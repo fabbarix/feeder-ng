@@ -33,7 +33,6 @@ has "$REL" 'registry:\s*ghcr\.io' "release.yml must log in to ghcr.io"
 has "$REL" 'secrets\.GITHUB_TOKEN' "release.yml must log in with GITHUB_TOKEN"
 has "$REL" 'packages:\s*write' "release.yml needs packages: write for the image job"
 has "$REL" 'push:\s*true' "release.yml must push the image"
-has "$REL" 'needs:\s*check' "release.yml must gate the image on the checks"
 lacks "$REL" 'pull_request' "release.yml must not run on pull requests"
 lacks "$REL" '(PAT|personal)' "release.yml must not use a personal access token"
 
@@ -82,7 +81,8 @@ python3 - "$REL" <<'PY' && ok || bad "the chart job must declare needs: image"
 import sys, re
 t = open(sys.argv[1]).read()
 m = re.search(r"^  chart:\n(.*?)(?=^  \w[\w-]*:\n|\Z)", t, re.S | re.M)
-sys.exit(0 if m and re.search(r"needs:\s*(\[?\s*image\s*\]?|\n\s*-\s*image)", m.group(1)) else 1)
+n = re.search(r"needs:\s*(\[[^\]]*\]|\w[\w-]*)", m.group(1)) if m else None
+sys.exit(0 if n and re.search(r"\bimage\b", n.group(1)) else 1)
 PY
 VERS="$(grep -Eo '\-\-version[ =]+\S+' "$REL" | head -1 | sed -E 's/--version[ =]+//')"
 APPV="$(grep -Eo '\-\-app-version[ =]+\S+' "$REL" | head -1 | sed -E 's/--app-version[ =]+//')"
@@ -93,6 +93,78 @@ has "$REL" '--password-stdin' "helm registry login must read the token with --pa
 # Each publishing job declares its own permissions; the workflow default stays read-only.
 if [ "$(grep -Ec '^\s+packages:\s*write' "$REL")" -ge 2 ]; then ok; else bad "release.yml: image and chart jobs each need packages: write"; fi
 has "$REL" '^permissions:\s*$' "release.yml must declare top-level permissions"
+
+# ci-light: CI runs a light, parallel check (CHECK_PROFILE=ci, no headless Chrome); the full check stays the local default.
+if python3 -c 'import yaml' >/dev/null 2>&1; then
+  python3 - "$CI" "$REL" <<'PY' && ok || bad "workflows: the ci-profile check jobs, their gates or the v*-only trigger are wrong (see above)"
+import sys, yaml
+errs = []
+def load(p):
+    d = yaml.safe_load(open(p))
+    d["on"] = d.pop(True, d.get("on"))  # YAML 1.1 reads the key `on` as True
+    return d
+ci, rel = load(sys.argv[1]), load(sys.argv[2])
+if rel["on"] != {"push": {"tags": ["v*"]}}:
+    errs.append("release.yml must run only on pushes of v* tags (got %r)" % (rel["on"],))
+def needs(job):
+    n = job.get("needs", [])
+    return [n] if isinstance(n, str) else list(n)
+for name, wf in (("ci.yml", ci), ("release.yml", rel)):
+    jobs = wf["jobs"]
+    parts = {}
+    for jid, job in jobs.items():
+        runs = " ".join(s.get("run", "") for s in job.get("steps", []))
+        if "scripts/check.sh" not in runs:
+            continue
+        env = job.get("env", {})
+        if env.get("CHECK_PROFILE") != "ci":
+            errs.append("%s: job %s runs scripts/check.sh without CHECK_PROFILE: ci" % (name, jid))
+        parts[env.get("CHECK_ONLY")] = jid
+        if job.get("timeout-minutes", 999) > 40:
+            errs.append("%s: job %s needs a timeout of at most 40 minutes" % (name, jid))
+    if sorted(k for k in parts if k) != ["go", "web"] or None in parts:
+        errs.append("%s: the checks must be two jobs, CHECK_ONLY web and CHECK_ONLY go (got %r)" % (name, parts))
+    gates = set(parts.values())
+    for jid, job in jobs.items():
+        if jid in gates:
+            if needs(job):
+                errs.append("%s: check job %s must not wait for another job (they run in parallel)" % (name, jid))
+            continue
+        if not gates <= set(needs(job)):
+            errs.append("%s: job %s must need both check jobs %s (needs %r)" % (name, jid, sorted(gates), needs(job)))
+for jid in ("image", "chart"):
+    if jid not in rel["jobs"]:
+        errs.append("release.yml has no %s job" % jid)
+for e in errs:
+    print("  " + e)
+sys.exit(1 if errs else 0)
+PY
+else
+  echo "note: python yaml missing, skipping the check-job shape checks"
+fi
+CHECK_SH="$HERE/../check.sh"
+FULL="$(env -u CHECK_PROFILE -u CHECK_ONLY CHECK_LIST=1 bash "$CHECK_SH" 2>&1)"
+CIL="$(env -u CHECK_ONLY CHECK_PROFILE=ci CHECK_LIST=1 bash "$CHECK_SH" 2>&1)"
+for s in 'UI guards' 'pnpm install' 'typecheck' 'vitest' 'vite build' 'page layout guard' 'go vet' 'go test' 'shell tests'; do
+  grep -q "^==> $s" <<<"$FULL" && ok || bad "check.sh with no CHECK_PROFILE must run '$s' (the local default stays the full check)"
+done
+for s in 'UI guards' 'pnpm install' 'typecheck' 'vitest' 'vite build' 'go vet' 'go test' 'shell tests'; do
+  grep -q "^==> $s" <<<"$CIL" && ok || bad "CHECK_PROFILE=ci must still run '$s'"
+done
+grep -q 'page layout guard' <<<"$CIL" && bad "CHECK_PROFILE=ci must leave out the page layout guard" || ok
+# Every shell test runs in the full profile. A test is left out of the ci profile only when it is marked as a browser test, and a
+# test is marked exactly when it starts Chrome (it reads or sets CHROME).
+for f in "$HERE"/*_test.sh; do
+  t="scripts/test/$(basename "$f")"
+  grep -q -- "--> $t\$" <<<"$FULL" && ok || bad "the full check must run $t"
+  starts=no; grep -Eq '\$\{?CHROME\b|\bCHROME=' "$f" && starts=yes
+  marked=no; grep -q '^# check-profile: browser' "$f" && marked=yes
+  [ "$starts" = "$marked" ] && ok || bad "$t: starts Chrome=$starts but marked '# check-profile: browser'=$marked"
+  inci=no; grep -q -- "--> $t\$" <<<"$CIL" && inci=yes
+  [ "$marked" != "$inci" ] && ok || bad "CHECK_PROFILE=ci: $t is marked browser=$marked but run=$inci (browser tests are left out, the rest run)"
+done
+lacks "$CI" 'PAGE_LAYOUT' "ci.yml must not run the page layout guard"
+lacks "$REL" 'PAGE_LAYOUT' "release.yml must not run the page layout guard"
 
 # YAML syntax, when python yaml is available.
 if python3 -c 'import yaml' >/dev/null 2>&1; then

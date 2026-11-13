@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# check-profile: browser (starts Chrome; CHECK_PROFILE=ci leaves it out, the full check runs it)
 # b5-pl: the page-layout guard must never lose coverage silently. A route x viewport that could not be probed is "not inspected" and FAILS
 # the guard (exit 1, whatever the modes file says), unless the route is listed in scripts/check-page-layout.exempt with a reason.
 # Design: docs/dev/design/b5-pl.md. Written first (red); the fix lands in a following commit.

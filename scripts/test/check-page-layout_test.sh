@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# check-profile: browser (starts Chrome; CHECK_PROFILE=ci leaves it out, the full check runs it)
 # R2-L: scripts/check-page-layout.sh builds, starts a DETACHED server on a worktree-unique port with a scratch data dir, seeds,
 # runs the guard, stops the server (always), and maps findings to warn/fail per route. Everything heavy is replaced by fakes here.
 set -uo pipefail

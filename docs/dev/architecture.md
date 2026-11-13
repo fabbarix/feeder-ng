@@ -61,7 +61,7 @@ web/src/features/<feature>/
 ## Tests and check
 - **BDD step text must be feature-specific.** godog does not detect duplicate step text across files (a clash silently runs one definition for both features). Reuse only the generic steps in `bdd/steps_common_test.go`; phrase new steps in your feature's own words, and register them under a unique `RegisterSteps` name.
 - Designer writes unit tests (Go `_test.go` next to domain code; vitest `*.test.ts(x)` next to TS) and Gherkin scenarios FIRST; Developer makes them pass.
-- `scripts/check.sh` (also `make check`) runs, in the current worktree only: pnpm install (frozen lockfile), typecheck, vitest, vite build, `go vet ./...`, `go test ./...` (includes BDD). It also runs every `scripts/test/*_test.sh` (shell tests for scripts/infra; a team may add one). Output goes to `<worktree>/build/check.log` (`build/` is gitignored). Exit code non-zero on any failure.
+- `scripts/check.sh` (also `make check`) runs, in the current worktree only: pnpm install (frozen lockfile), typecheck, vitest, vite build, `go vet ./...`, `go test ./...` (includes BDD). It also runs every `scripts/test/*_test.sh` (shell tests for scripts/infra; a team may add one). Output goes to `<worktree>/build/check.log` (`build/` is gitignored). Exit code non-zero on any failure. With no `CHECK_PROFILE` it is the full check, including the page layout guard and the browser shell tests; `CHECK_PROFILE=ci` (the GitHub workflows) leaves the headless-Chrome work out, and `CHECK_ONLY=web|go` runs one half (see [deploy.md](deploy.md)).
 - No synthetic load, no long-running servers in tests (use httptest). If a dev server is needed: `setsid nohup ... > build/server.log 2>&1 &` on a port unique to the worktree.
 
 ## Shared files (serialised by the PM)

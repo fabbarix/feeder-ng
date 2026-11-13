@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# check-profile: browser (starts Chrome; CHECK_PROFILE=ci leaves it out, the full check runs it)
 # hf-recipes-filter: the Recipes filter header in a browser (docs/design/recipes-filter.md 1, 11, 13). The real driver runs against a
 # tiny static server (fixtures/page-layout-recipes-header):
 #   /plan      crushed.html  the beta.6 Tag row with 40 Tags: every chip crushed to its dot (P16);

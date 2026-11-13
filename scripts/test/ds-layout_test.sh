@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# check-profile: browser (starts Chrome; CHECK_PROFILE=ci leaves it out, the full check runs it)
 # DS-A round 2: real-layout checks that jsdom cannot fake. Static fixture pages (scripts/test/fixtures/ds-layout) load the app's
 # real stylesheets, measure themselves in headless Chrome and write the result as JSON into <title>; this reads it from --dump-dom.
 #   action-group-narrow-row.html  round 3: a 358 px ListRow, the group on its own line, the title >= 120 px, no spill.

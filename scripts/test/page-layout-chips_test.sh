@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# check-profile: browser (starts Chrome; CHECK_PROFILE=ci leaves it out, the full check runs it)
 # ds-plan round 3: rule P14 of the page-layout guard. A chip whose label is cut by an ellipsis while its chip line still has room to
 # spare is a finding (the Plan review: "Leftover from Sat" shown as "L…", alone on a 1024 px row, because the chip line was only as
 # wide as its content and `max-inline-size: 40%` was a percentage of that). A chip cut because the line is really full is fine.

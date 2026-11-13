@@ -11,31 +11,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: scripts/check.sh
+  # The same two parallel check jobs as release.yml, with the same ci profile of scripts/check.sh: the headless-Chrome work
+  # (the page layout guard and the browser shell tests) is left out; the full check runs locally before every tag.
+  checks-web:
+    name: "Checks: web (UI guards, typecheck, vitest, vite build)"
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
+    env:
+      CHECK_PROFILE: ci
+      CHECK_ONLY: web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 10.28.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: scripts/check.sh
+      - name: Show the check log on failure
+        if: failure()
+        run: cat build/check.log
+
+  checks-go:
+    name: "Checks: Go and shell tests (go vet, go test, non-browser shell tests)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CHECK_PROFILE: ci
+      CHECK_ONLY: go
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
           cache: true
-
+      # Some shell tests run vite (precache, icons bundle), so this job installs the web dependencies too.
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 10.28.1
-
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
-
-      # Typecheck, vitest, vite build, go vet, go test (including BDD) and the shell tests.
-      - name: Run the checks
-        run: scripts/check.sh
-
+      - run: scripts/check.sh
       - name: Show the check log on failure
         if: failure()
         run: cat build/check.log
@@ -44,7 +66,7 @@ jobs:
   # so fork PRs work without secrets.
   image-build:
     name: Build the image (not pushed)
-    needs: check
+    needs: [checks-web, checks-go]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 60

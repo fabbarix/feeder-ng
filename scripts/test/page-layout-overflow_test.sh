@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# check-profile: browser (starts Chrome; CHECK_PROFILE=ci leaves it out, the full check runs it)
 # DS-A round 2: horizontal overflow fails the page-layout guard in EVERY mode (the Plan review: Course rows 582 px wide in a
 # 358 px day tile, the page 614 px wide on a 390 phone, and the guard printed OK).
 #   (a) P1  the document is wider than the viewport (sideways page scroll), or a box ends past the viewport's right edge. Under

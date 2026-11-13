@@ -34,8 +34,15 @@ All tags are multi-arch (`linux/amd64`, `linux/arm64`) and carry the OCI label `
 
 Workflows:
 
-- `.github/workflows/ci.yml`: runs `scripts/check.sh` on pull requests only; a push to `main` runs nothing, and checks run on `v*` tags through `release.yml`. On pull requests it also builds the image without pushing it (and without any registry login), so a broken Dockerfile fails the PR. It never publishes.
-- `.github/workflows/release.yml` ("Publish"): runs only on `v*` tags. It runs the checks, then builds and pushes the image with the `GITHUB_TOKEN` (`packages: write`, nothing else). It then packages the Helm chart with `--version` and `--app-version` taken from the tag (`v1.2.3` becomes `1.2.3`) and pushes it to `oci://ghcr.io/fabbarix/charts`. A failed release is re-run with *Re-run jobs* on the tag's run, which keeps the tag.
+- `.github/workflows/ci.yml`: runs on pull requests only; a push to `main` runs nothing, and checks run on `v*` tags through `release.yml`. It runs the same two parallel check jobs as `release.yml` (below), then builds the image without pushing it (and without any registry login), so a broken Dockerfile fails the PR. It never publishes.
+- `.github/workflows/release.yml` ("Publish"): runs only on `v*` tags. It runs the checks as two parallel jobs, then, once both pass, builds and pushes the image with the `GITHUB_TOKEN` (`packages: write`, nothing else). It then packages the Helm chart with `--version` and `--app-version` taken from the tag (`v1.2.3` becomes `1.2.3`) and pushes it to `oci://ghcr.io/fabbarix/charts`. A failed release is re-run with *Re-run jobs* on the tag's run, which keeps the tag.
+
+Both workflows run `scripts/check.sh` with `CHECK_PROFILE=ci`, a fast safety net, split into two jobs that run side by side:
+
+- **web** (`CHECK_ONLY=web`): the UI guards, `pnpm install`, typecheck, vitest and the vite build;
+- **Go and shell tests** (`CHECK_ONLY=go`): `pnpm install` (some shell tests run vite), `go vet`, `go test` and the shell tests that do not start a browser.
+
+The ci profile leaves out the headless-Chrome work, the slowest part of the check: the page layout guard (`scripts/check-page-layout.sh`) and the shell tests marked `# check-profile: browser` (the ones that start Chrome; `scripts/test/workflows_test.sh` fails when a test that starts Chrome is not marked, or the reverse). So **run the full check locally before every tag**: `bash scripts/check.sh` with no `CHECK_PROFILE` is the full check and runs every step. `CHECK_LIST=1 bash scripts/check.sh` prints the steps and shell tests a run would take, without running them (add `CHECK_PROFILE=ci` to see the CI list).
 
 Images and the chart are published from `v*` tags only. `latest` is set only on stable tags (no `-` in the tag).
 
