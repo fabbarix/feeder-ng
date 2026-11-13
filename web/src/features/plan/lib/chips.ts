@@ -82,9 +82,9 @@ export function sheetChips(meal: PlannedMeal, ctx: PhraseContext): { chips: Plan
   return { chips: shown, overflow: base.length + relaxed.length - shown.length }
 }
 
-/** The why chips of the Today hero (rule: at most 2), most relevant first; a relaxed chip comes after the positive ones. */
+/** The why chips of the Today hero (rule: at most 2), most relevant first: the Bought chip first, a relaxed chip after the positive ones. */
 export function heroChips(meal: PlannedMeal, ctx: PhraseContext): PlanChip[] {
-  return whyChips(meal, ctx).slice(0, HERO_LIMIT)
+  return addBoughtChip(whyChips(meal, ctx), meal.bought, 'sheet').slice(0, HERO_LIMIT)
 }
 
 function dedupe(chips: PlanChip[]): PlanChip[] {

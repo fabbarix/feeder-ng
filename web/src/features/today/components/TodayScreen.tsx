@@ -177,6 +177,7 @@ export function TodayScreen(): ReactElement {
         alternatives={sheets.swap.alternatives}
         isLoading={sheets.swap.isLoading}
         onPick={(id) => void sheets.swap.pick(id)}
+        bought={sheets.swap.bought}
       />
       <RecipeChooserSheet
         open={sheets.choose.key !== null}
