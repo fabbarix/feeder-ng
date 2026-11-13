@@ -161,6 +161,23 @@ export function appliedFilters(state: PantryFilterState, mode: PantryMode, place
   return { status: state.status, places: knownPlaces(state, places), kinds: state.kinds, onlyLeftovers: state.leftovers }
 }
 
+/** A chip of the Filters panel's Show section: the status (one at a time) or Leftovers. */
+export type PantryShow = 'useSoon' | 'spoiled' | 'leftovers'
+
+/**
+ * The Show chips the panel offers: Use soon and Spoiled (no "All": none pressed is all of Stock), and Leftovers on By Storage Place
+ * while the Pantry holds frozen Leftovers (docs/design/pantry-filter.md 4.3, 4.8).
+ */
+export function showChoices(mode: PantryMode, hasLeftovers: boolean): PantryShow[] {
+  return mode === 'places' && hasLeftovers ? ['useSoon', 'spoiled', 'leftovers'] : ['useSoon', 'spoiled']
+}
+
+/** The Show chips pressed now: the status in force, and Leftovers when it applies (By Storage Place). */
+export function shownChoices(status: StockFilter, leftovers: boolean, mode: PantryMode): PantryShow[] {
+  const shown: PantryShow[] = status === 'all' ? [] : [status]
+  return mode === 'places' && leftovers ? [...shown, 'leftovers'] : shown
+}
+
 /** Storage Places by name (accents and case ignored, numbers in order). */
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
 

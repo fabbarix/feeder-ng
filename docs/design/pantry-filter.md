@@ -167,6 +167,9 @@ export function withoutChip(params, key: PantryChipKey): URLSearchParams
 export interface AppliedPantryFilters { status: StockFilter; places: number[]; kinds: StorageKind[]; onlyLeftovers: boolean }
 export function appliedFilters(state, mode: PantryMode, places: readonly StoragePlace[]): AppliedPantryFilters
 export function pantryFilterChips(state, mode: PantryMode, places: readonly StoragePlace[]): FilterChip<PantryChipKey>[]
+export type PantryShow = 'useSoon' | 'spoiled' | 'leftovers'
+export function showChoices(mode: PantryMode, hasLeftovers: boolean): PantryShow[]           // Leftovers: By Storage Place, while any
+export function shownChoices(status: StockFilter, leftovers: boolean, mode: PantryMode): PantryShow[]
 export interface PlaceFilterRow { id: number; name: string; kind: StorageKind | null; lots: number; selected: boolean }
 export function placeFilterRows(places, lots: readonly StockLot[], selected: readonly number[], query: string): PlaceFilterRow[]
 ```

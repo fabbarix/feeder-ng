@@ -9,6 +9,8 @@ import {
   pantryFilterChips,
   pantryFiltersFromParams,
   placeFilterRows,
+  showChoices,
+  shownChoices,
   withGroupByPlace,
   withKindToggled,
   withLeftovers,
@@ -163,5 +165,26 @@ describe('placeFilterRows', () => {
     expect(placeFilterRows(places, lots, [], 'GARAGE').map((r) => r.name)).toEqual(['Garage Freezer', 'garage Fridge'])
     expect(placeFilterRows(places, lots, [], 'sorted').map((r) => r.name)).toEqual(['Not sorted'])
     expect(placeFilterRows(places, lots, [], 'zzz')).toEqual([])
+  })
+})
+
+// pantry-filter review: the Show section of the Filters panel is derived here, not in the panel component.
+describe('showChoices and shownChoices: the Show section', () => {
+  it('offers Use soon and Spoiled, never "All"', () => {
+    expect(showChoices('places', false)).toEqual(['useSoon', 'spoiled'])
+    expect(showChoices('ingredients', false)).toEqual(['useSoon', 'spoiled'])
+  })
+  it('adds Leftovers on By Storage Place while the Pantry holds frozen Leftovers, never By Ingredient', () => {
+    expect(showChoices('places', true)).toEqual(['useSoon', 'spoiled', 'leftovers'])
+    expect(showChoices('ingredients', true)).toEqual(['useSoon', 'spoiled'])
+  })
+  it('presses the status in force, none for all of Stock', () => {
+    expect(shownChoices('all', false, 'places')).toEqual([])
+    expect(shownChoices('useSoon', false, 'places')).toEqual(['useSoon'])
+    expect(shownChoices('spoiled', false, 'ingredients')).toEqual(['spoiled'])
+  })
+  it('presses Leftovers only where it applies (By Storage Place)', () => {
+    expect(shownChoices('spoiled', true, 'places')).toEqual(['spoiled', 'leftovers'])
+    expect(shownChoices('all', true, 'ingredients')).toEqual([])
   })
 })

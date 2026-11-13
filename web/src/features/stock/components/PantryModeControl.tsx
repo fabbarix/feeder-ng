@@ -1,4 +1,4 @@
-// pantry-filter: the List control of the Pantry header, "By Storage Place · By Ingredient" (shared Segmented, compact, a radiogroup
+// pantry-filter: the List control of the Pantry header, "Storage Place · Ingredient" (shared Segmented, compact, a radiogroup
 // "List" whose label is visually hidden; docs/design/pantry-filter.md 3, 7).
 import type { ReactNode } from 'react'
 import { Segmented } from '../../../ui'

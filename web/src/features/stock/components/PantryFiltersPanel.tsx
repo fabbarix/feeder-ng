@@ -4,12 +4,10 @@ import type { ReactNode, RefObject } from 'react'
 import { FilterChipGroup, FilterSection, FiltersPanel, Switch } from '../../../ui'
 import type { StockFilter } from '../lib/filter'
 import { KIND_ICON, STORAGE_KINDS } from '../lib/kinds'
-import type { PantryMode } from '../lib/pantryFilters'
+import { showChoices, shownChoices, type PantryMode, type PantryShow } from '../lib/pantryFilters'
 import { stockStrings as strings } from '../strings'
 import type { StockLot, StorageKind, StoragePlace } from '../types'
 import { PlaceFilterList } from './PlaceFilterList'
-
-type ShowValue = 'useSoon' | 'spoiled' | 'leftovers'
 
 export interface PantryFiltersPanelProps {
   id?: string
@@ -40,18 +38,13 @@ export function PantryFiltersPanel(props: PantryFiltersPanelProps): ReactNode {
   const { id, open, onClose, anchorRef, mode, status, onStatus, hasLeftovers, leftovers, onLeftovers, kinds, onKind, places, lots, selectedPlaces, onPlace, groupByPlace, onGroupByPlace, count, onClear } = props
   const t = strings.filterBar
   const byPlace = mode === 'places'
-  const show: { value: ShowValue; label: string }[] = [
-    { value: 'useSoon', label: strings.filters.useSoon },
-    { value: 'spoiled', label: strings.filters.spoiled },
-    ...(byPlace && hasLeftovers ? [{ value: 'leftovers' as const, label: strings.leftoversFilter }] : []),
-  ]
-  const shown: ShowValue[] = [...(status === 'all' ? [] : [status as ShowValue]), ...(byPlace && leftovers ? ['leftovers' as const] : [])]
-  const onShow = (value: ShowValue) => (value === 'leftovers' ? onLeftovers(!leftovers) : onStatus(value))
+  const show = showChoices(mode, hasLeftovers).map((value) => ({ value, label: value === 'leftovers' ? strings.leftoversFilter : strings.filters[value] }))
+  const onShow = (value: PantryShow) => (value === 'leftovers' ? onLeftovers(!leftovers) : onStatus(value))
 
   return (
     <FiltersPanel id={id} open={open} onClose={onClose} anchorRef={anchorRef} count={count} onClear={onClear} showLabel={t.showStock} className="pantry-filters__panel">
       <FilterSection heading={t.showHeading}>
-        <FilterChipGroup<ShowValue> label={t.showHeading} options={show} selected={shown} onToggle={onShow} />
+        <FilterChipGroup<PantryShow> label={t.showHeading} options={show} selected={shownChoices(status, leftovers, mode)} onToggle={onShow} />
       </FilterSection>
       {byPlace && places.length > 0 ? (
         <FilterSection heading={t.kindHeading}>
