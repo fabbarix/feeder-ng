@@ -1,6 +1,8 @@
 // English copy of the new-Product sheet (SR5). Kept apart from strings.ts, which SR4 owns while both work in parallel.
 // Wording follows docs/design/shop-scan-proposals.md 13.5 and 13.8 and the SR5 mockups.
 
+import { scanStrings } from './strings'
+
 export const newProductStrings = {
   title: 'What is this?',
   barcodeNotKnown: (code: string) => `${code} · not in Feeder yet`,
@@ -52,6 +54,9 @@ export const newProductStrings = {
   // Step 6: the primary
   add: 'Add',
   addTicks: (line: string) => `Add · ticks ${line}`,
+
+  // a price-valued weighed code asks the weight once
+  weightHint: (price: string) => `The label says ${price}. ${scanStrings.weightHint}`,
 
   // inline validation hints
   needKind: 'Pick what it is',

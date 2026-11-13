@@ -100,7 +100,7 @@ export function NewProductForm(p: NewProductSheetProps) {
 
       {choice && p.mode === 'weighed_price' ? (
         <>
-          <p className="new-product__hint">{`The label says ${p.priceText ?? ''}. ${scanStrings.weightHint}`}</p>
+          <p className="new-product__hint">{newProductStrings.weightHint(p.priceText ?? '')}</p>
           <NumberField
             label={scanStrings.weight}
             value={numberValue(form.weightText)}
