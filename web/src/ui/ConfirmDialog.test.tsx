@@ -128,3 +128,12 @@ describe('useConfirm', () => {
     spy.mockRestore()
   })
 })
+
+describe('ConfirmDialog: body line breaks', () => {
+  it('keeps the line breaks of a multi-line body (one line per item reads as lines)', () => {
+    render(<ConfirmDialog {...base} body={'Replaces 3 meals.\nTue Dinner: Stew\nWed Lunch: Pie'} onConfirm={() => {}} onCancel={() => {}} />)
+    const body = screen.getByText(/Replaces 3 meals\./)
+    expect(body).toHaveTextContent('Tue Dinner: Stew')
+    expect(getComputedStyle(body).whiteSpace).toBe('pre-line')
+  })
+})
