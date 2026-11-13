@@ -62,6 +62,7 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
   const [unitPrompt, setUnitPrompt] = useState<UnitPrompt | null>(null)
   const [pickerKey, setPickerKey] = useState<string | null>(null)
   const [plainKey, setPlainKey] = useState<string | null>(null)
+  const [askName, setAskName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const pendingNew = useRef<{ line: LineDraft; name: string } | null>(null)
   const pendingLink = useRef<{ key: string; base: EditorBase } | null>(null)
@@ -96,6 +97,7 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
       const ask = parseTakeOver(err)
       if (ask) {
         pendingNew.current = { line, name }
+        setAskName(name)
         setTakeOverAsk(ask)
         return
       }
@@ -104,6 +106,7 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     }
     pendingNew.current = null
     setTakeOverAsk(null)
+    setAskName('')
     opts.linkLine(line.key, { id: created.id, name: created.name, ingredientId: created.baseIngredientId ?? 0 })
   }
 
@@ -143,7 +146,7 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
   return {
     linkTo,
     takeOverAsk,
-    askName: pendingNew.current?.name ?? '',
+    askName,
     answerTakeOver: async (yes) => {
       const pending = pendingNew.current
       if (!pending) return
@@ -152,6 +155,7 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     cancelTakeOver: () => {
       pendingNew.current = null
       setTakeOverAsk(null)
+      setAskName('')
     },
     unitPrompt,
     answerUnitPrompt: async (toBase) => {

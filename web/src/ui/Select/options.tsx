@@ -97,6 +97,7 @@ export function ingredientOptions(ingredients: IngredientChoice[]): SelectOption
     label: i.name,
     meta: selectStrings.baseUnitMeta(i.baseUnit),
     leading: <Thumb imageUrl={i.imageUrl} size={40} />,
+    preferred: i.baseRecipe ? true : undefined,
     badge: i.baseRecipe ? (
       <Chip kind="tag" icon="cook">
         {selectStrings.baseRecipeBadge}

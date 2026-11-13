@@ -26,6 +26,9 @@ export interface ListInput<V extends string | number> {
   createDisabled?: boolean
   /** WP3b: label of the clear row (e.g. "Any Shop"); it leads the list and is filtered by the query like an option. */
   clearLabel?: string
+  /** BR-D: exact matches of `rank` (the search, or what was typed) come first; among them `preferred` options lead. */
+  exactFirst?: boolean
+  rank?: string
 }
 
 export interface BuiltList<V extends string | number> {
@@ -45,7 +48,13 @@ export function buildList<V extends string | number>(input: ListInput<V>): Built
   const chosen = input.filters.filter((f) => input.activeFilters.includes(f.id))
   const filtered = filterOptions(input.options, input.query).filter((o) => chosen.every((f) => f.predicate(o)))
   const sort = input.sorts[input.sortIndex]
-  const sorted = sort ? [...filtered].sort(sort.compare) : filtered
+  const sortedBy = sort ? [...filtered].sort(sort.compare) : filtered
+  const rankKey = input.exactFirst && input.rank ? normalise(input.rank) : ''
+  const sorted = rankKey === '' ? sortedBy : [
+    ...sortedBy.filter((o) => normalise(o.label) === rankKey && o.preferred),
+    ...sortedBy.filter((o) => normalise(o.label) === rankKey && !o.preferred),
+    ...sortedBy.filter((o) => normalise(o.label) !== rankKey),
+  ]
   const clearRow: SelectOption<V>[] =
     input.clearLabel !== undefined && filterOptions([{ value: '' as V, label: input.clearLabel, clear: true }], input.query).length > 0
       ? [{ value: '' as V, label: input.clearLabel, clear: true }]
