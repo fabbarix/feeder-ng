@@ -108,8 +108,9 @@ Importing never writes directly. Every file goes through Import Review:
 3. **Unit check**: every unconvertible unit gets a one-off conversion prompt.
 4. **Recipe conflicts**: replace, keep both or skip.
 5. **Courses**: each name in a Recipe's `courses` is matched to a Course of the Household. A name that matches an active Course is used. A name that matches an archived Course, or is not a Course of the Household, shows on its row with the answers *use a Course of the Household* (default: the main Course), *skip this name*, and, for an Admin only, *add it as a Course* (for an archived Course: *unarchive it*). Nothing is created or unarchived without that answer. Names that match the same Course count once, and a Recipe whose names are all skipped gets the main Course.
-6. **Images** are fetched or decoded, with a warning for each failure.
-7. **Confirm** saves everything in one transaction (Courses added or unarchived by an answer included).
+6. **Base recipes**: each line marked with `recipe`, and each line whose name matches a Base recipe, a Recipe the Household plans or a Recipe of the file, asks "Is this another recipe?" with five answers: *use a Base recipe* (an existing one), *use one from this import*, *add it as a new Base recipe* (fill it in later, or *Read it next*, which offers to read that recipe after Confirm and replaces the empty Base recipe), *turn a planned Recipe into one* (after a confirm that names what goes), or *keep it as an Ingredient*. Only an exact name match is preselected, and Confirm waits for every other answer. A Base recipe the import creates over a same-name plain Ingredient asks whether it takes that Ingredient over.
+7. **Images** are fetched or decoded, with a warning for each failure.
+8. **Confirm** saves everything in one transaction (Courses added or unarchived by an answer included; Base recipes are written before the Recipes that call for them), then offers to link the plain lines that share a Base recipe's name.
 
 ## Agent Prompt
 

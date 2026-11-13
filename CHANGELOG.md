@@ -4,6 +4,44 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.6] - 2026-11-13
+
+Base recipes: a béchamel, a pasta frolla or a stock that other Recipes call for by amount, covered from Stock first and made just before the Step that needs it.
+
+### Added
+
+- **Base recipes.** Mark a Recipe as a Base recipe in the Recipe editor and give it a Yield, an amount in g, ml or portions and so on (1 l, 300 g, 8 portions). A Base recipe has no Courses and is not planned on its own, so it is not chosen for a Meal Slot, swapped, Pinned or named by a Slot Rule. The Recipes list hides Base recipes until you pick the Base recipes filter, and a Base recipe's page shows its Yield, the Recipes it is used in and its Stock.
+- **Use one as a line.** Pick a Base recipe in the Ingredient picker, where it carries a Base recipe badge, and add it to another Recipe by amount ("500 ml Béchamel"). The Ingredients inside follow the Yield. A Base recipe can call for other Base recipes at any depth, and Feeder refuses a loop ("Béchamel calls for Roux, which calls for Béchamel"). A line can say which Step it is Needed at.
+- **Link existing lines.** A plain line gets Link to a Base recipe, with search, an offer to add a new Base recipe from the line's name, and Undo or Use as a plain Ingredient to put it back. When a Recipe becomes a Base recipe, Feeder lists the other Recipes with an Ingredient of the same name, nothing ticked, and links only the lines you tick. Nothing is linked without your say.
+- **Take over a plain Ingredient.** When a Base recipe has the name of an Ingredient you already have, Feeder asks whether the Base recipe takes it over, naming the Recipes it is on and its Stock. Yes turns all its lines into Base recipe lines and keeps the Stock; No keeps it apart. Once no line uses the old Ingredient, Feeder offers to merge it into the Base recipe's.
+- **The planner, Exclusions and Advance Steps follow Base recipes.** Every Ingredient inside a Base recipe counts for Exclusions and Review Exclusions as if it were on the Recipe, and a Base recipe's Advance Step counts for the lead time. A Base recipe takes an Exclusion only, no Favourite or Dislike.
+- **The Shopping List uses Stock of a Base recipe first.** A jar or a frozen batch in the Pantry is drawn first, and only the Ingredients of the part Stock does not cover are listed.
+- **Cooked uses Stock first.** Mark as Cooked takes the jar or batch first and deducts only the part that is made. Used from lets you pick which jar, and Courses of one slot that call for the same Base recipe share a jar.
+- **Base recipes in Cook Mode.** Steps carry their Base recipe's name, the Step it is Needed at reads "Béchamel ready", and a Base recipe that Stock covers shows "Already in Stock" and "Béchamel from Stock" instead of its Steps. Its Steps are placed where the Recipe's total time is shortest, and Start cooking comes earlier to fit them.
+- **Recipe File and Import Review.** Recipe Files can mark a Base recipe, say what its Yield is counted in, and mark a line that calls for another recipe. Import Review spots those lines, and any line whose name matches a Base recipe or a Recipe you plan, and asks what each is: use a Base recipe, use one from the same import, add a new one, turn a planned Recipe into one, or keep a plain Ingredient. It can also convert a Recipe, offer Read it next to read the missing recipe after Confirm, and offer to link the matching lines once the import is saved. Confirm waits for every answer.
+- **Download includes Base recipes.** Downloading a Recipe File of a Recipe also includes every Base recipe it calls for, at any depth, once each.
+
+### Changed
+
+- **Total time and Start cooking** of a Recipe include the Steps of the Base recipes it calls for.
+- **The Ingredients page** shows a Base recipe's Ingredient with its badge and keeps its name and batch conversion read-only.
+
+### Fixed
+
+- **Totals stay in step.** When you edit a Base recipe, the total time and the longest Advance Step lead of every Recipe that calls for it, at every depth, are updated at once, so Recipe tiles and the planner agree with the Recipe's page.
+
+### Upgrading
+
+No new settings. The database is migrated on start: 1540 adds the columns behind Base recipes. It only adds columns, so every Recipe stays a plain Recipe you can plan and no line changes until you link it. Migrations cannot be undone.
+
+If the database already has applied migrations, Feeder first saves a checked copy of it as `feeder-pre-1540.db` in the `backups` folder of the data volume (`/data/backups`), before migration 1540 is applied. It is not listed in Settings, the nightly clean-up does not remove it, an existing copy is kept, and a fresh install takes none. If the copy cannot be written, Feeder stops with a log line naming the file and migrates nothing.
+
+Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.6 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
+To go back to 1.0.0-beta.5.1, stop Feeder (on Kubernetes, set the deployment to zero replicas), copy `feeder-pre-1540.db` over `feeder.db` (and delete `feeder.db-wal` and `feeder.db-shm`), then start the older image. Everything you changed after the upgrade is lost. On Kubernetes, `helm history feeder -n feeder` lists the revisions and `helm rollback feeder <revision> -n feeder` returns to the one that ran 1.0.0-beta.5.1, but only after the database is restored.
+
+If you skip releases, each snapshot goes back to one image: `feeder-pre-1540.db` to 1.0.0-beta.5.1, `feeder-pre-1500.db` to 1.0.0-beta.4.2 and `feeder-pre-1400.db` to 1.0.0-beta.3. An upgrade from 1.0.0-beta.4.2 straight to this release holds both `feeder-pre-1500.db` and `feeder-pre-1540.db`, and both are the beta.4.2 database. The steps are in the deploy guide, "Upgrading from 1.0.0-beta.5.x to 1.0.0-beta.6".
+
 ## [1.0.0-beta.5.1] - 2026-11-13
 
 A redesign of Today, Plan and Shop on one set of design rules, so screens line up, read clearly and use colour with meaning on phones, tablets and desktops alike.
@@ -251,7 +289,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5.1...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6...HEAD
+[1.0.0-beta.6]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5.1...v1.0.0-beta.6
 [1.0.0-beta.5.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5...v1.0.0-beta.5.1
 [1.0.0-beta.5]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.2...v1.0.0-beta.5
 [1.0.0-beta.4.2]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.1...v1.0.0-beta.4.2

@@ -25,7 +25,7 @@ The user's decisions (final), numbered as in the brief and referred to as **D1**
 | Model | A Base recipe is a Recipe with a **Base recipe Ingredient** (`recipes.base_ingredient_id`, like the Ready Meal's Ingredient but linked by id) and a Yield unit (`recipes.yield_unit`). It has no Courses, Whole meal, Cool-down, Use-by, Reheat time or Frozen Use-by. |
 | Base recipe line | An ordinary `recipe_lines` row whose Ingredient is a Base recipe Ingredient, plus an optional **Needed at** Step (`recipe_lines.needed_at_step`). No new line table. An existing plain line can be linked to one (re-pointing `ingredient_id`, remembering the old Ingredient for Undo), one by one, in bulk when a Recipe becomes a Base recipe, or all at once when the User lets the Base recipe take over a same-name Ingredient; nothing is linked silently. |
 | Stock | The Base recipe Ingredient is an ordinary Ingredient: Stock Lots, Products (a jar's barcode), Scan, Stock-take, Shelf Life, Frozen Shelf Life, Used from all work unchanged. |
-| Expansion | Read time, in a new pure package `internal/recipe/baserecipe` (unit-tested): a need tree, scaled by Unit Conversion, nested, cycle-checked. Nothing denormalised except the cached total time and the composed longest lead (`advance_minutes`), as today. |
+| Expansion | Read time, in a new pure package `internal/recipe/baserecipe` (unit-tested): a need tree, scaled by Unit Conversion, nested, cycle-checked. Nothing denormalised except the cached total time (as today) and the composed longest lead (`advance_minutes`), which is new in beta.6. |
 | Planner | No change to `internal/planner`. A Base recipe has no Course, so Course fit already keeps it out. `DBSources` feeds the planner the flattened Ingredients (plus each Base recipe Ingredient as an optional zero line), so Exclusions and Review Exclusions look all the way down. |
 | Shopping List | `shopping.Need` gains `Made`; `derivedLines` draws the Base recipe Ingredient from Stock first and only expands the shortfall. |
 | Cooked | The runner resolves the tree against Stock (Base recipe Ingredient first), then deducts as today; Used from can pick the jar. |
@@ -370,7 +370,7 @@ Server: `internal/recipefile/review.go` gains rows for these lines; `plan()` ret
 
 ## 12. Migration `1540_base_recipes.sql`
 
-The next free number after beta.5's 1500 to 1530, unless another beta.6 migration takes it first (then BR-B takes the next free one). Additive; no table rebuild, no foreign-key pragma, so it needs no snapshot of its own beyond the release's usual one.
+The snapshot taken before it, `feeder-pre-1540.db`, is in [b6-snap.md](b6-snap.md).
 
 ```sql
 -- Base recipes (ADR 0015). A Recipe is a Base recipe iff base_ingredient_id is set.

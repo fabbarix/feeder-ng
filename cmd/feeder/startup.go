@@ -18,7 +18,7 @@ import (
 type preSnapshot struct {
 	file      string // name under <data>/backups
 	migration string // the migrations it precedes, for the log and errors
-	keep      bool   // an existing file is never replaced (the 1500 snapshot holds the true pre-1500 database)
+	keep      bool   // an existing file is never replaced (a snapshot holds the true database from before its migrations)
 	need      func(ctx context.Context, d *sql.DB, fsys fs.FS) (bool, error)
 }
 
@@ -58,8 +58,8 @@ func prepareDatabase(ctx context.Context, d *sql.DB, dataDir string, logger *slo
 	return prepareDatabaseWith(ctx, d, dataDir, logger, db.Migrations())
 }
 
-// prepareDatabaseWith is prepareDatabase over the migration set fsys (tests pass synthetic 1500 and 1510 files).
-// A 1500 snapshot that already exists is never replaced: it is the true pre-1500 database.
+// prepareDatabaseWith is prepareDatabase over the migration set fsys (tests pass synthetic migration files).
+// A snapshot that already exists (1400, 1500 or 1540) is never replaced: it is the true database from before its migrations.
 func prepareDatabaseWith(ctx context.Context, d *sql.DB, dataDir string, logger *slog.Logger, fsys fs.FS) error {
 	dir := filepath.Join(dataDir, backup.DirName)
 	for _, s := range preSnapshots {

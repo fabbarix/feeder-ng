@@ -1,6 +1,6 @@
 # Base recipes own an Ingredient, are expanded at read time, and join the cooking timeline as composed Steps
 
-Status: **Accepted** (2026-11-12; the user's answers P1 to P7, all option A except P4 = C and P7 = B). **Target: beta.6**: nothing of it is built in beta.5. Design: [docs/dev/design/base-recipes.md](../dev/design/base-recipes.md). Spec: [functional-spec.md](../spec/functional-spec.md) decision 46 and §19, both marked "Scheduled for beta.6"; when beta.6 ships they are folded into §4, §6, §7.2, §8, §9, §11 and §13.
+Status: **Accepted** (2026-11-12; the user's answers P1 to P7, all option A except P4 = C and P7 = B). **Shipped in beta.6**. Design: [docs/dev/design/base-recipes.md](../dev/design/base-recipes.md). Spec: [functional-spec.md](../spec/functional-spec.md) decision 46, folded into §4, §6, §7.2, §8, §9, §11 and §13.
 
 The user asked for **Base recipes**: a béchamel, a pasta frolla or a stock that other Recipes call for by amount ("500 ml Béchamel"), never planned on its own, nested at any depth, scaled from its Yield, covered from Stock first (a bought jar, a frozen batch), with every Ingredient inside counting for Exclusions, and with its Steps on the cooking timeline so it is ready just before the Step that uses it. Three architectural choices follow; each touches code that several teams share.
 
@@ -40,7 +40,7 @@ Decision 2 still holds; the cache it allows is wider by one column. `recipes.adv
 
 ## Consequences
 
-- Migration **1540** (`ALTER TABLE` only): `recipes.base_ingredient_id`, `recipes.yield_unit`, `recipe_lines.needed_at_step`, `recipe_lines.linked_from_ingredient_id`, a partial unique index. Kind rules are checked in Go.
+- Migration **1540** (`ALTER TABLE` only): `recipes.base_ingredient_id`, `recipes.yield_unit`, `recipe_lines.needed_at_step`, `recipe_lines.linked_from_ingredient_id`, a partial unique index. Kind rules are checked in Go. Migrations cannot be undone, so going back means restoring `feeder-pre-1540.db`, taken before the migration runs ([b6-snap.md](../dev/design/b6-snap.md)), as [ADR 0008](0008-courses.md) says for 1400.
 - New package `internal/recipe/baserecipe`; the recipe store gains `NeedTree`, composed `Cook` Steps on `Get`, the cycle check and the kind changes (`/to-base`, `/to-plannable`); the Ingredient store gains guards; line link and unlink, link candidates and bulk link routes; `GET /api/recipes` gains `kind` (default plannable).
 - `internal/plan/runner/sources.go`, `snapshot.go` / `courses_c2.go` (`needsFor`), `internal/shopping/shopping.go` and `httpapi/wiring.go`, `internal/cook/service/adapters.go` and `internal/notify/facts/facts.go` change as adapters; `internal/planner`, `schedule` and `cook.Timeline` do not.
 - Recipe File v1 gains optional `baseRecipe`, `yieldUnit` (Recipe) and `recipe`, `neededAtStep` (line); the Recipe Assistant's output schema follows by projection, and the Agent Prompt gains two rules.
