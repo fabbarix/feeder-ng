@@ -16,6 +16,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { Icon } from './Icon'
 import { PriceKeypad, type PriceKeypadProps } from './PriceKeypad'
 import { declarations, readUiCss } from './test-utils'
 
@@ -315,6 +316,19 @@ describe('PriceKeypad: a11y and size', () => {
   it('uses the shared Phosphor icons only (decorative svgs are hidden from assistive tech)', () => {
     const { container } = setup({ hasNext: true })
     for (const svg of container.querySelectorAll('svg')) expect(svg.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('the backspace key draws the Phosphor Backspace glyph, not the back arrow', () => {
+    const glyph = (name: 'backspace' | 'back') => {
+      const { container, unmount } = render(<Icon name={name} size={20} />)
+      const html = container.querySelector('svg')?.innerHTML
+      unmount()
+      return html
+    }
+    setup()
+    const drawn = key('Backspace').querySelector('svg')?.innerHTML
+    expect(drawn).toBe(glyph('backspace'))
+    expect(drawn).not.toBe(glyph('back'))
   })
 
   it('has keys of at least 44 px (system.md) and a focus ring from the shared tokens', () => {

@@ -14,6 +14,7 @@ import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowsClockw
 import { ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight'
 import { BarcodeIcon } from '@phosphor-icons/react/dist/csr/Barcode'
 import { BasketIcon } from '@phosphor-icons/react/dist/csr/Basket'
+import { BackspaceIcon } from '@phosphor-icons/react/dist/csr/Backspace'
 import { BellIcon } from '@phosphor-icons/react/dist/csr/Bell'
 import { BirdIcon } from '@phosphor-icons/react/dist/csr/Bird'
 import { BookOpenTextIcon } from '@phosphor-icons/react/dist/csr/BookOpenText'
@@ -164,6 +165,7 @@ export const icons = {
   close: XIcon,
   back: ArrowLeftIcon,
   next: ArrowRightIcon,
+  backspace: BackspaceIcon, // beta.7 SR2: the PriceKeypad's backspace key (shop-scan-proposals.md 13.4)
   more: DotsThreeVerticalIcon,
   drag: DotsSixVerticalIcon, // sort-drag: the handle of ui/Sortable (+265 B gz, docs/dev/design/sort-drag.md section 7)
   search: MagnifyingGlassIcon,

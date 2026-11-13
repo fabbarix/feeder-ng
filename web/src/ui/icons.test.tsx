@@ -56,6 +56,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['close', 'X'],
   ['back', 'ArrowLeft'],
   ['next', 'ArrowRight'],
+  ['backspace', 'Backspace'], // beta.7 SR2: the PriceKeypad's backspace key
   ['more', 'DotsThreeVertical'],
   ['search', 'MagnifyingGlass'],
   ['filter', 'FunnelSimple'],

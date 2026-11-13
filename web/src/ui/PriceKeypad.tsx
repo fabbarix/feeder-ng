@@ -149,7 +149,7 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
           0
         </button>
         <button type="button" className="price-keypad__key" aria-label={uiStrings.backspace} onClick={() => press(pressBackspace(typed))}>
-          <Icon name="back" size={20} />
+          <Icon name="backspace" size={20} />
         </button>
       </div>
       <div className="price-keypad__actions">
