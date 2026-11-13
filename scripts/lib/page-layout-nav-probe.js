@@ -27,9 +27,12 @@ function feederNavProbe() {
     const cTop = b.top + parseFloat(s.borderTopWidth) + parseFloat(s.paddingTop)
     const cBottom = b.bottom - parseFloat(s.borderBottomWidth) - parseFloat(s.paddingBottom)
     if (cTop >= bottom || cBottom <= top) continue
-    hits.push({ e, px: Math.round(Math.min(cBottom, bottom) - Math.max(cTop, top)) })
+    // round 3: an intersection of 1 px or less is subpixel rounding at the bar's edge, not a finding
+    const overlap = Math.min(cBottom, bottom) - Math.max(cTop, top)
+    if (overlap <= 1) continue
+    hits.push({ e, px: Math.round(overlap) })
   }
   const leaves = hits.filter((h) => !hits.some((o) => o !== h && h.e.contains(o.e)))
   window.scrollTo(0, scrollY)
-  return leaves.slice(0, 3).map((h) => ({ sel: h.e.tagName.toLowerCase() + '.' + String(h.e.className).split(' ')[0], px: h.px }))
+  return leaves.slice(0, 3).map((h) => ({ sel: h.e.tagName.toLowerCase() + '.' + (h.e.getAttribute('class') || '').split(' ')[0], px: h.px }))
 }

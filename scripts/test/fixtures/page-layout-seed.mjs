@@ -10,6 +10,7 @@
 // a layout). Exit 0 whenever login worked; exit 1 when it did not.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { pickZones, SLOT_TIMES } from './page-layout-seed-zones.mjs'
 
 const args = process.argv.slice(2)
 const base = (args.find((a) => /^https?:/.test(a)) ?? '').replace(/\/$/, '')
@@ -72,13 +73,11 @@ for (const [name, colour, f] of [['Anna', '#e07a5f', 1], ['Ben', '#3d405b', 1], 
 const members = (await api('GET', '/api/members')).json ?? []
 const attendance = members.slice(0, 3).map((m) => ({ memberId: m.id, portionFactorOverride: null }))
 
-// Meal Slots: Dinner every day, Breakfast and Lunch at the weekend
+// Meal Slots: Breakfast, Lunch and Dinner every day (round 3: at any hour at least two of them are To confirm, see
+// page-layout-seed-zones.mjs)
+const SLOT_NAME = { '08:30': 'Breakfast', '13:00': 'Lunch', '19:00': 'Dinner' }
 for (let d = 1; d <= 7; d++) {
-  await step('slot', 'POST', '/api/meal-slots', { weekday: d, name: 'Dinner', time: '19:00', attendance })
-  if (d >= 6) {
-    await step('slot', 'POST', '/api/meal-slots', { weekday: d, name: 'Breakfast', time: '08:30', attendance })
-    await step('slot', 'POST', '/api/meal-slots', { weekday: d, name: 'Lunch', time: '13:00', attendance })
-  }
+  for (const time of SLOT_TIMES) await step('slot', 'POST', '/api/meal-slots', { weekday: d, name: SLOT_NAME[time], time, attendance })
 }
 
 // Ingredients
@@ -172,23 +171,24 @@ if (mainCourse && sideCourse) {
   }
 }
 // Planned Meals not marked Cooked yet (the "to-confirm" list): there is no clock to move, so the Household's time zone is moved
-// instead. In Pago Pago (UTC-11) tonight's or tomorrow's Dinner is still ahead and can be planned; in Kiritimati (UTC+14) the
-// same date is 25 hours later, so that Dinner is more than two hours past and waits to be confirmed. Best effort: in one hour a
-// day (19:00-20:00 Pago Pago time) neither date works and the guard runs without a To confirm tile.
+// instead. pickZones (page-layout-seed-zones.mjs) gives a plan zone (UTC-12) where the slot instances are still ahead, and a
+// confirm zone (UTC+14) where they are more than 2 h 15 min past. Those instances are planned while the zone is the plan zone.
 const setZone = async (timeZone) => {
   const cur = (await api('GET', '/api/household/settings')).json
   if (!cur) return
   const { timeZoneConfigured, ...rest } = cur
   await step('time zone', 'PUT', '/api/household/settings', { ...rest, timeZone })
 }
-await setZone('Pacific/Pago_Pago')
+const zones = pickZones(Date.now())
+await setZone(zones.planZone)
 await step('plan', 'POST', '/api/plan/regenerate', {})
-const pagoDate = (days) => new Date(Date.now() - 11 * 3600e3 + days * 86400e3).toISOString().slice(0, 10)
 const planned = (await api('GET', '/api/plan')).json?.slots ?? []
-for (const s of planned.filter((x) => x.name === 'Dinner' && [pagoDate(0), pagoDate(1)].includes(x.date))) {
-  for (const c of s.courses ?? []) {
-    const rid = c.courseId === sideCourse?.id ? sideIds[0] : mainR.json?.id
-    if (rid) await api('PUT', `/api/plan/${s.date}/${s.mealSlotId}/${c.courseId}`, { recipeId: rid }) // a past slot refuses: expected
+for (const t of zones.targets) {
+  for (const s of planned.filter((x) => x.name === SLOT_NAME[t.time] && x.date === t.date)) {
+    for (const c of s.courses ?? []) {
+      const rid = c.courseId === sideCourse?.id ? sideIds[0] : mainR.json?.id
+      if (rid) await api('PUT', `/api/plan/${s.date}/${s.mealSlotId}/${c.courseId}`, { recipeId: rid }) // a past slot refuses: expected
+    }
   }
 }
 // DS-A: the Plan chip line (system.md §6). A long-named Side with a big Yield (so its Leftovers are planned: "Leftover for …" on
@@ -203,7 +203,7 @@ const favId = mainR.json?.id
 if (favId) for (const m of members.slice(0, 2)) await step('favourite', 'PUT', `/api/recipes/${favId}/preference`, { state: 'favourite', memberId: m.id })
 const mondayDinner = listOf(await api('GET', '/api/meal-slots')).find((x) => x.name === 'Dinner' && x.weekday === 1)
 if (mondayDinner && mainCourse && favId) await step('slot rule', 'POST', '/api/slot-rules', { mealSlotId: mondayDinner.id, courseId: mainCourse.id, recipeId: favId })
-await setZone('Pacific/Kiritimati')
+await setZone(zones.confirmZone)
 await step('plan', 'POST', '/api/plan/regenerate', {})
 // Tomorrow's Dinner Side: the long Side, two Batches, so it leaves Leftovers for a later Dinner; the regenerate then plans them.
 const ahead = ((await api('GET', '/api/plan')).json?.slots ?? []).filter((x) => x.name === 'Dinner' && x.date > (new Date(Date.now() + 14 * 3600e3).toISOString().slice(0, 10)))

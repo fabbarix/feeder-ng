@@ -253,7 +253,7 @@ const probe = `
     if (e.matches('.sticky-action-bar')) continue // as wide as the container by design (P6 checks its alignment); its inner row is measured
     const b = e.getBoundingClientRect()
     if (b.width < 2) continue
-    if (b.right > cw + 1 && !inScroller(e)) over.push(e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0])
+    if (b.right > cw + 1 && !inScroller(e)) over.push(e.tagName.toLowerCase() + '.' + (e.getAttribute('class') || '').split(' ')[0])
     minX = Math.min(minX, b.x); maxR = Math.max(maxR, Math.min(b.right, cw))
   }
   const fields = []
@@ -347,7 +347,8 @@ const tileProbe = `
 (() => {
   const main = document.querySelector('main')
   const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 2 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
-  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
+  // round 3: named by the class attribute (an svg's className is an SVGAnimatedString)
+  const sel = (e) => e.tagName.toLowerCase() + '.' + (e.getAttribute('class') || '').split(' ')[0]
   const out = []
   for (const card of (main ? main.querySelectorAll('.tile, .list-group') : [])) {
     if (!vis(card)) continue
@@ -357,8 +358,14 @@ const tileProbe = `
       if (!vis(d)) continue
       const over = d.getBoundingClientRect().right - edge
       if (over <= 1) continue
+      // round 3: only in-flow spills count. A position: absolute or fixed box (a corner menu in the tile's padding) is not one, and
+      // neither is anything inside it; a scroll container (overflow-x auto / scroll) between the box and its card is intentional.
       let scrolled = false
-      for (let p = d.parentElement; p && p !== card; p = p.parentElement) {
+      for (let p = d; p && p !== card; p = p.parentElement) {
+        const ps = getComputedStyle(p).position
+        if (ps === 'absolute' || ps === 'fixed') { scrolled = true; break }
+      }
+      for (let p = d.parentElement; !scrolled && p && p !== card; p = p.parentElement) {
         const o = getComputedStyle(p).overflowX
         if (o === 'auto' || o === 'scroll') { scrolled = true; break }
       }

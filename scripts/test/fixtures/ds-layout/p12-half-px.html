@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><title>pending</title>
+<!-- DS-A round 3 (system.md §8): A 0.5 px intersection (subpixel rounding at the edge) is NOT a P12 finding: only more than 1 px is. The bar is 70.5 px high, so its top edge is 82.5 px above the viewport bottom (the scroll position is whole pixels, a fractional bar is how a 0.5 px edge happens); main's
+     padding-bottom (82 px) puts the last box's bottom edge 0.5 px into the bar at the end of the scroll. Read by ds-layout_test.sh. -->
+<style>body { margin: 0 } nav.bottom-bar { position: fixed; left: 12px; right: 12px; bottom: 12px; height: 70.5px; background: #ccc }
+main { padding-bottom: 82px } .filler { height: 1200px } .last { display: block; width: 200px; height: 44px; background: #9cf }</style>
+<script src="../../../lib/page-layout-nav-probe.js"></script></head><body>
+<main><div class="filler">x</div><div class="last">Last</div></main><nav class="bottom-bar">nav</nav>
+<script>document.title = JSON.stringify(typeof feederNavProbe === 'function' ? feederNavProbe() : 'no probe')</script></body></html>

@@ -26,6 +26,7 @@
 @container (max-width: 35rem) {
   .action-group {
     display: grid;
+    flex: 0 0 100%;
     grid-template-columns: 1fr 1fr 44px;
     min-inline-size: 0;
     margin-inline-start: 0;
