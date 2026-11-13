@@ -63,7 +63,7 @@ describe('TonightHero: why chips on one line', () => {
     expect(chips.length).toBeLessThanOrEqual(2)
     expect(chips.length).toBeGreaterThan(0)
     for (const c of chips) expect(c).toHaveAttribute('data-kind', 'why')
-    expect(chips[0]).toHaveAttribute('title', 'Mia and Fabio’s favourite')
+    expect(chips[0]).toHaveAttribute('title', "Mia and Fabio's favourite")
   })
 })
 

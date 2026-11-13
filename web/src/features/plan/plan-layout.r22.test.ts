@@ -33,10 +33,4 @@ describe('plan.css R2-2', () => {
   it('L-07: the hero body does not stretch the action row on desktop (no width: 100% on its buttons)', () => {
     expect(rules('.plan-hero__actions .button').join('')).not.toMatch(/width:\s*100%/)
   })
-
-  it('L-07: To confirm rows put the Recipe at the start and the actions at the end from 820 px', () => {
-    const r = inMedia(/min-width:\s*820px/, '.plan-confirm').join('')
-    expect(r).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto/)
-    expect(r).toMatch(/align-items:\s*center/)
-  })
 })

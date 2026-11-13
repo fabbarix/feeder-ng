@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest'
 import { declarations, ruleBlocks } from '../../ui/test-utils'
 import { readFeatureCss } from './test-css'
 
-const css = readFeatureCss('plan.css').replace(/\/\*[\s\S]*?\*\//g, '')
+// The hero and the To confirm rows own their stylesheet (plan.css stays free of .plan-course and chip painting).
+const css = readFeatureCss('components/TonightHero.css').replace(/\/\*[\s\S]*?\*\//g, '')
 const blocks = ruleBlocks(css)
 const rulesFor = (pred: (s: string) => boolean) => blocks.filter((b) => b.selectors.some(pred))
 const bodyOf = (selector: string) => rulesFor((s) => s === selector).map((b) => b.body).join(';')

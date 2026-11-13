@@ -24,7 +24,7 @@ describe('composeMetrics', () => {
 
   it('the labels use the Glossary words ("Leftovers", "Lines")', () => {
     const labels = composeMetrics({ streakDays: 1, leftovers: 1, linesToGet: 1 }).map((m) => m.label)
-    expect(labels.join(' ')).not.toMatch(/\b(items?|products?|left-?overs?)\b/i)
+    expect(labels.join(' ')).not.toMatch(/\b(items?|products?|left-overs?|left overs?)\b/i)
   })
 })
 
