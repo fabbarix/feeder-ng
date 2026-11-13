@@ -23,13 +23,15 @@ func (b *brgWorld) recipeWithBechamel(name string, course int64, optional ...boo
 	return id
 }
 
-// replan replaces the Planned Meals with exactly these (Main, Side) Recipes, one Batch each.
+// replan replaces the Planned Meals with exactly these (Main, Side) Recipes, one Batch each, Pinned (see newBrg). It
+// first lets the planner finish the replans the Recipes just saved started (Settle), so none fills a cell between the
+// clear and the writes and leaves a second Planned Meal on it.
 func (b *brgWorld) replan(main, side int64) {
 	b.T.Helper()
-	b.Exec(`DELETE FROM planned_meals`)
-	b.Meal(crsc2.Today, b.Slot, b.Main, main, "planned", false)
+	b.Settle()
+	b.Meal(crsc2.Today, b.Slot, b.Main, main, "planned", true)
 	if side != 0 {
-		b.Meal(crsc2.Today, b.Slot, b.Side, side, "planned", false)
+		b.Meal(crsc2.Today, b.Slot, b.Side, side, "planned", true)
 	}
 }
 

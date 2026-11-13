@@ -103,6 +103,11 @@ func line(ing int64, grams float64) map[string]any {
 
 // newBrg is the C2 household with Béchamel and Lasagne (Main) made, and Lasagne planned on Monday's Main Course for
 // batches Batches. Side is left empty so the slot is a single Course.
+//
+// The Planned Meal is Pinned. The tests write after this (a Stock Lot, a Recipe saved), and each write starts a
+// background replan that can land between any two requests. A replan never moves a Pinned meal, but it replans an
+// unpinned one whose Recipe it no longer plans: a Recipe on a Base recipe cycle is never planned, so an unpinned
+// Lasagne on a cycle would vanish and Cook Mode would answer 404.
 func newBrg(t *testing.T, batches float64) *brgWorld {
 	t.Helper()
 	b := &brgWorld{World: crsc2.New(t)}
@@ -115,7 +120,7 @@ func newBrg(t *testing.T, batches float64) *brgWorld {
 		"lines": []map[string]any{line(b.pasta, 200), {"baseRecipeId": b.béchamel, "quantity": 500, "unit": "g"}},
 		"steps": []map[string]any{step("Layer the lasagne", "active", 10), step("Bake", "passive", 30, 0)}})
 	b.Settle()
-	b.Meal(crsc2.Today, b.Slot, b.Main, b.lasagne, "planned", false)
+	b.Meal(crsc2.Today, b.Slot, b.Main, b.lasagne, "planned", true)
 	if batches != 1 {
 		b.Exec(`UPDATE planned_meals SET batches = ? WHERE course_id = ?`, batches, b.Main)
 	}
