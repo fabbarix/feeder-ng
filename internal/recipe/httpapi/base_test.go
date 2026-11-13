@@ -189,7 +189,7 @@ func TestABaseRecipeNamedLikeAPlainIngredientAsksWith409AndTheAnswerDecides(t *t
 	env := testkit.Start(t)
 	user := env.LoginUser(t)
 	jar := ingredient(t, env, "béchamel", "ml")
-	lasagne := mustCreate(t, user, body(jar, "Lasagne", nil))
+	lasagne := mustCreate(t, user, body(jar, "Lasagne", map[string]any{"lines": []any{lineOf(jar, 200, "ml")}}))
 	mustExec(t, env, `INSERT INTO stock_lots(ingredient_id, quantity, purchased, source, created_at) VALUES (?, 400, '2026-11-01', 'manual', '2026-11-01T00:00:00Z')`, jar)
 
 	r := user.Post("/api/recipes", baseBody("Béchamel", 1, "l", nil))

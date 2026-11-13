@@ -239,11 +239,32 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 		return Input{}, fieldErr("description", CodeDescTooLong, "the description is longer than 4000 characters")
 	}
 
-	if !finite(in.Yield) || in.Yield <= 0 || in.Yield > MaxYield {
-		return Input{}, fieldErr("yield", CodeYieldInvalid, "the yield must be more than 0 and at most 100")
+	isBase := in.IsBase()
+	ready := in.ReadyMeal
+	if isBase {
+		// §3.1: a Base recipe is never a Ready Meal, has no Courses and none of the plannable-only fields, and
+		// its Yield is an amount in a unit of its own (up to MaxBaseYield, so 1000 g fits).
+		if ready {
+			return Input{}, fieldErr("readyMeal", CodeBaseRecipeReadyMeal, "a Base recipe cannot be a Ready Meal")
+		}
+		if !finite(in.Yield) || in.Yield <= 0 || in.Yield > MaxBaseYield {
+			return Input{}, fieldErr("yield", CodeYieldInvalid, "the yield must be more than 0 and at most 100000")
+		}
+		unit := units.NormalizeUnit(in.YieldUnit)
+		if _, ok := YieldBase(unit); !ok {
+			return Input{}, fieldErr("yieldUnit", CodeYieldUnitInvalid, "a Base recipe's yield needs a unit: g, kg, ml, l, dl, cl, tsp, tbsp, cup, piece or portion")
+		}
+		out.YieldUnit = unit
+	} else {
+		if !finite(in.Yield) || in.Yield <= 0 || in.Yield > MaxYield {
+			return Input{}, fieldErr("yield", CodeYieldInvalid, "the yield must be more than 0 and at most 100")
+		}
+		if strings.TrimSpace(in.YieldUnit) != "" {
+			return Input{}, fieldErr("yieldUnit", CodeYieldUnitInvalid, "only a Base recipe has a yield unit")
+		}
 	}
 	out.Yield = in.Yield
-	ready := in.ReadyMeal
+	out.BaseRecipe = boolPtr(isBase)
 
 	tags, err := cleanTags(in.Tags)
 	if err != nil {
@@ -290,7 +311,7 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 	out.Source = Source{URL: src, Attribution: attribution}
 	out.Image = strings.TrimSpace(in.Image)
 
-	if len(in.Lines) == 0 {
+	if len(in.Lines) == 0 && !isBase {
 		return Input{}, fieldErr("lines", CodeLinesRequired, "a Recipe needs at least one ingredient line")
 	}
 	lines, err := cleanLines(in.Lines, lookup)
@@ -303,15 +324,21 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 	out.ReadyMeal = ready
 	out.Lines = lines
 
-	if in.CourseIDs != nil {
-		if len(in.CourseIDs) == 0 {
-			return Input{}, fieldErr("courses", CodeCoursesEmpty, "a Recipe needs at least one Course")
+	if isBase {
+		if err := baseOnlyEmpty(in); err != nil {
+			return Input{}, err
 		}
-		out.CourseIDs = dedupeIDs(in.CourseIDs)
-	}
-	if in.WholeMeal != nil {
-		whole := *in.WholeMeal
-		out.WholeMeal = &whole
+	} else {
+		if in.CourseIDs != nil {
+			if len(in.CourseIDs) == 0 {
+				return Input{}, fieldErr("courses", CodeCoursesEmpty, "a Recipe needs at least one Course")
+			}
+			out.CourseIDs = dedupeIDs(in.CourseIDs)
+		}
+		if in.WholeMeal != nil {
+			whole := *in.WholeMeal
+			out.WholeMeal = &whole
+		}
 	}
 
 	steps, err := cleanSteps(in.Steps, lookup)
@@ -319,6 +346,13 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 		return Input{}, err
 	}
 	out.Steps = steps
+
+	// Needed at (§3.3): an override names one of the Recipe's own Steps (the Base recipe check is the store's).
+	for i := range out.Lines {
+		if n := out.Lines[i].NeededAtStep; n != nil && (*n < 0 || *n >= len(steps)) {
+			return Input{}, fieldErr(fmt.Sprintf("lines[%d].neededAtStep", i), CodeNeededAtStepInvalid, "Needed at must be one of this Recipe's Steps")
+		}
+	}
 
 	// Unit convertibility comes last, so a typo in a field is reported first.
 	for i, l := range lines {
@@ -380,12 +414,16 @@ func cleanLines(in []Line, lookup IngredientLookup) ([]Line, error) {
 			return nil, fieldErr(fmt.Sprintf("lines[%d].note", i), CodeNoteTooLong, "the note is longer than 200 characters")
 		}
 		out = append(out, Line{
+			ID:           l.ID,
 			IngredientID: l.IngredientID,
 			Ingredient:   ing.Name,
 			Quantity:     l.Quantity,
 			Unit:         unit,
 			Optional:     l.Optional,
 			Note:         note,
+			NeededAtStep: copyIntPtr(l.NeededAtStep),
+			// The memory of a Base recipe line is kept by the store (§3.7); Validate carries it through.
+			LinkedFromIngredientID: l.LinkedFromIngredientID,
 		})
 	}
 	return out, nil
@@ -465,6 +503,36 @@ func runeLen(s string) int { return utf8.RuneCountInString(s) }
 func finite(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
 
 func intPtr(n int) *int { return &n }
+
+func boolPtr(b bool) *bool { return &b }
+
+func copyIntPtr(p *int) *int {
+	if p == nil {
+		return nil
+	}
+	n := *p
+	return &n
+}
+
+// baseOnlyEmpty refuses a field a Base recipe does not have (§3.1, CodeBaseRecipeField). The empty values the
+// editor sends back (no Courses, Whole meal false) are not fields that were set.
+func baseOnlyEmpty(in Input) error {
+	switch {
+	case len(in.CourseIDs) > 0:
+		return fieldErr("courses", CodeBaseRecipeField, "a Base recipe has no Courses: it is never planned")
+	case in.WholeMeal != nil && *in.WholeMeal:
+		return fieldErr("wholeMeal", CodeBaseRecipeField, "a Base recipe is not a whole meal")
+	case in.CooldownDays != nil:
+		return fieldErr("cooldownDays", CodeBaseRecipeField, "a Base recipe has no cool-down")
+	case in.LeftoverUseByDays != nil:
+		return fieldErr("leftoverUseByDays", CodeBaseRecipeField, "a Base recipe has no Use-by")
+	case in.FrozenUseByDays != nil:
+		return fieldErr("frozenUseByDays", CodeBaseRecipeField, "a Base recipe has no Frozen Use-by")
+	case in.ReheatMinutes != nil:
+		return fieldErr("reheatMinutes", CodeBaseRecipeField, "a Base recipe has no reheat time")
+	}
+	return nil
+}
 
 // TagKey is the matching key of a Tag: lower case, trimmed, whitespace collapsed.
 func TagKey(name string) string { return tag.NameKey(name) }

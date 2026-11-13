@@ -51,6 +51,14 @@ func ChooseReadyMealIngredient(recipeName string, existing []ReadyMealCandidate)
 	line := Line{Quantity: 1, Unit: string(units.Piece)}
 	key := units.NormalizeName(display)
 	for _, c := range existing {
+		if c.BaseRecipe && units.NormalizeName(c.Name) == key {
+			return ReadyMealChoice{BaseRecipeTaken: true}
+		}
+	}
+	for _, c := range existing {
+		if c.BaseRecipe {
+			continue
+		}
 		if units.NormalizeName(c.Name) != key {
 			continue
 		}

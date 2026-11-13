@@ -92,7 +92,7 @@ const pendingIngredient int64 = -1
 
 // prepare derives the Ready Meal line when needed (create: name of the Ingredient to create in
 // the transaction, empty otherwise), then validates.
-func (s *Store) prepare(ctx context.Context, in recipe.Input) (clean recipe.Input, create string, err error) {
+func (s *Store) prepare(ctx context.Context, in recipe.Input, id int64) (clean recipe.Input, create string, err error) {
 	// The placeholder only ever stands for the derived line; a Step use of it is just an unknown Ingredient.
 	for i, st := range in.Steps {
 		for j, u := range st.Uses {
@@ -102,16 +102,33 @@ func (s *Store) prepare(ctx context.Context, in recipe.Input) (clean recipe.Inpu
 			}
 		}
 	}
+	if in, err = s.resolveKind(ctx, in, id); err != nil {
+		return recipe.Input{}, "", err
+	}
+	if in, err = s.mapBaseLines(ctx, in); err != nil {
+		return recipe.Input{}, "", err
+	}
+	if err := s.checkNeededAt(ctx, in); err != nil {
+		return recipe.Input{}, "", err
+	}
 	if s.ready == nil || !recipe.NeedsReadyMealIngredient(in) {
 		clean, err = s.validate(ctx, in, nil)
-		return clean, "", err
+		if err != nil {
+			return recipe.Input{}, "", err
+		}
+		return clean, "", s.checkReadyMealName(ctx, clean, id)
 	}
 	cands, err := s.ready.Candidates(ctx)
 	if err != nil {
 		return recipe.Input{}, "", err
 	}
+	if err := s.markBaseCandidates(ctx, cands); err != nil {
+		return recipe.Input{}, "", err
+	}
 	choice := recipe.ChooseReadyMealIngredient(in.Name, cands)
 	switch {
+	case choice.BaseRecipeTaken:
+		return recipe.Input{}, "", refusedName(recipe.CodeBaseRecipeNameTaken)
 	case choice.Conflict:
 		return recipe.Input{}, "", &recipe.ValidationError{Field: "lines", Code: recipe.CodeReadyMealUnit,
 			Message: "an Ingredient with the Recipe's name already exists but is not counted in pieces; name the pack Ingredient in the line"}
@@ -126,7 +143,122 @@ func (s *Store) prepare(ctx context.Context, in recipe.Input) (clean recipe.Inpu
 		in.Lines = []recipe.Line{choice.Line}
 	}
 	clean, err = s.validate(ctx, in, nil)
-	return clean, "", err
+	if err != nil {
+		return recipe.Input{}, "", err
+	}
+	return clean, "", s.checkReadyMealName(ctx, clean, id)
+}
+
+// resolveKind settles the Base recipe kind of a save: an absent kind keeps the stored one (a create has none, id 0);
+// the other kind is refused, because the kind changes only by to-base and to-plannable (base_recipe_kind).
+func (s *Store) resolveKind(ctx context.Context, in recipe.Input, id int64) (recipe.Input, error) {
+	if id == 0 {
+		return in, nil
+	}
+	var base sql.NullInt64
+	err := s.db.QueryRowContext(ctx, `SELECT base_ingredient_id FROM recipes WHERE id = ?`, id).Scan(&base)
+	if errors.Is(err, sql.ErrNoRows) {
+		return recipe.Input{}, ErrNotFound
+	}
+	if err != nil {
+		return recipe.Input{}, err
+	}
+	if in.BaseRecipe == nil {
+		in.BaseRecipe = boolPtrOf(base.Valid)
+		return in, nil
+	}
+	if *in.BaseRecipe != base.Valid {
+		return recipe.Input{}, &recipe.ValidationError{Field: "baseRecipe", Code: recipe.CodeBaseRecipeKind,
+			Message: "a save cannot change the kind: use to-base or to-plannable"}
+	}
+	return in, nil
+}
+
+// mapBaseLines points each line that names a Base recipe (baseRecipeId) at that Base recipe's Ingredient.
+func (s *Store) mapBaseLines(ctx context.Context, in recipe.Input) (recipe.Input, error) {
+	lines := append([]recipe.Line(nil), in.Lines...)
+	for i := range lines {
+		if lines[i].BaseRecipeID == 0 {
+			continue
+		}
+		ing, err := baseIngredientOf(ctx, s.db, lines[i].BaseRecipeID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return recipe.Input{}, &recipe.ValidationError{Field: fmt.Sprintf("lines[%d].baseRecipeId", i),
+				Code: recipe.CodeUnknownIngr, Message: "that Base recipe does not exist"}
+		}
+		if err != nil {
+			return recipe.Input{}, err
+		}
+		lines[i].IngredientID = ing
+		lines[i].BaseRecipeID = 0
+	}
+	in.Lines = lines
+	return in, nil
+}
+
+// checkNeededAt refuses a Needed at on a line that is not a Base recipe line (§3.3).
+func (s *Store) checkNeededAt(ctx context.Context, in recipe.Input) error {
+	for i, l := range in.Lines {
+		if l.NeededAtStep == nil {
+			continue
+		}
+		ok, err := isBaseIngredient(ctx, s.db, l.IngredientID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return &recipe.ValidationError{Field: fmt.Sprintf("lines[%d].neededAtStep", i), Code: recipe.CodeNeededAtStepInvalid,
+				Message: "Needed at is set on a Base recipe line only"}
+		}
+	}
+	return nil
+}
+
+// markBaseCandidates tells the Ready Meal rule which Ingredients belong to a Base recipe (it never reuses them).
+func (s *Store) markBaseCandidates(ctx context.Context, cands []recipe.ReadyMealCandidate) error {
+	rows, err := s.db.QueryContext(ctx, `SELECT base_ingredient_id FROM recipes WHERE base_ingredient_id IS NOT NULL`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	bases := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		bases[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range cands {
+		cands[i].BaseRecipe = bases[cands[i].ID]
+	}
+	return nil
+}
+
+// checkReadyMealName refuses a Ready Meal named like a Base recipe (§3.2, the reverse case).
+func (s *Store) checkReadyMealName(ctx context.Context, clean recipe.Input, selfID int64) error {
+	if !clean.ReadyMeal {
+		return nil
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT name FROM recipes WHERE base_ingredient_id IS NOT NULL AND id != ?`, selfID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	key := units.NormalizeName(clean.Name)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+		if units.NormalizeName(name) == key {
+			return refusedName(recipe.CodeBaseRecipeNameTaken)
+		}
+	}
+	return rows.Err()
 }
 
 // createReadyMealIngredient creates the pending Ingredient and points the derived line at it.
@@ -148,7 +280,7 @@ func (s *Store) createReadyMealIngredient(ctx context.Context, tx *sql.Tx, clean
 // its Tags (created on use). Returns the stored Recipe with Timing filled in.
 // Errors: *recipe.ValidationError, *recipe.UnknownUnitError.
 func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, error) {
-	clean, create, err := s.prepare(ctx, in)
+	clean, create, err := s.prepare(ctx, in, 0)
 	if err != nil {
 		return recipe.Recipe{}, err
 	}
@@ -157,6 +289,9 @@ func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, err
 		return recipe.Recipe{}, err
 	}
 	defer tx.Rollback()
+	for i := range clean.Lines {
+		clean.Lines[i].ID = 0 // a new Recipe has no line ids to keep
+	}
 	if err := s.createReadyMealIngredient(ctx, tx, &clean, create); err != nil {
 		return recipe.Recipe{}, err
 	}
@@ -174,6 +309,7 @@ func (s *Store) Create(ctx context.Context, in recipe.Input) (recipe.Recipe, err
 // with the Ingredients it uses) inside the caller's transaction. It checks no
 // image ids and commits nothing. Returns the new id.
 func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (int64, error) {
+	isBase := clean.IsBase()
 	if err := checkCourses(ctx, tx, clean.CourseIDs); err != nil {
 		return 0, err
 	}
@@ -187,19 +323,29 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (i
 		return 0, err
 	}
 	courseIDs := clean.CourseIDs
-	if courseIDs == nil {
+	if courseIDs == nil && !isBase {
 		courseIDs = []int64{mainID}
+	}
+	if isBase {
+		courseIDs = nil // a Base recipe has no Courses (§3.1)
 	}
 	whole := recipe.DefaultWholeMeal(clean.ReadyMeal, courseIDs, mainID)
 	if clean.WholeMeal != nil {
 		whole = *clean.WholeMeal
 	}
+	if isBase {
+		whole = false
+	}
+	yieldUnit := sql.NullString{}
+	if isBase {
+		yieldUnit = sql.NullString{String: clean.YieldUnit, Valid: true}
+	}
 	res, err := tx.ExecContext(ctx, `INSERT INTO recipes (name, description, yield, ready_meal, cooldown_days, leftover_use_by_days, frozen_use_by_days,
-	        reheat_minutes, source_url, source_attribution, image, archived, total_minutes, advance_minutes, whole_meal, created_at, updated_at)
-	        VALUES (?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
+	        reheat_minutes, source_url, source_attribution, image, archived, total_minutes, advance_minutes, whole_meal, created_at, updated_at, yield_unit)
+	        VALUES (?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?)`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
 		nullInt(clean.FrozenUseByDays), nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes,
-		boolInt(whole), now, now)
+		boolInt(whole), now, now, yieldUnit)
 	if err != nil {
 		return 0, err
 	}
@@ -207,10 +353,21 @@ func (s *Store) CreateTx(ctx context.Context, tx *sql.Tx, clean recipe.Input) (i
 	if err != nil {
 		return 0, err
 	}
+	if isBase {
+		if _, err := s.claimBase(ctx, tx, id, 0, clean, false); err != nil {
+			return 0, err
+		}
+	}
 	if err := writeCourses(ctx, tx, id, courseIDs); err != nil {
 		return 0, err
 	}
 	if err := writeContent(ctx, tx, id, clean); err != nil {
+		return 0, err
+	}
+	if err := s.refreshTotals(ctx, tx, id); err != nil {
+		return 0, err
+	}
+	if err := checkCycles(ctx, tx, id); err != nil {
 		return 0, err
 	}
 	return id, nil
@@ -240,7 +397,7 @@ func (s *Store) Get(ctx context.Context, id int64) (recipe.Recipe, error) {
 // Update replaces every field, line and Step (PUT semantics), keeping id,
 // archived flag and created_at. Same errors as Create, plus ErrNotFound.
 func (s *Store) Update(ctx context.Context, id int64, in recipe.Input) (recipe.Recipe, error) {
-	clean, create, err := s.prepare(ctx, in)
+	clean, create, err := s.prepare(ctx, in, id)
 	if err != nil {
 		return recipe.Recipe{}, err
 	}
@@ -277,10 +434,16 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 		return nil, err
 	}
 	var storedWhole int64
-	if err := tx.QueryRowContext(ctx, `SELECT whole_meal FROM recipes WHERE id = ?`, id).Scan(&storedWhole); errors.Is(err, sql.ErrNoRows) {
+	var storedBase sql.NullInt64
+	var storedName string
+	if err := tx.QueryRowContext(ctx, `SELECT whole_meal, base_ingredient_id, name FROM recipes WHERE id = ?`, id).Scan(&storedWhole, &storedBase, &storedName); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	} else if err != nil {
 		return nil, err
+	}
+	isBase := clean.IsBase()
+	if storedBase.Valid != isBase {
+		return nil, &recipe.ValidationError{Field: "baseRecipe", Code: recipe.CodeBaseRecipeKind, Message: "a save cannot change the kind: use to-base or to-plannable"}
 	}
 	before, err := recipeImages(ctx, tx, id)
 	if err != nil {
@@ -290,7 +453,7 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 	if err != nil {
 		return nil, err
 	}
-	// Courses: nil keeps the stored ones; Whole meal: nil keeps the stored value.
+	// Courses: nil keeps the stored ones; Whole meal: nil keeps the stored value. A Base recipe has neither.
 	ids := clean.CourseIDs
 	if ids == nil {
 		ids = courseIDs(prevCourses)
@@ -299,6 +462,14 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 	if clean.WholeMeal != nil {
 		whole = *clean.WholeMeal
 	}
+	if isBase {
+		ids, whole = nil, false
+	}
+	lines, err := lineMemory(ctx, tx, id, clean.Lines)
+	if err != nil {
+		return nil, err
+	}
+	clean.Lines = lines
 	for _, q := range []string{
 		`DELETE FROM recipe_step_uses WHERE recipe_id = ?`,
 		`DELETE FROM recipe_steps WHERE recipe_id = ?`,
@@ -309,12 +480,16 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 			return nil, err
 		}
 	}
+	yieldUnit := sql.NullString{}
+	if isBase {
+		yieldUnit = sql.NullString{String: clean.YieldUnit, Valid: true}
+	}
 	if _, err := tx.ExecContext(ctx, `UPDATE recipes SET name = ?, description = ?, yield = ?, ready_meal = ?, cooldown_days = ?,
 	        leftover_use_by_days = ?, frozen_use_by_days = ?, reheat_minutes = ?, source_url = ?, source_attribution = ?, image = ?, total_minutes = ?, advance_minutes = ?,
-	        whole_meal = ?, updated_at = ? WHERE id = ?`,
+	        whole_meal = ?, yield_unit = ?, updated_at = ? WHERE id = ?`,
 		clean.Name, clean.Description, clean.Yield, boolInt(clean.ReadyMeal), nullInt(clean.CooldownDays), nullInt(clean.LeftoverUseByDays),
 		nullInt(clean.FrozenUseByDays), nullInt(clean.ReheatMinutes), clean.Source.URL, clean.Source.Attribution, clean.Image, timing.TotalMinutes, timing.AdvanceMinutes,
-		boolInt(whole), s.now(), id); err != nil {
+		boolInt(whole), yieldUnit, s.now(), id); err != nil {
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM recipe_courses WHERE recipe_id = ?`, id); err != nil {
@@ -329,10 +504,87 @@ func (s *Store) ReplaceTx(ctx context.Context, tx *sql.Tx, id int64, clean recip
 			return nil, err
 		}
 	}
+	if isBase {
+		keepName := units.NormalizeName(storedName) == units.NormalizeName(clean.Name)
+		if _, err := s.claimBase(ctx, tx, id, storedBase.Int64, clean, keepName); err != nil {
+			return nil, err
+		}
+	}
 	if err := writeContent(ctx, tx, id, clean); err != nil {
 		return nil, err
 	}
+	if err := s.refreshTotals(ctx, tx, id); err != nil {
+		return nil, err
+	}
+	if err := checkCycles(ctx, tx, id); err != nil {
+		return nil, err
+	}
 	return before, nil
+}
+
+// lineMemory keeps the line ids a Recipe's lines had (an editor's PUT names them, so a line keeps its id across saves)
+// and the plain Ingredient a Base recipe line was linked from (§3.7): an explicit one wins, else a line matched by id
+// keeps its memory, or remembers the plain Ingredient it had when a save made it a Base recipe line.
+func lineMemory(ctx context.Context, tx *sql.Tx, id int64, in []recipe.Line) ([]recipe.Line, error) {
+	type old struct{ ingredient, linked int64 }
+	rows, err := tx.QueryContext(ctx, `SELECT id, ingredient_id, linked_from_ingredient_id FROM recipe_lines WHERE recipe_id = ?`, id)
+	if err != nil {
+		return nil, err
+	}
+	existing := map[int64]old{}
+	for rows.Next() {
+		var lid, ing int64
+		var linked sql.NullInt64
+		if err := rows.Scan(&lid, &ing, &linked); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		existing[lid] = old{ing, linked.Int64}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	bases := map[int64]bool{}
+	brows, err := tx.QueryContext(ctx, `SELECT base_ingredient_id FROM recipes WHERE base_ingredient_id IS NOT NULL`)
+	if err != nil {
+		return nil, err
+	}
+	for brows.Next() {
+		var ing int64
+		if err := brows.Scan(&ing); err != nil {
+			brows.Close()
+			return nil, err
+		}
+		bases[ing] = true
+	}
+	brows.Close()
+	if err := brows.Err(); err != nil {
+		return nil, err
+	}
+	out := append([]recipe.Line(nil), in...)
+	for i := range out {
+		l := &out[i]
+		prev, matched := existing[l.ID]
+		if l.ID != 0 && !matched {
+			l.ID = 0
+		}
+		if !bases[l.IngredientID] {
+			l.LinkedFromIngredientID = 0
+			continue
+		}
+		if l.LinkedFromIngredientID == 0 && matched {
+			if bases[prev.ingredient] {
+				l.LinkedFromIngredientID = prev.linked
+			} else {
+				l.LinkedFromIngredientID = prev.ingredient
+			}
+		}
+		if l.LinkedFromIngredientID == l.IngredientID {
+			l.LinkedFromIngredientID = 0
+		}
+	}
+	return out, nil
 }
 
 // DropUnreferenced removes the stored photos in ids that no Recipe or Step uses
@@ -365,6 +617,13 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	default:
 		where = append(where, "r.archived = 0")
 	}
+	switch f.Kind {
+	case "base":
+		where = append(where, "r.base_ingredient_id IS NOT NULL")
+	case "all":
+	default: // "" and "plannable": a Base recipe is never planned, so it is hidden by default
+		where = append(where, "r.base_ingredient_id IS NULL")
+	}
 	if f.Tag != "" {
 		where = append(where, `EXISTS (SELECT 1 FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id
 		        WHERE rt.recipe_id = r.id AND t.key = ?)`)
@@ -378,7 +637,9 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 		where = append(where, `NOT EXISTS (SELECT 1 FROM recipe_courses rc WHERE rc.recipe_id = r.id AND rc.course_id = ?)`)
 		args = append(args, f.NotCourseID)
 	}
-	q := `SELECT r.id, r.name, r.yield, r.ready_meal, r.image, r.archived, r.total_minutes, r.advance_minutes, r.reheat_minutes, r.whole_meal FROM recipes r`
+	q := `SELECT r.id, r.name, r.yield, r.ready_meal, r.image, r.archived, r.total_minutes, r.advance_minutes, r.reheat_minutes, r.whole_meal,
+	        r.base_ingredient_id IS NOT NULL, r.yield_unit,
+	        (SELECT count(DISTINCT rl.recipe_id) FROM recipe_lines rl WHERE rl.ingredient_id = r.base_ingredient_id) FROM recipes r`
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -392,13 +653,18 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	out := []recipe.Summary{}
 	for rows.Next() {
 		var sum recipe.Summary
-		var ready, archived, whole int64
+		var ready, archived, whole, isBase, used int64
 		var reheat sql.NullInt64
-		if err := rows.Scan(&sum.ID, &sum.Name, &sum.Yield, &ready, &sum.Image, &archived, &sum.TotalMinutes, &sum.AdvanceMinutes, &reheat, &whole); err != nil {
+		var yieldUnit sql.NullString
+		if err := rows.Scan(&sum.ID, &sum.Name, &sum.Yield, &ready, &sum.Image, &archived, &sum.TotalMinutes, &sum.AdvanceMinutes, &reheat, &whole,
+			&isBase, &yieldUnit, &used); err != nil {
 			return nil, err
 		}
 		sum.ReheatMinutes = int(reheat.Int64)
 		sum.WholeMeal = whole == 1
+		sum.BaseRecipe = isBase == 1
+		sum.YieldUnit = yieldUnit.String
+		sum.UsedByCount = int(used)
 		sum.CourseIDs = []int64{}
 		if needle != "" && !strings.Contains(strings.ToLower(sum.Name), needle) {
 			continue
@@ -503,6 +769,19 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 	defer tx.Rollback()
+	var baseIng sql.NullInt64
+	if err := tx.QueryRowContext(ctx, `SELECT base_ingredient_id FROM recipes WHERE id = ?`, id).Scan(&baseIng); err != nil {
+		return err
+	}
+	if baseIng.Valid {
+		used, err := usedBy(ctx, tx, baseIng.Int64)
+		if err != nil {
+			return err
+		}
+		if len(used) > 0 {
+			return &recipe.InUseError{UsedBy: refsOf(used)}
+		}
+	}
 	before, err := recipeImages(ctx, tx, id)
 	if err != nil {
 		return err
@@ -511,8 +790,18 @@ func (s *Store) Delete(ctx context.Context, id int64) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM recipes WHERE id = ?`, id); err != nil {
 		return err
 	}
+	if baseIng.Valid && s.ings != nil {
+		// The Base recipe's Ingredient stays as an ordinary one (with its Stock) unless nothing holds it: it takes its
+		// plain key back here; a plain Ingredient holding the name keeps the key of the Base recipe (ErrNameTaken).
+		if err := s.ings.ReleaseBaseRecipeTx(ctx, tx, baseIng.Int64); err != nil && !errors.Is(err, ingstore.ErrNameTaken) {
+			return err
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return err
+	}
+	if baseIng.Valid && s.ings != nil {
+		_ = s.ings.Delete(ctx, baseIng.Int64) // in use (Stock, Products, lines): it stays as an ordinary Ingredient
 	}
 	s.dropUnreferenced(ctx, before)
 	return nil
@@ -532,6 +821,24 @@ func (s *Store) SetRecipeState(ctx context.Context, memberID, recipeID int64, st
 	}
 	if err := exists(ctx, s.db, `SELECT 1 FROM recipes WHERE id = ?`, recipeID, ErrNotFound); err != nil {
 		return err
+	}
+	ing, err := baseIngredientOf(ctx, s.db, recipeID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if err == nil {
+		// A Base recipe has only an Exclusion (P2), stored as the Exclusion of its Ingredient (§8).
+		switch st {
+		case recipe.StateFavourite, recipe.StateDislike:
+			return &recipe.ValidationError{Field: "state", Code: recipe.CodeBasePreference, Message: "a Base recipe has only an Exclusion"}
+		case recipe.StateExclusion:
+			_, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO member_ingredient_exclusions (member_id, ingredient_id) VALUES (?,?)`, memberID, ing)
+			return err
+		case recipe.StateNone:
+			if _, err := s.db.ExecContext(ctx, `DELETE FROM member_ingredient_exclusions WHERE member_id = ? AND ingredient_id = ?`, memberID, ing); err != nil {
+				return err
+			}
+		}
 	}
 	switch st {
 	case recipe.StateNone:
@@ -585,6 +892,23 @@ func (s *Store) Preferences(ctx context.Context, memberID int64) (Preferences, e
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
+		return Preferences{}, err
+	}
+	bases, err := s.db.QueryContext(ctx, `SELECT r.id FROM recipes r JOIN member_ingredient_exclusions e ON e.ingredient_id = r.base_ingredient_id
+		WHERE e.member_id = ?`, memberID)
+	if err != nil {
+		return Preferences{}, err
+	}
+	for bases.Next() {
+		var id int64
+		if err := bases.Scan(&id); err != nil {
+			bases.Close()
+			return Preferences{}, err
+		}
+		out.Recipes[id] = recipe.StateExclusion
+	}
+	bases.Close()
+	if err := bases.Err(); err != nil {
 		return Preferences{}, err
 	}
 	ex, err := s.db.QueryContext(ctx, `SELECT ingredient_id FROM member_ingredient_exclusions WHERE member_id = ? ORDER BY ingredient_id`, memberID)
@@ -648,6 +972,7 @@ func (s *Store) validate(ctx context.Context, in recipe.Input, preset map[int64]
 	if err != nil {
 		return recipe.Input{}, err
 	}
+	clean.TakeOver = in.TakeOver
 	if err := s.checkImages(clean); err != nil {
 		return recipe.Input{}, err
 	}
@@ -703,8 +1028,19 @@ func writeContent(ctx context.Context, tx *sql.Tx, id int64, in recipe.Input) er
 		}
 	}
 	for pos, l := range in.Lines {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO recipe_lines (recipe_id, position, ingredient_id, quantity, unit, optional, note)
-		        VALUES (?,?,?,?,?,?,?)`, id, pos, l.IngredientID, l.Quantity, l.Unit, boolInt(l.Optional), l.Note); err != nil {
+		var linked any
+		if l.LinkedFromIngredientID != 0 {
+			linked = l.LinkedFromIngredientID
+		}
+		if l.ID != 0 {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO recipe_lines (id, recipe_id, position, ingredient_id, quantity, unit, optional, note, needed_at_step, linked_from_ingredient_id)
+			        VALUES (?,?,?,?,?,?,?,?,?,?)`, l.ID, id, pos, l.IngredientID, l.Quantity, l.Unit, boolInt(l.Optional), l.Note, nullInt(l.NeededAtStep), linked); err != nil {
+				return err
+			}
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO recipe_lines (recipe_id, position, ingredient_id, quantity, unit, optional, note, needed_at_step, linked_from_ingredient_id)
+		        VALUES (?,?,?,?,?,?,?,?,?)`, id, pos, l.IngredientID, l.Quantity, l.Unit, boolInt(l.Optional), l.Note, nullInt(l.NeededAtStep), linked); err != nil {
 			return err
 		}
 	}
@@ -732,63 +1068,6 @@ func writeContent(ctx context.Context, tx *sql.Tx, id int64, in recipe.Input) er
 }
 
 // getRecipe loads a Recipe with its Tags, lines, Steps and timing.
-func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) {
-	var r recipe.Recipe
-	var ready, archived int64
-	var cool, useBy, frozenUseBy, reheat sql.NullInt64
-	var created, updated string
-	var whole int64
-	err := q.QueryRowContext(ctx, `SELECT name, description, yield, ready_meal, cooldown_days, leftover_use_by_days, frozen_use_by_days,
-	        reheat_minutes, source_url, source_attribution, image, archived, whole_meal, created_at, updated_at FROM recipes WHERE id = ?`, id).
-		Scan(&r.Name, &r.Description, &r.Yield, &ready, &cool, &useBy, &frozenUseBy, &reheat, &r.Source.URL, &r.Source.Attribution, &r.Image,
-			&archived, &whole, &created, &updated)
-	if errors.Is(err, sql.ErrNoRows) {
-		return recipe.Recipe{}, ErrNotFound
-	}
-	if err != nil {
-		return recipe.Recipe{}, err
-	}
-	r.ID = id
-	r.ReadyMeal = ready == 1
-	r.Archived = archived == 1
-	wholeMeal := whole == 1
-	r.WholeMeal = &wholeMeal
-	if cool.Valid {
-		r.CooldownDays = intPtr(int(cool.Int64))
-	}
-	if useBy.Valid {
-		r.LeftoverUseByDays = intPtr(int(useBy.Int64))
-	}
-	if frozenUseBy.Valid {
-		r.FrozenUseByDays = intPtr(int(frozenUseBy.Int64))
-	}
-	if reheat.Valid {
-		r.ReheatMinutes = intPtr(int(reheat.Int64))
-	}
-	if r.CreatedAt, err = time.Parse(time.RFC3339, created); err != nil {
-		return recipe.Recipe{}, err
-	}
-	if r.UpdatedAt, err = time.Parse(time.RFC3339, updated); err != nil {
-		return recipe.Recipe{}, err
-	}
-	if r.Tags, err = loadTags(ctx, q, id); err != nil {
-		return recipe.Recipe{}, err
-	}
-	if r.Courses, err = loadCourses(ctx, q, id); err != nil {
-		return recipe.Recipe{}, err
-	}
-	r.CourseIDs = courseIDs(r.Courses)
-	if r.Lines, err = loadLines(ctx, q, id); err != nil {
-		return recipe.Recipe{}, err
-	}
-	if r.Steps, err = loadSteps(ctx, q, id); err != nil {
-		return recipe.Recipe{}, err
-	}
-	if r.Timing, err = recipe.TimingOf(r.Steps); err != nil {
-		return recipe.Recipe{}, err
-	}
-	return r, nil
-}
 
 func loadTags(ctx context.Context, q Querier, id int64) ([]string, error) {
 	rows, err := q.QueryContext(ctx, `SELECT t.name FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id
@@ -804,27 +1083,6 @@ func loadTags(ctx context.Context, q Querier, id int64) ([]string, error) {
 			return nil, err
 		}
 		out = append(out, name)
-	}
-	return out, rows.Err()
-}
-
-func loadLines(ctx context.Context, q Querier, id int64) ([]recipe.Line, error) {
-	rows, err := q.QueryContext(ctx, `SELECT rl.ingredient_id, i.name, rl.quantity, rl.unit, rl.optional, rl.note
-	        FROM recipe_lines rl JOIN ingredients i ON i.id = rl.ingredient_id
-	        WHERE rl.recipe_id = ? ORDER BY rl.position`, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []recipe.Line
-	for rows.Next() {
-		var l recipe.Line
-		var optional int64
-		if err := rows.Scan(&l.IngredientID, &l.Ingredient, &l.Quantity, &l.Unit, &optional, &l.Note); err != nil {
-			return nil, err
-		}
-		l.Optional = optional == 1
-		out = append(out, l)
 	}
 	return out, rows.Err()
 }

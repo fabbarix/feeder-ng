@@ -17,11 +17,34 @@ var YieldUnits = []string{"g", "kg", "ml", "l", "dl", "cl", "tsp", "tbsp", "cup"
 // YieldBase is the Base Unit a Yield unit gives the Base recipe's Ingredient (§3.2): g and kg are g, the ml family
 // (ml, l, dl, cl, tsp, tbsp, cup) is ml, piece and portion are piece. ok is false for any other unit (the unit is
 // normalised first, so " L " is l).
-func YieldBase(unit string) (base units.Base, ok bool) { return "", false } // BR-B stub
+func YieldBase(unit string) (base units.Base, ok bool) {
+	switch units.NormalizeUnit(unit) {
+	case "g", "kg":
+		return units.Gram, true
+	case "ml", "l", "dl", "cl", "tsp", "tbsp", "cup":
+		return units.Millilitre, true
+	case "piece", "portion":
+		return units.Piece, true
+	}
+	return "", false
+}
 
 // YieldInBase is the Yield in Base Units (1 l is 1000 ml, 2 kg is 2000 g, 4 portion is 4 piece); ok is false for a
 // unit YieldBase refuses. It is what the `batch` Unit Conversion of the Base recipe's Ingredient holds.
-func YieldInBase(quantity float64, unit string) (float64, bool) { return 0, false } // BR-B stub
+func YieldInBase(quantity float64, unit string) (float64, bool) {
+	base, ok := YieldBase(unit)
+	if !ok {
+		return 0, false
+	}
+	if u := units.NormalizeUnit(unit); u == "portion" {
+		return quantity, true // 1 portion is 1 piece (§3.2)
+	}
+	q, err := units.ToBase(quantity, unit, units.Ingredient{Base: base})
+	if err != nil {
+		return 0, false
+	}
+	return q, true
+}
 
 // IsBase reports whether the Input is a Base recipe (BaseRecipe is set and true).
 func (in Input) IsBase() bool { return in.BaseRecipe != nil && *in.BaseRecipe }
@@ -96,7 +119,33 @@ type NameDecision struct {
 // only one that is asked about). A plain Ingredient may exist beside a Base recipe of the same name; that is not a
 // holder to refuse.
 func DecideBaseRecipeName(name string, holders []NameHolder) NameDecision {
-	return NameDecision{} // BR-B stub
+	key := units.NormalizeName(name)
+	var plain, ready *NameHolder
+	for i := range holders {
+		h := &holders[i]
+		if units.NormalizeName(h.Name) != key {
+			continue
+		}
+		switch h.Kind {
+		case HolderBaseRecipe:
+			return NameDecision{Action: NameRefuse, Code: CodeBaseRecipeNameTaken}
+		case HolderReadyMeal:
+			if ready == nil {
+				ready = h
+			}
+		case HolderPlain:
+			if plain == nil {
+				plain = h
+			}
+		}
+	}
+	switch {
+	case ready != nil:
+		return NameDecision{Action: NameRefuse, Code: CodeReadyMealNameTaken}
+	case plain != nil:
+		return NameDecision{Action: NameAsk, TakeOver: *plain}
+	}
+	return NameDecision{Action: NameOwn}
 }
 
 // ErrBaseRecipeInUse is matched by *InUseError.
