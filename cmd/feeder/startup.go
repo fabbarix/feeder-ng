@@ -59,7 +59,8 @@ func prepareDatabase(ctx context.Context, d *sql.DB, dataDir string, logger *slo
 }
 
 // prepareDatabaseWith is prepareDatabase over the migration set fsys (tests pass synthetic migration files).
-// A snapshot that already exists (1400, 1500 or 1540) is never replaced: it is the true database from before its migrations.
+// A 1500 or 1540 snapshot that already exists is never replaced (keep): it is the true database from before its migrations.
+// The 1400 one is taken again while 1400 is pending.
 func prepareDatabaseWith(ctx context.Context, d *sql.DB, dataDir string, logger *slog.Logger, fsys fs.FS) error {
 	dir := filepath.Join(dataDir, backup.DirName)
 	for _, s := range preSnapshots {

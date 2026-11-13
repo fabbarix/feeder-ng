@@ -1,6 +1,6 @@
 # Base recipes
 
-Design (docs only) for **Base recipes**, **scheduled for beta.6** (the user's answer P4 = C; nothing is built in beta.5). Written on branch `team/b5-base-design`, from main `878952b`. Architectural decisions: [ADR 0015](../../adr/0015-base-recipes.md) (Accepted, Target: beta.6). The user's answers to the design's questions are in §15; the beta.6 work packages and waves are in §14. Spec: [functional-spec.md](../../spec/functional-spec.md) decision 46 and §19, both marked "Scheduled for beta.6".
+Design (docs only) for **Base recipes**, **scheduled for beta.6** (the user's answer P4 = C; nothing is built in beta.5). Written on branch `team/b5-base-design`, from main `878952b`. Architectural decisions: [ADR 0015](../../adr/0015-base-recipes.md) (Accepted, shipped in beta.6). The user's answers to the design's questions are in §15; the beta.6 work packages and waves are in §14. Spec: [functional-spec.md](../../spec/functional-spec.md) decision 46; the behaviour is in §4, §6, §7.2, §8, §9, §11 and §13, and the API in §19 (shipped in beta.6).
 
 Terms in **bold** are [GLOSSARY](../../../GLOSSARY.md) terms; the new ones of §2 are now in GLOSSARY.md, each marked "(beta.6)". Everything was read from the tree at `878952b`.
 
@@ -25,7 +25,7 @@ The user's decisions (final), numbered as in the brief and referred to as **D1**
 | Model | A Base recipe is a Recipe with a **Base recipe Ingredient** (`recipes.base_ingredient_id`, like the Ready Meal's Ingredient but linked by id) and a Yield unit (`recipes.yield_unit`). It has no Courses, Whole meal, Cool-down, Use-by, Reheat time or Frozen Use-by. |
 | Base recipe line | An ordinary `recipe_lines` row whose Ingredient is a Base recipe Ingredient, plus an optional **Needed at** Step (`recipe_lines.needed_at_step`). No new line table. An existing plain line can be linked to one (re-pointing `ingredient_id`, remembering the old Ingredient for Undo), one by one, in bulk when a Recipe becomes a Base recipe, or all at once when the User lets the Base recipe take over a same-name Ingredient; nothing is linked silently. |
 | Stock | The Base recipe Ingredient is an ordinary Ingredient: Stock Lots, Products (a jar's barcode), Scan, Stock-take, Shelf Life, Frozen Shelf Life, Used from all work unchanged. |
-| Expansion | Read time, in a new pure package `internal/recipe/baserecipe` (unit-tested): a need tree, scaled by Unit Conversion, nested, cycle-checked. Nothing denormalised except the cached total time (as today) and the composed longest lead (`advance_minutes`), which is new in beta.6. |
+| Expansion | Read time, in a new pure package `internal/recipe/baserecipe` (unit-tested): a need tree, scaled by Unit Conversion, nested, cycle-checked. Nothing denormalised except the cached total time and the longest Advance Step lead (`advance_minutes`), both as today; from beta.6 the lead is composed over the Base recipes too (ADR 0015, decision 2). |
 | Planner | No change to `internal/planner`. A Base recipe has no Course, so Course fit already keeps it out. `DBSources` feeds the planner the flattened Ingredients (plus each Base recipe Ingredient as an optional zero line), so Exclusions and Review Exclusions look all the way down. |
 | Shopping List | `shopping.Need` gains `Made`; `derivedLines` draws the Base recipe Ingredient from Stock first and only expands the shortfall. |
 | Cooked | The runner resolves the tree against Stock (Base recipe Ingredient first), then deducts as today; Used from can pick the jar. |
@@ -278,7 +278,7 @@ A Base recipe may have no lines (Import Review's "Add it as a new Base recipe ·
 
 ## 10. API
 
-New spec section **§19 Base recipes (scheduled for beta.6)** (§18 is beta.5's). Errors use the existing `validation_failed` / conflict shapes.
+New spec section **§19 API for Base recipes** (§18 is beta.5's). The earlier §19 Base recipes was folded into §4, §6, §7.2, §8, §9, §11 and §13 when beta.6 shipped. Errors use the existing `validation_failed` / conflict shapes.
 
 **Recipes** (`internal/recipe/httpapi`):
 
@@ -424,7 +424,7 @@ Each WP runs the usual pipeline (designer/test author, developer, reviewer) in i
 | **BR-F Planning and shopping wiring** | `DBSources.Recipes` flatten + Exclusions (§5), the Base recipe Exclusion mapping; `shopping.Need.Made`, `derivedLines` Stock first, `plans.Meals` tree | `internal/plan/runner/sources.go`, new `internal/plan/runner/basetree.go`, `internal/shopping/shopping.go`, `internal/shopping/httpapi/wiring.go` | BR-B |
 | **BR-G Cooked and Cook Mode backend** | `needsFor` with `Resolve` (Stock first, Used from), composed Steps in the cook adapter, labels in the cook payloads, notify facts on composed Steps | `internal/plan/runner/{snapshot.go,courses_c2.go,actions.go,stockport.go}`, `internal/cook/**`, `internal/notify/facts/facts.go` | BR-B, BR-F (`needsFor` reads the tree kept by `basetree.go`) |
 | **BR-H Web Cook Mode** | Base recipe chips, "ready", hidden covered Steps | `web/src/features/cook/**` | BR-G (API; can build on a fixture once BR-G's tests are red) |
-| **W-BR Docs** | Done on this branch: GLOSSARY entries marked (beta.6), spec decision 46 and §19 marked "Scheduled for beta.6", the Recipe File doc's beta.6 section, ADR 0015 Accepted. Left for the beta.6 release: drop the (beta.6) notes, fold §19 into the behaviour sections (§4, §6, §7.2, §8, §9, §11, §13) and the beta.6 fields into the Recipe File tables (BR-C) | `GLOSSARY.md`, `docs/spec/functional-spec.md` | the release, last |
+| **W-BR Docs** | Done. GLOSSARY entries, spec decision 46 and §19, the Recipe File doc's beta.6 section and ADR 0015 Accepted were written on this branch. At the beta.6 release the (beta.6) notes were dropped, §19 was folded into §4, §6, §7.2, §8, §9, §11 and §13 (its API paragraph went to the new §19 API for Base recipes), and the Recipe File tables carry the beta.6 fields | `GLOSSARY.md`, `docs/spec/functional-spec.md` | the release, last |
 
 
 ### 14.2 beta.6 waves

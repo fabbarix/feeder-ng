@@ -6,7 +6,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [1.0.0-beta.6] - 2026-11-13
 
-Base recipes: a béchamel, a pasta frolla or a stock that other Recipes call for by amount, covered from Stock first and made just before the Step that needs it.
+Base recipes: a béchamel, a pasta frolla or a stock that other Recipes call for by amount, covered from Stock first and ready by the Step that needs it.
 
 ### Added
 
@@ -16,19 +16,15 @@ Base recipes: a béchamel, a pasta frolla or a stock that other Recipes call for
 - **Take over a plain Ingredient.** When a Base recipe has the name of an Ingredient you already have, Feeder asks whether the Base recipe takes it over, naming the Recipes it is on and its Stock. Yes turns all its lines into Base recipe lines and keeps the Stock; No keeps it apart. Once no line uses the old Ingredient, Feeder offers to merge it into the Base recipe's.
 - **The planner, Exclusions and Advance Steps follow Base recipes.** Every Ingredient inside a Base recipe counts for Exclusions and Review Exclusions as if it were on the Recipe, and a Base recipe's Advance Step counts for the lead time. A Base recipe takes an Exclusion only, no Favourite or Dislike.
 - **The Shopping List uses Stock of a Base recipe first.** A jar or a frozen batch in the Pantry is drawn first, and only the Ingredients of the part Stock does not cover are listed.
-- **Cooked uses Stock first.** Mark as Cooked takes the jar or batch first and deducts only the part that is made. Used from lets you pick which jar, and Courses of one slot that call for the same Base recipe share a jar.
-- **Base recipes in Cook Mode.** Steps carry their Base recipe's name, the Step it is Needed at reads "Béchamel ready", and a Base recipe that Stock covers shows "Already in Stock" and "Béchamel from Stock" instead of its Steps. Its Steps are placed where the Recipe's total time is shortest, and Start cooking comes earlier to fit them.
-- **Recipe File and Import Review.** Recipe Files can mark a Base recipe, say what its Yield is counted in, and mark a line that calls for another recipe. Import Review spots those lines, and any line whose name matches a Base recipe or a Recipe you plan, and asks what each is: use a Base recipe, use one from the same import, add a new one, turn a planned Recipe into one, or keep a plain Ingredient. It can also convert a Recipe, offer Read it next to read the missing recipe after Confirm, and offer to link the matching lines once the import is saved. Confirm waits for every answer.
-- **Download includes Base recipes.** Downloading a Recipe File of a Recipe also includes every Base recipe it calls for, at any depth, once each.
+- **Cooked uses Stock first.** Mark as Cooked takes the jar or batch first and deducts the Ingredients of only the part that is made. Used from lets you pick which jar, and Courses of one slot that call for the same Base recipe share a jar.
+- **Base recipes in Cook Mode.** Steps carry their Base recipe's name, the Step it is Needed at reads "Béchamel ready", and a Base recipe that Stock covers shows "Already in Stock" and "Béchamel from Stock" instead of its Steps. Its Steps are placed before the Step they are Needed at, where the Recipe's total time is shortest, and Start cooking comes earlier to fit them.
+- **Recipe File and Import Review.** Recipe Files can mark a Base recipe, say what its Yield is counted in, and mark a line that calls for another recipe. Import Review spots those lines, and any line whose name matches a Base recipe, a Recipe you plan or a Recipe in the same file, and asks what each is: use a Base recipe, use one from the same import, add a new one, turn a planned Recipe into one, or keep a plain Ingredient. It can also offer Read it next to read the missing recipe after Confirm, and offer to link the matching lines once the import is saved. Confirm waits for every answer.
+- **Recipe Files carry their Base recipes.** A Recipe File that Feeder writes for a Recipe also holds every Base recipe it calls for, at any depth, once each.
 
 ### Changed
 
-- **Total time and Start cooking** of a Recipe include the Steps of the Base recipes it calls for.
-- **The Ingredients page** shows a Base recipe's Ingredient with its badge and keeps its name and batch conversion read-only.
-
-### Fixed
-
-- **Totals stay in step.** When you edit a Base recipe, the total time and the longest Advance Step lead of every Recipe that calls for it, at every depth, are updated at once, so Recipe tiles and the planner agree with the Recipe's page.
+- **Total time and Start cooking** of a Recipe include the Steps of the Base recipes it calls for, and its longest Advance Step lead includes theirs. Editing a Base recipe updates them at once for every Recipe that calls for it, at any depth, so Recipe tiles and the planner agree with the Recipe's page.
+- **The Ingredients page** shows a Base recipe's Ingredient with its badge and a link to the Base recipe, and keeps its name and its batch and portion Unit Conversions read-only.
 
 ### Upgrading
 
