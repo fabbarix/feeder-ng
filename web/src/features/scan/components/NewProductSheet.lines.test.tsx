@@ -36,9 +36,9 @@ describe('NewProductSheet: Which Line is it?', () => {
   it('each chip says the amount still to get; a Restock Line says Restock', () => {
     setup({ lines })
     const names = chipNames()
-    expect(names[0]).toBe('Mozzarella125 g')
-    expect(names[3]).toBe('Eggs6 pieces')
-    expect(names[4]).toBe('Dish soapRestock')
+    expect(names[0]).toBe('Mozzarella 125 g')
+    expect(names[3]).toBe('Eggs 6 pieces')
+    expect(names[4]).toBe('Dish soap Restock')
   })
 
   it('a partly covered Line is still there', () => {

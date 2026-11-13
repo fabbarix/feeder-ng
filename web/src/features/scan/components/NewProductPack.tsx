@@ -1,6 +1,6 @@
 // Pack size (SR5, 13.5 step 3): chips of the Ingredient's usual sizes and common sizes, then Other (a number and a unit).
 import { useId } from 'react'
-import { NumberField, UnitSelect } from '../../../ui'
+import { ChoiceChip, NumberField, UnitSelect } from '../../../ui'
 import type { PackChip } from '../lib/packChips'
 import { numberText, numberValue, unitChoices, type PackSelection } from '../lib/newProductSelect'
 import { newProductStrings } from '../newProductStrings'
@@ -37,13 +37,13 @@ export function NewProductPack({ chips, pack, base, error, onPick, onOther, onSi
         className="new-product__chips"
       >
         {chips.map((chip) => (
-          <button key={chip.key} type="button" className="new-product__chip" aria-pressed={pack.key === chip.key} onClick={() => onPick(chip)}>
+          <ChoiceChip key={chip.key} pressed={pack.key === chip.key} onClick={() => onPick(chip)}>
             {chip.label}
-          </button>
+          </ChoiceChip>
         ))}
-        <button type="button" className="new-product__chip" aria-pressed={pack.other} onClick={onOther}>
+        <ChoiceChip pressed={pack.other} onClick={onOther}>
           {newProductStrings.packOther}
-        </button>
+        </ChoiceChip>
       </div>
       {pickHint ? (
         <p id={hintId} className="new-product__hint">

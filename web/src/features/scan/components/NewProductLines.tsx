@@ -1,6 +1,6 @@
 // "Which Line is it?" (SR5, 13.5 step 1): the open Lines as chips, "More Lines" past eight, and "Something else".
 import { useId } from 'react'
-import { Icon, Thumb } from '../../../ui'
+import { ChoiceChip } from '../../../ui'
 import type { UnitSystem } from '../../../lib/units'
 import { lineChipAmount, type LineChip, type LineChips } from '../lib/lineChoice'
 import { newProductStrings } from '../newProductStrings'
@@ -27,21 +27,23 @@ export function NewProductLines({ chips, system, expanded, onExpand, onPick, onS
       <p className="new-product__hint">{newProductStrings.whichLineHint}</p>
       <div className="new-product__chips">
         {shown.map((line) => (
-          <button key={line.ingredientId} type="button" className="new-product__chip" onClick={() => onPick(line)}>
-            {line.imageUrl ? <Thumb name={line.name} imageUrl={line.imageUrl} size={40} /> : null}
-            <span>{line.name}</span>
-            <span className="new-product__chip-tag">{line.restock ? newProductStrings.restock : lineChipAmount(line, system)}</span>
-          </button>
+          <ChoiceChip
+            key={line.ingredientId}
+            {...(line.imageUrl ? { thumb: { name: line.name, imageUrl: line.imageUrl } } : { icon: line.restock ? 'supply' : 'successOpen' })}
+            note={line.restock ? newProductStrings.restock : lineChipAmount(line, system)}
+            onClick={() => onPick(line)}
+          >
+            {line.name}
+          </ChoiceChip>
         ))}
         {!expanded && chips.more.length > 0 ? (
-          <button type="button" className="new-product__chip new-product__chip--quiet" onClick={onExpand}>
+          <ChoiceChip variant="quiet" onClick={onExpand}>
             {newProductStrings.moreLines}
-          </button>
+          </ChoiceChip>
         ) : null}
-        <button type="button" className="new-product__chip new-product__chip--outline" onClick={onSomethingElse}>
-          <Icon name="search" />
+        <ChoiceChip variant="outline" icon="search" onClick={onSomethingElse}>
           {newProductStrings.somethingElse}
-        </button>
+        </ChoiceChip>
       </div>
     </div>
   )
