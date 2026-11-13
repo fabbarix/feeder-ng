@@ -28,7 +28,7 @@ Each has a `*.test.ts(x)` beside it.
 **Chip.** `addBoughtChip(chips, bought, 'row' | 'sheet')`:
 - `row` (day tile, Course row): the Bought chip is added only when the row has no other chip (like the relaxed chip), so `chips` empty and `bought` set gives `[Bought]`.
 - `sheet`: always shown when Bought, placed after the leading state chips (Cooked, Not cooked, Pinned), so Pinned and Bought show both facts. Overflow counting stays in `sheetChips` (wiring below).
-- A Bought chip is `{ key: 'status:bought', kind: 'why', label: 'Bought' }` (a `PlanChip`; the component maps it to `BoughtChip`).
+- A Bought chip is `{ key: BOUGHT_CHIP_KEY, kind: 'why', label: 'Bought' }` (a `PlanChip`; the component maps it to `BoughtChip`).
 
 **Sheet line** `boughtLine`: "Bought for it: chicken thighs, cream. Automatic plan changes leave it as it is." Names in server order, joined ", ".
 
@@ -55,6 +55,14 @@ Each has a `*.test.ts(x)` beside it.
 | `warnExcluded(member, ingredient)` | {member} now excludes {ingredient}, which this uses. Swap it to change it. |
 | `warnArchived` | This Recipe is archived. Swap it to change it. |
 | `warnCourseLost(course)` | This Recipe is no longer a {course} Recipe. Swap it to change it. |
+| `warnCourseLostAny` | This Recipe is no longer a Recipe for this Course. Swap it to change it. (no `ctx.courseName`) |
+| `warnExcludedRecipe(member)` | {member} now excludes this Recipe. Swap it to change it. (`excluded` with a `memberId` and no `ingredientId`: the Member excludes the Recipe itself) |
+| `unknownMember` | A Member |
+| `unknownIngredient` | an Ingredient |
+
+`BOUGHT_CHIP_KEY` is exported from `lib/bought.ts` (a `why` chip, so no `status:` prefix). "Is Bought" means `boughtNames(b).length > 0` everywhere (chip, sheet line, Swap note): `{ ingredients: [] }` is not Bought.
+
+`warning` arrives on slot views (`slotOut.courses[i].meal.warning`), so the Planned Meal sheet reads it from there.
 
 ## 5. Later wiring (after b5-f1 merges; developer step on existing files)
 

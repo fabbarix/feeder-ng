@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { addBoughtChip, boughtLine, boughtNames, regenerateBoughtLines, swapBoughtNote, warningLine, type BoughtInfo } from './bought'
+import { BOUGHT_CHIP_KEY, addBoughtChip, boughtLine, boughtNames, regenerateBoughtLines, swapBoughtNote, warningLine, type BoughtInfo } from './bought'
 import type { PlanChip } from './chips'
+import { boughtStrings } from '../boughtStrings'
 
 const bought: BoughtInfo = { ingredients: [{ id: 1, name: 'chicken thighs' }, { id: 2, name: 'cream' }] }
 const pinned: PlanChip = { key: 'state:pinned', kind: 'state', status: 'pinned', label: 'Pinned' }
 const fav: PlanChip = { key: 'why:f', kind: 'why', label: "Anna's favourite" }
-const chip: PlanChip = { key: 'status:bought', kind: 'why', label: 'Bought' }
+const chip: PlanChip = { key: BOUGHT_CHIP_KEY, kind: 'why', label: 'Bought' }
 
 describe('boughtNames', () => {
   it('lists the Ingredient names in server order, [] when not Bought', () => {
@@ -26,6 +27,18 @@ describe('addBoughtChip', () => {
   it('the sheet always shows it, after the state chips (Pinned and Bought both shown)', () => {
     expect(addBoughtChip([pinned, fav], bought, 'sheet')).toEqual([pinned, chip, fav])
     expect(addBoughtChip([], bought, 'sheet')).toEqual([chip])
+  })
+  it('the key is exported and has no status: prefix (it is a why chip)', () => {
+    expect(BOUGHT_CHIP_KEY).not.toMatch(/^status:/)
+    expect(addBoughtChip([], bought, 'row')[0].key).toBe(BOUGHT_CHIP_KEY)
+  })
+  it('an empty Ingredient list is not Bought: no chip, no line, no note', () => {
+    const empty: BoughtInfo = { ingredients: [] }
+    expect(addBoughtChip([], empty, 'row')).toEqual([])
+    expect(addBoughtChip([], empty, 'sheet')).toEqual([])
+    expect(addBoughtChip([pinned], empty, 'sheet')).toEqual([pinned])
+    expect(boughtLine(empty)).toBeNull()
+    expect(swapBoughtNote(empty)).toBeNull()
   })
   it('nothing when not Bought', () => {
     expect(addBoughtChip([], null, 'row')).toEqual([])
@@ -51,6 +64,11 @@ describe('warningLine', () => {
   })
   it('excluded with unknown names falls back', () => {
     expect(warningLine({ code: 'excluded', memberId: 4, ingredientId: 8 }, ctx)).toBe('A Member now excludes an Ingredient, which this uses. Swap it to change it.')
+  })
+  it('excluded without an Ingredient means the Member excludes the Recipe itself', () => {
+    expect(boughtStrings.warnExcludedRecipe('Sam')).toBe('Sam now excludes this Recipe. Swap it to change it.')
+    expect(warningLine({ code: 'excluded', memberId: 3 }, ctx)).toBe('Sam now excludes this Recipe. Swap it to change it.')
+    expect(warningLine({ code: 'excluded', memberId: 4 }, ctx)).toBe('A Member now excludes this Recipe. Swap it to change it.')
   })
   it('archived and course_lost', () => {
     expect(warningLine({ code: 'archived' }, ctx)).toBe('This Recipe is archived. Swap it to change it.')
