@@ -298,3 +298,16 @@ func TestTheOfflineDataHasTheDateOfTheLastPrice(t *testing.T) {
 		}
 	}
 }
+
+// "prices" is the batch route's segment, so no scan can have it as its client uuid.
+func TestAScanCannotBeCalledPrices(t *testing.T) {
+	f := newPricesFixture(t)
+	var res struct {
+		Status string `json:"status"`
+	}
+	r := f.user.Post("/api/scan", f.op("prices"))
+	r.MustJSON(t, &res)
+	if res.Status != "rejected" {
+		t.Fatalf("scan \"prices\" = %d %s, want rejected", r.Status, r.Body)
+	}
+}
