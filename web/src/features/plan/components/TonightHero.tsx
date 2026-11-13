@@ -53,7 +53,7 @@ export function TonightHero(props: TonightHeroProps): ReactNode {
 }
 
 /** A slot that serves one Course: the single-Recipe hero, as before. */
-function SingleHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook' }: TonightHeroProps): ReactNode {
+function SingleHero({ slot, now, today = slot.date, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', dateActions }: TonightHeroProps): ReactNode {
   const row = heroRow(slot)
   const meal = row?.course.meal ?? null
   const phrase = usePhraseContext(slot.date)
@@ -69,6 +69,11 @@ function SingleHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy =
 
   return (
     <Tile variant="hero" span="full" overline={heroDayOverline({ slot, day, action })} overlineIcon={slotIcon(slot.name)} className="plan-hero">
+      {dateActions ? (
+        <div className="plan-hero__menu">
+          <SlotMenu slot={slot} today={today} onMarkAllCooked={noop} onNotCookedSlot={noop} onAddCourse={noop} dateActions={dateActions} />
+        </div>
+      ) : null}
       <div className="plan-hero__body">
         {meal.photoUrl ? <RecipeThumb name={meal.recipeName} photoUrl={meal.photoUrl} size={72} label={meal.recipeName} /> : null}
         <div className="plan-hero__text">
@@ -127,7 +132,7 @@ const noop = () => {}
  * After the slot time with two or more Courses to cook: "<Slot> cooked?" and one primary Mark all Cooked; with one left
  * it is a one-Course hero whose Yes, Cooked and Adjust report that Course.
  */
-function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', today = slot.date, rowHandlers = { onOpen: noop }, onMarkAllCooked = noop, menu }: TonightHeroProps): ReactNode {
+function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust, busy = false, day = 'today', action = 'cook', today = slot.date, rowHandlers = { onOpen: noop }, onMarkAllCooked = noop, menu, dateActions }: TonightHeroProps): ReactNode {
   const hero = heroRow(slot)
   const meal = hero?.course.meal
   const phrase = usePhraseContext(slot.date)
@@ -146,9 +151,16 @@ function SeveralCoursesHero({ slot, now, onCook, onYesCooked, onReheat, onAdjust
 
   return (
     <Tile variant="hero" span="full" overline={heroDayOverline({ slot, day, action })} overlineIcon={slotIcon(slot.name)} className="plan-hero">
-      {menu ? (
+      {menu || dateActions ? (
         <div className="plan-hero__menu">
-          <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={menu.onNotCookedSlot} onAddCourse={menu.onAddCourse} />
+          <SlotMenu
+            slot={slot}
+            today={today}
+            onMarkAllCooked={onMarkAllCooked}
+            onNotCookedSlot={menu?.onNotCookedSlot ?? noop}
+            onAddCourse={menu?.onAddCourse ?? noop}
+            dateActions={dateActions}
+          />
         </div>
       ) : null}
       <div className="plan-hero__body">

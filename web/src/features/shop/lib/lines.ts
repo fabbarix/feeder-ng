@@ -53,8 +53,10 @@ export function priceText(cents: number | null, currency: string): string | null
 
 export function lineEntry(line: ShoppingLine, currency: string, system: UnitSystem): ListEntry {
   const hint = pastMealsHint(line.pastPlannedMeals)
+  const markIt = hint ? markItTarget(line.pastPlannedMeals) : null
   return {
     ...(hint ? { hint } : {}),
+    ...(markIt ? { markIt } : {}),
     key: `line:${line.ingredientId}`,
     kind: 'line',
     ingredientId: line.ingredientId,
@@ -134,8 +136,10 @@ export function pastMealsHint(meals: PastPlannedMeal[] | undefined): string {
 }
 
 /** B5-F1: the oldest slot among the unconfirmed past meals (by date, then Meal Slot id); null without any. */
-export function markItTarget(_meals: PastPlannedMeal[] | undefined): { date: string; mealSlotId: number } | null {
-  return null
+export function markItTarget(meals: PastPlannedMeal[] | undefined): { date: string; mealSlotId: number } | null {
+  if (!meals || meals.length === 0) return null
+  const first = [...meals].sort((a, b) => a.date.localeCompare(b.date) || a.mealSlotId - b.mealSlotId)[0]!
+  return { date: first.date, mealSlotId: first.mealSlotId }
 }
 
 /** B5-SH: the entries of the collapsed "Not needed" group (list.notNeeded, in server order); [] for an older saved list. */

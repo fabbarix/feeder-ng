@@ -32,11 +32,15 @@ export const settingsApi = {
   deleteMealSlot: (id: number) => http.delete<void>(`/api/meal-slots/${id}`),
   getAttendance: (slotId: number, date: string) =>
     http.get<DateAttendance>(`/api/meal-slots/${slotId}/attendance?date=${date}`),
-  /** CRS D2: `attendance` is left out of the body when undefined (only the Courses change); `courses` is sent when given. */
-  saveAttendance: (slotId: number, date: string, attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[], _guests?: number) =>
+  /**
+   * CRS D2: `attendance` is left out of the body when undefined (only the Courses change); `courses` is sent when given.
+   * B5-F1: `guests` (0 to 20) is sent when given, 0 included (taking the Guests off).
+   */
+  saveAttendance: (slotId: number, date: string, attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[], guests?: number) =>
     http.put<DateAttendance>(`/api/meal-slots/${slotId}/attendance?date=${date}`, {
       ...(attendance !== undefined ? { attendance } : {}),
       ...(courses !== undefined ? { courses } : {}),
+      ...(guests !== undefined ? { guests } : {}),
     }),
   resetAttendance: (slotId: number, date: string) =>
     http.delete<void>(`/api/meal-slots/${slotId}/attendance?date=${date}`),

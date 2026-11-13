@@ -96,9 +96,9 @@ export function useMealSlotsPage() {
     }
   }
 
-  const saveDate = async (entries: AttendanceEntry[] | undefined, courses?: DateCourseChange[]) => {
+  const saveDate = async (entries: AttendanceEntry[] | undefined, courses?: DateCourseChange[], guests?: number) => {
     try {
-      await attendance.save(entries, courses)
+      await attendance.save(entries, courses, guests)
       toast.show(settingsStrings.attendanceSaved, { status: 'success' })
       setDateEditor(null)
     } catch (err) {

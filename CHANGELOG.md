@@ -4,6 +4,14 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **Not served for one date.** The slot menu on Plan and Today has Not served for that date only. Feeder asks first when Planned Meals go (naming what goes, and what was bought), then the slot reads "Dinner · Not served" with Plan Dinner again, and the toast has Undo. The kitchen board's Tonight and Tomorrow tiles show it too.
+- **Who's eating with Guests.** The Who's eating sheet on Plan and Today takes Guests, 0 to 20, who eat one standard portion of every Course. Taking every Member off a date with no Guests makes it Not served, as Settings does.
+- **Time today.** The slot menu on Plan and Today sets the time of one date (Time today, or Time on Thu), with Back to the usual time. A date with its own time reads "20:15 · usually 19:30".
+- **Dates that differ on Settings > Meal Slots.** The page lists the coming dates whose slot has its own time, is Not served, or has Guests.
+- **Mark it on the Shopping List.** The hint "Includes Tue Dinner, not marked Cooked yet" has a Mark it button that opens that slot's Mark as Cooked sheet on the Plan.
+
 ## [1.0.0-beta.4.2] - 2026-11-12
 
 A fix for the photo editor in Read a recipe.

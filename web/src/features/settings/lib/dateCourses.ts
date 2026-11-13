@@ -66,5 +66,5 @@ export function sameAttendance(a: readonly AttendanceEntry[], b: readonly Attend
  */
 export function hasDateOverride(attendance: { isOverride: boolean; courses?: readonly { isOverride: boolean }[]; guests?: number } | undefined): boolean {
   if (!attendance) return false
-  return attendance.isOverride || (attendance.courses ?? []).some((c) => c.isOverride)
+  return attendance.isOverride || (attendance.courses ?? []).some((c) => c.isOverride) || (attendance.guests ?? 0) > 0
 }

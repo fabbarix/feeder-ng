@@ -1,4 +1,6 @@
-import type { DateException } from '../lib/mealSlotCards'
+import { useQuery } from '@tanstack/react-query'
+import { settingsApi } from '../api'
+import { exceptionsFromPlan, type DateException } from '../lib/mealSlotCards'
 
 const NONE: DateException[] = []
 
@@ -8,5 +10,9 @@ const NONE: DateException[] = []
  * Empty while loading or when the plan cannot be read: the tile shows nothing then.
  */
 export function useDateExceptions(): DateException[] {
-  return NONE
+  const q = useQuery({
+    queryKey: ['plan', 'dates-that-differ'],
+    queryFn: async () => exceptionsFromPlan((await settingsApi.planDates()).slots),
+  })
+  return q.data ?? NONE
 }

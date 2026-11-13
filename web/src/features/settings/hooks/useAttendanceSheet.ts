@@ -1,5 +1,13 @@
 // B5-F1: everything the Who's eating sheet needs for one Meal Slot on one date, opened from Plan or Today (WhosEatingSheet).
+import { useQuery } from '@tanstack/react-query'
+import { useToast } from '../../../ui'
+import { settingsApi } from '../api'
+import { savingEmptiesDate } from '../lib/dateAttendance'
+import { errorMessage } from '../lib/errors'
+import { settingsStrings } from '../strings'
 import type { AttendanceEntry, DateAttendance, DateCourseChange, MealSlot, Member } from '../types'
+import { settingsKeys } from './queryKeys'
+import { useAttendance } from './useAttendance'
 
 /** The slot and date a Who's eating sheet is open for (the same shape as Plan's SlotDayKey). */
 export interface WhosEatingTarget {
@@ -28,7 +36,65 @@ export interface AttendanceSheetState {
   reset: () => Promise<boolean>
 }
 
+const NO_MEMBERS: Member[] = []
+
 /** `target` null = closed: no request is made. */
-export function useAttendanceSheet(_target: WhosEatingTarget | null, _options: AttendanceSheetOptions): AttendanceSheetState {
-  return { ready: false, slot: undefined, members: [], attendance: undefined, saving: false, save: async () => false, reset: async () => false }
+export function useAttendanceSheet(target: WhosEatingTarget | null, options: AttendanceSheetOptions): AttendanceSheetState {
+  const toast = useToast()
+  const open = target !== null
+  const slots = useQuery({ queryKey: settingsKeys.slots, queryFn: settingsApi.listMealSlots, enabled: open })
+  const members = useQuery({ queryKey: settingsKeys.members, queryFn: settingsApi.listMembers, enabled: open })
+  const att = useAttendance(target?.mealSlotId ?? null, target?.date ?? null)
+  const slot = target ? slots.data?.find((s) => s.id === target.mealSlotId) : undefined
+  const ready = open && slot !== undefined && members.data !== undefined && att.attendance !== undefined
+
+  const close = () => options.onClose()
+
+  const save = async (attendance: AttendanceEntry[] | undefined, courses?: DateCourseChange[], guests?: number): Promise<boolean> => {
+    if (!target || !slot) return false
+    if (savingEmptiesDate({ attendance, guests }, att.attendance, slot.attendance)) {
+      if (options.beforeEmptying && !(await options.beforeEmptying(target))) return false
+      try {
+        await att.save(attendance, courses, guests)
+      } catch (err) {
+        toast.show(errorMessage(err), { status: 'error' })
+        return false
+      }
+      options.onEmptied?.(target)
+      close()
+      return true
+    }
+    try {
+      await att.save(attendance, courses, guests)
+      toast.show(settingsStrings.attendanceSaved, { status: 'success' })
+      close()
+      return true
+    } catch (err) {
+      toast.show(errorMessage(err), { status: 'error' })
+      return false
+    }
+  }
+
+  const reset = async (): Promise<boolean> => {
+    if (!target) return false
+    try {
+      await att.reset()
+      toast.show(settingsStrings.attendanceReset, { status: 'success' })
+      close()
+      return true
+    } catch (err) {
+      toast.show(errorMessage(err), { status: 'error' })
+      return false
+    }
+  }
+
+  return {
+    ready,
+    slot,
+    members: members.data ?? NO_MEMBERS,
+    attendance: att.attendance,
+    saving: att.saving,
+    save,
+    reset,
+  }
 }

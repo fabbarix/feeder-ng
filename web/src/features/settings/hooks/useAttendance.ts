@@ -27,6 +27,8 @@ export function useAttendance(slotId: number | null, date: string | null): Atten
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: settingsKeys.attendance(slotId ?? 0, date ?? '') }),
       queryClient.invalidateQueries({ queryKey: settingsKeys.slots }),
+      // B5-F1: Guests and the emptied date show on the plan and in "Dates that differ".
+      queryClient.invalidateQueries({ queryKey: ['plan'] }),
     ])
   }
   const save = useMutation({

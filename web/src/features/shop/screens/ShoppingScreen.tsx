@@ -1,6 +1,7 @@
 // The Shop screen (bottom bar "Shop", route /shop). Wires hooks to components; no fetching or domain maths here.
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { markSlotPath } from '../../plan'
 import { ApiError } from '../../../lib/http'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { useIngredientChoices } from '../../stock/hooks/useIngredientChoices'
@@ -146,6 +147,9 @@ export function ShoppingScreen() {
           onScan={() => navigate('/scan')}
           onNotNeeded={onNotNeeded}
           onNeededAfterAll={onNeededAfterAll}
+          onMarkIt={(entry) => {
+            if (entry.markIt) navigate(markSlotPath(entry.markIt))
+          }}
         />
       ) : null}
       {sheet?.kind === 'tick' && data ? (
