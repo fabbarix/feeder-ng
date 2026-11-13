@@ -49,7 +49,7 @@ func Propose(rows []Row, ans Answer, ctx Context) Result {
 			lines = append(lines, ans.Lines[i])
 		}
 		text := lines[0].Text
-		if row.Weighed {
+		if byWeight(row, lines) {
 			if p, ok := weighedPriceProposal(r, row, lines, text); ok {
 				price = append(price, p)
 			}
@@ -211,15 +211,50 @@ func weighedPerKg(lines []Line) (int, bool) {
 	return roundDiv(sumPrice*1000, sumGrams), true
 }
 
-// weighedBeforePerKg is the row's current price per kg, from its stored per-kg price or its total and quantity.
-func weighedBeforePerKg(row Row) (int, bool) {
+// byWeight: the row is read by weight, a weighed row or a Product in g whose lines give grams (design §6, weight).
+func byWeight(row Row, lines []Line) bool {
+	if row.Weighed {
+		return true
+	}
+	if row.BaseUnit != "g" {
+		return false
+	}
+	for _, l := range lines {
+		if l.Grams > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// rowPerKg is the row's current price per kg: its stored per-kg price, else a weighed row's total over its quantity,
+// else a pack row's per-pack Price over its pack size.
+func rowPerKg(row Row) (int, bool) {
 	if row.PerKgCents >= 0 {
 		return row.PerKgCents, true
 	}
-	if row.PriceCents >= 0 && row.Quantity > 0 {
-		return roundDiv(row.PriceCents*1000, int(math.Round(row.Quantity))), true
+	if row.PriceCents < 0 {
+		return 0, false
 	}
-	return 0, false
+	den := row.PackSize
+	if row.Weighed {
+		den = int(math.Round(row.Quantity))
+	}
+	if den <= 0 {
+		return 0, false
+	}
+	return roundDiv(row.PriceCents*1000, den), true
+}
+
+// rowTotal is what the row costs now: a weighed row's Price is already its total; a pack row's is per pack.
+func rowTotal(row Row) (int, bool) {
+	if row.PriceCents < 0 {
+		return 0, false
+	}
+	if row.Weighed {
+		return row.PriceCents, true
+	}
+	return row.PriceCents * row.Scans, true
 }
 
 func weighedPriceProposal(r int, row Row, lines []Line, text string) (Proposal, bool) {
@@ -227,7 +262,7 @@ func weighedPriceProposal(r int, row Row, lines []Line, text string) (Proposal, 
 	if !ok {
 		return Proposal{}, false
 	}
-	before, haveBefore := weighedBeforePerKg(row)
+	before, haveBefore := rowPerKg(row)
 	if haveBefore && before == after {
 		return Proposal{}, false
 	}
@@ -251,7 +286,8 @@ func lineTotal(lines []Line) (int, bool) {
 	return sum, true
 }
 
-// weightProposal: Σ grams differs from the scanned quantity by more than 1 % and more than 2 g.
+// weightProposal: Σ grams differs from the scanned quantity by more than 1 % and more than 2 g. The new Price is the
+// lines' total, else the printed per kg, else the row's own per kg, at the new weight.
 func weightProposal(r int, row Row, lines []Line, text string) (Proposal, bool) {
 	grams := 0
 	for _, l := range lines {
@@ -269,10 +305,12 @@ func weightProposal(r int, row Row, lines []Line, text string) (Proposal, bool) 
 		after.PriceCents = intPtr(total)
 	} else if pk, ok := weighedPerKg(lines); ok {
 		after.PriceCents = intPtr(roundDiv(pk*grams, 1000))
+	} else if pk, ok := rowPerKg(row); ok {
+		after.PriceCents = intPtr(roundDiv(pk*grams, 1000))
 	}
 	before := Value{Grams: intPtr(int(math.Round(cur)))}
-	if row.PriceCents >= 0 {
-		before.PriceCents = intPtr(row.PriceCents)
+	if total, ok := rowTotal(row); ok {
+		before.PriceCents = intPtr(total)
 	}
 	return Proposal{ID: pid("weight", r), Kind: KindWeight, Row: r, Line: -1, Text: text, Checked: true,
 		Before: before, After: after}, true

@@ -397,3 +397,38 @@ func TestProposeOnAnExactReceiptProposesNothingButMissingRows(t *testing.T) {
 		t.Errorf("proposals = %v", got)
 	}
 }
+
+// Review: a weighed line whose price and per kg are both unreadable keeps the row's own price per kg (design §6, "the
+// new Price follows").
+func TestWeightPriceFollowsTheRowsPerKgWhenTheLineHasNone(t *testing.T) {
+	r := propose(t, nil, mkLine(map[string]any{"row": 1, "grams": 330}))
+	p := mustFind(t, r, "weight:1")
+	if p.After.PriceCents == nil || *p.After.PriceCents != 660 {
+		t.Errorf("the row's 2000/kg x 330 g = 660: %+v", p.After)
+	}
+	none(t, r, "price:1")
+}
+
+// Review: design §6 reads "a weighed row (or a Product in g whose line has grams > 0)" by weight.
+func TestAProductInGramsWhoseLineGivesGramsIsReadByWeight(t *testing.T) {
+	r := propose(t, nil, mkLine(map[string]any{"row": 0, "grams": 1500, "priceCents": 290}))
+	w := mustFind(t, r, "weight:0")
+	if *w.Before.Grams != 1400 || *w.After.Grams != 1500 || *w.After.PriceCents != 290 || *w.Before.PriceCents != 258 {
+		t.Errorf("weight = before %v/%v after %v/%v", *w.Before.Grams, *w.Before.PriceCents, *w.After.Grams, *w.After.PriceCents)
+	}
+	p := mustFind(t, r, "price:0")
+	if !p.After.PerKg || *p.After.PriceCents != 193 || *p.Before.PriceCents != 184 { // 290 / 1.5 kg; 129 / 0.7 kg
+		t.Errorf("price per kg = before %v after %v", *p.Before.PriceCents, *p.After.PriceCents)
+	}
+	none(t, r, "quantity:0")
+	none(t, r, "pack_size:0")
+}
+
+func TestAWeighedRowWithATinyQuantityDoesNotDivideByZero(t *testing.T) {
+	rows := fixtureRows()
+	rows[1].Quantity, rows[1].PerKgCents = 0.3, -1
+	a := answer(t, nil, mkLine(map[string]any{"row": 1, "grams": 300, "priceCents": 600}))
+	if _, ok := find(receipt.Propose(rows, a, fixtureCtx()).Proposals, "price:1"); !ok {
+		t.Error("the line's per kg is proposed, the row has none")
+	}
+}

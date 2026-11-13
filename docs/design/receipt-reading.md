@@ -271,7 +271,7 @@ it concerns, and the values before and after.
 | Kind | Rule |
 |---|---|
 | `price` | A row's lines (all with readable `priceCents`): pack rows → per pack = round(Σ price / Σ count), or `unitPriceCents` when every line printed the same one; weighed rows → per kg from `perKgCents`, else Σ price × 1000 / Σ grams. Proposed when the row has no Price or differs by at least one minor unit. |
-| `weight` | A weighed row (or a Product in g whose line has `grams` > 0): Σ grams differs from the scanned quantity by more than 1 % or 2 g. The new Price follows (`PriceForWeight`). |
+| `weight` | A weighed row (or a Product in g whose line has `grams` > 0; such a row is then read by weight: Price per kg, no quantity or pack size): Σ grams differs from the scanned quantity by more than 1 % or 2 g. The new Price follows: the lines' amount, else their per kg, else the row's own per kg at the new weight; the new scan keeps the per kg. |
 | `quantity` | A pack row: Σ count differs from its scans. |
 | `pack_size` | A matched line's `packSize` (in the row's Base Unit) differs from the Product's pack size. |
 | `name` | A matched line with a non-empty `name` that differs from the Product name (case and spacing ignored). |

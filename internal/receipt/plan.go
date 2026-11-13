@@ -283,22 +283,23 @@ func BuildPlan(in PlanInput) (Plan, error) {
 		}
 	}
 
-	// Quantity: more or fewer scans, or another weight (a weighed row is scanned again once).
+	// Quantity: more or fewer scans, or another weight (a row read by weight is scanned again once, keeping its price
+	// per kg).
 	for r, row := range rows {
 		if removed[r] {
 			continue
 		}
-		if row.Weighed {
-			wp, ok := accP("weight", r)
-			if !ok {
-				continue
-			}
+		if wp, ok := accP("weight", r); ok {
 			grams := deref(wp.After.Grams)
 			prP, priceOK := accP("price", r)
-			total := -1
+			total, perKg := -1, -1
+			if pk, ok := rowPerKg(row); ok {
+				perKg = pk
+			}
 			switch {
 			case priceOK && prP.After.PerKg:
-				total = roundDiv(deref(prP.After.PriceCents)*grams, 1000)
+				perKg = deref(prP.After.PriceCents)
+				total = roundDiv(perKg*grams, 1000)
 			case wp.After.PriceCents != nil:
 				total = *wp.After.PriceCents
 			}
@@ -307,10 +308,10 @@ func BuildPlan(in PlanInput) (Plan, error) {
 			}
 			u := b.newUUID()
 			b.add(Step{Phase: PhaseQuantity,
-				Op:      Op{Kind: OpNewScan, UUID: u, ProductID: row.ProductID, Quantity: float64(grams), PriceCents: total, PerKgCents: -1, ShopID: shopID, Date: date},
+				Op:      Op{Kind: OpNewScan, UUID: u, ProductID: row.ProductID, Quantity: float64(grams), PriceCents: total, PerKgCents: perKg, ShopID: shopID, Date: date},
 				Inverse: Op{Kind: OpUndo, UUID: u}})
 			// The Price is carried by the new scan, so the price step skips this row.
-			live[r] = []liveScan{{uuid: u, productID: row.ProductID, qty: float64(grams), price: total, perKg: -1, shopID: shopID, date: date, priced: true}}
+			live[r] = []liveScan{{uuid: u, productID: row.ProductID, qty: float64(grams), price: total, perKg: perKg, shopID: shopID, date: date, priced: true}}
 			continue
 		}
 		qp, ok := accP("quantity", r)

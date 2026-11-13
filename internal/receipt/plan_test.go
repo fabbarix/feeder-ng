@@ -408,3 +408,21 @@ func TestAReweighedRowIsScannedAgainOnceAtTheNewShop(t *testing.T) {
 		t.Errorf("new scan = %+v", o)
 	}
 }
+
+func TestAWeightChangeKeepsThePricePerKg(t *testing.T) {
+	p := buildPlan(t, planInput(t, nil, []string{"weight:1"}, nil, mkLine(map[string]any{"row": 1, "grams": 330})))
+	if n := p.Steps[len(p.Steps)-1].Op; n.Kind != receipt.OpNewScan || n.Quantity != 330 || n.PriceCents != 660 || n.PerKgCents != 2000 {
+		t.Errorf("new scan = %+v", n)
+	}
+}
+
+func TestAPackRowReadByWeightIsScannedAgainOnceAtItsWeight(t *testing.T) {
+	p := buildPlan(t, planInput(t, nil, []string{"weight:0", "price:0"}, nil, mkLine(map[string]any{"row": 0, "grams": 1500, "priceCents": 290})))
+	got := kinds(p)
+	if len(got) != 3 || got[0] != receipt.OpUndo || got[1] != receipt.OpUndo || got[2] != receipt.OpNewScan {
+		t.Fatalf("steps = %v", got)
+	}
+	if n := p.Steps[2].Op; n.ProductID != 10 || n.Quantity != 1500 || n.PerKgCents != 193 || n.PriceCents != 290 {
+		t.Errorf("new scan = %+v", n)
+	}
+}
