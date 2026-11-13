@@ -4,6 +4,20 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.6.1] - 2026-11-13
+
+Recipe reading works again, and the Recipes list has a simpler filter header that copes with many Tags.
+
+### Fixed
+
+- **Reading a recipe with the Recipe Assistant failed** with "The compiled grammar is too large" since 1.0.0-beta.6. The answer Feeder asks Claude for grew too large with the Base recipe fields; it is back within the limit, and reading a recipe that calls for another one (a lasagne with its béchamel) works again.
+- **The Recipes filter header** showed every Tag as an unnamed coloured dot in a row that ran off the screen, and stacked Kind, Course and Sort on separate lines. It is now Search with a Filters button, then the Recipes or Base recipes switch with a compact Sort. Filters opens a panel (a sheet on a phone) with the Courses and a searchable list of Tags by name, colour and Recipe count. The filters you pick show as named chips you can remove, with "+N" when they don't fit. The chosen Course is now kept in the page address, so going back to the list keeps it.
+- **Settings › Tags** cut off a long Tag's Recipe count and pushed its arrow past the edge on a phone; a long Tag name now ends in an ellipsis, with the full name kept for screen readers.
+
+### Upgrading
+
+No new settings and no migrations. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.6.1 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
 ## [1.0.0-beta.6] - 2026-11-13
 
 Base recipes: a béchamel, a pasta frolla or a stock that other Recipes call for by amount, covered from Stock first and ready by the Step that needs it.
@@ -285,7 +299,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.1...HEAD
+[1.0.0-beta.6.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6...v1.0.0-beta.6.1
 [1.0.0-beta.6]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5.1...v1.0.0-beta.6
 [1.0.0-beta.5.1]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.5...v1.0.0-beta.5.1
 [1.0.0-beta.5]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.4.2...v1.0.0-beta.5
