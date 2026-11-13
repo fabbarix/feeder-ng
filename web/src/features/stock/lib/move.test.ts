@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkMoveQuantity, moveNote } from './move'
+import { checkMoveQuantity, lotMoveNote, moveNote } from './move'
 
 const pantry = { id: 1, name: 'Kitchen Pantry', kind: 'pantry' as const, default: true }
 const fridge = { id: 2, name: 'Garage Fridge', kind: 'fridge' as const, default: false }
@@ -31,5 +31,14 @@ describe('checkMoveQuantity', () => {
     expect(checkMoveQuantity('1001', lot)).toEqual({ ok: false, error: 'tooMuch' })
     expect(checkMoveQuantity('0', lot)).toMatchObject({ ok: false })
     expect(checkMoveQuantity('lots', lot)).toMatchObject({ ok: false })
+  })
+})
+
+describe('lotMoveNote', () => {
+  it('a Supply never goes off: a Freezer move has no note; food keeps the note', () => {
+    expect(lotMoveNote({ kind: 'supply' }, pantry, freezer)).toBeNull()
+    expect(lotMoveNote({ kind: 'supply' }, freezer, pantry)).toBeNull()
+    expect(lotMoveNote({ kind: 'food' }, fridge, freezer)).toBe('freezer')
+    expect(lotMoveNote({}, freezer, fridge)).toBe('thaw')
   })
 })

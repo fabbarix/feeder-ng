@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { BottomSheet, Button, FormActions, Select, TextField, useConfirm } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { capitalise, formatLotDate } from '../lib/display'
-import { checkMoveQuantity, moveNote } from '../lib/move'
+import { checkMoveQuantity, lotMoveNote } from '../lib/move'
 import { checkUsedUp, isSupply } from '../lib/supplies'
 import { describeGoOff } from '../lib/view'
 import { stockStrings as strings } from '../strings'
@@ -74,7 +74,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
   const [usedAmount, setUsedAmount] = useState('')
   const [usedError, setUsedError] = useState<string | null>(null)
   const to = places.find((p) => p.id === placeId) ?? null
-  const note = moveNote(from, to)
+  const note = lotMoveNote(lot, from, to)
   const all = formatQuantity(lot.quantity, lot.baseUnit, system)
   const options = places.filter((p) => p.id !== lot.storagePlaceId).map((p) => ({ value: p.id, label: p.name, meta: strings.kinds[p.kind] }))
   return (

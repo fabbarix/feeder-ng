@@ -10,6 +10,11 @@ export function moveNote(from: StoragePlace | null, to: StoragePlace | null): 'f
   return null
 }
 
+/** The note for this Lot's move: none for a Supply, which never goes off (household-items.md 4.2: a Freezer move changes nothing). */
+export function lotMoveNote(lot: Pick<StockLot, 'kind'>, from: StoragePlace | null, to: StoragePlace | null): 'freezer' | 'thaw' | null {
+  return lot.kind === 'supply' ? null : moveNote(from, to)
+}
+
 export type MoveCheck = { ok: true; quantity: number | undefined } | { ok: false; error: AmountError | 'tooMuch' }
 
 /** The quantity to send: blank or the whole Lot = undefined (move it all); more than the Lot holds is refused. */
