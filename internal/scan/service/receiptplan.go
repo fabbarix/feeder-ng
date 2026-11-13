@@ -29,12 +29,15 @@ type ReceiptApplyResult struct {
 }
 
 // ReceiptApplyError is a plan that failed at Step, its index in the plan. Err is the step's error. Compensation is nil
-// when every step before it was put back; otherwise it says what could not be.
+// when every step before it was put back; otherwise it says what could not be. Results are the scans the put-back
+// wrote: each scan the plan had undone is applied again under a new uuid (receipt:<readId>:undo:<its uuid>, with a
+// "#n" suffix on a retry), which the phone learns only from these Results (receipt-reading §7.2).
 type ReceiptApplyError struct {
 	Step         int
 	Kind         receipt.OpKind
 	Err          error
 	Compensation error
+	Results      []scan.Result
 }
 
 func (e *ReceiptApplyError) Error() string {
@@ -220,7 +223,8 @@ func (s *Service) applyReceiptPlan(ctx context.Context, plan receipt.Plan) (Rece
 			if compErr != nil {
 				s.publish()
 			}
-			return ReceiptApplyResult{}, &ReceiptApplyError{Step: i, Kind: st.Op.Kind, Err: err, Compensation: compErr}
+			return ReceiptApplyResult{}, &ReceiptApplyError{Step: i, Kind: st.Op.Kind, Err: err, Compensation: compErr,
+				Results: r.restored}
 		}
 		if comp != nil {
 			undo = append(undo, comp)
@@ -240,6 +244,8 @@ type planRun struct {
 	index   map[string]int    // client uuid -> its place in results
 	uuids   map[string]string // a plan uuid -> the uuid this run writes it under (see resolveUUID)
 	results []scan.Result
+	// restored are the Results of the scans a put-back wrote (an undone scan applied again under a new uuid).
+	restored []scan.Result
 }
 
 // errNoFreeUUID: every suffix of a plan uuid is taken by a put-back attempt (never expected; see resolveUUID).
@@ -349,10 +355,14 @@ func (r *planRun) inverse(op receipt.Op) func(context.Context) error {
 }
 
 // exec runs one operation of an inverse (or a correction): the operations the plan's steps use, against the same ports.
+// A new scan only comes from an inverse (an Undo put back); its Result is kept in restored.
 func (r *planRun) exec(ctx context.Context, op receipt.Op) error {
 	switch op.Kind {
 	case receipt.OpNewScan:
-		_, err := r.newScan(ctx, op)
+		res, err := r.newScan(ctx, op)
+		if err == nil && res.Status == scan.StatusApplied {
+			r.restored = append(r.restored, res)
+		}
 		return err
 	case receipt.OpUndo:
 		_, err := r.s.undo(ctx, r.mapped(op.UUID))

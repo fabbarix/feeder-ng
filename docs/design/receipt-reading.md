@@ -331,7 +331,12 @@ User; 30 accepted reads per Household per rolling hour for non-Admins. A receipt
      current ones.
   3. Every accepted id must be one of the read's proposals; each `add` must have its choices (`422` with the proposal id).
   4. The plan (§8) runs; the answer is `200 {applied: n, results: [ScanResult...]}` with the new scan Results, so the phone
-     rebuilds its session from them.
+     rebuilds its session from them. `n` counts the distinct accepted ids (an id sent twice is one proposal).
+  5. A step that fails puts back every step before it (§8.3) and answers
+     `500 {error: {code: "receipt_apply_failed", message}, results: [ScanResult...]}`. Putting back an Undo applies the scan
+     again under a **new** uuid, `receipt:<readId>:undo:<its uuid>` (with a `#n` suffix when an earlier attempt already used
+     it), so `results` carries those scans, in the same shape as the 200's (`[]` when the put-back wrote none). The phone
+     re-keys its Scanned list: each result replaces the scan whose uuid follows `undo:`. Nothing else in the session changed.
 - Validation happens before the first write; the plan is built in full first.
 
 ### 7.3 Offline

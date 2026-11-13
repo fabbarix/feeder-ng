@@ -1,6 +1,7 @@
 package httpapi_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -605,5 +606,58 @@ func TestADuplicateAcceptIdIsAppliedAndCountedOnce(t *testing.T) {
 	}
 	if out.Applied != 1 || len(out.Results) != 2 {
 		t.Errorf("applied %d with %d results, want 1 with 2: %+v", out.Applied, len(out.Results), out)
+	}
+}
+
+// A failed apply puts back the scans it undid under new uuids; the 500 carries their Results, in the 200's shape, so
+// the phone can re-key its Scanned list (design §7.2).
+func TestAFailedApplyReturnsTheScansItsPutBackWrote(t *testing.T) {
+	f := newReceiptFixture(t)
+	uuids := f.session(t)
+	one := receipt.Line{Row: 0, Text: "MUTTI PASSATA", Count: 1, PriceCents: intp(129)} // 1 pack, 2 scanned: undo "b"
+	read := f.read(t, uuids, one, addLine("Pasta", 100))
+	ids := f.addIDs(read)
+	if len(ids) != 1 {
+		t.Fatalf("adds = %v", ids)
+	}
+	b := body(uuids, "quantity:0", ids[0])
+	b["adds"] = []any{map[string]any{"id": ids[0], "ingredient": map[string]any{"id": 999999}, "productName": "Pasta", "packSize": 500}} // no such Ingredient
+	r := f.apply(b)
+	var out struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+		Results []struct {
+			ClientUUID string `json:"clientUuid"`
+			Status     string `json:"status"`
+			Scan       struct {
+				ProductName string `json:"productName"`
+				PriceCents  *int   `json:"priceCents"`
+			} `json:"scan"`
+		} `json:"results"`
+	}
+	if r.Status != 500 || jsonInto(r.Body, &out) != nil || out.Error.Code != "receipt_apply_failed" {
+		t.Fatalf("apply = %d %s", r.Status, r.Body)
+	}
+	if len(out.Results) != 1 || out.Results[0].ClientUUID != "receipt:r1:undo:b" || out.Results[0].Status != "applied" ||
+		out.Results[0].Scan.PriceCents == nil || *out.Results[0].Scan.PriceCents != 129 {
+		t.Fatalf("results = %+v, want the put-back of b under receipt:r1:undo:b", out.Results)
+	}
+	if f.lots(t) != 2 || f.spent(t) != 258 {
+		t.Errorf("not put back: Lots %d, spent %d", f.lots(t), f.spent(t))
+	}
+}
+
+// A failure with nothing to put back still answers results, empty.
+func TestAFailedApplyWithNothingPutBackAnswersEmptyResults(t *testing.T) {
+	f := newReceiptFixture(t)
+	uuids := f.session(t)
+	read := f.read(t, uuids, addLine("Pasta", 100))
+	ids := f.addIDs(read)
+	b := body(uuids, ids[0])
+	b["adds"] = []any{map[string]any{"id": ids[0], "ingredient": map[string]any{"id": 999999}, "productName": "Pasta", "packSize": 500}}
+	r := f.apply(b)
+	if r.Status != 500 || !bytes.Contains(r.Body, []byte(`"results":[]`)) {
+		t.Fatalf("apply = %d %s, want 500 with results []", r.Status, r.Body)
 	}
 }

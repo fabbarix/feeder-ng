@@ -123,7 +123,8 @@ func (c addChoice) choice() receipt.AddChoice {
 }
 
 // apply answers 200 {applied, results}; 409 receipt_session_changed, receipt_read_not_done or assistant_unavailable;
-// 410 receipt_read_gone; 422 unknown_proposal or add_incomplete with the proposal's id; 500 receipt_apply_failed.
+// 410 receipt_read_gone; 422 unknown_proposal or add_incomplete with the proposal's id; 500 receipt_apply_failed with
+// the results of the scans the put-back wrote.
 func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
 	var body applyBody
 	if err := httpx.DecodeJSON(r, &body); err != nil {
@@ -204,7 +205,7 @@ func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
 			// Counts only: the step's index and kind, and whether the put-back failed; never the rows or the uuids.
 			slog.ErrorContext(ctx, "receipt apply failed", "step", ae.Step, "kind", string(ae.Kind), "putBackFailed", ae.Compensation != nil)
 		}
-		httpx.WriteError(w, http.StatusInternalServerError, "receipt_apply_failed", "The receipt could not be applied. Check the Scanned list and try again.")
+		applyFailed(w, ae)
 		return
 	case err != nil:
 		httpx.WriteAPIError(w, err)
@@ -224,6 +225,19 @@ func (a *applier) lookup(ctx context.Context, userID int64, readID string) (Appl
 		return ApplyRead{}, ErrReadGone
 	}
 	return l.Lookup(ctx, userID, readID)
+}
+
+// applyFailed is the 500 receipt_apply_failed. Its results are the scans the put-back wrote, in the 200's shape, so the
+// phone re-keys its Scanned list: each scan the plan had undone is back under a new uuid (design §7.2).
+func applyFailed(w http.ResponseWriter, ae *scanservice.ReceiptApplyError) {
+	results := []scan.Result{}
+	if ae != nil && ae.Results != nil {
+		results = ae.Results
+	}
+	httpx.WriteJSON(w, http.StatusInternalServerError, map[string]any{
+		"error":   map[string]string{"code": "receipt_apply_failed", "message": "The receipt could not be applied. Check the Scanned list and try again."},
+		"results": results,
+	})
 }
 
 func changed(w http.ResponseWriter) {
