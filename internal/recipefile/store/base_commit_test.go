@@ -853,3 +853,169 @@ func TestTheAnsweredUnitPromptIsSavedAsAConversionOfTheBaseRecipesIngredient(t *
 		t.Error("and no plain béchamel Ingredient")
 	}
 }
+
+// ---- round 3: the review says Ready, so Apply must succeed ----------------------------------------------------------
+
+func readyThenApply(t *testing.T, f *seeded, file recipefile.File, d recipefile.Decisions) store.Result {
+	t.Helper()
+	ex, err := f.s.Existing(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := recipefile.BuildPlan(file, ex, d, recipefile.ImageSet{})
+	if !p.Ready {
+		t.Fatalf("the plan must be Ready: problems %+v tiles %+v takeOvers %+v", p.Problems, p.BaseRecipeLines, p.TakeOvers)
+	}
+	c, err := recipefile.BuildCommit(file, ex, d, recipefile.ImageSet{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := f.s.Apply(ctx, c)
+	if err != nil {
+		t.Fatalf("a Ready plan must Apply: %v", err)
+	}
+	return res
+}
+
+func TestTwoCreateAnswersOfOneNameShareOneBaseRecipe(t *testing.T) {
+	f := newSeeded(t)
+	l := recipefile.Recipe{Name: "Lasagne", Yield: 4, Ingredients: []recipefile.Line{{Ingredient: "béchamel", Quantity: 500, Unit: "ml"}}}
+	c := recipefile.Recipe{Name: "Cannelloni", Yield: 4, Ingredients: []recipefile.Line{{Ingredient: "Bechamel", Quantity: 300, Unit: "ml"}}}
+	file := recipefile.File{Format: recipefile.Format, Version: recipefile.Version,
+		Ingredients: []recipefile.Ingredient{{Name: "béchamel", BaseUnit: "ml"}}, Recipes: []recipefile.Recipe{l, c}}
+	d := answers(map[string]recipefile.BaseRecipeLineDecision{
+		"$.recipes[0].ingredients[0]": {Action: recipefile.BaseCreate},
+		"$.recipes[1].ingredients[0]": {Action: recipefile.BaseCreate},
+	})
+	readyThenApply(t, f, file, d)
+	if n := f.recipeNamedCount(t, "Béchamel") + f.recipeNamedCount(t, "Bechamel"); n != 1 {
+		t.Fatalf("one Béchamel is created for both lines, got %d", n)
+	}
+	var base int64
+	if err := f.db.QueryRow(`SELECT base_ingredient_id FROM recipes WHERE base_ingredient_id IS NOT NULL`).Scan(&base); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"Lasagne", "Cannelloni"} {
+		if ing, _, _ := f.lineAt(t, f.recipeNamed(t, name).id, 0); ing != base {
+			t.Errorf("%s calls %d, want the shared Béchamel's Ingredient %d", name, ing, base)
+		}
+	}
+}
+
+func TestAKeptLineOfAFileBaseRecipeNamedLikeABaseRecipeTheImportCreatesAppliesInAnyFileOrder(t *testing.T) {
+	for name, order := range map[string]bool{"holder first": false, "user first": true} {
+		t.Run(name, func(t *testing.T) {
+			f := newSeeded(t)
+			ragu := recipefile.Recipe{Name: "Ragù", BaseRecipe: ptrOf(true), Yield: 1, YieldUnit: "kg",
+				Ingredients: []recipefile.Line{{Ingredient: "béchamel", Quantity: 100, Unit: "ml"}}}
+			recipes, at := []recipefile.Recipe{ragu, fileBechamel(1, "l")}, "$.recipes[0].ingredients[0]"
+			if !order {
+				recipes, at = []recipefile.Recipe{fileBechamel(1, "l"), ragu}, "$.recipes[1].ingredients[0]"
+			}
+			file := recipefile.File{Format: recipefile.Format, Version: recipefile.Version,
+				Ingredients: []recipefile.Ingredient{{Name: "béchamel", BaseUnit: "ml"}, {Name: "milk", BaseUnit: "ml"}, {Name: "butter", BaseUnit: "g"}},
+				Recipes:     recipes}
+			readyThenApply(t, f, file, answers(map[string]recipefile.BaseRecipeLineDecision{at: {Action: recipefile.BaseKeep}}))
+			plain, ok := f.ingredientIDByKey(t, "béchamel")
+			if !ok {
+				t.Fatal("the kept line's plain béchamel is created")
+			}
+			if ing, _, _ := f.lineAt(t, f.recipeNamed(t, "Ragù").id, 0); ing != plain {
+				t.Errorf("Ragù's kept line uses %d, want the plain béchamel %d", ing, plain)
+			}
+			if b := f.recipeNamed(t, "Béchamel"); !b.baseIng.Valid || b.baseIng.Int64 == plain {
+				t.Errorf("Béchamel keeps an Ingredient of its own: %v", b.baseIng)
+			}
+		})
+	}
+}
+
+func TestConvertWithAKeptLineOfTheSameNameAndNoStoredPlainIngredientApplies(t *testing.T) {
+	f := newSeeded(t)
+	p := f.seedPesto(t)
+	gnocchi := recipefile.Recipe{Name: "Gnocchi", Yield: 2, Ingredients: []recipefile.Line{{Ingredient: "pesto", Quantity: 30, Unit: "g"}}}
+	file := lasagneFile(pestoLine(), gnocchi)
+	d := answers(map[string]recipefile.BaseRecipeLineDecision{
+		lineB:                         {Action: recipefile.BaseConvert, RecipeID: p.recipe.ID, Yield: 200, YieldUnit: "g"},
+		"$.recipes[1].ingredients[0]": {Action: recipefile.BaseKeep},
+	})
+	readyThenApply(t, f, file, d)
+	pesto := f.recipeNamed(t, "Pesto")
+	if !pesto.baseIng.Valid {
+		t.Fatal("Pesto is a Base recipe")
+	}
+	if _, ok := f.ingredientIDByKey(t, "pesto"); ok {
+		t.Error("no plain pesto remains: the convert target counts among the Base recipe names")
+	}
+	if ing, _, _ := f.lineAt(t, f.recipeNamed(t, "Gnocchi").id, 0); ing != pesto.baseIng.Int64 {
+		t.Errorf("the kept line lands on Pesto's Ingredient (%d), the one Ingredient of that name: got %d", pesto.baseIng.Int64, ing)
+	}
+}
+
+// ---- nits: a take-over keeps the existing Ingredient's values ---------------------------------------------------------
+
+func (f *seeded) plainBechamelWith(t *testing.T, shelf *int, image string) int64 {
+	t.Helper()
+	i, err := f.ings.Create(ctx, ingredient.Input{Name: "béchamel", Base: units.Millilitre, ShelfLifeDays: shelf, Image: image})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return i.ID
+}
+
+func (f *seeded) takeOverWithFilePicture(t *testing.T) store.Result {
+	t.Helper()
+	file := lasagneFile(bechamelLine(), fileBechamel(1, "l"))
+	days := 4
+	file.Ingredients[3].ShelfLifeDays = &days
+	imgs := recipefile.ImageSet{Images: map[string]imaging.Result{"$.ingredients[3].image": {WebP: webpOf(t, 8, 6), Width: 8, Height: 6}}}
+	ex, err := f.s.Existing(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := withTakeOvers(t, answers(map[string]recipefile.BaseRecipeLineDecision{lineB: fileAnswer(1)}), map[string]bool{otherAt: true})
+	c, err := recipefile.BuildCommit(file, ex, d, imgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := f.s.Apply(ctx, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return res
+}
+
+func TestTakeOverYesKeepsTheExistingShelfLifeAndPictureAndSavesNoOrphanImage(t *testing.T) {
+	f := newSeeded(t)
+	id, err := imaging.NewStore(f.images).Save(webpOf(t, 4, 4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	seven := 7
+	plain := f.plainBechamelWith(t, &seven, id)
+	res := f.takeOverWithFilePicture(t)
+	var days sql.NullInt64
+	var image string
+	f.db.QueryRow(`SELECT shelf_life_days, image FROM ingredients WHERE id = ?`, plain).Scan(&days, &image)
+	if days.Int64 != 7 || image != id {
+		t.Errorf("shelf life %v picture %q, want the existing 7 days and %q", days, image, id)
+	}
+	if res.PicturesAdded != 0 || f.imageFiles(t) != 1 {
+		t.Errorf("picturesAdded %d, image files %d: the picture is kept, so the file's one is neither counted nor saved", res.PicturesAdded, f.imageFiles(t))
+	}
+}
+
+func TestTakeOverYesFillsShelfLifeAndPictureOnlyWhenTheExistingIngredientHasNone(t *testing.T) {
+	f := newSeeded(t)
+	plain := f.plainBechamelWith(t, nil, "")
+	f.takeOverWithFilePicture(t)
+	var days sql.NullInt64
+	var image string
+	f.db.QueryRow(`SELECT shelf_life_days, image FROM ingredients WHERE id = ?`, plain).Scan(&days, &image)
+	if days.Int64 != 4 || image == "" {
+		t.Errorf("shelf life %v picture %q, want the file's 4 days and picture filled in", days, image)
+	}
+	if f.imageFiles(t) != 1 {
+		t.Errorf("image files = %d, want 1", f.imageFiles(t))
+	}
+}

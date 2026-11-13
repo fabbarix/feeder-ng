@@ -434,3 +434,34 @@ func TestANameAReadyMealHoldsIsAProblemOnTheTileBeforeConfirm(t *testing.T) {
 		t.Errorf("want ready_meal_name_taken at %s: %+v", lineB, p.Problems)
 	}
 }
+
+func TestTwoCreateAnswersOfOneNameLeaveThePlanReady(t *testing.T) {
+	l := miniRecipe("Lasagne")
+	l.Ingredients = []recipefile.Line{{Ingredient: "béchamel", Quantity: 500, Unit: "ml"}}
+	c := miniRecipe("Cannelloni")
+	c.Ingredients = []recipefile.Line{{Ingredient: "béchamel", Quantity: 300, Unit: "ml"}}
+	f := fileOf(l, c)
+	f.Ingredients = []recipefile.Ingredient{{Name: "béchamel", BaseUnit: "ml"}}
+	d := recipefile.Decisions{BaseRecipeLines: map[string]recipefile.BaseRecipeLineDecision{
+		"$.recipes[0].ingredients[0]": {Action: recipefile.BaseCreate},
+		"$.recipes[1].ingredients[0]": {Action: recipefile.BaseCreate},
+	}}
+	p := plan(t, f, recipefile.Existing{}, d)
+	if !p.Ready || len(p.Problems) != 0 {
+		t.Errorf("both lines share the one Béchamel that is created: ready %v problems %+v", p.Ready, p.Problems)
+	}
+}
+
+func TestACreateAnswerNamedLikeARecipeOfTheSameFileIsAProblemOnTheTile(t *testing.T) {
+	l := miniRecipe("Lasagne")
+	l.Ingredients = []recipefile.Line{{Ingredient: "pesto", Quantity: 50, Unit: "g"}}
+	pesto := miniRecipe("Pesto")
+	pesto.Ingredients = []recipefile.Line{{Ingredient: "basil", Quantity: 50, Unit: "g"}}
+	f := fileOf(l, pesto)
+	f.Ingredients = []recipefile.Ingredient{{Name: "pesto", BaseUnit: "g"}, {Name: "basil", BaseUnit: "g"}, {Name: "Rice", BaseUnit: "g"}}
+	path := "$.recipes[0].ingredients[0]"
+	p := plan(t, f, recipefile.Existing{}, answerAt(path, recipefile.BaseRecipeLineDecision{Action: recipefile.BaseCreate}))
+	if p.Ready || !hasProblem(p, path, "base_recipe_name_taken") {
+		t.Errorf("want base_recipe_name_taken at %s before Confirm: ready %v problems %+v", path, p.Ready, p.Problems)
+	}
+}
