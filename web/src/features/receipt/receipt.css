@@ -1,0 +1,266 @@
+/* Receipt reading (RR4): the photos, the read and the review (docs/design/receipt-reading.md 3; mock-ups 13 to 17). Tokens only. */
+
+.receipt-section {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.receipt-section__title {
+  margin: 0;
+  font-size: var(--text-overline-size);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.receipt-section__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+
+.receipt-meta,
+.receipt-hint {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.receipt-photos {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.receipt-photo {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+  box-shadow: var(--elev-1);
+}
+
+.receipt-photo__title {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+}
+
+.receipt-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.receipt-progress,
+.receipt-problem,
+.receipt-alert {
+  align-items: start;
+}
+
+/* The privacy note and the review's notes sit in an info Tile, which sets their colour. */
+.receipt-privacy,
+.receipt-note {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+}
+
+.receipt-progress__status {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.receipt-progress__title {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+}
+
+.receipt-progress__note {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.receipt-progress__bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--color-surface-2);
+}
+
+.receipt-progress__bar::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inline-size: 40%;
+  border-radius: 2px;
+  background: var(--color-accent);
+  animation: receipt-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes receipt-indeterminate {
+  from {
+    inset-inline-start: -40%;
+  }
+  to {
+    inset-inline-start: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receipt-progress__bar::before {
+    animation: none;
+    inset-inline-start: 30%;
+  }
+}
+
+.receipt-alert__message {
+  margin: 0;
+  font-size: var(--text-body-size);
+}
+
+.receipt-problem p {
+  margin: 0;
+  font-size: var(--text-body-size);
+}
+
+.receipt-reasons {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+
+.receipt-reasons p {
+  margin: 0;
+}
+
+.receipt-link {
+  color: var(--color-accent-text);
+  font-weight: var(--text-body-strong-weight);
+  text-decoration: underline;
+}
+
+.receipt-empty {
+  margin: 0;
+  font-size: var(--text-body-size);
+  color: var(--color-text);
+}
+
+.receipt-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.receipt-metric__value {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.receipt-row__check {
+  position: relative;
+  z-index: 1;
+}
+
+/* The checkbox keeps its own label for the accessible name; the title is shown beside it. */
+.receipt-row__check .checkbox__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.receipt-row__line {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.receipt-row__actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.receipt-row__ready {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-accent-text);
+}
+
+.receipt-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 64px;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.receipt-row + .receipt-row {
+  border-block-start: 1px solid var(--color-surface-2);
+}
+
+.receipt-row[data-highlighted='true'] {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.receipt-row__text {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.receipt-row__title {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+}
+
+.receipt-row__change {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-text);
+}
+
+.receipt-row__value {
+  display: grid;
+  justify-items: end;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.receipt-row__sub {
+  color: var(--color-muted);
+}

@@ -44,7 +44,7 @@ and keeps writes behind an explicit review. It records the schema budget of §5.
 ### 3.1 Where it lives
 
 - **The Scanned list's last row**: a `ListRow` with the Phosphor `Receipt` icon, **Read the receipt**, meta "Fill in Prices and
-  weights from a photo". It shows when the session has at least one scan and the assistant is available
+  weighed amounts from a photo". It shows when the session has at least one scan and the assistant is available
   (`GET /api/recipe-assistant/status`: `available` and `photos`). Unavailable: hidden for a User; an Admin sees it muted with
   "Turn on the Recipe Assistant in Settings" linking to the settings.
 - **The "Shopping list complete" celebration** gets a secondary button **Read the receipt** under the cost summary.
@@ -72,7 +72,7 @@ Full-screen route `/scan/receipt` (the Scan session stays mounted behind it; the
 - **Rotate and crop** reuse the recipe-photo flow as it is: `PhotoList`, `PhotoRow` and `PhotoEditorPanel` over the shared
   `ImageEditor` (`aspect="free"`, rotate in 90° steps, crop, Retake), from `features/import` (photo-read.md D7, D10). Each new
   photo opens in the editor once, as in Import; **Use photo** returns to the list.
-- The photos stay in memory only (not IndexedDB): leaving the route asks "Discard 2 photos?" in a `ConfirmDialog`.
+- The photos stay in memory only (not IndexedDB): leaving the route asks "Leave without reading?" ("The 2 photos are not kept.") in a `ConfirmDialog`.
 
 ### 3.3 Progress
 
@@ -93,7 +93,7 @@ Route `/scan/receipt/review`. Nothing has been written yet; the header says so.
 [ Accept all (secondary)                              ]
 [ section: Shop and date                              ]
 [ section: Prices (6)                                 ]
-[ section: Weights (1)                                ]
+[ section: Weighed Products (1)                       ]
 [ section: Quantities (1)                             ]
 [ section: Corrections (1)                            ]
 [ section: Not scanned (2)                            ]
@@ -108,13 +108,13 @@ designed checkbox (our `Checkbox`, a real `<input type=checkbox>` under the styl
 |---|---|---|---|
 | **Shop and date** | "Shop: Esselunga → **Coop**" (the receipt names another saved Shop); "Date: today → **Wed 12 Nov**" | unchecked | moves every scan of the session to that Shop and date (§8) |
 | **Prices** | "€1.29 → **€1.35** per pack" or "Add price → **€4.49**"; per kg rows "€19.90/kg" | checked | the Price for every scan of the row |
-| **Weights** | "300 g → **312 g** · €6.21" | checked | the scan's quantity and its Price |
+| **Weighed Products** | "300 g → **312 g** · €6.21" | checked | the scan's quantity and its Price |
 | **Quantities** | "×2 → **×3**" ("the receipt has 3") | checked | adds or undoes scans of the Product |
 | **Corrections** | "Pack size 700 g → **500 g**"; "Name Mutti passata 700 g → **Mutti passata 500 g**" | unchecked | changes the Product, and this session's scans of it |
 | **Not scanned** | the receipt line "PANE CASERECCIO 0,45 kg €2.25", button **Add…** | unchecked until set up | opens the short form (scan design §13.5, without a barcode) prefilled with the name, pack size or weight and Price; once filled the row is checked |
 | **Not on the receipt** | the Scanned row, meta "Not on the receipt" in the info tone | unchecked | **Remove** the row's scans (Undo) |
 
-- **Accept all** checks every row that needs no choice (Prices, Weights, Quantities, Shop and date, Corrections); it never checks
+- **Accept all** checks every row that needs no choice (Prices, Weighed Products, Quantities, Shop and date, Corrections); it never checks
   Not on the receipt (removing Stock is not a default) and leaves **Add…** rows waiting for their form. A second press reads
   **Clear all**.
 - A note tile appears when the totals differ after all proposals: "The receipt total is €0.50 more than the Scanned list. Check
@@ -124,11 +124,11 @@ designed checkbox (our `Checkbox`, a real `<input type=checkbox>` under the styl
   (the session changed meanwhile, 409) says "The Scanned list changed since the read. **Read it again**".
 - **Back** keeps the review for its 10 minutes; leaving with checked rows asks "Leave without applying?".
 
-Copy: "Read the receipt", "Fill in Prices and weights from a photo", "Take a photo", "Choose a photo", "Add another photo",
+Copy: "Read the receipt", "Fill in Prices and weighed amounts from a photo", "Take a photo", "Choose a photo", "Add another photo",
 "Long receipt? Take it in parts, top to bottom.", "Reading the receipt…", "Long receipts can take up to a minute", "Cancel",
-"Review the receipt", "Nothing changes until you apply.", "Accept all", "Clear all", "Shop and date", "Prices", "Weights",
+"Review the receipt", "Nothing changes until you apply.", "Accept all", "Clear all", "Shop and date", "Prices", "Weighed Products",
 "Quantities", "Corrections", "Not scanned", "Not on the receipt", "Add…", "Apply {n} changes", "Applied {n} changes from the
-receipt", "Read it again", "Leave without applying?", "Discard {n} photos?".
+receipt", "Read it again", "Leave without applying?", "Leave without reading?", "The {n} photos are not kept.".
 
 ## 4. What is sent to the assistant
 
@@ -400,6 +400,13 @@ Catalogue and List ports to accept a `*sql.Tx`; that refactor is not proposed he
   Ingredient: the Ingredient port has no inverse for `Ensure`, and an Ingredient that already existed must never be removed. The
   leftover is an unused Ingredient, visible in the Ingredients list, which a retry of the same Add finds and reuses (`Ensure`
   matches by name). Accepted as a known leftover (RR3 review); no port change.
+- **No Edit (rotate and crop) and no reorder of the receipt photos in 1.0.0-beta.7** (RR4 review). §3.2's reuse of the
+  recipe-photo editor (`PhotoEditorPanel` over `ImageEditor`) and the drag handle of mock-up 13 are not built: each photo is
+  prepared as taken (re-encoded as a JPEG, long edge 2576 px, at most 8 MiB) and can only be removed and taken again, in the
+  order taken. A badly framed photo is retaken.
+- **Leaving the photos screen while a read runs cancels it** (RR4, pinned by its tests): the screen stops polling and sends the
+  `DELETE` with `keepalive`, so the slot is freed at once. §3.3's "leaving does not cancel" and the Scanned list row "Receipt
+  read: review 9 changes" are not built; a finished read is still kept for its 10 minutes, so Back from the review returns to it.
 
 ## 9. Cost, limits and errors
 

@@ -72,6 +72,19 @@ describe('createHttpClient', () => {
     expect(err.details).toEqual({ field: 'lines[1].unit', unit: 'clove', ingredientId: 7 })
   })
 
+  it('keeps the whole parsed error body, for the keys beside error', async () => {
+    const body = { error: { code: 'receipt_apply_failed', message: 'no' }, results: [{ clientUuid: 'u1' }] }
+    const err = (await createHttpClient({ fetch: vi.fn().mockResolvedValue(json(500, body)) }).post('/api/x', {}).catch((e) => e)) as ApiError
+    expect(err).toMatchObject({ status: 500, code: 'receipt_apply_failed' })
+    expect(err.body).toEqual(body)
+  })
+
+  it('has no body for an answer that is not the error shape', async () => {
+    const err = (await createHttpClient({ fetch: vi.fn().mockResolvedValue(new Response('<html>', { status: 502 })) }).get('/api/x').catch((e) => e)) as ApiError
+    expect(err).toMatchObject({ status: 502, code: 'http_error' })
+    expect(err.body).toBeUndefined()
+  })
+
   describe('request timeout (a signal passed as the third argument of post)', () => {
     const hangingFetch = () =>
       vi.fn((_url: string, init?: RequestInit) => {
