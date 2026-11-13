@@ -277,8 +277,8 @@ func TestPickedRollsBackWithTheCallersTransaction(t *testing.T) {
 func TestPreviewCookedListsLotsInDeductionOrderWithDefaultSelection(t *testing.T) {
 	f := setup(t)
 	garage := f.place(t, "Garage Fridge", stock.KindFridge)
-	newLot := f.addIn(t, f.thighs, 800, "2026-11-09", garage) // goes off 11-13
 	oldLot := f.add(t, f.thighs, 500, "2026-11-07")           // goes off 11-11, not sorted
+	newLot := f.addIn(t, f.thighs, 800, "2026-11-09", garage) // goes off 11-13 (add the sorted one last: AddLot remembers the place)
 	f.add(t, f.milk, 1000, "")
 	got, err := f.svc.PreviewCooked(ctx, []stock.Need{{IngredientID: f.thighs, Quantity: 600}, {IngredientID: f.milk, Quantity: 200}})
 	if err != nil {

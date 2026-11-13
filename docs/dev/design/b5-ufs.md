@@ -44,12 +44,12 @@ Same contract as `DeductForCookedTx`: runs inside the caller's transaction, begi
 - Two meals needing the same Ingredient are not merged; each keeps its own need and Warning.
 - A pick for an Ingredient that is not among that meal's needs (or whose need was skipped as non-positive/unknown) is refused.
 - Every refusal returns an error wrapping `ErrUsedFromInvalid` (and so `ErrInvalid`, via `errors.Is`) before anything is written; the caller rolls back. UF-runner/httpapi maps it to `422 used_from_invalid`. Other errors are unchanged.
-- `PickedDeduction.Warnings` is the flattened list (meal order, then need order); `PerMeal[i]` is meal i's Warnings (never nil). `Have` in a Warning is the Ingredient's Stock when that meal's step B starts (after all picks).
+- `PickedDeduction.Warnings` is the flattened list (meal order, then need order); `PerMeal[i]` is meal i's Warnings (never nil). `Have` in a Warning is the Ingredient's Stock at the start of that meal's step B plus that meal's own picks (so `Have - Need = Shortfall`).
 - `ChangedIngredientIDs` lists Ingredients whose Stock changed, once each.
 
 ## Service: PreviewCooked
 
-Read-only (no event), for the Cooked sheet. For each need in input order (unknown Ingredient and non-positive need skipped): the Ingredient's `Lots` in default (Deduction) order including Lots that have gone off, each a `LotView` plus `StoragePlaceName` ("" when not sorted, resolved by the service); `Have` the Stock total; `Default` what `Deduct` would take for `Need` (the sheet's preselection, soonest-to-go-off first); `Shortfall` the uncovered part. An Ingredient with no Stock still yields an entry (no Lots, `Shortfall == Need`). The runner/httpapi adds these under `lots` per need (JSON naming is theirs).
+Read-only (no event), for the Cooked sheet. For each need in input order (unknown Ingredient and non-positive need skipped): the Ingredient's `Lots` in default (Deduction) order including Lots that have gone off, each a `LotView` plus `StoragePlaceName` ("" when not sorted, resolved by the service); `Have` the Stock total; `Default` what `Deduct` would take for `Need` (the sheet's preselection, soonest-to-go-off first); `Shortfall` the uncovered part. An Ingredient with no Stock still yields an entry (no Lots, `Shortfall == Need`). The runner/httpapi adds these under `lots` per need (JSON naming is theirs; the cook preview needs `baseUnit` per need and `lots[].{id, quantity, purchased, goesOff, storagePlaceName}`, where `""` means Not sorted).
 
 ## Tests (red in this commit)
 
@@ -57,4 +57,4 @@ Read-only (no event), for the Cooked sheet. For each need in input order (unknow
 
 ## Open points
 
-None blocking. Assumption: JSON `usedFrom` shape is `[{ingredientId, picks: [{lotId, quantity}]}]` per meal; UF-runner may adapt it.
+None blocking. Decision: the HTTP JSON item is `{ingredientId, lots: [{lotId, quantity}]}` (plan §2.6, as the web uses), mapped by the runner/httpapi layer to `stock.Pick`.
