@@ -44,7 +44,7 @@ JS
 FIX="$FIX" PORT="$PORT" node "$TMP/server.cjs" >/dev/null 2>&1 &
 SERVER=$!
 for _ in $(seq 1 25); do curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PORT/" && break; sleep 0.2; done
-echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1,"sideCourseId":2,"longTag":"HOMEMADE WEDNESDAY MUSHROOM WELLINGTONS"}' >"$TMP/ids.json"
+echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1,"sideCourseId":2,"longTag":"HEARTY HOMEMADE MUSHROOM WELLINGTONS"}' >"$TMP/ids.json"
 OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|recipes|settings)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
 
 # the beta.6 Tag row (/plan): its chips are crushed at a phone and both iPad portrait widths
@@ -56,7 +56,7 @@ COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /plan: P16 ' <<<"$OUT" | node scr
 [ "${COUNT:-0}" -gt 0 ] && ok || bad "the P16 findings must count as failures (count-fail said '${COUNT:-}')"
 
 # round 1 (/recipes, and its SCENARIOS, which this static server answers with the same page)
-grep -Eq "^\s+- 390px /recipes[^:]*: P17 .*HOMEMADE WEDNESDAY" <<<"$OUT" && ok || bad "390px /recipes: the cut Tag chip beside Side must be a P17 finding naming it (got: $OUT)"
+grep -Eq "^\s+- 390px /recipes[^:]*: P17 .*HEARTY HOMEMADE" <<<"$OUT" && ok || bad "390px /recipes: the cut Tag chip beside Side must be a P17 finding naming it (got: $OUT)"
 for w in 390 834 1024 1440 1920; do
   grep -Eq "^\s+- ${w}px /recipes[^:]*: P18 .*hit area" <<<"$OUT" && ok || bad "${w}px /recipes: the clipped hit areas of the chip line must be a P18 finding (got: $OUT)"
   grep -Eq "^\s+- ${w}px /recipes[^:]*: P18 .*All Courses.*focus ring" <<<"$OUT" && ok || bad "${w}px /recipes: the clipped focus ring of All Courses must be a P18 finding (got: $OUT)"

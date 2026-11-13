@@ -114,8 +114,10 @@ for (const [i, name] of RECIPES.entries()) {
 // eight of them, with long names, so its tile's Tag line is exercised too.
 // Round 2: one very long Tag; with the Side Course it makes the active filter chips overflow into "+1" at 390 and 430 px.
 // Round 3: a Tag holds at most 40 characters (the API refuses longer ones, so the 51-character Tag of round 2 was never created). In
-// capitals this 39-character name draws a 352 px chip, past the 318 px that "Side" leaves on a 430 px line.
-const LONG_TAG = 'HOMEMADE WEDNESDAY MUSHROOM WELLINGTONS'
+// capitals this 36-character name draws a 338 px chip (with its colour dot and close icon). Beside "Side" (72 px and an 8 px gap) the
+// line needs 418 px: it overflows into "+1" below a 450 px screen (390 and 430 included) and both chips show again from 462 px (the
+// FIT_MARGIN), so the guard's 360-480 px walk and live sweep cross both edges of the fit.
+const LONG_TAG = 'HEARTY HOMEMADE MUSHROOM WELLINGTONS'
 const MANY_TAGS = ['beef', 'breakfast', 'budget', 'chicken', 'comfort food', 'curry', 'dairy-free', 'fish', 'freezer', 'gluten-free',
   'grill', 'kids', 'leftovers', 'lunchbox', 'one-pot', 'pasta', 'pork', 'rice', 'roast', 'salad', 'slow cooker', 'soup', 'spicy',
   'sweet', 'vegan', 'weeknight', 'batch cooking', 'high protein']
