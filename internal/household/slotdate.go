@@ -3,6 +3,7 @@ package household
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // A Meal Slot on one date (ADR 0014; docs/dev/design/b5-sd.md). The pure rules: the date's own time, Not served, Guests.
@@ -113,9 +114,20 @@ type UnresolvedMeal struct {
 }
 
 // SlotDatePatch is a PATCH of a Meal Slot on one date: a nil field is not touched; Time "" is the usual time. Today is
-// the household's date, for the date_past rule. (Stub of the test commit: the developer implements the store side.)
+// the household's date, for the date_past rule. DryRun validates the patch as a save would and writes nothing.
 type SlotDatePatch struct {
 	NotServed *bool
 	Time      *string
 	Today     string
+	DryRun    bool
+}
+
+// SlotOver says whether the Meal Slot's instant on the date (its effective time, in the household zone) is already
+// before now. Not served leaves the Planned Meals of an over slot in To confirm, so they are not removed.
+func SlotOver(date, effectiveTime string, zone *time.Location, now time.Time) (bool, error) {
+	at, err := time.ParseInLocation("2006-01-02 15:04", date+" "+effectiveTime, zone)
+	if err != nil {
+		return false, err
+	}
+	return at.Before(now), nil
 }

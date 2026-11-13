@@ -340,10 +340,6 @@ func (a *api) putAttendance(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, err)
 			return
 		}
-		if err := a.checkNotEmptiedWhileStarted(r, slot.ID, date, att, in.Guests); err != nil {
-			writeErr(w, err)
-			return
-		}
 	}
 	// Check every Course before the first write, so a bad entry leaves the date as it was.
 	var dayCourses []household.DateCourse

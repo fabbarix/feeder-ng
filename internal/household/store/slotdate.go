@@ -41,6 +41,9 @@ func (s *Store) SaveSlotDate(ctx context.Context, row household.SlotDate) error 
 // in.Members is set, and the Guests when in.Guests is set. When in.Members is set and EmptiesDate(*in.Members, the
 // date's Guests after this save) is true, the date is also saved Not served (U1). A save that leaves Members as they
 // are never changes Not served. Course opt-outs are written separately (SetDateCourseOptOuts).
+//
+// A save that takes the date from someone eating to nobody eating (no Member and no Guest) is refused with
+// household.ErrSlotStarted when a Course of the slot is already Cooked or Not cooked (decision 3a, 3b). Nothing is written.
 func (s *Store) SaveWhoIsEating(ctx context.Context, slotID int64, date string, in household.WhoIsEating) error {
 	if in.Guests != nil {
 		if err := household.ValidateGuests(*in.Guests); err != nil {
@@ -60,8 +63,26 @@ func (s *Store) SaveWhoIsEating(ctx context.Context, slotID int64, date string, 
 		if err != nil {
 			return err
 		}
+		current, _, err := dateAttendance(ctx, tx, slotID, date)
+		if err != nil {
+			return err
+		}
+		members := current
+		if in.Members != nil {
+			members = *in.Members
+		}
+		eatingBefore := len(current) > 0 || row.Guests > 0
 		if in.Guests != nil {
 			row.Guests = *in.Guests
+		}
+		if eatingBefore && household.EmptiesDate(members, row.Guests) {
+			started, err := slotStarted(ctx, tx, slotID, date)
+			if err != nil {
+				return err
+			}
+			if started {
+				return household.ErrSlotStarted
+			}
 		}
 		if in.Members != nil {
 			if err := setDateAttendance(ctx, tx, slotID, date, *in.Members); err != nil {
@@ -88,30 +109,31 @@ func (s *Store) ServeAgain(ctx context.Context, slotID int64, date string) error
 		if err != nil {
 			return err
 		}
-		var members int
-		err = tx.QueryRowContext(ctx, `SELECT count(*) FROM attendance_override_attendees WHERE slot_id = ? AND date = ?`,
-			slotID, date).Scan(&members)
-		if err != nil {
+		if err := serveAgain(ctx, tx, slotID, date, &row); err != nil {
 			return err
 		}
-		var hasOverride int
-		err = tx.QueryRowContext(ctx, `SELECT count(*) FROM attendance_overrides WHERE slot_id = ? AND date = ?`,
-			slotID, date).Scan(&hasOverride)
-		if err != nil {
-			return err
-		}
-		if hasOverride == 1 && members == 0 && row.Guests == 0 {
-			if err := clearDateCourses(ctx, tx, slotID, date); err != nil {
-				return err
-			}
-			if _, err := tx.ExecContext(ctx, `DELETE FROM attendance_overrides WHERE slot_id = ? AND date = ?`,
-				slotID, date); err != nil {
-				return err
-			}
-		}
-		row.NotServed = false
 		return writeSlotDate(ctx, tx, row, s.clk.Now())
 	})
+}
+
+// serveAgain clears Not served on row. An emptied date (an empty override and no Guest) also loses its override, so
+// the usual Attendance applies again; its Course overrides go with it.
+func serveAgain(ctx context.Context, tx *sql.Tx, slotID int64, date string, row *household.SlotDate) error {
+	att, hasOverride, err := dateAttendance(ctx, tx, slotID, date)
+	if err != nil {
+		return err
+	}
+	if household.IsNotServed(household.SlotDate{Guests: row.Guests}, att, hasOverride) {
+		if err := clearDateCourses(ctx, tx, slotID, date); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM attendance_overrides WHERE slot_id = ? AND date = ?`,
+			slotID, date); err != nil {
+			return err
+		}
+	}
+	row.NotServed = false
+	return nil
 }
 
 // slotExists is household.ErrNotFound for an unknown Meal Slot.
@@ -167,10 +189,25 @@ func writeSlotDate(ctx context.Context, q querier, row household.SlotDate, now t
 }
 
 // UnresolvedMealsOn lists the slot's unresolved Planned Meals on the date in the slot's Course order: what marking the
-// date Not served would remove. household.ErrNotFound for an unknown Meal Slot.
-func (s *Store) UnresolvedMealsOn(ctx context.Context, slotID int64, date string) ([]household.UnresolvedMeal, error) {
+// date Not served would remove. effective is the slot's effective time on the date (the date's own, or the usual);
+// a slot whose instant is already before now removes nothing, so the list is empty. household.ErrNotFound for an
+// unknown Meal Slot.
+func (s *Store) UnresolvedMealsOn(ctx context.Context, slotID int64, date, effective string, now time.Time) ([]household.UnresolvedMeal, error) {
 	if err := slotExists(ctx, s.db, slotID); err != nil {
 		return nil, err
+	}
+	out := []household.UnresolvedMeal{}
+	settings, err := s.Settings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	zone, lerr := time.LoadLocation(settings.TimeZone)
+	if lerr != nil {
+		zone = time.UTC
+	}
+	over, err := household.SlotOver(date, effective, zone, now)
+	if err != nil || over {
+		return out, err
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT pm.course_id, c.name, r.name, pm.pinned
 		FROM planned_meals pm
@@ -183,7 +220,6 @@ func (s *Store) UnresolvedMealsOn(ctx context.Context, slotID int64, date string
 		return nil, err
 	}
 	defer rows.Close()
-	out := []household.UnresolvedMeal{}
 	for rows.Next() {
 		var (
 			m      household.UnresolvedMeal
@@ -198,19 +234,69 @@ func (s *Store) UnresolvedMealsOn(ctx context.Context, slotID int64, date string
 	return out, rows.Err()
 }
 
-// SlotStarted says whether a Course of the slot is already Cooked or Not cooked on the date (U2).
-func (s *Store) SlotStarted(ctx context.Context, slotID int64, date string) (bool, error) {
-	if err := slotExists(ctx, s.db, slotID); err != nil {
-		return false, err
-	}
+// slotStarted says whether a Course of the slot is already Cooked or Not cooked on the date (U2).
+func slotStarted(ctx context.Context, q querier, slotID int64, date string) (bool, error) {
 	var n int
-	err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM planned_meals
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM planned_meals
 		WHERE meal_slot_id = ? AND date = ? AND state IN ('cooked', 'skipped')`, slotID, date).Scan(&n)
 	return n > 0, err
 }
 
-// PatchSlotDate applies a PATCH of the Meal Slot on the date in one transaction and returns the saved row.
-// STUB of the test commit (review round 3): see slotdate_patch_test.go for the contract.
+// PatchSlotDate applies a PATCH of the Meal Slot on the date in one transaction and returns the saved row: it reads the
+// row, checks every field sent (time_invalid, date_past, slot_started), serves the date again when NotServed is false
+// (an emptied date loses its override), applies only the fields sent, and saves. A refused patch writes nothing. With
+// patch.DryRun the row as it would be saved is returned and nothing is written. household.ErrNotFound for an unknown
+// Meal Slot; the refusals are *household.ValidationError.
 func (s *Store) PatchSlotDate(ctx context.Context, slotID int64, date string, patch household.SlotDatePatch) (household.SlotDate, error) {
-	return household.SlotDate{}, errors.New("household/store: PatchSlotDate is not implemented")
+	var out household.SlotDate
+	err := s.inTx(ctx, func(tx *sql.Tx) error {
+		if err := slotExists(ctx, tx, slotID); err != nil {
+			return err
+		}
+		row, err := readSlotDate(ctx, tx, slotID, date)
+		if err != nil {
+			return err
+		}
+		// Every field is checked before the first write.
+		if patch.Time != nil {
+			if err := household.ValidateSlotTime(*patch.Time); err != nil {
+				return err
+			}
+			if *patch.Time != row.Time && date < patch.Today {
+				return &household.ValidationError{Field: "time", Message: "a past date keeps its time", Reason: "date_past"}
+			}
+		}
+		if patch.NotServed != nil && *patch.NotServed {
+			started, err := slotStarted(ctx, tx, slotID, date)
+			if err != nil {
+				return err
+			}
+			if err := household.ValidateNotServedChange(date, patch.Today, started); err != nil {
+				return err
+			}
+		}
+		if patch.Time != nil {
+			row.Time = *patch.Time
+		}
+		if patch.DryRun {
+			if patch.NotServed != nil {
+				row.NotServed = *patch.NotServed
+			}
+			out = row
+			return nil
+		}
+		if patch.NotServed != nil {
+			if *patch.NotServed {
+				row.NotServed = true
+			} else if err := serveAgain(ctx, tx, slotID, date, &row); err != nil {
+				return err
+			}
+		}
+		if err := writeSlotDate(ctx, tx, row, s.clk.Now()); err != nil {
+			return err
+		}
+		out = row
+		return nil
+	})
+	return out, err
 }

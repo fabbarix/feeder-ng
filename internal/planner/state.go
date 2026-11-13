@@ -293,12 +293,14 @@ func (st *state) classify(i int) role {
 	case MealSkipped:
 		return roleSkipped
 	}
-	// Not served drops the unresolved Planned Meal, Pinned ones too (ADR 0014); Cooked and Not cooked ones are history.
-	if st.slots[i].NotServed {
-		return roleNotServedDate
-	}
+	// A Pinned meal is classified before Not served: a past, unconfirmed one that happened still counts (its Stock,
+	// Cool-down and pending Leftover). BuildInput drops a future Pinned meal of a Not served slot from Existing.
 	if m.State == MealPinned {
 		return rolePinned
+	}
+	// Not served drops the unresolved Planned Meal (ADR 0014); Cooked and Not cooked ones are history.
+	if st.slots[i].NotServed {
+		return roleNotServedDate
 	}
 	if st.regen {
 		return roleEmpty
