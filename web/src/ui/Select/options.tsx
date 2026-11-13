@@ -24,6 +24,8 @@ export interface IngredientChoice {
   baseUnit: string
   /** PE: the Ingredient's Picture address; the option draws a Thumb (an empty slot without it). */
   imageUrl?: string
+  /** BR-D: set when this is a Base recipe's Ingredient: the option shows the "Base recipe" badge. A plain Ingredient of the same name is a second option. */
+  baseRecipe?: { id: number; name: string; archived: boolean } | null
 }
 export interface UnitChoices {
   baseUnit: string

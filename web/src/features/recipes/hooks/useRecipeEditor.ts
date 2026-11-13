@@ -23,6 +23,7 @@ import { parseUnknownUnit, type UnitPrompt } from '../lib/unitPrompt'
 import { renameOffer as renameOfferOf, syncReadyMealLine, type RenameOffer } from '../lib/readyMeal'
 import { lostSlotRules, reconcileWholeMeal, validateCourses, withDefaultCourse } from '../lib/recipeCourses'
 import type { CourseChoice } from '../../../lib/courses'
+import type { TakeOverAsk } from '../../../lib/baseRecipes/types'
 import type { CourseLoss, IngredientRef, Recipe } from '../types'
 
 export interface UseRecipeEditor {
@@ -60,6 +61,23 @@ export interface UseRecipeEditor {
   renameLinkedIngredient: () => Promise<void>
   /** CRS E2: the Slot Rules a save would remove because the draft takes a Course off (lib/recipeCourses.lostSlotRules); null when none. */
   courseLoss: CourseLoss | null
+  /**
+   * BR-D: set while a save was answered 409 `base_recipe_take_over` (a new Base recipe, or a rename, named like a plain Ingredient). Nothing is saved until the answer.
+   */
+  takeOverAsk: TakeOverAsk | null
+  /** BR-D: Yes/No: saves again with `takeOver` true/false (lib/draft sends it); resolves like `save`. */
+  answerTakeOver: (yes: boolean) => Promise<Recipe | null>
+  /** BR-D: Escape on the ask: forgets it, saves nothing. */
+  cancelTakeOver: () => void
+  /**
+   * BR-D: the words of a Base recipe refusal that has no field to sit on, or whose words need the server's path: a cycle ("Roux calls for Béchamel, which calls for Roux",
+   * with the line also in `errors['lines.1']`), a name taken (also `errors.name`). Null when none. Cleared by the next save.
+   */
+  refusal: string | null
+  /** BR-D: "Link to a Base recipe" on a draft line (lib/baseRecipe.linkDraftLine); the link is saved with the Recipe. */
+  linkLine: (key: string, base: { id: number; name: string; ingredientId: number }) => void
+  /** BR-D: "Use as a plain Ingredient" on a draft line (lib/baseRecipe.unlinkDraftLine). */
+  unlinkLine: (key: string, plain: IngredientRef) => void
 }
 
 const NO_INGREDIENTS: readonly IngredientRef[] = []
@@ -204,6 +222,18 @@ export function useRecipeEditor(
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
     pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickCreatedIngredient(d, key, ingredient)),
     courseLoss,
+    takeOverAsk: null,
+    answerTakeOver: () => Promise.reject(new Error('BR-D: not implemented')),
+    cancelTakeOver: () => {
+      throw new Error('BR-D: not implemented')
+    },
+    refusal: null,
+    linkLine: () => {
+      throw new Error('BR-D: not implemented')
+    },
+    unlinkLine: () => {
+      throw new Error('BR-D: not implemented')
+    },
     renameOffer: keptOffer ?? liveOffer,
     renameLinkedIngredient: async () => {
       const offer = keptOffer ?? liveOffer

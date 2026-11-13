@@ -4,7 +4,7 @@ import { Button, Chip, IconButton, IngredientSelect, Menu, TextField, UnitSelect
 import type { DraftErrors, LineDraft } from '../lib/draft'
 import { needsConversion, unitChoicesOf } from '../lib/lineUnits'
 import { codeMessage, recipeStrings } from '../strings'
-import type { IngredientRef } from '../types'
+import type { IngredientRef, RecipeStep } from '../types'
 
 export interface IngredientLineRowProps {
   line: LineDraft
@@ -35,6 +35,16 @@ export interface IngredientLineRowProps {
   /** L13: take focus in the Ingredient picker now (a line just added); calls onIngredientFocused once it has. */
   focusIngredient?: boolean
   onIngredientFocused?: () => void
+  /** BR-D: the Recipe's Steps, for the Needed at menu of a Base recipe line (line.baseRecipeId set). */
+  steps?: ReadonlyArray<Pick<RecipeStep, 'text' | 'kind'>>
+  /** BR-D: the default Needed at Step (0-based), marked "(default)"; null = unknown. */
+  neededAtDefault?: number | null
+  /** BR-D: a Step index = override, null = back to the default. */
+  onNeededAt?: (step: number | null) => void
+  /** BR-D: "Link to a Base recipe" in the actions menu of a plain line with an Ingredient. Without it the item is absent. */
+  onLinkToBase?: () => void
+  /** BR-D: "Use as a plain Ingredient" in the actions menu of a Base recipe line. Without it the item is absent. */
+  onUseAsPlain?: () => void
 }
 
 /** The row's class names with the one the sortable adds. */

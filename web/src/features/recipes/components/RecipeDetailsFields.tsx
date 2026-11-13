@@ -20,6 +20,12 @@ export interface RecipeDetailsFieldsProps {
   courses?: readonly CourseChoice[]
   /** B5-LOW: the Household's Frozen Use-by, named in the helper ("Blank uses the Household's 90 days."); 90 until it is known. */
   householdFrozenUseBy?: number
+  /**
+   * BR-D: the Base recipe switch. Without it the switch is not drawn. The screen's answer runs useBaseRecipeChange (a saved Recipe asks first), then patches the
+   * draft with lib/baseRecipe.setBaseRecipe. Disabled while `baseRecipeBusy`.
+   */
+  onBaseRecipeChange?: (on: boolean) => void
+  baseRecipeBusy?: boolean
 }
 
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)

@@ -18,6 +18,16 @@ export interface LineDraft {
    * Any edit by the User (picking another Ingredient, changing quantity or unit) clears it.
    */
   auto?: boolean
+  /** BR-D: the stored line's id (the link routes need it); absent on a line added in this edit. */
+  id?: number
+  /** BR-D: set on a Base recipe line: the Base recipe it calls for. `ingredientId` is then the Base recipe's Ingredient (for units). */
+  baseRecipeId?: number | null
+  /** BR-D: the Base recipe's name, for the line label "500 ml Béchamel (Base recipe)". */
+  baseRecipeName?: string
+  /** BR-D: the explicit "Needed at" Step (0-based); null/absent = the default. */
+  neededAtStep?: number | null
+  /** BR-D: the plain Ingredient this line was linked from, kept for "Use as a plain Ingredient"; null/absent = none (a take-over line). */
+  linkedFromIngredientId?: number | null
 }
 
 export interface UseDraft {
@@ -45,6 +55,12 @@ export interface RecipeDraft {
   description: string
   yield: string
   readyMeal: boolean
+  /** BR-D: the Base recipe switch. Absent = false. */
+  baseRecipe?: boolean
+  /** BR-D: the Yield's unit while `baseRecipe` is on ('' = not chosen). */
+  yieldUnit?: string
+  /** BR-D: set by the take-over answer (Yes/No) for the next save only. Never stored in the draft otherwise. */
+  takeOver?: boolean
   /** CRS E2: the Courses chosen, household order. */
   courseIds: number[]
   /** CRS E2: sent as it is. While the Whole meal switch is hidden it keeps the stored value (a new Recipe: false). */
