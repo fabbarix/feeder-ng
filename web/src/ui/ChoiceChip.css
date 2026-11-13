@@ -34,9 +34,10 @@
   box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
 }
 
+/* Inside the pill: a sheet body scrolls (overflow) and would clip a ring drawn outside it. */
 .choice-chip:focus-visible {
   outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
+  outline-offset: -3px;
 }
 
 .choice-chip:disabled {
