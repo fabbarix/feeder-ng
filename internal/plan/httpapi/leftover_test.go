@@ -486,3 +486,56 @@ func TestPickingALeftoverRefusals(t *testing.T) {
 	loWantErr(t, "past its Use-by", w.User.Put(cell, map[string]any{"leftoverId": soon}), 409, "leftover_past_use_by")
 	loWantErr(t, "unknown Leftover", w.User.Put(cell, map[string]any{"leftoverId": 9999}), 404, "not_found")
 }
+
+// ---- Round 2 ----
+
+func TestPickingAWholeMealLeftoverForTheMainCourseReportsTheCoursesItCovered(t *testing.T) {
+	w := crsc2.New(t)
+	stew := w.Recipe("Beef stew", crsc2.RecipeSpec{Whole: true})
+	beans := w.Recipe("Green beans", crsc2.RecipeSpec{Courses: []int64{w.Side}})
+	w.Settle()
+	w.Meal(crsc2.Today, w.Slot, w.Side, beans, "planned", false) // unpinned, unresolved: the Whole meal covers it
+	lw := &loWorld{World: w, chilli: stew, stew: stew}
+	id := lw.leftover(stew, 4, "2026-11-12", 0, "")
+	m := decodeMeal(t, w.User.Put(fmt.Sprintf("/api/plan/%s/%d/%d", crsc2.Today, w.Slot, w.Main), map[string]any{"leftoverId": id}))
+	if m.CourseID != w.Main || !m.WholeMeal || len(m.Covered) != 1 || m.Covered[0] != w.Side {
+		t.Errorf("meal = %+v, want covered [Side], as the recipeId path answers", m)
+	}
+	if n := w.Count(`SELECT count(*) FROM planned_meals WHERE course_id = ?`, w.Side); n != 0 {
+		t.Errorf("the covered Side still has %d rows", n)
+	}
+}
+
+func TestTakeOutNamesTheMealsDatedAfterTheNewUseByAndItsDryRunToo(t *testing.T) {
+	w := newLO(t)
+	freezer := w.place("Garage Freezer", "freezer")
+	id := w.leftover(w.chilli, 3, "2027-02-07", freezer, "2026-11-02")
+	w.serve(w.chilli, id, true) // today, 2026-11-09: before the new Use-by 2026-11-12
+	w.Exec(`INSERT INTO planned_meals (date, meal_slot_id, course_id, recipe_id, batches, portions, state, pinned, from_leftover_id, from_date, from_meal_slot_id, from_course_id, created_at, updated_at)
+		VALUES ('2026-11-16', ?, ?, ?, 0, 2, 'planned', 1, ?, '2026-11-05', ?, ?, '2026-11-08T12:00:00Z', '2026-11-08T12:00:00Z')`, w.Slot, w.Main, w.chilli, id, w.Slot, w.Main)
+	r := w.User.Post(fmt.Sprintf("/api/plan/leftovers/%d/take-out?dryRun=1", id), map[string]any{"storagePlaceId": nil})
+	var dry loAnswer
+	if r.Status != 200 || r.JSON(&dry) != nil || len(dry.Replanned) != 1 || dry.Replanned[0].Date != "2026-11-16" {
+		t.Fatalf("dry run = %d %s, want the meal of 2026-11-16 named", r.Status, r.Body)
+	}
+	if l := w.list()[id]; !l.Frozen || l.UseBy != "2027-02-07" {
+		t.Errorf("a dry run changed the Leftover: %+v", l)
+	}
+	r = w.post(id, "take-out", map[string]any{"storagePlaceId": nil})
+	var out loAnswer
+	if r.Status != 200 || r.JSON(&out) != nil || len(out.Replanned) != 1 || out.Replanned[0].Date != "2026-11-16" {
+		t.Fatalf("take-out = %d %s, want the meal of 2026-11-16 in replanned", r.Status, r.Body)
+	}
+	if out.Leftover.ID != id || out.Leftover.UseBy != "2026-11-12" {
+		t.Errorf("leftover = %+v, want Use-by 2026-11-12", out.Leftover)
+	}
+}
+
+func TestALeftoverWithNoPortionsAnswers404ForFreezeHadItAndThrewItOut(t *testing.T) {
+	w := newLO(t)
+	freezer := w.place("Garage Freezer", "freezer")
+	id := w.leftover(w.chilli, 0, "2026-11-12", 0, "")
+	loWantErr(t, "freeze", w.post(id, "freeze", map[string]any{"storagePlaceId": freezer}), 404, "not_found")
+	loWantErr(t, "had-it", w.post(id, "had-it", map[string]any{"portions": 1}), 404, "not_found")
+	loWantErr(t, "threw-out", w.post(id, "threw-out", map[string]any{"portions": 1}), 404, "not_found")
+}

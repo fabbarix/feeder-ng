@@ -6,10 +6,9 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ### Added
 
-- **Leftovers by hand.** A Leftover past its Use-by is no longer thrown away on its own. A Leftover takes Had it (portions used outside the plan, not waste), Threw it out (waste dated the day of the action), Freeze it (into a Freezer, for the Frozen Use-by) or Take out (out of the Freezer, for the Recipe's Use-by days). Each one shows the Planned Meals it would replan before it is confirmed.
+- **Leftovers by hand.** A Leftover past its Use-by is no longer thrown away on its own. A Leftover takes Had it (portions used outside the plan, not waste), Threw it out (waste dated the day of the action, or the day after the Use-by when the Leftover is already past it), Freeze it (into a Freezer, for the Frozen Use-by) or Take out (out of the Freezer, for the Recipe's Use-by days).
 - **Frozen Use-by.** Each Recipe can set its own Frozen Use-by, from 1 to 365 days; the Household sets the default in its settings (90 days). A Leftover in a Freezer is not planned automatically: pick it with From the freezer in Choose a Recipe, and Cooked takes only the portions used, leaving the rest frozen.
-- **Answer a Leftover past its Use-by.** Had it, Threw it out, or Wasn't there. Had it and Wasn't there are not waste; Threw it out is waste dated the day after the Use-by.
-
+- **Answer a Leftover past its Use-by.** Had it, Threw it out, or Wasn't there. Had it and Wasn't there are not waste; Threw it out is waste dated the day after the Use-by. Until it is answered a Leftover past its Use-by waits on Today and is not planned again, so the Zero-waste streak holds.
 - **Stock Lots inline.** On the Pantry, each Ingredient shows its Stock Lots under its name, with the quantity, Bought on and Good until of each, so the Stock is visible without opening every Lot.
 - **Edit a Stock Lot.** Correct a Stock Lot's quantity, Bought on and Good until from its sheet. Changing Bought on suggests Good until again from the Shelf Life, unless Good until is chosen in the same edit. An Ingredient with a Shelf Life needs a Good until; "No go-off date" is offered only without one. A Storage Place is still changed with Move to.
 - **Delete a Stock Lot.** Delete removes a Stock Lot entered by mistake, such as a double Scan. It is not counted as waste.
@@ -17,7 +16,6 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ### Changed
 
-- **A Leftover past its Use-by asks first.** It is no longer counted as waste by the nightly plan. Until it is answered it waits on Today, and it is not planned again, so the Zero-waste streak holds until the answer.
 - **Regenerate lists Bought Planned Meals.** Before Regenerate replaces anything, it can list the Bought Planned Meals it would replace, with the Ingredients bought for each, and change nothing.
 
 ## [1.0.0-beta.4.2] - 2026-11-12

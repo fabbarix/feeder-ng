@@ -282,6 +282,11 @@ func TestHadItBelowTheClaimsUnpinsAndReplansTheMealsThatLoseOut(t *testing.T) {
 func TestHadItThatLeavesEnoughKeepsTheMealsServedFromIt(t *testing.T) {
 	e := newEnv(t)
 	l := e.loLeftover("chicken", 5, "2026-11-12")
+	// Today has a Pinned meal of its own: the replan after the action finds no empty cell before the dependants to
+	// put the Leftover into.
+	if _, err := e.st.SaveMeal(ctx, plan.Meal{Key: e.key(9), RecipeID: e.rec["pasta"], Portions: 2, State: plan.StatePlanned, Pinned: true}); err != nil {
+		t.Fatal(err)
+	}
 	e.loServe(10, l, true)
 	e.loServe(11, l, false)
 	res, err := e.r.HadIt(ctx, l.ID, 1, loUser) // 4 left: exactly what the two meals use
@@ -862,5 +867,95 @@ func TestLosingOutNamesTheMealsWithoutWritingAnything(t *testing.T) {
 	}
 	if _, err := e.r.LosingOut(ctx, 9999, 1); !errors.Is(err, runner.ErrNotFound) {
 		t.Errorf("unknown Leftover: %v, want ErrNotFound", err)
+	}
+}
+
+// ---- Round 2: Take out shortens the Use-by (ADR 0012), archived Recipes, 0 portions ----
+
+func TestTakeOutUnpinsAndReplansTheMealsDatedAfterTheNewUseBy(t *testing.T) {
+	e := newEnv(t)
+	freezer := e.loPlace("Garage Freezer", "freezer")
+	l := e.loFrozen("chicken", 6, "2027-02-07", freezer, "2026-11-02")
+	e.loServe(11, l, true) // Wednesday: on the new Use-by's right side
+	e.loServe(12, l, true) // Thursday 2026-11-12 is the new Use-by (today + 3): still fine
+	e.loServe(13, l, true) // Friday: after it
+	res, err := e.r.TakeOut(ctx, l.ID, 0, loUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := keys(e.key(13)); !reflect.DeepEqual(res.Replanned, want) {
+		t.Errorf("Replanned = %v, want %v (only the meal dated after the new Use-by 2026-11-12)", res.Replanned, want)
+	}
+	if e.loServedFrom(13, l.ID) || e.loPinned(13) {
+		t.Error("Friday must be planned again: unpinned and no longer served from the Leftover")
+	}
+	if !e.loServedFrom(11, l.ID) || !e.loServedFrom(12, l.ID) || !e.loPinned(12) {
+		t.Error("the meals dated on or before the new Use-by must be left alone")
+	}
+}
+
+func TestTakeOutWithNoMealAfterTheNewUseByReplansNothing(t *testing.T) {
+	e := newEnv(t)
+	freezer := e.loPlace("Garage Freezer", "freezer")
+	l := e.loFrozen("chicken", 4, "2027-02-07", freezer, "2026-11-02")
+	e.loServe(10, l, true)
+	e.loServe(11, l, true)
+	res, err := e.r.TakeOut(ctx, l.ID, 0, loUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Replanned) != 0 || !e.loServedFrom(10, l.ID) || !e.loServedFrom(11, l.ID) || !e.loPinned(10) {
+		t.Errorf("Replanned = %v; both meals are before the new Use-by and must stay", res.Replanned)
+	}
+}
+
+func TestTakeOutDryRunNamesTheMealsAndWritesNothing(t *testing.T) {
+	e := newEnv(t)
+	freezer := e.loPlace("Garage Freezer", "freezer")
+	l := e.loFrozen("chicken", 4, "2027-02-07", freezer, "2026-11-02")
+	e.loServe(13, l, true)
+	res, err := e.r.TakeOut(runner.Dry(ctx), l.ID, 0, loUser)
+	if !errors.Is(err, runner.ErrDryRun) {
+		t.Fatalf("TakeOut on a Dry context = %v, want ErrDryRun", err)
+	}
+	if want := keys(e.key(13)); !reflect.DeepEqual(res.Replanned, want) {
+		t.Errorf("Replanned = %v, want %v", res.Replanned, want)
+	}
+	if got := e.loGet(l.ID); !got.Frozen() || got.UseBy != "2027-02-07" || !e.loServedFrom(13, l.ID) || !e.loPinned(13) || len(e.loEvents(l.ID)) != 0 {
+		t.Errorf("a dry run changed something: %+v", got)
+	}
+}
+
+func TestAnArchivedRecipesLeftoverCanStillBePickedForAMeal(t *testing.T) {
+	e := newEnv(t)
+	l := e.loLeftover("stew", 4, "2026-11-12")
+	e.src.archive(e.rec["stew"])
+	m, err := e.r.UseLeftover(ctx, e.key(11), l.ID)
+	if err != nil {
+		t.Fatalf("UseLeftover of an archived Recipe's Leftover = %v; the food exists, the archive refusal is for Recipes", err)
+	}
+	if !m.Pinned || m.From == nil || m.From.LeftoverID != l.ID || m.RecipeID != l.RecipeID {
+		t.Errorf("meal = %+v, want a Pinned meal served from the Leftover", m)
+	}
+}
+
+func TestALeftoverWithNoPortionsIsNotFoundForFreezeHadItAndThrewItOut(t *testing.T) {
+	e := newEnv(t)
+	freezer := e.loPlace("Garage Freezer", "freezer")
+	l := e.loLeftover("chicken", 3, "2026-11-12")
+	if _, err := e.db.Exec(`UPDATE leftovers SET portions = 0 WHERE id = ?`, l.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.r.Freeze(ctx, l.ID, freezer, nil, loUser); !errors.Is(err, runner.ErrNotFound) {
+		t.Errorf("Freeze = %v, want ErrNotFound", err)
+	}
+	if _, err := e.r.HadIt(ctx, l.ID, 1, loUser); !errors.Is(err, runner.ErrNotFound) {
+		t.Errorf("HadIt = %v, want ErrNotFound", err)
+	}
+	if _, err := e.r.ThrewOut(ctx, l.ID, 1, loUser); !errors.Is(err, runner.ErrNotFound) {
+		t.Errorf("ThrewOut = %v, want ErrNotFound", err)
+	}
+	if len(e.loEvents(l.ID)) != 0 || len(e.stock.waste) != 0 {
+		t.Error("a refused action wrote something")
 	}
 }
