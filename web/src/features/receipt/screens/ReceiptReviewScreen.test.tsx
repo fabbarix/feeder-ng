@@ -198,7 +198,9 @@ describe('Add…: the seam for the new-Product sheet (SR5, wired at integration)
       <button type="button" onClick={onClose}>Close add</button>
     </dialog>
   ))
-  beforeEach(() => sheet.mockClear())
+  beforeEach(() => {
+    sheet.mockClear()
+  })
 
   it('renders nothing of it until Add… is pressed, then calls renderAdd with the proposal and no draft', async () => {
     show(sheet)
