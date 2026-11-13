@@ -38,6 +38,7 @@ import { useJustScanned } from '../hooks/useJustScanned'
 import { useListView } from '../hooks/useListView'
 import { useScanController, type ScanController } from '../hooks/useScanController'
 import { useScanSession } from '../hooks/useScanSessionActive'
+import { useScrollAboveSheet } from '../hooks/useScrollAboveSheet'
 import { initialChoice, type ScanChoice } from '../lib/initialChoice'
 import { getLastShopId, setLastShopId } from '../lib/lastShop'
 import type { ListView } from '../lib/listView'
@@ -176,6 +177,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
 
   const pricingKey = flow.pricing?.key ?? null
   const pricingRow = pricingKey === null ? undefined : scanned.rows.find((r) => r.key === pricingKey)
+  useScrollAboveSheet(pricingRow ? pricingKey : null)
   const productOf = (row: ScannedRow) => (row.productId === null ? undefined : c.product?.(row.productId))
 
   /** Save, Next or Close of the Price entry: a refusal or a failed save keeps the sheet open with its message. */
@@ -205,6 +207,22 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
       <CameraFailure recovery={c.recovery} />
       {flow.banner ? <p className="scan-screen__banner" data-tone={flow.banner.tone}>{flow.banner.text}</p> : null}
       <ScanNotices online={c.online} pendingCount={c.pendingCount} rejectedCount={c.rejectedCount} onDismissRejected={c.dismissRejected} notices={c.notices} onDismiss={c.dismissNotice} />
+      {/* The Price entry is a non-modal sheet: fixed at the bottom on a phone, docked here, under the camera, from 768 px. */}
+      {isShop && pricingRow ? (
+        <PriceEntrySheet
+          row={pricingRow}
+          shopName={shopName}
+          currency={c.currency}
+          {...priceContext(productOf(pricingRow))}
+          weighed={pricingRow.weighed ? (pricingRow.weight ?? undefined) : undefined}
+          initialPerKgCents={pricingRow.perKgCents}
+          hasNext={scanned.nextUnpriced(pricingRow.key) !== null}
+          error={priceFailure?.key === pricingRow.key ? priceFailure.message : null}
+          onNext={(entry) => savePrice(pricingRow, entry, 'next')}
+          onSave={(entry) => savePrice(pricingRow, entry, 'save')}
+          onClose={(entry) => savePrice(pricingRow, entry, 'close')}
+        />
+      ) : null}
     </div>
   )
 
@@ -250,7 +268,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   )
 
   return (
-    <section className="scan-screen">
+    <section className="scan-screen" data-pricing={pricingRow ? 'true' : undefined}>
       {shop ? (
         <PageHeader title={shop.name} actions={<Button variant="tertiary" onClick={changeShop}>{scanStrings.changeShop}</Button>} />
       ) : (
@@ -279,21 +297,6 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
         cameraColumn
       )}
 
-      {isShop && pricingRow ? (
-        <PriceEntrySheet
-          row={pricingRow}
-          shopName={shopName}
-          currency={c.currency}
-          {...priceContext(productOf(pricingRow))}
-          weighed={pricingRow.weighed ? (pricingRow.weight ?? undefined) : undefined}
-          initialPerKgCents={pricingRow.perKgCents}
-          hasNext={scanned.nextUnpriced(pricingRow.key) !== null}
-          error={priceFailure?.key === pricingRow.key ? priceFailure.message : null}
-          onNext={(entry) => savePrice(pricingRow, entry, 'next')}
-          onSave={(entry) => savePrice(pricingRow, entry, 'save')}
-          onClose={(entry) => savePrice(pricingRow, entry, 'close')}
-        />
-      ) : null}
       {sheet?.kind === 'confirm_remove' ? (
         <ConfirmDialog
           open

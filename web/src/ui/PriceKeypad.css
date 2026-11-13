@@ -95,3 +95,17 @@
   justify-content: space-between;
   gap: var(--space-2);
 }
+
+/* compact: a half-height sheet. Less air between the parts and the keys; the keys keep their 44 px minimum. */
+.price-keypad[data-compact='true'] {
+  gap: var(--space-2);
+  padding: 0;
+}
+
+.price-keypad[data-compact='true'] .price-keypad__display {
+  padding-block: 0;
+}
+
+.price-keypad[data-compact='true'] .price-keypad__keys {
+  gap: var(--space-1) var(--space-2);
+}

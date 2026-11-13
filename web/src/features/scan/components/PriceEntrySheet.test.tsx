@@ -44,6 +44,15 @@ describe('PriceEntrySheet', () => {
     expect(screen.getByRole('status', { name: 'Price of Mutti passata 700 g' })).toBeInTheDocument()
   })
 
+  it('is a non-modal half sheet, so the list stays in view; the compact keypad leaves the name to the title', () => {
+    setup()
+    const dialog = screen.getByRole('dialog', { name: 'Price of Mutti passata 700 g' })
+    expect(dialog).toHaveAttribute('data-modal', 'false')
+    expect(dialog).toHaveAttribute('data-size', 'half')
+    expect(document.querySelector('.price-keypad')).toHaveAttribute('data-compact', 'true')
+    expect(document.querySelector('.price-keypad__meta')).toBeNull()
+  })
+
   it('offers per pack and per kg for a Product in grams, and "Last time here" with the last Price', () => {
     setup()
     expect(screen.getByRole('radio', { name: 'per pack' })).toBeChecked()

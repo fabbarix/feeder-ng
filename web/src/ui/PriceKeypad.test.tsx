@@ -516,3 +516,20 @@ describe('PriceKeypad: a11y and size', () => {
     expect(readUiCss('PriceKeypad.css')).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/)
   })
 })
+
+describe('PriceKeypad: compact, for a half-height sheet', () => {
+  it('marks itself compact and can leave out the name its host already shows', () => {
+    const { container } = setup({ compact: true, showName: false })
+    expect(container.querySelector('.price-keypad')).toHaveAttribute('data-compact', 'true')
+    expect(screen.queryByText('Mutti passata')).toBeNull()
+    expect(display()).toBeInTheDocument()
+  })
+
+  it('keeps the keys at least 44 px high: compact changes only the spacing', () => {
+    const css = readUiCss('PriceKeypad.css')
+    expect(declarations(css, '.price-keypad__key')['min-height']).toBe('44px')
+    const compactKeys = declarations(css, ".price-keypad[data-compact='true'] .price-keypad__keys")
+    expect(compactKeys['min-height']).toBeUndefined()
+    expect(css).not.toMatch(/data-compact='true'\][^{]*__key\s*\{[^}]*(min-height|block-size|height)/)
+  })
+})

@@ -1,5 +1,6 @@
-// SR4: the Price entry of one row (shop-scan-proposals.md 13.4): a BottomSheet around the PriceKeypad, keyed by the row so
-// the next row starts empty. It reports Save, Next and Close with what was typed; the screen saves it. Replaces PriceEditSheet.
+// SR4: the Price entry of one row (shop-scan-proposals.md 13.4): a non-modal half-height BottomSheet around the compact
+// PriceKeypad, so the Scanned list stays in view above it (the row being priced is outlined). Keyed by the entry, so the next
+// row starts afresh. It reports Save, Next and Close with what was typed; the screen saves it. Replaces PriceEditSheet.
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { PriceKeypad, type PriceEntry } from '../../../ui/PriceKeypad'
 import type { PackSize } from '../../../ui/lib/priceImplication'
@@ -30,9 +31,11 @@ const NOTHING_TYPED: PriceEntry = { basis: 'pack', cents: null, packCents: null,
 
 export function PriceEntrySheet({ row, shopName, currency, locale, pack, last, weighed, initialPerKgCents, hasNext, error, onNext, onSave, onClose }: PriceEntrySheetProps) {
   return (
-    <BottomSheet open title={scanStrings.priceOf(row.name)} onClose={() => onClose(NOTHING_TYPED)}>
+    <BottomSheet open modal={false} size="half" title={scanStrings.priceOf(row.name)} onClose={() => onClose(NOTHING_TYPED)}>
       <PriceKeypad
         key={row.key}
+        compact
+        showName={false}
         productName={row.name}
         currency={currency}
         locale={locale}

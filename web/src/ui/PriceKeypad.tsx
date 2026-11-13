@@ -45,6 +45,10 @@ export interface PriceKeypadProps {
   onNext: (entry: PriceEntry) => void
   onSave: (entry: PriceEntry) => void
   onClose: (entry: PriceEntry) => void
+  /** Tighter spacing for a half-height sheet; the keys stay at least 44 px high. */
+  compact?: boolean
+  /** false: leave out the product name line (the host already shows it, e.g. as the sheet title). Default true. */
+  showName?: boolean
 }
 
 const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const
@@ -53,7 +57,7 @@ const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const
  * The keypad of the Price entry: our own keys only, uncontrolled. It keeps the typed text and reports a PriceEntry.
  * A physical keyboard types into it too, unless the focus is in another text field.
  */
-export function PriceKeypad({ productName, currency, locale = 'en-US', initialCents, initialPerKgCents, pack, weighed, last, shopName, hasNext, onNext, onSave, onClose }: PriceKeypadProps) {
+export function PriceKeypad({ productName, currency, locale = 'en-US', initialCents, initialPerKgCents, pack, weighed, last, shopName, hasNext, onNext, onSave, onClose, compact = false, showName = true }: PriceKeypadProps) {
   const perKgPack = pack && supportsPerKg(pack.unit) ? pack : null
   const errorId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -187,8 +191,8 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
   const implied = impliedLine({ basis, cents: valid ? cents : null, packCents: entry().packCents, pack: pack, weighed, currency, locale })
 
   return (
-    <div ref={rootRef} className="price-keypad">
-      <p className="price-keypad__meta">{productName}</p>
+    <div ref={rootRef} className="price-keypad" data-compact={compact ? 'true' : undefined}>
+      {showName ? <p className="price-keypad__meta">{productName}</p> : null}
       {perKgPack ? (
         <Segmented<PriceBasis> label={uiStrings.priceBasis} labelHidden options={priceBasisOptions(perKgPack.unit)} value={basis} onChange={switchBasis} compact />
       ) : null}
