@@ -10,6 +10,7 @@ import { tileRows } from '../../../lib/leftovers/rows'
 import { planStrings as s } from '../strings'
 import type { Leftover, PlanEntry, SlotDayKey, SlotKey } from '../types'
 import '../plan.css'
+import './TonightHero.css'
 
 export interface ToConfirmTileProps {
   slots: PlanEntry[]

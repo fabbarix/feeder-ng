@@ -1,0 +1,179 @@
+/* The Today hero (TonightHero), its Course rows and the To confirm rows (TodayTiles). Tokens only. */
+/* The hero's frame (.plan-hero, its slot menu and the actions) stays in plan.css. */
+.plan-hero__body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.plan-hero__text {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.plan-hero__name {
+  margin: 0;
+  font-size: var(--text-title-2-size);
+}
+/* DS-TODAY: the hero name is title-1 from 520 px; it wraps at word boundaries (never mid-word). */
+@media (min-width: 520px) {
+  .plan-hero__name {
+    font-size: var(--text-title-1-size);
+  }
+}
+/* DS-TODAY: the why chips stay on one line: a row that never wraps, clipped by the row, each chip may shrink. */
+.plan-hero__chips {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  min-inline-size: 0;
+  gap: 8px;
+}
+.plan-hero__chips > * {
+  min-inline-size: 0;
+}
+/* DS-TODAY §9: To confirm, one row per Meal Slot. Tokens only; the rows share one column for their actions. */
+.to-confirm__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+.to-confirm__badge {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: var(--radius-chip);
+}
+.to-confirm__badge[data-tone='info'] {
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+}
+.to-confirm__heading {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  font-weight: 800;
+}
+.to-confirm__count {
+  font-size: var(--text-meta-size);
+  font-weight: 700;
+  color: var(--color-muted);
+}
+.to-confirm__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.to-confirm__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+}
+.to-confirm__row + .to-confirm__row {
+  border-block-start: 1px solid var(--color-line);
+}
+.to-confirm__when {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  inline-size: 4.5rem;
+  min-block-size: 3rem;
+  margin: 0;
+  padding: var(--space-1);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-label-size);
+  font-weight: 700;
+  text-align: center;
+}
+.to-confirm__when > span:first-child {
+  font-size: var(--text-meta-size);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.to-confirm__text {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+.to-confirm__title {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: 700;
+}
+.to-confirm__meta {
+  min-inline-size: 0;
+  margin: 0;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The Today hero's Courses list (TonightHero). */
+.plan-hero__courses {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* DS-TODAY: the hero on the accent. Its why chips are on-accent at 18 % (neutral, never an accent-soft fill). */
+.plan-hero .chip[data-kind='why'] {
+  background: color-mix(in srgb, var(--color-on-accent) 18%, transparent);
+  color: var(--color-on-accent);
+}
+/* DS-TODAY: in dark mode the hero is the darker accent container with the text colour; its Cook button is accent solid. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .plan-hero {
+    background: var(--color-soft-strong);
+    color: var(--color-text);
+  }
+  :root:not([data-theme='light']) .plan-hero [data-variant='primary'] {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+}
+:root[data-theme='dark'] .plan-hero {
+  background: var(--color-soft-strong);
+  color: var(--color-text);
+}
+:root[data-theme='dark'] .plan-hero [data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* DS-TODAY: a Course row of the hero is one line: the name (it takes the room, ends in an ellipsis), the chip, then the icon group at the end. */
+.plan-course__caption {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+.plan-course__body {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.plan-course .plan-meal__recipe {
+  display: block;
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plan-course__actions {
+  display: inline-flex;
+  flex: none;
+  margin-inline-start: auto;
+  gap: var(--space-1);
+}

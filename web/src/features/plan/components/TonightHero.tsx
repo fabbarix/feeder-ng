@@ -13,6 +13,7 @@ import { PlanChipView } from './PlanChipView'
 import { RuleWarningLine } from './RuleWarningLine'
 import { SlotMenu, type SlotMenuProps } from './SlotMenu'
 import '../plan.css'
+import './TonightHero.css'
 
 export interface TonightHeroProps {
   /** From lib/days heroMeal; its meal is planned. */
