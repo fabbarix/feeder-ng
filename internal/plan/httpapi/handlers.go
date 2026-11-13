@@ -145,12 +145,52 @@ func (a *api) leftovers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) regenerate(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("dryRun") == "1" {
+		a.regenerateDryRun(w, r)
+		return
+	}
 	sum, err := a.run.Regenerate(r.Context())
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]int{"placed": sum.Placed, "kept": sum.Kept, "unfilled": sum.Unfilled})
+}
+
+// regenerateDryRunOut is POST /api/plan/regenerate?dryRun=1: how many Planned Meals Regenerate would replace, and the
+// Bought ones among them (ADR 0013 point 7). Nothing is written.
+type regenerateDryRunOut struct {
+	Replaces int              `json:"replaces"`
+	Bought   []regenBoughtOut `json:"bought"`
+}
+
+type regenBoughtOut struct {
+	Date         string   `json:"date"`
+	MealSlotName string   `json:"mealSlotName"`
+	CourseName   string   `json:"courseName"`
+	RecipeName   string   `json:"recipeName"`
+	Ingredients  []string `json:"ingredients"`
+}
+
+func (a *api) regenerateDryRun(w http.ResponseWriter, r *http.Request) {
+	prev, err := a.run.RegeneratePreview(r.Context())
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	t, err := a.names.load(r.Context())
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	out := regenerateDryRunOut{Replaces: prev.Replaces, Bought: make([]regenBoughtOut, 0, len(prev.Bought))}
+	for _, m := range prev.Bought {
+		out.Bought = append(out.Bought, regenBoughtOut{
+			Date: m.Key.Date, MealSlotName: t.slots[m.Key.MealSlotID], CourseName: t.courses[m.Key.CourseID],
+			RecipeName: t.recipes[m.RecipeID], Ingredients: boughtNames(m.Bought, t),
+		})
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // mealReply answers a meal action with the meal as it is now.

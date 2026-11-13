@@ -299,10 +299,9 @@ func (s *Service) EditLot(ctx context.Context, lotID int64, edit stock.Edit) (Lo
 }
 
 // DeleteLot deletes a Lot as a correction (a double Scan): the Lot leaves Stock, no waste is recorded and no go-off is
-// kept, and its go-off record, if any, goes (like the Undo of a Scan). Publishes stock {"changed":"lots"}.
+// kept, and its go-off record, if any, goes (like the Undo of a Scan). The Planned Meals it was bought for lose their
+// records in the same transaction (store.DeleteLot, B5-BO). Publishes stock {"changed":"lots"}.
 func (s *Service) DeleteLot(ctx context.Context, lotID int64) error {
-	// TODO(BO): the planned_meal_bought records of this Lot (spec §6, plan 2.4) come with migration 1520; when BO lands,
-	// remove them here in the same transaction as the Lot.
 	return s.RemoveLot(ctx, lotID)
 }
 

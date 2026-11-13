@@ -331,6 +331,11 @@ func (s *Store) DeleteLot(ctx context.Context, id int64) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM stock_go_offs WHERE lot_id = ?`, id); err != nil {
 		return err
 	}
+	// What the Lot was bought for (planned_meal_bought, B5-BO, ADR 0013) goes in the same transaction: the Lot is gone.
+	// Used-up Lots are not deleted here, so their records stay.
+	if _, err := tx.ExecContext(ctx, `DELETE FROM planned_meal_bought WHERE lot_id = ?`, id); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 

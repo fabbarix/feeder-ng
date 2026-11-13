@@ -46,12 +46,13 @@ type impactJSON struct {
 }
 
 type plannedMealOut struct {
-	Date         string `json:"date"`
-	MealSlotID   int64  `json:"mealSlotId"`
-	MealSlotName string `json:"mealSlotName"`
-	RecipeID     int64  `json:"recipeId"`
-	RecipeName   string `json:"recipeName"`
-	Pinned       bool   `json:"pinned"`
+	Date         string   `json:"date"`
+	MealSlotID   int64    `json:"mealSlotId"`
+	MealSlotName string   `json:"mealSlotName"`
+	RecipeID     int64    `json:"recipeId"`
+	RecipeName   string   `json:"recipeName"`
+	Pinned       bool     `json:"pinned"`
+	Bought       []string `json:"bought"` // the Ingredients bought for the meal by name; [] when none (ADR 0013)
 }
 
 // ruleOut is a Slot Rule: a Recipe rule carries recipeId and recipeName, a rule by Tag carries tag.
@@ -69,7 +70,8 @@ func impactOut(im course.Impact, recipeNames map[int64]string) impactJSON {
 		PlannedMeals: make([]plannedMealOut, 0, len(im.PlannedMeals)), SlotRules: make([]ruleOut, 0, len(im.SlotRules))}
 	for _, m := range im.PlannedMeals {
 		out.PlannedMeals = append(out.PlannedMeals, plannedMealOut{Date: m.Date, MealSlotID: m.MealSlotID,
-			MealSlotName: m.MealSlotName, RecipeID: m.RecipeID, RecipeName: m.RecipeName, Pinned: m.Pinned})
+			MealSlotName: m.MealSlotName, RecipeID: m.RecipeID, RecipeName: m.RecipeName, Pinned: m.Pinned,
+			Bought: nonNilNames(m.Bought)})
 	}
 	for _, r := range im.SlotRules {
 		o := ruleOut{ID: r.ID, MealSlotID: r.MealSlotID, Tag: r.Tag}
@@ -153,4 +155,12 @@ func (a *api) nameTaken(w http.ResponseWriter, r *http.Request, name string) {
 func idParam(r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	return id, err == nil
+}
+
+// nonNilNames is names, or an empty list for none: the JSON of a bought list is [] and never null.
+func nonNilNames(names []string) []string {
+	if names == nil {
+		return []string{}
+	}
+	return names
 }

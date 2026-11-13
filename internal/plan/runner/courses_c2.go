@@ -50,6 +50,8 @@ type CourseView struct {
 	CoveredBy       *CoveredBy
 	Unserved        string // "", "optional", "no_course_attendance" or "not_served" (the whole slot is Not served on that date)
 	History         bool   // a Course the slot no longer serves, shown for its Cooked or Not cooked meal
+	// Warning (B5-BO): the Pinned or Bought Planned Meal now breaks a hard rule (plan.HardRuleWarning), else nil.
+	Warning *plan.Warning
 }
 
 // MainCourseID is the real id of the main Course.

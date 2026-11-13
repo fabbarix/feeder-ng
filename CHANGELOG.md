@@ -14,6 +14,11 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 - **Time today.** The slot menu on Plan and Today sets the time of one date (Time today, or Time on Thu), with Back to the usual time. A date with its own time reads "20:15 · usually 19:30".
 - **Dates that differ on Settings > Meal Slots.** The page lists the coming dates whose slot has its own time, is Not served, or has Guests.
 - **Mark it on the Shopping List.** The hint "Includes Tue Dinner, not marked Cooked yet" has a Mark it button that opens that slot's Mark as Cooked sheet on the Plan.
+- **Bought Planned Meals stay.** A Planned Meal that a purchase from the Shopping List was bought for is Bought: automatic plan changes leave it where it is, as they do a Pinned one, and the plan says when it now breaks a hard rule, such as an Exclusion or an archived Recipe. Undoing the Scan, unticking the line or deleting the Stock Lot takes the Bought mark back.
+
+### Changed
+
+- **Regenerate lists Bought Planned Meals.** Before Regenerate replaces anything, it can list the Bought Planned Meals it would replace, with the Ingredients bought for each, and change nothing.
 
 ## [1.0.0-beta.4.2] - 2026-11-12
 

@@ -110,7 +110,7 @@ func LostCourses(before, after []int64) []int64
 // store.ListFilter gains CourseID, NotCourseID (0 = any)
 ```
 
-The store resolves the ids (`ValidationError{Field:"courses", Code: CodeCourseUnknown}` for unknown, archived or zero), writes `recipe_courses` and `recipes.whole_meal`, and reads Courses back in **household order** (`courses.position`). Taking the main Course off a Whole meal Recipe keeps the flag. **A Recipe that loses a Course**, in the same transaction as the update and only when the update succeeds: delete its Slot Rules **by that Recipe** on the lost Courses; delete its `state = 'planned'`, `pinned = 0`, `date >= today` Planned Meals in the lost Courses (fresh ones and those served from its Leftovers alike); keep Pinned, Cooked, Not cooked and past ones, other Courses' meals, Slot Rules by Tag, and other Recipes' rules. The replan itself is the handler's event (C/B).
+The store resolves the ids (`ValidationError{Field:"courses", Code: CodeCourseUnknown}` for unknown, archived or zero), writes `recipe_courses` and `recipes.whole_meal`, and reads Courses back in **household order** (`courses.position`). Taking the main Course off a Whole meal Recipe keeps the flag. **A Recipe that loses a Course**, in the same transaction as the update and only when the update succeeds: delete its Slot Rules **by that Recipe** on the lost Courses; delete its `state = 'planned'`, `pinned = 0`, `date >= today`, unbought Planned Meals in the lost Courses (fresh ones and those served from its Leftovers alike); keep Pinned, Bought, Cooked, Not cooked and past ones, other Courses' meals, Slot Rules by Tag, and other Recipes' rules. The replan itself is the handler's event (C/B).
 
 ### 3.4 Household
 
