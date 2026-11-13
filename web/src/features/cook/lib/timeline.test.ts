@@ -75,7 +75,7 @@ describe('toCookStep (the existing Step tile takes it)', () => {
     const v = visibleItems(view, 'all')[2]!
     expect(toCookStep(v)).toEqual({
       index: 1, number: 3, of: 4, kind: 'passive', text: 'Roast in the oven', durationMinutes: 20, imageUrl: '', uses: [],
-      timer: { label: 'Roast chicken · Roast in the oven', durationSeconds: 1200 }, after: [0],
+      timer: { label: 'Roast chicken · Roast in the oven', durationSeconds: 1200 }, after: [0], baseRecipe: null,
     })
   })
 
