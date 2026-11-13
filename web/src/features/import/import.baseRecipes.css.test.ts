@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest'
 import { readSource } from '../plan/test-css'
 
 const css = readSource('features/import/import.css').replace(/\/\*[\s\S]*?\*\//g, '')
-const block = css.slice(css.indexOf('/* ---- Base recipes (BR-E'))
+// The Base recipe rules start at the first `.base-line-tile {` rule (comments are stripped, so the section comment cannot be the anchor).
+const blockStart = css.indexOf('.base-line-tile {')
+const block = blockStart < 0 ? '' : css.slice(blockStart)
 const rule = (selector: string): string => {
   const at = css.indexOf(`${selector} {`)
   return at < 0 ? '' : css.slice(at, css.indexOf('}', at))
@@ -23,6 +25,13 @@ const baseClasses = [
 ]
 
 describe('import.css, Base recipe tiles', () => {
+  it('finds the Base recipe block: it is not empty and starts with the tile rule', () => {
+    expect(blockStart).toBeGreaterThanOrEqual(0)
+    expect(block.length).toBeGreaterThan(200)
+    expect(block.startsWith('.base-line-tile {')).toBe(true)
+    expect(block).toContain('.base-yield {')
+  })
+
   it('every class the Base recipe tiles use has a rule of its own', () => {
     for (const name of baseClasses) expect(css, name).toMatch(new RegExp(`\\.${name} \\{`))
   })
@@ -36,7 +45,7 @@ describe('import.css, Base recipe tiles', () => {
   it('uses design tokens only: no colour literal and no raw size in the Base recipe rules', () => {
     expect(block).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
     expect(block).not.toMatch(/\b(rgba?|hsla?|oklch)\(/)
-    expect(block).not.toMatch(/font-size:\s*(?!var\(--text-)/)
+    expect(block).not.toMatch(/font-size:\s*(?!var\(--text-)\S/)
   })
 
   it('the Problem and take-over tiles are shared status Tiles, in their tone', async () => {
