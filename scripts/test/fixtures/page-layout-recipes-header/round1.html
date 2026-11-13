@@ -69,9 +69,20 @@
 <script>
   // Round 3: the round-2 chip line looped between 420 and 440 px (React #185) and the page showed the error page. The guard's
   // RESIZE_WALK (P21) must see the console error, the uncaught exception and the error page at those widths only.
-  if (innerWidth >= 420 && innerWidth <= 440) {
+  // The layout width (clientWidth): under phone emulation an overflowing page like this one reports a wider innerWidth.
+  const layoutWidth = () => document.documentElement.clientWidth
+  if (layoutWidth() >= 420 && layoutWidth() <= 440) {
     document.querySelector('main').innerHTML = '<div class="page" data-page-width="wide"><h1>Something went wrong</h1></div>'
     console.error('Maximum update depth exceeded')
     setTimeout(() => { throw new Error('Minified React error #185') }, 0)
   }
+  // Review of round 3: a break only on a live resize, in a 3 px window between the walk's 10 px steps (453 to 455 px). Only the
+  // RESIZE_SWEEP can see it: a fresh load at 450 or 460 is fine.
+  addEventListener('resize', () => {
+    if (layoutWidth() >= 453 && layoutWidth() <= 455 && !document.body.dataset.broken) {
+      document.body.dataset.broken = 'yes'
+      document.querySelector('main').innerHTML = '<div class="page" data-page-width="wide"><h1>Something went wrong</h1></div>'
+      console.error('Maximum update depth exceeded (on resize)')
+    }
+  })
 </script></body></html>

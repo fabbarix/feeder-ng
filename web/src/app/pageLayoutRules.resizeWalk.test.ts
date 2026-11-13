@@ -18,6 +18,8 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   SCENARIOS: { name: string }[]
   RESIZE_WALK?: { scenario: string; from: number; to: number; step: number }
   resizeWalkWidths?: () => number[]
+  RESIZE_SWEEP?: { step: number; pauseMs: number }
+  resizeSweepWidths?: () => number[]
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
 }
 const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
@@ -36,6 +38,25 @@ describe('RESIZE_WALK', () => {
   })
   it('resizeWalkWidths lists the 13 widths', () => {
     expect(rules.resizeWalkWidths?.()).toEqual([360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480])
+  })
+})
+
+// Review of round 3: round 2's loop lived in an 8 px window, which 10 px steps can step over, and a fresh load never takes the resize
+// path. So the same scenario is also resized live, 1 px at a time, through the walk's range and back.
+describe('RESIZE_SWEEP', () => {
+  it('resizes 1 px at a time, from 480 down to 360 px and back up to 480', () => {
+    expect(rules.RESIZE_SWEEP?.step).toBe(1)
+    const w = rules.resizeSweepWidths?.() ?? []
+    expect(w[0]).toBe(480)
+    expect(w).toContain(360)
+    expect(w.at(-1)).toBe(480)
+    expect(w).toHaveLength(121 + 120)
+    for (let i = 1; i < w.length; i++) expect(Math.abs(w[i]! - w[i - 1]!)).toBe(1)
+  })
+  it('the driver runs it in one page with phone emulation, and labels its findings "(live resize)"', () => {
+    expect(driver).toMatch(/resizeSweepWidths\(\)/)
+    expect(driver).toMatch(/\(live resize\)/)
+    expect(driver).not.toMatch(/mobile: false/)
   })
 })
 

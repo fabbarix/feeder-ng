@@ -45,6 +45,20 @@ export function resizeWalkFindings(runtimeErrors, { width, route }) {
   return evaluateMetrics(walked, { width, route, kind: 'wide' }).filter((f) => f.rule === 'P21')
 }
 
+/**
+ * Review of round 3: the same scenario resized live in one page, 1 px at a time, from the walk's widest width down to its narrowest
+ * and back up, with `pauseMs` after each step (P21 "(live resize)"). It catches a window narrower than the walk's step, and the
+ * resize path that a fresh load never takes.
+ */
+export const RESIZE_SWEEP = { step: 1, pauseMs: 40 }
+
+/** The widths of the RESIZE_SWEEP, in order: RESIZE_WALK.to down to RESIZE_WALK.from, then back up. */
+export function resizeSweepWidths() {
+  const down = []
+  for (let w = RESIZE_WALK.to; w >= RESIZE_WALK.from; w -= RESIZE_SWEEP.step) down.push(w)
+  return [...down, ...down.slice(0, -1).reverse()]
+}
+
 /** The widths of the RESIZE_WALK, in order. */
 export function resizeWalkWidths() {
   const out = []

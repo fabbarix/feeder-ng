@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PROFILES, ROUTES, RESIZE_WALK, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario } from './lib/page-layout-rules.mjs'
+import { PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALK, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario } from './lib/page-layout-rules.mjs'
 import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
 
 const arg = (name, fallback) => {
@@ -681,8 +681,10 @@ if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAG
       await closeTab()
       await openTab()
       runtimeEvents.length = 0
-      // The exact CSS width, not mobile emulation: mobile emulation scaled the layout width of these phone widths (innerWidth 589 for 360).
-      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: false })
+      // Phone emulation, as the quick profile's 390 px probe: the app lays out at exactly w CSS px (documentElement.clientWidth = w; no
+      // scrollbar takes 15 px of it, as it does without mobile emulation). Only a page wider than w (a horizontal overflow) reports a
+      // larger innerWidth under mobile emulation; its layout width is still w.
+      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
       await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
       await settle()
       const runtimeErrors = [...runtimeEvents]
@@ -693,6 +695,36 @@ if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAG
     } catch (e) {
       notInspected.push({ width: w, route, pattern: walkScenario.route, reason: e.message })
     }
+  }
+}
+
+// Review of round 3 (P21, RESIZE_SWEEP): the 10 px steps of the walk can step over a narrow window (round 2's loop lived in 8 px), and a
+// fresh load never exercises the resize path (ResizeObserver). So the same page is also loaded once at the widest width and resized
+// live, 1 px at a time, down to the narrowest and back up. The first width at which it logs an error or shows the error page is a
+// P21 finding, labelled "(live resize)".
+if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
+  probes++
+  const route = resolveScenario(walkScenario, ids)
+  const widths = resizeSweepWidths()
+  try {
+    await closeTab()
+    await openTab()
+    await cdp('Emulation.setDeviceMetricsOverride', { width: widths[0], height: 844, deviceScaleFactor: 1, mobile: true })
+    await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
+    await settle()
+    runtimeEvents.length = 0
+    for (const w of widths) {
+      await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
+      await sleep(RESIZE_SWEEP.pauseMs)
+      const runtimeErrors = [...runtimeEvents]
+      if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
+      if (runtimeErrors.length > 0) {
+        for (const f of resizeWalkFindings(runtimeErrors, { width: w, route })) fail(`${w}px ${route} (live resize): ${f.message}`)
+        break
+      }
+    }
+  } catch (e) {
+    notInspected.push({ width: widths[0], route: `${route} (live resize)`, pattern: walkScenario.route, reason: e.message })
   }
 }
 

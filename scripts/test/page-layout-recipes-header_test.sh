@@ -6,7 +6,8 @@
 #                            "Side" (P17 at 390), hit areas and the ring of "All Courses" clipped (P18), the popover start-aligned
 #                            past the page (P19 at 834 and 1440), row 3 flush under row 2 and the panel sections unspaced (P20);
 #                            Round 3: between 420 and 440 px it logs a console error, throws and shows the error page (P21, found
-#                            by the RESIZE_WALK of the filtered scenario, 360 to 480 px);
+#                            by the RESIZE_WALK of the filtered scenario, 360 to 480 px); and on a live resize through 453 to 455 px
+#                            it shows the error page and logs an error (P21 "(live resize)", found only by the 1 px RESIZE_SWEEP);
 #   /settings  fixed.html    the same state laid out as round 2 says: clean of P1, P13, P14 and P16 to P20 at every width.
 # The real build is covered by the guard itself (check.sh), which probes /recipes and its SCENARIOS. No Chrome: SKIP.
 set -uo pipefail
@@ -75,6 +76,8 @@ done
 for w in 360 400 410 450 480; do
   grep -Eq "^\s+- ${w}px /recipes[^:]*: P21 " <<<"$OUT" && bad "${w}px /recipes: no P21 expected where the page works (got: $OUT)" || ok
 done
+# review of round 3: the live 1 px RESIZE_SWEEP finds the break that only a resize triggers, in 453 to 455 px (between the walk's steps)
+grep -Eq "^\s+- 45[345]px /recipes[^:]*\(live resize\): P21 " <<<"$OUT" && ok || bad "the live resize sweep must find the break at 453-455 px (got: $OUT)"
 COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /recipes[^:]*: P21 ' <<<"$OUT" | node scripts/lib/page-layout-modes.mjs count-fail scripts/check-page-layout.modes 2>/dev/null)"
 [ "${COUNT:-0}" -gt 0 ] && ok || bad "the P21 findings must count as failures (count-fail said '${COUNT:-}')"
 
