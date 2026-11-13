@@ -95,7 +95,7 @@ export const strings = {
     mergeInto: 'Merge into another Supply',
     deleteLabel: 'Delete Supply',
     emptyTitle: 'No Supplies yet',
-    emptyText: 'Dish soap, toilet paper or batteries: things you buy and keep in Stock but never cook with.',
+    emptyText: "Toilet paper, batteries or laundry pods: things you buy and keep in Stock but don't cook with.",
     noMatches: 'No Supply matches that search',
   },
   /** H5: the kind choice, the kind Tile, the Restock level and the words of a refused kind change. */

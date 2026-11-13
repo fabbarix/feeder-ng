@@ -62,7 +62,7 @@ describe('SuppliesScreen', () => {
     state.isEmpty = true
     setup()
     expect(screen.getByText('No Supplies yet')).toBeInTheDocument()
-    expect(screen.getByText('Dish soap, toilet paper or batteries: things you buy and keep in Stock but never cook with.')).toBeInTheDocument()
+    expect(screen.getByText("Toilet paper, batteries or laundry pods: things you buy and keep in Stock but don't cook with.")).toBeInTheDocument()
   })
   it('says nothing matches when the search finds none', () => {
     state.ingredients = []

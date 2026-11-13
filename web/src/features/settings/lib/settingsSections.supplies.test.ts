@@ -17,7 +17,7 @@ describe('Settings > Catalogue > Supplies', () => {
     expect(row(false)).toEqual({
       id: 'supplies',
       title: 'Supplies',
-      meta: 'What you buy and keep but never cook with: dish soap, bin bags',
+      meta: "What you buy and keep but don't cook with: toilet paper, batteries, laundry pods",
       icon: 'supply',
       path: '/supplies',
     })

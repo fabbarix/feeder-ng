@@ -16,7 +16,7 @@ export const settingsStrings = {
     rowWithCount: (title: string, n: number) => `${title}, ${n} waiting`,
     sections: {
       ingredients: { title: 'Ingredients', meta: 'What you cook with, and what it means' },
-      supplies: { title: 'Supplies', meta: 'What you buy and keep but never cook with: dish soap, bin bags' },
+      supplies: { title: 'Supplies', meta: "What you buy and keep but don't cook with: toilet paper, batteries, laundry pods" },
       products: { title: 'Products', meta: 'What you buy: brands and pack sizes' },
       household: { title: 'Household', meta: 'Time zone, Planning Horizon, currency' },
       members: { title: 'Members', meta: 'Who eats from the plan' },
