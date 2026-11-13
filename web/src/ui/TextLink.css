@@ -1,16 +1,17 @@
-/* TextLink: an in-app text link in the accent text colour, 44 px tall on touch. Tokens only. */
+/* TextLink: an in-app text link, neutral at rest (inherits its text colour, underlined); accent text on hover and focus. 44 px tall on touch. Tokens only. */
 .text-link {
   display: inline-flex;
   align-items: center;
   min-block-size: 44px;
-  color: var(--color-accent-text);
+  color: inherit;
   font-weight: var(--text-label-weight);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.text-link:hover {
-  color: var(--color-on-surface);
+.text-link:hover,
+.text-link:focus-visible {
+  color: var(--color-accent-text);
 }
 
 .text-link:focus-visible {
