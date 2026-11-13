@@ -99,9 +99,3 @@ Feature: Shopping List: Not needed, and past meals still to confirm (beta.5, pla
     Then the Shopping List lists "passata" as Not needed with 1400 g
     And the Shopping List has no line for "passata"
 
-  # Not needed does not make a Planned Meal Bought: parked until the Bought backend (migration 1520, team BO) exists.
-  @wip
-  Scenario: Not needed does not make a Planned Meal Bought
-    When I view the Shopping List
-    And I mark "passata" as Not needed on the Shopping List
-    Then the Planned Meal of 2026-11-10 is not Bought

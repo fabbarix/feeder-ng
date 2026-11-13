@@ -9,6 +9,11 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 - **Stock Lots inline.** On the Pantry, each Ingredient shows its Stock Lots under its name, with the quantity, Bought on and Good until of each, so the Stock is visible without opening every Lot.
 - **Edit a Stock Lot.** Correct a Stock Lot's quantity, Bought on and Good until from its sheet. Changing Bought on suggests Good until again from the Shelf Life, unless Good until is chosen in the same edit. An Ingredient with a Shelf Life needs a Good until; "No go-off date" is offered only without one. A Storage Place is still changed with Move to.
 - **Delete a Stock Lot.** Delete removes a Stock Lot entered by mistake, such as a double Scan. It is not counted as waste.
+- **Bought Planned Meals stay.** A Planned Meal that a purchase from the Shopping List was bought for is Bought: automatic plan changes leave it where it is, as they do a Pinned one, and the plan says when it now breaks a hard rule, such as an Exclusion or an archived Recipe. Undoing the Scan, unticking the line or deleting the Stock Lot takes the Bought mark back.
+
+### Changed
+
+- **Regenerate lists Bought meals.** Before Regenerate replaces anything, it can list the Bought Planned Meals it would replace, with the Ingredients bought for each, and change nothing.
 
 ## [1.0.0-beta.4.2] - 2026-11-12
 

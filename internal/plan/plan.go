@@ -265,6 +265,10 @@ func existing(m Meal, at, now time.Time, cleared bool) *planner.ExistingMeal {
 		case at.Before(now):
 			// Happened, not confirmed: it waits in "To confirm" and is never replanned.
 			em.State = planner.MealPinned
+		case m.IsBought() && m.From == nil:
+			// Bought (ADR 0013): held like a Pinned meal, and Clear does not apply to it.
+			em.State = planner.MealPlanned
+			em.Held = true
 		case cleared:
 			return nil
 		default:

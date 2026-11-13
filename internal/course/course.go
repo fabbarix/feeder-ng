@@ -55,6 +55,7 @@ type ImpactMeal struct {
 	RecipeID     int64
 	RecipeName   string
 	Pinned       bool
+	Bought       []string // the Ingredients bought for the meal (ADR 0013), nil when none
 }
 
 // ImpactRule is a Slot Rule on the Course.

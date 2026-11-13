@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"sort"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/planner"
@@ -42,5 +43,67 @@ type Warning struct {
 //     Recipe wins over one of its Ingredients (optional lines included); among Members the lowest id wins, and among
 //     Ingredients the lowest id.
 func HardRuleWarning(m Meal, recipe planner.Recipe, found bool, attendance []Attendee, prefs map[int64]planner.Preferences) *Warning {
+	if m.State != StatePlanned || m.From != nil || !(m.Pinned || m.IsBought()) {
+		return nil
+	}
+	if !found || recipe.Archived {
+		return &Warning{Code: WarnArchived}
+	}
+	if m.Key.CourseID != 0 && !containsID(recipe.CourseIDs, m.Key.CourseID) {
+		return &Warning{Code: WarnCourseLost}
+	}
+	eating := make([]int64, 0, len(attendance))
+	for _, a := range attendance {
+		if a.Factor > 0 {
+			eating = append(eating, a.MemberID)
+		}
+	}
+	sort.Slice(eating, func(i, j int) bool { return eating[i] < eating[j] })
+	// The Recipe itself first, whoever excludes it.
+	for _, id := range eating {
+		if containsRecipe(prefs[id].ExcludedRecipes, recipe.ID) {
+			return &Warning{Code: WarnExcluded, MemberID: id}
+		}
+	}
+	// Then one of its Ingredients (optional lines count): the lowest Member, then the lowest Ingredient.
+	for _, id := range eating {
+		var hit int64
+		for _, n := range recipe.Needs {
+			ing := int64(n.IngredientID)
+			if containsIngredient(prefs[id].ExcludedIngredients, n.IngredientID) && (hit == 0 || ing < hit) {
+				hit = ing
+			}
+		}
+		if hit != 0 {
+			return &Warning{Code: WarnExcluded, MemberID: id, IngredientID: hit}
+		}
+	}
 	return nil
+}
+
+func containsID(ids []int64, id int64) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+func containsRecipe(ids []planner.RecipeID, id planner.RecipeID) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+func containsIngredient(ids []planner.IngredientID, id planner.IngredientID) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
 }

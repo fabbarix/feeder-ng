@@ -173,7 +173,7 @@ func (a *api) writeSlotDateRemoves(w http.ResponseWriter, r *http.Request, slot 
 		}
 		for _, m := range meals {
 			out.Removes.PlannedMeals = append(out.Removes.PlannedMeals, removedMealOut{CourseID: m.CourseID,
-				CourseName: m.CourseName, RecipeName: m.RecipeName, Pinned: m.Pinned, Bought: []string{}})
+				CourseName: m.CourseName, RecipeName: m.RecipeName, Pinned: m.Pinned, Bought: nonNilNames(m.Bought)})
 		}
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)

@@ -105,12 +105,13 @@ type WhoIsEating struct {
 var ErrSlotStarted = errors.New("household: a Course of this Meal Slot is already Cooked or Not cooked on that date")
 
 // UnresolvedMeal is an unresolved Planned Meal (state planned) of a Meal Slot on a date: what Not served removes,
-// Pinned ones included. Bought is not known here (team BO); the API answers an empty list.
+// Pinned ones included. Bought names the Ingredients bought for it (ADR 0013), nil when none.
 type UnresolvedMeal struct {
 	CourseID   int64
 	CourseName string
 	RecipeName string
 	Pinned     bool
+	Bought     []string
 }
 
 // SlotDatePatch is a PATCH of a Meal Slot on one date: a nil field is not touched; Time "" is the usual time. Today is

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"sort"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
@@ -265,6 +266,37 @@ func whyFor(ws []plan.Why, t table) []whyOut {
 	return out
 }
 
+// boughtNames are the names of the Ingredients, by name (ascending); an empty list for none.
+func boughtNames(ids []int64, t table) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, t.ingredients[id])
+	}
+	sort.Strings(out)
+	return out
+}
+
+// boughtFor is the bought object of a meal: null when nothing was bought for it, else its Ingredients by name.
+func boughtFor(ids []int64, t table) *boughtOut {
+	if len(ids) == 0 {
+		return nil
+	}
+	ings := make([]boughtIngredientOut, 0, len(ids))
+	for _, id := range ids {
+		ings = append(ings, boughtIngredientOut{ID: id, Name: t.ingredients[id]})
+	}
+	sort.SliceStable(ings, func(a, b int) bool { return ings[a].Name < ings[b].Name })
+	return &boughtOut{Ingredients: ings}
+}
+
+// warningFor is the warning object of a view cell: null when the meal breaks no hard rule.
+func warningFor(w *plan.Warning) *hardRuleWarningOut {
+	if w == nil {
+		return nil
+	}
+	return &hardRuleWarningOut{Code: w.Code, MemberID: w.MemberID, IngredientID: w.IngredientID}
+}
+
 func mealFor(m plan.Meal, t table) *mealOut {
 	courseID := m.Key.CourseID
 	out := &mealOut{
@@ -273,6 +305,7 @@ func mealFor(m plan.Meal, t table) *mealOut {
 		Batches: m.Batches, Portions: m.Portions, State: string(m.State), Pinned: m.Pinned,
 		Why:      whyFor(m.Why, t),
 		PhotoURL: t.recipePhoto[m.RecipeID],
+		Bought:   boughtFor(m.Bought, t),
 	}
 	// A meal served from a Leftover is already cooked: no cook time, so no startBy either (slotFor).
 	if m.From == nil {
@@ -316,6 +349,7 @@ func courseFor(c runner.CourseView, at time.Time, t table) courseOut {
 	if c.Meal != nil {
 		out.Meal = mealFor(*c.Meal, t)
 		out.Meal.StartBy = plan.StartBy(at, out.Meal.CookMinutes)
+		out.Meal.Warning = warningFor(c.Warning)
 	}
 	if c.Unfilled != nil {
 		out.Unfilled = unfilledFor(*c.Unfilled)

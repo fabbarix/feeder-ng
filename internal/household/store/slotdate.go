@@ -209,7 +209,7 @@ func (s *Store) UnresolvedMealsOn(ctx context.Context, slotID int64, date, effec
 	if err != nil || over {
 		return out, err
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT pm.course_id, c.name, r.name, pm.pinned
+	rows, err := s.db.QueryContext(ctx, `SELECT pm.id, pm.course_id, c.name, r.name, pm.pinned
 		FROM planned_meals pm
 		JOIN courses c ON c.id = pm.course_id
 		JOIN recipes r ON r.id = pm.recipe_id
@@ -219,17 +219,52 @@ func (s *Store) UnresolvedMealsOn(ctx context.Context, slotID int64, date, effec
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	var ids []int64
 	for rows.Next() {
 		var (
+			id     int64
 			m      household.UnresolvedMeal
 			pinned int
 		)
-		if err := rows.Scan(&m.CourseID, &m.CourseName, &m.RecipeName, &pinned); err != nil {
+		if err := rows.Scan(&id, &m.CourseID, &m.CourseName, &m.RecipeName, &pinned); err != nil {
+			rows.Close()
 			return nil, err
 		}
 		m.Pinned = pinned == 1
 		out = append(out, m)
+		ids = append(ids, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if out[i].Bought, err = boughtNames(ctx, s.db, ids[i]); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+// boughtNames lists the names of the Ingredients bought for a Planned Meal (planned_meal_bought, ADR 0013), by name;
+// nil when nothing was bought.
+func boughtNames(ctx context.Context, q querier, mealID int64) ([]string, error) {
+	rows, err := q.QueryContext(ctx, `SELECT DISTINCT i.name FROM planned_meal_bought b
+		JOIN ingredients i ON i.id = b.ingredient_id
+		WHERE b.planned_meal_id = ? ORDER BY i.name`, mealID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		out = append(out, name)
 	}
 	return out, rows.Err()
 }

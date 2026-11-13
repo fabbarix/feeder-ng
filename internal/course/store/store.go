@@ -474,7 +474,7 @@ func impact(ctx context.Context, q dbtx, id int64, today string) (course.Impact,
 		FROM meal_slot_courses mc WHERE mc.course_id = ?`, id).Scan(&im.MealSlots, &im.MealSlotsOnlyThis); err != nil {
 		return im, err
 	}
-	rows, err := q.QueryContext(ctx, `SELECT pm.date, pm.meal_slot_id, ms.name, pm.recipe_id, r.name, pm.pinned
+	rows, err := q.QueryContext(ctx, `SELECT pm.id, pm.date, pm.meal_slot_id, ms.name, pm.recipe_id, r.name, pm.pinned
 		FROM planned_meals pm
 		JOIN meal_slots ms ON ms.id = pm.meal_slot_id
 		JOIN recipes r ON r.id = pm.recipe_id
@@ -483,21 +483,34 @@ func impact(ctx context.Context, q dbtx, id int64, today string) (course.Impact,
 	if err != nil {
 		return im, err
 	}
+	var ids []int64
 	for rows.Next() {
 		var m course.ImpactMeal
-		var pinned int
-		if err := rows.Scan(&m.Date, &m.MealSlotID, &m.MealSlotName, &m.RecipeID, &m.RecipeName, &pinned); err != nil {
+		var (
+			mealID int64
+			pinned int
+		)
+		if err := rows.Scan(&mealID, &m.Date, &m.MealSlotID, &m.MealSlotName, &m.RecipeID, &m.RecipeName, &pinned); err != nil {
 			rows.Close()
 			return im, err
 		}
 		m.Pinned = pinned == 1
 		im.PlannedMeals = append(im.PlannedMeals, m)
+		ids = append(ids, mealID)
 	}
 	if err := rows.Close(); err != nil {
 		return im, err
 	}
 	if err := rows.Err(); err != nil {
 		return im, err
+	}
+	// What was bought for each Planned Meal the Course removes (ADR 0013 point 2); nil when nothing was.
+	for i := range ids {
+		names, err := boughtNames(ctx, q, ids[i])
+		if err != nil {
+			return im, err
+		}
+		im.PlannedMeals[i].Bought = names
 	}
 	rows, err = q.QueryContext(ctx, `SELECT id, meal_slot_id, COALESCE(recipe_id, 0), COALESCE(tag, '')
 		FROM slot_rules WHERE course_id = ? ORDER BY id`, id)
@@ -637,4 +650,25 @@ func boolInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// boughtNames lists the names of the Ingredients bought for a Planned Meal (planned_meal_bought, ADR 0013), by name;
+// nil when nothing was bought.
+func boughtNames(ctx context.Context, q dbtx, mealID int64) ([]string, error) {
+	rows, err := q.QueryContext(ctx, `SELECT DISTINCT i.name FROM planned_meal_bought b
+		JOIN ingredients i ON i.id = b.ingredient_id
+		WHERE b.planned_meal_id = ? ORDER BY i.name`, mealID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		out = append(out, name)
+	}
+	return out, rows.Err()
 }

@@ -115,7 +115,27 @@ func NewService(d app.Deps) *service.Service {
 		Ingredients: ingredients{st: ingredientstore.New(d.DB, d.Clock)},
 		Household:   hh,
 		Ledger:      scanstore.New(d.DB, d.Clock),
+		Bought:      boughts{st: planstore.New(d.DB, d.Clock)},
 	}, d.Clock, d.Events)
+}
+
+// boughts keeps what each purchase was bought for in planned_meal_bought, through the plan store (B5-BO, ADR 0013).
+type boughts struct{ st *planstore.Store }
+
+// RecordBought stores one record per share: the Planned Meal, the Ingredient and the Lot.
+func (b boughts) RecordBought(ctx context.Context, lotID int64, shares []shopping.Share, at time.Time) error {
+	recs := make([]plan.BoughtRecord, 0, len(shares))
+	for _, sh := range shares {
+		recs = append(recs, plan.BoughtRecord{MealID: sh.MealID, IngredientID: sh.IngredientID, LotID: lotID,
+			Quantity: sh.Quantity, At: at})
+	}
+	return b.st.AddBought(ctx, recs)
+}
+
+// RemoveBought removes the records of the Lot.
+func (b boughts) RemoveBought(ctx context.Context, lotID int64) error {
+	_, err := b.st.RemoveBoughtForLot(ctx, lotID)
+	return err
 }
 
 // plans lists the uncooked, non-skipped Planned Meals fresh from a Leftover, with the Needs of one Batch.
@@ -181,7 +201,7 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 			return nil, err
 		}
 		out = append(out, shopping.Meal{Date: stock.Date(m.Key.Date), At: at, Batches: m.Batches, Needs: byID[m.RecipeID],
-			SlotID: m.Key.MealSlotID, SlotName: slot.Name, CourseName: courseNames[m.Key.CourseID]})
+			MealID: m.ID, SlotID: m.Key.MealSlotID, SlotName: slot.Name, CourseName: courseNames[m.Key.CourseID]})
 	}
 	return out, nil
 }
@@ -270,10 +290,11 @@ func (i ingredients) Info(ctx context.Context, ids []int64) (map[int64]shopping.
 
 // Compile-time checks that the adapters satisfy the ports.
 var (
-	_ service.Plan        = plans{}
-	_ service.Stock       = stockPort{}
-	_ service.Products    = products{}
-	_ service.Ingredients = ingredients{}
-	_ service.Household   = (*Household)(nil)
-	_ service.Ledger      = (*scanstore.Store)(nil)
+	_ service.Plan           = plans{}
+	_ service.Stock          = stockPort{}
+	_ service.Products       = products{}
+	_ service.Ingredients    = ingredients{}
+	_ service.Household      = (*Household)(nil)
+	_ service.Ledger         = (*scanstore.Store)(nil)
+	_ service.BoughtRecorder = boughts{}
 )

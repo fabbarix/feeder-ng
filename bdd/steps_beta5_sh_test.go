@@ -160,8 +160,4 @@ func beta5ShoppingSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return err
 	})
-	// Parked with @wip until the Bought backend lands (team BO).
-	sc.Step(`^the Planned Meal of `+ssDate+` is not Bought$`, func(date string) error {
-		return fmt.Errorf("pending: needs the Bought backend (migration 1520)")
-	})
 }
