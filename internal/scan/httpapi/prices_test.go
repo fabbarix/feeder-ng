@@ -287,6 +287,9 @@ func TestTheOfflineDataHasTheDateOfTheLastPrice(t *testing.T) {
 	}
 	// At the other Shop, and at home, there is no Price and no date.
 	for _, path := range []string{"/api/scan/offline?shop=" + strconv.FormatInt(f.shop2, 10), "/api/scan/offline"} {
+		var b struct {
+			Products []map[string]any `json:"products"`
+		}
 		f.user.Get(path).MustJSON(t, &b)
 		for _, p := range b.Products {
 			if _, has := p["lastPriceDate"]; has {
