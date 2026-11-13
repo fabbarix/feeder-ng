@@ -85,7 +85,7 @@ The user's decisions (final), numbered as in the brief and referred to as **D1**
 +The quantity of each Ingredient the Household currently has at home, a Base recipe's Ingredient included (a jar of béchamel, a frozen batch of ragù).
 ```
 
-Word check: none of the new _Avoid_ words occurs inside a quoted string of any `strings.ts` at `878952b` (`component` occurs only in comments of `ui/CoursePicker/strings.ts` and `features/cook/strings.ts`, which `check-ui.sh` rule 6 skips). The CHANGELOG word check (`scripts/changelog-avoid.py`, run by `scripts/test/release_test.sh`) found "open-source component" in the 1.0.0 notes (third-party notices), another sense of the word; it is on that script's allow list, like "app icons". Copy must not say "makes" (Yield's _Avoid_ word, inflections "make", "made", "making" included): the editor and tiles say **Yield**, Import Review says "Add it as a new Base recipe", never "Make it".
+Word check: none of the new _Avoid_ words occurs inside a quoted string of any `strings.ts` at `878952b` (`component` occurs only in comments of `ui/CoursePicker/strings.ts` and `features/cook/strings.ts`, which `check-ui.sh` rule 6 skips). The CHANGELOG word check (`scripts/changelog-avoid.py`, run by `scripts/test/release_test.sh`) found "open-source component" in the 1.0.0 notes (third-party notices), another sense of the word; it is on that script's allow list, like "app icons". Copy must not use "makes" for a Yield ("makes 4"): the editor and tiles say **Yield**, Import Review says "Add it as a new Base recipe", never "Make it".
 
 ---
 
