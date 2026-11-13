@@ -159,6 +159,11 @@
   color: var(--color-accent-text);
 }
 
+/* The option's leading visual comes after its text in the DOM (decorative, aria-hidden) and is drawn first. */
+.select__option > .select__leading {
+  order: -1;
+}
+
 .select__text {
   display: grid;
   flex: 1;

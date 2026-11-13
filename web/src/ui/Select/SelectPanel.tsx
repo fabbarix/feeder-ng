@@ -62,9 +62,6 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
         onClick={() => p.onPick(i)}
         onMouseEnter={() => p.onHover(i)}
       >
-        {option.leading ? <span className="select__leading" aria-hidden="true">
-            {option.leading}
-          </span> : null}
         <span className="select__text">
           <span id={`${p.optionId(i)}-label`} className="select__label">
             {option.label}
@@ -80,6 +77,13 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
             </span>
           ) : null}
         </span>
+        {/* Decorative (aria-hidden), after the text in the DOM so the option's text starts with its name (a Thumb's monogram letter
+            would otherwise lead it); `.select__option > .select__leading` draws it first. */}
+        {option.leading ? (
+          <span className="select__leading" aria-hidden="true">
+            {option.leading}
+          </span>
+        ) : null}
         {isSelected ? <Icon name="tick" size={20} weight="fill" /> : null}
       </div>
     )
