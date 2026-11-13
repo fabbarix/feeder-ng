@@ -133,7 +133,7 @@ export function BoardLeftoversTile({ rows }: { rows: LeftoverRow[] }): ReactNode
       ) : (
         <ul className="board-list">
           {rows.map((r) => (
-            <li key={r.id}>{`${r.recipeName} · ${boardStrings.portions(r.portions)} · use by ${shortWeekday(r.useBy)}`}</li>
+            <li key={r.id}>{r.toAnswer ? `${r.recipeName}, ${boardStrings.useByPassed}` : `${r.recipeName} · ${boardStrings.portions(r.portions)} · use by ${shortWeekday(r.useBy)}`}</li>
           ))}
         </ul>
       )}

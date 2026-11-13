@@ -314,14 +314,10 @@ func (a *api) cookPreview(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	needs := make([]needOut, 0, len(p.Needs))
-	for _, n := range p.Needs {
-		needs = append(needs, needOut{IngredientID: n.IngredientID, Ingredient: t.ingredients[n.IngredientID], Quantity: n.Quantity})
-	}
 	httpx.WriteJSON(w, http.StatusOK, cookPreviewOut{
 		Meal: *mealFor(p.Meal, t), Fresh: p.Fresh, Batches: p.Meal.Batches, Yield: p.Yield,
 		PortionsNeeded: p.PortionsNeeded, ProposedLeftover: p.Proposed, MaxLeftover: p.Max,
-		LeftoverUseBy: p.UseBy, Needs: needs,
+		LeftoverUseBy: p.UseBy, Needs: cookNeedsOut(p.Needs, p.Stock, t),
 	})
 }
 
@@ -332,13 +328,14 @@ func (a *api) cooked(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		LeftoverPortions *float64 `json:"leftoverPortions"`
+		LeftoverPortions *float64     `json:"leftoverPortions"`
+		UsedFrom         []usedFromIn `json:"usedFrom"`
 	}
 	if err := httpx.DecodeJSON(r, &body); err != nil {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	res, err := a.run.Cooked(r.Context(), k, body.LeftoverPortions)
+	res, err := a.run.CookedUsing(r.Context(), k, body.LeftoverPortions, usedFromOf(body.UsedFrom))
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -386,8 +383,9 @@ func (a *api) allCooked(w http.ResponseWriter, r *http.Request) {
 	}
 	var body struct {
 		Courses []struct {
-			CourseID         int64    `json:"courseId"`
-			LeftoverPortions *float64 `json:"leftoverPortions"`
+			CourseID         int64        `json:"courseId"`
+			LeftoverPortions *float64     `json:"leftoverPortions"`
+			UsedFrom         []usedFromIn `json:"usedFrom"`
 		} `json:"courses"`
 	}
 	if r.ContentLength != 0 {
@@ -398,7 +396,8 @@ func (a *api) allCooked(w http.ResponseWriter, r *http.Request) {
 	}
 	list := make([]runner.CourseLeftover, 0, len(body.Courses))
 	for _, c := range body.Courses {
-		list = append(list, runner.CourseLeftover{CourseID: c.CourseID, LeftoverPortions: c.LeftoverPortions})
+		list = append(list, runner.CourseLeftover{CourseID: c.CourseID, LeftoverPortions: c.LeftoverPortions,
+			UsedFrom: usedFromOf(c.UsedFrom)})
 	}
 	res, err := a.run.CookedAll(r.Context(), k.Date, k.MealSlotID, list)
 	if err != nil {

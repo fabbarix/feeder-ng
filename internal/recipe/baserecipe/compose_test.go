@@ -249,7 +249,7 @@ func TestComposeRecipeWithNoStepsListsTheBlocksOnTheirOwn(t *testing.T) {
 }
 
 func TestComposeTwoBlocksInLineOrder(t *testing.T) {
-	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"},
+	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Lines: []br.Line{line(iFlour, 200, "g"), line(iButter, 200, "g")},
 		Steps: []br.Step{step("Toast the flour", act, 8)}}
 	l := lasagneWithSteps()
 	l.Lines = []br.Line{line(iBechamelI, 500, "ml"), line(iRouxI, 100, "g"), line(iPasta, 200, "g")}
@@ -282,7 +282,7 @@ func TestComposeNestedBaseRecipes(t *testing.T) {
 		{Text: "Make the roux", Kind: act, DurationMinutes: 4, Uses: []schedule.Use{{IngredientID: iRouxI, Quantity: 200, Unit: "g"}}},
 		step("Whisk in the milk", act, 10, 0),
 	}
-	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"},
+	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Lines: []br.Line{line(iFlour, 200, "g"), line(iButter, 200, "g")},
 		Steps: []br.Step{step("Melt the butter", act, 3), {Text: "Cook the flour in it", Kind: act, DurationMinutes: 2, After: []int{0},
 			Uses: []schedule.Use{{IngredientID: iFlour, Quantity: 200, Unit: "g"}}}}}
 	c := newCat().add(b, ml("Béchamel")).add(roux, grams("Roux")).add(lasagneWithSteps())
@@ -405,7 +405,7 @@ func TestComposeNestedFractionsMultiplyDown(t *testing.T) {
 	b := bechamel()
 	b.Lines = []br.Line{line(iMilk, 1000, "ml"), line(iRouxI, 400, "g")}
 	b.Steps = []br.Step{step("Whisk", act, 10)}
-	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"},
+	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Lines: []br.Line{line(iFlour, 200, "g"), line(iButter, 200, "g")},
 		Steps: []br.Step{{Text: "Cook the flour", Kind: act, DurationMinutes: 2, Uses: []schedule.Use{{IngredientID: iFlour, Quantity: 400, Unit: "g"}}}}}
 	c := newCat().add(b, ml("Béchamel")).add(roux, grams("Roux")).add(lasagneWithSteps())
 	made := func(p br.Path) float64 {
@@ -434,7 +434,7 @@ func TestComposeOuterCoveredCoversNestedToo(t *testing.T) {
 	b := bechamel()
 	b.Lines = []br.Line{line(iRouxI, 400, "g")}
 	b.Steps = []br.Step{step("Whisk", act, 10)}
-	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Steps: []br.Step{step("Cook the flour", act, 2)}}
+	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Lines: []br.Line{line(iFlour, 200, "g"), line(iButter, 200, "g")}, Steps: []br.Step{step("Cook the flour", act, 2)}}
 	c := newCat().add(b, ml("Béchamel")).add(roux, grams("Roux")).add(lasagneWithSteps())
 	got := compose(t, c, rLasagne, func(p br.Path) float64 {
 		if p == "0" {
@@ -470,7 +470,9 @@ func TestNeededAtDefaultRules(t *testing.T) {
 		{"text on the accented side", mk(step("Boil", act, 1), step("Stir in the Béchamel", act, 1)), 1},
 		{"whole words only", mk(step("Taste the bechamelle", act, 1), step("Use the bechamel", act, 1)), 1},
 		{"first Step when nothing names it", mk(step("Boil", act, 1), step("Bake", pas, 20)), 0},
-		{"no Steps at all", mk(), 0},
+		{"no Steps at all: no anchor", mk(), -1},
+		{"only Advance Steps: no anchor", mk(br.Step{Text: "Soak", Kind: adv, LeadTimeMinutes: 60}), -1},
+		{"first non-Advance Step when nothing names it", mk(br.Step{Text: "Soak", Kind: adv, LeadTimeMinutes: 60}, step("Cook", act, 5)), 1},
 		{"Advance Steps are skipped for uses", mk(br.Step{Text: "Soak", Kind: adv, LeadTimeMinutes: 60, Uses: use(iBechamelI)}, br.Step{Text: "Layer", Kind: act, Uses: use(iBechamelI)}), 1},
 		{"Advance Steps are skipped for text", mk(br.Step{Text: "Make the béchamel ahead", Kind: adv, LeadTimeMinutes: 60}, step("Mix", act, 1), step("Add the béchamel", act, 1)), 2},
 	}
@@ -563,7 +565,7 @@ func TestComposeUnknownRecipe(t *testing.T) {
 func TestComposeRootThatIsAlreadyABaseRecipe(t *testing.T) {
 	b := bechamelWithSteps()
 	b.Lines = []br.Line{line(iMilk, 1000, "ml"), line(iRouxI, 100, "g")}
-	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Steps: []br.Step{step("Toast the flour", act, 4)}}
+	roux := br.Recipe{ID: rRoux, Name: "Roux", Base: &br.Yield{IngredientID: iRouxI, Quantity: 400, Unit: "g"}, Lines: []br.Line{line(iFlour, 200, "g"), line(iButter, 200, "g")}, Steps: []br.Step{step("Toast the flour", act, 4)}}
 	c := newCat().add(b, ml("Béchamel")).add(roux, grams("Roux"))
 	got := compose(t, c, rBechamel, nil)
 	if got.Steps[0].Text != "Toast the flour" || !eqStrings(got.Steps[0].Origin.Names, []string{"Roux"}) {

@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
@@ -101,6 +102,57 @@ type StockPort interface {
 	PublishDeduction(d Deduction)
 	// RecordLeftoverWaste is called after the commit that discarded the Leftover.
 	RecordLeftoverWaste(ctx context.Context, w LeftoverWaste) error
+}
+
+// Pick is the quantity (Base Units) the User says a Cooked meal took from one Stock Lot (Used from, ADR 0011).
+type Pick struct {
+	LotID    int64
+	Quantity float64
+}
+
+// UsedFrom is the picks for one Ingredient of one Planned Meal.
+type UsedFrom struct {
+	IngredientID int64
+	Picks        []Pick
+}
+
+// CookedMeal is one Planned Meal being Cooked: its Needs and its Used from picks (nil: the default order).
+type CookedMeal struct {
+	Needs    []Need
+	UsedFrom []UsedFrom
+}
+
+// ErrUsedFromInvalid is a Used from pick the Stock refuses (an unknown or another Ingredient's Lot, an Ingredient not in
+// the meal, a quantity that is not positive, more than a Lot holds) or picks on a meal served from a Leftover. Nothing
+// is written; the httpapi maps it to 422 used_from_invalid.
+var ErrUsedFromInvalid = errors.New("used from invalid")
+
+// PickedDeducter is optionally implemented by a StockPort: the picked deduction for one or several Cooked meals (one
+// CookedMeal per Course, in Course order), inside tx. Without it a Cooked with picks is refused as a wiring error.
+type PickedDeducter interface {
+	DeductCookedPickedTx(ctx context.Context, tx *sql.Tx, meals []CookedMeal) (Deduction, error)
+}
+
+// CookPreviewer is optionally implemented by a StockPort: the Lots of each need, for the Mark as Cooked sheet.
+type CookPreviewer interface {
+	PreviewCooked(ctx context.Context, needs []Need) ([]NeedPreview, error)
+}
+
+// PreviewLot is a Stock Lot on the Mark as Cooked sheet. GoesOff is "" when the Lot does not go off; StoragePlaceName
+// is "" when the Lot is not sorted.
+type PreviewLot struct {
+	ID               int64
+	Quantity         float64
+	Purchased        string
+	GoesOff          string
+	StoragePlaceName string
+}
+
+// NeedPreview is one need of the sheet with the Lots it can take from, in default (Deduction) order.
+type NeedPreview struct {
+	IngredientID int64
+	BaseUnit     string
+	Lots         []PreviewLot
 }
 
 // TxWaster is optionally implemented by a StockPort: the waste of a discarded Leftover is then recorded inside the

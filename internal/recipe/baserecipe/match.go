@@ -9,6 +9,9 @@ import (
 )
 
 // matchKey is the key names are compared by: units.NormalizeName, accents folded, a trailing plural "s" dropped.
+// The plural rule is deliberately crude: one trailing "s" goes, but only when the key is longer than three
+// bytes and does not end in "ss" (so "pass" and "gas" keep it). It is applied to both sides, so "béchamels"
+// and "Bechamel" still meet.
 func matchKey(name string) string {
 	k := ingredient.FoldAccents(units.NormalizeName(name))
 	if len(k) > 3 && strings.HasSuffix(k, "s") && !strings.HasSuffix(k, "ss") {

@@ -84,6 +84,10 @@ type Need struct {
 	Optional     bool
 	BaseRecipeID int64 // set when IngredientID is a Base recipe's Ingredient
 	Made         []Need
+	// Path is the node's line in the tree, in the format ComposeSteps uses (raw line indexes from the root,
+	// unconvertible lines counted: "1", "1/3"). Set by Expand on every node; empty on the output of Flatten and
+	// Resolve.
+	Path Path
 }
 
 // Path identifies a Base recipe line by the line indexes from the root Recipe, joined by "/": "1" is line 1 of
@@ -190,4 +194,14 @@ type PickerRow struct {
 	Exact    bool
 	Disabled bool
 	Reason   string
+}
+
+// MadeFractions returns the made(path) function ComposeSteps wants, for the given tree and Batches, from the
+// same Stock-first walk as Resolve: for each Base recipe node, the fraction (need - taken) / need still to
+// make *of what its parent asks* (relative; 0 when the parent was fully covered, so Stock of a nested Base
+// recipe is not used under a covered parent). Paths come from Need.Path; an unknown Path is 1. The walk takes
+// from a private copy of the availability, so it never touches the caller's Stock, and it is deterministic:
+// two lines of one Base recipe share the same jar in line order.
+func MadeFractions(tree []Need, batches float64, have func(ingredientID int64) float64) func(Path) float64 {
+	return madeFractions(tree, batches, have)
 }

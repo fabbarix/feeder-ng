@@ -53,6 +53,8 @@ export interface RecipeInput {
   tags: string[]
   cooldownDays: number | null
   leftoverUseByDays: number | null
+  /** B5-LOW: whole days (1 to 365) a frozen Leftover of this Recipe keeps; null = the Household's Frozen Use-by. Absent in older payloads. */
+  frozenUseByDays?: number | null
   /** R12: whole minutes (1 to 30) to reheat a Leftover of this Recipe; null = not set (Reheat uses its formula). */
   reheatMinutes: number | null
   source: RecipeSource

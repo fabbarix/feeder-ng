@@ -79,7 +79,42 @@
         "quantity": { "type": "number", "exclusiveMinimum": 0 },
         "unit": { "$ref": "#/$defs/unit" },
         "note": { "type": "string", "maxLength": 200 },
+        "optional": { "type": "boolean", "default": false },
+        "recipe": {
+          "description": "The other recipe this line calls for: its name, and the words in the source that point at it. Null when the line calls for none.",
+          "anyOf": [ { "$ref": "#/$defs/recipeRef" }, { "type": "null" } ]
+        },
+        "neededAtStep": {
+          "description": "0-based index of the step by which the other recipe must be ready. Null for none.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "use": {
+      "description": "An Ingredient amount a Step needs. A Step's uses never call for another recipe: no recipe or neededAtStep.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ingredient", "quantity", "unit"],
+      "properties": {
+        "ingredient": { "$ref": "#/$defs/name" },
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": { "$ref": "#/$defs/unit" },
+        "note": { "type": "string", "maxLength": 200 },
         "optional": { "type": "boolean", "default": false }
+      }
+    },
+    "recipeRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "cue": {
+          "description": "The words in the source that point at the other recipe, such as \"see page 42\". Write \"\" when the source gives none.",
+          "type": "string",
+          "maxLength": 200
+        }
       }
     },
     "step": {
@@ -103,7 +138,7 @@
         "image": { "$ref": "#/$defs/image" },
         "uses": {
           "type": "array",
-          "items": { "$ref": "#/$defs/quantity" }
+          "items": { "$ref": "#/$defs/use" }
         }
       },
       "allOf": [
@@ -124,6 +159,14 @@
           "exclusiveMinimum": 0
         },
         "readyMeal": { "type": "boolean", "default": false },
+        "baseRecipe": {
+          "description": "true for a Base recipe (a recipe other recipes call for, never planned); false or null otherwise.",
+          "type": ["boolean", "null"]
+        },
+        "yieldUnit": {
+          "description": "The unit of a Base recipe's yield (g, kg, ml, l, dl, cl, tsp, tbsp, cup, piece or portion). Null unless baseRecipe is true.",
+          "anyOf": [ { "$ref": "#/$defs/unit" }, { "type": "null" } ]
+        },
         "courses": {
           "description": "Names of the Courses this Recipe can fill (for example \"Main\", \"Side\"), taken from the list in the prompt. Omit it, or leave it empty, for the main Course.",
           "type": "array", "uniqueItems": true, "maxItems": 20,

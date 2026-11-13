@@ -1,6 +1,20 @@
-import type { Leftover } from '../types'
+import type { Leftover as LeftoverLike } from '../types'
+import type { Leftover } from '../../../lib/leftovers/types'
 import { formatPortions } from './cook'
 import { dayNumber, weekdayName } from './phrase'
+
+/** A Leftover as the lib's by-hand actions need it: an older payload without the beta.5 fields reads as not frozen, not to answer. */
+export function asLeftover(l: LeftoverLike): Leftover {
+  return {
+    ...l,
+    storagePlaceId: l.storagePlaceId ?? null,
+    storagePlaceName: l.storagePlaceName ?? null,
+    frozen: l.frozen ?? false,
+    frozenOn: l.frozenOn ?? null,
+    toAnswer: l.toAnswer ?? false,
+    plannedPortions: l.plannedPortions ?? 0,
+  }
+}
 
 export interface LeftoverRow {
   id: number
@@ -13,7 +27,7 @@ export interface LeftoverRow {
 }
 
 /** The rows of the "Leftovers to use" tile, soonest Use-by first. */
-export function leftoverRows(leftovers: Leftover[], today: string): LeftoverRow[] {
+export function leftoverRows(leftovers: LeftoverLike[], today: string): LeftoverRow[] {
   return [...leftovers]
     .sort((a, b) => a.useBy.localeCompare(b.useBy) || a.id - b.id)
     .map((l) => {

@@ -1,6 +1,7 @@
 package baserecipe
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"unicode"
@@ -72,13 +73,16 @@ func (c composer) compose(r Recipe, path string, chain []string, factor, frac fl
 	}
 
 	list := append([]*item(nil), own...)
+	var placed [][]*item // the blocks already placed at this level: each one stays one unbroken run
 	for i, ln := range r.Lines {
 		q, ok := qtyOf(c.cat, ln)
 		if !ok {
 			continue
 		}
 		child, yield, isBlock := blockOf(c.cat, ln.IngredientID)
-		if !isBlock {
+		if !isBlock || !hasConvertingLine(c.cat, child) {
+			// A Base recipe with no converting line is empty (§4.6): it counts as its own Ingredient, its Steps
+			// stay off the timeline.
 			continue
 		}
 		if err := cycleFor(stack, child); err != nil {
@@ -97,20 +101,18 @@ func (c composer) compose(r Recipe, path string, chain []string, factor, frac fl
 		if len(block) == 0 {
 			continue
 		}
+		// No anchor (no non-Advance Step): the block goes at the end, in line order.
 		var anchor *item
-		if len(own) > 0 {
-			k := NeededAt(r, i, child.Name)
-			if k < 0 || k >= len(own) {
-				k = 0
-			}
+		if k := NeededAt(r, i, child.Name); k >= 0 && k < len(own) {
 			anchor = own[k]
 		}
 		sinks := sinksOf(block)
-		p, err := bestPosition(list, anchor, block, sinks)
+		p, err := bestPosition(list, anchor, block, sinks, placed)
 		if err != nil {
 			return nil, err
 		}
 		list = insertAt(list, p, block)
+		placed = append(placed, block)
 		if anchor != nil {
 			anchor.deps = appendNew(anchor.deps, sinks)
 		}
@@ -118,13 +120,26 @@ func (c composer) compose(r Recipe, path string, chain []string, factor, frac fl
 	return list, nil
 }
 
-// madeOf is the made fraction of the Base recipe line at path, clamped to 0..1; 1 without a made function.
+// hasConvertingLine reports whether a Recipe has any line that converts; without one its Base recipe is empty.
+func hasConvertingLine(cat Catalog, r Recipe) bool {
+	for _, ln := range r.Lines {
+		if _, ok := qtyOf(cat, ln); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// madeOf is the made fraction of the Base recipe line at path, clamped to 0..1; 1 without a made function. NaN
+// means "make it" (1).
 func (c composer) madeOf(path string) float64 {
 	if c.made == nil {
 		return 1
 	}
 	v := c.made(Path(path))
 	switch {
+	case math.IsNaN(v):
+		return 1
 	case !(v >= 0):
 		return 0
 	case v > 1:
@@ -151,15 +166,39 @@ func sinksOf(block []*item) []*item {
 }
 
 // bestPosition picks where a block goes in the list: the position p <= the anchor's index that gives the
-// shortest total with full durations, the latest on a tie. With no anchor (a Recipe without Steps) the block
-// goes at the end.
-func bestPosition(list []*item, anchor *item, block, sinks []*item) (int, error) {
+// shortest total with full durations, the latest on a tie. A position strictly inside an already placed sibling
+// block is not allowed, so sibling blocks never interleave. With no anchor (a Recipe without a non-Advance
+// Step) the block goes at the end.
+func bestPosition(list []*item, anchor *item, block, sinks []*item, placed [][]*item) (int, error) {
 	if anchor == nil {
 		return len(list), nil
+	}
+	var spans [][2]int // [first, end) of each placed sibling in the current list
+	for _, b := range placed {
+		first, last := len(list), -1
+		for _, it := range b {
+			i := indexOf(list, it)
+			first = min(first, i)
+			last = max(last, i)
+		}
+		if last >= 0 {
+			spans = append(spans, [2]int{first, last + 1})
+		}
+	}
+	inside := func(p int) bool {
+		for _, sp := range spans {
+			if sp[0] < p && p < sp[1] {
+				return true
+			}
+		}
+		return false
 	}
 	pos := indexOf(list, anchor)
 	best, bestTotal := -1, 0
 	for p := pos; p >= 0; p-- {
+		if inside(p) {
+			continue
+		}
 		total, err := totalOf(insertAt(list, p, block), anchor, sinks)
 		if err != nil {
 			return 0, err
@@ -167,6 +206,9 @@ func bestPosition(list []*item, anchor *item, block, sinks []*item) (int, error)
 		if best < 0 || total < bestTotal {
 			best, bestTotal = p, total
 		}
+	}
+	if best < 0 {
+		return pos, nil // unreachable: the anchor is never inside a sibling's run
 	}
 	return best, nil
 }
@@ -271,7 +313,8 @@ func scaleUses(uses []schedule.Use, f float64) []schedule.Use {
 
 // NeededAt is the default Needed at Step of the Base recipe line lineIndex of r (§3.3): the stored override
 // when it points at a non-Advance Step; else the first non-Advance Step whose Uses name the line's Ingredient;
-// else the first non-Advance Step whose text names baseName (whole words, case and accents folded); else 0.
+// else the first non-Advance Step whose text names baseName (whole words, case and accents folded); else the
+// first non-Advance Step. -1 when the Recipe has no non-Advance Step: ComposeSteps then puts the block at the end.
 func NeededAt(r Recipe, lineIndex int, baseName string) int {
 	if lineIndex < 0 || lineIndex >= len(r.Lines) {
 		return 0
@@ -299,7 +342,12 @@ func NeededAt(r Recipe, lineIndex int, baseName string) int {
 			}
 		}
 	}
-	return 0
+	for k, s := range r.Steps {
+		if s.Kind != schedule.Advance {
+			return k
+		}
+	}
+	return -1
 }
 
 // words splits a text into lower-case, accent-folded words.

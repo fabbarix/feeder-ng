@@ -4,6 +4,8 @@ import { LEFTOVER_STEP, formatPortions } from '../lib/cook'
 import { weekdayName } from '../lib/phrase'
 import { planStrings } from '../strings'
 import type { CookPreview } from '../types'
+import type { UsedFromController } from '../hooks/useUsedFrom'
+import { CourseUsedFrom } from './CourseUsedFrom'
 import '../plan.css'
 
 export interface MarkCookedSheetProps {
@@ -17,6 +19,10 @@ export interface MarkCookedSheetProps {
   onNotCooked: () => void
   busy: boolean
   error: string | null
+  /** The Course of the key, or null: the Used from row is for this Course. */
+  courseId: number | null
+  /** The Used from picks (below the Leftover stepper). */
+  usedFrom: UsedFromController
 }
 
 /**
@@ -25,7 +31,7 @@ export interface MarkCookedSheetProps {
  * Cooked (the one primary), No Leftover (while there is one) and Not cooked.
  */
 export function MarkCookedSheet(props: MarkCookedSheetProps): ReactNode {
-  const { open, onClose, preview, isLoading, leftover, onLeftoverChange, onConfirm, onNotCooked, busy, error } = props
+  const { open, onClose, preview, isLoading, leftover, onLeftoverChange, onConfirm, onNotCooked, busy, error, courseId, usedFrom } = props
   const fresh = preview?.fresh ?? false
   const footer = (
     <div className="plan-sheet__actions">
@@ -70,6 +76,7 @@ export function MarkCookedSheet(props: MarkCookedSheetProps): ReactNode {
                 ) : (
                   <Chip>{planStrings.noLeftover}</Chip>
                 )}
+                {courseId !== null && usedFrom.lines(courseId).length > 0 ? <CourseUsedFrom usedFrom={usedFrom} courseId={courseId} /> : null}
               </>
             ) : (
               <p className="plan__muted">{planStrings.fromLeftoverNote}</p>

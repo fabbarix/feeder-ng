@@ -62,6 +62,8 @@ export const stockStrings = {
   thawNote: 'Out of the Freezer, its Shelf Life starts again from today.',
   seeIngredient: (name: string) => `All ${name}`,
   managePlaces: 'Storage Places',
+  /** B5-LOW: the filter that shows only the frozen Leftovers (they are not Stock; they sit in their Freezer). */
+  leftoversFilter: 'Leftovers',
   noPlacesHint: 'Add Storage Places (Kitchen Pantry, Garage Freezer…) to sort what you keep.',
   addPlaceTo: 'Storage Place',
   wherePlace: (place: string) => `Goes to ${place}`,

@@ -202,6 +202,12 @@ func openReview(t *testing.T, c *testkit.Client, text string) reviewResp {
 	return v
 }
 
+// milkKept answers the Base recipe tile of Pancakes' "milk" line (an ingredient that is also a plannable Recipe in the
+// file or household): "Keep it as an Ingredient". The tile is asked, never preselected (beta.6, BR-C).
+func milkKept() obj {
+	return obj{"baseRecipeLines": obj{"$.recipes[0].ingredients[1]": obj{"action": "keep"}}}
+}
+
 func TestRoundTripExportThenImportIntoAnotherFeeder(t *testing.T) {
 	_, a := start(t)
 	pancakes, _ := seed(t, a)
@@ -209,8 +215,13 @@ func TestRoundTripExportThenImportIntoAnotherFeeder(t *testing.T) {
 
 	_, b := start(t)
 	rev := openReview(t, b, string(exported))
-	if !rev.Plan.Ready || len(rev.Plan.Ingredients) != 2 || len(rev.Plan.Warnings) != 0 || len(rev.Plan.Problems) != 0 {
-		t.Fatalf("plan = %+v", rev.Plan)
+	if rev.Plan.Ready || len(rev.Plan.BaseRecipeLines) != 1 {
+		t.Fatalf("the milk line is asked about, not silently linked: %+v", rev.Plan.BaseRecipeLines)
+	}
+	var kept reviewResp
+	mustStatus(t, b.Post("/api/imports/"+rev.ID+"/plan", obj{"decisions": milkKept()}), 200).MustJSON(t, &kept)
+	if !kept.Plan.Ready || len(kept.Plan.Ingredients) != 2 || len(kept.Plan.Warnings) != 0 || len(kept.Plan.Problems) != 0 {
+		t.Fatalf("plan = %+v", kept.Plan)
 	}
 	var done struct {
 		Recipes []struct {
@@ -221,7 +232,7 @@ func TestRoundTripExportThenImportIntoAnotherFeeder(t *testing.T) {
 		IngredientsCreated int
 		ConversionsAdded   int
 	}
-	mustStatus(t, b.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}}), 200).MustJSON(t, &done)
+	mustStatus(t, b.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": milkKept()}), 200).MustJSON(t, &done)
 	if len(done.Recipes) != 2 || done.IngredientsCreated != 2 {
 		t.Fatalf("done = %+v", done)
 	}
@@ -335,7 +346,7 @@ func TestReviewMustBeFinishedBeforeConfirm(t *testing.T) {
 		t.Fatalf("%d recipes after a refused confirm", n)
 	}
 	// Answer through /plan, then confirm: replace one, keep both of the other.
-	d := obj{"recipes": []obj{{"index": 0, "action": "replace"}, {"index": 1, "action": "keep_both"}}}
+	d := obj{"recipes": []obj{{"index": 0, "action": "replace"}, {"index": 1, "action": "keep_both"}}, "baseRecipeLines": milkKept()["baseRecipeLines"]}
 	var p reviewResp
 	mustStatus(t, c.Post("/api/imports/"+rev.ID+"/plan", obj{"decisions": d}), 200).MustJSON(t, &p)
 	if !p.Plan.Ready || p.Plan.Recipes[1].ImportedAs != "Milk (2)" {
@@ -547,7 +558,7 @@ func TestAFailedConfirmLeavesTheReviewOpenForARetry(t *testing.T) {
 	f["recipes"] = append(f["recipes"].([]any), obj{"name": "Golden rice", "yield": 2, "ingredients": []obj{{"ingredient": "saffron", "quantity": 1, "unit": "g"}}})
 	text, _ := json.Marshal(f)
 	rev := openReview(t, c, string(text))
-	d := obj{"recipes": []obj{{"index": 0, "action": "replace"}}}
+	d := obj{"recipes": []obj{{"index": 0, "action": "replace"}}, "baseRecipeLines": milkKept()["baseRecipeLines"]}
 
 	// Not ready (no answer for the conflict) is refused and keeps the Review.
 	if r := c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}}); r.Status != 422 {
@@ -566,7 +577,7 @@ func TestAFailedConfirmLeavesTheReviewOpenForARetry(t *testing.T) {
 	if !p.Plan.Ready {
 		t.Fatalf("the Review is recomputed from the current data and is ready again: %+v", p.Plan)
 	}
-	mustStatus(t, c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{}}), 200)
+	mustStatus(t, c.Post("/api/imports/"+rev.ID+"/confirm", obj{"decisions": obj{"baseRecipeLines": milkKept()["baseRecipeLines"]}}), 200)
 	if n := countRecipes(t, c); n != 3 { // Milk, Pancakes (created again), Golden rice
 		t.Fatalf("%d recipes, want 3", n)
 	}

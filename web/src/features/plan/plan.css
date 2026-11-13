@@ -325,6 +325,11 @@
   flex-wrap: wrap;
   column-gap: var(--space-1);
 }
+/* B5-LOW: the Plan's "Leftovers to use" section: its title above its rows. */
+.plan-leftovers-section {
+  display: grid;
+  gap: var(--space-2);
+}
 /* Cooked and Not cooked: a quieter tone, not a fade (WCAG AA). */
 .plan-meal[data-state='cooked'] .plan-meal__recipe,
 .plan-meal[data-state='skipped'] .plan-meal__recipe,

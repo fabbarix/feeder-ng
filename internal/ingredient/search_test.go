@@ -152,3 +152,20 @@ func TestScoreSymmetricAndUnrelatedIsLow(t *testing.T) {
 		t.Errorf("empty scored %v", s)
 	}
 }
+
+func TestFoldAccentsHandlesDecomposedInput(t *testing.T) {
+	for in, want := range map[string]string{
+		"é":             "e", // e + combining acute
+		"Crème fraîche": "creme fraiche",
+		"BÉCHAMEL":      "bechamel",
+		"é":              "e",
+		"ñ":             "n",
+	} {
+		if got := ingredient.FoldAccents(in); got != want {
+			t.Errorf("FoldAccents(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if s := ingredient.Score("béchamel", "bechamel"); s != 1 {
+		t.Errorf("Score with NFD = %v, want 1", s)
+	}
+}

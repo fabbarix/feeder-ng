@@ -153,3 +153,18 @@ describe('startCookPath', () => {
     expect(startCookPath([slot('2026-11-09', 2, '2026-11-09T19:00:00Z', 'skipped')], '2026-11-09', NOW)).toBeNull()
   })
 })
+
+describe('leftoverRows: Leftovers by hand (ADR 0012)', () => {
+  const l = (id: number, over: Record<string, unknown> = {}) => ({ id, recipeId: 1, recipeName: `R${id}`, portions: 2, useBy: '2026-11-14', ...over })
+  it('marks a Leftover past its Use-by as to answer, and lists it first', () => {
+    const rows = leftoverRows([l(1), l(2, { useBy: '2026-11-10', toAnswer: true })] as never, 5)
+    expect(rows.map((r) => [r.id, r.toAnswer])).toEqual([[2, true], [1, false]])
+  })
+  it('leaves out a frozen Leftover that is not to answer: it lives on the Pantry', () => {
+    const rows = leftoverRows([l(1, { frozen: true }), l(2, { frozen: true, toAnswer: true, useBy: '2026-11-10' })] as never, 5)
+    expect(rows.map((r) => r.id)).toEqual([2])
+  })
+  it('an older payload without the new fields reads as an ordinary Leftover', () => {
+    expect(leftoverRows([l(1)] as never, 5)[0]).toMatchObject({ toAnswer: false })
+  })
+})

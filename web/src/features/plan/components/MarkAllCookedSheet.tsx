@@ -4,6 +4,8 @@ import { LEFTOVER_STEP } from '../lib/cook'
 import type { AllCookedRow } from '../lib/toConfirm'
 import { weekdayName } from '../lib/phrase'
 import { planStrings as s } from '../strings'
+import type { UsedFromController } from '../hooks/useUsedFrom'
+import { CourseUsedFrom } from './CourseUsedFrom'
 import '../plan.css'
 
 export interface MarkAllCookedSheetProps {
@@ -15,17 +17,20 @@ export interface MarkAllCookedSheetProps {
   onConfirm: () => void
   busy: boolean
   error: string | null
+  /** The Used from picks, per Course; a conflict disables Mark all Cooked. */
+  usedFrom: UsedFromController
 }
 
 /**
  * "Mark all Cooked": a block per Course (its name and Recipe). A fresh Course has its own Leftover field at its proposal
  * and the Use-by chip; a Leftover Course says nothing is taken from Stock. The footer holds the one primary button.
  */
-export function MarkAllCookedSheet({ open, onClose, rows, isLoading, onLeftoverChange, onConfirm, busy, error }: MarkAllCookedSheetProps): ReactNode {
+export function MarkAllCookedSheet({ open, onClose, rows, isLoading, onLeftoverChange, onConfirm, busy, error, usedFrom }: MarkAllCookedSheetProps): ReactNode {
   const ready = rows.length > 0 && !isLoading
+  const conflict = usedFrom.hasConflict
   const footer = (
     <div className="plan-sheet__actions">
-      <Button variant="primary" disabled={busy || !ready} onClick={onConfirm}>
+      <Button variant="primary" disabled={busy || !ready || conflict} onClick={onConfirm}>
         {s.markAllCooked}
       </Button>
     </div>
@@ -55,6 +60,7 @@ export function MarkAllCookedSheet({ open, onClose, rows, isLoading, onLeftoverC
                 ) : (
                   <Chip>{s.noLeftover}</Chip>
                 )}
+                {usedFrom.lines(row.courseId).length > 0 ? <CourseUsedFrom usedFrom={usedFrom} courseId={row.courseId} /> : null}
               </>
             ) : (
               <p className="plan__muted">{s.fromLeftoverNote}</p>

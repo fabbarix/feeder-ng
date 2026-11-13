@@ -11,6 +11,8 @@ export const boardStrings = {
   markDone: 'Done',
   leftovers: 'Leftovers',
   leftoversNone: 'No Leftovers',
+  /** B5-LOW: a Leftover past its Use-by, still to answer on Today; read-only here. */
+  useByPassed: 'Use-by passed',
   useSoon: 'Use soon',
   useSoonNone: 'Nothing to use up',
   timers: 'Timers',

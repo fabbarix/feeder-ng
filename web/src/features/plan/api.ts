@@ -49,6 +49,8 @@ export const planApi = {
   regenerateDryRun: () => http.post<RegenerateDryRun>('/api/plan/regenerate?dryRun=1'),
   setMeal: (key: SlotKey, recipeId: number, batches?: number) =>
     http.put<PlannedMeal>(slotPath(key), batches === undefined ? { recipeId } : { recipeId, batches }),
+  /** B5-LOW: pins a Leftover (not taken out of the Freezer) to the Planned Meal of a Course; `{ leftoverId }` instead of a Recipe. */
+  pickLeftover: (key: SlotKey, leftoverId: number) => http.put<PlannedMeal>(slotPath(key), { leftoverId }),
   confirm: (key: SlotKey) => http.post<PlannedMeal>(`${slotPath(key)}/confirm`),
   unpin: (key: SlotKey) => http.post<PlannedMeal>(`${slotPath(key)}/unpin`),
   alternatives: (key: SlotKey) => http.get<{ alternatives: Alternative[] }>(`${slotPath(key)}/alternatives`),

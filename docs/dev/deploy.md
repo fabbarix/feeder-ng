@@ -20,6 +20,7 @@ Third-party licences: the image carries [THIRD_PARTY_NOTICES.md](../../THIRD_PAR
 | `1.0.0-beta.4` | tag `v1.0.0-beta.4` | prerelease: the fourth beta; never `latest`, `1.0` or `1` |
 | `1.0.0-beta.4.1` | tag `v1.0.0-beta.4.1` | prerelease: the first fix release of the fourth beta; never `latest`, `1.0` or `1` |
 | `1.0.0-beta.4.2` | tag `v1.0.0-beta.4.2` | prerelease: the second fix release of the fourth beta; never `latest`, `1.0` or `1` |
+| `1.0.0-beta.5` | tag `v1.0.0-beta.5` | prerelease: the fifth beta; never `latest`, `1.0` or `1` |
 | `1.0.0-dev` | tag `v1.0.0-dev` | earlier prerelease; never `latest` |
 | `1.0.0`, `1.0`, `1` | tag `v1.0.0` | exact version, latest patch of 1.0, latest 1.x (no `1` tag for 0.x) |
 | `latest` | a `v*` tag without a `-` prerelease suffix | latest stable release; does not exist until the first stable tag |
@@ -147,7 +148,7 @@ The image is distroless (no shell), so there is no `HEALTHCHECK`; let the proxy 
 The chart is public too, published as an OCI artifact; installing it needs no login:
 
 ```sh
-helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.2 \
+helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.5 \
   --namespace feeder --create-namespace \
   --set adminEmail=you@example.com \
   --set baseUrl=https://feeder.example.com \
@@ -155,7 +156,7 @@ helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.
   --set ingress.tls.enabled=true --set ingress.tls.secretName=feeder-tls
 ```
 
-The chart version equals the release (`v1.0.0-beta.4.2` publishes chart `1.0.0-beta.4.2` with `appVersion` `1.0.0-beta.4.2`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reset-then-reuse-values` (Helm 3.14 or newer). Plain `--reuse-values` reuses the old computed values, so a new chart's `secretKey` default (and any other new setting) is not applied; `--reset-then-reuse-values` re-applies the new defaults and then your overrides, or add `--set secretKey.generate=true`. Source and the values table: `deploy/helm/feeder/README.md`.
+The chart version equals the release (`v1.0.0-beta.5` publishes chart `1.0.0-beta.5` with `appVersion` `1.0.0-beta.5`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reset-then-reuse-values` (Helm 3.14 or newer). Plain `--reuse-values` reuses the old computed values, so a new chart's `secretKey` default (and any other new setting) is not applied; `--reset-then-reuse-values` re-applies the new defaults and then your overrides, or add `--set secretKey.generate=true`. Source and the values table: `deploy/helm/feeder/README.md`.
 
 - **One replica only.** The state is a SQLite file on a single volume, so the Deployment is fixed at one replica with the `Recreate` strategy (no overlap during upgrades) and must never be scaled.
 - **Storage.** A PVC mounted at `/data` (`persistence.size`, `persistence.storageClass`, or `persistence.existingClaim`). `/data` must be writable by uid/gid 65532. The pod sets `fsGroup: 65532`, which makes most dynamically provisioned volumes writable, but `fsGroup` is not enough on its own: an `existingClaim` whose volume ignores `fsGroup` (hostPath, NFS, some CSI drivers) must be chowned beforehand with `chown 65532:65532` on the volume's directory. The root filesystem is read-only; only `/data` and an `emptyDir` `/tmp` are writable.
@@ -164,7 +165,7 @@ The chart version equals the release (`v1.0.0-beta.4.2` publishes chart `1.0.0-b
   ```sh
   kubectl -n feeder create secret generic feeder-google \
     --from-literal=client-id=... --from-literal=client-secret=...
-  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.2 --namespace feeder --reset-then-reuse-values \
+  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.5 --namespace feeder --reset-then-reuse-values \
     --set google.existingSecret=feeder-google
   ```
 
@@ -263,3 +264,30 @@ chown 65532:65532 /srv/feeder/feeder.db
    On Kubernetes the paths above are on the PVC, which you reach by mounting it in a helper pod while the deployment is scaled to zero (for example a pod with the PVC mounted at `/data` and an image that has `cp`, `rm` and `chown`). In the pod the files are under `/data/...`: the snapshot is `/data/backups/feeder-pre-1400.db` and the database is `/data/feeder.db`, owned by 65532. Run the same `cp`, `rm` and `chown` there with those paths, then delete the helper pod. To bring the replica back on the older release, run `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.3 --namespace feeder --reset-then-reuse-values`, or roll back the release: `helm history feeder -n feeder` lists the revisions, and `helm rollback feeder <revision> -n feeder` goes back to the last one that ran 1.0.0-beta.3 (the one before the upgrade, which is not always the highest number below the current one if you changed values in between).
 
    Everything Feeder recorded after the upgrade (Plan changes, Stock, new Recipes) is gone with the restore; images in `/data/images` stay. Restore the file as `feeder.db` owned by uid/gid 65532, as in Restore above. Do not start the new image on the restored file: it migrates it again.
+
+### Upgrading from 1.0.0-beta.4.2 to 1.0.0-beta.5
+
+This release adds Meal Slot dates and Guests, Leftovers by hand, Bought Planned Meals and Not needed on the Shopping List, so read this before you upgrade.
+
+1. Take a backup first (Admin: `POST /api/admin/backups`, or copy `/data/backups` and `/data/images`). Migrations run at start and are forward-only.
+2. Upgrade. Kubernetes: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.5 --namespace feeder --reset-then-reuse-values`. Docker or compose: pull the new image and restart. There are no new settings.
+3. Four migrations run on the first start:
+   - `1500` adds the table behind a Meal Slot on one date: Not served, the date's own time and Guests.
+   - `1510` lets a Leftover sit in a Storage Place and be frozen, and adds the Frozen Use-by (90 days for the Household, optional per Recipe) and the history of the hand actions Had it, Threw it out, Freeze it, Take out and Wasn't there.
+   - `1520` adds the record of which Planned Meal a purchase from the Shopping List was bought for. Purchases made before the upgrade have no record, so no Planned Meal is Bought until the next purchase.
+   - `1530` adds Not needed for the Shopping List.
+4. **The pre-1500 snapshot.** If the database already has applied migrations, Feeder first takes a verified snapshot as `feeder-pre-1500.db` in `/data/backups` (on Docker, the `backups` folder of the data volume; on Kubernetes, the `backups` folder of the PVC), before any of the four migrations runs, with `integrity_check`. If it cannot be written, Feeder stops with a log line naming `feeder-pre-1500.db` and nothing is migrated. A fresh install takes none. An existing `feeder-pre-1500.db` is never replaced, so a start that stopped half way (1500 applied, 1510 failed) keeps the true pre-upgrade file. The file is not listed in Settings, is never pruned by the nightly clean-up and stays until you delete it, so copy it off the volume if you want to keep it. A database that also lacks migration 1400 (an upgrade from before beta.4) gets `feeder-pre-1400.db` as well. The nightly snapshots (`feeder-YYYY-MM-DD.db`) are separate.
+5. A Leftover past its Use-by is no longer thrown away at 03:00. After the upgrade those Leftovers wait on Today until a User answers Had it, Threw it out or Wasn't there.
+6. **Rolling back.** Migrations cannot be undone, so going back to 1.0.0-beta.4.2 means restoring the snapshot and running the older image. A `helm rollback` on its own does not restore the database:
+
+```sh
+docker stop feeder                                          # Kubernetes: kubectl -n feeder scale deploy/feeder --replicas=0
+cp /srv/feeder/backups/feeder-pre-1500.db /srv/feeder/feeder.db
+rm -f /srv/feeder/feeder.db-wal /srv/feeder/feeder.db-shm   # stale write-ahead files
+chown 65532:65532 /srv/feeder/feeder.db
+# run the older image: ghcr.io/fabbarix/feeder-ng:1.0.0-beta.4.2
+```
+
+   On Kubernetes the paths above are on the PVC, which you reach by mounting it in a helper pod while the deployment is scaled to zero (for example a pod with the PVC mounted at `/data` and an image that has `cp`, `rm` and `chown`). In the pod the snapshot is `/data/backups/feeder-pre-1500.db` and the database is `/data/feeder.db`, owned by 65532. Run the same `cp`, `rm` and `chown` there with those paths, then delete the helper pod. Then bring the replica back on the older release: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.4.2 --namespace feeder --reset-then-reuse-values`, or roll back the release: `helm history feeder -n feeder` lists the revisions, and `helm rollback feeder <revision> -n feeder` goes back to the last one that ran 1.0.0-beta.4.2 (the one before the upgrade, which is not always the highest number below the current one if you changed values in between). `helm rollback` scales the deployment back up, so restore the database first.
+
+   Everything Feeder recorded after the upgrade (Plan changes, Stock, new Recipes, Leftovers answered by hand) is gone with the restore; images in `/data/images` stay. Restore the file as `feeder.db` owned by uid/gid 65532, as in Restore above. Do not start the new image on the restored file: it migrates it again.

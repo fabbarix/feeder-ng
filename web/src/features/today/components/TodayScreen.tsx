@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
 import { Tile, useToast } from '../../../ui'
+import { LeftoverSheets } from '../../../ui/LeftoverActions/LeftoverSheets'
 import {
   AllCookedSheets,
   CookFlowSheets,
@@ -20,6 +21,7 @@ import {
   useCouldntPlanNotice,
   toConfirmCourses,
   useNotCooked,
+  useScreenLeftovers,
   useSlotDate,
   useTonightSheets,
 } from '../../plan'
@@ -69,6 +71,8 @@ export function TodayScreen(): ReactElement {
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
   const hero = data.nextSlot
   const sheets = useTonightSheets(hero)
+  // B5-LOW: the Leftover flow, the tile and the chooser's freezer list (round 2: the logic lives in useScreenLeftovers).
+  const leftovers = useScreenLeftovers({ today: data.planToday, leftovers: data.leftovers, choose: sheets.choose, closePlanned: sheets.planned.close })
   // B5-F1: the per-date choices of today's Tonight slot and its Not served rows (their sheets are rendered below).
   const notServed = data.notServedToday ?? []
   const slotDate = useSlotDate(hero ? [hero, ...notServed] : notServed)
@@ -126,7 +130,7 @@ export function TodayScreen(): ReactElement {
     ),
     couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} span="full" />,
     setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} isAdmin={isAdmin} />,
-    leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} />,
+    leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} flow={leftovers.flow} tone={leftovers.tile.tone} />,
     useSoon: <UseSoonTile items={data.useSoon} />,
     streak: <StreakTile days={streak.days} />,
   }
@@ -168,6 +172,7 @@ export function TodayScreen(): ReactElement {
           onMarkRecipes={sheets.planned.markRecipes}
           onAddRecipes={sheets.planned.addRecipes}
           onReviewVarietyRules={sheets.planned.reviewVarietyRules}
+          onOpenLeftover={(id) => leftovers.openLeftover(id)}
         />
       ) : null}
       <SwapSheet
@@ -185,7 +190,10 @@ export function TodayScreen(): ReactElement {
         recipes={sheets.choose.recipes}
         isLoading={sheets.choose.isLoading}
         onPick={(id) => void sheets.choose.pick(id)}
+        frozenLeftovers={leftovers.chooserLeftovers}
+        onPickLeftover={(id) => void leftovers.pickLeftover(id)}
       />
+      <LeftoverSheets flow={leftovers.flow} />
       <AllCookedSheets flow={sheets.allCooked} />
       <SlotDateSheets controller={slotDate} />
     </>

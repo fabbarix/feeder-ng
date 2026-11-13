@@ -18,7 +18,7 @@ export interface HouseholdSettingsFormProps {
 
 const text = settingsStrings.form
 
-/** Time zone, the day counts (NumberFields bounded in the field: Planning Horizon 1-28, Cool-down 0-365, Leftover Use-by 1-14),
+/** Time zone, the day counts (NumberFields bounded in the field: Planning Horizon 1-28, Cool-down 0-365, Leftover Use-by 1-14, Frozen Use-by 1-365),
  *  quiet hours (two TimeFields), Planner Style, Location (its helper says why coordinates matter) and Currency. */
 export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZone, onSave }: HouseholdSettingsFormProps) {
   const [draft, setDraft] = useState<SettingsDraft>(() => draftFromSettings(value, suggestedTimeZone))
@@ -81,6 +81,17 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
           disabled={readOnly}
           error={errors.defaultLeftoverUseByDays}
           onChange={(n) => set({ defaultLeftoverUseByDays: fromDays(n) })}
+        />
+        <NumberField
+          size="xs"
+          label={text.frozenUseBy}
+          value={draft.frozenUseByDays === undefined ? null : days(draft.frozenUseByDays)}
+          min={1}
+          max={365}
+          step={1}
+          disabled={readOnly}
+          error={errors.frozenUseByDays}
+          onChange={(n) => set({ frozenUseByDays: fromDays(n) })}
         />
       </FieldRow>
       <FieldRow>

@@ -7,6 +7,8 @@ export interface SettingsDraft {
   planningHorizonDays: number
   defaultCooldownDays: number
   defaultLeftoverUseByDays: number
+  /** Absent when the settings the form was filled from have none: then it is neither checked nor sent (the server keeps its value). */
+  frozenUseByDays?: number
   quietHours: { start: string; end: string }
   plannerStyle: number
   locationText: string
@@ -26,6 +28,7 @@ export function draftFromSettings(s: HouseholdSettings, suggestedTimeZone?: stri
     planningHorizonDays: s.planningHorizonDays,
     defaultCooldownDays: s.defaultCooldownDays,
     defaultLeftoverUseByDays: s.defaultLeftoverUseByDays,
+    frozenUseByDays: s.frozenUseByDays,
     quietHours: { ...s.quietHours },
     plannerStyle: s.plannerStyle,
     locationText: formatLocation(s.location),
@@ -71,6 +74,10 @@ export function validateSettings(d: SettingsDraft): Record<string, string> {
   if (cooldown) errors.defaultCooldownDays = cooldown
   const useBy = dayCountError('Default Leftover Use-by', d.defaultLeftoverUseByDays, 1, 14)
   if (useBy) errors.defaultLeftoverUseByDays = useBy
+  if (d.frozenUseByDays !== undefined) {
+    const frozenUseBy = dayCountError('Default Frozen Use-by', d.frozenUseByDays, 1, 365)
+    if (frozenUseBy) errors.frozenUseByDays = frozenUseBy
+  }
   const { start, end } = d.quietHours
   if (!TIME.test(start) || !TIME.test(end)) errors.quietHours = 'Enter a start and end time.'
   else if (start === end) errors.quietHours = 'Start and end must be different times.'
@@ -87,6 +94,7 @@ export function settingsFromDraft(d: SettingsDraft): SettingsInput {
     planningHorizonDays: d.planningHorizonDays,
     defaultCooldownDays: d.defaultCooldownDays,
     defaultLeftoverUseByDays: d.defaultLeftoverUseByDays,
+    frozenUseByDays: d.frozenUseByDays,
     quietHours: { ...d.quietHours },
     plannerStyle: d.plannerStyle,
     location: parsed.ok ? parsed.value : null,
