@@ -75,8 +75,9 @@ describe('IngredientLineRow: "Optional" is a menu item plus a status chip (never
     expect(combo.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(container.querySelector('li.line-row')!.textContent).toContain('Optional')
   })
-  it('no [title] attribute anywhere in the line', () => {
+  it('no [title] attribute anywhere in the line, except on chips (their full text, DS-A system.md §6)', () => {
     const { container } = view({ optional: true })
-    expect(container.querySelector('[title]')).toBeNull()
+    expect(container.querySelector('[title]:not(.chip)')).toBeNull()
+    for (const chip of container.querySelectorAll('.chip[title]')) expect(chip.getAttribute('title')).toBe(chip.textContent)
   })
 })

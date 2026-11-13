@@ -62,18 +62,13 @@ describe('plan.css', () => {
     expect(slot).toMatch(/text-overflow:\s*ellipsis/)
   })
 
-  it('no mid-word breaks: nothing uses overflow-wrap: anywhere; Recipe names and chips break at word edges and hyphenate', () => {
-    // No exemption, the Leftovers tile (N2) included: wp6 review rule (wp6-plan-today.md, CSS contract).
-    expect(css).not.toMatch(/overflow-wrap:\s*anywhere/)
-    for (const sel of ['.plan-meal__recipe', '.plan-meal [data-kind]']) {
-      expect(rule(sel)).toMatch(/overflow-wrap:\s*break-word/)
-      expect(rule(sel)).toMatch(/hyphens:\s*auto/)
-    }
+  it('no mid-word breaks: nothing uses overflow-wrap anywhere / break-word or hyphens: auto (DS-A system.md §10)', () => {
+    // No exemption, the Leftovers tile (N2) included. Names and chips wrap at word boundaries only.
+    expect(css).not.toMatch(/overflow-wrap:\s*(anywhere|break-word)|hyphens:\s*auto/)
   })
 
   it('the day title is never clipped: it wraps, with no overflow hidden, ellipsis or nowrap', () => {
     const r = rule('.plan-day__title')
-    expect(r).toMatch(/overflow-wrap:\s*break-word/)
     expect(r).not.toMatch(/overflow:\s*hidden|text-overflow|white-space:\s*nowrap/)
   })
 
@@ -91,12 +86,10 @@ describe('plan.css Leftovers tile (N2)', () => {
     expect(r).toMatch(/padding-block/)
   })
 
-  it('the Recipe name wraps (no nowrap, no ellipsis) and breaks at word edges, hyphenating (never anywhere)', () => {
+  it('the Recipe name wraps (no nowrap, no ellipsis) at word edges only (DS-A: no anywhere, break-word or hyphens)', () => {
     const r = rule('.plan-leftovers .list-row__title')
     expect(r).toMatch(/white-space:\s*normal/)
-    expect(r).toMatch(/overflow-wrap:\s*break-word/)
-    expect(r).toMatch(/hyphens:\s*auto/)
-    expect(r).not.toMatch(/anywhere|nowrap/)
+    expect(r).not.toMatch(/anywhere|break-word|hyphens:\s*auto|nowrap/)
   })
 
   it('the meta line may wrap under the name', () => {

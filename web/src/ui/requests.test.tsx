@@ -26,11 +26,15 @@ describe('WP3b #6/#16: icons moveUp, moveDown, mute', () => {
   })
 })
 
-describe('WP3b #9: BentoGrid columns 7', () => {
-  it('sets data-columns=7 and the stylesheet gives seven equal columns', () => {
-    render(<BentoGrid columns={7} label="Week" />)
-    expect(screen.getByRole('group', { name: 'Week' })).toHaveAttribute('data-columns', '7')
-    expect(declarations(readUiCss('BentoGrid.css'), ".bento-grid[data-columns='7']")['grid-template-columns']).toBe('repeat(7, minmax(0, 1fr))')
+describe('WP3b #9 (DS-A, ADR 0016): the week is a BentoGrid by minimum tile width, not 7 columns', () => {
+  it('min="day" sets data-min and the stylesheet lays out auto-fill tracks of --tile-min-day', () => {
+    render(<BentoGrid min="day" label="Week" />)
+    const grid = screen.getByRole('group', { name: 'Week' })
+    expect(grid).toHaveAttribute('data-min', 'day')
+    expect(grid).not.toHaveAttribute('data-columns')
+    expect(declarations(readUiCss('BentoGrid.css'), ".bento-grid[data-min='day']")['grid-template-columns']).toBe(
+      'repeat(auto-fill, minmax(min(var(--tile-min-day), 100%), 1fr))',
+    )
   })
 })
 
@@ -47,9 +51,9 @@ describe('WP3b #10: why chip and primary Button on the accent hero (plan 4.3, 5.
       color: 'var(--color-accent-text)',
     })
   })
-  it('the existing hero secondary rule and the base why chip are unchanged', () => {
+  it('the existing hero secondary rule is unchanged; the base why chip is the neutral surface-2 (DS-A system.md §6)', () => {
     expect(declarations(readUiCss('Button.css'), ".tile[data-variant='hero'] .button[data-variant='secondary']")).toMatchObject({ background: 'var(--color-surface)' })
-    expect(declarations(readUiCss('Chip.css'), ".chip[data-kind='why']")).toMatchObject({ background: 'var(--color-soft)' })
+    expect(declarations(readUiCss('Chip.css'), ".chip[data-kind='why']")).toMatchObject({ background: 'var(--color-surface-2)' })
   })
 })
 
