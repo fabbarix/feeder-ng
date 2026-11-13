@@ -1,12 +1,14 @@
 import { usePhraseContext } from './usePhraseContext'
 import { wholeMealChip, type CourseRowModel } from '../lib/courses'
-import { emptyRow, rowChips, type EmptyRowModel, type RowChip } from '../lib/rowChips'
+import { emptyRow, rowChips, type ChipMore, type EmptyRowModel, type RowChip } from '../lib/rowChips'
 import { rowActions, type RowAction } from '../lib/rowActions'
 import type { PlanSlot } from '../types'
 
 export interface PlanCourseRowView {
-  /** The chips of a Planned Meal (empty for an empty Course). */
+  /** The chips of a Planned Meal the row shows (empty for an empty Course). Round 2: at most ROW_CHIP_LIMIT, the rest in `more`. */
   chips: RowChip[]
+  /** Round 2: the "+N" chip for the chips that were left out; null when all show. */
+  more: ChipMore | null
   /** The icon actions at the row's end, in order. */
   actions: RowAction[]
   /** Set for an empty Course: its title, its "Not planned" chip and whether it can be chosen. */
@@ -19,6 +21,7 @@ export function usePlanCourseRow(row: CourseRowModel, slot: PlanSlot): PlanCours
   const meal = row.course.meal
   return {
     chips: meal ? rowChips(meal, phrase, wholeMealChip(slot, row)) : [],
+    more: null,
     actions: rowActions(meal),
     empty: meal ? null : emptyRow(row.course),
   }

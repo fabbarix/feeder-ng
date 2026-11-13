@@ -63,4 +63,14 @@ describe('SlotHeader', () => {
     expect(within(head).queryByRole('button', { name: 'Swap' })).toBeNull()
     expect(within(head).queryByRole('button', { name: 'Pin' })).toBeNull()
   })
+
+  it('round 2: the ⋮ is the same size and treatment as Cook, Swap and Pin: every button of the group is a compact icon button', () => {
+    const { head } = setup()
+    const buttons = within(head.querySelector('.plan-slot-head__actions') as HTMLElement).getAllByRole('button')
+    expect(buttons).toHaveLength(2)
+    for (const b of buttons) {
+      expect(b).toHaveClass('icon-button')
+      expect(b).toHaveAttribute('data-size', 'compact')
+    }
+  })
 })

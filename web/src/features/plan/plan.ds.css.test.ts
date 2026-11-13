@@ -113,10 +113,9 @@ describe('Course rows and their chips', () => {
     expect(c['gap']).toBe('var(--space-1)')
   })
 
-  it('a chip in the line may shrink and truncate (Chip.css does the ellipsis), it never wraps or grows', () => {
-    const c = d('.plan-row__chips .chip')
-    expect(c['flex']).toBe('0 1 auto')
-    expect(c['min-width']).toBe('0')
+  // ds-plan round 2: was `flex: 0 1 auto` (chips shrank to stubs); now chips keep their size and the row caps them at 2 + "+N".
+  it('a chip in the line keeps its full size (flex none); it never wraps or shrinks', () => {
+    expect(d('.plan-row__chips .chip')['flex']).toBe('none')
   })
 
   it('Swap and Pin are a non-shrinking icon group at the end of the row', () => {

@@ -1,6 +1,6 @@
 // ds-plan (docs/design/system.md §3, §6): a Course row on a day tile is a ListRow.
 //   [meta: "Main" | "Side"] [title: Recipe, body-strong, 2 lines, wraps at a word] [one line of chips] [Swap, Pin at the end]
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -170,5 +170,38 @@ describe('PlanCourseRow: an empty Course', () => {
     expect(screen.queryByRole('button', { name: 'Choose a Recipe' })).not.toBeInTheDocument()
     expect(li.querySelector('.list-row__title')).toHaveTextContent('Nobody is set to attend.')
     expect(li.querySelector('.plan-row__chips .chip')).toHaveAttribute('data-status', 'info')
+  })
+})
+
+describe('PlanCourseRow: round 2', () => {
+  const four = () => side({ meal: courseMeal(2, 'Side', { pinned: true, servedFromLeftover: { date: '2026-11-09' } as never, why: [{ code: 'leftover_fits', date: '2026-11-13' }, { code: 'favourite', members: ['Mia'] }] }) })
+
+  it('shows at most 2 chips and one neutral "+2" chip last; the hidden ones are in its title and accessible name', () => {
+    const { li } = setup(four())
+    const line = li.querySelector('.plan-row__chips')!
+    expect(line.children).toHaveLength(3)
+    expect(Array.from(line.querySelectorAll('.chip')).slice(0, 2).map((c) => c.textContent)).toEqual(['Pinned', 'Leftover from Mon'])
+    const more = line.lastElementChild as HTMLElement
+    expect(more).toHaveClass('chip')
+    expect(more).toHaveAttribute('data-kind', 'count')
+    expect(more).toHaveTextContent('+2')
+    expect(more).toHaveAttribute('title', "Leftover for Fri, Mia's favourite")
+    expect(more).toHaveAccessibleName(expect.stringContaining('+2'))
+    expect(more).toHaveAccessibleName(expect.stringContaining('Leftover for Fri'))
+    expect(more).toHaveAccessibleName(expect.stringContaining("Mia's favourite"))
+  })
+
+  it('two chips or fewer have no "+N"', () => {
+    const { li } = setup(side({ meal: courseMeal(2, 'Side', { pinned: true, why: [{ code: 'favourite', members: ['Mia'] }] }) }))
+    expect(li.querySelectorAll('.plan-row__chips .chip')).toHaveLength(2)
+    expect(li.querySelector('.chip[data-kind="count"]')).toBeNull()
+  })
+
+  it('the full Recipe name is shown, wrapped at words, never cut: the row is in ListRow wrap-title mode (a filled and an empty row)', () => {
+    const { li } = setup()
+    expect(li).toHaveAttribute('data-wrap-title', 'true')
+    cleanup()
+    const empty = setup(side({ meal: null }))
+    expect(empty.li).toHaveAttribute('data-wrap-title', 'true')
   })
 })

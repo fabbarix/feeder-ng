@@ -107,3 +107,19 @@ export function emptyRow(course: PlanCourse): EmptyRowModel {
     canChoose: cause !== 'nobody_attending',
   }
 }
+
+/** ds-plan round 2: a row shows at most this many chips; the rest collapse into one "+N" chip. */
+export const ROW_CHIP_LIMIT = 2
+
+/** The collapsed "+N" chip: its label, and the hidden chips' labels (the chip's title and accessible name). */
+export interface ChipMore {
+  label: string
+  /** The hidden chips' labels, joined with ", ". */
+  title: string
+  count: number
+}
+
+/** The first `limit` chips in order, and a "+N" for the rest (null when everything fits). Stub: the developer implements it. */
+export function capChips(_chips: RowChip[], _limit: number = ROW_CHIP_LIMIT): { shown: RowChip[]; more: ChipMore | null } {
+  throw new Error('ds-plan round 2: capChips is not implemented')
+}
