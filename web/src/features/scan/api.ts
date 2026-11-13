@@ -2,7 +2,7 @@ import { http as defaultHttp, type HttpClient } from '../../lib/http'
 import { IMAGE_UPLOAD_PATH } from '../../ui/ImagePicker/api'
 import { blobToDataUrl } from '../../ui/ImagePicker/lib/imageUrl'
 import type { ArchivedProduct } from './lib/archivedProduct'
-import type { OfflineData, Op, ScanResult } from './types'
+import type { OfflineData, Op, PricePatch, ScanResult } from './types'
 
 export interface ScanApi {
   offlineData(shopId?: number | null): Promise<OfflineData>
@@ -12,7 +12,10 @@ export interface ScanApi {
   /** PPX: POST /api/images {dataUrl} for a Picture queued offline (the ImagePicker's endpoint); answers the image id. */
   uploadPicture(blob: Blob): Promise<string>
   undo(clientUuid: string): Promise<{ undone: boolean; alreadyUndone?: boolean }>
-  setPrice(clientUuid: string, priceCents: number): Promise<ScanResult>
+  /** SR3: PATCH /api/scan/prices: one Price for the scans of a row; answers one Result per uuid */
+  setPrices(body: PricePatch): Promise<ScanResult[]>
+  /** pricePerKgCents is sent only when given */
+  setPrice(clientUuid: string, priceCents: number, pricePerKgCents?: number): Promise<ScanResult>
   /** R8: GET /api/resolve?barcode=&shop=; `archivedProduct` is set when only an archived Product owns the code */
   findArchived(barcode: string, shopId: number | null): Promise<ArchivedProduct | null>
   /** R8: GET /api/products/{id} (an archived Product is served too), for its name */
@@ -48,7 +51,9 @@ export function createScanApi(client: HttpClient, opts: ScanApiOptions = {}): Sc
       return (await client.post<{ id: string }>(IMAGE_UPLOAD_PATH, { dataUrl }, { signal })).id
     },
     undo: (uuid) => client.post(`/api/scan/${encodeURIComponent(uuid)}/undo`),
-    setPrice: (uuid, priceCents) => client.patch<ScanResult>(`/api/scan/${encodeURIComponent(uuid)}`, { priceCents }),
+    setPrices: async (body) => (await client.patch<{ results: ScanResult[] }>('/api/scan/prices', body)).results,
+    setPrice: (uuid, priceCents, pricePerKgCents) =>
+      client.patch<ScanResult>(`/api/scan/${encodeURIComponent(uuid)}`, pricePerKgCents === undefined ? { priceCents } : { priceCents, pricePerKgCents }),
     async findArchived(barcode, shopId) {
       const q = new URLSearchParams({ barcode })
       if (shopId != null) q.set('shop', String(shopId))

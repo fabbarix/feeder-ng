@@ -189,11 +189,13 @@ export class OfflineQueue {
    * changed; false when it already left it (sent, applied or rejected): the caller then uses the server's SetPrice.
    * Runs in the queue's lock, so it never falls between a send's read and its outcome.
    */
-  updatePrice(clientUuid: string, priceCents: number): Promise<boolean> {
+  updatePrice(clientUuid: string, priceCents: number, pricePerKgCents?: number): Promise<boolean> {
     return this.exclusive(async () => {
       const queued = (await this.store.all()).find((e) => e.op.clientUuid === clientUuid)
       if (!queued) return false
-      await this.store.put({ ...queued, op: { ...queued.op, priceCents } })
+      // SR3: the Price per kg travels with the Op when given (the server then costs each weighed scan by its weight)
+      const op = pricePerKgCents === undefined ? { ...queued.op, priceCents } : { ...queued.op, priceCents, pricePerKgCents }
+      await this.store.put({ ...queued, op })
       return true
     })
   }

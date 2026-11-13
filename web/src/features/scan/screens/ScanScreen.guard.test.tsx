@@ -21,9 +21,10 @@ function controller(online: boolean): ScanController {
     camera: { status: 'ready', videoRef: { current: null }, torchSupported: false, torchOn: false, toggleTorch: vi.fn() },
     recovery: { failure: null, manualOpen: false, openManual: vi.fn(), closeManual: vi.fn(), text: '', setText: vi.fn(), error: null, submit: vi.fn(() => true), retry: vi.fn() },
     muted: false, toggleMute: vi.fn(), canVibrate: false,
+    scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), clear: vi.fn() }, endSession: vi.fn(),
     flow: {
-      feedback: null, banner: null, paused: true, onScan: vi.fn(), saveUnknown: vi.fn(), submitWeight: vi.fn(), stockTakeAction: vi.fn(), openEditPrice: vi.fn(),
-      editPrice: vi.fn(), undo: vi.fn(), dismissFeedback: vi.fn(), closeSheet: vi.fn(), applySyncResults: vi.fn(), unarchiveProduct: vi.fn(), unarchiving: false,
+      pricing: null, startPriceEntry: vi.fn(), closePriceEntry: vi.fn(), savePrice: vi.fn(async () => ({ status: 'saved' as const })), increment: vi.fn(), decrement: vi.fn(), removeRow: vi.fn(), confirmRemove: vi.fn(), banner: null, paused: true, onScan: vi.fn(), saveUnknown: vi.fn(), submitWeight: vi.fn(), stockTakeAction: vi.fn(),
+      closeSheet: vi.fn(), applySyncResults: vi.fn(), unarchiveProduct: vi.fn(), unarchiving: false,
       createNewInstead: vi.fn(), sheet: { kind: 'unknown', mode: 'pack', target: { mode: 'pack', code: '123' } },
     } as unknown as ScanController['flow'],
     list: makeList(), online, pendingCount: 0, rejectedCount: 0, dismissRejected: vi.fn(), notices: [], dismissNotice: vi.fn(),

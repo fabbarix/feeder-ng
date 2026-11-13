@@ -1,39 +1,49 @@
 // The Scan screen (centre button, route /scan). The session starts at once with the last Shop used (lib/initialChoice),
 // or with Stock-take when the URL asks for it (?mode=stocktake, linked from the Stock-take button); otherwise the picker
-// "Where are you shopping?" (ShopPicker over useShops(), the last Shop used first). The session is then the camera strip,
-// the live list (Shop mode), the scan line, notices and the sheets. The session view is its own component, so the camera
-// and the offline data start only once a Shop or Stock-take is chosen.
+// "Where are you shopping?" (ShopPicker over useShops(), the last Shop used first). A Shop session is the Split layout
+// (shop-scan-proposals.md 13.2): the camera strip, and beside it the Scanned list or the To get Lines, the total and the
+// sheets. Stock-take is the camera and its sheet only. The session view is its own component, so the camera and the
+// offline data start only once a Shop or Stock-take is chosen.
 // Shop Location: useNearestShop finds the Shop the User is in (at once only where that shows no prompt); the picker
 // lists it first, and a session started with another Shop offers to switch. Any User adds a Shop (AddShopSheet).
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ingredientsApi } from '../../ingredients/api'
 import { useShops } from '../../shops/hooks/useShops'
 import { useNearestShop } from '../../shops/hooks/useNearestShop'
 import { AddShopSheet } from '../../shops/components/AddShopSheet'
 import { formatDistance } from '../../shops/lib/nearest'
+import { lineEntry } from '../../shop/lib/lines'
 import { ViewfinderStrip } from '../../../ui/ViewfinderStrip'
 import { Button } from '../../../ui/Button'
+import { ConfirmDialog } from '../../../ui/ConfirmDialog'
 import { IconButton } from '../../../ui/IconButton'
 import { Icon } from '../../../ui/Icon'
 import { PageHeader } from '../../../ui/PageHeader'
+import { Segmented } from '../../../ui/fields/Segmented'
 import { Skeleton } from '../../../ui/Skeleton'
 import { formatMinor } from '../../products/lib/money'
 import { formatQuantity } from '../../../lib/units'
 import { AskWeightSheet } from '../components/AskWeightSheet'
 import { CameraFailure } from '../components/CameraFailure'
-import { LiveList } from '../components/LiveList'
-import { PriceEditSheet } from '../components/PriceEditSheet'
-import { ScanFeedback } from '../components/ScanFeedback'
+import { PriceEntrySheet } from '../components/PriceEntrySheet'
 import { ScanNotices } from '../components/ScanNotices'
+import { ScannedList } from '../components/ScannedList'
 import { ShopPicker } from '../components/ShopPicker'
 import { StockTakeSheet } from '../components/StockTakeSheet'
+import { ToGetList } from '../components/ToGetList'
 import { UnarchiveProductSheet } from '../components/UnarchiveProductSheet'
 import { UnknownBarcodeSheet } from '../components/UnknownBarcodeSheet'
+import { useJustScanned } from '../hooks/useJustScanned'
+import { useListView } from '../hooks/useListView'
 import { useScanController, type ScanController } from '../hooks/useScanController'
 import { useScanSession } from '../hooks/useScanSessionActive'
 import { initialChoice, type ScanChoice } from '../lib/initialChoice'
 import { getLastShopId, setLastShopId } from '../lib/lastShop'
+import type { ListView } from '../lib/listView'
+import { priceContext } from '../lib/priceContext'
+import type { PriceEntry, PriceIntent } from '../lib/priceEntry'
+import type { ScannedRow } from '../lib/scannedList'
 import { scanStrings } from '../strings'
 import '../scan.css'
 
@@ -140,55 +150,162 @@ interface ScanSessionProps {
   elsewhere?: { name: string; distance: string; onSwitch: () => void } | null
 }
 
+/** The Price entry's failure, kept with the row it belongs to, so it never shows on another row. */
+interface PriceFailure {
+  key: string
+  message: string
+}
+
 function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) {
   useScanSession(mode === 'shop')
   const c = useScanController({ mode, shop })
+  const navigate = useNavigate()
   const flow = c.flow
-  const fb = flow.feedback
   const sheet = flow.sheet
+  const isShop = mode === 'shop'
   const shopName = shop?.name ?? ''
   const product = sheet?.kind === 'stock_take' ? sheet.product : null
   // A camera failure is explained by CameraFailure below; the strip only carries the starting text.
   const viewfinderStatus = c.recovery.failure ? undefined : cameraText(c.camera.status)
+  const scanned = c.scanned
+  // Until the stored session is in, its scans coming back are not new scans (no switch to Scanned, no wash).
+  const scanCount = scanned.loaded ? scanned.entries.length : null
+  const { view, choose } = useListView(scanCount)
+  const justScanned = useJustScanned(scanCount, scanned.rows[0]?.key ?? null)
+  const [priceFailure, setPriceFailure] = useState<PriceFailure | null>(null)
 
-  return (
-    <section className="scan-screen">
-      {shop ? (
-        <PageHeader title={shop.name} actions={<Button variant="tertiary" onClick={onChangeShop}>{scanStrings.changeShop}</Button>} />
-      ) : (
-        <PageHeader
-          title={scanStrings.stockTakeHeading}
-          subtitle={scanStrings.stockTakeHint}
-          leading={<IconButton icon="back" label={scanStrings.back} onClick={onChangeShop} />}
-        />
-      )}
-      {elsewhere ? <ElsewhereNotice {...elsewhere} /> : null}
+  const pricingKey = flow.pricing?.key ?? null
+  const pricingRow = pricingKey === null ? undefined : scanned.rows.find((r) => r.key === pricingKey)
+  const productOf = (row: ScannedRow) => (row.productId === null ? undefined : c.product?.(row.productId))
+
+  /** Save, Next or Close of the Price entry: a refusal or a failed save keeps the sheet open with its message. */
+  const savePrice = (row: ScannedRow, entry: PriceEntry, intent: PriceIntent) => {
+    void flow.savePrice(row.key, entry, intent).then((outcome) => {
+      setPriceFailure(outcome.status === 'refused' || outcome.status === 'failed' ? { key: row.key, message: outcome.error } : null)
+    })
+  }
+
+  // Change Shop ends the session first (its Scanned list starts empty next time); Stock-take keeps no session.
+  const changeShop = () => {
+    if (isShop) c.endSession()
+    onChangeShop()
+  }
+
+  const cameraColumn = (
+    <div className="scan-screen__camera">
       <ViewfinderStrip
+        size="tall"
         status={viewfinderStatus}
+        camera={flow.paused ? 'paused' : 'on'}
         torch={{ supported: c.camera.torchSupported, on: c.camera.torchOn, onToggle: c.camera.toggleTorch }}
         mute={{ muted: c.muted, onToggle: c.toggleMute }}
       >
         <video ref={c.camera.videoRef} playsInline muted autoPlay />
       </ViewfinderStrip>
       <CameraFailure recovery={c.recovery} />
+      {flow.banner ? <p className="scan-screen__banner" data-tone={flow.banner.tone}>{flow.banner.text}</p> : null}
+      <ScanNotices online={c.online} pendingCount={c.pendingCount} rejectedCount={c.rejectedCount} onDismissRejected={c.dismissRejected} notices={c.notices} onDismiss={c.dismissNotice} />
+    </div>
+  )
 
-      {fb ? (
-        <ScanFeedback
-          text={fb.text}
-          imageUrl={fb.imageUrl}
-          queued={fb.queued}
-          canEditPrice={fb.canEditPrice}
-          onEditPrice={flow.openEditPrice}
-          onUndo={() => void flow.undo()}
-          onDismiss={flow.dismissFeedback}
+  const listColumn = (
+    <div className="scan-screen__list">
+      <div className="scan-screen__summary">
+        <Segmented<ListView>
+          label={scanStrings.viewLabel}
+          labelHidden
+          compact
+          value={view}
+          onChange={choose}
+          options={[
+            { value: 'scanned', label: scanStrings.scannedTab(scanned.rows.length) },
+            { value: 'to-get', label: scanStrings.toGetTab(scanned.toGetCount) },
+          ]}
+        />
+        <div className="scan-screen__total">
+          <strong className="scan-screen__amount">{formatMinor(scanned.totals.spentCents, c.currency)}</strong>
+          {scanned.totals.unpricedCount > 0 ? (
+            <Button variant="tertiary" size="sm" onClick={() => flow.startPriceEntry()}>
+              {scanStrings.withoutPrice(scanned.totals.unpricedCount)}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      {view === 'scanned' ? (
+        <ScannedList
+          rows={scanned.rows}
+          currency={c.currency}
+          system={c.system}
+          pricingKey={pricingKey}
+          justScanned={justScanned}
+          onPrice={(key) => flow.startPriceEntry(key)}
+          onIncrement={(key) => void flow.increment(key)}
+          onDecrement={(key) => void flow.decrement(key)}
+          onRemove={(key) => void flow.removeRow(key)}
+        />
+      ) : (
+        <ToGetList entries={scanned.toGet.map((line) => lineEntry(line, c.currency, c.system))} onOpen={() => navigate('/shop')} />
+      )}
+    </div>
+  )
+
+  return (
+    <section className="scan-screen">
+      {shop ? (
+        <PageHeader title={shop.name} actions={<Button variant="tertiary" onClick={changeShop}>{scanStrings.changeShop}</Button>} />
+      ) : (
+        <PageHeader
+          title={scanStrings.stockTakeHeading}
+          subtitle={scanStrings.stockTakeHint}
+          leading={<IconButton icon="back" label={scanStrings.back} onClick={changeShop} />}
+        />
+      )}
+      {elsewhere ? (
+        <ElsewhereNotice
+          {...elsewhere}
+          onSwitch={() => {
+            if (isShop) c.endSession()
+            elsewhere.onSwitch()
+          }}
         />
       ) : null}
-      {flow.banner ? <p className="scan-screen__banner" data-tone={flow.banner.tone}>{flow.banner.text}</p> : null}
 
-      <ScanNotices online={c.online} pendingCount={c.pendingCount} rejectedCount={c.rejectedCount} onDismissRejected={c.dismissRejected} notices={c.notices} onDismiss={c.dismissNotice} />
+      {isShop ? (
+        <div className="scan-screen__split">
+          {cameraColumn}
+          {listColumn}
+        </div>
+      ) : (
+        cameraColumn
+      )}
 
-      {c.list ? <LiveList list={c.list} system={c.system} /> : null}
-
+      {isShop && pricingRow ? (
+        <PriceEntrySheet
+          row={pricingRow}
+          shopName={shopName}
+          currency={c.currency}
+          {...priceContext(productOf(pricingRow))}
+          weighed={pricingRow.weighed ? (pricingRow.weight ?? undefined) : undefined}
+          initialPerKgCents={pricingRow.perKgCents}
+          hasNext={scanned.nextUnpriced(pricingRow.key) !== null}
+          error={priceFailure?.key === pricingRow.key ? priceFailure.message : null}
+          onNext={(entry) => savePrice(pricingRow, entry, 'next')}
+          onSave={(entry) => savePrice(pricingRow, entry, 'save')}
+          onClose={(entry) => savePrice(pricingRow, entry, 'close')}
+        />
+      ) : null}
+      {sheet?.kind === 'confirm_remove' ? (
+        <ConfirmDialog
+          open
+          title={scanStrings.removeTitle(sheet.count, sheet.name)}
+          body={scanStrings.removeBody}
+          confirmLabel={scanStrings.removeAction}
+          cancelLabel={scanStrings.keepThem}
+          tone="danger"
+          onConfirm={() => void flow.confirmRemove()}
+          onCancel={flow.closeSheet}
+        />
+      ) : null}
       {sheet?.kind === 'unknown' ? (
         <UnknownBarcodeSheet
           open
@@ -230,16 +347,6 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           busy={flow.unarchiving}
           onUnarchive={() => void flow.unarchiveProduct()}
           onCreateNew={flow.createNewInstead}
-        />
-      ) : null}
-      {sheet?.kind === 'edit_price' ? (
-        <PriceEditSheet
-          open
-          onClose={flow.closeSheet}
-          productName={fb?.productName ?? ''}
-          priceCents={fb?.priceCents ?? null}
-          currency={c.currency}
-          onSave={(cents) => void flow.editPrice(cents)}
         />
       ) : null}
     </section>

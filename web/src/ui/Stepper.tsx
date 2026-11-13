@@ -14,8 +14,11 @@ export interface StepperProps {
   unit?: string
   /** The id(s) of the helper/error line that describes the control. */
   describedBy?: string
-  /** 'sm' is the compact group (40 px buttons, never stretched). */
-  size?: 'md' | 'sm'
+  /**
+   * 'sm' is the compact group (40 px buttons, never stretched). 'xs' is the smallest: 32 px outline buttons (44 px to hit) and a
+   * regular-weight count, for a control inside a list row.
+   */
+  size?: 'md' | 'sm' | 'xs'
 }
 
 /** A − value + control for small amounts. Accessible: a group named by `label`, the value is a spinbutton (arrows, Home, End). */
@@ -41,6 +44,7 @@ export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit, 
       <IconButton
         icon="minus"
         label={uiStrings.decrease(label)}
+        size={size === 'xs' ? 'compact' : 'md'}
         disabled={value <= min}
         onClick={() => move(stepValue(value, -1, bounds))}
       />
@@ -61,6 +65,7 @@ export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit, 
       <IconButton
         icon="add"
         label={uiStrings.increase(label)}
+        size={size === 'xs' ? 'compact' : 'md'}
         disabled={max !== undefined && value >= max}
         onClick={() => move(stepValue(value, 1, bounds))}
       />

@@ -6,8 +6,8 @@ import type { IconName } from './icons'
 import './ListRow.css'
 
 interface ListRowBase {
-  /** Second line (muted). Makes the row two-lined (64) unless a thumb is given (72). */
-  meta?: string
+  /** Second line (muted). Makes the row two-lined (64) unless a thumb is given (72). A node may mix text and icons on that line. */
+  meta?: ReactNode
   /** Tinted 40 px square with this icon, as leading visual. */
   icon?: IconName
   /** Thumb or Avatar as leading visual (wins over `icon`; row height 72). */
@@ -33,6 +33,11 @@ interface ListRowBase {
   children?: ReactNode
   /** DS-SHOP round 2: the row's target opens a dialog (`aria-haspopup`); set on an `onActivate` target only. */
   haspopup?: 'dialog'
+  /**
+   * SR4: a full-width strip under the row, inside the same `li` (e.g. the controls of the active row). It catches the pointer
+   * on its own, like `panel`; the rest of the row stays the target.
+   */
+  footer?: ReactNode
 }
 
 /**
@@ -114,6 +119,7 @@ export function ListRow(props: ListRowProps) {
     metaIcon,
     wrapTitle,
     haspopup,
+    footer,
   } = props
   const inRouter = useInRouterContext()
   const panelId = useId()
@@ -148,6 +154,7 @@ export function ListRow(props: ListRowProps) {
       data-selected={selected ? 'true' : undefined}
       data-wrap-title={wrapTitle ? 'true' : undefined}
       data-expanded={isExpanded ? 'true' : undefined}
+      data-footer={footer ? 'true' : undefined}
     >
       {control ? <span className="list-row__control">{control}</span> : null}
       {target}
@@ -180,6 +187,7 @@ export function ListRow(props: ListRowProps) {
           <Icon name="chevron" size={20} />
         </span>
       ) : null}
+      {footer ? <div className="list-row__footer">{footer}</div> : null}
       {onToggle ? (
         <div id={panelId} className="list-row__panel" hidden={!isExpanded}>
           {panel}

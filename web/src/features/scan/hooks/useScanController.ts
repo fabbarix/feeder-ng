@@ -16,18 +16,20 @@ import { scanApi } from '../api'
 import { chooseDetector, type Detector } from '../lib/detector'
 import { createFeedback, webAudioBeep } from '../lib/feedback'
 import { appOpStore, appPictureStore } from '../lib/idbStore'
+import { appSessionStore } from '../lib/sessionStore'
 import { shouldRefreshOfflineData } from '../lib/offlineRefresh'
 import { OfflineQueue, type SyncApi } from '../lib/queue'
 import type { SyncNotice } from '../lib/notices'
 import { createZxingDetector } from '../lib/zxingDetector'
 import type { IngredientChoice } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
-import type { Op, ScanResult } from '../types'
+import type { Op, OfflineProduct, PricePatch, ScanResult } from '../types'
 import { useOfflineData } from './useOfflineData'
 import { useCamera, type CameraStatus } from './useCamera'
 import { useCameraRecovery, type CameraRecovery } from './useCameraRecovery'
 import { useScanFlow, type ScanFlow } from './useScanFlow'
 import { useScanner } from './useScanner'
+import { useScannedList, type ScannedList } from './useScannedList'
 import { useSyncQueue } from './useSyncQueue'
 
 export interface ScanControllerOptions {
@@ -54,6 +56,10 @@ export interface ScanController {
   /** false on iOS: the beep is the only confirmation */
   canVibrate: boolean
   flow: ScanFlow
+  /** SR3: the Scanned list of the Shop and household day (empty in Stock-take) */
+  scanned: ScannedList
+  /** SR3: Change Shop: empties the Scanned list and its stored session */
+  endSession: () => void
   /** the live Shopping List of the Shop (shop mode); undefined in Stock-take */
   list: ShoppingList | undefined
   online: boolean
@@ -67,6 +73,8 @@ export interface ScanController {
   system: UnitSystem
   /** the Stock total of an Ingredient in Base Units, for the Stock-take sheet */
   stockTotal?: (ingredientId: number) => number | undefined
+  /** SR4: a Product of the cached offline data, by id (the Price entry's pack size and last Price) */
+  product?: (id: number) => OfflineProduct | undefined
 }
 
 /** The Scan session's view model. Mounted only after a Shop or Stock-take was chosen. */
@@ -82,6 +90,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const totals = useStockTotals()
   const shopList = useShoppingList({ shopId })
   const camera = useCamera({ enabled: true })
+  const sessionStore = useMemo(() => appSessionStore(), [])
 
   const [detector, setDetector] = useState<Detector | null>(null)
   useEffect(() => {
@@ -156,6 +165,16 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     ])
   }
 
+  // SR3: the Scanned list is the Shop's session (the day is the Shopping List's); Stock-take keeps none.
+  const scanned = useScannedList({
+    shopId: mode === 'shop' ? shopId : null,
+    day: mode === 'shop' ? (shopList.data?.today ?? null) : null,
+    store: sessionStore,
+    offline: offline.offline,
+    list: mode === 'shop' ? shopList.data : undefined,
+    system,
+  })
+
   const flow = useScanFlow({
     mode,
     shop: options.shop,
@@ -165,17 +184,23 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     rangeTo: mode === 'shop' ? shopList.data?.to : undefined,
     submit,
     cancelQueued,
-    setQueuedPrice: (clientUuid, priceCents) => sync.updateQueuedPrice(clientUuid, priceCents),
+    setQueuedPrice: (clientUuid, priceCents, pricePerKgCents) => sync.updateQueuedPrice(clientUuid, priceCents, pricePerKgCents),
     undo: async (clientUuid) => {
       await scanApi.undo(clientUuid)
       refreshLive()
     },
-    setPrice: async (clientUuid, priceCents) => {
-      await scanApi.setPrice(clientUuid, priceCents)
+    setPrice: async (clientUuid, priceCents, pricePerKgCents) => {
+      await scanApi.setPrice(clientUuid, priceCents, pricePerKgCents)
       refreshLive()
     },
+    setPrices: async (body: PricePatch) => {
+      const results = await scanApi.setPrices(body)
+      refreshLive()
+      return results
+    },
+    ...(mode === 'shop' ? { session: scanned } : {}),
     feedback,
-    notify: (message, status) => toast.show(message, { status }),
+    notify: (message, status, opts) => toast.show(message, { status, ...opts }),
     findArchived: (code, shopId) => scanApi.findArchived(code, shopId),
     fetchProduct: (id) => scanApi.product(id),
     unarchive,
@@ -212,6 +237,8 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     },
     canVibrate: feedback.canVibrate,
     flow,
+    scanned,
+    endSession: () => scanned.clear(),
     list: mode === 'shop' ? shopList.data : undefined,
     online: sync.online,
     pendingCount: sync.pendingCount,
@@ -223,6 +250,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     currency,
     system,
     stockTotal: (ingredientId) => totals.data?.find((t) => t.ingredientId === ingredientId)?.total,
+    product: (id) => offline.offline?.products.find((p) => p.id === id),
   }
 }
 

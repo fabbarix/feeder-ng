@@ -206,3 +206,32 @@ describe('ListRow: accessible name of the target', () => {
     expect(screen.getByRole('button', { name: 'Plain' })).toBeInTheDocument()
   })
 })
+
+describe('ListRow footer and a node meta (SR4)', () => {
+  it('renders the footer inside the same li, after the row, and marks the row', async () => {
+    const onActivate = vi.fn()
+    const onRemove = vi.fn()
+    inList(<ListRow title="Mutti passata" onActivate={onActivate} footer={<button type="button" onClick={onRemove}>Remove</button>} />)
+    const item = screen.getByRole('listitem')
+    expect(item).toHaveAttribute('data-footer', 'true')
+    expect(item.lastElementChild).toHaveClass('list-row__footer')
+    await userEvent.click(within(item).getByRole('button', { name: 'Remove' }))
+    expect(onRemove).toHaveBeenCalledTimes(1)
+    expect(onActivate).not.toHaveBeenCalled()
+  })
+
+  it('has no footer or data-footer by default', () => {
+    inList(<ListRow title="Milk" />)
+    expect(screen.getByRole('listitem')).not.toHaveAttribute('data-footer')
+    expect(document.querySelector('.list-row__footer')).toBeNull()
+  })
+
+  it('the footer catches the pointer (the rest of the row stays click-through)', () => {
+    expect(declarations(readUiCss('ListRow.css'), '.list-row > .list-row__footer')['pointer-events']).toBe('auto')
+  })
+
+  it('meta may be a node: text and an icon on the second line', () => {
+    inList(<ListRow title="Mozzarella" meta={<><span>125 g</span><span>250 of 375 g</span></>} />)
+    expect(screen.getByRole('listitem').querySelector('.list-row__meta')).toHaveTextContent('125 g250 of 375 g')
+  })
+})

@@ -64,7 +64,7 @@ describe('useScanFlow, archived Product owns the barcode', () => {
     expect(deps.submit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'shop_scan', shopId: 1, productId: 9, quantity: 500 }))
     expect((deps.submit as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).not.toHaveProperty('priceCents')
     expect(hook.result.current.sheet).toBeNull()
-    expect(hook.result.current.feedback?.text).toContain('Passata')
+    expect(deps.feedback.confirm).toHaveBeenCalledTimes(1)
   })
 
   it('a double tap on Unarchive records the scan once (pending guard)', async () => {
