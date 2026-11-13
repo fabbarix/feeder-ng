@@ -16,6 +16,11 @@ vi.mock('../hooks/useIngredients', () => ({
   },
 }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
+// H9: the stock level and quick Use have their own tests (SuppliesScreen.use.test.tsx); here Stock has not loaded and nothing is used.
+vi.mock('../hooks/useSupplyStock', () => ({ useSupplyStock: () => ({ totals: null, isLoading: true, error: null }) }))
+vi.mock('../hooks/useSupplyUse', () => ({
+  useSupplyUse: () => ({ request: vi.fn(), sheet: null, confirm: vi.fn(), closeSheet: vi.fn(), busyId: null }),
+}))
 
 import { SuppliesScreen } from './SuppliesScreen'
 
@@ -49,7 +54,7 @@ describe('SuppliesScreen', () => {
   })
   it('lists the Supplies and opens one at /supplies/:id', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: /Dish soap/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Dish soap' }))
     expect(screen.getByText('supply page')).toBeInTheDocument()
   })
   it('searches with "Search Supplies" and passes the text on', async () => {
