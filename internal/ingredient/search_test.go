@@ -115,3 +115,40 @@ func TestSimilarity(t *testing.T) {
 		t.Errorf("tomatoes~tomato = %v / %v, want symmetric and >= MinScore", ab, ba)
 	}
 }
+
+func TestScoreFoldsAccents(t *testing.T) {
+	for _, c := range [][2]string{{"béchamel", "bechamel"}, {"Crème fraîche", "creme fraiche"}, {"BÉCHAMEL", "bechamel"}} {
+		if s := ingredient.Score(c[0], c[1]); s != 1 {
+			t.Errorf("Score(%q, %q) = %v, want 1", c[0], c[1], s)
+		}
+	}
+}
+
+func TestScoreAgreesWithSimilarityOnPlainNames(t *testing.T) {
+	for _, c := range [][2]string{{"tomatoes", "tomato"}, {"olive oil", "extra virgin olive oil"}, {"onion", "red onion"}, {"onion", "passata"}} {
+		if got, want := ingredient.Score(c[0], c[1]), ingredient.Similarity(c[0], c[1]); got != want {
+			t.Errorf("Score(%q, %q) = %v, Similarity = %v", c[0], c[1], got, want)
+		}
+	}
+}
+
+func TestScoreAccentsDoNotHideAMatch(t *testing.T) {
+	if s := ingredient.Score("béchamels", "bechamel"); s < ingredient.MinScore {
+		t.Errorf("plural and accent: score %v < MinScore", s)
+	}
+	if s := ingredient.Score("pâte brisée", "brisee pate"); s < 0.9 {
+		t.Errorf("order-insensitive with accents: score %v", s)
+	}
+}
+
+func TestScoreSymmetricAndUnrelatedIsLow(t *testing.T) {
+	if a, b := ingredient.Score("béchamel sauce", "bechamel"), ingredient.Score("bechamel", "béchamel sauce"); a != b {
+		t.Errorf("not symmetric: %v vs %v", a, b)
+	}
+	if s := ingredient.Score("béchamel", "chicken thighs"); s >= ingredient.MinScore {
+		t.Errorf("unrelated scored %v", s)
+	}
+	if s := ingredient.Score("", "bechamel"); s != 0 {
+		t.Errorf("empty scored %v", s)
+	}
+}

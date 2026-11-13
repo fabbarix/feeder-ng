@@ -192,3 +192,8 @@ func levenshtein(a, b []rune) int {
 	}
 	return prev[len(b)]
 }
+
+// Score compares two names like Similarity but with accents folded first (béchamel = bechamel), 0..1. It is
+// the one fuzzy score other packages reuse (Base recipe matching, BR-A); no copy of the matcher.
+// STATUS: stub (BR-A red phase).
+func Score(a, b string) float64 { return 0 }
