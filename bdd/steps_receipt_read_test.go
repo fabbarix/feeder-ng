@@ -153,9 +153,12 @@ func receiptReadSteps(sc *godog.ScenarioContext, w *World) {
 			panic(fmt.Sprintf("off: %d %s", r.Status, r.Body))
 		}
 	})
-	sc.Step(`^the API key is removed$`, func() {
-		if r := admin().Delete("/api/recipe-assistant/settings/api-key"); r.Status != 200 {
-			panic(fmt.Sprintf("remove key: %d %s", r.Status, r.Body))
+	sc.Step(`^the assistant is on with no API key$`, func() {
+		// Removing the key through the API also turns the assistant off (ApplyKeyRemoval), which reads as "off". The
+		// API never leaves it on with no key, so the settings row is written directly, as reads_test.go does.
+		if _, err := w.Env.DB.Exec(`UPDATE recipe_assistant_settings SET enabled = 1, api_key_ciphertext = NULL,
+			api_key_last4 = NULL, api_key_master_id = NULL WHERE id = 1`); err != nil {
+			panic(err)
 		}
 	})
 

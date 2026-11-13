@@ -95,7 +95,7 @@ Feature: Reading a receipt
     Then the receipt read is refused with 409 "assistant_unavailable" because "off"
 
   Scenario: There is no API key
-    Given the API key is removed
+    Given the assistant is on with no API key
     When I send a receipt read with 1 photos
     Then the receipt read is refused with 409 "assistant_unavailable" because "no_key"
 
