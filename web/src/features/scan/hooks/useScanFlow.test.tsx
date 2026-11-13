@@ -1,6 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from '../../../lib/http'
 import { parse } from '../lib/barcode'
 import { emptyForm } from '../lib/unknownForm'
 import type { OfflineData, Op, ScanApplied, ScanResult } from '../types'
@@ -85,108 +84,15 @@ describe('useScanFlow in a Shop', () => {
       priceCents: 159,
     })
     expect(deps.feedback.confirm).toHaveBeenCalledTimes(1)
-    expect(hook.result.current.feedback).toMatchObject({ clientUuid: 'uuid-1', text: 'Passata +700 g · $1.59', queued: false, canEditPrice: true })
   })
-
-  it('says "not on the list" for an off-list scan', async () => {
-    const { hook } = setup({ submit: vi.fn(async (op: Op) => ok(op.clientUuid, { onList: false })) })
-    await read(hook, '8000500310427')
-    expect(hook.result.current.feedback?.text).toBe('Passata +700 g · $1.59 · not on the list')
-  })
-
-  it('shows the server price when it differs from the prefill', async () => {
-    const { hook } = setup({ submit: vi.fn(async (op: Op) => ok(op.clientUuid, { priceCents: 179 })) })
-    await read(hook, '8000500310427')
-    expect(hook.result.current.feedback?.text).toBe('Passata +700 g · $1.79')
-  })
-
-  it('offline: queues the scan and shows it as waiting, without claiming it is off the list', async () => {
-    const { hook } = setup({ submit: vi.fn(async () => null) })
-    await read(hook, '8000500310427')
-    expect(hook.result.current.feedback).toMatchObject({ text: 'Passata +700 g · $1.59', queued: true })
-  })
-
   it('a rejected Result shows a warning and a failure buzz', async () => {
     const rejected: ScanResult = { clientUuid: 'uuid-1', status: 'rejected', error: { code: 'unknown_product', message: 'that Product was deleted' } }
     const { deps, hook } = setup({ submit: vi.fn(async () => rejected) })
     await read(hook, '8000500310427')
     expect(hook.result.current.banner).toEqual({ tone: 'warn', text: "Couldn't add that Scan: that Product was deleted" })
-    expect(hook.result.current.feedback).toBeNull()
+    expect(deps.feedback.confirm).not.toHaveBeenCalled()
     expect(deps.feedback.reject).toHaveBeenCalled()
   })
-
-  it('Undo asks the server to reverse an applied scan and clears the line', async () => {
-    const { deps, hook } = setup()
-    await read(hook, '8000500310427')
-    await act(() => hook.result.current.undo())
-    expect(deps.undo).toHaveBeenCalledWith('uuid-1')
-    expect(deps.cancelQueued).not.toHaveBeenCalled()
-    expect(hook.result.current.feedback).toBeNull()
-  })
-
-  it('Undo of a scan still in the queue just drops it', async () => {
-    const { deps, hook } = setup({ submit: vi.fn(async () => null) })
-    await read(hook, '8000500310427')
-    await act(() => hook.result.current.undo())
-    expect(deps.cancelQueued).toHaveBeenCalledWith('uuid-1')
-    expect(deps.undo).not.toHaveBeenCalled()
-    expect(hook.result.current.feedback).toBeNull()
-  })
-
-  it('Undo of a queued scan that was being sent asks the server to reverse it (cancelQueued answers false), so the Undo is not lost', async () => {
-    const { deps, hook } = setup({ submit: vi.fn(async () => null), cancelQueued: vi.fn(async () => false) })
-    await read(hook, '8000500310427')
-    await act(() => hook.result.current.undo())
-    expect(deps.cancelQueued).toHaveBeenCalledWith('uuid-1')
-    expect(deps.undo).toHaveBeenCalledWith('uuid-1')
-    expect(hook.result.current.feedback).toBeNull()
-  })
-
-  it('a 404 from the server Undo of a queued scan means the server never had it: done, feedback cleared', async () => {
-    const undo = vi.fn(async () => {
-      throw new ApiError(404, 'not_found', 'no such scan')
-    })
-    const { deps, hook } = setup({ submit: vi.fn(async () => null), cancelQueued: vi.fn(async () => false), undo })
-    await read(hook, '8000500310427')
-    await act(() => hook.result.current.undo())
-    expect(deps.undo).toHaveBeenCalledWith('uuid-1')
-    expect(hook.result.current.feedback).toBeNull()
-  })
-
-  it('a 404 from the server Undo of an applied scan also clears the feedback', async () => {
-    const undo = vi.fn(async () => {
-      throw new ApiError(404, 'not_found', 'no such scan')
-    })
-    const { hook } = setup({ undo })
-    await read(hook, '8000500310427')
-    await act(() => hook.result.current.undo())
-    expect(hook.result.current.feedback).toBeNull()
-  })
-
-  it('any other Undo error still fails and keeps the feedback', async () => {
-    const undo = vi.fn(async () => {
-      throw new ApiError(500, 'http_error', 'boom')
-    })
-    const { hook } = setup({ submit: vi.fn(async () => null), cancelQueued: vi.fn(async () => false), undo })
-    await read(hook, '8000500310427')
-    await act(async () => {
-      await expect(hook.result.current.undo()).rejects.toBeInstanceOf(ApiError)
-    })
-    expect(hook.result.current.feedback).not.toBeNull()
-  })
-
-  it('editing the price saves it and updates the line', async () => {
-    const { deps, hook } = setup()
-    await read(hook, '8000500310427')
-    act(() => hook.result.current.openEditPrice())
-    expect(hook.result.current.sheet).toEqual({ kind: 'edit_price' })
-    expect(hook.result.current.paused).toBe(true)
-    await act(() => hook.result.current.editPrice(179))
-    expect(deps.setPrice).toHaveBeenCalledWith('uuid-1', 179)
-    expect(hook.result.current.feedback?.text).toBe('Passata +700 g · $1.79')
-    expect(hook.result.current.sheet).toBeNull()
-  })
-
   it('an unknown barcode opens the full form and waits', async () => {
     const { deps, hook } = setup()
     await read(hook, '5012345678900')
@@ -195,7 +101,7 @@ describe('useScanFlow in a Shop', () => {
     expect(deps.submit).not.toHaveBeenCalled()
   })
 
-  it('saving the form submits a shop_unknown Op and shows the line', async () => {
+  it('saving the form submits a shop_unknown Op and resumes scanning', async () => {
     const { deps, hook } = setup({ submit: vi.fn(async (op: Op) => ok(op.clientUuid, { productCreated: true, ingredientName: 'tinned tomatoes', productName: 'Tinned tomatoes 400 g', quantity: 400, priceCents: null, onList: false })) })
     await read(hook, '5012345678900')
     await act(() =>
@@ -204,7 +110,6 @@ describe('useScanFlow in a Shop', () => {
     expect(deps.submit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'shop_unknown', barcode: '05012345678900', shopId: 1, quantity: 400, productName: 'Tinned tomatoes 400 g', clientUuid: 'uuid-1' }))
     expect(hook.result.current.sheet).toBeNull()
     expect(hook.result.current.paused).toBe(false)
-    expect(hook.result.current.feedback?.text).toBe('tinned tomatoes +400 g · not on the list')
   })
 
   it('an unknown item code on a weight rule asks only for the Ingredient and the name', async () => {
@@ -248,7 +153,6 @@ describe('useScanFlow in a Shop', () => {
     const { deps, hook } = setup({ offline: null })
     await read(hook, '8000500310427')
     expect(deps.submit).not.toHaveBeenCalled()
-    expect(hook.result.current.feedback).toBeNull()
   })
 
   it('closing a sheet resumes scanning', async () => {

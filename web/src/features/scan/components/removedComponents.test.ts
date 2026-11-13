@@ -18,6 +18,12 @@ describe('removed components', () => {
     expect(screen).toContain('ScannedList')
   })
 
+  it('the flow has no scan line and no Edit price path left (SR4 review), and its text builder is gone', () => {
+    expect(existsSync(`${scan}/lib/toast.ts`)).toBe(false)
+    const flow = readFileSync(`${scan}/hooks/useScanFlow.ts`, 'utf8')
+    for (const name of ['openEditPrice', 'editPrice', 'dismissFeedback', 'edit_price', 'FlowFeedback', 'feedbackText', 'setLine']) expect(flow).not.toContain(name)
+  })
+
   it('the Scan screen never calls native alert, confirm or prompt', () => {
     const files = ['screens/ScanScreen.tsx', 'components/ScannedList.tsx', 'components/ScannedRow.tsx', 'components/PriceEntrySheet.tsx']
     for (const f of files) expect(readFileSync(`${scan}/${f}`, 'utf8')).not.toMatch(/\b(?:window\.)?(?:alert|confirm|prompt)\(/)

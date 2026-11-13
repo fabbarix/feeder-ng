@@ -1,6 +1,5 @@
 // SR4: fakes shared by the Scan screen tests: a ScanFlow, a ScanController and a ScannedList built from the SR3 fixtures with
 // the real pure functions (lib/scannedList), so the screen is tested against rows the session model really produces.
-// The flow fake is cast, so it compiles before and after the old Edit price path (feedback, openEditPrice, editPrice) leaves ScanFlow.
 import { vi } from 'vitest'
 import { makeExtra, makeLine, makeList } from '../../shop/testData'
 import type { ScanController } from '../hooks/useScanController'

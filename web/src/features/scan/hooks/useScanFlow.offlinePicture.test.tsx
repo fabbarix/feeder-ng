@@ -62,10 +62,4 @@ describe('useScanFlow.saveUnknown with an offline Picture', () => {
     expect(submit.mock.calls[0]?.[1]).toBeUndefined()
     expect((submit.mock.calls[0]?.[0] as Op).productImage).toBeUndefined()
   })
-
-  it('the scan line shows the queued scan as waiting, as for any offline form', async () => {
-    const { hook } = setup(null)
-    await save(hook, form({ picture: local }))
-    expect(hook.result.current.feedback).toMatchObject({ queued: true, productName: 'Tinned tomatoes 400 g' })
-  })
 })
