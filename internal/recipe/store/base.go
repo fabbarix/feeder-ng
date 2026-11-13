@@ -57,6 +57,20 @@ func (basePort) MergeCycle(ctx context.Context, q ingstore.Querier, sourceID, ta
 	return mergeCycle(ctx, q, sourceID, targetID)
 }
 
+// AfterMerge refreshes the cached total time of the Base recipe whose Ingredient received a merge, and of the Recipes
+// calling it, since their lines now call for it (round 2).
+func (basePort) AfterMerge(ctx context.Context, tx *sql.Tx, targetID int64) error {
+	var id int64
+	err := tx.QueryRowContext(ctx, `SELECT id FROM recipes WHERE base_ingredient_id = ?`, targetID).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return refreshTotals(ctx, tx, id)
+}
+
 // mergeCycle is the cycle merging source into the Base recipe's Ingredient target would make: the Recipes with lines on
 // source start calling that Base recipe. nil when target is no Base recipe's Ingredient or no cycle results.
 func mergeCycle(ctx context.Context, q Querier, sourceID, targetID int64) ([]string, error) {
@@ -432,6 +446,36 @@ func (s *Store) NeedTree(ctx context.Context, id int64) ([]baserecipe.Need, erro
 	return baserecipe.Expand(cat, id)
 }
 
+// TreeResult is one plannable Recipe's need tree (Needs, one Batch), the lines skipped in it, or why it has no tree
+// (Err: a *baserecipe.CycleError for a cycle, data written before the check).
+type TreeResult struct {
+	Needs   []baserecipe.Need
+	Skipped []baserecipe.Skipped
+	Err     error
+}
+
+// NeedTrees is the need tree of every plannable Recipe (archived included; Base recipes are never keys), over one
+// catalog load. A Recipe whose tree fails has Err set and the others are still given.
+func (s *Store) NeedTrees(ctx context.Context) (map[int64]TreeResult, error) {
+	cat, err := loadCatalog(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64]TreeResult, len(cat.recipes))
+	for id, r := range cat.recipes {
+		if r.Base != nil {
+			continue
+		}
+		exp, err := baserecipe.ExpandReport(cat, id)
+		if err != nil {
+			out[id] = TreeResult{Err: err}
+			continue
+		}
+		out[id] = TreeResult{Needs: exp.Needs, Skipped: exp.Skipped}
+	}
+	return out, nil
+}
+
 // Cook is baserecipe.ComposeSteps over the stored Recipes: the Recipe's Steps with its Base recipes' Steps in them,
 // each carrying its Origin. made nil = nothing in Stock.
 func (s *Store) Cook(ctx context.Context, id int64, made func(baserecipe.Path) float64) (baserecipe.Composed, error) {
@@ -550,7 +594,7 @@ func (s *Store) claimBase(ctx context.Context, tx *sql.Tx, recipeID, own int64, 
 			return 0, &recipe.ValidationError{Field: "takeOver", Code: recipe.CodeTakeOverUnit,
 				Message: "the Yield's unit does not convert to that Ingredient's Base Unit: keep it apart instead"}
 		default:
-			ing, err = s.adopt(ctx, tx, recipeID, own, plain.ID, in.Name)
+			ing, err = s.adopt(ctx, tx, recipeID, own, plain.ID, in.Name, base)
 		}
 	}
 	if err != nil {
@@ -586,7 +630,7 @@ func (s *Store) ownIngredient(ctx context.Context, tx *sql.Tx, recipeID, own int
 // adopt takes the plain Ingredient over (§3.2, Yes). On a rename the former Ingredient of the Base recipe is merged into
 // it first: the Base recipe points at the plain one, so the merge's guard does not apply to the former one, and its
 // Stock and lines move with it. Batch and portion are rewritten from the Yield by the caller.
-func (s *Store) adopt(ctx context.Context, tx *sql.Tx, recipeID, own, plainID int64, name string) (int64, error) {
+func (s *Store) adopt(ctx context.Context, tx *sql.Tx, recipeID, own, plainID int64, name string, base units.Base) (int64, error) {
 	if own != 0 && own != plainID {
 		if _, err := tx.ExecContext(ctx, `UPDATE recipes SET base_ingredient_id = ? WHERE id = ?`, plainID, recipeID); err != nil {
 			return 0, err
@@ -605,7 +649,30 @@ func (s *Store) adopt(ctx context.Context, tx *sql.Tx, recipeID, own, plainID in
 				return 0, err
 			}
 		}
-		if err := s.ings.MergeTx(ctx, tx, own, plainID, ingredient.Resolution{}); err != nil {
+		// The former Ingredient's Base Unit follows the Yield first (a Base Unit change while it is in use is refused).
+		if err := s.ings.BaseUnitTx(ctx, tx, own, base); err != nil {
+			if errors.Is(err, ingstore.ErrInUse) {
+				return 0, recipe.ErrBaseUnitInUse
+			}
+			return 0, err
+		}
+		// The taken-over Ingredient is the one in use: on every conflict its values win (its Shelf Life and its
+		// Unit Conversions). Nothing is left unresolved, so the merge cannot fail on a conflict.
+		src, err := s.ings.GetTx(ctx, tx, own)
+		if err != nil {
+			return 0, err
+		}
+		tgt, err := s.ings.GetTx(ctx, tx, plainID)
+		if err != nil {
+			return 0, err
+		}
+		res := ingredient.Resolution{Conversions: map[string]float64{}, ShelfLifeSet: true, ShelfLifeDays: tgt.ShelfLifeDays}
+		for _, c := range ingredient.PlanMerge(src, tgt).Conflicts {
+			if c.Kind == ingredient.ConflictConversion {
+				res.Conversions[c.Unit] = c.Target
+			}
+		}
+		if err := s.ings.MergeTx(ctx, tx, own, plainID, res); err != nil {
 			return 0, err
 		}
 	}
@@ -647,7 +714,7 @@ func (s *Store) releaseBase(ctx context.Context, tx *sql.Tx, ingredientID int64)
 
 // refreshTotals rewrites the cached total time of every Recipe that calls for the saved Base recipe, transitively, and of
 // the saved Recipe when it has Base recipe lines: the total is the composed one, as if nothing is in Stock (§4.4).
-func (s *Store) refreshTotals(ctx context.Context, tx *sql.Tx, id int64) error {
+func refreshTotals(ctx context.Context, tx *sql.Tx, id int64) error {
 	cat, err := loadCatalog(ctx, tx)
 	if err != nil {
 		return err
@@ -873,7 +940,10 @@ func (s *Store) toBaseTx(ctx context.Context, tx *sql.Tx, id int64, in recipe.To
 		in.Yield, unit, s.now(), id); err != nil {
 		return err
 	}
-	return s.refreshTotals(ctx, tx, id)
+	if err := checkCycles(ctx, tx, id); err != nil {
+		return err
+	}
+	return refreshTotals(ctx, tx, id)
 }
 
 // ToPlannable turns a Base recipe back into a plannable Recipe (§3.6). *recipe.InUseError while any Recipe calls for
@@ -949,7 +1019,7 @@ func (s *Store) toPlannableTx(ctx context.Context, tx *sql.Tx, id int64, in reci
 	if _, err := tx.ExecContext(ctx, `UPDATE recipes SET whole_meal = ? WHERE id = ?`, boolInt(recipe.DefaultWholeMeal(false, courses, mainID)), id); err != nil {
 		return err
 	}
-	return s.refreshTotals(ctx, tx, id)
+	return refreshTotals(ctx, tx, id)
 }
 
 // coursesFor is the Course list a plannable Recipe gets: the given ids (deduplicated), or the main Course when nil.
@@ -1328,10 +1398,14 @@ func (s *Store) Link(ctx context.Context, baseID int64, lineIDs []int64) (recipe
 		byID[c.LineID] = c
 	}
 	ing, err := baseIngredientOf(ctx, tx, baseID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return recipe.LinkResult{}, ErrNotFound
+	}
 	if err != nil {
 		return recipe.LinkResult{}, err
 	}
 	var old []int64
+	var touched []int64
 	seen := map[int64]bool{}
 	for _, id := range lineIDs {
 		c, ok := byID[id]
@@ -1357,6 +1431,9 @@ func (s *Store) Link(ctx context.Context, baseID int64, lineIDs []int64) (recipe
 		if err := s.saveInTx(ctx, tx, c.RecipeID, in); err != nil {
 			return recipe.LinkResult{}, err
 		}
+		if !containsID(touched, c.RecipeID) {
+			touched = append(touched, c.RecipeID)
+		}
 	}
 	offers := []recipe.MergeOffer{}
 	for _, id := range old {
@@ -1379,45 +1456,61 @@ func (s *Store) Link(ctx context.Context, baseID int64, lineIDs []int64) (recipe
 		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM products WHERE ingredient_id = ?`, id).Scan(&o.Products); err != nil {
 			return recipe.LinkResult{}, err
 		}
+		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM member_ingredient_exclusions WHERE ingredient_id = ?`, id).Scan(&o.Exclusions); err != nil {
+			return recipe.LinkResult{}, err
+		}
 		offers = append(offers, o)
 	}
 	if err := tx.Commit(); err != nil {
 		return recipe.LinkResult{}, err
 	}
-	return recipe.LinkResult{Linked: append([]int64(nil), lineIDs...), MergeOffer: offers}, nil
+	return recipe.LinkResult{Linked: append([]int64(nil), lineIDs...), MergeOffer: offers, Recipes: touched}, nil
 }
 
 // Unlink reverses a bulk link (the Toast's Undo): each line goes back to its remembered Ingredient, all or nothing
-// (CodeLineNotBase for a line that does not call for this Base recipe).
-func (s *Store) Unlink(ctx context.Context, baseID int64, lineIDs []int64) error {
+// (CodeLineNotBase for a line that does not call for this Base recipe). It returns the Recipes whose lines changed, in
+// the order of lineIDs, each once, read inside the transaction; nil on a refusal.
+func (s *Store) Unlink(ctx context.Context, baseID int64, lineIDs []int64) ([]int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
+	if _, err := baseIngredientOf(ctx, tx, baseID); errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	var touched []int64
 	for _, id := range lineIDs {
 		var recipeID, ing int64
 		var linked sql.NullInt64
 		err := tx.QueryRowContext(ctx, `SELECT recipe_id, ingredient_id, linked_from_ingredient_id FROM recipe_lines WHERE id = ?`, id).
 			Scan(&recipeID, &ing, &linked)
 		if errors.Is(err, sql.ErrNoRows) {
-			return &recipe.ValidationError{Field: "lineIds", Code: recipe.CodeLineNotBase, Message: "this line does not call for that Base recipe"}
+			return nil, &recipe.ValidationError{Field: "lineIds", Code: recipe.CodeLineNotBase, Message: "this line does not call for that Base recipe"}
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		own, err := baseIngredientOf(ctx, tx, baseID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if ing != own {
-			return &recipe.ValidationError{Field: "lineIds", Code: recipe.CodeLineNotBase, Message: "this line does not call for that Base recipe"}
+			return nil, &recipe.ValidationError{Field: "lineIds", Code: recipe.CodeLineNotBase, Message: "this line does not call for that Base recipe"}
 		}
 		if err := s.unlinkTx(ctx, tx, recipeID, id, linked.Int64, "lineIds"); err != nil {
-			return err
+			return nil, err
+		}
+		if !containsID(touched, recipeID) {
+			touched = append(touched, recipeID)
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return touched, nil
 }
 
 // getRecipe loads a Recipe with its Tags, lines, Steps and timing. A Base recipe carries its kind, Yield unit, the
@@ -1506,10 +1599,12 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 	if hasBase {
 		if composed, cerr := baserecipe.ComposeSteps(cat, id, nil); cerr == nil {
 			r.Timing.TotalMinutes = composed.TotalMinutes
+			r.Timing.Advance, r.Timing.AdvanceMinutes = composedAdvance(composed)
 		}
 		for i := range r.Lines {
 			if b := r.Lines[i].Base; b != nil {
 				r.Lines[i].NeededAt = max(0, baserecipe.NeededAt(cat.recipes[id], i, b.Name))
+				r.Lines[i].NeededAtDefault = max(0, baserecipe.NeededAt(withoutOverride(cat.recipes[id], i), i, b.Name))
 			}
 		}
 	}
@@ -1517,6 +1612,55 @@ func getRecipe(ctx context.Context, q Querier, id int64) (recipe.Recipe, error) 
 		withinOf(cat, tree, nil, &r.Within)
 	}
 	return r, nil
+}
+
+// composedAdvance lists the Advance Steps of a composed Step list (its own and its Base recipes') by index into that
+// list, with the longest lead time: what Timing.Advance and AdvanceMinutes hold for a Recipe with Base recipe lines.
+func composedAdvance(c baserecipe.Composed) ([]recipe.AdvanceItem, int) {
+	var out []recipe.AdvanceItem
+	longest := 0
+	for i, st := range c.Steps {
+		if st.Kind != schedule.Advance {
+			continue
+		}
+		out = append(out, recipe.AdvanceItem{Step: i, LeadTimeMinutes: st.LeadTimeMinutes})
+		longest = max(longest, st.LeadTimeMinutes)
+	}
+	return out, longest
+}
+
+// keptStock reports whether an Ingredient keeps Stock Lots or Products.
+func keptStock(ctx context.Context, q Querier, ingredientID int64) (bool, error) {
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM stock_lots WHERE ingredient_id = ?) + (SELECT count(*) FROM products WHERE ingredient_id = ?)`,
+		ingredientID, ingredientID).Scan(&n)
+	return n > 0, err
+}
+
+// releaseDeleted gives the Ingredient of a deleted Base recipe its plain key back. A plain Ingredient holding the name
+// keeps the key of the Base recipe, except when the Ingredient keeps Stock Lots or Products: then the delete is
+// refused (*recipe.NameTakenError, §17) and nothing changes. An Ingredient with nothing on it goes with the Base recipe.
+func (s *Store) releaseDeleted(ctx context.Context, tx *sql.Tx, ingredientID int64) error {
+	err := s.ings.ReleaseBaseRecipeTx(ctx, tx, ingredientID)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, ingstore.ErrNameTaken) {
+		return err
+	}
+	kept, err := keptStock(ctx, tx, ingredientID)
+	if err != nil || !kept {
+		return err
+	}
+	cur, err := s.ings.GetTx(ctx, tx, ingredientID)
+	if err != nil {
+		return err
+	}
+	holder, err := plainHolder(ctx, tx, units.NormalizeName(cur.Name), ingredientID)
+	if err != nil {
+		return err
+	}
+	return &recipe.NameTakenError{Ingredient: holder}
 }
 
 // loadLines reads a Recipe's lines in order, with the Base recipe each calls for (and whether it is empty, §4.6), its
@@ -1554,4 +1698,54 @@ func loadLines(ctx context.Context, q Querier, id int64) ([]recipe.Line, error) 
 		out = append(out, l)
 	}
 	return out, rows.Err()
+}
+
+// withoutOverride is the Recipe with the stored Needed at override of line i cleared: the default rule alone (round 2).
+func withoutOverride(r baserecipe.Recipe, i int) baserecipe.Recipe {
+	lines := append([]baserecipe.Line(nil), r.Lines...)
+	if i >= 0 && i < len(lines) {
+		lines[i].NeededAtStep = nil
+	}
+	r.Lines = lines
+	return r
+}
+
+// containsID reports whether the id is in ids.
+func containsID(ids []int64, id int64) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+// BaseUnit is the Base Unit of the Base recipe's Ingredient (the link candidates carry it, round 2). ErrNotFound for a
+// plannable Recipe.
+func (s *Store) BaseUnit(ctx context.Context, baseID int64) (string, error) {
+	var u string
+	err := s.db.QueryRowContext(ctx, `SELECT i.base_unit FROM recipes r JOIN ingredients i ON i.id = r.base_ingredient_id WHERE r.id = ?`, baseID).Scan(&u)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return u, err
+}
+
+// RecipesOfLines lists the Recipes the lines belong to, in line order, each once (the events of an undo).
+func (s *Store) RecipesOfLines(ctx context.Context, lineIDs []int64) ([]int64, error) {
+	var out []int64
+	for _, id := range lineIDs {
+		var recipeID int64
+		err := s.db.QueryRowContext(ctx, `SELECT recipe_id FROM recipe_lines WHERE id = ?`, id).Scan(&recipeID)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if !containsID(out, recipeID) {
+			out = append(out, recipeID)
+		}
+	}
+	return out, nil
 }

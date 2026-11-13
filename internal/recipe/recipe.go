@@ -150,6 +150,9 @@ type Line struct {
 	// Needed at Step (baserecipe.NeededAt) of such a line.
 	Base     *BaseRef
 	NeededAt int
+	// NeededAtDefault (output, round 2) is the effective Needed at Step with the override cleared (the default rule),
+	// so the editor can show "Default: Step 2" beside an override.
+	NeededAtDefault int
 }
 
 // Use is an Ingredient amount a Step needs (informational).
@@ -349,7 +352,7 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 
 	// Needed at (§3.3): an override names one of the Recipe's own Steps (the Base recipe check is the store's).
 	for i := range out.Lines {
-		if n := out.Lines[i].NeededAtStep; n != nil && (*n < 0 || *n >= len(steps)) {
+		if n := out.Lines[i].NeededAtStep; n != nil && (*n < 0 || *n >= len(steps) || steps[*n].Kind == schedule.Advance) {
 			return Input{}, fieldErr(fmt.Sprintf("lines[%d].neededAtStep", i), CodeNeededAtStepInvalid, "Needed at must be one of this Recipe's Steps")
 		}
 	}
@@ -611,6 +614,12 @@ type Summary struct {
 	BaseRecipe  bool   // §10: a Base recipe
 	YieldUnit   string // its Yield's unit, "" for a plannable Recipe
 	UsedByCount int    // Recipes that call for it (Base recipes only)
+
+	// Round 2 (BR-B review): BaseIngredientID is the Base recipe's Ingredient (0 for a plannable Recipe; the web reads
+	// Stock by it). WouldCycle is set only when the list was asked ListFilter.For a Recipe: a line of that Recipe
+	// calling for this Base recipe would make a cycle.
+	BaseIngredientID int64
+	WouldCycle       bool
 }
 
 // State is a Member's preference for a Recipe. A Member has exactly one state

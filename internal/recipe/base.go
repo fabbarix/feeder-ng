@@ -286,10 +286,12 @@ type MergeOffer struct {
 	Name         string
 	StockLots    int
 	Products     int
+	Exclusions   int // Members' Exclusions of it that the merge moves (round 2)
 }
 
 // LinkResult is the answer of the bulk link.
 type LinkResult struct {
 	Linked     []int64
 	MergeOffer []MergeOffer
+	Recipes    []int64 // the Recipes whose lines changed (events, round 2)
 }

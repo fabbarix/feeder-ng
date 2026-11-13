@@ -74,6 +74,33 @@ type Step struct {
 	Uses            []schedule.Use
 }
 
+// SkipReason says why a line could not be used in a need tree.
+type SkipReason string
+
+// Reasons a line is skipped by expansion: its Ingredient is not in the Catalog, or its unit does not convert to the
+// Ingredient's Base Unit.
+const (
+	SkipUnknownIngredient SkipReason = "unknown_ingredient"
+	SkipUnconvertibleUnit SkipReason = "unconvertible_unit"
+)
+
+// Skipped is a line expansion could not use. Line is the 0-based index of the line in the Recipe that owns it
+// (RecipeID, RecipeName), which may be a Base recipe nested under the root.
+type Skipped struct {
+	RecipeID     int64
+	RecipeName   string
+	Line         int
+	IngredientID int64
+	Unit         string
+	Reason       SkipReason
+}
+
+// Expansion is a need tree with the lines it skipped, in the order expansion met them.
+type Expansion struct {
+	Needs   []Need
+	Skipped []Skipped
+}
+
 // Need is one node of a Recipe's need tree, for ONE Batch of the root Recipe, in the Ingredient's Base Units.
 // For a Base recipe line, Quantity is the amount of the Base recipe Ingredient the line asks for and Made is
 // what making that whole Quantity needs (the Base recipe's own lines scaled by Quantity / Yield, recursively).

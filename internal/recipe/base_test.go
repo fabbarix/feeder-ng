@@ -2,6 +2,7 @@ package recipe
 
 import (
 	"errors"
+	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 	"testing"
 
 	"github.com/fabbarix/feeder-ng/internal/units"
@@ -240,5 +241,17 @@ func TestDecideBaseRecipeNameComparesLikeTheIngredientKeyAndNotLikeTheFuzzyMatch
 	}
 	if got := DecideBaseRecipeName("  Béchamel   sauce ", []NameHolder{{IngredientID: 7, Name: "béchamel sauce", Kind: HolderPlain}}); got.Action != NameAsk {
 		t.Errorf("collapsed spacing = %+v, want NameAsk", got)
+	}
+}
+
+func TestNeededAtStepMustNameANonAdvanceStepInValidate(t *testing.T) {
+	in := valid()
+	in.Steps = []Step{{Text: "Marinate", Kind: schedule.Advance, LeadTimeMinutes: 60}, {Text: "Whisk", Kind: schedule.Active, DurationMinutes: 5}}
+	in.Lines[0].NeededAtStep = intp(0)
+	_, err := in.Validate(lookup)
+	wantValidation(t, err, "lines[0].neededAtStep", CodeNeededAtStepInvalid)
+	in.Lines[0].NeededAtStep = intp(1)
+	if _, err := in.Validate(lookup); err != nil {
+		t.Errorf("an active Step: %v", err)
 	}
 }
