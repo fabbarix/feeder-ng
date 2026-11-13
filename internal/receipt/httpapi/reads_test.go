@@ -15,7 +15,7 @@ package httpapi_test
 //	409 read_in_progress                  429 too_many_reads (+ "retryAfterSeconds")      (the Recipe Assistant's Limiter)
 //	422 scans_empty                       none of the uuids is an applied, not undone scan of this Shop made today
 //	422 photos_empty | too_many_photos | photo_too_large | photo_unsupported | photos_not_supported_by_model
-//	400 bad_request (not JSON, or a photo with an "url")    413 request_too_large (above 45 MiB)
+//	400 bad_request (not JSON)    413 request_too_large (above 45 MiB)
 //	Order: availability (409) and Limiter Check (409/429) come before the body is read; then body, photos, session.
 //
 // GET /api/scan/receipt/reads/{id} (404 not_found for an unknown id or another User's):
@@ -319,7 +319,7 @@ func TestADoneReadReturnsFingerprintRowsProposalsNotesTotalsAndWarnings(t *testi
 		t.Errorf("fingerprint = %q, want 64 hex digits (SHA-256)", v.Fingerprint)
 	}
 	if len(v.Rows) != 2 || v.Rows[0].Row != 0 || v.Rows[0].Product != nameMut || v.Rows[0].Scans != 2 || v.Rows[0].Quantity != 1400 ||
-		v.Rows[0].PriceCents != 7771 || v.Rows[0].ProductID != w.mutti || v.Rows[0].Barcode != barMut || v.Rows[0].BaseUnit != "g" || v.Rows[0].PackSize != 700 ||
+		v.Rows[0].PriceCents != 7771 || v.Rows[0].ProductID != w.mutti || v.Rows[0].Barcode != "08000500310427" || v.Rows[0].BaseUnit != "g" || v.Rows[0].PackSize != 700 ||
 		v.Rows[1].Row != 1 || v.Rows[1].Product != nameBar || v.Rows[1].Scans != 1 {
 		t.Errorf("rows = %+v (the grouped Scanned rows in first-scan order, with the index the model answered with)", v.Rows)
 	}
@@ -693,8 +693,15 @@ func TestUnavailableAnswers409WithTheReasonBeforeTheBodyIsRead(t *testing.T) {
 		}
 	}
 	check("off")
+	// Removing the key through the API turns the assistant off too (ApplyKeyRemoval), so that is "off", not "no_key".
 	mustStatus(t, w.admin.Put("/api/recipe-assistant/settings", obj{"enabled": true, "baseUrl": w.fake.URL, "model": "claude-haiku-5-5"}), 200)
 	mustStatus(t, w.admin.Delete("/api/recipe-assistant/settings/api-key"), 200)
+	check("off")
+	// no_key needs enabled with no key, which the API never produces: set the row directly.
+	if _, err := w.env.DB.Exec(`UPDATE recipe_assistant_settings SET enabled = 1, api_key_ciphertext = NULL,
+		api_key_last4 = NULL, api_key_master_id = NULL WHERE id = 1`); err != nil {
+		t.Fatal(err)
+	}
 	check("no_key")
 }
 
