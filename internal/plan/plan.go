@@ -170,9 +170,10 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 	in.Lots = s.Lots
 	in.ShelfLifeDays = s.ShelfLife
 	in.Packs = s.Packs
+	today := Today(s.Now, s.Zone)
 	for _, l := range s.Leftovers {
-		if l.Status != LeftoverAvailable || l.Portions <= 0 {
-			continue
+		if !Plannable(l, today) {
+			continue // a frozen one is used only when picked; one to answer waits for the User (ADR 0012)
 		}
 		in.Leftovers = append(in.Leftovers, planner.Leftover{
 			ID: l.ID, FromSlot: pkey(l.From), RecipeID: planner.RecipeID(l.RecipeID),

@@ -133,6 +133,11 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 		return notify.Facts{}, err
 	}
 	for _, l := range leftovers {
+		// The 10:00 Use-by push is for an ordinary Leftover: a frozen one is due on its Frozen Use-by, and one to answer is
+		// asked on Today, not pushed (ADR 0012).
+		if l.Frozen() || plan.IsToAnswer(l, today) {
+			continue
+		}
 		rec, err := s.recipe(ctx, l.RecipeID, recipes)
 		if errors.Is(err, recipestore.ErrNotFound) {
 			continue

@@ -57,11 +57,10 @@ type Deps struct {
 
 // Summary describes one planning run.
 type Summary struct {
-	Reason    plan.Reason
-	Placed    int // slots the planner filled this run
-	Kept      int // unpinned meals it left alone
-	Unfilled  int // slots it could not fill
-	Discarded int // Leftovers past Use-by discarded first (Nightly only)
+	Reason   plan.Reason
+	Placed   int // slots the planner filled this run
+	Kept     int // unpinned meals it left alone
+	Unfilled int // slots it could not fill
 }
 
 // Runner plans and acts on the plan. Safe for concurrent use: runs and actions
@@ -96,7 +95,6 @@ type runOpts struct {
 	clearAll   bool      // Slot or Variety Rules changed: unpinned meals are treated as empty
 	after      *plan.Key // Swap, set, confirm: unpinned meals after this slot are treated as empty
 	regenerate bool      // bump the generation and redo every unpinned meal (planner.Regenerate)
-	skipPlan   bool      // the write does not plan (DiscardExpired)
 	// afterPlan runs inside the transaction once the replan is written (not after the commit).
 	afterPlan func(ctx context.Context, st *store.Store) error
 }
@@ -130,17 +128,21 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 				return err
 			}
 		}
-		if !o.skipPlan {
-			if sum, err = r.planIn(withTx(ctx, tx), st, reason, o); err != nil {
+		if sum, err = r.planIn(withTx(ctx, tx), st, reason, o); err != nil {
+			return err
+		}
+		if o.afterPlan != nil {
+			if err := o.afterPlan(withTx(ctx, tx), st); err != nil {
 				return err
 			}
-			if o.afterPlan != nil {
-				if err := o.afterPlan(withTx(ctx, tx), st); err != nil {
-					return err
-				}
-			}
 		}
-		return r.pruneStaleChips(ctx, st)
+		if err := r.pruneStaleChips(ctx, st); err != nil {
+			return err
+		}
+		if isDry(ctx) {
+			return ErrDryRun // rolls the whole write back: a preview (?dryRun=1) writes nothing
+		}
+		return nil
 	})
 	if err != nil {
 		return Summary{}, err
@@ -228,74 +230,12 @@ func (r *Runner) ChangeRules(ctx context.Context, change func(st *store.Store) e
 	return err
 }
 
-// DiscardExpired discards the Leftovers whose Use-by is before today (household
-// date) and records each as waste (reason leftover_discarded). Pinned dependants
-// of a discarded Leftover are unpinned so the next run can replan them. Waste is
-// recorded in the same transaction when the Stock adapter supports it (TxWaster),
-// and then the runner publishes the `stock` waste change after the commit;
-// otherwise the waste is recorded after the commit by the adapter, and a failure
-// there is logged and the Leftover stays discarded. It returns how many were discarded.
-func (r *Runner) DiscardExpired(ctx context.Context) (int, error) {
-	var discarded []plan.Leftover
-	var on string
-	_, err := r.write(ctx, "", runOpts{skipPlan: true}, func(tx *sql.Tx, st *store.Store) (func(), error) {
-		info, err := r.info(ctx)
-		if err != nil {
-			return nil, err
-		}
-		on = info.today
-		ls, err := st.Leftovers(ctx)
-		if err != nil {
-			return nil, err
-		}
-		discarded = plan.ExpiredLeftovers(ls, on)
-		var deferred []LeftoverWaste
-		wastedInTx := false
-		txWaster, inTx := r.d.Stock.(TxWaster)
-		for _, l := range discarded {
-			if err := st.DiscardLeftover(ctx, l.ID, on); err != nil {
-				return nil, err
-			}
-			if err := r.unpinMisfits(ctx, st, l.From, 0, info); err != nil {
-				return nil, err
-			}
-			w := LeftoverWaste{LeftoverID: l.ID, RecipeID: int64(l.RecipeID), Portions: l.Portions, On: on}
-			if inTx {
-				if err := txWaster.RecordLeftoverWasteTx(ctx, tx, w); err != nil {
-					return nil, err
-				}
-				wastedInTx = true
-				continue
-			}
-			deferred = append(deferred, w)
-		}
-		return func() {
-			// The in-transaction waste publishes nothing itself (RecordWasteTx), so the runner announces it here.
-			if wastedInTx && r.d.Events != nil {
-				r.d.Events.Publish("stock", map[string]any{"changed": "waste"})
-			}
-			for _, w := range deferred {
-				if err := r.d.Stock.RecordLeftoverWaste(ctx, w); err != nil {
-					r.d.Logger.Error("recording Leftover waste failed", "leftover", w.LeftoverID, "err", err)
-				}
-			}
-		}, nil
-	})
-	return len(discarded), err
-}
-
-// Nightly is the 03:00 job: DiscardExpired, then Plan(ReasonNightly). day is the
-// household date the scheduler is running for. Register it with
+// Nightly is the 03:00 job: Plan(ReasonNightly). It discards nothing: a Leftover past its Use-by is asked about, not
+// wasted (ADR 0012). day is the household date the scheduler is running for. Register it with
 // scheduler.Daily("plan.nightly", "03:00", runner.Nightly).
 func (r *Runner) Nightly(ctx context.Context, day string) error {
-	_, discardErr := r.DiscardExpired(ctx)
-	if _, err := r.Plan(ctx, plan.ReasonNightly); err != nil {
-		return errors.Join(discardErr, err)
-	}
-	if discardErr != nil {
-		r.d.Logger.Error("nightly: discarding expired Leftovers failed", "day", day, "err", discardErr)
-	}
-	return nil
+	_, err := r.Plan(ctx, plan.ReasonNightly)
+	return err
 }
 
 // Invalidate asks for a Plan run soon. It never blocks and never runs inline:

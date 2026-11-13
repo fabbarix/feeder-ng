@@ -1,7 +1,7 @@
 Feature: Cooked, Not cooked and Leftovers
   Mark as Cooked proposes the Leftover portions (Batches x Yield - portions needed), deducts
   Stock, records the actual Leftover with its Use-by and replans. Not cooked skips the meal.
-  Leftovers past their Use-by are discarded automatically and count as waste.
+  Leftovers past their Use-by are not discarded; they wait for an answer (ADR 0012).
 
   Background: Monday 2026-11-09 12:00 UTC. Monday's dinner is chicken (Yield 4, two eat, 400 g thighs + 250 g rice per Batch); Tuesday is served from its 2 extra portions
     Given a running Feeder
@@ -113,15 +113,16 @@ Feature: Cooked, Not cooked and Leftovers
     And I list the meals to confirm
     Then the plan has no meals to confirm
 
-  Scenario: Leftovers past their Use-by are discarded overnight and count as waste
+  Scenario: A Leftover past its Use-by is not discarded overnight and waits for an answer
     Given planning Stock holds 1000 g of "chicken thighs"
     And planning Stock holds 1000 g of "rice"
     And I mark the slot on 2026-11-09 as Cooked with 4 Leftover portions
     When the household clock is 2026-11-13 03:00 UTC
     And the scheduler runs its due jobs
     And I list the Leftovers
-    Then the plan has no Leftovers
-    And planning Stock waste has a "leftover_discarded" record of 4
+    Then the plan JSON "leftovers.0.portions" is "4"
+    And the plan JSON "leftovers.0.toAnswer" is "true"
+    And the Household has recorded no waste
 
   Scenario: A Leftover is still good on its Use-by date
     Given planning Stock holds 1000 g of "chicken thighs"

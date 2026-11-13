@@ -27,8 +27,9 @@ const (
 	MaxTagRunes         = 40
 	MaxCooldownDays     = 365
 	MaxUseByDays        = 30
-	MinReheatMinutes    = 1  // R12: per-Recipe reheat time, whole minutes
-	MaxReheatMinutes    = 30 // the Reheat timer's own upper limit (30 minutes)
+	MaxFrozenUseByDays  = 365 // B5-LO: a Recipe's Frozen Use-by is 1 to 365 days
+	MinReheatMinutes    = 1   // R12: per-Recipe reheat time, whole minutes
+	MaxReheatMinutes    = 30  // the Reheat timer's own upper limit (30 minutes)
 	MaxNoteRunes        = 200
 	MaxStepTextRunes    = 2000
 	MaxMinutes          = 10080 // one week, for durations and lead times
@@ -38,27 +39,28 @@ const (
 // Validation error codes (ValidationError.Code). Codes from the schedule
 // package (schedule.Code*) are passed through for Step timing problems.
 const (
-	CodeNameRequired    = "name_required"
-	CodeNameTooLong     = "name_too_long"
-	CodeDescTooLong     = "description_too_long"
-	CodeYieldInvalid    = "yield_invalid"
-	CodeTagInvalid      = "tag_invalid"
-	CodeTooManyTags     = "too_many_tags"
-	CodeCooldownInvalid = "cooldown_invalid"
-	CodeUseByInvalid    = "use_by_invalid"
-	CodeReheatInvalid   = "reheat_invalid"
-	CodeSourceInvalid   = "source_invalid"
-	CodeLinesRequired   = "lines_required"
-	CodeReadyMealLines  = "ready_meal_lines" // a Ready Meal has exactly one ingredient line
-	CodeUnknownIngr     = "unknown_ingredient"
-	CodeQuantityInvalid = "quantity_invalid"
-	CodeUnitRequired    = "unit_required"
-	CodeNoteTooLong     = "note_too_long"
-	CodeStepTextMissing = "step_text_required"
-	CodeStepTextLong    = "step_text_too_long"
-	CodeMinutesInvalid  = "minutes_invalid"
-	CodeCoursesEmpty    = "courses_empty"  // field "courses": a non-nil empty CourseIDs (spec §4)
-	CodeCourseUnknown   = "course_unknown" // field "courses": an unknown or archived Course id (checked by the store)
+	CodeNameRequired       = "name_required"
+	CodeNameTooLong        = "name_too_long"
+	CodeDescTooLong        = "description_too_long"
+	CodeYieldInvalid       = "yield_invalid"
+	CodeTagInvalid         = "tag_invalid"
+	CodeTooManyTags        = "too_many_tags"
+	CodeCooldownInvalid    = "cooldown_invalid"
+	CodeUseByInvalid       = "use_by_invalid"
+	CodeFrozenUseByInvalid = "frozen_use_by_invalid" // B5-LO: field "frozenUseByDays", outside 1 to 365
+	CodeReheatInvalid      = "reheat_invalid"
+	CodeSourceInvalid      = "source_invalid"
+	CodeLinesRequired      = "lines_required"
+	CodeReadyMealLines     = "ready_meal_lines" // a Ready Meal has exactly one ingredient line
+	CodeUnknownIngr        = "unknown_ingredient"
+	CodeQuantityInvalid    = "quantity_invalid"
+	CodeUnitRequired       = "unit_required"
+	CodeNoteTooLong        = "note_too_long"
+	CodeStepTextMissing    = "step_text_required"
+	CodeStepTextLong       = "step_text_too_long"
+	CodeMinutesInvalid     = "minutes_invalid"
+	CodeCoursesEmpty       = "courses_empty"  // field "courses": a non-nil empty CourseIDs (spec §4)
+	CodeCourseUnknown      = "course_unknown" // field "courses": an unknown or archived Course id (checked by the store)
 )
 
 // ErrInvalid is matched (errors.Is) by every *ValidationError.
@@ -148,11 +150,14 @@ type Input struct {
 	Tags              []string
 	CooldownDays      *int // nil = household default
 	LeftoverUseByDays *int // nil = household default; 0 = same day
-	ReheatMinutes     *int // nil = no reheat time (Reheat uses its formula); else 1..30 whole minutes (R12)
-	Source            Source
-	Image             string // image id, "" = none
-	Lines             []Line
-	Steps             []Step
+	// FrozenUseByDays is how long a Leftover of this Recipe keeps in a Freezer: nil = the Household's default, else
+	// 1..365 (B5-LO, ADR 0012).
+	FrozenUseByDays *int
+	ReheatMinutes   *int // nil = no reheat time (Reheat uses its formula); else 1..30 whole minutes (R12)
+	Source          Source
+	Image           string // image id, "" = none
+	Lines           []Line
+	Steps           []Step
 }
 
 // IngredientLookup returns the Ingredient (with its Unit Conversions) for an id.
@@ -210,6 +215,12 @@ func (in Input) Validate(lookup IngredientLookup) (Input, error) {
 			return Input{}, fieldErr("leftoverUseByDays", CodeUseByInvalid, "the use-by must be 0 to 30 days")
 		}
 		out.LeftoverUseByDays = intPtr(*d)
+	}
+	if d := in.FrozenUseByDays; d != nil {
+		if *d < 1 || *d > MaxFrozenUseByDays {
+			return Input{}, fieldErr("frozenUseByDays", CodeFrozenUseByInvalid, "the frozen use-by must be 1 to 365 days")
+		}
+		out.FrozenUseByDays = intPtr(*d)
 	}
 	if d := in.ReheatMinutes; d != nil {
 		if *d < MinReheatMinutes || *d > MaxReheatMinutes {

@@ -108,19 +108,6 @@ func TestDependantsToUnpin(t *testing.T) {
 	})
 }
 
-func TestExpiredLeftoversAreThoseWithAUseByBeforeToday(t *testing.T) {
-	ls := []plan.Leftover{
-		{ID: 1, Portions: 2, UseBy: "2026-11-08", Status: plan.LeftoverAvailable}, // expired
-		{ID: 2, Portions: 2, UseBy: "2026-11-09", Status: plan.LeftoverAvailable}, // still good on its Use-by date
-		{ID: 3, Portions: 0, UseBy: "2026-11-01", Status: plan.LeftoverAvailable}, // nothing left to waste
-		{ID: 4, Portions: 2, UseBy: "2026-11-01", Status: plan.LeftoverDiscarded}, // already discarded
-	}
-	got := plan.ExpiredLeftovers(ls, "2026-11-09")
-	if len(got) != 1 || got[0].ID != 1 {
-		t.Errorf("ExpiredLeftovers = %+v, want only #1", got)
-	}
-}
-
 func timed(date string, slot int64, h, m int, state plan.State, pinned bool) plan.Timed {
 	return plan.Timed{
 		Meal: plan.Meal{Key: k(date, slot), State: state, Pinned: pinned},
