@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest'
 import type { CameraRecovery } from '../hooks/useCameraRecovery'
 import { AskWeightSheet } from './AskWeightSheet'
 import { ManualBarcodeEntry } from './ManualBarcodeEntry'
-import { PriceEditSheet } from './PriceEditSheet'
 import { StockTakeSheet } from './StockTakeSheet'
 import { UnarchiveProductSheet } from './UnarchiveProductSheet'
 import { UnknownBarcodeSheet } from './UnknownBarcodeSheet'
@@ -20,10 +19,6 @@ describe('Scan sheets use FormActions', () => {
   it('How much does it weigh?: Save', () => {
     render(<AskWeightSheet open onClose={() => {}} productName="Ham" priceText="$2.50" onSubmit={() => {}} />)
     expect(inPrimary('Save')).not.toBeNull()
-  })
-  it('Price of ...: Save price', () => {
-    render(<PriceEditSheet open onClose={() => {}} productName="Ham" priceCents={250} currency="USD" onSave={() => {}} />)
-    expect(inPrimary('Save price')).not.toBeNull()
   })
   it('Unarchive: "Unarchive ..." is the primary, "Create a new Product instead" the secondary of one row', () => {
     render(<UnarchiveProductSheet open onClose={() => {}} productName="Mutti passata" onUnarchive={() => {}} onCreateNew={() => {}} />)

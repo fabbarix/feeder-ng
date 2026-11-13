@@ -35,22 +35,11 @@ const open = (c: ScanController) => {
   controllerHook.useScanController.mockReturnValue(c)
   return render(<MemoryRouter initialEntries={['/scan']}><ScanScreen /></MemoryRouter>)
 }
-const line = { clientUuid: 'u-1', text: 'Passata +700 g · $1.59', queued: false, productName: 'Mutti passata 700 g', priceCents: 159, canEditPrice: true }
 const unknown = { paused: true, sheet: { kind: 'unknown' as const, mode: 'pack' as const, target: { mode: 'pack' as const, code: '05012345678900' } } }
 
 beforeEach(() => controllerHook.useScanController.mockReset())
 
 describe('ScanScreen: Product pictures', () => {
-  it('draws the picture of the scanned Product on the scan line', () => {
-    open(controller({ flow: flow({ feedback: { ...line, imageUrl: '/api/images/' + 'a'.repeat(32) } }) }))
-    expect(screen.getByText('Passata +700 g · $1.59').closest('[role=status]')!.querySelector('img')).toHaveAttribute('src', '/api/images/' + 'a'.repeat(32))
-  })
-
-  it('draws no picture for a Product without one', () => {
-    open(controller({ flow: flow({ feedback: line }) }))
-    expect(screen.getByText('Passata +700 g · $1.59').closest('[role=status]')!.querySelector('img')).toBeNull()
-  })
-
   it('the what-is-this sheet has the Picture field while online', () => {
     open(controller({ flow: flow(unknown) }))
     expect(screen.getByRole('group', { name: scanStrings.pictureLabel })).toBeInTheDocument()

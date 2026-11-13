@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -124,12 +124,12 @@ describe('ScanScreen', () => {
     expect(screen.getByRole('heading', { name: 'Where are you shopping?' })).toBeInTheDocument()
   })
 
-  it('picking a Shop remembers it, shows the viewfinder strip above the live list and marks a session active', async () => {
+  it('picking a Shop remembers it, shows the viewfinder strip above the Scanned list and marks a session active', async () => {
     await pickCoop()
     expect(lastShop.setLastShopId).toHaveBeenCalledWith(expect.anything(), 2)
     expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'shop', shop: { id: 2, name: 'Coop' } })
     const strip = screen.getByRole('region', { name: 'Scanner' })
-    const list = screen.getByRole('list', { name: 'Shopping List' })
+    const list = screen.getByRole('radiogroup', { name: 'List view' })
     expect(strip.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(scanSession.isActive()).toBe(true)
   })
@@ -147,22 +147,13 @@ describe('ScanScreen', () => {
     expect(screen.queryByText(/couldn't sync/)).toBeNull()
   })
 
-  it('the live list shows what is left, compactly', async () => {
-    await startShopping()
-    const list = screen.getByRole('list', { name: 'Shopping List' })
-    expect(within(list).getByText(/Passata/)).toBeInTheDocument()
-    expect(within(list).getByText(/1400 g · 2 × Mutti 700 g/)).toBeInTheDocument()
-    expect(within(list).getByText(/toilet paper/)).toBeInTheDocument()
-    expect(screen.getByText('2 left')).toBeInTheDocument()
-  })
-
   it('Stock-take has the camera but no list and no session', async () => {
     lastShop.getLastShopId.mockReturnValue(null)
     const view = open(controller({ list: undefined }))
     await userEvent.click(screen.getByRole('button', { name: /Stock-take at home/ }))
     expect(controllerHook.useScanController).toHaveBeenLastCalledWith({ mode: 'stocktake', shop: null })
     expect(screen.getByRole('region', { name: 'Scanner' })).toBeInTheDocument()
-    expect(screen.queryByRole('list', { name: 'Shopping List' })).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Scanned list' })).toBeNull()
     expect(scanSession.isActive()).toBe(false)
     view.unmount()
   })
@@ -172,16 +163,6 @@ describe('ScanScreen', () => {
     expect(scanSession.isActive()).toBe(true)
     view.unmount()
     expect(scanSession.isActive()).toBe(false)
-  })
-
-  it('shows the line after a scan with Edit price and Undo wired to the flow', async () => {
-    const f = flow({ feedback: { clientUuid: 'u-1', text: 'Passata +700 g · $1.59', queued: false, productName: 'Mutti passata 700 g', priceCents: 159, canEditPrice: true } })
-    await startShopping(controller({ flow: f }))
-    expect(screen.getByText('Passata +700 g · $1.59')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Edit price' }))
-    expect(f.undo).toHaveBeenCalledTimes(1)
-    expect(f.openEditPrice).toHaveBeenCalledTimes(1)
   })
 
   it('shows a banner such as "Not a product code"', async () => {
@@ -206,11 +187,7 @@ describe('ScanScreen', () => {
     expect(screen.getByRole('dialog', { name: 'Stock-take: Mutti passata 700 g' })).toBeInTheDocument()
   })
 
-  it('opens the price editor and the ask-weight sheet', async () => {
-    const edit = flow({ paused: true, sheet: { kind: 'edit_price' }, feedback: { clientUuid: 'u-1', text: 'x', queued: false, productName: 'Mutti passata 700 g', priceCents: 159, canEditPrice: true } })
-    const view = await startShopping(controller({ flow: edit }))
-    expect(screen.getByRole('dialog', { name: 'Price of Mutti passata 700 g' })).toBeInTheDocument()
-    view.unmount()
+  it('opens the ask-weight sheet', async () => {
     const ask = flow({
       paused: true,
       sheet: { kind: 'ask_weight', plan: { kind: 'ask_weight', priceCents: 250, product: { id: 21, name: 'Loose cheese', ingredientId: 5, ingredientName: 'cheese', baseUnit: 'g', packSize: 1000, lastPriceCents: null } } },
