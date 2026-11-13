@@ -83,7 +83,7 @@ fi
 # --- the wrapper: not-inspected lines fail the run in any mode (warn included); an exempt-only run passes
 cat >"$TMP/fake-server.sh" <<'FS'
 echo $$ >"$FAKE_PID_OUT"
-exec node -e 'require("http").createServer((q,s)=>s.end("ok")).listen(process.env.PORT,"127.0.0.1")'
+exec node -e 'require("http").createServer((q,s)=>{ if (process.env.FAKE_NO_FRONTEND) { s.statusCode = 503; return s.end("frontend not built") } s.end("ok") }).listen(process.env.PORT,"127.0.0.1")'
 FS
 echo 'true' >"$TMP/fake-seed.sh"
 cat >"$TMP/fake-guard.sh" <<'FS'
@@ -133,11 +133,109 @@ unset PORT_OVERRIDE BUILD_OVERRIDE
 wait "$FIRST" 2>/dev/null
 [ "$(cat "$TMP/first.rc" 2>/dev/null)" = 0 ] && ok || bad "the first run must still finish OK (rc $(cat "$TMP/first.rc" 2>/dev/null))"
 
-# --- a lock held by a live run refuses a run in this worktree in every mode, and the refused run leaves that lock alone
-LB="$TMP/locked"; mkdir -p "$LB/page-layout.lock"; echo $$ >"$LB/page-layout.lock/pid"
-BUILD_OVERRIDE="$LB"; run_wrapper ""; LOCK_RC=$RC; unset BUILD_OVERRIDE
-[ "$LOCK_RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "a run refused by the lock must FAIL in quick (rc $LOCK_RC): $OUT"
-[ -d "$LB/page-layout.lock" ] && ok || bad "a refused run must not remove the lock of the run that holds it"
+# --- the lock is flock -n on $BUILD/page-layout.lock, held on an fd for the script's life (the kernel drops it when the process dies: no stale handling)
+grep -q 'flock -n' "$W" && ok || bad "the wrapper must take its lock with flock -n"
+grep -Eq 'mkdir +"?\$LOCK' "$W" && bad "no lock directory: the lock is a flock on a file (nothing stale to detect)" || ok
+holder() { # LOCKFILE -> starts a process that holds the flock until killed; HOLDER = its pid
+  bash -c 'exec 9>"$1"; flock -n 9 || exit 9; exec sleep 60' _ "$1" &
+  HOLDER=$!
+  for _ in $(seq 1 25); do flock -n "$1" true 2>/dev/null || break; sleep 0.2; done
+}
+LB="$TMP/locked"; mkdir -p "$LB"
+holder "$LB/page-layout.lock"
+for m in quick full; do
+  BUILD_OVERRIDE="$LB"; run_wrapper "" PAGE_LAYOUT=$m; LOCK_RC=$RC; unset BUILD_OVERRIDE
+  [ "$LOCK_RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "$m: a run refused by a lock held by a live process must FAIL (rc $LOCK_RC): $OUT"
+  [ -e "$LB/page-layout.lock" ] && kill -0 "$HOLDER" 2>/dev/null && ! flock -n "$LB/page-layout.lock" true 2>/dev/null && ok || bad "$m: a refused run must leave the lock and its holder alone"
+done
+kill "$HOLDER" 2>/dev/null; wait "$HOLDER" 2>/dev/null
+# the holder is dead: the lock file may still be there, and that must not matter
+[ -e "$LB/page-layout.lock" ] && ok || bad "(test setup) the lock file should remain after its holder died"
+BUILD_OVERRIDE="$LB"; run_wrapper ""; unset BUILD_OVERRIDE
+[ "$RC" -eq 0 ] && ok || bad "after the lock holder died, a run must proceed (a leftover lock file is not a lock) (rc $RC): $OUT"
+
+# --- a busy port with a free lock (a foreign server, another build dir): FAIL in quick, and the foreign server is left running
+FPORT="$(free_port)"
+PORT="$FPORT" setsid nohup node -e 'require("http").createServer((q,s)=>s.end("foreign")).listen(process.env.PORT,"127.0.0.1")' >/dev/null 2>&1 &
+FOREIGN=$!
+for _ in $(seq 1 25); do curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$FPORT/" && break; sleep 0.2; done
+PORT_OVERRIDE="$FPORT"; run_wrapper ""; unset PORT_OVERRIDE
+[ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "quick: a busy port with a free lock must FAIL (rc $RC): $OUT"
+grep -q "$FPORT" <<<"$OUT" && grep -q 'page-layout-server.pid' <<<"$OUT" && ok || bad "the busy-port message must name the port and the pidfile (got: $OUT)"
+[ "$(curl -s --max-time 1 "http://127.0.0.1:$FPORT/")" = foreign ] && ok || bad "a refused run must leave the foreign server running"
+kill "$FOREIGN" 2>/dev/null
+
+# --- a guard that crashed (exit 1 and no 'check-page-layout: coverage:' line) fails in every mode; the FAILN fallback must not turn it into a pass
+echo 'echo boom >&2; exit 1' >"$TMP/crash-guard.sh"
+for m in quick full; do
+  run_wrapper "" PAGE_LAYOUT=$m PAGE_LAYOUT_GUARD_CMD="bash -c 'echo boom >&2; exit 1'"
+  [ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "$m: a guard that exits 1 without a coverage line crashed, and must FAIL (rc $RC): $OUT"
+  run_wrapper "" PAGE_LAYOUT=$m PAGE_LAYOUT_GUARD_CMD="bash $TMP/crash-guard.sh"
+  [ "$RC" -ne 0 ] && ok || bad "$m: the same crash through a script must fail (rc $RC): $OUT"
+done
+# findings plus a coverage line, but the modes file cannot be read: the fail count is unknown, so FAIL (never the 'echo 0' fallback)
+cat >"$TMP/finding-guard.sh" <<'FS'
+echo "  - 1440px /plan: P3 content is 1036px wide"
+echo "check-page-layout: coverage: inspected 93 of 93 (not inspected 0: 0 exempt, 0 failing)"
+exit 1
+FS
+run_wrapper "" PAGE_LAYOUT_GUARD_CMD="bash $TMP/finding-guard.sh" PAGE_LAYOUT_MODES="$TMP/no-such-modes"
+[ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "an unreadable modes file must fail the run, not count as 0 failing findings (rc $RC): $OUT"
+
+# --- the driver's usage and exemption-file errors are exit 2, and the wrapper fails on exit 2 in every mode (quick too)
+printf 'garbage line with no such route\n' >"$TMP/bad-exempt"
+for args in "--url http://127.0.0.1:1 --ids $TMP/ids.json --exempt $TMP/bad-exempt" "--url http://127.0.0.1:1 --ids $TMP/ids.json --exempt $TMP/no-such-exempt" "--ids $TMP/ids.json"; do
+  DOUT=$(cd "$ROOT" && CHROME=/bin/true timeout 60 node "$DRV" $args 2>&1); RC=$?
+  [ "$RC" -eq 2 ] && ok || bad "driver '$args': an invalid or missing exempt file, or a usage error, must exit 2 (rc $RC): $DOUT"
+done
+for m in quick full; do
+  run_wrapper "" PAGE_LAYOUT=$m PAGE_LAYOUT_GUARD_CMD="bash -c 'echo check-page-layout: bad exemption file >&2; exit 2'"
+  [ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ! grep -q '^WARN' <<<"$OUT" && ok || bad "$m: a driver exit 2 (invalid exempt file, usage, could not start the session) must FAIL (rc $RC): $OUT"
+done
+
+# --- quick mode: coverage lost is a FAIL whatever the cause (server, seeder, timeouts, session); only no Chrome and no web build stay SKIP/WARN in quick
+quick_fails() { # LABEL env... -> asserts rc!=0, FAILED, no WARN line, server stopped
+  local label="$1"; shift
+  run_wrapper "" "$@"
+  [ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ! grep -q '^WARN' <<<"$OUT" && ok || bad "quick: $label must FAIL, not WARN (rc $RC): $OUT"
+  server_gone && ok || bad "quick: the server must be stopped after: $label"
+}
+server_gone() { ! curl -s --max-time 1 "http://127.0.0.1:$PORT/" >/dev/null 2>&1 && { [ ! -s "$RUN/pid" ] || ! kill -0 "$(cat "$RUN/pid")" 2>/dev/null; }; }
+echo 'true' >"$TMP/fake-seed.sh"
+quick_fails "the server did not start" PAGE_LAYOUT_SERVER_CMD=false
+echo 'exit 3' >"$TMP/seed-fails.sh"
+quick_fails "a seed failure" PAGE_LAYOUT_SEED_CMD="bash $TMP/seed-fails.sh"
+echo 'sleep 30' >"$TMP/hang.sh"
+t0=$SECONDS
+quick_fails "a seed timeout" PAGE_LAYOUT_SEED_CMD="bash $TMP/hang.sh" PAGE_LAYOUT_SEED_TIMEOUT=2
+[ $((SECONDS - t0)) -lt 20 ] && ok || bad "the seed timeout must cut the seeder off quickly"
+t0=$SECONDS
+quick_fails "a guard timeout" PAGE_LAYOUT_GUARD_CMD="bash $TMP/hang.sh" PAGE_LAYOUT_GUARD_TIMEOUT=2
+[ $((SECONDS - t0)) -lt 20 ] && ok || bad "the guard timeout must cut the guard off quickly"
+quick_fails "the driver could not start the session (exit 2)" PAGE_LAYOUT_GUARD_CMD="bash -c 'echo check-page-layout: could not start the session >&2; exit 2'"
+run_wrapper "" PAGE_LAYOUT=full PAGE_LAYOUT_SERVER_CMD=false
+[ "$RC" -ne 0 ] && ok || bad "full: a server that did not start must fail (rc $RC)"
+
+# --- no web build: the server answers the 503 'frontend not built' page. WARN (exit 0) in quick, FAILED in full; the seeder and the guard do not run
+rm -f "$TMP/seeded" "$TMP/guarded"
+echo "touch $TMP/seeded" >"$TMP/mark-seed.sh"; echo "touch $TMP/guarded" >"$TMP/mark-guard.sh"
+nb() { run_wrapper "" FAKE_NO_FRONTEND=1 PAGE_LAYOUT_SEED_CMD="bash $TMP/mark-seed.sh" PAGE_LAYOUT_GUARD_CMD="bash $TMP/mark-guard.sh" "$@"; }
+nb
+[ "$RC" -eq 0 ] && grep -q '^WARN' <<<"$OUT" && grep -qi 'frontend\|web build' <<<"$OUT" && ok || bad "quick: a server without a web build (503 'frontend not built') must WARN and exit 0 (rc $RC): $OUT"
+[ ! -e "$TMP/seeded" ] && [ ! -e "$TMP/guarded" ] && ok || bad "no web build: neither the seeder nor the guard may run"
+server_gone && ok || bad "no web build: the server must be stopped"
+nb PAGE_LAYOUT=full
+[ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "full: a server without a web build must FAIL (rc $RC): $OUT"
+server_gone && ok || bad "no web build (full): the server must be stopped"
+# no Chrome: SKIP in quick, FAILED in full
+out=$(CHROME=/nonexistent/chrome PAGE_LAYOUT_BUILD_DIR="$TMP/nochrome" "$W" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && grep -q 'SKIP' <<<"$out" && ok || bad "quick: no Chrome stays a SKIP with exit 0 (rc $rc): $out"
+out=$(CHROME=/nonexistent/chrome PAGE_LAYOUT=full PAGE_LAYOUT_BUILD_DIR="$TMP/nochrome" "$W" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && grep -q 'FAILED' <<<"$out" && ok || bad "full: no Chrome must FAIL (rc $rc): $out"
+
+# --- the OK line shows the probe count from the coverage summary
+run_wrapper ""
+grep -Eq 'page layout guard: OK \(quick profile, 93 probes' <<<"$OUT" && ok || bad "the OK line must read 'OK (quick profile, 93 probes, ...)' with the count from the coverage summary (got: $OUT)"
 
 printf 'check-page-layout-coverage_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
