@@ -172,7 +172,7 @@ func (s *Service) ApplyReceiptPlan(ctx context.Context, plan receipt.Plan) (Rece
 
 // applyReceiptPlan is ApplyReceiptPlan with the scan lock held.
 func (s *Service) applyReceiptPlan(ctx context.Context, plan receipt.Plan) (ReceiptApplyResult, error) {
-	r := &planRun{s: s, refs: map[string]int64{}, scanOf: map[string]string{}, index: map[string]int{}}
+	r := &planRun{s: s, refs: map[string]int64{}, scanOf: map[string]string{}, index: map[string]int{}, uuids: map[string]string{}}
 	for _, st := range plan.Steps {
 		if st.Op.Kind == receipt.OpNewScan && st.Op.Ref != "" {
 			r.scanOf[st.Op.Ref] = st.Op.UUID
@@ -204,7 +204,42 @@ type planRun struct {
 	refs    map[string]int64  // Ref -> the Product for it
 	scanOf  map[string]string // Ref -> the uuid of the plan's new scan for it
 	index   map[string]int    // client uuid -> its place in results
+	uuids   map[string]string // a plan uuid -> the uuid this run writes it under (see resolveUUID)
 	results []scan.Result
+}
+
+// errNoFreeUUID: every suffix of a plan uuid is taken by a put-back attempt (never expected; see resolveUUID).
+var errNoFreeUUID = errors.New("receipt apply: no free uuid for a plan scan")
+
+// resolveUUID is the uuid a plan scan is written under in this run. The plan's uuids come from the read, so a retry of
+// an apply that went through finds its scans live ("duplicate": nothing is done twice). A plan uuid whose scan is there
+// but undone was put back by an earlier attempt that failed; writing it again would answer "duplicate" and silently
+// skip the scan, so this attempt writes under the next free suffix ("#2", "#3", ...), which a later retry finds live.
+func (r *planRun) resolveUUID(ctx context.Context, u string) (string, error) {
+	if v, ok := r.uuids[u]; ok {
+		return v, nil
+	}
+	cand := u
+	for k := 2; k <= 100; k++ {
+		ev, ok, err := r.s.d.Ledger.Get(ctx, cand)
+		if err != nil {
+			return "", err
+		}
+		if !ok || ev.UndoneAt == "" {
+			r.uuids[u] = cand
+			return cand, nil
+		}
+		cand = fmt.Sprintf("%s#%d", u, k)
+	}
+	return "", errNoFreeUUID
+}
+
+// mapped is the uuid a plan uuid was written under in this run (itself when it was not, or is not a plan uuid).
+func (r *planRun) mapped(u string) string {
+	if v, ok := r.uuids[u]; ok {
+		return v
+	}
+	return u
 }
 
 // putBack runs the compensations in reverse order, every one even after a failure, and joins their errors.
@@ -232,7 +267,7 @@ func (r *planRun) step(ctx context.Context, st receipt.Step) (func(context.Conte
 		return r.inverse(st.Inverse), nil
 
 	case receipt.OpUndo:
-		res, err := r.s.undo(ctx, st.Op.UUID)
+		res, err := r.s.undo(ctx, r.mapped(st.Op.UUID))
 		if err != nil {
 			return nil, err
 		}
@@ -286,7 +321,7 @@ func (r *planRun) exec(ctx context.Context, op receipt.Op) error {
 		_, err := r.newScan(ctx, op)
 		return err
 	case receipt.OpUndo:
-		_, err := r.s.undo(ctx, op.UUID)
+		_, err := r.s.undo(ctx, r.mapped(op.UUID))
 		return err
 	case receipt.OpUpdateProduct:
 		_, err := r.s.d.Catalogue.UpdateProduct(ctx, op.ProductID, ProductUpdate{Name: op.Name, PackSize: float64(op.PackSize)})
@@ -311,8 +346,12 @@ func (r *planRun) newScan(ctx context.Context, op receipt.Op) (scan.Result, erro
 		}
 		pid = id
 	}
+	uuid, err := r.resolveUUID(ctx, op.UUID)
+	if err != nil {
+		return scan.Result{}, err
+	}
 	shop := op.ShopID
-	so := scan.Op{ClientUUID: op.UUID, ScannedAt: op.Date + "T12:00:00Z", Kind: scan.KindShopScan, ShopID: &shop,
+	so := scan.Op{ClientUUID: uuid, ScannedAt: op.Date + "T12:00:00Z", Kind: scan.KindShopScan, ShopID: &shop,
 		ProductID: pid, Quantity: op.Quantity}
 	if op.PriceCents >= 0 {
 		c := op.PriceCents
@@ -340,7 +379,11 @@ func (r *planRun) newScan(ctx context.Context, op receipt.Op) (scan.Result, erro
 // (reused is true, and nothing is made). Otherwise the Ingredient is found or created (with its kind) and the Product is
 // created without a barcode.
 func (r *planRun) createProduct(ctx context.Context, op receipt.Op) (id int64, reused bool, err error) {
-	if uuid, ok := r.scanOf[op.Ref]; ok {
+	if planUUID, ok := r.scanOf[op.Ref]; ok {
+		uuid, err := r.resolveUUID(ctx, planUUID)
+		if err != nil {
+			return 0, false, err
+		}
 		ev, found, err := r.s.d.Ledger.Get(ctx, uuid)
 		if err != nil {
 			return 0, false, err
@@ -377,7 +420,7 @@ func (r *planRun) setPrices(ctx context.Context, op receipt.Op) ([]scan.Result, 
 	}
 	uuids := make([]string, len(op.Prices))
 	for i, c := range op.Prices {
-		uuids[i] = c.UUID
+		uuids[i] = r.mapped(c.UUID)
 	}
 	first := op.Prices[0]
 	in := SetPricesInput{ClientUUIDs: uuids, PriceCents: first.PriceCents}

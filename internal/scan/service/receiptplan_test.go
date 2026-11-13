@@ -794,3 +794,44 @@ func TestApplyReceiptHoldsTheLockFromTheCheckToTheEndOfThePlan(t *testing.T) {
 		t.Errorf("u1 = %d, u2 live %v: want the plan first, then the Undo", e.priceOfScan(t, "u1"), e.live(t, "u2"))
 	}
 }
+
+// A plan that failed and was put back leaves its scans in the ledger, undone. Its retry (the session did not change, so
+// the fingerprint holds) must scan again, not answer "duplicate" for the undone scans and skip them.
+func TestARetryAfterAPutBackScansAgain(t *testing.T) {
+	e := newRR3Env(t)
+	plan := receipt.Plan{Steps: []receipt.Step{
+		// Milk is not on the Shopping List (the fake List does not undo a clamped remaining exactly)
+		step(receipt.PhaseQuantity, newScanOp(uSecond, milkProd, 1000, 150), undoOp(uSecond)),
+		step(receipt.PhaseCorrection,
+			receipt.Op{Kind: receipt.OpUpdateProduct, ProductID: mutti, Name: "Mutti passata 700 g (new)", PackSize: 700},
+			receipt.Op{Kind: receipt.OpUpdateProduct, ProductID: mutti, Name: "Mutti passata 700 g", PackSize: 700}),
+	}}
+	e.f.arm("UpdateProduct", func(a any) bool { return a.(service.ProductUpdate).Name != "Mutti passata 700 g" })
+	before := e.snapshot(t)
+	if _, err := e.apply(t, plan); err == nil {
+		t.Fatal("the plan succeeded with a failure injected")
+	}
+	if e.snapshot(t) != before || e.live(t, uSecond) {
+		t.Fatalf("the failed plan was not put back (live %v):\n%s\n--\n%s", e.live(t, uSecond), before, e.snapshot(t))
+	}
+	res, err := e.apply(t, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resultUUIDs(res); len(got) != 1 || got[0] != uSecond+"#2" || res.Results[0].Status != scan.StatusApplied {
+		t.Fatalf("results = %v %+v, want %s#2 applied", got, res.Results, uSecond)
+	}
+	if !e.live(t, uSecond+"#2") || e.lotCountFor(t) != 4 {
+		t.Errorf("the retry did not scan again: live %v, lots %d", e.live(t, uSecond+"#2"), e.lotCountFor(t))
+	}
+	// and a retry of that retry is idempotent again
+	res, err = e.apply(t, plan)
+	if err != nil || len(res.Results) != 1 || res.Results[0].Status != scan.StatusDuplicate || e.lotCountFor(t) != 4 {
+		t.Errorf("third apply = %+v, %v, lots %d", res.Results, err, e.lotCountFor(t))
+	}
+}
+
+func (r *rr3Env) lotCountFor(t *testing.T) int {
+	t.Helper()
+	return r.stock.lotCount()
+}
