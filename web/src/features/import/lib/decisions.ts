@@ -1,5 +1,5 @@
 // Pure helpers that build the answers sent to the server. Every function returns a new object and leaves the input untouched.
-import type { BaseUnit, ConversionAnswer, CourseDecision, Decisions, IngredientDecision, RecipeAction, RecipeDecision } from './../types'
+import type { BaseRecipeAnswer, BaseUnit, ConversionAnswer, CourseDecision, Decisions, IngredientDecision, RecipeAction, RecipeDecision } from './../types'
 
 /** No answers yet. */
 export function emptyDecisions(): Decisions {
@@ -82,4 +82,33 @@ export function chooseCourseUnarchive(d: Decisions, key: string): Decisions {
 /** The answers a non-Admin cannot give (`add`, `unarchive`) taken out, everything else kept; used after a 403. */
 export function dropAdminCourseAnswers(d: Decisions): Decisions {
   return { ...d, courses: d.courses.filter((c) => c.action !== 'add' && c.action !== 'unarchive') }
+}
+
+// ---- BR-E: Base recipe answers (docs/dev/design/base-recipes.md §11.3) ----
+
+/** Copies a record without one key. */
+function omitKey<T>(record: Record<string, T>, key: string): Record<string, T> {
+  const out = { ...record }
+  delete out[key]
+  return out
+}
+
+/** Answers a Base recipe tile by its line path. A new answer also drops the take-over answer of that path (the ask may no longer apply). */
+export function chooseBaseRecipeLine(d: Decisions, path: string, answer: BaseRecipeAnswer): Decisions {
+  const next: Decisions = { ...d, baseRecipeLines: { ...(d.baseRecipeLines ?? {}), [path]: answer } }
+  if (d.takeOvers && path in d.takeOvers) next.takeOvers = omitKey(d.takeOvers, path)
+  return next
+}
+
+/** Answers a take-over ask by its path: true takes the Ingredient over, false keeps it apart. */
+export function chooseTakeOver(d: Decisions, path: string, yes: boolean): Decisions {
+  return { ...d, takeOvers: { ...(d.takeOvers ?? {}), [path]: yes } }
+}
+
+/** Removes a tile's answer and its take-over answer. */
+export function clearBaseRecipeLine(d: Decisions, path: string): Decisions {
+  const next: Decisions = { ...d }
+  if (d.baseRecipeLines) next.baseRecipeLines = omitKey(d.baseRecipeLines, path)
+  if (d.takeOvers) next.takeOvers = omitKey(d.takeOvers, path)
+  return next
 }

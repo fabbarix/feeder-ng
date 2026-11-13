@@ -1,9 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import type { TakeOverAsk } from '../../../lib/baseRecipes/types'
 import { ApiError } from '../../../lib/http'
 import { importApi } from '../api'
+import { confirmProblem, type ConfirmProblem } from '../lib/confirmErrors'
+import type { ReadNextTarget } from '../lib/confirmFollowUps'
 import {
   answerConversion,
+  chooseBaseRecipeLine,
+  chooseTakeOver,
   chooseCreate,
   chooseCourseAdd,
   chooseCourseSkip,
@@ -16,7 +21,14 @@ import {
 } from '../lib/decisions'
 import { readFileError } from '../lib/errors'
 import { confirmPhoto, initialPhotoChoice, normaliseChoice, photoRecipes as photoRecipesOf, type PhotoChoice, type PhotoRecipeOption } from '../lib/photoChoice'
-import type { AdoptedRead, BaseUnit, Decisions, FileError, ImportResult, Plan, ReadNoteInfo, RecipeAction, ReviewPhoto } from '../types'
+import type { AdoptedRead, BaseRecipeAnswer, BaseUnit, Decisions, FileError, ImportResult, Plan, ReadNoteInfo, RecipeAction, ReviewPhoto } from '../types'
+
+/** BR-E: the take-over ask open as a dialog after a Confirm refused it (409 base_recipe_take_over): the tile's path and the Base recipe's name. */
+export interface TakeOverPrompt {
+  path: string
+  baseName: string
+  ask: TakeOverAsk
+}
 
 export interface UseImportReview {
   phase: 'source' | 'reviewing' | 'done'
@@ -46,6 +58,22 @@ export interface UseImportReview {
   confirm: () => Promise<void>
   /** Discards the server-side review and returns to the source step. */
   reset: () => Promise<void>
+
+  // ---- BR-E: Base recipes (docs/dev/design/base-recipes.md §11.3, §13) ----
+  /** Answers a Base recipe tile by its line path. Each re-plans like the other answers. */
+  chooseBaseRecipeLine: (path: string, answer: BaseRecipeAnswer) => void
+  /** Answers a take-over ask by its path (true takes the Ingredient over, false keeps it apart). */
+  chooseTakeOver: (path: string, yes: boolean) => void
+  /** What the last Confirm refused (cycle, take-over, a refused answer, an unready plan); cleared by the next answer. */
+  confirmProblem: ConfirmProblem | undefined
+  /** The take-over dialog a Confirm refusal opened; Yes or No answers it and confirms again, Escape saves nothing. */
+  takeOverPrompt: TakeOverPrompt | undefined
+  answerTakeOverPrompt: (yes: boolean) => void
+  cancelTakeOverPrompt: () => void
+  /** "Read Béchamel now": starts over at the source step, for a read whose review replaces that Base recipe. */
+  startReadNext: (target: ReadNextTarget) => Promise<void>
+  /** The Base recipe the next read is for, until Start over or a new file. */
+  readNextFor: ReadNextTarget | undefined
 
   // ---- Recipe Assistant (WP-E / WP-G): docs/dev/design/ra-e-import.md section 5.2 ----
   /** The open review's id (thumbnails are GET /api/imports/{id}/photos/{n}). */
@@ -93,6 +121,9 @@ export function useImportReview(): UseImportReview {
   const [decisions, setDecisions] = useState<Decisions>(emptyDecisions)
   const [extras, setExtrasState] = useState<ReadExtras>(noExtras)
   const [courseForbidden, setCourseForbidden] = useState(false)
+  const [confirmProblemState, setConfirmProblem] = useState<ConfirmProblem | undefined>(undefined)
+  const [takeOverPrompt, setTakeOverPrompt] = useState<TakeOverPrompt | undefined>(undefined)
+  const [readNextFor, setReadNextFor] = useState<ReadNextTarget | undefined>(undefined)
 
   // Refs mirror the latest values, so answers given in quick succession build on each other.
   const decisionsRef = useRef<Decisions>(decisions)
@@ -130,6 +161,9 @@ export function useImportReview(): UseImportReview {
         setStale(false)
         setResult(undefined)
         setExtras(noExtras())
+        setConfirmProblem(undefined)
+        setTakeOverPrompt(undefined)
+        setReadNextFor(undefined)
         setCurrent({ id: res.id, plan: res.plan })
         setPhase('reviewing')
       } catch (e) {
@@ -155,6 +189,9 @@ export function useImportReview(): UseImportReview {
       })
       setCurrent({ id: read.id, plan: read.plan })
       setCourseForbidden(false)
+      setConfirmProblem(undefined)
+      setTakeOverPrompt(undefined)
+      setReadNextFor(undefined)
       setPhase('reviewing')
     },
     [setCurrent, setExtras],
@@ -181,14 +218,16 @@ export function useImportReview(): UseImportReview {
   const answer = useCallback(
     (next: Decisions) => {
       setCourseForbidden(false)
+      setConfirmProblem(undefined)
       replan(next)
     },
     [replan],
   )
 
-  const confirm = useCallback(async () => {
+  const confirmImport = useCallback(async () => {
     const current = reviewRef.current
     if (!current) return
+    setConfirmProblem(undefined)
     try {
       const { photos, choice } = extrasRef.current
       const options = photoRecipesOf(current.plan, decisionsRef.current)
@@ -202,7 +241,20 @@ export function useImportReview(): UseImportReview {
       // CRS E2: an import that added or brought back a Course changes the Courses lists.
       if ((res.coursesCreated ?? 0) > 0 || (res.coursesUnarchived ?? 0) > 0) void client.invalidateQueries({ queryKey: ['courses'] })
     } catch (e) {
-      if (e instanceof ApiError && e.code === 'import_not_ready') {
+      const problem = confirmProblem(e)
+      if (problem?.kind === 'takeOver') {
+        // BR-E (P7): the ask names the plain Ingredient; the dialog asks the Base recipe whose tile carries that ask.
+        const asked = current.plan.takeOvers.find((a) => a.ingredient.id === problem.ask.ingredient.id)
+        if (asked) {
+          setTakeOverPrompt({ path: asked.path, baseName: asked.name, ask: problem.ask })
+          return
+        }
+      }
+      if (problem && (problem.kind !== 'validation' || problem.reason !== undefined)) {
+        // BR-E: a refusal that names what to fix (a cycle, a Base recipe refused as planned, an unready plan) stays on the review.
+        if (problem.kind === 'notReady') setCurrent({ id: current.id, plan: problem.plan })
+        setConfirmProblem(problem)
+      } else if (e instanceof ApiError && e.code === 'import_not_ready') {
         setCurrent({ id: current.id, plan: e.details.plan as Plan })
       } else if (e instanceof ApiError && e.code === 'import_stale') {
         setStale(true)
@@ -233,8 +285,33 @@ export function useImportReview(): UseImportReview {
     setResult(undefined)
     setExtras(noExtras())
     setCourseForbidden(false)
+    setConfirmProblem(undefined)
+    setTakeOverPrompt(undefined)
+    setReadNextFor(undefined)
     setPhase('source')
   }, [setCurrent, setExtras])
+
+  // BR-E: answers the take-over dialog and confirms again with that answer (nothing is saved on Escape).
+  const answerTakeOverPrompt = useCallback(
+    async (yes: boolean) => {
+      if (!takeOverPrompt) return
+      const next = chooseTakeOver(decisionsRef.current, takeOverPrompt.path, yes)
+      decisionsRef.current = next
+      setDecisions(next)
+      setTakeOverPrompt(undefined)
+      await confirmImport()
+    },
+    [takeOverPrompt, confirmImport],
+  )
+
+  // BR-E: "Read Béchamel now": the review is discarded (its import is saved), and the next read is remembered for the Base recipe.
+  const startReadNext = useCallback(
+    async (target: ReadNextTarget) => {
+      await reset()
+      setReadNextFor(target)
+    },
+    [reset],
+  )
 
   const photoRecipes = useMemo(() => photoRecipesOf(review?.plan, decisions), [review?.plan, decisions])
   const photoChoice = useMemo(() => normaliseChoice(extras.choice, extras.photos.length, photoRecipes), [extras, photoRecipes])
@@ -261,8 +338,16 @@ export function useImportReview(): UseImportReview {
     chooseCourseAdd: (key) => answer(chooseCourseAdd(decisionsRef.current, key)),
     chooseCourseUnarchive: (key) => answer(chooseCourseUnarchive(decisionsRef.current, key)),
     courseForbidden,
-    confirm,
+    confirm: confirmImport,
     reset,
+    chooseBaseRecipeLine: (path, a) => answer(chooseBaseRecipeLine(decisionsRef.current, path, a)),
+    chooseTakeOver: (path, yes) => answer(chooseTakeOver(decisionsRef.current, path, yes)),
+    confirmProblem: confirmProblemState,
+    takeOverPrompt,
+    answerTakeOverPrompt,
+    cancelTakeOverPrompt: () => setTakeOverPrompt(undefined),
+    startReadNext,
+    readNextFor,
     reviewId: review?.id,
     adopt,
     photos: extras.photos,

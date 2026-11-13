@@ -1,5 +1,7 @@
 import { http } from '../../lib/http'
 import type { AssistantStatus, ConfirmPhoto, Decisions, ExportableRecipe, ImportResult, ReadBody, ReadStarted, ReadView, ReviewResponse } from './types'
+import type { CallGraph } from './lib/exportAlso'
+
 
 /** Recipe File calls (routes in docs/dev/design/t12-import-export.md). */
 export const importApi = {
@@ -15,6 +17,14 @@ export const importApi = {
   agentPrompt: async (): Promise<string> => (await http.get<{ prompt: string }>('/api/recipe-file/agent-prompt')).prompt,
   /** Recipes to pick from, archived ones included. */
   recipes: () => http.get<ExportableRecipe[]>('/api/recipes?archived=all'),
+  /** BR-E: the Base recipes a Recipe calls for on its lines (GET /api/recipes/{id}, its `lines[].baseRecipe`): the Export picker's "Also exports". */
+  recipeCalls: async (id: number): Promise<CallGraph[number]> => {
+    const detail = await http.get<{ name: string; lines: Array<{ baseRecipe: { id: number; name: string } | null }> }>(`/api/recipes/${id}`)
+    return {
+      name: detail.name,
+      calls: detail.lines.flatMap((l) => (l.baseRecipe ? [{ id: l.baseRecipe.id, name: l.baseRecipe.name }] : [])),
+    }
+  },
 
   // ---- Recipe Assistant reads (WP-E / WP-G) ----
   /** GET /api/recipe-assistant/status. */
