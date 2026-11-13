@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log/slog"
 	"sort"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/household"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
-	"github.com/fabbarix/feeder-ng/internal/ingredient"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/planner"
@@ -27,7 +25,6 @@ import (
 type DBSources struct {
 	hh   *householdstore.Store
 	rc   *recipestore.Store
-	ing  *ingredientstore.Store
 	prod *productstore.Store
 	log  *slog.Logger
 }
@@ -38,7 +35,6 @@ func NewDBSources(db *sql.DB, clk clock.Clock, logger *slog.Logger) *DBSources {
 	return &DBSources{
 		hh:   householdstore.New(db, clk),
 		rc:   recipestore.New(db, clk, ingredientUnits{ing}),
-		ing:  ing,
 		prod: productstore.New(db, clk),
 		log:  logger,
 	}
@@ -198,75 +194,49 @@ func (s *DBSources) members(ctx context.Context) (map[int64]household.Member, er
 }
 
 // Recipes implements Sources: every plannable Recipe, archived ones included, with the Needs of one Batch in Base
-// Units. A Base recipe line is flattened (baserecipe.Flatten over NeedTrees): the Base recipe's own leaves at full
-// Quantity, and the Base recipe itself as an optional line of 0, so an Exclusion of any Ingredient inside it rules the
-// Recipe out (section 5). A line whose unit cannot be converted is left out (it is not deducted and not planned for).
-// A Base recipe is never passed: it could never be a candidate.
+// Units. A Base recipe line is flattened (baserecipe.Flatten over the batch need trees): the Base recipe's own leaves at
+// full Quantity, and the Base recipe itself as an optional line of 0, so an Exclusion of any Ingredient inside it rules
+// the Recipe out (section 5). A line whose unit cannot be converted is left out (it is not deducted and not planned
+// for). A Base recipe is never passed: it could never be a candidate.
+//
+// The reads are one List (the Recipe fields, composed lead time included in its summary) and one batch of need trees;
+// no Recipe is loaded or composed on its own.
 func (s *DBSources) Recipes(ctx context.Context) ([]planner.Recipe, error) {
 	list, err := s.rc.List(ctx, recipestore.ListFilter{Archived: "all"})
 	if err != nil {
 		return nil, err
 	}
-	trees, err := s.NeedTrees(ctx)
+	trees, err := s.treeResults(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ings := map[int64]ingredient.Ingredient{}
 	out := make([]planner.Recipe, 0, len(list))
 	for _, sum := range list {
-		tree, ok := trees[sum.ID]
+		tr, ok := trees[sum.ID]
 		if !ok {
-			// A Recipe without a tree (a cycle, left out by NeedTrees) is never planned: with no Needs it would pass
-			// every Exclusion.
 			s.log.Warn("recipe without a need tree left out of the planner", "recipe", sum.ID)
 			continue
 		}
-		rec, err := s.rc.Get(ctx, sum.ID)
-		if err != nil {
-			return nil, err
-		}
-		pr := planner.Recipe{ID: planner.RecipeID(rec.ID), Name: rec.Name, Yield: rec.Yield, Archived: rec.Archived,
-			CooldownDays: rec.CooldownDays, UseByDays: rec.LeftoverUseByDays, CourseIDs: rec.CourseIDs}
-		pr.WholeMeal = rec.WholeMeal != nil && *rec.WholeMeal
-		for _, t := range rec.Tags {
-			pr.Tags = append(pr.Tags, planner.Tag(t))
-		}
-		adv, err := s.advanceSteps(ctx, rec)
-		if errors.Is(err, baserecipe.ErrCycle) {
-			s.log.Warn("recipe with a Base recipe cycle left out of the planner", "recipe", sum.ID)
+		if tr.Err != nil {
+			// A cycle: treeResults has logged it. With no Needs it would pass every Exclusion, so it is never planned.
 			continue
 		}
-		if err != nil {
-			return nil, err
+		pr := planner.Recipe{ID: planner.RecipeID(sum.ID), Name: sum.Name, Yield: sum.Yield, Archived: sum.Archived,
+			CooldownDays: sum.CooldownDays, UseByDays: sum.LeftoverUseByDays, CourseIDs: sum.CourseIDs, WholeMeal: sum.WholeMeal}
+		for _, t := range sum.Tags {
+			pr.Tags = append(pr.Tags, planner.Tag(t))
 		}
-		pr.AdvanceSteps = adv
-		for _, n := range baserecipe.Flatten(tree) {
+		// The longest lead of the composed Advance Steps (its own and its Base recipes') is the one the lead-time filter
+		// needs: a cell is blocked when any Advance Step starts too late, so one step of that lead covers them all.
+		if sum.AdvanceMinutes > 0 {
+			pr.AdvanceSteps = []planner.AdvanceStep{{Lead: time.Duration(sum.AdvanceMinutes) * time.Minute}}
+		}
+		for _, n := range baserecipe.Flatten(tr.Needs) {
 			pr.Needs = append(pr.Needs, planner.Need{IngredientID: planner.IngredientID(n.IngredientID), Quantity: n.Quantity, Optional: n.Optional})
 		}
-		s.logSkippedLines(ctx, rec, ings)
 		out = append(out, pr)
 	}
 	return out, nil
-}
-
-// logSkippedLines warns about each line of the Recipe that Expand leaves out: an unknown Ingredient or a unit that does
-// not convert. The skip itself is silent in the domain; the planner's view is the one that is logged.
-func (s *DBSources) logSkippedLines(ctx context.Context, rec recipe.Recipe, ings map[int64]ingredient.Ingredient) {
-	for _, line := range rec.Lines {
-		ing, ok := ings[line.IngredientID]
-		if !ok {
-			got, err := s.ing.Get(ctx, line.IngredientID)
-			if err != nil {
-				s.log.Warn("recipe line with an unknown Ingredient skipped", "recipe", rec.ID, "ingredient", line.IngredientID)
-				continue
-			}
-			ing = got
-			ings[line.IngredientID] = ing
-		}
-		if _, err := units.ToBase(line.Quantity, line.Unit, ing.Units()); err != nil {
-			s.log.Warn("recipe line with an unconvertible unit skipped", "recipe", rec.ID, "ingredient", line.IngredientID)
-		}
-	}
 }
 
 // Preferences implements Sources: each Member's Favourites, Dislikes, Exclusions and excluded Ingredients.

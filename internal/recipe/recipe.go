@@ -611,6 +611,11 @@ type Summary struct {
 	AdvanceMinutes int
 	ReheatMinutes  int // 0 = none (R12)
 
+	// CooldownDays and LeftoverUseByDays are the Recipe's own overrides (nil = the Household default), so the planner
+	// reads them from the list without composing the Recipe.
+	CooldownDays      *int
+	LeftoverUseByDays *int
+
 	BaseRecipe  bool   // §10: a Base recipe
 	YieldUnit   string // its Yield's unit, "" for a plannable Recipe
 	UsedByCount int    // Recipes that call for it (Base recipes only)

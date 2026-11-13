@@ -751,7 +751,9 @@ func refreshTotals(ctx context.Context, tx *sql.Tx, id int64) error {
 		if err != nil {
 			continue // a cycle: the save that made it was refused
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE recipes SET total_minutes = ? WHERE id = ?`, composed.TotalMinutes, r); err != nil {
+		_, advance := composedAdvance(composed)
+		if _, err := tx.ExecContext(ctx, `UPDATE recipes SET total_minutes = ?, advance_minutes = ? WHERE id = ?`,
+			composed.TotalMinutes, advance, r); err != nil {
 			return err
 		}
 	}
@@ -1729,23 +1731,4 @@ func (s *Store) BaseUnit(ctx context.Context, baseID int64) (string, error) {
 		return "", ErrNotFound
 	}
 	return u, err
-}
-
-// RecipesOfLines lists the Recipes the lines belong to, in line order, each once (the events of an undo).
-func (s *Store) RecipesOfLines(ctx context.Context, lineIDs []int64) ([]int64, error) {
-	var out []int64
-	for _, id := range lineIDs {
-		var recipeID int64
-		err := s.db.QueryRowContext(ctx, `SELECT recipe_id FROM recipe_lines WHERE id = ?`, id).Scan(&recipeID)
-		if errors.Is(err, sql.ErrNoRows) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		if !containsID(out, recipeID) {
-			out = append(out, recipeID)
-		}
-	}
-	return out, nil
 }
