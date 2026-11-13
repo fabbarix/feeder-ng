@@ -132,18 +132,20 @@ func TestTheRangeAndThePlanDoNotChangeARestockLine(t *testing.T) {
 func TestARestockLineHasTheSuggestionRoundedUpToWholePacks(t *testing.T) {
 	for _, c := range []struct {
 		name      string
+		level     float64
 		have      float64
 		size      float64
 		wantQ     float64
 		wantCount int
 		wantRem   float64
 	}{
-		{"7 short of a pack of 9 is one pack", 2, 9, 7, 1, 2},
-		{"nothing in Stock, level 9, packs of 9: one pack", 0, 9, 9, 1, 0}, // level 9: exactly one pack
-		{"level 20 with 2 in Stock and packs of 6: 18 is three packs", 2, 6, 18, 3, 0},
-		{"level 20 with 4 in Stock and packs of 6: 16 is three packs", 4, 6, 16, 3, 2},
+		{"7 short of a pack of 9 is one pack", 9, 2, 9, 7, 1, 2},
+		{"nothing in Stock, level 9, packs of 9: one pack", 9, 0, 9, 9, 1, 0}, // level 9: exactly one pack
+		{"level 20 with 2 in Stock and packs of 6: 18 is three packs", 20, 2, 6, 18, 3, 0},
+		{"level 20 with 4 in Stock and packs of 6: 16 is three packs", 20, 4, 6, 16, 3, 2},
 	} {
 		in := supplyInput(lot(1, bags, c.have))
+		in.Ingredients[bags] = shopping.IngredientInfo{Name: "Bin bags", BaseUnit: "piece", Supply: true, RestockLevel: fp(c.level)}
 		in.Packs = map[int64]shopping.Pack{bags: {ProductID: 5, Name: "Bin bags", Size: c.size}}
 		got := line(t, shopping.Derive(in), bags)
 		if !near(got.Quantity, c.wantQ) || got.Pack == nil || got.Pack.Count != c.wantCount || !near(got.Pack.Remainder, c.wantRem) {
@@ -171,7 +173,7 @@ func TestARestockLineIsPricedFromItsPackAndCountsInTheEstimate(t *testing.T) {
 
 // A Supply both restocked and added by hand shows both, as a food Line and its extra do today (§4.4).
 func TestARestockLineAndAnExtraOfTheSameSupplyShowBoth(t *testing.T) {
-	in := supplyInput(lot(1, paper, 2))
+	in := supplyInput(lot(1, paper, 2), lot(9, bags, 20))
 	in.Extras = []shopping.Extra{{ID: 1, IngredientID: paper, Quantity: 4}}
 	l := shopping.Derive(in)
 	got := line(t, l, paper)
@@ -198,7 +200,7 @@ func TestAnExtraOfFoodIsNotASupply(t *testing.T) {
 }
 
 func TestAnExtraOfASupplyWithoutALevelIsMarkedASupply(t *testing.T) {
-	in := supplyInput()
+	in := supplyInput(lot(9, bags, 20))
 	in.Extras = []shopping.Extra{{ID: 1, IngredientID: soapGel, Quantity: 500}}
 	l := shopping.Derive(in)
 	if len(l.Extras) != 1 || !l.Extras[0].Supply || len(l.Lines) != 1 { // the only Line is Toilet paper at 0 of 9
@@ -207,7 +209,7 @@ func TestAnExtraOfASupplyWithoutALevelIsMarkedASupply(t *testing.T) {
 }
 
 func TestTickedRestockLineWhoseStockWasBoughtStaysOnTheListTicked(t *testing.T) {
-	in := supplyInput(lot(1, paper, 2), lot(2, paper, 7)) // 7 bought: Stock is now 9, at the level
+	in := supplyInput(lot(1, paper, 2), lot(2, paper, 7), lot(9, bags, 20)) // 7 bought: Stock is now 9, at the level
 	in.Ticks = map[int64]shopping.Tick{paper: {IngredientID: paper, Needed: 7, By: "hand"}}
 	l := shopping.Derive(in)
 	got := line(t, l, paper)
@@ -232,7 +234,7 @@ func TestTickedRestockLineStillBelowTheLevelIsTickedWithoutPackOrCost(t *testing
 }
 
 func TestNotNeededTakesARestockLineOffTheListForTheRange(t *testing.T) {
-	in := supplyInput(lot(1, paper, 2))
+	in := supplyInput(lot(1, paper, 2), lot(9, bags, 20))
 	in.NotNeeded = map[int64]shopping.NotNeeded{paper: {IngredientID: paper, Needed: 7}}
 	l := shopping.Derive(in)
 	noLine(t, l, paper)
