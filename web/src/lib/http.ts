@@ -36,6 +36,8 @@ export interface HttpClient {
   put<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
   patch<T>(path: string, body?: unknown, opts?: RequestOptions): Promise<T>
   delete<T>(path: string, opts?: RequestOptions): Promise<T>
+  /** BR-D: a DELETE with a JSON body (the unlink of a Base recipe line names the Ingredient). */
+  deleteJson<T>(path: string, body: unknown): Promise<T>
 }
 
 // Resolved at call time so tests can stub the global fetch after import.
@@ -75,6 +77,7 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
     put: <T>(path: string, body?: unknown, opts?: RequestOptions) => request<T>('PUT', path, body, opts),
     patch: <T>(path: string, body?: unknown, opts?: RequestOptions) => request<T>('PATCH', path, body, opts),
     delete: <T>(path: string, opts?: RequestOptions) => request<T>('DELETE', path, undefined, opts),
+    deleteJson: <T>(path: string, body: unknown) => request<T>('DELETE', path, body),
   }
 }
 

@@ -17,6 +17,8 @@ export interface Ingredient {
   image?: string
   /** IM2: '/api/images/<image>' or ''. */
   imageUrl?: string
+  /** BR-D: set when this is a Base recipe's Ingredient; null/absent for a plain Ingredient. */
+  baseRecipe?: { id: number; name: string; archived: boolean } | null
 }
 
 /** GET /api/ingredients/{id}: the Ingredient plus what other features use it (label -> count). */

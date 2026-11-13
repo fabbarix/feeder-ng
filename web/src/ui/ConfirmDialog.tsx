@@ -5,7 +5,8 @@ import { overlayStrings } from './overlayStrings'
 
 export interface ConfirmOptions {
   title: string
-  body?: string
+  /** One paragraph, or several (BR-D: the convert and take-over confirms name what goes, one paragraph each). */
+  body?: string | string[]
   confirmLabel: string
   /** Default 'Cancel'. */
   cancelLabel?: string
@@ -58,7 +59,15 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel = o
         </>
       }
     >
-      {body ? <p className="confirm-dialog__body">{body}</p> : null}
+      {Array.isArray(body)
+        ? body.map((paragraph, i) => (
+            <p key={i} className="confirm-dialog__body">
+              {paragraph}
+            </p>
+          ))
+        : body
+          ? <p className="confirm-dialog__body">{body}</p>
+          : null}
     </Dialog>
   )
 }

@@ -20,6 +20,8 @@ export interface PreferenceTableProps {
   /** The preferences failed to load: an ErrorState with a retry. */
   error?: boolean
   onRetry?: () => void
+  /** BR-D: a Base recipe offers Exclusion only (P2 = A): no Favourite and no Dislike column or button. */
+  exclusionOnly?: boolean
 }
 
 type State = Exclude<PreferenceState, 'none'>
@@ -33,7 +35,9 @@ const STATES: { state: State; label: string; icon: IconName }[] = [
  * The Recipe's preferences of the whole Household: a real table, one row per Member, one column per state, each cell
  * a toggle button (rx-pt.md section 5.3). An Exclusion that comes from an Ingredient is shown read-only.
  */
-export function PreferenceTable({ recipeName, rows, onToggle, highlightedMemberId = null, isAdmin = false, error = false, onRetry }: PreferenceTableProps): ReactNode {
+export function PreferenceTable({ recipeName, rows, onToggle, highlightedMemberId = null, isAdmin = false, error = false, onRetry, exclusionOnly }: PreferenceTableProps): ReactNode {
+  // BR-D (P2 = A): a Base recipe offers Exclusion only.
+  const states = exclusionOnly ? STATES.filter((s) => s.state === 'exclusion') : STATES
   if (error) return <ErrorState message={recipeStrings.preferencesLoadError} onRetry={onRetry} />
   if (rows.length === 0) {
     return (
@@ -53,7 +57,7 @@ export function PreferenceTable({ recipeName, rows, onToggle, highlightedMemberI
             <th scope="col" className="preference-table__member">
               {recipeStrings.memberColumn}
             </th>
-            {STATES.map((s) => (
+            {states.map((s) => (
               <th key={s.state} scope="col" className="preference-table__state">
                 <span className="preference-table__head-icon">
                   <Icon name={s.icon} size={20} />
@@ -78,7 +82,7 @@ export function PreferenceTable({ recipeName, rows, onToggle, highlightedMemberI
                   {row.you ? <Chip kind="tag">{recipeStrings.you}</Chip> : null}
                 </span>
               </th>
-              {STATES.map((s) => (
+              {states.map((s) => (
                 <td key={s.state} className="preference-table__cell">
                   <StateCell row={row} state={s.state} label={s.label} icon={s.icon} onToggle={onToggle} />
                 </td>

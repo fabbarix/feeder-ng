@@ -39,6 +39,8 @@ export function withDefaultCourse(draft: RecipeDraft, courses: readonly CourseCh
 
 /** `{ courses: 'courses_empty' }` for an empty choice, `{}` otherwise. */
 export function validateCourses(draft: RecipeDraft): Record<string, string> {
+  // BR-D: a Base recipe is never planned, so it needs no Course.
+  if (draft.baseRecipe === true) return {}
   return draft.courseIds.length === 0 ? { courses: 'courses_empty' } : {}
 }
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { useConfirm } from '../../../ui'
+import { inUseRefusal } from '../../../lib/baseRecipes/refusals'
 import { codeMessage, recipeStrings } from '../strings'
 import type { UseRecipe } from './useRecipe'
 
@@ -59,6 +60,18 @@ export function useRecipeActions(
       await recipe.remove()
       onDeleted()
     } catch (err) {
+      // BR-D: a Base recipe that Recipes call for is not deleted; the dialog names them and offers Archive instead.
+      const inUse = inUseRefusal(err, meta.name)
+      if (inUse) {
+        const archive = await confirm.confirm({ title: recipeStrings.inUse.title(meta.name), body: inUse.message, confirmLabel: inUse.alternate })
+        if (!archive) return
+        try {
+          await recipe.setArchived(true)
+        } catch (archiveErr) {
+          fail(archiveErr)
+        }
+        return
+      }
       fail(err)
     }
   }

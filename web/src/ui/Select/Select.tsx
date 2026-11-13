@@ -41,6 +41,8 @@ interface SelectBaseProps<V extends string | number> extends SelectFieldProps {
   appearance?: 'chip'
   /** Chip only: an icon before the value, instead of the selected option's own leading visual. */
   icon?: IconName
+  /** BR-D: exact matches of the search (or of what is typed) come first; among them `preferred` options lead. */
+  exactFirst?: boolean
 }
 
 export interface SelectProps<V extends string | number = string> extends SelectBaseProps<V> {
@@ -102,6 +104,7 @@ interface CoreProps<V extends string | number> extends SelectBaseProps<V> {
 
 function SelectCore<V extends string | number>({
   size = 'md',
+  exactFirst = false,
   label,
   helper,
   error,
@@ -136,6 +139,8 @@ function SelectCore<V extends string | number>({
 
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  // BR-D: the text the exact-first order ranks by: the search, or what was typed in a list without one.
+  const [typedText, setTypedText] = useState('')
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [sortIndex, setSortIndex] = useState(0)
   const [active, setActive] = useState(-1)
@@ -148,11 +153,25 @@ function SelectCore<V extends string | number>({
   const popover = useRef<HTMLDivElement>(null)
 
   const build = (q: string, filterIds: string[], sort: number) =>
-    buildList<V>({ options, query: q, activeFilters: filterIds, filters, sorts, sortIndex: sort, createLabel, canCreate: Boolean(onCreate), createDisabled: createDisabledReason !== undefined, clearLabel })
+    buildList<V>({
+      options,
+      query: q,
+      activeFilters: filterIds,
+      filters,
+      sorts,
+      sortIndex: sort,
+      createLabel,
+      canCreate: Boolean(onCreate),
+      createDisabled: createDisabledReason !== undefined,
+      clearLabel,
+      exactFirst,
+      rank: showSearch ? q : typedText,
+    })
   const current = build(query, activeFilters, sortIndex)
 
   const close = (restoreFocus: boolean) => {
     setOpen(false)
+    setTypedText('')
     if (restoreFocus) trigger.current?.focus()
   }
 
@@ -206,6 +225,7 @@ function SelectCore<V extends string | number>({
   const typeAhead = (char: string) => {
     const step = typeAheadStep(typed.current, char, Date.now())
     typed.current = step.buffer
+    setTypedText(step.buffer.text)
     const found = typeAheadMatch(current.flat, step.needle, active)
     if (found >= 0) setActive(found)
   }

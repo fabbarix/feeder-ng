@@ -4,6 +4,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { Button, ConfirmDialog, FormActions, PageHeader, Skeleton, Sortable, StickyActionBar, Tile } from '../../../ui'
+import { KindChange } from '../components/KindChange'
+import { EditorLineLinkSession } from '../components/EditorLineLinkSession'
+import { UnitConversionPrompt } from '../components/UnitConversionPrompt'
+import { baseUnitOfYield } from '../../../lib/baseRecipes/yield'
+import { useRef } from 'react'
+import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
+import { TakeOverDialog } from '../components/TakeOverDialog'
+import { neededAtOverride, setBaseRecipe } from '../lib/baseRecipe'
 import { NewIngredientSheet } from '../../ingredients/components/NewIngredientSheet'
 import { CourseLossDialog } from '../components/CourseLossDialog'
 import { IngredientLineRow } from '../components/IngredientLineRow'
@@ -13,13 +21,13 @@ import { useHouseholdFrozenUseBy } from '../hooks/useHouseholdFrozenUseBy'
 import { useRecipeTags } from '../hooks/useRecipeTags'
 import { RecipeSectionIndex } from '../components/RecipeSectionIndex'
 import { StepsEditor } from '../components/StepsEditor'
-import { UnitConversionPrompt } from '../components/UnitConversionPrompt'
 import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useQuickCreateIngredient } from '../hooks/useQuickCreateIngredient'
 import { useRecipeEditor } from '../hooks/useRecipeEditor'
 import type { RecipeDraft } from '../lib/draft'
 import { pickCourseIds } from '../lib/recipeCourses'
 import { codeMessage, recipeStrings } from '../strings'
+import { parseNumber } from '../lib/draft'
 import type { IngredientRef } from '../types'
 import '../recipes.css'
 
@@ -75,16 +83,26 @@ export function RecipeEditorScreen(): ReactNode {
   const [asking, setAsking] = useState<{ id: number } | null>(null)
   // CRS E2: a save that takes a Course off and so removes Slot Rules waits for the User's confirm.
   const [confirmingLoss, setConfirmingLoss] = useState(false)
+  // BR-D: the Base recipe switch (asks first on a saved Recipe), the line links, and the bulk link sheet after a Base recipe is saved.
+  const [linkSheet, setLinkSheet] = useState<{ id: number; name: string; ingredientId: number } | null>(null)
+  // A line action runs as a session (EditorLineLinkSession); a kind change runs on Save (KindChange).
+  const [session, setSession] = useState<{ kind: 'picker' | 'plain'; key: string } | null>(null)
+  const [kindRequest, setKindRequest] = useState<{ on: boolean } | null>(null)
+  const kindBusy = useRef(false)
+  const kindDone = useRef(false)
 
   const crumbs = useBreadcrumbs(editor.draft?.name)
   if (editor.isLoading) return <Skeleton variant="tile" count={3} />
   const draft = editor.draft
   const setDraft = (change: (d: RecipeDraft) => RecipeDraft) => editor.setDraft(change)
 
-  const finish = (saved: { id: number } | null) => {
+  const finish = (saved: { id: number; name?: string; baseRecipe?: boolean; baseIngredientId?: number } | null) => {
     if (!saved) return
     // A renamed Ready Meal: ask about its Ingredient before leaving the editor.
     if (editor.renameOffer) setAsking(saved)
+    // BR-D: a Base recipe offers the bulk link first (its sheet closes into the Base recipe).
+    else if (draft.baseRecipe && saved.baseRecipe !== false && saved.baseIngredientId !== undefined && baseUnitOfYield(draft.yieldUnit ?? '') !== null)
+      setLinkSheet({ id: saved.id, name: saved.name ?? draft.name, ingredientId: saved.baseIngredientId })
     else navigate(`/recipes/${saved.id}`)
   }
 
@@ -110,8 +128,26 @@ export function RecipeEditorScreen(): ReactNode {
     }))
   const failed = (err: unknown) => setSaveError(err instanceof ApiError ? codeMessage(err.code) : recipeStrings.generic)
 
+  // BR-D round 3: a changed kind is asked on Save (once: a second press while it asks does nothing), then the Recipe saves.
+  const storedBase = editor.storedKind === 'base'
+  const kindChanged = editor.storedKind !== null && (draft.baseRecipe === true) !== storedBase
+  const kindResult = (outcome: 'done' | 'cancelled' | 'failed', message: string | null) => {
+    kindBusy.current = false
+    setKindRequest(null)
+    if (outcome === 'done') {
+      kindDone.current = true
+      void save()
+    } else if (outcome === 'failed') setSaveError(message)
+  }
   const save = async (confirmed = false) => {
+    if (kindBusy.current) return
     setSaveError(null)
+    if (kindChanged && !kindDone.current) {
+      kindBusy.current = true
+      setKindRequest({ on: draft.baseRecipe === true })
+      return
+    }
+    kindDone.current = false
     if (!confirmed && editor.courseLoss) {
       setConfirmingLoss(true)
       return
@@ -132,6 +168,8 @@ export function RecipeEditorScreen(): ReactNode {
     }
   }
 
+  const lineByKey = (key: string | null) => (key === null ? undefined : draft.lines.find((l) => l.key === key))
+
   return (
     <>
       <div className="recipe-editor-layout">
@@ -148,6 +186,7 @@ export function RecipeEditorScreen(): ReactNode {
               courses={courses}
               householdFrozenUseBy={householdFrozenUseBy}
               onChange={changeDetails}
+              onBaseRecipeChange={(on) => setDraft((d) => setBaseRecipe(d, on))}
             />
           </Tile>
           <div id="recipe-section-photo" className="recipe-editor__section">
@@ -198,6 +237,11 @@ export function RecipeEditorScreen(): ReactNode {
                   ingredients={ingredients}
                   onPick={(ing) => editor.pickIngredient(line.key, ing)}
                   onChange={(patch) => editor.updateLine(line.key, patch)}
+                  steps={draft.steps}
+                  neededAtDefault={(line.baseRecipeId ?? null) !== null ? (line.neededAtDefault ?? null) : null}
+                  onNeededAt={(step) => editor.updateLine(line.key, { neededAtStep: neededAtOverride(step, line.neededAtDefault ?? null) })}
+                  onLinkToBase={line.ingredientId !== null && (line.baseRecipeId ?? null) === null ? () => setSession({ kind: 'picker', key: line.key }) : undefined}
+                  onUseAsPlain={() => setSession({ kind: 'plain', key: line.key })}
                   onRemove={() => editor.removeLine(line.key)}
                   onQuickCreate={(query) => quick.open({ lineKey: line.key, query, unit: line.unit })}
                   quickCreateDisabledReason={quick.disabledReason}
@@ -226,7 +270,45 @@ export function RecipeEditorScreen(): ReactNode {
             />
           </Tile>
           {saveError ? <p role="alert">{saveError}</p> : null}
-          {Object.keys(editor.errors).length > 0 ? <p role="alert">{recipeStrings.checkFields}</p> : null}
+          {kindRequest ? (
+            <KindChange
+              recipeId={recipeId}
+              on={kindRequest.on}
+              name={draft.name}
+              yieldValue={parseNumber(draft.yield) ?? 1}
+              yieldUnit={draft.yieldUnit || 'portion'}
+              onResult={kindResult}
+            />
+          ) : null}
+          {editor.refusal ? <p role="alert">{editor.refusal}</p> : Object.keys(editor.errors).length > 0 ? <p role="alert">{recipeStrings.checkFields}</p> : null}
+          {session && lineByKey(session.key) ? (
+            <EditorLineLinkSession
+              recipeId={recipeId}
+              kind={session.kind}
+              line={lineByKey(session.key)!}
+              ingredientOf={(id) => byId.get(id)}
+              ingredients={ingredients}
+              linkLine={editor.linkLine}
+              unlinkLine={editor.unlinkLine}
+              onDone={() => setSession(null)}
+              onFailed={setSaveError}
+            />
+          ) : null}
+          <TakeOverDialog
+            ask={editor.takeOverAsk}
+            baseName={draft.name}
+            onAnswer={(yes) => {
+              void editor.answerTakeOver(yes).then((saved) => finish(saved))
+            }}
+            onCancel={editor.cancelTakeOver}
+          />
+          {linkSheet ? (
+            <LinkCandidatesSheet
+              open
+              baseRecipe={{ id: linkSheet.id, name: linkSheet.name, ingredientId: linkSheet.ingredientId }}
+              onClose={() => navigate(`/recipes/${linkSheet.id}`)}
+            />
+          ) : null}
           <NewIngredientSheet
             open={quick.request !== null}
             onClose={quick.close}

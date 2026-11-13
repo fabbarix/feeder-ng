@@ -960,3 +960,119 @@
     white-space: nowrap;
   }
 }
+
+/* BR-D: Base recipes (picker, Needed at, bulk link, tile). Tokens only; rows are 44 px tap targets; the lists scroll inside the sheet. */
+.picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-block-size: 60vh;
+  overflow-y: auto;
+}
+.picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-start: var(--space-3);
+}
+.picker-group__label {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+.picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-tile-sm);
+  cursor: pointer;
+}
+.picker-row:hover,
+.picker-row:focus-visible,
+.picker-row[aria-selected="true"] {
+  background: var(--color-surface-2);
+  outline: none;
+}
+.picker-row[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.picker-row__name {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+}
+.picker-row__detail {
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+.picker-row__reason {
+  flex-basis: 100%;
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+.needed-at {
+  position: relative;
+  display: inline-flex;
+}
+.needed-at__trigger {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border: none;
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-chip-size);
+  cursor: pointer;
+}
+.needed-at__menu {
+  position: absolute;
+  z-index: 10;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 16rem;
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface-container-high);
+  box-shadow: var(--elev-2);
+}
+.needed-at__item {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text);
+  text-align: start;
+  cursor: pointer;
+}
+.needed-at__item[aria-checked="true"] {
+  background: var(--color-surface-2);
+}
+.link-candidate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-block-size: 44px;
+}
+.link-candidate__archived {
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
+.recipe-tile__yield {
+  font-size: var(--text-meta-size);
+  color: var(--color-muted);
+}
