@@ -23,7 +23,7 @@ export function PantryLotRow({ lot, today, system = 'metric', placeName, onOpen 
       meta={`${formatQuantity(lot.quantity, lot.baseUnit, system)} · ${goOff.label}`}
       metaStatus={goOff.tone === 'spoil' ? 'spoil' : undefined}
       trailing={placeName}
-      leading={<Thumb imageUrl={lot.ingredientImageUrl} size={40} />}
+      leading={<Thumb name={lot.ingredientName} imageUrl={lot.ingredientImageUrl} size={40} />}
       chevron
       onActivate={() => onOpen(lot)}
     />

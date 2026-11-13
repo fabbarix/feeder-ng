@@ -1,0 +1,42 @@
+/* ActionGroup (docs/design/system.md 5): the actions of a row or tile. Tokens only; never flex-wraps. The group is the root; its
+   container is the caller's row or tile, which must have a definite width: a .list-row, or .action-group-host on any other row or
+   tile (never on a shrink-to-fit box, which has no width to query). */
+.action-group-host {
+  container-type: inline-size;
+  min-inline-size: 0;
+}
+
+/* Wide: at the row's end, on one line, never shrinking below its minimum (the widest real group: "All Cooked" + icon, "Adjust", ⋮). */
+.action-group {
+  display: flex;
+  flex: none;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-inline-size: var(--action-group-min-inline-size);
+  margin-inline-start: auto;
+}
+
+.action-group .button {
+  white-space: nowrap;
+}
+
+/* Narrow: the group takes its own line as equal tracks; the ⋮ at 44 px; no minimum. */
+@container (max-width: 35rem) {
+  .action-group {
+    display: grid;
+    flex: 0 0 100%;
+    grid-template-columns: 1fr 1fr 44px;
+    min-inline-size: 0;
+    margin-inline-start: 0;
+  }
+
+  .action-group:not([data-more]) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .action-group .button {
+    inline-size: 100%;
+  }
+}

@@ -1,4 +1,4 @@
-/* ProgressTile (docs/design/ui-fix-plan.md 4.4): a soft tile with a bar. Tokens only. */
+/* ProgressTile (docs/design/system.md 2): a neutral metric tile with a success bar on a surface-2 track. Tokens only. */
 .progress-tile {
   gap: var(--space-2);
 }
@@ -6,7 +6,7 @@
 .progress-tile__bar {
   block-size: 8px;
   border-radius: var(--radius-pill);
-  background: var(--color-soft-strong);
+  background: var(--color-surface-2);
   overflow: hidden;
 }
 
@@ -14,7 +14,7 @@
   display: block;
   block-size: 100%;
   border-radius: inherit;
-  background: var(--color-accent);
+  background: var(--status-success-fg);
   transition: inline-size var(--dur-2) var(--ease-out);
 }
 
@@ -26,6 +26,7 @@
 
 .progress-tile__label {
   margin: var(--space-2) 0 0;
+  color: var(--color-muted);
   font-size: var(--text-label-size);
   font-weight: var(--text-label-weight);
 }

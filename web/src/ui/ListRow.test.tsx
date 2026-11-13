@@ -23,7 +23,7 @@ describe('ListGroup', () => {
 
 describe('ListRow (plan 4.13)', () => {
   it.each([
-    ['one line', {}, '56'],
+    ['one line', {}, '64'], // DS-A: every row is at least 64 px (system.md §3)
     ['two lines', { meta: '2 packs' }, '64'],
     ['a thumb', { leading: <span data-testid="thumb" /> }, '72'],
     ['a thumb and two lines', { meta: '2 packs', leading: <span /> }, '72'],
@@ -133,10 +133,9 @@ describe('ListRow whole-row target (plan 4.13: the row is the tap target)', () =
 
 describe('ListRow styling (plan 4.13)', () => {
   const css = readUiCss('ListRow.css')
-  it('rows are 56 / 64 / 72 high with 16 px padding', () => {
-    for (const h of ['56', '64', '72']) {
-      expect(declarations(css, `.list-row[data-height='${h}']`)['block-size']).toBe(`${h}px`)
-    }
+  it('rows are at least 64 / 72 high (DS-A: a minimum, never a fixed height) with 16 px padding', () => {
+    expect(declarations(css, '.list-row')['min-block-size']).toBe('var(--row-min)')
+    expect(declarations(css, ".list-row[data-height='72']")['min-block-size']).toBe('72px')
     expect(declarations(css, '.list-row')['padding-inline']).toBe('var(--space-4)')
   })
   it('the leading square is 40 px, radius 12, soft fill, accent-text icon', () => {
@@ -179,7 +178,7 @@ describe('ListRow: a rich, wrapping title (CRS G2)', () => {
     expect(plain).not.toHaveAttribute('data-wrap-title')
     // a wrapping title can take any number of lines, so the row grows with it
     expect(wrapped).toHaveAttribute('data-height', 'auto')
-    expect(plain).toHaveAttribute('data-height', '56')
+    expect(plain).toHaveAttribute('data-height', '64')
   })
 
   it('the CSS wraps the title of a wrapTitle row and lets links inside a title take the pointer', () => {

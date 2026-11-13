@@ -104,7 +104,6 @@
   font-size: var(--text-body-strong-size);
   font-weight: 700;
   line-height: var(--text-body-strong-line);
-  overflow-wrap: break-word;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -132,7 +131,7 @@
   line-height: var(--text-meta-line);
 }
 
-/* L-09: as many 240 px tiles as fit the page (loaded after, so it beats .bento-grid[data-columns='2'] at equal specificity). */
+/* L-09: as many 240 px tiles as fit the page (loaded after, so it beats the BentoGrid track rule at equal specificity). */
 .shop-lines .bento-grid {
   grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
 }

@@ -196,31 +196,32 @@ describe('Tile styling (plan 4.4)', () => {
   })
 })
 
-describe('BentoGrid', () => {
-  it('lays out children and defaults to 2 columns', () => {
+describe('BentoGrid (DS-A, ADR 0016: a minimum tile width, not a column count)', () => {
+  it('lays out children and defaults to min="card", with no data-columns', () => {
     render(<BentoGrid label="Today"><Tile>a</Tile><Tile>b</Tile></BentoGrid>)
     const grid = screen.getByRole('group', { name: 'Today' })
-    expect(grid).toHaveAttribute('data-columns', '2')
+    expect(grid).toHaveAttribute('data-min', 'card')
+    expect(grid).not.toHaveAttribute('data-columns')
     expect(grid).toContainElement(screen.getByText('a'))
     expect(grid).toContainElement(screen.getByText('b'))
   })
 
-  it.each([3, 4] as const)('supports %i columns', (columns) => {
-    render(<BentoGrid columns={columns} label="g">x</BentoGrid>)
-    expect(screen.getByRole('group', { name: 'g' })).toHaveAttribute('data-columns', String(columns))
+  it.each(['metric', 'day', 'wide'] as const)('supports min="%s"', (min) => {
+    render(<BentoGrid min={min} label="g">x</BentoGrid>)
+    expect(screen.getByRole('group', { name: 'g' })).toHaveAttribute('data-min', min)
   })
 })
 
-describe('BentoGrid styling (plan 4.4)', () => {
+describe('BentoGrid styling (plan 4.4, DS-A)', () => {
   const css = readUiCss('BentoGrid.css')
-  it('uses the Bento gap and lets tiles of a row stretch to the tallest', () => {
+  it('uses the Bento gap and lets the tiles of a row stretch to the tallest (their content stays top-aligned)', () => {
     const d = declarations(css, '.bento-grid')
     expect(d.gap).toBe('var(--bento-gap)')
     expect(d['align-items']).toBe('stretch')
-    expect(d['grid-auto-rows']).toBe('auto')
+    expect(declarations(css, '.bento-grid > .tile')['justify-content']).toBe('flex-start')
   })
-  it.each([2, 3, 4])('lays out %i columns', (n) => {
-    expect(declarations(css, `.bento-grid[data-columns='${n}']`)['grid-template-columns']).toBe(`repeat(${n}, minmax(0, 1fr))`)
+  it.each(['card', 'day', 'wide'])('min="%s" lays out auto-fill tracks of its --tile-min token', (min) => {
+    expect(declarations(css, `.bento-grid[data-min='${min}']`)['grid-template-columns']).toBe(`repeat(auto-fill, minmax(min(var(--tile-min-${min}), 100%), 1fr))`)
   })
 })
 

@@ -80,7 +80,7 @@ export function ShopScreen() {
         </p>
       ) : null}
 
-      <BentoGrid columns={2}>
+      <BentoGrid min="card">
         <ShopLocationTile location={shop.shop.location} onSave={shop.saveLocation} />
 
         <Tile as="section" span="full" aria-label={strings.shopBarcodesTitle}>

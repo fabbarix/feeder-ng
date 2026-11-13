@@ -44,5 +44,5 @@
   color: var(--color-text);
   font-size: var(--text-meta-size);
   font-weight: var(--text-meta-weight);
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
 }

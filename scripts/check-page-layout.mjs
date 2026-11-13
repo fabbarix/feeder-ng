@@ -235,6 +235,7 @@ const probe = `
     return { hasMain: false, title: document.title.trim().slice(0, 80), text }
   }
   const vw = innerWidth
+  const cw = document.documentElement.clientWidth
   const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 0 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
   const inScroller = (e) => { for (let p = e.parentElement; p; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll' || o === 'hidden') return true } return false }
   const rgb = (c) => (c.match(/[\\d.]+/g) || []).map(Number)
@@ -252,8 +253,8 @@ const probe = `
     if (e.matches('.sticky-action-bar')) continue // as wide as the container by design (P6 checks its alignment); its inner row is measured
     const b = e.getBoundingClientRect()
     if (b.width < 2) continue
-    if (b.right > vw + 1 && !inScroller(e)) over.push(e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0])
-    minX = Math.min(minX, b.x); maxR = Math.max(maxR, Math.min(b.right, vw))
+    if (b.right > cw + 1 && !inScroller(e)) over.push(e.tagName.toLowerCase() + '.' + (e.getAttribute('class') || '').split(' ')[0])
+    minX = Math.min(minX, b.x); maxR = Math.max(maxR, Math.min(b.right, cw))
   }
   const fields = []
   for (const e of document.querySelectorAll('main input, main textarea, main [role=spinbutton]')) {
@@ -336,6 +337,44 @@ const probe = `
     pageWidthAttr: pageEl ? pageEl.getAttribute('data-page-width') : null,
     fields, bars, railContrast, brokenText, dialog: null, hasMain: true }
 })()`
+// P12 (DS-A round 2, system.md 8): the probe is scripts/lib/page-layout-nav-probe.js (feederNavProbe), shared with the static
+// fixtures of scripts/test/ds-layout_test.sh. It is evaluated in the page below (m.navOverlap).
+const navProbeSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'lib', 'page-layout-nav-probe.js'), 'utf8')
+
+// P13 (DS-A round 2, system.md 10): a box whose content is wider than its tile or card (.tile, .list-group) and spills past it. A scroll
+// container (overflow-x auto or scroll) between the box and its card is intentional and not counted; clipping by overflow hidden is.
+const tileProbe = `
+(() => {
+  const main = document.querySelector('main')
+  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 2 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
+  // round 3: named by the class attribute (an svg's className is an SVGAnimatedString)
+  const sel = (e) => e.tagName.toLowerCase() + '.' + (e.getAttribute('class') || '').split(' ')[0]
+  const out = []
+  for (const card of (main ? main.querySelectorAll('.tile, .list-group') : [])) {
+    if (!vis(card)) continue
+    const cs = getComputedStyle(card)
+    const edge = card.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth)
+    for (const d of card.querySelectorAll('*')) {
+      if (!vis(d)) continue
+      const over = d.getBoundingClientRect().right - edge
+      if (over <= 1) continue
+      // round 3: only in-flow spills count. A position: absolute or fixed box (a corner menu in the tile's padding) is not one, and
+      // neither is anything inside it; a scroll container (overflow-x auto / scroll) between the box and its card is intentional.
+      let scrolled = false
+      for (let p = d; p && p !== card; p = p.parentElement) {
+        const ps = getComputedStyle(p).position
+        if (ps === 'absolute' || ps === 'fixed') { scrolled = true; break }
+      }
+      for (let p = d.parentElement; !scrolled && p && p !== card; p = p.parentElement) {
+        const o = getComputedStyle(p).overflowX
+        if (o === 'auto' || o === 'scroll') { scrolled = true; break }
+      }
+      if (!scrolled) out.push({ sel: sel(d), card: sel(card), px: Math.round(over) })
+    }
+  }
+  return out.slice(0, 3)
+})()`
+
 // P10 (run once per colour scheme): a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
 const buttonProbe = `
 (() => {
@@ -386,6 +425,8 @@ for (const vp of VIEWPORTS) {
         continue
       }
       m.lowContrastButtons = await evaluate(buttonProbe)
+      m.navOverlap = await evaluate(`(() => { ${navProbeSource}\n; return feederNavProbe() })()`)
+      m.tileOverflow = await evaluate(tileProbe)
       m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
       // The light findings are reported first, on the light page.
       for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)

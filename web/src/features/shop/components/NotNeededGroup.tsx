@@ -32,7 +32,7 @@ export function NotNeededGroup({ entries, onNeededAfterAll, lead }: NotNeededGro
       {open ? (
         <div role="group" aria-label={shopStrings.notNeeded} id={panelId}>
           <div className="shop-lines">
-            <BentoGrid columns={2}>
+            <BentoGrid min="card">
               {entries.map((entry) => (
                 <Tile as="article" key={entry.key} className="line-tile" data-state="not-needed" data-lead={lead ? 'true' : undefined}>
                   {lead ? <span className="line-tile__lead">{lead(entry)}</span> : null}
