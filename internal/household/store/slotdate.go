@@ -208,3 +208,9 @@ func (s *Store) SlotStarted(ctx context.Context, slotID int64, date string) (boo
 		WHERE meal_slot_id = ? AND date = ? AND state IN ('cooked', 'skipped')`, slotID, date).Scan(&n)
 	return n > 0, err
 }
+
+// PatchSlotDate applies a PATCH of the Meal Slot on the date in one transaction and returns the saved row.
+// STUB of the test commit (review round 3): see slotdate_patch_test.go for the contract.
+func (s *Store) PatchSlotDate(ctx context.Context, slotID int64, date string, patch household.SlotDatePatch) (household.SlotDate, error) {
+	return household.SlotDate{}, errors.New("household/store: PatchSlotDate is not implemented")
+}

@@ -111,3 +111,11 @@ type UnresolvedMeal struct {
 	RecipeName string
 	Pinned     bool
 }
+
+// SlotDatePatch is a PATCH of a Meal Slot on one date: a nil field is not touched; Time "" is the usual time. Today is
+// the household's date, for the date_past rule. (Stub of the test commit: the developer implements the store side.)
+type SlotDatePatch struct {
+	NotServed *bool
+	Time      *string
+	Today     string
+}

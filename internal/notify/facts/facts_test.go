@@ -466,3 +466,47 @@ func TestFactsKeepTheUsualTimeOnOtherDatesAndForGuestsOnlyRows(t *testing.T) {
 		t.Errorf("lunch SlotAt = %s, want the usual 12:30 Rome (%s)", l.SlotAt.UTC(), want)
 	}
 }
+
+// B5-SD review round 3 (PM decision 3e): a SlotDate lookup error that is not "not found" is returned, not skipped
+// (a meal silently missing from the facts is a reminder silently never sent); a missing Meal Slot is still skipped.
+func TestFactsReturnASlotDateLookupErrorThatIsNotNotFound(t *testing.T) {
+	w := newWorld(t)
+	w.meal(t, "2026-11-09", w.dinner, w.curry, plan.StatePlanned, nil)
+	if _, err := w.db.Exec(`DROP TABLE meal_slot_dates`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.src.Facts(ctx, w.now); err == nil {
+		t.Error("Facts = nil error with the slot-date lookup failing; the error must be returned, not skipped")
+	}
+}
+
+func TestFactsStillSkipAMealWhoseMealSlotIsGone(t *testing.T) {
+	w := newWorld(t)
+	w.meal(t, "2026-11-09", w.dinner, w.curry, plan.StatePlanned, nil)
+	w.meal(t, "2026-11-09", w.lunch, w.porridge, plan.StatePlanned, nil)
+	conn, err := w.db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	// A Planned Meal of a deleted Meal Slot cannot exist under the foreign keys; switch them off on this connection.
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.ExecContext(ctx, `DELETE FROM meal_slots WHERE id = ?`, w.dinner); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = ON`); err != nil {
+		t.Fatal(err)
+	}
+	f, err := w.src.Facts(ctx, w.now)
+	if err != nil {
+		t.Fatalf("Facts = %v; a missing Meal Slot is skipped, not an error", err)
+	}
+	if _, ok := find(f, "2026-11-09", w.dinner); ok {
+		t.Error("the meal of the deleted Meal Slot is in the facts")
+	}
+	if _, ok := find(f, "2026-11-09", w.lunch); !ok {
+		t.Error("the other meal is missing from the facts")
+	}
+}

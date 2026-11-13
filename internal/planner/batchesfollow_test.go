@@ -154,3 +154,30 @@ func TestAGrownCellRaisesFromThePlacedPortionsNotFromTheBatches(t *testing.T) {
 		t.Errorf("Raised = %+v, want 2 Batches for 4 portions", b)
 	}
 }
+
+// Review round 3 (PM decision d): a past, unconfirmed Planned Meal on a slot that is later marked Not served stays;
+// BuildInput passes it as Pinned with the cell's NotServed set. The planner classifies it Pinned before the Not
+// served check, so its Stock and pending Leftover are counted and its Recipe is in Cool-down.
+func TestAPastUnconfirmedMealOfANotServedSlotStillCountsAsPinned(t *testing.T) {
+	t.Run("its Recipe is in Cool-down", func(t *testing.T) {
+		past := withExisting(dinner(-1), ExistingMeal{State: MealPinned, RecipeID: 1, Batches: 1})
+		past.NotServed = true
+		in := baseInput([]Slot{past, dinner(0)}, rcp(1, 2), rcp(2, 2))
+		r := mustPlan(t, in)
+		if got := placementAt(t, r, key(0)).RecipeID; got != 2 {
+			t.Errorf("day 0 = Recipe %d, want 2 (Recipe 1 was served yesterday, whatever the date's Not served says)", got)
+		}
+		if _, ok := notServedAt(r, SlotKey{Date: day(-1), MealSlotID: dinnerSlot}); ok {
+			t.Error("the past meal's cell was treated as Not served; it is a Pinned meal that happened")
+		}
+	})
+	t.Run("its pending Leftover is consumed", func(t *testing.T) {
+		past := withExisting(dinner(-1), ExistingMeal{State: MealPinned, RecipeID: 1, From: &LeftoverSource{LeftoverID: 7}})
+		past.NotServed = true
+		in := baseInput([]Slot{past, dinner(0)}, rcp(1, 2), rcp(2, 2))
+		in.Leftovers = []Leftover{leftoverOf(7, 1, 2, day(3))}
+		if got := placementAt(t, mustPlan(t, in), key(0)); got.Source == SourceLeftover {
+			t.Errorf("day 0 = %+v, want no Leftover: the past meal's 2 portions use it up", got)
+		}
+	})
+}
