@@ -1,8 +1,9 @@
-/* Plan: the week grid, day tiles, Planned Meal blocks and sheets. Layout here; colours come from the theme tokens. */
+/* Plan: the week of day tiles, the Meal Slot header and Course rows (ds-plan, docs/design/system.md), the hero, sheets and
+   the notices. Layout here; every colour, size and gap comes from a theme token. */
 .plan {
   display: grid;
-  gap: 16px;
-  padding-top: 16px;
+  gap: var(--section-gap);
+  padding-top: var(--space-4);
 }
 .plan__note,
 .plan__muted {
@@ -18,7 +19,7 @@
   margin: 0 0 12px;
   font-size: var(--text-title-3-size);
 }
-/* R13: Couldn't plan. The notice's tiles are items of the grid it sits in (Today's, or the Plan's notice grid). */
+/* R13: Couldn't plan. The notice's tiles are items of the grid it sits in (the Plan's notice grid, or Today's). */
 .plan-couldnt-notice {
   display: contents;
 }
@@ -30,9 +31,6 @@
   list-style: none;
   padding-left: 0;
   margin-top: 8px;
-}
-.plan-meal__status {
-  white-space: nowrap; /* the chip inherits it: "Not planned" never wraps */
 }
 .plan__stack {
   display: grid;
@@ -53,72 +51,127 @@
   list-style: none;
 }
 
-/* The week grid: 2 phone, 4 tablet, 7 desktop columns (a true week). */
-.plan-grid {
-  display: grid;
-  gap: 16px;
-}
-.plan-grid[data-columns='2'] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.plan-grid[data-columns='4'] {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-.plan-grid[data-columns='7'] {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 12px;
-}
+/* The week: BentoGrid min="day" sizes the tracks. A day is one track, the same width as every other; today is the ring. */
 .plan-day {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
+  gap: var(--space-3);
   min-width: 0;
 }
 .plan-day[data-today='true'] {
   box-shadow: 0 0 0 2px var(--color-accent);
 }
 .plan-day__title {
-  margin: 0 0 8px;
   min-width: 0;
   font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
 }
-/* At 7 columns a day tile is narrow: its heading steps down a size so "Tomorrow" does not break mid-word. */
-.plan-grid[data-columns='7'] .plan-day__title {
-  font-size: var(--text-body-strong-size);
-}
-/* A ~140 px day tile (1440 px viewport beside the rail): tight padding leaves the compact head row room for the slot icon,
-   the time and one action, and the Recipe name keeps its 2-line clamp (the full name is the button's title). */
-.plan-grid[data-columns='7'] .plan-day {
-  --tile-pad: 10px;
+.plan-day[data-today='true'] .plan-day__title {
+  color: var(--color-accent-text);
 }
 
-/* A Planned Meal inside a day tile: compact, one chip at most. */
+/* A Meal Slot on a day: its header, then its Course rows. */
 .plan-meal {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
-  margin-block: 6px;
 }
-/* Chips in a narrow day tile wrap inside it rather than spill past its edge, and sit at the start edge. */
-.plan-meal [data-kind] {
-  justify-self: start;
-  block-size: auto;
-  min-block-size: 28px;
-  white-space: normal;
-  text-align: start;
-}
-/* The divider between Planned Meals shows only on a day with 3 or more meals (data-dividers): a 1 px line. */
+/* The divider between Meal Slots shows only on a day with 3 or more (data-dividers): a 1 px line. */
 .plan-day[data-dividers='true'] .plan-meal + .plan-meal {
-  padding-top: 12px;
-  border-top: 1px solid var(--color-outline);
+  padding-block-start: var(--space-3);
+  border-top: 1px solid var(--color-line);
 }
-.plan-meal[data-unfilled] {
-  padding: 12px;
+
+/* The Meal Slot header: icon and full name, the time, then Cook and ⋮ grouped at the end. One nowrap row. */
+.plan-slot-head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.plan-slot-head__label {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+  color: var(--color-muted);
+}
+.plan-slot-head__label > svg {
+  flex: none;
+}
+.plan-slot-head__name {
+  min-width: 0;
+}
+.plan-slot-head__time {
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}
+.plan-slot-head__actions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* The Course rows of a slot: a ListRow each, separated by the 1 px line. */
+.plan-meal__courses {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plan-meal__courses > .list-row + .list-row {
+  border-top: 1px solid var(--color-line);
+}
+/* An empty Course is a dashed row. */
+.plan-meal .list-row[data-unfilled] {
   border: 1px dashed var(--color-outline);
-  border-radius: 16px;
+  border-radius: var(--radius-control);
 }
-/* The slot row keeps its Swap and Cook icon buttons on the same line, even in a one-column day tile. */
+/* Cooked and Not cooked: a quieter tone, not a fade (WCAG AA). */
+.plan-meal .list-row[data-state='cooked'] .list-row__title {
+  color: var(--color-muted);
+}
+.plan-meal .list-row[data-state='skipped'] .list-row__title {
+  color: var(--color-muted);
+}
+
+/* The chips of a row: one line, the ones that do not fit are clipped (the sheet shows all). */
+.plan-row__chips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
+}
+.plan-row__chips .chip {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* Swap and Pin: a group at the end of the row that never shrinks. */
+.plan-row__actions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* A Not served date: one compact row (NotServedRow). */
 .plan-meal__head {
   display: flex;
   flex-wrap: nowrap;
@@ -127,7 +180,6 @@
   gap: 4px 8px;
   min-width: 0;
 }
-/* The slot label truncates with an ellipsis (the name inside), so it never pushes the Swap and Cook buttons off the row. */
 .plan-meal__slot {
   display: inline-flex;
   align-items: center;
@@ -149,37 +201,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.plan-meal__actions {
-  display: inline-flex;
-  flex-shrink: 0;
-  gap: 4px;
-}
-.plan-meal__recipe {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-size: var(--text-body-strong-size);
-  font-weight: 700;
-  text-align: start;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 .plan-meal__reason {
   margin: 0;
   font-size: var(--text-meta-size);
-}
-
-/* B5-F1: "20:15 · usually 19:30" under the Meal Slot name; a Not served slot's compact row. */
-.plan-meal__caption {
-  display: block;
-  font-size: var(--text-meta-size);
-  font-weight: normal;
-  color: var(--color-muted);
 }
 .plan-meal--not-served {
   grid-template-columns: minmax(0, 1fr) auto;
@@ -192,16 +216,6 @@
 }
 .plan-meal--not-served .plan-meal__reason {
   grid-column: 1 / -1;
-}
-
-/* Compact chips in the 7-column week. */
-.plan-grid[data-columns='7'] .plan-meal [data-kind] {
-  min-block-size: 24px;
-  padding-inline: 8px;
-  font-size: var(--text-chip-size);
-}
-.plan-grid[data-columns='7'] .plan-meal__recipe {
-  font-size: var(--text-body-strong-size);
 }
 
 /* The Today hero: the photo and the text side by side, the actions below. */
@@ -290,6 +304,15 @@
   display: grid;
   gap: 12px;
 }
+.plan-sheet__course {
+  display: grid;
+  gap: var(--space-1);
+}
+.plan-sheet__relaxed {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .plan * {
@@ -320,18 +343,6 @@
   display: grid;
   gap: var(--space-2);
 }
-/* Cooked and Not cooked: a quieter tone, not a fade (WCAG AA). */
-.plan-meal[data-state='cooked'] .plan-meal__recipe,
-.plan-meal[data-state='skipped'] .plan-meal__recipe,
-.plan-meal[data-state='cooked'] .plan-meal__slot,
-.plan-meal[data-state='skipped'] .plan-meal__slot {
-  color: var(--color-muted);
-}
-
-/* R2-2 (L-05): the box the container-width columns are measured on. */
-.plan__grid-box {
-  min-width: 0;
-}
 
 /* R2-2 (L-07): the hero actions sit at the tile's end on a wide screen; the button keeps its own width. */
 @media (min-width: 820px) {
@@ -345,45 +356,13 @@
   }
 }
 
-/* CRS F: Courses of a slot (one row per Course, with its caption, chips and icon buttons). */
-.plan-meal__courses,
+/* The Today hero's Courses list (TonightHero). */
 .plan-hero__courses {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
-}
-.plan-course {
-  display: grid;
-  gap: 0.25rem;
-}
-.plan-course__caption {
-  font-size: var(--text-meta-size);
-  color: var(--color-muted);
-}
-.plan-course__body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-.plan-course__chips {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-.plan-meal--courses .plan-meal__courses {
-  margin-top: 0.25rem;
-}
-.plan-sheet__course {
-  display: grid;
-  gap: 0.25rem;
-}
-.plan-sheet__relaxed {
-  display: grid;
-  gap: 0.5rem;
-  justify-items: start;
+  gap: var(--space-2);
 }
 
 /* CRS G2: the Review Exclusions page and the Couldn't plan lines. Tokens only; lists have no bullets. */
@@ -397,10 +376,6 @@
 }
 .plan__caption {
   margin: 0;
-  font-size: var(--text-meta-size);
-  color: var(--color-muted);
-}
-.plan-course__reason {
   font-size: var(--text-meta-size);
   color: var(--color-muted);
 }

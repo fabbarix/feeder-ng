@@ -1,11 +1,14 @@
-// ds-plan: which icon actions a row and a slot header offer. Plain TypeScript, no React. Stub: the developer implements it.
+// ds-plan: which icon actions a Course row and a Meal Slot header offer. Plain TypeScript, no React.
+import { mayCook } from './resolve'
+import { plannedMeals, slotMenu } from './courses'
 import type { PlannedMeal, PlanSlot } from '../types'
 
 export type RowAction = 'swap' | 'pin' | 'unpin'
 
 /** The icon actions at the end of a Course row, in this fixed order; none for a Cooked, Not cooked or empty row. */
-export function rowActions(_meal: PlannedMeal | null): RowAction[] {
-  throw new Error('ds-plan: rowActions is not implemented')
+export function rowActions(meal: PlannedMeal | null): RowAction[] {
+  if (!meal || meal.state !== 'planned') return []
+  return ['swap', meal.pinned ? 'unpin' : 'pin']
 }
 
 export interface SlotHeadModel {
@@ -15,6 +18,10 @@ export interface SlotHeadModel {
   menu: boolean
 }
 
-export function slotHead(_slot: PlanSlot, _today: string, _hasDateActions: boolean): SlotHeadModel {
-  throw new Error('ds-plan: slotHead is not implemented')
+/** The actions of a Meal Slot header: Cook for today's planned meal, and the ⋮ menu when the slot has entries for it. */
+export function slotHead(slot: PlanSlot, today: string, hasDateActions: boolean): SlotHeadModel {
+  return {
+    cook: plannedMeals(slot).length > 0 && mayCook(slot.date, today),
+    menu: slotMenu(slot, today, hasDateActions) !== null,
+  }
 }

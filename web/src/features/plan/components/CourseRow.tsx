@@ -8,6 +8,7 @@ import { mayResolve } from '../lib/resolve'
 import { planStrings as s } from '../strings'
 import { PlanChipView } from './PlanChipView'
 import type { PlanSlot, SlotKey } from '../types'
+import './CourseRow.css'
 
 export type CourseAction = 'swap' | 'pin' | 'cooked'
 

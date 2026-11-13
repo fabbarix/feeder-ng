@@ -15,12 +15,8 @@ export interface DayGroup {
   /** WP6: the date overline of the tile, "WED 11". */
   overline: string
   isToday: boolean
-  /** ds-plan: the day tile's title-3, "Thu 12 · Today" / "Fri 13 · Tomorrow" / "Sun 8 · Yesterday", otherwise "Sat 14". Stub (empty until implemented). */
+  /** The day tile's title-3: "Thu 12 · Today" / "Fri 13 · Tomorrow" / "Sun 8 · Yesterday", otherwise "Sat 14". */
   heading: string
-  /** WP6 round 2: the short heading for the compact (7-column) tile: Today / Tomorrow / Yesterday, else "Wed". */
-  shortTitle: string
-  /** Grid columns the day tile spans: both columns (2) for today, otherwise 1; at 7 columns (a true week) always 1. */
-  span: 1 | 2
   slots: PlanSlot[]
 }
 
@@ -42,17 +38,18 @@ function titleFor(date: string, today: string): string {
   return weekdayName(date)
 }
 
-/** Today / Tomorrow / Yesterday, otherwise the short weekday ("Wed"): a heading that never clips in a 7-column tile. */
-function shortTitleFor(date: string, today: string): string {
+/** "Thu 12", with " · Today" (or Tomorrow, Yesterday) for the three days around today. */
+function headingFor(date: string, today: string): string {
+  const short = `${weekdayName(date, 'short')} ${dayOfMonth(date)}`
   const diff = dayNumber(date) - dayNumber(today)
-  if (diff === 0) return s.today
-  if (diff === 1) return s.tomorrow
-  if (diff === -1) return s.yesterday
-  return weekdayName(date, 'short')
+  if (diff === 0) return `${short} · ${s.today}`
+  if (diff === 1) return `${short} · ${s.tomorrow}`
+  if (diff === -1) return `${short} · ${s.yesterday}`
+  return short
 }
 
-/** Groups slots by date, chronologically (slots inside a day by time, then Meal Slot id). columns: the Plan grid's columns. */
-export function groupByDay(slots: PlanSlot[], today: string, columns: 2 | 4 | 7 = 2): DayGroup[] {
+/** Groups slots by date, chronologically (slots inside a day by time, then Meal Slot id). */
+export function groupByDay(slots: PlanSlot[], today: string): DayGroup[] {
   const byDate = new Map<string, PlanSlot[]>()
   for (const s of slots) byDate.set(s.date, [...(byDate.get(s.date) ?? []), s])
   return [...byDate.keys()]
@@ -63,11 +60,9 @@ export function groupByDay(slots: PlanSlot[], today: string, columns: 2 | 4 | 7 
         date,
         label: labelFor(date, today),
         title: titleFor(date, today),
-        shortTitle: shortTitleFor(date, today),
         overline: dayOverline(date),
         isToday,
-        heading: '',
-        span: isToday && columns !== 7 ? 2 : 1,
+        heading: headingFor(date, today),
         slots: byDate.get(date)!.sort((a, b) => a.time.localeCompare(b.time) || a.mealSlotId - b.mealSlotId),
       }
     })
