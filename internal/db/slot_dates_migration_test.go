@@ -91,3 +91,55 @@ func TestMigration1500KeepsTheAttendanceOverrides(t *testing.T) {
 		t.Errorf("meal_slot_dates starts with %d rows, want none", n)
 	}
 }
+
+// Review round 3: the standard migration tests (as for 1400 in courses_migration_test.go).
+
+func TestMigration1500FreshDatabaseHasTheSameSchemaAsTheUpgradedOne(t *testing.T) {
+	upgraded := migrate1500(t)
+	fresh, _ := openTemp(t)
+	if err := db.MigrateEmbedded(context.Background(), fresh); err != nil {
+		t.Fatal(err)
+	}
+	q := `SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name`
+	if got, want := rows(t, fresh, q), rows(t, upgraded, q); !equalRows(got, want) {
+		t.Errorf("the fresh schema differs from the upgraded one:\nfresh    %v\nupgraded %v", got, want)
+	}
+	if n := count(t, fresh, `SELECT count(*) FROM meal_slot_dates`); n != 0 {
+		t.Errorf("fresh meal_slot_dates has %d rows", n)
+	}
+}
+
+func TestMigration1500IsIdempotent(t *testing.T) {
+	d := migrate1500(t)
+	mustExec(t, d, `INSERT INTO attendance_overrides(slot_id,date) VALUES (1,'2026-11-09')`)
+	mustExec(t, d, `INSERT INTO meal_slot_dates(slot_id,date,not_served,time,guests,updated_at) VALUES (1,'2026-11-09',1,'20:00',2,?)`, mts)
+	dates := rows(t, d, `SELECT * FROM meal_slot_dates`)
+	overrides := rows(t, d, `SELECT * FROM attendance_overrides`)
+	if err := db.MigrateEmbedded(context.Background(), d); err != nil {
+		t.Fatalf("second migrate: %v", err)
+	}
+	if got := rows(t, d, `SELECT * FROM meal_slot_dates`); !equalRows(got, dates) {
+		t.Errorf("a second migrate changed meal_slot_dates: %v, want %v", got, dates)
+	}
+	if got := rows(t, d, `SELECT * FROM attendance_overrides`); !equalRows(got, overrides) {
+		t.Errorf("a second migrate changed attendance_overrides: %v, want %v", got, overrides)
+	}
+	if n := count(t, d, `SELECT count(*) FROM schema_migrations WHERE name LIKE '1500\_%' ESCAPE '\'`); n != 1 {
+		t.Errorf("1500 recorded %d times, want once", n)
+	}
+}
+
+func TestMigration1500LeavesNoForeignKeyViolationInASeededDatabase(t *testing.T) {
+	d := tagsOpenAt(t, "1500_")
+	mustExec(t, d, `INSERT INTO meal_slots(id,weekday,name,time) VALUES (1,1,'Dinner','19:00')`)
+	mustExec(t, d, `INSERT INTO attendance_overrides(slot_id,date) VALUES (1,'2026-11-09')`)
+	if err := db.MigrateEmbedded(context.Background(), d); err != nil {
+		t.Fatalf("1500: %v", err)
+	}
+	if got := rows(t, d, `PRAGMA foreign_key_check`); len(got) != 0 {
+		t.Errorf("foreign_key_check reports %v", got)
+	}
+	if count(t, d, `PRAGMA foreign_keys`) != 1 {
+		t.Error("foreign_keys must be ON")
+	}
+}

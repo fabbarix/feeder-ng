@@ -88,6 +88,12 @@ type ExistingMeal struct {
 	// Batches follow portions only when the portions CHANGE: a fresh meal, unpinned or Pinned, is raised only when the
 	// cell's current portions are greater than PlacedPortions, so a Pinned 0.5 Batch whose portions did not change stays.
 	PlacedPortions float64
+	// Held marks a Bought Planned Meal (ADR 0013): every Plan leaves it where it is, like a Pinned one (its Recipe stays;
+	// it consumes projected Stock, yields its Leftover and counts for Cool-down and Variety; the keep check and Slot
+	// Rule reservations pass over it; it is never cleared), but only Plan: Regenerate treats it as an empty cell and
+	// Swap replaces it. Ignored unless State is MealPlanned and From is nil. Its relaxed flag and chip are still
+	// recomputed (Result.Rechecks) and its Batches still follow the portions (Result.Raised).
+	Held bool
 }
 
 // Slot is one cell in the Planning Horizon: one Course of one Meal Slot on one

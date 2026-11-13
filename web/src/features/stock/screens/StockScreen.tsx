@@ -26,19 +26,22 @@ import { useMemo, useState, type ReactElement } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BottomSheet, Button, Chip, EmptyState, ErrorState, ListGroup, PageHeader, SearchField, Skeleton, useMediaQuery, useToast } from '../../../ui'
 import { AddLotSheet } from '../components/AddLotSheet'
+import { IngredientLotsRow } from '../components/IngredientLotsRow'
+import { LotEditSheet } from '../components/LotEditSheet'
 import { LotList } from '../components/LotList'
 import { LotSheet } from '../components/LotSheet'
 import { PantryFilters } from '../components/PantryFilters'
 import { PantryLotRow } from '../components/PantryLotRow'
+import { useOpenIngredients } from '../hooks/useOpenIngredients'
 import { usePantry } from '../hooks/usePantry'
 import type { StockLot } from '../types'
 import { SetTotalSheet } from '../components/SetTotalSheet'
 import { SpoiledTile } from '../components/SpoiledTile'
-import { StockRow } from '../components/StockRow'
 import { useIngredientChoices } from '../hooks/useIngredientChoices'
 import { useStockActions, useSpoiledLots, useStockLots, useStockTotals } from '../hooks/useStock'
 import { useStockTakeEntry } from '../hooks/useStockTakeEntry'
 import { capitalise } from '../lib/display'
+import { lotsOfIngredient } from '../lib/ingredientLots'
 import { filterTotals, STOCK_FILTERS, type StockFilter } from '../lib/filter'
 import { sortTotals } from '../lib/view'
 import { stockStrings as strings } from '../strings'
@@ -56,6 +59,8 @@ export function StockScreen(): ReactElement | null {
   const navigate = useNavigate()
   const { mode, setMode } = pantry
   const [openLot, setOpenLot] = useState<StockLot | null>(null)
+  const [editingLot, setEditingLot] = useState<StockLot | null>(null)
+  const openIngredients = useOpenIngredients()
 
   const [filter, setFilter] = useState<StockFilter>('all')
   const [query, setQuery] = useState('')
@@ -197,7 +202,17 @@ export function StockScreen(): ReactElement | null {
           ) : (
             <ListGroup label={strings.listLabel}>
               {items.map((item) => (
-                <StockRow key={item.ingredientId} item={item} today={today} system={system} onOpen={setSelectedId} />
+                <IngredientLotsRow
+                  key={item.ingredientId}
+                  item={item}
+                  lots={lotsOfIngredient(pantry.lots.data ?? [], item.ingredientId)}
+                  places={pantry.places}
+                  today={today}
+                  system={system}
+                  expanded={openIngredients.isOpen(item.ingredientId)}
+                  onToggle={() => openIngredients.toggle(item.ingredientId)}
+                  onOpenLot={setOpenLot}
+                />
               ))}
             </ListGroup>
           )}
@@ -254,6 +269,27 @@ export function StockScreen(): ReactElement | null {
         onSeeIngredient={(id) => {
           setOpenLot(null)
           setSelectedId(id)
+        }}
+        onEdit={(lot) => setEditingLot(lot)}
+        onDelete={(lot) => {
+          setOpenLot(null)
+          void attempt(async () => {
+            await actions.deleteLot(lot.id)
+            toast.show(strings.deleted(lot.ingredientName), { status: 'success' })
+          })
+        }}
+      />
+
+      <LotEditSheet
+        lot={editingLot}
+        today={today}
+        onClose={() => setEditingLot(null)}
+        onSubmit={(lot, patch) => {
+          setEditingLot(null)
+          void attempt(async () => {
+            await actions.editLot(lot.id, patch)
+            toast.show(strings.edited(lot.ingredientName), { status: 'success' })
+          })
         }}
       />
 

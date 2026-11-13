@@ -960,8 +960,8 @@ func courseIDs(refs []recipe.CourseRef) []int64 {
 }
 
 // dropLostCourses removes what a Recipe no longer has a reason to be in once it loses the Courses lost:
-// its Slot Rules by Recipe on them, and its unpinned, unresolved Planned Meals from today on in them.
-// Pinned, Cooked, Not cooked and past Planned Meals stay, as do other Recipes' and Tag rules.
+// its Slot Rules by Recipe on them, and its unpinned, unresolved, unbought Planned Meals from today on in them.
+// Pinned, Bought, Cooked, Not cooked and past Planned Meals stay, as do other Recipes' and Tag rules.
 func (s *Store) dropLostCourses(ctx context.Context, tx *sql.Tx, id int64, lost []int64) error {
 	today, err := s.householdToday(ctx, tx)
 	if err != nil {
@@ -971,8 +971,10 @@ func (s *Store) dropLostCourses(ctx context.Context, tx *sql.Tx, id int64, lost 
 		if _, err := tx.ExecContext(ctx, `DELETE FROM slot_rules WHERE recipe_id = ? AND course_id = ?`, id, c); err != nil {
 			return err
 		}
+		// A Bought Planned Meal stays (B5-BO, ADR 0013): the plan shows it with the course_lost warning.
 		if _, err := tx.ExecContext(ctx, `DELETE FROM planned_meals WHERE recipe_id = ? AND course_id = ?
-		        AND state = 'planned' AND pinned = 0 AND date >= ?`, id, c, today); err != nil {
+		        AND state = 'planned' AND pinned = 0 AND date >= ?
+		        AND NOT EXISTS (SELECT 1 FROM planned_meal_bought b WHERE b.planned_meal_id = planned_meals.id)`, id, c, today); err != nil {
 			return err
 		}
 	}

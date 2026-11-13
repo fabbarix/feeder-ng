@@ -109,6 +109,9 @@ func (r *Runner) View(ctx context.Context, from, to string) (PlanView, error) {
 		if len(si.Courses) > 0 {
 			cells = courseViews(si, day, uByKey, whole)
 		}
+		if err := r.warnCells(ctx, cells); err != nil {
+			return PlanView{}, err
+		}
 		sv := occurrenceView(in, si, cells)
 		for _, rule := range rules {
 			if rule.MealSlotID == si.Key.MealSlotID {

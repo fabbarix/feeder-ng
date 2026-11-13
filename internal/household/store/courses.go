@@ -182,26 +182,38 @@ func (s *Store) saveSlotCourses(ctx context.Context, tx *sql.Tx, slotID int64, i
 // removeSlotCourse takes one Course off a slot: its unresolved Planned Meals from today on (Pinned included) are
 // reported and deleted, and so are its opt-outs (usual and per date), Slot Rules and Couldn't plan reasons.
 func removeSlotCourse(ctx context.Context, tx *sql.Tx, slotID, courseID int64, today string, rem *household.Removals) error {
-	rows, err := tx.QueryContext(ctx, `SELECT date, meal_slot_id, course_id, recipe_id, pinned FROM planned_meals
+	rows, err := tx.QueryContext(ctx, `SELECT id, date, meal_slot_id, course_id, recipe_id, pinned FROM planned_meals
 		WHERE meal_slot_id = ? AND course_id = ? AND state = 'planned' AND date >= ? ORDER BY date, id`, slotID, courseID, today)
 	if err != nil {
 		return err
 	}
+	var ids []int64
 	for rows.Next() {
 		var m household.RemovedMeal
-		var pinned int
-		if err := rows.Scan(&m.Date, &m.MealSlotID, &m.CourseID, &m.RecipeID, &pinned); err != nil {
+		var (
+			id     int64
+			pinned int
+		)
+		if err := rows.Scan(&id, &m.Date, &m.MealSlotID, &m.CourseID, &m.RecipeID, &pinned); err != nil {
 			rows.Close()
 			return err
 		}
 		m.Pinned = pinned == 1
 		rem.PlannedMeals = append(rem.PlannedMeals, m)
+		ids = append(ids, id)
 	}
 	if err := rows.Close(); err != nil {
 		return err
 	}
 	if err := rows.Err(); err != nil {
 		return err
+	}
+	for i := range ids {
+		names, err := boughtNames(ctx, tx, ids[i])
+		if err != nil {
+			return err
+		}
+		rem.PlannedMeals[len(rem.PlannedMeals)-len(ids)+i].Bought = names
 	}
 	rows, err = tx.QueryContext(ctx, `SELECT id, meal_slot_id, course_id, COALESCE(recipe_id, 0), COALESCE(tag, '') FROM slot_rules
 		WHERE meal_slot_id = ? AND course_id = ? ORDER BY id`, slotID, courseID)

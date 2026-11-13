@@ -23,6 +23,7 @@ const (
 	roleCooked                      // Cooked: history only (Stock already deducted)
 	roleSkipped                     // skipped: no effect at all
 	roleKept                        // a valid unpinned fresh Planned meal that Plan keeps
+	roleHeld                        // a Bought fresh Planned meal (ADR 0013): kept like Pinned by Plan, empty for Regenerate
 	rolePlannedLeftover             // a Planned meal served from a Leftover: checked at walk time
 	roleCovered                     // a Whole meal in the main Course covers it (spec 7.2 step 0)
 	roleNotServed                   // every attendee opts out of this Course (spec 7.2 step 0b)
@@ -208,7 +209,7 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 			continue
 		}
 		switch st.roles[i] {
-		case rolePinned, roleCooked, roleSkipped, roleKept:
+		case rolePinned, roleHeld, roleCooked, roleSkipped, roleKept:
 			st.coverGroup(i)
 		}
 	}
@@ -223,7 +224,7 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 	}
 	for i, s := range slots {
 		switch st.roles[i] {
-		case rolePinned, roleCooked:
+		case rolePinned, roleHeld, roleCooked:
 			if s.Existing.From == nil {
 				st.addHistory(i)
 			}
@@ -239,6 +240,7 @@ func newState(in Input, regen bool, target *SlotKey) (*state, error) {
 		}
 	}
 	st.keepCheck()
+	st.heldChecks()
 
 	for _, l := range in.Lots {
 		if l.Quantity <= eps {
@@ -293,18 +295,23 @@ func (st *state) classify(i int) role {
 	case MealSkipped:
 		return roleSkipped
 	}
-	// Not served drops the unresolved Planned Meal, Pinned ones too (ADR 0014); Cooked and Not cooked ones are history.
-	if st.slots[i].NotServed {
-		return roleNotServedDate
-	}
+	// A Pinned meal is classified before Not served: a past, unconfirmed one that happened still counts (its Stock,
+	// Cool-down and pending Leftover). BuildInput drops a future Pinned meal of a Not served slot from Existing.
 	if m.State == MealPinned {
 		return rolePinned
 	}
+	// Not served drops the unresolved Planned Meal (ADR 0014); Cooked and Not cooked ones are history.
+	if st.slots[i].NotServed {
+		return roleNotServedDate
+	}
 	if st.regen {
-		return roleEmpty
+		return roleEmpty // Regenerate replaces a Bought meal too (ADR 0013)
 	}
 	if m.From != nil {
 		return rolePlannedLeftover
+	}
+	if m.Held {
+		return roleHeld
 	}
 	if st.validPlannedFresh(i) {
 		return roleKept
@@ -349,7 +356,7 @@ func (st *state) plannedInGroup(i int, id RecipeID) bool {
 			return true
 		}
 		switch st.roles[j] {
-		case rolePinned, roleCooked, roleSkipped, roleKept, rolePlannedLeftover:
+		case rolePinned, roleHeld, roleCooked, roleSkipped, roleKept, rolePlannedLeftover:
 			if st.slots[j].Existing.RecipeID == id {
 				return true
 			}
@@ -365,7 +372,7 @@ func (st *state) fixedBeside(i int) bool {
 			continue
 		}
 		switch st.roles[j] {
-		case rolePinned, roleCooked, roleSkipped:
+		case rolePinned, roleHeld, roleCooked, roleSkipped:
 			return true
 		}
 	}
@@ -436,7 +443,7 @@ func (st *state) servedElsewhere(i int) bool {
 			continue
 		}
 		switch st.roles[j] {
-		case rolePinned, roleCooked, roleSkipped:
+		case rolePinned, roleHeld, roleCooked, roleSkipped:
 			return true
 		case roleKept, rolePlannedLeftover:
 			if j < i {
@@ -494,6 +501,30 @@ func (st *state) keepCheck() {
 	}
 }
 
+// heldChecks runs the recheck of the held (Bought) meals (ADR 0013 point 4): each is checked against the history without
+// its own cook. Unlike the keep check it never drops the meal: a broken rule only makes it relaxed, with its chip.
+func (st *state) heldChecks() {
+	for i := range st.slots {
+		if st.roles[i] != roleHeld {
+			continue
+		}
+		s := st.slots[i]
+		r, ok := st.recipes[s.Existing.RecipeID]
+		if !ok {
+			continue
+		}
+		st.dropHistory(i)
+		if !st.breaks(i, r) {
+			st.addHistory(i)
+			st.rechecks = append(st.rechecks, Recheck{Key: s.Key})
+			continue
+		}
+		chip := st.relaxedChip(i, r)
+		st.addHistory(i)
+		st.rechecks = append(st.rechecks, Recheck{Key: s.Key, Relaxed: true, Why: &chip})
+	}
+}
+
 // walk processes cells [0, upto) in order.
 func (st *state) walk(upto int) {
 	for i := 0; i < upto; i++ {
@@ -512,7 +543,7 @@ func (st *state) step(i int) {
 		// Skipped has no effect.
 	case rolePinned:
 		st.applyFixed(i, st.raise(i, *s.Existing))
-	case roleKept:
+	case roleKept, roleHeld:
 		st.keep(i)
 		st.applyFixed(i, st.raise(i, *s.Existing))
 	case roleNotServedDate:

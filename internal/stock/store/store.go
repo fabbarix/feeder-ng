@@ -93,6 +93,9 @@ type Mutation struct {
 	NewSource Source
 	Waste     []WasteRecord
 	Today     stock.Date
+	// ForgetGoOffs lists Lot ids whose go-off record is removed in the same transaction (beta.5: editing the
+	// Good until of a Lot to a later day removes its go-off). An id with no record is ignored.
+	ForgetGoOffs []int64
 }
 
 // GoOffRecord is the persisted go-off of a Lot that was removed from Stock without a Throw out
@@ -277,6 +280,11 @@ func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn
 	if src == "" {
 		src = SourceManual
 	}
+	for _, id := range m.ForgetGoOffs {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM stock_go_offs WHERE lot_id = ?`, id); err != nil {
+			return nil, err
+		}
+	}
 	for _, l := range m.Lots {
 		if l.ID == 0 {
 			// A Stock-take increase goes where the Ingredient was last put (or the default Storage Place).
@@ -305,16 +313,30 @@ func (s *Store) UpdateTx(ctx context.Context, tx *sql.Tx, ingredientID int64, fn
 	return queryLots(ctx, tx, ingredientID)
 }
 
-// DeleteLot removes one Stock Lot whole (Undo of a scan); ErrNotFound for an unknown lot.
+// DeleteLot removes one Stock Lot whole and its go-off record, if it has one (Undo of a scan, and beta.5 Delete: a
+// correction, not a go-off); ErrNotFound for an unknown lot.
 func (s *Store) DeleteLot(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM stock_lots WHERE id = ?`, id)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	res, err := tx.ExecContext(ctx, `DELETE FROM stock_lots WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotFound
 	}
-	return nil
+	if _, err := tx.ExecContext(ctx, `DELETE FROM stock_go_offs WHERE lot_id = ?`, id); err != nil {
+		return err
+	}
+	// What the Lot was bought for (planned_meal_bought, B5-BO, ADR 0013) goes in the same transaction: the Lot is gone.
+	// Used-up Lots are not deleted here, so their records stay.
+	if _, err := tx.ExecContext(ctx, `DELETE FROM planned_meal_bought WHERE lot_id = ?`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // AddWaste records waste.

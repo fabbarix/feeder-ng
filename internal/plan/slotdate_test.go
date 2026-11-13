@@ -175,6 +175,47 @@ func TestReconcileRaisesBatchesOfKeptAndPinnedMeals(t *testing.T) {
 	}
 }
 
+// Review round 3: a kept meal that is both raised and re-checked gets both: the raised Batches and portions, and the
+// re-check's relaxed flag and reason. Apply runs RaiseBatches before Upserts, so the upsert must carry the raised
+// values (or it undoes the raise).
+func TestReconcileAppliesTheRecheckOfAMealThatIsAlsoRaised(t *testing.T) {
+	s := baseSnapshot()
+	s.Slots = []plan.SlotInfo{slotInfo("2026-11-10", 1, "19:00", 1, 2)}
+	s.Meals = []plan.Meal{{ID: 2, Key: k("2026-11-10", 1), RecipeID: 3, Batches: 1, Portions: 2, State: plan.StatePlanned}}
+	res := planner.Result{
+		Kept:   []planner.SlotKey{pk("2026-11-10", 1)},
+		Raised: []planner.BatchRaise{{Key: pk("2026-11-10", 1), Batches: 3, Portions: 6}},
+		Rechecks: []planner.Recheck{{Key: pk("2026-11-10", 1), Relaxed: true,
+			Why: &planner.Why{Code: planner.ReasonCooldownRelaxed, Date: "2026-11-05"}}},
+	}
+	got := plan.Reconcile(s, res)
+	if want := []plan.BatchRaise{{Key: k("2026-11-10", 1), Batches: 3, Portions: 6}}; !reflect.DeepEqual(got.RaiseBatches, want) {
+		t.Errorf("RaiseBatches = %+v, want %+v", got.RaiseBatches, want)
+	}
+	var up *plan.Meal
+	for i := range got.Upserts {
+		if got.Upserts[i].Key == k("2026-11-10", 1) {
+			up = &got.Upserts[i]
+		}
+	}
+	if up == nil {
+		t.Fatalf("Upserts = %+v; the re-check's relaxed flag and reason never reach Changes for a raised meal", got.Upserts)
+	}
+	if !up.Relaxed {
+		t.Errorf("upsert = %+v, want Relaxed from the re-check", *up)
+	}
+	hasChip := false
+	for _, w := range up.Why {
+		hasChip = hasChip || w.Code == string(planner.ReasonCooldownRelaxed)
+	}
+	if !hasChip {
+		t.Errorf("upsert Why = %+v, want the re-check's cooldown_relaxed chip", up.Why)
+	}
+	if up.Batches != 3 || up.Portions != 6 {
+		t.Errorf("upsert Batches %v Portions %v, want the raised 3 and 6 (Apply would undo the raise with the old values)", up.Batches, up.Portions)
+	}
+}
+
 func TestReconcileNoRaiseWhenNothingWasRaised(t *testing.T) {
 	s := baseSnapshot()
 	s.Slots = []plan.SlotInfo{slotInfo("2026-11-10", 1, "19:00", 1, 2)}

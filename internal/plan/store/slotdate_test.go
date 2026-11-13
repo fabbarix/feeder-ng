@@ -36,6 +36,26 @@ func TestApplyRaisesTheBatchesOfAPinnedMealAndItStaysPinned(t *testing.T) {
 	}
 }
 
+// Review round 3: an upsert in the same Changes (a re-checked relaxed flag) must not undo a raise, whatever Batches
+// it carries.
+func TestApplyAnUpsertOfARaisedMealKeepsTheRaisedBatches(t *testing.T) {
+	f := newFixture(t)
+	saved, _ := f.st.SaveMeal(ctx, f.meal("2026-11-10", f.dinner, f.chicken)) // 1 Batch, 3 portions
+	stale := saved
+	stale.Relaxed = true // the re-check, carrying the old Batches and portions
+	err := f.st.Apply(ctx, plan.Changes{
+		RaiseBatches: []plan.BatchRaise{{Key: saved.Key, Batches: 3, Portions: 6}},
+		Upserts:      []plan.Meal{stale},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := f.st.Meal(ctx, saved.Key)
+	if got.Batches != 3 || got.Portions != 6 || !got.Relaxed {
+		t.Errorf("meal = %+v, want 3 Batches for 6 portions and the relaxed flag", got)
+	}
+}
+
 func TestApplyNeverRaisesACookedOrNotCookedMeal(t *testing.T) {
 	f := newFixture(t)
 	for i, state := range []plan.State{plan.StateCooked, plan.StateSkipped} {

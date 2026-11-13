@@ -95,6 +95,7 @@ type RemovedMeal struct {
 	CourseID   int64
 	RecipeID   int64
 	Pinned     bool
+	Bought     []string // the Ingredients bought for the meal (ADR 0013), nil when none
 }
 
 // RemovedRule is a Slot Rule that goes with its Course.

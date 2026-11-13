@@ -54,7 +54,15 @@ type Meal struct {
 	// Relaxed marks a relaxed pick: a Cool-down or Variety Rule gave way because too few Recipes fit
 	// (ADR 0009). Stored in planned_meals.relaxed.
 	Relaxed bool
+	// Bought lists the Ingredients (ids, ascending) a purchase from the Shopping List was bought for this Planned Meal
+	// (planned_meal_bought, migration 1520; ADR 0013). Filled by the store when it reads Planned Meals; empty = not
+	// Bought. A Pinned, Cooked or Not cooked meal can carry records too, but only a fresh, unresolved, unpinned one is
+	// held by BuildInput (see IsBought).
+	Bought []int64
 }
+
+// IsBought reports whether a purchase was bought for the Planned Meal (it has at least one record).
+func (m Meal) IsBought() bool { return len(m.Bought) > 0 }
 
 // Fresh reports whether the meal is cooked from scratch (not served from a Leftover).
 func (m Meal) Fresh() bool { return m.From == nil }
