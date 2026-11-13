@@ -19,7 +19,7 @@ export function ExportScreen(): ReactNode {
       ) : null}
       {p.error ? <ErrorState message={p.error.message} /> : null}
       {!p.isLoading && !p.error ? (
-        <ExportPicker recipes={p.recipes} selected={p.selected} onToggle={p.toggle} onSelectAll={p.selectAll} onClear={p.clear} href={p.href} />
+        <ExportPicker recipes={p.recipes} selected={p.selected} onToggle={p.toggle} onSelectAll={p.selectAll} onClear={p.clear} href={p.href} also={p.also} />
       ) : null}
     </section>
   )

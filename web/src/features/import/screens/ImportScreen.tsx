@@ -1,24 +1,33 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { BentoGrid, Button, PageHeader, Tile } from '../../../ui'
+import { TakeOverDialog } from '../../recipes/components/TakeOverDialog'
 import { AgentPromptStep } from '../components/AgentPromptStep'
+import { BaseRecipeLineTile } from '../components/BaseRecipeLineTile'
+import { ConfirmProblemTile } from '../components/ConfirmProblemTile'
 import { ConfirmTile } from '../components/ConfirmTile'
+import { ConvertBaseDialog } from '../components/ConvertBaseDialog'
 import { CourseMatchTile } from '../components/CourseMatchTile'
 import { ImageWarningsTile } from '../components/ImageWarningsTile'
+import { ImportFollowUps } from '../components/ImportFollowUps'
 import { ImportSource } from '../components/ImportSource'
 import { IngredientMatchTile } from '../components/IngredientMatchTile'
 import { ReadNote } from '../components/ReadNote'
 import { ReadRecipeStep } from '../components/ReadRecipeStep'
 import { RecipeConflictTile } from '../components/RecipeConflictTile'
 import { ReviewPhotoChoice } from '../components/ReviewPhotoChoice'
+import { TakeOverQuestion } from '../components/TakeOverQuestion'
 import { UnitPromptTile } from '../components/UnitPromptTile'
 import { ValidationErrorsTile } from '../components/ValidationErrorsTile'
+import { useBaseRecipeLines, type UseBaseRecipeLines } from '../hooks/useBaseRecipeLines'
 import { useImportCourses } from '../hooks/useImportCourses'
 import { useImportReview } from '../hooks/useImportReview'
 import { useReadAvailability } from '../hooks/useReadAvailability'
 import { usePhotoReadEnd } from '../hooks/usePhotoReadEnd'
 import { useRecipeRead } from '../hooks/useRecipeRead'
+import { confirmNeedsAnswer, genericProblems, standaloneAsks } from '../lib/baseRecipeLines'
+import { hasFollowUps } from '../lib/confirmFollowUps'
 import { questionRows, splitProblems, usedByRecipes } from '../lib/courseRows'
 import { canConfirm, openCount } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
@@ -41,6 +50,9 @@ export function ImportScreen(): ReactNode {
   const finishPhotos = useCallback(() => photosFinished.current?.(), [])
   usePhotoReadEnd(read, finishPhotos)
   const availability = useReadAvailability()
+  // BR-E: the Base recipe tiles and the convert dialog of the review.
+  const baseLines = useBaseRecipeLines({ plan: r.plan, onAnswer: r.chooseBaseRecipeLine })
+  const readNoteId = useId()
   const readHeading = useRef<HTMLHeadingElement>(null)
   const reviewHeading = useRef<HTMLHeadingElement>(null)
   const { hash } = useLocation()
@@ -52,6 +64,12 @@ export function ImportScreen(): ReactNode {
     heading?.scrollIntoView?.({ block: 'start' })
     heading?.focus({ preventScroll: true })
   }, [hash])
+
+  // BR-E: "Read Béchamel now" lands on the Read step's heading, which says which Base recipe the read is for.
+  const readNextFor = r.readNextFor
+  useEffect(() => {
+    if (readNextFor) readHeading.current?.focus({ preventScroll: true })
+  }, [readNextFor])
 
   // A finished read opens the review below the fold on a phone: move focus there so the result is not missed. A file does not.
   const fromRead = r.readNote !== undefined
@@ -79,20 +97,36 @@ export function ImportScreen(): ReactNode {
       <PageHeader title={s.importTitle} breadcrumbs={useBreadcrumbs()} />
       {r.error ? <ValidationErrorsTile error={r.error} /> : null}
       {r.phase === 'done' ? (
-        <Tile as="section" className="import-done">
-          <p>{s.done(r.result?.recipes.length ?? 0)}</p>
-          {(r.result?.coursesCreated ?? 0) > 0 ? <p>{s.courses.created(r.result?.coursesCreated ?? 0)}</p> : null}
-          {(r.result?.coursesUnarchived ?? 0) > 0 ? <p>{s.courses.unarchived(r.result?.coursesUnarchived ?? 0)}</p> : null}
-          <Link className="button" data-variant="primary" data-size="md" to="/recipes">
-            {s.openRecipes}
-          </Link>
-          <Button variant="tertiary" onClick={() => void r.reset()}>
-            {s.startOver}
-          </Button>
-        </Tile>
+        <>
+          <Tile as="section" className="import-done">
+            <p>{s.done(r.result?.recipes.length ?? 0)}</p>
+            {(r.result?.coursesCreated ?? 0) > 0 ? <p>{s.courses.created(r.result?.coursesCreated ?? 0)}</p> : null}
+            {(r.result?.coursesUnarchived ?? 0) > 0 ? <p>{s.courses.unarchived(r.result?.coursesUnarchived ?? 0)}</p> : null}
+            <Link className="button" data-variant="primary" data-size="md" to="/recipes">
+              {s.openRecipes}
+            </Link>
+            <Button variant="tertiary" onClick={() => void r.reset()}>
+              {s.startOver}
+            </Button>
+          </Tile>
+          {r.result && hasFollowUps(r.result) ? <ImportFollowUps result={r.result} onReadNext={(target) => void r.startReadNext(target)} /> : null}
+        </>
       ) : (
         <>
-          {r.phase === 'source' ? <ReadRecipeStep read={read} availability={availability} headingRef={readHeading} photosFinished={photosFinished} /> : null}
+          {r.phase === 'source' && r.readNextFor ? (
+            <p id={readNoteId} className="read-step__muted">
+              {s.baseRecipes.readingFor(r.readNextFor.name)}
+            </p>
+          ) : null}
+          {r.phase === 'source' ? (
+            <ReadRecipeStep
+              read={read}
+              availability={availability}
+              headingRef={readHeading}
+              headingDescribedBy={r.readNextFor ? readNoteId : undefined}
+              photosFinished={photosFinished}
+            />
+          ) : null}
           <AgentPromptStep step={r.phase === 'source' ? 2 : 1} />
           {r.phase === 'source' ? <ImportSource busy={r.busy} onSubmit={(text) => void r.open(text)} /> : null}
           <Tile as="section" className="import-review" overline={s.stepOverline(r.phase === 'source' ? 4 : 2)}>
@@ -100,16 +134,36 @@ export function ImportScreen(): ReactNode {
               {s.stepThreeTitle}
             </h2>
             {r.phase === 'reviewing' && r.plan ? (
-              <Reviewing plan={r.plan} stale={r.stale} screen={r} courses={courses} />
+              <Reviewing plan={r.plan} stale={r.stale} screen={r} courses={courses} baseLines={baseLines} />
             ) : (
               <p className="import-review__empty">{s.reviewEmpty}</p>
             )}
           </Tile>
           {r.phase === 'reviewing' && r.plan ? (
-            <ConfirmTile canConfirm={canConfirm(r.plan, r.busy)} busy={r.busy} open={openCount(r.plan)} onConfirm={() => void r.confirm()} />
+            <ConfirmTile
+              canConfirm={canConfirm(r.plan, r.busy)}
+              busy={r.busy}
+              open={openCount(r.plan)}
+              needs={confirmNeedsAnswer(r.plan)}
+              onConfirm={() => void r.confirm()}
+            />
           ) : null}
         </>
       )}
+      <ConvertBaseDialog
+        state={baseLines.convert}
+        canConfirm={baseLines.canConfirmConvert}
+        onYield={baseLines.setYield}
+        onYieldUnit={baseLines.setYieldUnit}
+        onConfirm={baseLines.confirmConvert}
+        onCancel={baseLines.cancelConvert}
+      />
+      <TakeOverDialog
+        ask={r.takeOverPrompt?.ask ?? null}
+        baseName={r.takeOverPrompt?.baseName ?? ''}
+        onAnswer={(yes) => void r.answerTakeOverPrompt(yes)}
+        onCancel={r.cancelTakeOverPrompt}
+      />
     </section>
   )
 }
@@ -119,17 +173,21 @@ interface ReviewingProps {
   stale: boolean
   screen: ReturnType<typeof useImportReview>
   courses: ReturnType<typeof useImportCourses>
+  baseLines: UseBaseRecipeLines
 }
 
-function Reviewing({ plan, stale, screen, courses }: ReviewingProps): ReactNode {
+function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps): ReactNode {
   // CRS E2: the too_many_courses Problem and a refused Course answer are inline danger Tiles beside the Course tiles; each follows its
-  // state. The other Problems stay in the generic list.
+  // state. The other Problems stay in the generic list. BR-E: a Problem on a Base recipe line is shown on that line's tile.
   const { courseLimit, others } = splitProblems(plan.problems)
   const names = questionRows(plan.courses)
   const forbidden = screen.courseForbidden
   const limited = courseLimit !== undefined
+  // A take-over ask whose Base recipe has no line of its own (an exported Base recipe imported on its own) gets its own tile.
+  const asks = standaloneAsks(plan)
   return (
     <>
+      <ConfirmProblemTile problem={screen.confirmProblem} />
       {screen.readNote ? <ReadNote note={screen.readNote} /> : null}
       {stale ? (
         <Tile variant="status" status="danger" role="alert" as="section">
@@ -139,11 +197,11 @@ function Reviewing({ plan, stale, screen, courses }: ReviewingProps): ReactNode 
           </Button>
         </Tile>
       ) : null}
-      {others.length > 0 ? (
+      {genericProblems(plan, others).length > 0 ? (
         <Tile variant="status" status="spoil" as="section">
           <h3>{s.errorsTitle}</h3>
           <ul className="import-list">
-            {others.map((p, i) => (
+            {genericProblems(plan, others).map((p, i) => (
               <li key={`${p.path}-${i}`}>
                 <code>{p.path}</code> {p.message}
               </li>
@@ -151,11 +209,34 @@ function Reviewing({ plan, stale, screen, courses }: ReviewingProps): ReactNode 
           </ul>
         </Tile>
       ) : null}
-      <BentoGrid min="card" label={s.ingredientsTitle}>
-        {plan.ingredients.map((m) => (
-          <IngredientMatchTile key={m.key} match={m} onUseExisting={(id) => screen.chooseExisting(m.key, id)} onCreate={(opts) => screen.chooseCreate(m.key, opts)} />
-        ))}
-      </BentoGrid>
+      <section aria-label={s.ingredientsTitle}>
+        <BentoGrid min="card">
+          {plan.ingredients.map((m) => (
+            <IngredientMatchTile key={m.key} match={m} onUseExisting={(id) => screen.chooseExisting(m.key, id)} onCreate={(opts) => screen.chooseCreate(m.key, opts)} />
+          ))}
+        </BentoGrid>
+      </section>
+      {plan.baseRecipeLines.length > 0 || asks.length > 0 ? (
+        <section aria-label={s.baseRecipes.title}>
+          <BentoGrid min="card">
+            {baseLines.rows.map((row) => (
+              <BaseRecipeLineTile
+                key={row.path}
+                row={row}
+                ask={baseLines.askFor(row.path)}
+                problems={plan.problems}
+                warnings={plan.warnings}
+                onAnswer={(answer) => baseLines.answer(row.path, answer)}
+                onConvert={(recipe) => void baseLines.startConvert(row.path, recipe)}
+                onTakeOver={(yes) => screen.chooseTakeOver(row.path, yes)}
+              />
+            ))}
+            {asks.map((ask) => (
+              <TakeOverQuestion key={ask.path} ask={ask} onTakeOver={(yes) => screen.chooseTakeOver(ask.path, yes)} />
+            ))}
+          </BentoGrid>
+        </section>
+      ) : null}
       {plan.unitPrompts.length > 0 ? (
         <BentoGrid min="card" label={s.unitsTitle}>
           {plan.unitPrompts.map((p) => (

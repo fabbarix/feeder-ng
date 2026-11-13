@@ -24,11 +24,11 @@ export function recipe(over: Partial<RecipeStatus> = {}): RecipeStatus {
 }
 
 export function plan(over: Partial<Plan> = {}): Plan {
-  return { ingredients: [], unitPrompts: [], recipes: [], courses: [], problems: [], warnings: [], ready: true, ...over }
+  return { ingredients: [], unitPrompts: [], recipes: [], courses: [], baseRecipeLines: [], takeOvers: [], problems: [], warnings: [], ready: true, ...over }
 }
 
 /** The Recipe Assistant part of a UseImportReview mock: a review that came from a file (no photos). */
-export function reviewExtras(over: Partial<UseImportReview> = {}): Pick<UseImportReview, 'reviewId' | 'adopt' | 'photos' | 'photoRecipes' | 'photoChoice' | 'setPhotoEnabled' | 'choosePhoto' | 'choosePhotoRecipe' | 'readNote'> {
+export function reviewExtras(over: Partial<UseImportReview> = {}): Pick<UseImportReview, 'reviewId' | 'adopt' | 'photos' | 'photoRecipes' | 'photoChoice' | 'setPhotoEnabled' | 'choosePhoto' | 'choosePhotoRecipe' | 'readNote' | 'chooseBaseRecipeLine' | 'chooseTakeOver' | 'confirmProblem' | 'takeOverPrompt' | 'answerTakeOverPrompt' | 'cancelTakeOverPrompt' | 'startReadNext' | 'readNextFor'> {
   return {
     reviewId: undefined,
     adopt: vi.fn(),
@@ -39,6 +39,15 @@ export function reviewExtras(over: Partial<UseImportReview> = {}): Pick<UseImpor
     choosePhoto: vi.fn(),
     choosePhotoRecipe: vi.fn(),
     readNote: undefined,
+    // BR-E: the Base recipe part of a UseImportReview mock.
+    chooseBaseRecipeLine: vi.fn(),
+    chooseTakeOver: vi.fn(),
+    confirmProblem: undefined,
+    takeOverPrompt: undefined,
+    answerTakeOverPrompt: vi.fn(),
+    cancelTakeOverPrompt: vi.fn(),
+    startReadNext: vi.fn(),
+    readNextFor: undefined,
     ...over,
   }
 }

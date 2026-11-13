@@ -1,7 +1,9 @@
 // BR-D (design §3.1, §3.7): the units a Base recipe's Yield can have, and the Yield a new Base recipe gets from a line.
 
-/** The Yield units: the weights and volumes of the global units (cup among them), piece and portion (design §3.1). */
-export const YIELD_UNITS: readonly string[] = ['g', 'kg', 'ml', 'l', 'dl', 'cl', 'tsp', 'tbsp', 'cup', 'piece', 'portion']
+/** The Yield units: the weights and volumes of the global units (cup among them), piece and portion (design §3.1); the list lives in ui/fields/yieldUnits. */
+import { YIELD_UNITS } from '../../ui/fields/yieldUnits'
+
+export { YIELD_UNITS }
 
 /** The Yield amount of a Base recipe's shown text: "1 l", "300 g", "8 portions", "1 portion"; null unit = a plannable Recipe's portions. */
 export function yieldText(amount: number, unit: string | null | undefined): string {

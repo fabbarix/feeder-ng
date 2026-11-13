@@ -25,11 +25,39 @@ export interface CourseDecision {
   /** For action 'use': an active Course. */
   courseId?: number
 }
+/** BR-E: the actions a Base recipe tile can answer with. */
+export type BaseRecipeAction = 'use' | 'file' | 'create' | 'convert' | 'keep'
+
+/**
+ * BR-E: the answer to a Base recipe tile (design §11.3). `use` an existing Base recipe (recipeId), `file` a Recipe of this import
+ * (recipeIndex, with a Yield when it is not marked a Base recipe), `create` a new Base recipe (readNext), `convert` a plannable
+ * Recipe (recipeId, the Yield), `keep` the line as an Ingredient.
+ */
+export interface BaseRecipeAnswer {
+  action: BaseRecipeAction
+  recipeId?: number
+  recipeIndex?: number
+  readNext?: boolean
+  yield?: number
+  yieldUnit?: string
+}
 export interface Decisions {
   ingredients: IngredientDecision[]
   conversions: ConversionAnswer[]
   recipes: RecipeDecision[]
   courses: CourseDecision[]
+  /** BR-E: the answer of each Base recipe tile, by line path. Absent until one is given. */
+  baseRecipeLines?: Record<string, BaseRecipeAnswer>
+  /** BR-E: the take-over ask answers (P7), by path. Absent until one is given. */
+  takeOvers?: Record<string, boolean>
+}
+/** BR-E round 2: a Base recipe answer as it goes over the wire: the action is the server's word (a string), checked by the server. */
+export interface WireBaseRecipeAnswer extends Omit<BaseRecipeAnswer, 'action'> {
+  action: string
+}
+/** The decisions as they are sent to the Import Review routes: a Decisions whose Base recipe answers are the wire shape. */
+export interface DecisionsWire extends Omit<Decisions, 'baseRecipeLines'> {
+  baseRecipeLines?: Record<string, WireBaseRecipeAnswer>
 }
 
 export interface Suggestion { id: number; name: string; baseUnit: BaseUnit; score: number }
@@ -85,19 +113,60 @@ export interface PathError { path: string; message: string }
 export interface Problem { path: string; code: string; message: string }
 export interface Warning { path: string; code: string; message: string }
 
+/** BR-E: what a Base recipe suggestion stands for: a Base recipe, a Recipe of this file, or a plannable Recipe (a convert). */
+export interface BaseRecipeSuggestion {
+  kind: 'base' | 'plannable' | 'file'
+  recipeId?: number
+  recipeIndex?: number
+  name: string
+  exact: boolean
+}
+/** BR-E: one Base recipe line of the review (`plan().baseRecipeLines[]`): "500 ml béchamel", with its answers. */
+export interface BaseRecipeLine {
+  path: string
+  name: string
+  cue?: string
+  quantity: number
+  unit: string
+  suggestions: BaseRecipeSuggestion[]
+  /** The answer in force: the User's, or the preselected exact match. */
+  effective?: BaseRecipeAnswer
+  resolved: boolean
+  /** The plain Ingredient of the same name, when there is one (shown beside Keep it as an Ingredient). */
+  keepIngredient?: { id: number; name: string; baseUnit: BaseUnit }
+  /** BR-E round 2: the reference the line makes (a Recipe's name), when the server gives one. */
+  reference?: string
+}
+/** BR-E: the take-over ask of a Base recipe whose name an Ingredient already has (`plan().takeOvers[]`, P7 = B). */
+export interface ImportTakeOverAsk {
+  path: string
+  name: string
+  ingredient: { id: number; name: string; baseUnit: BaseUnit }
+  recipes: Array<{ id: number; name: string }>
+  stockLots: number
+  convertible: boolean
+  answer?: boolean
+  resolved: boolean
+}
+
 export interface Plan {
   ingredients: IngredientMatch[]
   unitPrompts: UnitPrompt[]
   recipes: RecipeStatus[]
   /** CRS E2: one row per distinct Course name of the kept Recipes, first-seen order; [] when none. */
   courses: CourseMatch[]
+  /** BR-E: one tile per Base recipe line that is marked or matched; [] when none. */
+  baseRecipeLines: BaseRecipeLine[]
+  /** BR-E: the take-over asks; [] when none. */
+  takeOvers: ImportTakeOverAsk[]
   problems: Problem[]
   warnings: Warning[]
   ready: boolean
 }
 export interface ReviewResponse { id: string; plan: Plan }
 export interface ImportResult {
-  recipes: Array<{ index: number; id: number; name: string; action: 'created' | 'replaced' }>
+  /** BR-E: `converted` is a plannable Recipe turned into a Base recipe; `baseRecipe`, `line` and `readNext` are absent in an older answer. */
+  recipes: Array<{ index: number; id: number; name: string; action: 'created' | 'replaced' | 'converted'; baseRecipe?: boolean; line?: string; readNext?: boolean }>
   ingredientsCreated: number
   conversionsAdded: number
   /** CRS E2: Courses the import added or brought back (absent from an old answer = 0). */

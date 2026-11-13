@@ -19,6 +19,8 @@ export interface ReadRecipeStepProps {
   availability: ReadAvailability & { retry?: () => void }
   /** The step's heading takes focus when the page is opened at #read (the screen owns that). */
   headingRef?: Ref<HTMLHeadingElement>
+  /** BR-E round 2: ids of the elements that describe the heading (the "Reading Béchamel" note, when a read is for a Base recipe). */
+  headingDescribedBy?: string
   /**
    * The screen's slot for this step's photo clearing (pages.finished). The screen runs it when a photo read reaches review, after
    * this step has unmounted (hotfix 4.2).
@@ -33,7 +35,7 @@ type Tab = 'url' | 'text' | 'photo'
  * (Web page, Text, Photo), its panel, the Read button, the progress while a read runs, the error tile after a failure,
  * and the disabled reason when the feature is off. Renders and wires; the work is in useRecipeRead and lib/.
  */
-export function ReadRecipeStep({ read, availability, headingRef, photosFinished }: ReadRecipeStepProps): ReactNode {
+export function ReadRecipeStep({ read, availability, headingRef, headingDescribedBy, photosFinished }: ReadRecipeStepProps): ReactNode {
   const [tab, setTab] = useState<Tab>('url')
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
@@ -117,7 +119,7 @@ export function ReadRecipeStep({ read, availability, headingRef, photosFinished 
 
   return (
     <Tile as="section" overline={s.stepOverline(1)} overlineIcon="assistant">
-      <h2 ref={headingRef} tabIndex={-1}>
+      <h2 ref={headingRef} tabIndex={-1} aria-describedby={headingDescribedBy}>
         {t.stepTitle}
       </h2>
       <Segmented

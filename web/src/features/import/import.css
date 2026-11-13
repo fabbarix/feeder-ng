@@ -406,3 +406,85 @@
   gap: var(--space-2);
   overflow-wrap: anywhere;
 }
+
+/* ---- Base recipes (BR-E, design §11.3, §13). Tokens only; a status tile has a 1 px border in its tone; a chip stays on one line. ---- */
+.base-line-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.base-line-tile__reading {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+}
+
+.base-line-tile__question {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-title-3-size);
+  font-weight: var(--text-title-3-weight);
+  line-height: var(--text-title-3-line);
+}
+
+/* The "Needs an answer" chip: one line, its label ends in an ellipsis instead of wrapping. */
+.base-line-tile__chips {
+  display: flex;
+  flex-wrap: nowrap;
+  min-inline-size: 0;
+}
+
+.base-line-tile__chips .chip {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  white-space: nowrap;
+}
+
+.base-line-tile__note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.base-line-tile__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.base-take-over__text {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+
+.base-yield {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.import-follow-ups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.export-picker__also {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}

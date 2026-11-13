@@ -33,7 +33,7 @@ const trail = () => screen.getByRole('navigation', { name: 'Breadcrumb' })
 
 beforeEach(() => {
   hook.review = review({})
-  hook.picker = { recipes: [], isLoading: false, error: null, selected: [], toggle: vi.fn(), selectAll: vi.fn(), clear: vi.fn(), href: '/api/recipe-file/export?all=1' }
+  hook.picker = { recipes: [], isLoading: false, error: null, selected: [], toggle: vi.fn(), selectAll: vi.fn(), clear: vi.fn(), href: '/api/recipe-file/export?all=1', also: [] }
 })
 
 describe('Import and Export breadcrumbs', () => {

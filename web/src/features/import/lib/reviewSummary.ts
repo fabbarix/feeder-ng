@@ -1,8 +1,9 @@
 // Pure view-model of an Import Review: which step tiles to show and how much is still open.
 import type { IngredientMatch, Plan } from '../types'
 import { questionRows } from './courseRows'
+import { unansweredCount } from './baseRecipeLines'
 
-export type StepId = 'problems' | 'ingredients' | 'units' | 'courses' | 'recipes' | 'images'
+export type StepId = 'problems' | 'ingredients' | 'baseRecipes' | 'units' | 'courses' | 'recipes' | 'images'
 
 export interface StepTile {
   id: StepId
@@ -13,8 +14,8 @@ export interface StepTile {
 }
 
 /**
- * The tiles to show, in this order: problems (only when there are any), ingredients (always),
- * units (only with prompts), Courses (only with unknown or archived names), recipes (only when some Recipe conflicts), images (only with warnings).
+ * The tiles to show, in this order: problems (only when there are any), ingredients (always), Base recipes (only with a Base recipe
+ * line or take-over ask), units (only with prompts), Courses (only with unknown or archived names), recipes (only when some Recipe conflicts), images (only with warnings).
  * `open` counts unresolved Ingredients, unanswered unit prompts, unresolved Courses, unresolved Recipe conflicts and problems;
  * images are never blocking (open 0).
  */
@@ -28,6 +29,12 @@ export function reviewSteps(plan: Plan): StepTile[] {
     total: plan.ingredients.length,
     open: plan.ingredients.filter((m) => !m.resolved).length,
   })
+  // BR-E: one row per Base recipe line, and each take-over ask that no line carries.
+  const asksOnLines = plan.takeOvers.filter((a) => plan.baseRecipeLines.some((l) => l.path === a.path))
+  const standaloneAsks = plan.takeOvers.length - asksOnLines.length
+  if (plan.baseRecipeLines.length > 0 || standaloneAsks > 0) {
+    tiles.push({ id: 'baseRecipes', total: plan.baseRecipeLines.length + standaloneAsks, open: unansweredCount(plan) })
+  }
   if (plan.unitPrompts.length > 0) {
     tiles.push({ id: 'units', total: plan.unitPrompts.length, open: plan.unitPrompts.filter((p) => !p.answered).length })
   }
@@ -51,9 +58,9 @@ export function openCount(plan: Plan): number {
   return reviewSteps(plan).reduce((sum, t) => sum + t.open, 0)
 }
 
-/** Confirm is possible only when the server says the plan is ready. */
+/** Confirm is possible only when the server says the plan is ready and every Base recipe question is answered (BR-E: nothing is linked silently). */
 export function canConfirm(plan: Plan, busy: boolean): boolean {
-  return plan.ready && !busy
+  return plan.ready && !busy && unansweredCount(plan) === 0
 }
 
 export interface IngredientOption {
