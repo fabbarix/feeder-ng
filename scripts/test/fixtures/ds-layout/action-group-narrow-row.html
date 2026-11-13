@@ -1,0 +1,28 @@
+<!doctype html><html data-scheme="light"><head><meta charset="utf-8"><title>pending</title>
+<!-- DS-A round 3 (system.md §5): ActionGroup in a 358 px ListRow (a phone). Below 35rem the group takes its own line, spanning the
+     row, so a long title keeps a readable width (>= 120 px) and nothing spills past the row. Review repro: dsa-review/ag-narrow.html
+     (the title shrank to 0-20 px and "All Cooked" spilled 8 px). Read by ds-layout_test.sh. -->
+<link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/500.css"><link rel="stylesheet" href="../../../../web/node_modules/@fontsource/figtree/700.css">
+<link rel="stylesheet" href="../../../../web/src/styles.css"><link rel="stylesheet" href="../../../../web/src/ui/Button.css"><link rel="stylesheet" href="../../../../web/src/ui/IconButton.css">
+<link rel="stylesheet" href="../../../../web/src/ui/ListRow.css"><link rel="stylesheet" href="../../../../web/src/ui/ActionGroup.css">
+<style>body { margin: 0; font-family: 'Figtree', sans-serif; } ul { margin: 0; padding: 0; list-style: none; }</style>
+</head><body>
+<ul style="inline-size: 358px">
+  <li class="list-row" id="row"><span class="list-row__text" id="text"><span class="list-row__title" id="title">Sam's Manicotti + Two-colour cauliflower with peppers</span><span class="list-row__meta">Thu Dinner · 2 Courses</span></span>
+    <div class="action-group" role="group" aria-label="Thu Dinner" data-more="true" id="g">
+      <button class="button" data-variant="primary" data-size="md"><svg width="20" height="20"></svg>All Cooked</button>
+      <button class="button" data-variant="secondary" data-size="md">Adjust</button>
+      <button class="icon-button" data-size="md" aria-label="More for Thu Dinner"></button></div></li>
+</ul>
+<script>
+const r = (id) => document.getElementById(id).getBoundingClientRect()
+const row = r('row'), title = r('title'), g = r('g')
+const kids = [...document.getElementById('g').children].map((c) => c.getBoundingClientRect())
+document.title = JSON.stringify({
+  titleW: Math.round(title.width),
+  groupBelow: g.top >= r('text').bottom - 1,
+  groupSpans: Math.round(g.width) >= Math.round(row.width) - 2 * 24,
+  spill: Math.round(Math.max(g.right, ...kids.map((k) => k.right), title.right) - row.right),
+  display: getComputedStyle(document.getElementById('g')).display,
+})
+</script></body></html>
