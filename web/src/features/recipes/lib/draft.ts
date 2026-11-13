@@ -239,24 +239,29 @@ export function draftToInput(draft: RecipeDraft): RecipeInput {
     image: draft.image,
     lines: draft.lines
       .filter((l) => l.ingredientId !== null || (l.baseRecipeId ?? null) !== null)
-      .map((l) =>
-        (l.baseRecipeId ?? null) !== null
+      .map((l) => {
+        // BR-D round 3: a stored line keeps its id (the PUT replaces the lines); a Base recipe line also keeps the Ingredient it was linked from.
+        const id = l.id === undefined ? {} : { id: l.id }
+        return (l.baseRecipeId ?? null) !== null
           ? {
+              ...id,
               baseRecipeId: l.baseRecipeId!,
               quantity: numberOrZero(l.quantity),
               unit: l.unit.trim().toLowerCase(),
               optional: l.optional,
               note: l.note.trim(),
               neededAtStep: l.neededAtStep ?? null,
+              linkedFromIngredientId: l.linkedFromIngredientId ?? null,
             }
           : {
+              ...id,
               ingredientId: l.ingredientId!,
               quantity: numberOrZero(l.quantity),
               unit: l.unit.trim().toLowerCase(),
               optional: l.optional,
               note: l.note.trim(),
-            },
-      ),
+            }
+      }),
     steps: draft.steps.map((s) => ({
       text: s.text.trim(),
       kind: s.kind,

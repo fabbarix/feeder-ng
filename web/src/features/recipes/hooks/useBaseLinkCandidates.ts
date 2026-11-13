@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { http } from '../../../lib/http'
 import { baseRecipesApi } from '../../../lib/baseRecipes/api'
 
 /**
@@ -17,4 +18,17 @@ export function useBaseLinkCandidates(baseRecipeId: number, enabled: boolean): {
     ingredientName: lines[0]?.ingredientName ?? '',
     refetch: () => void query.refetch(),
   }
+}
+
+/**
+ * BR-D (design §3.8): the Base Unit of a Base recipe's Ingredient, for the bulk link list's reasons ("cup cannot be converted to ml yet"). Known from the
+ * Ingredient list when it has loaded; else read from the Ingredient itself (`GET /api/ingredients/{id}`). undefined until known: never a guessed unit.
+ */
+export function useBaseIngredientUnit(ingredientId: number, known: string | undefined): string | undefined {
+  const query = useQuery({
+    queryKey: ['ingredients', ingredientId],
+    queryFn: () => http.get<{ baseUnit: string }>(`/api/ingredients/${ingredientId}`),
+    enabled: known === undefined && Number.isFinite(ingredientId),
+  })
+  return known ?? query.data?.baseUnit
 }

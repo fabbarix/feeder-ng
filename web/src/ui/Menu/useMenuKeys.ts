@@ -5,6 +5,8 @@ export interface UseMenuKeysOptions {
   onClose: () => void
   menuRef: RefObject<HTMLElement | null>
   triggerRef: RefObject<HTMLElement | null>
+  /** BR-D: the item that takes the focus on open (by its id); the first when absent or not found. */
+  initialFocusId?: string
 }
 
 const ITEM = '[role="menuitem"], [role="menuitemcheckbox"]'
@@ -13,7 +15,7 @@ const itemsIn = (menu: HTMLElement | null): HTMLElement[] =>
   menu ? Array.from(menu.querySelectorAll<HTMLElement>(ITEM)).filter((el) => el.getAttribute('aria-disabled') !== 'true') : []
 
 /** Keyboard rules of a menu: first item gets focus on open; Arrows wrap, Home and End jump; Escape and Tab close and return focus to the trigger. */
-export function useMenuKeys({ open, onClose, menuRef, triggerRef }: UseMenuKeysOptions): {
+export function useMenuKeys({ open, onClose, menuRef, triggerRef, initialFocusId }: UseMenuKeysOptions): {
   onMenuKeyDown: (e: KeyboardEvent<HTMLElement>) => void
 } {
   const close = useRef(onClose)
@@ -21,8 +23,10 @@ export function useMenuKeys({ open, onClose, menuRef, triggerRef }: UseMenuKeysO
 
   // Focus goes to the first item on open, never to a highlighted last item.
   useEffect(() => {
-    if (open) itemsIn(menuRef.current)[0]?.focus()
-  }, [open, menuRef])
+    if (!open) return
+    const chosen = initialFocusId ? menuRef.current?.querySelector<HTMLElement>(`[data-item-id="${initialFocusId}"]`) : null
+    ;(chosen ?? itemsIn(menuRef.current)[0])?.focus()
+  }, [open, menuRef, initialFocusId])
 
   // Escape closes from anywhere and returns focus to the trigger.
   useEffect(() => {

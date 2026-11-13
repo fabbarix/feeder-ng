@@ -20,8 +20,8 @@ export interface TakeOverDialogModel {
   title: string
   /** Paragraphs: who calls for it and what Stock it has; then what Yes does; then what No does. */
   body: string[]
-  yesLabel: 'Yes'
-  noLabel: 'No'
+  yesLabel: string
+  noLabel: string
   /** Yes is disabled (the Yield's unit does not convert to the Ingredient's Base Unit) and this says why; undefined when Yes works. */
   yesDisabledReason?: string
 }
@@ -45,14 +45,14 @@ export function takeOverDialog(ask: TakeOverAsk, baseName: string): TakeOverDial
       ? `${head}, and ${ask.stockLots === 1 ? '1 Stock Lot of it is in the Pantry' : `${ask.stockLots} Stock Lots of it are in the Pantry`}.`
       : `${head}. It has no Stock.`
   const model: TakeOverDialogModel = {
-    title: `Use the Ingredient ${ask.ingredient.name} for ${baseName}?`,
+    title: `${baseName} (Base recipe) has the name of an Ingredient. Take it over?`,
     body: [
       first,
       `Yes: ${baseName} takes this Ingredient over. Its Stock and its Recipes carry over, and every line of ${ask.ingredient.name} becomes a ${baseName} line.`,
-      `No: ${baseName} gets its own Ingredient, and the plain ${ask.ingredient.name} stays as it is. You link its lines one by one or in a list. An Ingredient named ${ask.ingredient.name} can still be added.`,
+      `No: ${baseName} gets its own Ingredient, and the plain ${ask.ingredient.name} stays as it is. You link its lines one by one or in a list. The Base recipe badge tells them apart.`,
     ],
-    yesLabel: 'Yes',
-    noLabel: 'No',
+    yesLabel: 'Yes, take it over',
+    noLabel: 'No, keep it apart',
   }
   if (!ask.convertible) model.yesDisabledReason = `The Yield's unit cannot be converted to ${ask.ingredient.name} yet.`
   return model

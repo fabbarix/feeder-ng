@@ -1,9 +1,9 @@
+import { newBaseRecipeInput } from './newBase'
 import { useRef, useState } from 'react'
-import { useOptionalConfirm } from '../../ui/ConfirmDialog'
-import { useOptionalToast } from '../../ui/Toast'
+import { useConfirm } from '../../ui/ConfirmDialog'
+import { useToast } from '../../ui/Toast'
 import { baseRecipesApi } from './api'
 import { convertConfirm } from './convertConfirm'
-import { displayBaseName } from './matchKey'
 import { parseTakeOver } from './takeOver'
 import { refusalMessage } from './refusals'
 import { baseRecipeLinkStrings } from './strings'
@@ -69,8 +69,8 @@ interface Pending {
 /** The line actions of a saved Recipe (the detail): Link to a Base recipe, Use as a plain Ingredient. `onChanged` runs after every change so the screen refetches. */
 export function useLineLink(opts: { recipeId: number; onChanged?: () => void }): UseLineLink {
   const { recipeId, onChanged } = opts
-  const toast = useOptionalToast()
-  const confirm = useOptionalConfirm()
+  const toast = useToast()
+  const confirm = useConfirm()
   const [takeOverAsk, setTakeOverAsk] = useState<TakeOverAsk | null>(null)
   const [askName, setAskName] = useState<string | null>(null)
   const [unitPrompt, setUnitPrompt] = useState<LinkUnitPrompt | null>(null)
@@ -104,7 +104,7 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
     }
     setError(null)
     onChanged?.()
-    toast?.show(baseRecipeLinkStrings.linkedTo(base.name), {
+    toast.show(baseRecipeLinkStrings.linkedTo(base.name), {
       actionLabel: baseRecipeLinkStrings.undo,
       onAction: () => void undoLink(line.id, () => baseRecipesApi.unlinkLine(recipeId, line.id)).catch(() => undefined),
     })
@@ -113,30 +113,10 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
 
   /** POST /api/recipes as a new Base recipe, then the link. `takeOver` answers the take-over ask. */
   const createAndLink = async (pending: Pending, takeOver?: boolean): Promise<LinkOutcome> => {
-    const y = yieldFromLine(pending.line.quantity, pending.line.unit)
-    const body = {
-      name: displayBaseName(pending.name),
-      description: '',
-      yield: y.yield,
-      yieldUnit: y.yieldUnit,
-      baseRecipe: true,
-      readyMeal: false,
-      courseIds: [],
-      wholeMeal: false,
-      tags: [],
-      cooldownDays: null,
-      leftoverUseByDays: null,
-      frozenUseByDays: null,
-      reheatMinutes: null,
-      source: { url: '', attribution: '' },
-      image: '',
-      lines: [],
-      steps: [],
-      ...(takeOver === undefined ? {} : { takeOver }),
-    }
+    const body = newBaseRecipeInput(pending.name, pending.line.quantity, pending.line.unit, takeOver)
     let created: { id: number; name: string }
     try {
-      created = await baseRecipesApi.createBase(body as never)
+      created = await baseRecipesApi.createBase(body)
     } catch (err) {
       const ask = parseTakeOver(err)
       if (ask) {
@@ -153,7 +133,7 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
     if (takeOver === true) {
       // The take-over made this line a Base recipe line already.
       onChanged?.()
-      toast?.show(baseRecipeLinkStrings.linkedTo(created.name ?? body.name), {})
+      toast.show(baseRecipeLinkStrings.linkedTo(created.name ?? body.name), {})
       return 'linked'
     }
     return linkExisting(pending.line, { id: created.id, name: created.name ?? body.name })
@@ -163,7 +143,7 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
     try {
       const plan = await baseRecipesApi.toBasePlan(recipe.id)
       const c = convertConfirm(recipe.name, plan)
-      const yes = confirm ? await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel }) : false
+      const yes = await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel })
       if (!yes) return 'cancelled'
       const y = yieldFromLine(line.quantity, line.unit)
       await baseRecipesApi.toBase(recipe.id, { yield: y.yield, yieldUnit: y.yieldUnit })
@@ -199,18 +179,20 @@ export function useLineLink(opts: { recipeId: number; onChanged?: () => void }):
     return linkExisting(again.line, again.base)
   }
 
-  const useAsPlain = async (line: SavedLine): Promise<'done' | 'pick' | 'failed'> => {
-    if (line.linkedFromIngredientId === null || line.linkedFromIngredientId === undefined || !line.baseRecipe) return 'pick'
+  /** Use as a plain Ingredient: with the User's choice (`ingredientId`) the line takes that Ingredient; without it, back to the remembered one; nothing remembered and no choice: 'pick'. */
+  const useAsPlain = async (line: SavedLine, ingredientId?: number): Promise<'done' | 'pick' | 'failed'> => {
+    const remembered = line.linkedFromIngredientId !== null && line.linkedFromIngredientId !== undefined
+    if (!line.baseRecipe || (ingredientId === undefined && !remembered)) return 'pick'
     const base = line.baseRecipe
     try {
-      await baseRecipesApi.unlinkLine(recipeId, line.id)
+      await baseRecipesApi.unlinkLine(recipeId, line.id, ingredientId)
     } catch (err) {
       fail(err)
       return 'failed'
     }
     setError(null)
     onChanged?.()
-    toast?.show(baseRecipeLinkStrings.plainIngredient(base.name), {
+    toast.show(baseRecipeLinkStrings.plainIngredient(base.name), {
       actionLabel: baseRecipeLinkStrings.undo,
       onAction: () => void undoLink(line.id, () => baseRecipesApi.linkLine(recipeId, line.id, base.id)).catch(() => undefined),
     })

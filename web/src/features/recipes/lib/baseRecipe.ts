@@ -114,7 +114,8 @@ export function linkDraftLine(draft: RecipeDraft, key: string, base: { id: numbe
             baseRecipeName: base.name,
             ingredientId: base.ingredientId,
             ingredientName: base.name,
-            linkedFromIngredientId: l.ingredientId,
+            // a take-over line (the Base recipe Ingredient was the same one) remembers nothing
+            linkedFromIngredientId: l.ingredientId === base.ingredientId ? null : l.ingredientId,
             neededAtStep: null,
           },
     ),

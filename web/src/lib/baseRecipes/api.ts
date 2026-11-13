@@ -32,10 +32,10 @@ export const baseRecipesApi = {
   linkLine: (recipeId: number, lineId: number, baseRecipeId: number): Promise<Recipe> =>
     http.post<Recipe>(`/api/recipes/${recipeId}/lines/${lineId}/base`, { baseRecipeId }),
   /** DELETE /api/recipes/{id}/lines/{lineId}/base: back to the Ingredient it was linked from. */
-  unlinkLine: (recipeId: number, lineId: number, ingredientId?: number): Promise<Recipe> => {
-    void ingredientId // BR-D round 3: with it, the body is { ingredientId } (red until built)
-    return http.delete<Recipe>(`/api/recipes/${recipeId}/lines/${lineId}/base`)
-  },
+  unlinkLine: (recipeId: number, lineId: number, ingredientId?: number): Promise<Recipe> =>
+    ingredientId === undefined
+      ? http.delete<Recipe>(`/api/recipes/${recipeId}/lines/${lineId}/base`)
+      : http.deleteJson<Recipe>(`/api/recipes/${recipeId}/lines/${lineId}/base`, { ingredientId }),
   /** GET /api/recipes/{id}/link-candidates -> lines. */
   linkCandidates: async (baseRecipeId: number): Promise<LinkCandidate[]> => (await http.get<{ lines: LinkCandidate[] }>(`/api/recipes/${baseRecipeId}/link-candidates`)).lines,
   /** POST /api/recipes/{id}/link { lineIds } (all or nothing). */

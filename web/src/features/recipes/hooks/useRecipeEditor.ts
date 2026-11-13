@@ -155,6 +155,8 @@ export function useRecipeEditor(
   }, [ingredients])
 
   const liveOffer = renameOfferOf(existing.data, draft, ingredients)
+  // BR-D round 3: the kind the stored Recipe has; the screen compares it with the draft on Save (the switch applies there).
+  const storedKind: 'plannable' | 'base' | null = existing.data ? (existing.data.baseRecipe ? 'base' : 'plannable') : null
 
   const courseLoss = recipeId === undefined || !rulesQuery.data || !slotsQuery.data
     ? null
@@ -219,6 +221,7 @@ export function useRecipeEditor(
     errors,
     saving,
     isLoading: recipeId !== undefined && existing.isLoading,
+    storedKind,
     unitPrompt,
     save: () => submit(draft),
     answerUnitPrompt: async (toBase) => {
@@ -238,7 +241,6 @@ export function useRecipeEditor(
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
     pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickCreatedIngredient(d, key, ingredient)),
     courseLoss,
-    storedKind: null,
     takeOverAsk,
     answerTakeOver: (yes) => submit({ ...draft, takeOver: yes }),
     cancelTakeOver: () => setTakeOverAsk(null),

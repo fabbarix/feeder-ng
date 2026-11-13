@@ -126,11 +126,6 @@ export function ConfirmProvider({ children }: { children?: ReactNode }) {
   )
 }
 
-/** BR-D: the Confirm API, or null outside a ConfirmProvider (the hook then cancels). */
-export function useOptionalConfirm(): ConfirmApi | null {
-  return useContext(ConfirmContext)
-}
-
 /** Replaces window.confirm. Throws outside a ConfirmProvider. */
 export function useConfirm(): ConfirmApi {
   const api = useContext(ConfirmContext)

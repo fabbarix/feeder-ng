@@ -5,12 +5,10 @@ import { useCourses } from '../../../lib/courses/useCourses'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { Button, Chip, Dialog, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useMediaQuery } from '../../../ui'
-import { useLineLink, type SavedLine } from '../../../lib/baseRecipes/useLineLink'
 import { BaseRecipeBadge } from '../components/BaseRecipeBadge'
-import { BaseRecipePicker } from '../components/BaseRecipePicker'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
-import { TakeOverDialog } from '../components/TakeOverDialog'
-import { useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
+import { useBaseIngredientUnit, useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
+import { LineLinkSession, type LineSession } from '../components/LineLinkSession'
 import { usedInText, yieldText } from '../lib/baseRecipe'
 import { CookEntry } from '../components/CookEntry'
 import { CourseChips } from '../components/CourseChips'
@@ -31,7 +29,7 @@ import { lastCookedLabel, localToday } from '../lib/lastCooked'
 import { recipesTagPath } from '../lib/tags'
 import { showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
-import type { Recipe, RecipeLine } from '../types'
+import type { Recipe } from '../types'
 import '../recipes.css'
 
 /**
@@ -58,16 +56,14 @@ export function RecipeDetailScreen(): ReactNode {
   const crumbs = useBreadcrumbs(r?.name)
   const actions = useRecipeActions(recipe, { name: r?.name ?? '', archived: r?.archived ?? false }, () => navigate('/recipes'))
   const { colourOf } = useRecipeTags()
-  // BR-D: the line links (Link to a Base recipe, Use as a plain Ingredient) save at once; a change refetches the Recipe and its candidates.
-  const [pickerFor, setPickerFor] = useState<RecipeLine | null>(null)
+  // BR-D: a line action (Link to a Base recipe, Use as a plain Ingredient) runs as a session; a change refetches the Recipe and its candidates.
+  const [session, setSession] = useState<LineSession | null>(null)
   const [candidateTick, setCandidateTick] = useState(0)
-  const links = useLineLink({
-    recipeId,
-    onChanged: () => {
-      recipe.refetch()
-      setCandidateTick((n) => n + 1)
-    },
-  })
+  const [lineError, setLineError] = useState<string | null>(null)
+  const refreshAll = () => {
+    recipe.refetch()
+    setCandidateTick((n) => n + 1)
+  }
 
   if (recipe.isLoading) return <Skeleton variant="tile" count={3} />
   if (!r)
@@ -88,14 +84,6 @@ export function RecipeDetailScreen(): ReactNode {
     />
   )
   const thumb = <RecipeThumb name={r.name} photoUrl={r.imageUrl || undefined} tags={r.tags} size="hero" />
-  const savedLine = (line: RecipeLine): SavedLine => ({
-    id: line.id ?? 0,
-    ingredientName: line.ingredient ?? '',
-    quantity: line.quantity,
-    unit: line.unit,
-    linkedFromIngredientId: line.linkedFromIngredientId ?? null,
-    baseRecipe: line.baseRecipe ? { id: line.baseRecipe.id, name: line.baseRecipe.name } : null,
-  })
   const isBase = r.baseRecipe === true
   const baseIngredient = r.baseIngredientId !== undefined ? refs.byId.get(r.baseIngredientId) : undefined
 
@@ -129,7 +117,7 @@ export function RecipeDetailScreen(): ReactNode {
           </>
         }
       />
-      {isBase ? <BaseRecipeSection recipe={r} baseUnit={baseIngredient?.baseUnit} refreshKey={candidateTick} /> : null}
+      {isBase ? <BaseRecipeSection recipe={r} knownUnit={baseIngredient?.baseUnit} refreshKey={candidateTick} onChanged={refreshAll} /> : null}
       <div className="recipe-detail__layout">
         <div className="recipe-detail__aside">
           <Tile variant="media" className="recipe-detail__hero" media={thumb}>
@@ -153,12 +141,8 @@ export function RecipeDetailScreen(): ReactNode {
               lines={r.lines}
               refs={refs.byId}
               system={system}
-              onLinkToBase={(line) => setPickerFor(line)}
-              onUseAsPlain={(line) => {
-                void links.useAsPlain(savedLine(line)).then((outcome) => {
-                  if (outcome === 'pick') setPickerFor(line)
-                })
-              }}
+              onLinkToBase={(line) => setSession({ kind: 'picker', line })}
+              onUseAsPlain={(line) => setSession({ kind: 'plain', line })}
               excludedBy={{
                 members: (ingredientId) => excludersOf(household.members, household.prefsByMember, ingredientId),
                 onOpen: (ingredientId, name) => setExcluding({ id: ingredientId, name }),
@@ -178,6 +162,7 @@ export function RecipeDetailScreen(): ReactNode {
               <Skeleton variant="tile" />
             ) : (
               <PreferenceTable
+                exclusionOnly={isBase}
                 recipeName={r.name}
                 rows={rows}
                 onToggle={(memberId, tapped) => void household.toggleRecipe(memberId, r.id, tapped)}
@@ -193,24 +178,17 @@ export function RecipeDetailScreen(): ReactNode {
       <Dialog open={excluding !== null} onClose={() => setExcluding(null)} title={excluding ? recipeStrings.whoExcludes(excluding.name) : ''}>
         {excluding ? <IngredientExclusionList ingredientId={excluding.id} ingredientName={excluding.name} /> : null}
       </Dialog>
-      <BaseRecipePicker
-        open={pickerFor !== null}
-        lineName={pickerFor?.ingredient ?? ''}
-        recipeId={r.id}
-        onClose={() => setPickerFor(null)}
-        onChoose={(choice) => {
-          const line = pickerFor
-          setPickerFor(null)
-          if (line) void links.linkTo(savedLine(line), choice)
-        }}
-      />
-      <TakeOverDialog
-        ask={links.takeOverAsk}
-        baseName={links.askName ?? ''}
-        onAnswer={(yes) => void links.answerTakeOver(yes)}
-        onCancel={links.cancelTakeOver}
-      />
-      {links.error ? <ErrorState message={links.error} /> : null}
+      {session ? (
+        <LineLinkSession
+          recipeId={r.id}
+          session={session}
+          refs={refs.byId}
+          onChanged={refreshAll}
+          onDone={() => setSession(null)}
+          onFailed={setLineError}
+        />
+      ) : null}
+      {lineError ? <p role="alert">{lineError}</p> : null}
       {actions.error ? <ErrorState message={actions.error} /> : null}
       {wide ? null : <StickyActionBar label={recipeStrings.cook.barLabel}>{cook}</StickyActionBar>}
     </section>
@@ -218,22 +196,24 @@ export function RecipeDetailScreen(): ReactNode {
 }
 
 /**
- * BR-D: a Base recipe's own facts: the Yield, the Recipes that call for it (links), and the row "Recipes with an Ingredient named béchamel (N)" that opens
+ * BR-D: a Base recipe's own facts: the Yield, the Recipes that call for it (links), and the candidates row (its copy is in the strings) that opens
  * the bulk link list while any plain line of that name is left. A child component, so a plannable Recipe never asks for candidates.
  */
-function BaseRecipeSection({ recipe: r, baseUnit, refreshKey }: { recipe: Recipe; baseUnit: string | undefined; refreshKey: number }): ReactNode {
+function BaseRecipeSection({ recipe: r, knownUnit, refreshKey, onChanged }: { recipe: Recipe; knownUnit: string | undefined; refreshKey: number; onChanged: () => void }): ReactNode {
   const candidates = useBaseLinkCandidates(r.id, true)
+  const baseUnit = useBaseIngredientUnit(r.baseIngredientId ?? 0, knownUnit)
   const [sheetOpen, setSheetOpen] = useState(false)
   useEffect(() => {
     if (refreshKey > 0) candidates.refetch()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when the screen reports a link change
   }, [refreshKey])
   const used = r.usedBy ?? []
+  const t = recipeStrings.baseRecipe
   return (
     <>
-      <Tile as="section" span="full" aria-label={recipeStrings.baseRecipe.badge}>
+      <Tile as="section" span="full" aria-label={t.badge}>
         <p>
-          <BaseRecipeBadge /> <span>{`Yield ${yieldText(r.yield, r.yieldUnit)}`}</span>
+          <BaseRecipeBadge /> <span>{t.yieldLine(yieldText(r.yield, r.yieldUnit))}</span>
         </p>
         <h2>{usedInText(used.length)}</h2>
         {used.length === 0 ? null : (
@@ -248,7 +228,7 @@ function BaseRecipeSection({ recipe: r, baseUnit, refreshKey }: { recipe: Recipe
         )}
         {candidates.count > 0 ? (
           <Button variant="tertiary" onClick={() => setSheetOpen(true)}>
-            {`Recipes with an Ingredient named ${candidates.ingredientName} (${candidates.count})`}
+            {t.candidatesRow(candidates.ingredientName, candidates.count)}
           </Button>
         ) : null}
       </Tile>
@@ -260,6 +240,7 @@ function BaseRecipeSection({ recipe: r, baseUnit, refreshKey }: { recipe: Recipe
             setSheetOpen(false)
             candidates.refetch()
           }}
+          onChanged={onChanged}
         />
       ) : null}
     </>

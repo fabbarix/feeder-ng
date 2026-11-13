@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useOptionalConfirm } from '../../../ui/ConfirmDialog'
+import { useConfirm } from '../../../ui/ConfirmDialog'
 import { baseRecipesApi } from '../../../lib/baseRecipes/api'
 import { convertConfirm } from '../../../lib/baseRecipes/convertConfirm'
 import { newBaseRecipeInput } from '../../../lib/baseRecipes/newBase'
@@ -38,7 +38,7 @@ export interface UseEditorLineLinks {
   pickerKey: string | null
   openPicker: (key: string) => void
   closePicker: () => void
-  /** The line key the plain Ingredient picker is open for (a Base recipe line with nothing remembered); null when closed. */
+  /** The line key the plain Ingredient picker is open for; null when closed. */
   plainKey: string | null
   openPlain: (key: string) => void
   closePlain: () => void
@@ -62,7 +62,7 @@ interface Options {
 
 /** The editor's Base recipe links (design §3.7, §3.2, §3.6): nothing is saved here; the draft line is linked and the Recipe saves with it. */
 export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
-  const confirm = useOptionalConfirm()
+  const confirm = useConfirm()
   const [takeOverAsk, setTakeOverAsk] = useState<TakeOverAsk | null>(null)
   const [unitPrompt, setUnitPrompt] = useState<UnitPrompt | null>(null)
   const [pickerKey, setPickerKey] = useState<string | null>(null)
@@ -125,7 +125,7 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
       return
     }
     const c = convertConfirm(recipe.name, plan)
-    const yes = confirm ? await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel }) : false
+    const yes = await confirm.confirm({ title: c.title, body: c.body, confirmLabel: c.confirmLabel })
     if (!yes) return
     const y = yieldFromLine(parseNumber(line.quantity) ?? 0, line.unit)
     try {
@@ -184,15 +184,17 @@ export function useEditorLineLinks(opts: Options): UseEditorLineLinks {
     pickerKey,
     openPicker: (key) => setPickerKey(key),
     closePicker: () => setPickerKey(null),
+    asPlain: (line) => {
+      const plain = line.linkedFromIngredientId != null ? opts.ingredientOf(line.linkedFromIngredientId) : undefined
+      if (plain) opts.unlinkLine(line.key, plain)
+      else setPlainKey(line.key)
+    },
     plainKey,
     openPlain: (key) => setPlainKey(key),
     closePlain: () => setPlainKey(null),
     choosePlain: (ingredient) => {
       if (plainKey !== null) opts.unlinkLine(plainKey, ingredient)
       setPlainKey(null)
-    },
-    asPlain: () => {
-      throw new Error('BR-D: not implemented')
     },
     error,
   }

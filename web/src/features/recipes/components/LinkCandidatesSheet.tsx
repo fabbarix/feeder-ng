@@ -2,11 +2,14 @@ import type { ReactNode } from 'react'
 import { Button, Checkbox, Dialog } from '../../../ui'
 import { useLinkCandidates } from '../../../lib/baseRecipes/useLinkCandidates'
 import { recipeStrings } from '../strings'
+import { baseRecipeLinkStrings } from '../../../lib/baseRecipes/strings'
 
 export interface LinkCandidatesSheetProps {
   open: boolean
   baseRecipe: { id: number; name: string; baseUnit: string; ingredientId: number }
   onClose: () => void
+  /** A link or its Undo changed the Recipes: the screen refetches. */
+  onChanged?: () => void
 }
 
 /**
@@ -18,13 +21,14 @@ export function LinkCandidatesSheet(props: LinkCandidatesSheetProps): ReactNode 
   return <CandidatesBody {...props} />
 }
 
-function CandidatesBody({ baseRecipe, onClose }: LinkCandidatesSheetProps): ReactNode {
+function CandidatesBody({ baseRecipe, onClose, onChanged }: LinkCandidatesSheetProps): ReactNode {
   const s = useLinkCandidates({
     baseRecipeId: baseRecipe.id,
     baseName: baseRecipe.name,
     baseUnit: baseRecipe.baseUnit,
     baseIngredientId: baseRecipe.ingredientId,
     onDone: onClose,
+    onChanged,
   })
   const t = recipeStrings.baseRecipe.links
 
@@ -70,7 +74,7 @@ function CandidatesBody({ baseRecipe, onClose }: LinkCandidatesSheetProps): Reac
         </>
       }
     >
-      {s.status === 'error' ? <p className="line-row__hint">{recipeStrings.baseRecipe.links.nothingTicked}</p> : null}
+      {s.status === 'error' ? <p className="line-row__hint">{baseRecipeLinkStrings.couldNotLoadCandidates}</p> : null}
       {s.rows.map((row) => (
         <div key={row.lineId} className="link-candidate">
           <Checkbox label={row.label} description={row.reason} checked={row.checked} disabled={row.disabled} onChange={() => s.toggle(row.lineId)} />

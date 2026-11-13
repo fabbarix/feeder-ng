@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Dialog, SearchField } from '../../../ui'
 import { useBaseRecipePicker } from '../../../lib/baseRecipes/useBaseRecipePicker'
 import type { LinkChoice } from '../../../lib/baseRecipes/useLineLink'
+import { flatPickerRows, moveActive } from '../../../lib/baseRecipes/pickerKeys'
 import type { PickerRow } from '../../../lib/baseRecipes/types'
 import { recipeStrings } from '../strings'
 
@@ -16,8 +17,9 @@ export interface BaseRecipePickerProps {
 }
 
 /**
- * BR-D (design §3.7): a crafted sheet (BottomSheet/Dialog) titled "Link to a Base recipe": a search field, the Base recipes (name matches first, the exact match marked), then
- * "Add "Béchamel" as a new Base recipe", then the group "Recipes you plan" (choosing one calls onChoose with kind 'convert'; the hook asks the confirm). Disabled rows say why. A listbox of options; no native control.
+ * BR-D (design §3.7): a listbox sheet titled "Link to a Base recipe": the search field keeps the focus, the arrows move the active option (disabled
+ * rows are skipped), Enter chooses it, Escape closes and the focus goes back to what opened it. Base recipes (exact match first), then the create row,
+ * then the group "Recipes you plan" (choosing one calls onChoose with kind 'convert'; the hook asks the confirm).
  */
 export function BaseRecipePicker(props: BaseRecipePickerProps): ReactNode {
   if (!props.open) return null
@@ -28,6 +30,17 @@ function PickerSheet({ lineName, recipeId, onClose, onChoose }: BaseRecipePicker
   const picker = useBaseRecipePicker({ recipeId, lineName })
   const t = recipeStrings.baseRecipe.picker
   const { rows } = picker
+  const uid = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [active, setActive] = useState(-1)
+  const flat = flatPickerRows(rows)
+
+  // The focus goes back to what opened the picker when it closes.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
+    return () => opener?.focus()
+  }, [])
+  useEffect(() => setActive(-1), [picker.query])
 
   const choose = (row: PickerRow) => {
     if (row.kind === 'base') {
@@ -36,45 +49,81 @@ function PickerSheet({ lineName, recipeId, onClose, onChoose }: BaseRecipePicker
     else if (!row.disabled) onChoose({ kind: 'convert', recipe: { id: row.id, name: row.name } })
   }
 
-  const option = (row: PickerRow, key: string) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((a) => moveActive(flat, a, e.key === 'ArrowDown' ? 1 : -1))
+    } else if (e.key === 'Enter' && active >= 0 && flat[active]) {
+      e.preventDefault()
+      choose(flat[active]!)
+    }
+  }
+
+  const optionId = (index: number) => `${uid}-option-${index}`
+  let index = -1
+  const option = (row: PickerRow, group: string) => {
+    index += 1
+    const i = index
+    const isActive = i === active
+    const common = {
+      id: optionId(i),
+      role: 'option' as const,
+      'aria-selected': isActive,
+      'aria-disabled': row.kind !== 'new' && row.disabled ? ('true' as const) : undefined,
+      tabIndex: -1,
+      className: 'picker-row',
+      onClick: () => choose(row),
+      onMouseEnter: () => setActive(i),
+    }
     if (row.kind === 'new') {
       return (
-        <OptionRow key={key} label={row.label} onSelect={() => choose(row)}>
+        <div key={`${group}-${i}`} {...common} aria-label={row.label}>
           {row.label}
-        </OptionRow>
+        </div>
       )
     }
     if (row.kind === 'base') {
       return (
-        <OptionRow key={key} label={`${row.name}, ${row.detail}`} disabled={row.disabled} onSelect={() => choose(row)}>
+        <div key={`${group}-${i}`} {...common} aria-label={`${row.name}, ${row.detail}`}>
           <span className="picker-row__name">{row.name}</span>
           <span className="picker-row__detail">{row.detail}</span>
           {row.reason ? <span className="picker-row__reason">{row.reason}</span> : null}
-        </OptionRow>
+        </div>
       )
     }
     return (
-      <OptionRow key={key} label={row.name} disabled={row.disabled} onSelect={() => choose(row)}>
+      <div key={`${group}-${i}`} {...common} aria-label={row.name}>
         <span className="picker-row__name">{row.name}</span>
         {row.reason ? <span className="picker-row__reason">{row.reason}</span> : null}
-      </OptionRow>
+      </div>
     )
   }
 
-  const nothing = rows.base.length === 0 && rows.plannable.length === 0 && rows.create === null
+  const nothing = rows.base.length === 0 && rows.plannable.length === 0
+  const baseRows = rows.base.map((r) => option(r, 'base'))
+  const createRow = rows.create ? option(rows.create, 'create') : null
+  const planRows = rows.plannable.map((r) => option(r, 'plan'))
 
   return (
-    <Dialog open title={t.title} onClose={onClose}>
-      <SearchField label={t.search} value={picker.query} onChange={picker.setQuery} placeholder={t.search} />
+    <Dialog open title={t.title} onClose={onClose} initialFocusRef={inputRef}>
+      <SearchField
+        ref={inputRef}
+        label={t.search}
+        value={picker.query}
+        onChange={picker.setQuery}
+        onKeyDown={onKeyDown}
+        placeholder={t.search}
+        aria-activedescendant={active >= 0 ? optionId(active) : undefined}
+      />
       {picker.error ? <p className="line-row__hint">{picker.error}</p> : null}
       {picker.isLoading ? <p className="line-row__hint">{t.loading}</p> : null}
-      <div role="listbox" aria-label={t.title} className="picker-list">
-        {rows.base.map((row, i) => option(row, `base-${i}`))}
-        {rows.create ? option(rows.create, 'create') : null}
-        {rows.plannable.length > 0 ? (
+      <div role="listbox" id={`${uid}-list`} aria-label={t.title} className="picker-list">
+        {baseRows}
+        {createRow}
+        {planRows.length > 0 ? (
           <div role="group" aria-label={t.group} className="picker-group">
             <p className="picker-group__label">{t.group}</p>
-            {rows.plannable.map((row, i) => option(row, `plan-${i}`))}
+            {planRows}
           </div>
         ) : null}
       </div>
@@ -83,24 +132,3 @@ function PickerSheet({ lineName, recipeId, onClose, onChoose }: BaseRecipePicker
   )
 }
 
-function OptionRow({ label, disabled, onSelect, children }: { label: string; disabled?: boolean; onSelect: () => void; children: ReactNode }) {
-  return (
-    <div
-      role="option"
-      aria-selected={false}
-      aria-disabled={disabled ? 'true' : undefined}
-      aria-label={label}
-      tabIndex={0}
-      className="picker-row"
-      onClick={() => onSelect()}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect()
-        }
-      }}
-    >
-      {children}
-    </div>
-  )
-}

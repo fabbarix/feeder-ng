@@ -84,11 +84,12 @@ function lineActions(l: RecipeLine, onLinkToBase?: (line: RecipeLine) => void, o
  */
 function BaseName({ id, label, name, archived, empty }: { id: number; label: string; name: string; archived: boolean; empty?: boolean }): ReactNode {
   const t = recipeStrings.baseRecipe
-  if (archived) return <span>{`${label} (${t.badge}, archived)`}</span>
   return (
     <>
-      <Link to={`/recipes/${id}`} aria-label={name}>{`${label} (${t.badge})`}</Link>
-      {empty ? <span className="ingredient-lines__note">No Ingredients yet</span> : null}
+      <Link to={`/recipes/${id}`} aria-label={name}>
+        {`${label} (${archived ? t.archivedLabel : t.badge})`}
+      </Link>
+      {empty ? <span className="ingredient-lines__note">{t.noIngredients}</span> : null}
     </>
   )
 }

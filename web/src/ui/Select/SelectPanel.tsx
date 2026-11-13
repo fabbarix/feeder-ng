@@ -53,7 +53,7 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
         aria-selected={isSelected}
         aria-disabled={option.disabled || undefined}
         aria-labelledby={`${p.optionId(i)}-label`}
-        aria-describedby={option.meta ? `${p.optionId(i)}-meta` : undefined}
+        aria-describedby={option.badge ? `${p.optionId(i)}-badge` : option.meta ? `${p.optionId(i)}-meta` : undefined}
         data-active={i === p.active || undefined}
         className="select__option"
         onClick={() => p.onPick(i)}
@@ -66,7 +66,11 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
           <span id={`${p.optionId(i)}-label`} className="select__label">
             {option.label}
           </span>
-          {option.badge ? <span className="select__badge">{option.badge}</span> : null}
+          {option.badge ? (
+            <span id={`${p.optionId(i)}-badge`} className="select__badge">
+              {option.badge}
+            </span>
+          ) : null}
           {option.meta ? (
             <span id={`${p.optionId(i)}-meta`} className="select__meta">
               {option.meta}

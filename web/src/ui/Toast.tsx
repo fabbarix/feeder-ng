@@ -152,11 +152,6 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
   )
 }
 
-/** BR-D: the Toast API, or null outside a ToastProvider (a Base recipe link hook may run in a screen without one; it then shows no toast). */
-export function useOptionalToast(): ToastApi | null {
-  return useContext(ToastContext)
-}
-
 /** Shows transient messages. Must be used inside a ToastProvider. */
 export function useToast(): ToastApi {
   const api = useContext(ToastContext)

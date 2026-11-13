@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useOptionalToast } from '../../ui/Toast'
+import { useToast } from '../../ui/Toast'
 import { baseRecipesApi } from './api'
 import { mergeOffers, type MergeOfferView } from './mergeOffer'
 import { linkCandidateRows, linkHeading, linkLabel, linkedToast, tickedLineIds, toggleTick } from './linkCandidateRows'
@@ -16,6 +16,8 @@ export interface UseLinkCandidatesOptions {
   baseIngredientId: number
   /** The sheet is finished (Not now, or the merge offer answered). */
   onDone: () => void
+  /** A link or its Undo changed the Recipes: the screen refetches the Recipe and the candidates. */
+  onChanged?: () => void
 }
 
 export interface UseLinkCandidates {
@@ -47,8 +49,8 @@ export interface UseLinkCandidates {
 
 /** Hook of the LinkCandidatesSheet (design §3.8). Fetches `GET /api/recipes/{id}/link-candidates`; the rows, counts and words come from lib/baseRecipes. */
 export function useLinkCandidates(opts: UseLinkCandidatesOptions): UseLinkCandidates {
-  const { baseRecipeId, baseName, baseUnit, baseIngredientId, onDone } = opts
-  const toast = useOptionalToast()
+  const { baseRecipeId, baseName, baseUnit, baseIngredientId, onDone, onChanged } = opts
+  const toast = useToast()
   const [status, setStatus] = useState<UseLinkCandidates['status']>('loading')
   const [lines, setLines] = useState<LinkCandidate[]>([])
   const [ticked, setTicked] = useState<Set<number>>(() => new Set())
@@ -105,10 +107,14 @@ export function useLinkCandidates(opts: UseLinkCandidatesOptions): UseLinkCandid
       const result = await baseRecipesApi.link(baseRecipeId, ids)
       const linkedSet = new Set(result.linked)
       const distinct = new Set(lines.filter((l) => linkedSet.has(l.lineId)).map((l) => l.recipeId)).size
-      toast?.show(linkedToast(distinct), {
+      onChanged?.()
+      toast.show(linkedToast(distinct), {
         actionLabel: baseRecipeLinkStrings.undo,
         onAction: () => {
-          void baseRecipesApi.unlink(baseRecipeId, result.linked).then(() => setTicked(new Set()))
+          void baseRecipesApi.unlink(baseRecipeId, result.linked).then(() => {
+            setTicked(new Set())
+            onChanged?.()
+          })
         },
       })
       if (result.mergeOffer.length > 0) {
