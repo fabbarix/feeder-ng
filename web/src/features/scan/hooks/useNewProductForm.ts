@@ -96,7 +96,8 @@ export function useNewProductForm(o: NewProductFormOptions) {
 
   const createChoice = (name: string) => {
     const trimmed = name.trim()
-    const next: IngredientChoice = { name: trimmed, baseUnit: defaultNewBaseUnit(kind), kind }
+    // A weighed code counts grams, so what it creates is on g whatever its kind.
+    const next: IngredientChoice = { name: trimmed, baseUnit: weighed ? 'g' : defaultNewBaseUnit(kind), kind }
     guardState.reset()
     applyChoice(next)
     void guardState.check(trimmed)
@@ -116,7 +117,7 @@ export function useNewProductForm(o: NewProductFormOptions) {
   }
 
   const changeBaseUnit = (unit: BaseUnit) => {
-    if (!choice) return
+    if (!choice || weighed) return
     applyChoice({ ...choice, baseUnit: unit })
   }
 

@@ -68,6 +68,7 @@ export function NewProductForm(p: NewProductSheetProps) {
           onPick={form.pickFromSelect}
           onCreate={form.createChoice}
           onBaseUnit={form.changeBaseUnit}
+          weighed={form.weighed}
           guard={form.guard}
           onAdopt={form.adopt}
           onKeepNew={form.keepNew}

@@ -82,6 +82,17 @@ describe('NewProductSheet: Something else', () => {
     expect(within(packGroup()).queryByRole('button', { name: '1 kg' })).toBeNull()
   })
 
+  it.each(['weighed', 'weighed_price'] as const)('a %s code creates a new Supply on g and asks no Base Unit (the code counts grams)', async (mode) => {
+    const { props } = setup({ mode, priceText: '€2.50' })
+    await userEvent.click(kindRadio('Supply'))
+    await choose(/Supply/, /New Supply .bird seed./, 'bird seed')
+    expect(within(dialog()).queryByRole('radiogroup', { name: 'Base Unit' })).toBeNull()
+    if (mode === 'weighed_price') await userEvent.type(within(dialog()).getByRole('spinbutton', { name: /weight/i }), '300')
+    await userEvent.click(addButton())
+    await waitFor(() => expect(props.onSave).toHaveBeenCalledTimes(1))
+    expect(props.onSave.mock.calls[0]?.[0].ingredient).toEqual({ name: 'bird seed', baseUnit: 'g', kind: 'supply' })
+  })
+
   it('an existing choice needs no Base Unit question', async () => {
     setup()
     await choose(/Ingredient/, /^milk/)

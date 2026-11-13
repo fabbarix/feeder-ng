@@ -20,6 +20,8 @@ export interface NewProductKindProps {
   onPick: (id: number) => void
   onCreate: (name: string) => void
   onBaseUnit: (unit: BaseUnit) => void
+  /** a weighed code: a new choice is on g, so the Base Unit is not asked */
+  weighed: boolean
   guard: DuplicateGuard
   onAdopt: (ingredient: Ingredient) => void
   onKeepNew: () => void
@@ -72,7 +74,7 @@ export function NewProductKind(p: NewProductKindProps) {
           </div>
         </div>
       ) : null}
-      {p.chosen && p.chosen.id === undefined ? (
+      {p.chosen && p.chosen.id === undefined && !p.weighed ? (
         <Segmented<BaseUnit> label={newProductStrings.baseUnitLabel} options={BASE_UNIT_CHOICES.map((u) => ({ value: u, label: u }))} value={p.chosen.baseUnit} onChange={p.onBaseUnit} />
       ) : null}
     </div>
