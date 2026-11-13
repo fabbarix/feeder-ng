@@ -7,13 +7,14 @@ import { TagSheet } from '../components/TagSheet'
 import { useTagsPage } from '../hooks/useTagsPage'
 import { rowLabel, usageLine } from '../lib/usage'
 import { tagsStrings } from '../strings'
+import '../tags.css'
 
 /** /settings/tags on the shared ListPage. */
 export function TagsScreen(): ReactElement | null {
   const page = useTagsPage()
   const breadcrumbs = useBreadcrumbs()
   return (
-    <ListPage header={<PageHeader title={tagsStrings.title} breadcrumbs={breadcrumbs} />}>
+    <ListPage className="tags-screen" header={<PageHeader title={tagsStrings.title} breadcrumbs={breadcrumbs} />}>
       <p className="pg__muted">{tagsStrings.intro}</p>
       {page.isLoading ? (
         <p role="status">{tagsStrings.loading}</p>
