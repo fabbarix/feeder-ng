@@ -67,14 +67,25 @@ type ReceiptApply struct {
 
 // ApplyReceipt is the receipt apply (receipt-reading §7.2, §8.2): under ONE hold of the scan lock it loads the
 // session's events, compares their fingerprint with the read's, builds the plan and runs it. No Scan, Undo or Price
-// edit from another phone can land between the check and the plan. A session that changed (or is empty) is
-// ErrReceiptSessionChanged.
+// edit from another phone can land between the check and the plan. The session is today's scans, as the read keeps
+// them (Q5): a scan of an earlier household day among the uuids is left out of the fingerprint here as it is there. A
+// session that changed (or is empty) is ErrReceiptSessionChanged.
 func (s *Service) ApplyReceipt(ctx context.Context, in ReceiptApply) (ReceiptApplyResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	events, err := s.sessionEvents(ctx, in.ShopID, in.ClientUUIDs)
+	all, err := s.sessionEvents(ctx, in.ShopID, in.ClientUUIDs)
 	if err != nil {
 		return ReceiptApplyResult{}, err
+	}
+	today, _, err := s.household(ctx)
+	if err != nil {
+		return ReceiptApplyResult{}, err
+	}
+	events := make([]receipt.ScanEvent, 0, len(all))
+	for _, ev := range all {
+		if ev.Date == string(today) {
+			events = append(events, ev)
+		}
 	}
 	if len(events) == 0 || receipt.Fingerprint(events) != in.Fingerprint {
 		return ReceiptApplyResult{}, ErrReceiptSessionChanged

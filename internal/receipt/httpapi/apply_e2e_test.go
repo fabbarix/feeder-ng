@@ -165,3 +165,23 @@ func TestTheApplyWhileTheAssistantIsOffIsUnavailable(t *testing.T) {
 		t.Errorf("apply with the assistant off = %d %s, want 409 assistant_unavailable", r.Status, r.Body)
 	}
 }
+
+// A scan of an earlier household day among the phone's uuids is left out of the read (Q5); the apply recomputes the
+// fingerprint over the same events, so it is left out there too.
+func TestAnEarlierDaysScanAmongTheUuidsIsLeftOutOfTheReadAndTheApplyAlike(t *testing.T) {
+	w := start(t)
+	uuids := w.session(t)
+	op := obj{"clientUuid": "y1", "scannedAt": "2026-11-08T12:00:00Z", "kind": "shop_scan", "shopId": w.shop, "productId": w.barilla,
+		"quantity": 500, "priceCents": 119, "rangeTo": "2026-11-15"}
+	mustStatus(t, w.user.Post("/api/scan", op), 200)
+	all := append(uuids, "y1")
+	w.fake.Queue(fakeanthropic.Reply{Text: okAnswer()})
+	id := startRead(t, w.user, w.body(w.shop, all))
+	v := poll(t, w.user, id)
+	if v.Status != "done" || len(v.Rows) != 2 || v.Rows[1].Scans != 1 {
+		t.Fatalf("read = %+v: yesterday's scan is not in today's rows", v)
+	}
+	if r := applyRead(t, w.user, applyBody(id, v, all, checkedIDs(v))); r.Status != 200 {
+		t.Errorf("apply = %d %s, want 200: the read and the apply fingerprint the same events", r.Status, r.Body)
+	}
+}
