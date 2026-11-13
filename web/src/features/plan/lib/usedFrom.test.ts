@@ -10,6 +10,8 @@ const chicken: UsedFromNeed = {
   ingredientId: 11, ingredient: 'Chicken thighs', quantity: 800, baseUnit: 'g',
   lots: [lot(1, 500), lot(2, 600, 'Freezer', '2027-02-01'), lot(3, 300, 'Fridge', null)],
 }
+// A far-off "today" so Good until prints as a date; the go-off wording itself is describeGoOff's (stock/lib).
+const TODAY = '2026-11-01'
 const rice: UsedFromNeed = { ingredientId: 12, ingredient: 'Rice', quantity: 200, baseUnit: 'g', lots: [lot(9, 1000, 'Pantry', null)] }
 
 describe('togglePick prefill', () => {
@@ -97,7 +99,7 @@ describe('overPickedLots across Courses', () => {
     expect(overPickedLots([main(300), side(200)])).toEqual([])
   })
   it('reports a Lot that the Courses together over-pick', () => {
-    expect(overPickedLots([main(400), side(300)])).toEqual([
+    expect(overPickedLots([main(400), side(300)])).toMatchObject([
       { lotId: 1, ingredientId: 11, ingredient: 'Chicken thighs', storagePlaceName: 'Fridge', held: 500, picked: 700, courseIds: [1, 2] },
     ])
   })
@@ -108,7 +110,7 @@ describe('overPickedLots across Courses', () => {
 
 describe('usedFromLines view models', () => {
   it('titles the line with the need and lists Lots with Storage Place, dates and unpicked state', () => {
-    const [line] = usedFromLines([chicken], {})
+    const [line] = usedFromLines([chicken], {}, 'metric', TODAY)
     expect(line!.title).toBe('Chicken thighs · 800 g')
     expect(line!.state).toBe('none')
     expect(line!.message).toBeNull()
@@ -118,23 +120,88 @@ describe('usedFromLines view models', () => {
     expect(line!.lots.every((l) => !l.picked)).toBe(true)
   })
   it('marks picked Lots with amount and max', () => {
-    const [line] = usedFromLines([chicken], { 11: { 1: 500 } })
-    expect(line!.lots[0]).toMatchObject({ lotId: 1, picked: true, amount: 500, max: 500, amountLabel: 'Amount used from Fridge' })
+    const [line] = usedFromLines([chicken], { 11: { 1: 500 } }, 'metric', TODAY)
+    expect(line!.lots[0]).toMatchObject({ lotId: 1, picked: true, amount: 500, max: 500, unit: 'g', amountLabel: 'Amount used from Fridge' })
   })
   it('says what is short and over', () => {
-    expect(usedFromLines([chicken], { 11: { 1: 500 } })[0]!.message).toBe('500 g of 800 g chosen. The rest follows soonest to go off first.')
-    expect(usedFromLines([chicken], { 11: { 1: 500, 2: 400 } })[0]!.message).toBe('900 g chosen, more than the 800 g needed. Taken as chosen.')
-    expect(usedFromLines([chicken], { 11: { 1: 500, 2: 300 } })[0]!.message).toBeNull()
+    expect(usedFromLines([chicken], { 11: { 1: 500 } }, 'metric', TODAY)[0]!.message).toBe('500 g of 800 g chosen. The rest follows soonest to go off first.')
+    expect(usedFromLines([chicken], { 11: { 1: 500, 2: 400 } }, 'metric', TODAY)[0]!.message).toBe('900 g chosen, more than the 800 g needed. Taken as chosen.')
+    expect(usedFromLines([chicken], { 11: { 1: 500, 2: 300 } }, 'metric', TODAY)[0]!.message).toBeNull()
   })
   it('an Ingredient without Lots says so', () => {
     const none = { ...rice, lots: [] }
-    const [line] = usedFromLines([none], {})
+    const [line] = usedFromLines([none], {}, 'metric', TODAY)
     expect(line!.empty).toBe('No Stock of this Ingredient')
     expect(line!.lots).toEqual([])
   })
   it('formats pieces and imperial through the shared units', () => {
     const eggs: UsedFromNeed = { ingredientId: 5, ingredient: 'Eggs', quantity: 4, baseUnit: 'piece', lots: [lot(7, 6, 'Fridge')] }
-    expect(usedFromLines([eggs], {})[0]!.title).toBe('Eggs · 4 pieces')
-    expect(usedFromLines([rice], {}, 'imperial')[0]!.title).toMatch(/^Rice · 7(\.\d)? oz$/)
+    expect(usedFromLines([eggs], {}, 'metric', TODAY)[0]!.title).toBe('Eggs · 4 pieces')
+    expect(usedFromLines([rice], {}, 'imperial', TODAY)[0]!.title).toMatch(/^Rice · 7(\.\d)? oz$/)
+  })
+})
+
+describe('usedFromLines: Not sorted (a Lot in no Storage Place)', () => {
+  const loose: UsedFromNeed = { ...rice, lots: [lot(9, 1000, '', null)] }
+  it('reads "Not sorted" in the label and the amount label, never an empty place', () => {
+    const [line] = usedFromLines([loose], { 12: { 9: 200 } }, 'metric', TODAY)
+    expect(line!.lots[0]!.label).toBe('1000 g · Not sorted')
+    expect(line!.lots[0]!.amountLabel).toBe('Amount used from Not sorted')
+  })
+})
+
+describe('usedFromLines: go-off copy follows the Stock wording', () => {
+  it('a Lot that has not gone off says Good until, relative to today', () => {
+    expect(usedFromLines([chicken], {}, 'metric', '2026-11-12')[0]!.lots[0]!.meta).toBe('Good until Sat · Bought 9 Nov')
+    expect(usedFromLines([chicken], {}, 'metric', '2026-11-13')[0]!.lots[0]!.meta).toBe('Good until tomorrow · Bought 9 Nov')
+  })
+  it('a gone-off Lot says Went off, never Good until a past date', () => {
+    const meta = usedFromLines([chicken], {}, 'metric', '2026-11-20')[0]!.lots[0]!.meta
+    expect(meta).toBe('Went off 5 days ago · Bought 9 Nov')
+    expect(meta).not.toMatch(/Good until/)
+    expect(usedFromLines([chicken], {}, 'metric', '2026-11-16')[0]!.lots[0]!.meta).toBe('Went off yesterday · Bought 9 Nov')
+  })
+})
+
+describe('Lot view carries the base unit', () => {
+  it('unit is the need base unit (g, ml, piece)', () => {
+    const eggs: UsedFromNeed = { ingredientId: 5, ingredient: 'Eggs', quantity: 4, baseUnit: 'piece', lots: [lot(7, 6)] }
+    expect(usedFromLines([eggs], {}, 'metric', TODAY)[0]!.lots[0]!.unit).toBe('piece')
+    expect(usedFromLines([chicken], {}, 'metric', TODAY)[0]!.lots[0]!.unit).toBe('g')
+  })
+})
+
+describe('float totals compare with a small epsilon', () => {
+  const pour: UsedFromNeed = { ingredientId: 20, ingredient: 'Milk', quantity: 0.3, baseUnit: 'ml', lots: [lot(30, 0.2), lot(31, 0.1)] }
+  it('0.1 + 0.2 picked for a need of 0.3 is exact, not over', () => {
+    expect(lineState(pour, { 20: { 30: 0.2, 31: 0.1 } })).toBe('exact')
+    expect(lineState(pour, { 20: { 30: 0.1, 31: 0.2 } })).toBe('exact')
+  })
+  it('a Lot held at 0.3 and picked 0.1 + 0.2 across Courses is no conflict', () => {
+    const held: UsedFromNeed = { ...pour, lots: [lot(30, 0.3)] }
+    const a: CourseSelection = { courseId: 1, needs: [held], selection: { 20: { 30: 0.1 } } }
+    const b: CourseSelection = { courseId: 2, needs: [held], selection: { 20: { 30: 0.2 } } }
+    expect(overPickedLots([a, b])).toEqual([])
+  })
+})
+
+describe('clearing an amount (null) clears the pick', () => {
+  it('setPickAmount with null unticks the Lot', () => {
+    expect(setPickAmount({ 11: { 1: 500 } }, chicken, 1, null)).toEqual({})
+    expect(setPickAmount({ 11: { 1: 500, 2: 100 } }, chicken, 1, null)).toEqual({ 11: { 2: 100 } })
+  })
+})
+
+describe('over-pick conflicts name the Lot', () => {
+  it('overPickedLots carries what tells two Lots in one place apart (quantity, purchased)', () => {
+    const twoFridge: UsedFromNeed = { ...chicken, lots: [lot(1, 500), lot(4, 300)] }
+    const sel = (a: number, b: number) => ({ 11: { 1: a, 4: b } })
+    const rows = overPickedLots([
+      { courseId: 1, needs: [twoFridge], selection: sel(400, 200) },
+      { courseId: 2, needs: [twoFridge], selection: sel(400, 200) },
+    ])
+    expect(rows.map((r) => r.lotId)).toEqual([1, 4])
+    expect(rows[0]).toMatchObject({ held: 500, purchased: '2026-11-09', baseUnit: 'g' })
+    expect(rows[1]).toMatchObject({ held: 300, purchased: '2026-11-09', baseUnit: 'g' })
   })
 })

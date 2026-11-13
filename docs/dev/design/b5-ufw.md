@@ -20,7 +20,7 @@ Both the Mark as Cooked sheet and the Mark all Cooked sheet (one section per Cou
 ```ts
 // preview: GET .../{courseId}/cook, each need gains lots in Deduction order (reconcile §6 API)
 interface UsedFromLot { id: number; quantity: number; purchased: string; goesOff: string | null; storagePlaceName: string }
-interface UsedFromNeed { ingredientId: number; ingredient: string; quantity: number; baseUnit?: 'g'|'ml'|'piece'; lots: UsedFromLot[] }
+interface UsedFromNeed { ingredientId: number; ingredient: string; quantity: number; baseUnit: 'g'|'ml'|'piece'; lots: UsedFromLot[] }
 // request: POST .../{courseId}/cooked and each courses[i] of .../all/cooked
 interface UsedFromPick { lotId: number; quantity: number }
 interface UsedFromEntry { ingredientId: number; lots: UsedFromPick[] }
@@ -32,11 +32,12 @@ interface UsedFromEntry { ingredientId: number; lots: UsedFromPick[] }
 
 | File | Role |
 |---|---|
-| `lib/usedFrom.ts` | Pure: `Selection`, `togglePick`, `setPickAmount`, `pickedTotal`, `lineState` (none/short/exact/over), `usedFromSummary`, `toUsedFrom` (payload; undefined when empty), `overPickedLots` (cross-Course), `usedFromLines` (view models for the component). |
+| `lib/usedFrom.ts` | Pure: `Selection`, `togglePick`, `setPickAmount`, `pickedTotal`, `lineState` (none/short/exact/over), `usedFromSummary`, `toUsedFrom` (payload; undefined when empty), `overPickedLots` (cross-Course), `usedFromLines(needs, selection, unitSystem, today)` (view models; `LotView` carries `unit`, the Base Unit). Totals compare with a small epsilon. `setPickAmount(..., null)` clears the pick. `LotConflict` also carries `purchased` and `baseUnit`. |
+| `components/usedFrom.css` | Token-based rules (no literal colours) for `.used-from`, `__panel`, `__line`, `__lot`, `__message`, `__conflict`; imported by the section. |
 | `usedFromStrings.ts` | All copy (below). |
 | `api.usedFrom.ts` | `usedFromApi.cooked(key, {leftoverPortions?, usedFrom?})`, `usedFromApi.cookedAll(slot, entries)`, `isUsedFromInvalid(err)`. Same routes as `planApi`; adds `usedFrom` to the bodies only when non-empty. |
-| `hooks/useUsedFrom.ts` | `useUsedFrom(courses)`, `courses: { courseId; courseName; needs }[]` (one entry for Mark as Cooked). Holds the Selections per Course, resets when the needs change, exposes `lines(courseId)`, `summary(courseId)`, `toggle`, `setAmount`, `entries(courseId)`, `conflicts`, `hasConflict`, `expanded`/`toggleExpanded`. |
-| `components/UsedFromSection.tsx` | Renders the collapsed row (shared `ListRow` disclosure) and its panel from the view models; no logic. |
+| `hooks/useUsedFrom.ts` | `useUsedFrom(courses)`, `courses: { courseId; courseName; needs }[]` (one entry for Mark as Cooked). `useUsedFrom(courses, { unitSystem, today })`. Holds the Selections per Course, resets when the needs change, exposes `lines(courseId)`, `summary(courseId)`, `toggle`, `setAmount(..., amount | null)` (null clears the pick), `entries(courseId)`, `conflicts`, `hasConflict`, `conflictMessages` (a record keyed by `lotId`), and per-Course expansion `expanded(courseId)` / `toggleExpanded(courseId)`. |
+| `components/UsedFromSection.tsx` | Renders the collapsed row (shared `ListRow` disclosure) and its panel from the view models; no logic. `conflicts` is `{ lotId, message }[]`, shown outside the Lot row (accepted). `onAmount` receives `null` when the field is cleared. |
 
 ## 4. Copy (GLOSSARY words: Stock Lot, Storage Place, Ingredient, Course, Deduction; never "source lots", "picked lots")
 
@@ -47,12 +48,13 @@ interface UsedFromEntry { ingredientId: number; lots: UsedFromPick[] }
 | summary chosen | Your choice for 1 Ingredient / Your choice for N Ingredients |
 | line title | `<Ingredient> · <need>` e.g. "Chicken thighs · 800 g" |
 | Lot label | `<quantity> · <Storage Place>` e.g. "500 g · Fridge" |
-| Lot meta | `Good until 14 Nov` or `No go-off date`; plus `Bought 9 Nov` |
-| amount field label | `Amount used from <Storage Place>` |
+| Lot meta | The go-off wording of the Stock screen, `describeGoOff(...)` from `features/stock/lib` (reused, `today` passed in): `Good until 14 Nov` / `Good until tomorrow` / `Went off 3 days ago` / `No go-off date`; plus ` · Bought 9 Nov`. A gone-off Lot never reads "Good until <past>". |
+| No Storage Place | A Lot with `storagePlaceName` `""` reads `Not sorted` in the Lot label, the amount label and the conflict message. |
+| amount field label | `Amount used from <Storage Place>`; the NumberField shows the Base Unit (`unit`: g, ml, piece) as its suffix |
 | short | `<picked> of <need> chosen. The rest follows soonest to go off first.` |
 | over | `<picked> chosen, more than the <need> needed. Taken as chosen.` |
 | no Lots | No Stock of this Ingredient |
-| conflict | `<Ingredient>: the Courses together take more from the Lot in <Storage Place> than it holds` |
+| conflict | `<Ingredient>: the Courses together take more from the <quantity> Lot in <Storage Place> than it holds`; names the Lot (its quantity, and the Bought date when needed) so two Lots in one place are distinct |
 | server refusal | Some Stock Lots changed. Check Used from and try again. |
 
 ## 5. Wiring plan (developer step, after b5-f1 merges)
@@ -66,5 +68,6 @@ interface UsedFromEntry { ingredientId: number; lots: UsedFromPick[] }
 
 ## 6. Open questions
 
-- Preview `needs[].baseUnit` is not named in the plan; we assume an optional field and default to grams. If the server omits it, units for ml and pieces would be wrong: PM to confirm with the UF-runner/httpapi team. The Unit System (metric/imperial) comes from the Household setting at wiring time (default metric here).
-- When the need is already covered, the prefill of a further ticked Lot is its whole quantity (our reading of "the cook used more"); confirm.
+- Preview `needs[].baseUnit` is not named in the plan; we require it (no default unit). PM to confirm with the UF-runner/httpapi team that the server sends it. The Unit System (metric/imperial) comes from the Household setting at wiring time (default metric here).
+- Confirmed by the PM: when the need is already covered, the prefill of a further ticked Lot is its whole quantity.
+- The request item is `{ ingredientId, lots: [{ lotId, quantity }] }`, as the plan says (not `picks`).
