@@ -59,7 +59,7 @@ describe('RecipeDetailScreen: Base recipe lines', () => {
     setRecipe(recipe({ id: 7, name: 'Lasagne', lines: [baseLine] }))
     view()
     expect(screen.getByText(/500 ml Béchamel \(Base recipe\)/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('link', { name: 'Béchamel' }))
+    await userEvent.click(screen.getByRole('link', { name: /^500 ml Béchamel/ }))
     expect(screen.getByTestId('where')).toHaveTextContent('/recipes/3')
   })
 

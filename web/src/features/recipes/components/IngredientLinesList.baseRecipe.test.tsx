@@ -19,8 +19,8 @@ const view = (lines: RecipeLine[], over: Partial<IngredientLinesListProps> = {})
 describe('IngredientLinesList: Base recipe lines', () => {
   it('reads "500 ml Béchamel (Base recipe)" with the name a link to the Base recipe', () => {
     view([based()])
-    const row = screen.getByRole('link', { name: 'Béchamel' }).closest('div') as HTMLElement
-    expect(screen.getByRole('link', { name: 'Béchamel' })).toHaveAttribute('href', '/recipes/3')
+    const row = screen.getByRole('link', { name: /^500 ml Béchamel/ }).closest('div') as HTMLElement
+    expect(screen.getByRole('link', { name: /^500 ml Béchamel/ })).toHaveAttribute('href', '/recipes/3')
     expect(row).toHaveTextContent('500 ml Béchamel (Base recipe)')
   })
   it('says "No Ingredients yet" for an empty Base recipe', () => {

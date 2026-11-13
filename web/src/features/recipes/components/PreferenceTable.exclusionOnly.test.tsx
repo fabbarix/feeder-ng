@@ -6,10 +6,11 @@ import type { PreferenceRow } from '../lib/preferenceRows'
 import { PreferenceTable } from './PreferenceTable'
 
 // BR-D (P2 = A): a Base recipe carries only an Exclusion.
-const rows = [
-  { memberId: 1, name: 'Anna', colour: '#e91e63', avatar: '', isMe: true, state: 'none', fromIngredient: null },
-  { memberId: 2, name: 'Ben', colour: '#2196f3', avatar: '', isMe: false, state: 'none', fromIngredient: null },
-] as unknown as PreferenceRow[]
+const member = (id: number, name: string) => ({ id, name, colour: '#e91e63', avatar: '', userId: id === 1 ? 10 : null })
+const rows: PreferenceRow[] = [
+  { member: member(1, 'Anna'), you: true, state: 'none', via: [] },
+  { member: member(2, 'Ben'), you: false, state: 'none', via: [] },
+]
 
 describe('PreferenceTable exclusionOnly', () => {
   it('shows the Member and Exclusion columns only', () => {

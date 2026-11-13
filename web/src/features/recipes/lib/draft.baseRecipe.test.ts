@@ -26,12 +26,12 @@ describe('draftFromRecipe for a Base recipe', () => {
 })
 
 describe('draftToInput for a Base recipe (the body of POST/PUT /api/recipes)', () => {
-  it('sends baseRecipe, yield and yieldUnit, no Courses, and a Base recipe line by baseRecipeId with no ingredientId', () => {
+  it('sends baseRecipe, yield and yieldUnit, no Courses, and a Base recipe line by baseRecipeId (with its id and remembered Ingredient) and no ingredientId', () => {
     const body = draftToInput(draftFromRecipe(baseRecipeOut))
     expect(body).toMatchObject({ name: 'Béchamel', yield: 1, yieldUnit: 'l', baseRecipe: true, courseIds: [], wholeMeal: false, readyMeal: false })
     const [plain, based] = body.lines
     expect(plain).toMatchObject({ ingredientId: 9, quantity: 1000, unit: 'ml' })
-    expect(based).toEqual<BaseRecipeLineInput>({ baseRecipeId: 4, quantity: 100, unit: 'g', optional: false, note: '', neededAtStep: 1 })
+    expect(based).toEqual<BaseRecipeLineInput>({ id: 12, baseRecipeId: 4, quantity: 100, unit: 'g', optional: false, note: '', neededAtStep: 1, linkedFromIngredientId: 6 })
     expect('ingredientId' in (based as object)).toBe(false)
   })
   it('sends neededAtStep null when the default applies', () => {
