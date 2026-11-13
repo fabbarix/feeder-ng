@@ -2,6 +2,12 @@ import type { ReactNode } from 'react'
 import { Checkbox, ListGroup, ListRow, NumberField } from '../../../ui'
 import type { LineView } from '../lib/usedFrom'
 import { usedFromStrings } from '../usedFromStrings'
+import './usedFrom.css'
+
+export interface UsedFromConflictView {
+  lotId: number
+  message: string
+}
 
 export interface UsedFromSectionProps {
   summary: string
@@ -9,15 +15,16 @@ export interface UsedFromSectionProps {
   expanded: boolean
   onToggleExpanded: () => void
   onToggle: (ingredientId: number, lotId: number, on: boolean) => void
-  onAmount: (ingredientId: number, lotId: number, amount: number) => void
-  /** Cross-Course conflict messages (Mark all Cooked). */
-  conflicts?: string[]
+  /** `null` when the amount is cleared: the pick is removed. */
+  onAmount: (ingredientId: number, lotId: number, amount: number | null) => void
+  /** Cross-Course conflicts (Mark all Cooked), one per over-picked Lot, shown outside the Lot rows. */
+  conflicts?: UsedFromConflictView[]
 }
 
 /** The collapsed "Used from" row of a Cooked sheet and its panel. Renders view models; no logic. */
 export function UsedFromSection({ summary, lines, expanded, onToggleExpanded, onToggle, onAmount, conflicts = [] }: UsedFromSectionProps): ReactNode {
   return (
-    <>
+    <div className="used-from">
       <ListGroup label={usedFromStrings.title}>
         <ListRow
           title={usedFromStrings.title}
@@ -27,12 +34,12 @@ export function UsedFromSection({ summary, lines, expanded, onToggleExpanded, on
           panel={<UsedFromPanel lines={lines} onToggle={onToggle} onAmount={onAmount} />}
         />
       </ListGroup>
-      {conflicts.map((message) => (
-        <p key={message} role="alert">
-          {message}
+      {conflicts.map((conflict) => (
+        <p key={conflict.lotId} role="alert" className="used-from__conflict">
+          {conflict.message}
         </p>
       ))}
-    </>
+    </div>
   )
 }
 
@@ -44,13 +51,13 @@ interface PanelProps {
 
 function UsedFromPanel({ lines, onToggle, onAmount }: PanelProps) {
   return (
-    <div>
+    <div className="used-from__panel">
       {lines.map((line) => (
-        <div key={line.ingredientId}>
+        <div key={line.ingredientId} className="used-from__line">
           <p>{line.title}</p>
-          {line.empty ? <p>{line.empty}</p> : null}
+          {line.empty ? <p className="used-from__message">{line.empty}</p> : null}
           {line.lots.map((lot) => (
-            <div key={lot.lotId}>
+            <div key={lot.lotId} className="used-from__lot">
               <Checkbox label={lot.label} description={lot.meta} checked={lot.picked} onChange={(on) => onToggle(line.ingredientId, lot.lotId, on)} />
               {lot.picked ? (
                 <NumberField
@@ -58,14 +65,13 @@ function UsedFromPanel({ lines, onToggle, onAmount }: PanelProps) {
                   value={lot.amount}
                   min={0}
                   max={lot.max}
-                  onChange={(amount) => {
-                    if (amount !== null) onAmount(line.ingredientId, lot.lotId, amount)
-                  }}
+                  unit={lot.unit}
+                  onChange={(amount) => onAmount(line.ingredientId, lot.lotId, amount)}
                 />
               ) : null}
             </div>
           ))}
-          {line.message ? <p>{line.message}</p> : null}
+          {line.message ? <p className="used-from__message">{line.message}</p> : null}
         </div>
       ))}
     </div>

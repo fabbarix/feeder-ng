@@ -1,7 +1,11 @@
 // Used from (ADR 0011, docs/dev/design/b5-ufw.md): pure picking maths, summary copy, payload. No React.
 import { formatQuantity, type BaseUnit, type UnitSystem } from '../../../lib/units'
+import { describeGoOff } from '../../stock/lib/view'
 import { usedFromStrings } from '../usedFromStrings'
 import { dateRange } from './days'
+
+/** Totals compare with this slack, so 0.1 + 0.2 is not over 0.3. */
+const EPSILON = 1e-9
 
 export interface UsedFromLot {
   id: number
@@ -43,6 +47,8 @@ export interface LotView {
   picked: boolean
   amount: number
   max: number
+  /** The Base Unit of the Ingredient, the NumberField suffix. */
+  unit: BaseUnit
   amountLabel: string
 }
 
@@ -65,12 +71,19 @@ export interface LotConflict {
   held: number
   picked: number
   courseIds: number[]
+  purchased: string
+  baseUnit: BaseUnit
 }
 
 export interface CourseSelection {
   courseId: number
   needs: UsedFromNeed[]
   selection: Selection
+}
+
+/** The Storage Place as shown: "Not sorted" for a Lot in no place. */
+export function storagePlaceLabel(storagePlaceName: string): string {
+  return storagePlaceName.trim() === '' ? usedFromStrings.unsorted : storagePlaceName
 }
 
 /** The picked amount of a Lot, or undefined when it is not picked. */
@@ -104,23 +117,27 @@ export function togglePick(selection: Selection, need: UsedFromNeed, lotId: numb
   if (picked) return selection
   // The Lots already picked for this Ingredient count against the need; once it is covered, the Lot is taken whole.
   const remaining = need.quantity - pickedTotal(selection, need.ingredientId)
-  const amount = remaining > 0 ? Math.min(lot.quantity, remaining) : lot.quantity
+  const amount = remaining > EPSILON ? Math.min(lot.quantity, remaining) : lot.quantity
   return withAmount(selection, need.ingredientId, lotId, amount)
 }
 
-/** Sets a picked Lot's amount, clamped to 0..Lot quantity; ignored for a Lot that is not picked. */
-export function setPickAmount(selection: Selection, need: UsedFromNeed, lotId: number, amount: number): Selection {
+/**
+ * Sets a picked Lot's amount, clamped to 0..Lot quantity. `null` clears the pick (the Lot is unticked). Ignored for a Lot
+ * that is not picked.
+ */
+export function setPickAmount(selection: Selection, need: UsedFromNeed, lotId: number, amount: number | null): Selection {
   const lot = need.lots.find((l) => l.id === lotId)
-  if (!lot || amountOf(selection, need.ingredientId, lotId) === undefined || !Number.isFinite(amount)) return selection
+  if (!lot || amountOf(selection, need.ingredientId, lotId) === undefined) return selection
+  if (amount === null) return withoutPick(selection, need.ingredientId, lotId)
+  if (!Number.isFinite(amount)) return selection
   return withAmount(selection, need.ingredientId, lotId, Math.min(Math.max(amount, 0), lot.quantity))
 }
 
 export function lineState(need: UsedFromNeed, selection: Selection): LineState {
   const total = pickedTotal(selection, need.ingredientId)
-  if (total <= 0) return 'none'
-  if (total < need.quantity) return 'short'
-  if (total === need.quantity) return 'exact'
-  return 'over'
+  if (total <= EPSILON) return 'none'
+  if (Math.abs(total - need.quantity) <= EPSILON) return 'exact'
+  return total < need.quantity ? 'short' : 'over'
 }
 
 export function usedFromSummary(needs: UsedFromNeed[], selection: Selection): string {
@@ -158,6 +175,8 @@ export function overPickedLots(courses: CourseSelection[]): LotConflict[] {
           held: lot.quantity,
           picked: 0,
           courseIds: [],
+          purchased: lot.purchased,
+          baseUnit: need.baseUnit,
         }
         row.picked += amount
         if (!row.courseIds.includes(course.courseId)) row.courseIds.push(course.courseId)
@@ -165,12 +184,33 @@ export function overPickedLots(courses: CourseSelection[]): LotConflict[] {
       }
     }
   }
-  return [...byLot.values()].filter((row) => row.picked > row.held)
+  return [...byLot.values()].filter((row) => row.picked > row.held + EPSILON)
+}
+
+/**
+ * One message per conflicting Lot, keyed by lotId. The message names the Lot by its quantity and Storage Place; the
+ * Bought date is added only when another conflicting Lot in the same place has the same quantity.
+ */
+export function conflictMessages(conflicts: LotConflict[], system: UnitSystem): Record<number, string> {
+  const out: Record<number, string> = {}
+  for (const row of conflicts) {
+    const twins = conflicts.filter(
+      (other) => other.ingredientId === row.ingredientId && other.storagePlaceName === row.storagePlaceName && other.held === row.held,
+    )
+    const bought = twins.length > 1 ? dateRange(row.purchased, row.purchased) : undefined
+    out[row.lotId] = usedFromStrings.conflict(
+      row.ingredient,
+      formatQuantity(row.held, row.baseUnit, system),
+      storagePlaceLabel(row.storagePlaceName),
+      bought,
+    )
+  }
+  return out
 }
 
 const shortDate = (date: string) => dateRange(date, date)
 
-export function usedFromLines(needs: UsedFromNeed[], selection: Selection, system: UnitSystem = 'metric'): LineView[] {
+export function usedFromLines(needs: UsedFromNeed[], selection: Selection, system: UnitSystem, today: string): LineView[] {
   return needs.map((need) => {
     const quantity = (amount: number) => formatQuantity(amount, need.baseUnit, system)
     const state = lineState(need, selection)
@@ -180,15 +220,17 @@ export function usedFromLines(needs: UsedFromNeed[], selection: Selection, syste
     if (state === 'over') message = usedFromStrings.over(quantity(total), quantity(need.quantity))
     const lots: LotView[] = need.lots.map((lot) => {
       const amount = amountOf(selection, need.ingredientId, lot.id)
-      const goesOff = lot.goesOff ? usedFromStrings.goesOff(shortDate(lot.goesOff)) : usedFromStrings.noGoOff
+      const goOff = describeGoOff({ goesOff: lot.goesOff, spoiled: false, useSoon: false }, today).label
+      const place = storagePlaceLabel(lot.storagePlaceName)
       return {
         lotId: lot.id,
-        label: usedFromStrings.lotLabel(quantity(lot.quantity), lot.storagePlaceName),
-        meta: `${goesOff} · ${usedFromStrings.bought(shortDate(lot.purchased))}`,
+        label: usedFromStrings.lotLabel(quantity(lot.quantity), place),
+        meta: `${goOff} · ${usedFromStrings.bought(shortDate(lot.purchased))}`,
         picked: amount !== undefined,
         amount: amount ?? 0,
         max: lot.quantity,
-        amountLabel: usedFromStrings.amountLabel(lot.storagePlaceName),
+        unit: need.baseUnit,
+        amountLabel: usedFromStrings.amountLabel(place),
       }
     })
     return {
