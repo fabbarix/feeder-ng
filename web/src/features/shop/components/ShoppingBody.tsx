@@ -1,14 +1,17 @@
-import type { UnitSystem } from '../../../lib/units'
-import { BentoGrid } from '../../../ui/BentoGrid'
+// The Shop body (DS-SHOP, docs/design/system.md §3, §4): the metric strip, ONE notice, then ONE dense list of rows (a 2-column
+// card grid from 768 px, the same rows). Ticked Lines sit in their own section; Not needed stays collapsed. Render only.
 import { EmptyState } from '../../../ui/EmptyState'
-import { ProgressTile } from '../../../ui/ProgressTile'
-import { Thumb } from '../../../ui/Thumb'
+import { ListGroup } from '../../../ui/ListRow'
+import { useShopSummary } from '../hooks/useShopSummary'
 import { listEntries, notNeededEntries, type ListEntry } from '../lib/lines'
+import type { RowGroup } from '../lib/rows'
 import { shopStrings } from '../strings'
 import type { ShoppingList } from '../types'
-import { CostTile } from './CostTile'
-import { LineTile } from './LineTile'
+import type { UnitSystem } from '../../../lib/units'
+import { LineRow } from './LineRow'
 import { NotNeededGroup } from './NotNeededGroup'
+import { ShopMetrics } from './ShopMetrics'
+import { UnconfirmedNotice } from './UnconfirmedNotice'
 
 export interface ShoppingBodyProps {
   list: ShoppingList
@@ -17,63 +20,52 @@ export interface ShoppingBodyProps {
   shopName: string | null
   onTick: (entry: ListEntry) => void
   onUntick: (entry: ListEntry) => void
-  onDelete: (entry: ListEntry) => void
+  /** a row was tapped: the screen opens its sheet */
+  onOpenLine: (entry: ListEntry, group: RowGroup) => void
   onScan: () => void
-  /** B5-SH: "Not needed" on an open Line; "Needed after all" in the Not needed group; "Mark it" beside a hint (not passed until F1). */
-  onNotNeeded?: (entry: ListEntry) => void
-  onNeededAfterAll?: (entry: ListEntry) => void
-  onMarkIt?: (entry: ListEntry) => void
+  /** "Mark it" on the notice: opens the oldest unconfirmed slot */
+  onMarkIt?: (slot: { date: string; mealSlotId: number }) => void
 }
 
-/** PE: the Ingredient's Picture (an empty slot without one); a free-text extra is not an Ingredient and has no lead. */
-function leadOf(entry: ListEntry) {
-  return entry.ingredientId === null ? undefined : <Thumb name={entry.title} imageUrl={entry.imageUrl} size={40} />
-}
-
-/** The list's tiles: how many are left and the estimate, the open entries, then the Ticked group. Render only. */
-export function ShoppingBody({ list, system, shopName, onTick, onUntick, onDelete, onScan, onNotNeeded, onNeededAfterAll, onMarkIt }: ShoppingBodyProps) {
+export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenLine, onScan, onMarkIt }: ShoppingBodyProps) {
+  const { summary, notice } = useShopSummary(list, shopName)
   const { open, ticked } = listEntries(list, system)
   const notNeeded = notNeededEntries(list, system)
-  const left = list.progress.total - list.progress.ticked
   const empty = open.length === 0 && ticked.length === 0
   return (
     <>
-      <BentoGrid min="card">
-        <ProgressTile label={shopStrings.leftToGet} value={list.progress.ticked} max={list.progress.total} valueLabel={String(left)} />
-        <CostTile estimatedCostCents={list.estimatedCostCents} unpriced={list.unpricedLines} currency={list.currency} shopName={shopName} onScan={onScan} />
-      </BentoGrid>
+      <ShopMetrics summary={summary} onScan={onScan} />
+      {notice ? <UnconfirmedNotice notice={notice} onMarkIt={onMarkIt} /> : null}
       {empty ? <EmptyState title={shopStrings.empty} description={shopStrings.emptyHint} /> : null}
-      <div className="shop-lines">
-        <BentoGrid min="card">
-          {open.map((entry) => (
-            <LineTile
-              key={entry.key}
-              entry={entry}
-              onTick={onTick}
-              onUntick={onUntick}
-              onDelete={entry.kind === 'extra' ? onDelete : undefined}
-              lead={leadOf(entry)}
-              onNotNeeded={onNotNeeded}
-              onMarkIt={onMarkIt}
-            />
-          ))}
-        </BentoGrid>
-      </div>
-      {ticked.length > 0 ? (
-        <section className="shop-ticked">
-          <h2 className="shop-ticked__title">{shopStrings.tickedGroup(ticked.length)}</h2>
-          <div role="group" aria-label={shopStrings.ticked}>
-            <div className="shop-lines">
-              <BentoGrid min="card">
-                {ticked.map((entry) => (
-                  <LineTile key={entry.key} entry={entry} onTick={onTick} onUntick={onUntick} lead={leadOf(entry)} onMarkIt={onMarkIt} />
-                ))}
-              </BentoGrid>
-            </div>
+      {open.length > 0 ? (
+        <section className="shop-open">
+          <h2 className="shop-section__title">
+            {shopStrings.toGet} <span className="shop-section__count">{open.length}</span>
+          </h2>
+          <div className="shop-lines">
+            <ListGroup label={shopStrings.toGet}>
+              {open.map((entry) => (
+                <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} />
+              ))}
+            </ListGroup>
           </div>
         </section>
       ) : null}
-      <NotNeededGroup entries={notNeeded} onNeededAfterAll={onNeededAfterAll} lead={leadOf} />
+      {ticked.length > 0 ? (
+        <section className="shop-ticked">
+          <h2 className="shop-section__title">
+            {shopStrings.ticked} <span className="shop-section__count">{ticked.length}</span>
+          </h2>
+          <div className="shop-lines">
+            <ListGroup label={shopStrings.ticked}>
+              {ticked.map((entry) => (
+                <LineRow key={entry.key} entry={entry} group="ticked" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} />
+              ))}
+            </ListGroup>
+          </div>
+        </section>
+      ) : null}
+      <NotNeededGroup entries={notNeeded} onOpen={onOpenLine} />
     </>
   )
 }

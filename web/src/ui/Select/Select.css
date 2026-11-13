@@ -203,3 +203,19 @@
 .select__group {
   display: grid;
 }
+
+/* DS-SHOP round 2: the compact chip picker of a toolbar. A pill sized by its value, never a 320 px field. */
+.select__trigger[data-appearance='chip'] {
+  inline-size: auto;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+}
+
+.ui-field[data-appearance='chip'] {
+  inline-size: auto;
+  min-inline-size: 0;
+}
