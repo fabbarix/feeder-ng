@@ -69,17 +69,17 @@ describe('PlanCourseRow: chips on one line', () => {
     expect(line.children).toHaveLength(3) // direct chips only: no second line, no wrapper rows
   })
 
-  it('Leftover from is the filled leftover chip; Leftover for is the outlined one; a favourite is a neutral why chip', () => {
+  it('Leftover from is the filled leftover chip; Leftover for is the outlined one; a favourite is carried by the "+1" chip', () => {
     const { li } = setup(side({ meal: courseMeal(2, 'Side', { servedFromLeftover: { date: '2026-11-09' } as never, why: [{ code: 'leftover_fits', date: '2026-11-13' }, { code: 'favourite', members: ['Mia'] }] }) }))
     const from = within(li as HTMLElement).getByText('Leftover from Mon').closest('.chip')!
     const forChip = within(li as HTMLElement).getByText('Leftover for Fri').closest('.chip')!
-    const fav = within(li as HTMLElement).getByText("Mia's favourite").closest('.chip')!
+    const more = li.querySelector('.plan-row__chips .chip[data-kind="count"]')!
     expect(from).toHaveAttribute('data-status', 'leftover')
     expect(from).not.toHaveAttribute('data-outline')
     expect(forChip).toHaveAttribute('data-status', 'leftover')
     expect(forChip).toHaveAttribute('data-outline', 'true')
-    expect(fav).toHaveAttribute('data-kind', 'why')
-    expect(fav).not.toHaveAttribute('data-status')
+    expect(more).toHaveTextContent('+1')
+    expect(more).toHaveAttribute('title', "Mia's favourite")
   })
 
   it('every chip carries its full text as the tooltip', () => {
