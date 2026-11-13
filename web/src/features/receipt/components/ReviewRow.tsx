@@ -12,6 +12,8 @@ export interface ReviewRowProps {
 }
 
 export function ReviewRow({ view, onToggle, onOpenAdd }: ReviewRowProps) {
+  // The checkbox's (visually hidden) name says the change too: one Product can have two rows (its Price and its pack size).
+  const name = view.change !== '' ? `${view.title}, ${view.change}` : view.title
   const activate = () => (view.needsForm ? onOpenAdd(view.id) : onToggle(view.id))
   const onClick = (e: MouseEvent<HTMLLIElement>) => {
     if ((e.target as Element).closest('button, input, label, a')) return
@@ -20,7 +22,7 @@ export function ReviewRow({ view, onToggle, onOpenAdd }: ReviewRowProps) {
   return (
     <li className="receipt-row" data-checked={view.checked ? 'true' : undefined} data-highlighted={view.highlighted ? 'true' : undefined} onClick={onClick}>
       <span className="receipt-row__check">
-        <Checkbox label={view.title} checked={view.checked} disabled={view.checkDisabled} onChange={() => onToggle(view.id)} />
+        <Checkbox label={name} checked={view.checked} disabled={view.checkDisabled} onChange={() => onToggle(view.id)} />
       </span>
       <Thumb name={view.title} size={40} />
       <span className="receipt-row__text">

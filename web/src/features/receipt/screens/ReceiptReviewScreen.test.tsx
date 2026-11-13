@@ -134,6 +134,12 @@ describe('the rows', () => {
     expect(screen.getAllByRole('checkbox')).toHaveLength(9)
     for (const box of screen.getAllByRole('checkbox')) expect(box).toHaveAccessibleName()
   })
+  it('each checkbox name says its change too, so two rows of one Product are told apart', () => {
+    show()
+    const names = screen.getAllByRole('checkbox').map((box) => box.getAttribute('aria-label') ?? box.closest('label')?.textContent ?? '')
+    expect(new Set(names).size).toBe(names.length)
+    expect(check('Mutti passata 700 g, €1.29 → €1.35 per pack')).toBeChecked()
+  })
   it('the whole row toggles its checkbox', async () => {
     show()
     await userEvent.click(within(rowOf(/^Mutti passata 700 g/)).getByText('MUTTI PASSATA 700G 2 x 1,35'))
