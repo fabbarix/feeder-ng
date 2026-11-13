@@ -36,7 +36,13 @@ describe('useMarkCooked: Used from', () => {
     const uf = result.current.usedFrom!
     expect(uf.summary(1)).toBe('Soonest to go off first')
     expect(uf.lines(1)[0]!.title).toBe('Chicken thighs · 800 g')
-    expect(uf.lines(1)[0]!.lots[0]!.meta).toBe('Good until 14 Nov · Bought 9 Nov')
+    expect(uf.lines(1)[0]!.lots[0]!.meta).toBe('Good until Sat · Bought 9 Nov') // within the week reads as a weekday
+  })
+
+  it('a Good until date more than a week out reads as a day and month', async () => {
+    mockApi({ [PREVIEW]: preview([{ ...lot(1, 500, 'Fridge'), goesOff: '2026-11-24' }]) })
+    const { result } = await loaded()
+    expect(result.current.usedFrom!.lines(1)[0]!.lots[0]!.meta).toBe('Good until 24 Nov · Bought 9 Nov')
   })
 
   it('sends no usedFrom when nothing was chosen (exactly as before)', async () => {

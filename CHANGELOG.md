@@ -14,6 +14,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 - **Time today.** The slot menu on Plan and Today sets the time of one date (Time today, or Time on Thu), with Back to the usual time. A date with its own time reads "20:15 · usually 19:30".
 - **Dates that differ on Settings > Meal Slots.** The page lists the coming dates whose slot has its own time, is Not served, or has Guests.
 - **Mark it on the Shopping List.** The hint "Includes Tue Dinner, not marked Cooked yet" has a Mark it button that opens that slot's Mark as Cooked sheet on the Plan.
+- **Used from at Mark as Cooked.** The Mark as Cooked sheet and the Mark all Cooked sheet, on Plan, Today and in Cook Mode, have a Used from row: pick the Stock Lots a Cooked Planned Meal took an Ingredient from, with the amount from each, or leave it on soonest to go off first. Mark all Cooked refuses a pick that takes more from a Stock Lot than it holds.
 
 ## [1.0.0-beta.4.2] - 2026-11-12
 
