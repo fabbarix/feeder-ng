@@ -1,8 +1,33 @@
 package httpapi
 
 import (
+	"github.com/fabbarix/feeder-ng/internal/cook"
 	"github.com/fabbarix/feeder-ng/internal/cook/service"
 )
+
+// baseRecipeDTO is the Base recipe a Step comes from (BR-G): name is the innermost one, path the names from the outermost.
+type baseRecipeDTO struct {
+	ID   int64    `json:"id"`
+	Name string   `json:"name"`
+	Path []string `json:"path"`
+}
+
+// baseRecipeOf maps a Step's Base recipe: null for the Recipe's own Steps.
+func baseRecipeOf(b *cook.BaseRecipe) *baseRecipeDTO {
+	if b == nil {
+		return nil
+	}
+	return &baseRecipeDTO{ID: b.ID, Name: b.Name, Path: append([]string{}, b.Path...)}
+}
+
+// baseRecipesOf maps the covered Base recipes; [] rather than null.
+func baseRecipesOf(bs []cook.BaseRecipe) []baseRecipeDTO {
+	out := make([]baseRecipeDTO, 0, len(bs))
+	for i := range bs {
+		out = append(out, *baseRecipeOf(&bs[i]))
+	}
+	return out
+}
 
 // The cooking timeline of a slot (GET /api/cook/meals/{date}/{slotId}/all, spec §11, crs-c2 §5.1).
 
@@ -19,30 +44,32 @@ type timelineCourseDTO struct {
 }
 
 type timelineAdvanceDTO struct {
-	CourseID        int64   `json:"courseId"`
-	Scope           string  `json:"scope"`
-	Step            int     `json:"step"`
-	Text            string  `json:"text"`
-	LeadTimeMinutes int     `json:"leadTimeMinutes"`
-	Done            bool    `json:"done"`
-	DoneAt          *string `json:"doneAt"`
-	Warning         bool    `json:"warning"`
+	CourseID        int64          `json:"courseId"`
+	Scope           string         `json:"scope"`
+	Step            int            `json:"step"`
+	Text            string         `json:"text"`
+	LeadTimeMinutes int            `json:"leadTimeMinutes"`
+	Done            bool           `json:"done"`
+	DoneAt          *string        `json:"doneAt"`
+	Warning         bool           `json:"warning"`
+	BaseRecipe      *baseRecipeDTO `json:"baseRecipe"`
 }
 
 type timelineItemDTO struct {
-	CourseID        int64         `json:"courseId"`
-	Scope           string        `json:"scope"`
-	Kind            string        `json:"kind"`
-	Step            *int          `json:"step"`
-	Number          int           `json:"number"`
-	Text            string        `json:"text"`
-	DurationMinutes int           `json:"durationMinutes"`
-	StartSeconds    int           `json:"startSeconds"`
-	EndSeconds      int           `json:"endSeconds"`
-	Uses            []useDTO      `json:"uses"`
-	ImageURL        string        `json:"imageUrl"`
-	Timer           *stepTimerDTO `json:"timer"`
-	After           []int         `json:"after"`
+	CourseID        int64          `json:"courseId"`
+	Scope           string         `json:"scope"`
+	Kind            string         `json:"kind"`
+	Step            *int           `json:"step"`
+	Number          int            `json:"number"`
+	Text            string         `json:"text"`
+	DurationMinutes int            `json:"durationMinutes"`
+	StartSeconds    int            `json:"startSeconds"`
+	EndSeconds      int            `json:"endSeconds"`
+	Uses            []useDTO       `json:"uses"`
+	ImageURL        string         `json:"imageUrl"`
+	Timer           *stepTimerDTO  `json:"timer"`
+	After           []int          `json:"after"`
+	BaseRecipe      *baseRecipeDTO `json:"baseRecipe"`
 }
 
 type timelineDTO struct {
@@ -55,6 +82,7 @@ type timelineDTO struct {
 	Courses      []timelineCourseDTO  `json:"courses"`
 	Advance      []timelineAdvanceDTO `json:"advance"`
 	Items        []timelineItemDTO    `json:"items"`
+	Covered      []baseRecipeDTO      `json:"covered"`
 }
 
 // timelineOf maps the service's timeline to the API shape; every array is [] rather than null.
@@ -62,6 +90,7 @@ func timelineOf(t service.Timeline) timelineDTO {
 	d := timelineDTO{
 		Date: t.Date, MealSlotID: t.MealSlotID, SlotName: t.SlotName, Time: t.Time, StartAt: instant(t.StartAt),
 		TotalMinutes: t.TotalMinutes, Courses: []timelineCourseDTO{}, Advance: []timelineAdvanceDTO{}, Items: []timelineItemDTO{},
+		Covered: baseRecipesOf(t.Covered),
 	}
 	for _, c := range t.Courses {
 		row := timelineCourseDTO{CourseID: c.CourseID, Name: c.Name, RecipeID: c.RecipeID, RecipeName: c.RecipeName,
@@ -74,7 +103,7 @@ func timelineOf(t service.Timeline) timelineDTO {
 	}
 	for _, a := range t.Advance {
 		row := timelineAdvanceDTO{CourseID: a.CourseID, Scope: string(a.Scope), Step: a.Step, Text: a.Text,
-			LeadTimeMinutes: a.LeadTimeMinutes, Done: a.Done, Warning: a.Warning}
+			LeadTimeMinutes: a.LeadTimeMinutes, Done: a.Done, Warning: a.Warning, BaseRecipe: baseRecipeOf(a.BaseRecipe)}
 		if a.DoneAt != nil {
 			s := instant(*a.DoneAt)
 			row.DoneAt = &s
@@ -84,7 +113,7 @@ func timelineOf(t service.Timeline) timelineDTO {
 	for _, it := range t.Items {
 		row := timelineItemDTO{CourseID: it.CourseID, Scope: string(it.Scope), Kind: it.Kind, Number: it.Number,
 			Text: it.Text, DurationMinutes: it.DurationMinutes, StartSeconds: it.StartSeconds, EndSeconds: it.EndSeconds,
-			ImageURL: it.ImageURL, Uses: []useDTO{}, After: append([]int{}, it.After...)}
+			ImageURL: it.ImageURL, Uses: []useDTO{}, After: append([]int{}, it.After...), BaseRecipe: baseRecipeOf(it.BaseRecipe)}
 		if it.Step >= 0 {
 			step := it.Step
 			row.Step = &step

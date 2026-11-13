@@ -28,6 +28,26 @@ type Recipes interface {
 	Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps, error)
 }
 
+// MealRecipes is the optional part of Recipes that gives the Steps of a Planned Meal's Recipe with the meal's Batches,
+// with the Stock on hand covering its Base recipes (BR-G). The service asks for them wherever it holds a Planned Meal,
+// and for Steps everywhere else (a Recipe opened on its own assumes everything is made).
+type MealRecipes interface {
+	MealSteps(ctx context.Context, recipeID int64, batches float64) (cook.RecipeSteps, error)
+}
+
+// SlotMeal is one planned, fresh Course of a slot as the Recipes port needs it: its Recipe and Batches.
+type SlotMeal struct {
+	RecipeID int64
+	Batches  float64
+}
+
+// SlotRecipes is the optional part of Recipes that gives the Steps of the Courses of one slot together, so they share the
+// Stock on hand as Mark all Cooked does (BR-G round 2). It is preferred over MealRecipes wherever the service holds a
+// Planned Meal of a slot. The answers are in the order of meals; answer i is meal i's Steps.
+type SlotRecipes interface {
+	SlotSteps(ctx context.Context, meals []SlotMeal) ([]cook.RecipeSteps, error)
+}
+
 // MealInfo is a Planned Meal as Cook Mode needs it.
 type MealInfo struct {
 	Date       string

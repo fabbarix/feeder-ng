@@ -117,7 +117,7 @@ func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, cours
 	if meal.State != "planned" || meal.Batches <= 0 {
 		return CookView{}, ErrNotCookable
 	}
-	rs, err := s.cfg.Recipes.Steps(ctx, meal.RecipeID)
+	rs, err := s.courseSteps(ctx, meal)
 	if err != nil {
 		return CookView{}, err
 	}
@@ -139,6 +139,52 @@ func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, cours
 		return CookView{}, err
 	}
 	return CookView{View: view, Meal: &meal, Timers: timers, Now: now, Today: today}, nil
+}
+
+// courseSteps is the Steps of a Planned Meal's Course with the Stock that the Courses before it in the slot leave (BR-G
+// round 2): the slot's planned fresh Courses up to and including this one go to SlotRecipes in one call, and the last answer
+// is this Course's. Without SlotRecipes, or for a Leftover-served meal, it is mealSteps.
+func (s *Service) courseSteps(ctx context.Context, m MealInfo) (cook.RecipeSteps, error) {
+	sr, ok := s.cfg.Recipes.(SlotRecipes)
+	if !ok || m.Batches <= 0 {
+		return s.mealSteps(ctx, m.RecipeID, m.Batches)
+	}
+	metas, err := s.cfg.Meals.Slot(ctx, m.Date, m.MealSlotID)
+	if err != nil {
+		return cook.RecipeSteps{}, err
+	}
+	var meals []SlotMeal
+	found := false
+	for _, x := range metas {
+		if x.CourseID == m.CourseID {
+			meals = append(meals, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches})
+			found = true
+			break
+		}
+		if x.State == "planned" && x.Batches > 0 {
+			meals = append(meals, SlotMeal{RecipeID: x.RecipeID, Batches: x.Batches})
+		}
+	}
+	if !found {
+		meals = append(meals, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches})
+	}
+	answers, err := sr.SlotSteps(ctx, meals)
+	if err != nil {
+		return cook.RecipeSteps{}, err
+	}
+	if len(answers) != len(meals) {
+		return cook.RecipeSteps{}, fmt.Errorf("slot steps: %d answers for %d meals", len(answers), len(meals))
+	}
+	return answers[len(answers)-1], nil
+}
+
+// mealSteps is the Steps of a Planned Meal's Recipe: with the meal's Batches and the Stock on hand when the Recipes port gives
+// them (MealRecipes), else the Recipe's Steps. A Leftover-served meal (no Batches) cooks nothing, so it gets the Steps.
+func (s *Service) mealSteps(ctx context.Context, recipeID int64, batches float64) (cook.RecipeSteps, error) {
+	if mr, ok := s.cfg.Recipes.(MealRecipes); ok && batches > 0 {
+		return mr.MealSteps(ctx, recipeID, batches)
+	}
+	return s.cfg.Recipes.Steps(ctx, recipeID)
 }
 
 // RecipeView is Cook Mode for a Recipe with a chosen Batch count (ErrNotFound;
@@ -228,15 +274,14 @@ func (s *Service) scopeSteps(ctx context.Context, scope cook.Scope) (cook.Recipe
 	if err != nil {
 		return cook.RecipeSteps{}, err
 	}
-	recipeID := parts.RecipeID
 	if parts.IsMeal {
 		meal, err := s.cfg.Meals.Meal(ctx, parts.Date, parts.MealSlotID, parts.CourseID)
 		if err != nil {
 			return cook.RecipeSteps{}, err
 		}
-		recipeID = meal.RecipeID
+		return s.courseSteps(ctx, meal)
 	}
-	return s.cfg.Recipes.Steps(ctx, recipeID)
+	return s.cfg.Recipes.Steps(ctx, parts.RecipeID)
 }
 
 // ScopeRecipeName is the name of the Recipe a scope cooks, "" for an empty or unknown scope (the timers list shows it
@@ -635,19 +680,14 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 	if err != nil {
 		return nil, err
 	}
-	steps := map[int64]cook.RecipeSteps{}
 	var cands []cook.AdvanceCandidate
 	for _, m := range meals {
 		if m.Batches <= 0 {
 			continue
 		}
-		rs, ok := steps[m.RecipeID]
-		if !ok {
-			rs, err = s.cfg.Recipes.Steps(ctx, m.RecipeID)
-			if err != nil {
-				return nil, err
-			}
-			steps[m.RecipeID] = rs
+		rs, err := s.courseSteps(ctx, m)
+		if err != nil {
+			return nil, err
 		}
 		scope := courseScope(m)
 		marks, err := s.cfg.Store.Marks(ctx, scope)
@@ -655,7 +695,7 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 			return nil, err
 		}
 		for i, st := range rs.Steps {
-			if st.Kind != schedule.Advance {
+			if st.Kind != schedule.Advance || st.Covered {
 				continue
 			}
 			_, done := marks[i]

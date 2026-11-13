@@ -391,16 +391,18 @@ type stepDTO struct {
 	Uses            []useDTO      `json:"uses"`
 	Timer           *stepTimerDTO `json:"timer"`
 	// After lists the Recipe Step indexes this Step waits for; Cook Mode holds Next while their timers run.
-	After []int `json:"after"`
+	After      []int          `json:"after"`
+	BaseRecipe *baseRecipeDTO `json:"baseRecipe"`
 }
 
 type advanceDTO struct {
-	Step            int     `json:"step"`
-	Text            string  `json:"text"`
-	LeadTimeMinutes int     `json:"leadTimeMinutes"`
-	Done            bool    `json:"done"`
-	DoneAt          *string `json:"doneAt"`
-	Warning         bool    `json:"warning"`
+	Step            int            `json:"step"`
+	Text            string         `json:"text"`
+	LeadTimeMinutes int            `json:"leadTimeMinutes"`
+	Done            bool           `json:"done"`
+	DoneAt          *string        `json:"doneAt"`
+	Warning         bool           `json:"warning"`
+	BaseRecipe      *baseRecipeDTO `json:"baseRecipe"`
 }
 
 type mealDTO struct {
@@ -413,30 +415,32 @@ type mealDTO struct {
 }
 
 type viewDTO struct {
-	Scope      string       `json:"scope"`
-	RecipeID   int64        `json:"recipeId"`
-	RecipeName string       `json:"recipeName"`
-	Batches    float64      `json:"batches"`
-	Meal       *mealDTO     `json:"meal"`
-	Advance    []advanceDTO `json:"advance"`
-	Steps      []stepDTO    `json:"steps"`
-	Timers     []timerDTO   `json:"timers"`
-	Now        string       `json:"now"`
-	Today      string       `json:"today"` // household date
+	Scope      string          `json:"scope"`
+	RecipeID   int64           `json:"recipeId"`
+	RecipeName string          `json:"recipeName"`
+	Batches    float64         `json:"batches"`
+	Meal       *mealDTO        `json:"meal"`
+	Advance    []advanceDTO    `json:"advance"`
+	Steps      []stepDTO       `json:"steps"`
+	Covered    []baseRecipeDTO `json:"covered"`
+	Timers     []timerDTO      `json:"timers"`
+	Now        string          `json:"now"`
+	Today      string          `json:"today"` // household date
 }
 
 func viewOf(v service.CookView) viewDTO {
 	d := viewDTO{
 		Scope: string(v.Scope), RecipeID: v.RecipeID, RecipeName: v.RecipeName, Batches: v.Batches,
 		Advance: []advanceDTO{}, Steps: []stepDTO{}, Timers: timersOf(v.Timers, v.Now), Now: instant(v.Now),
-		Today: v.Today,
+		Today: v.Today, Covered: baseRecipesOf(v.Covered),
 	}
 	if v.Meal != nil {
 		d.Meal = &mealDTO{Date: v.Meal.Date, MealSlotID: v.Meal.MealSlotID, SlotName: v.Meal.SlotName, At: instant(v.Meal.At),
 			CourseID: v.Meal.CourseID, CourseName: v.Meal.CourseName}
 	}
 	for _, a := range v.Advance {
-		item := advanceDTO{Step: a.Step, Text: a.Text, LeadTimeMinutes: a.LeadTimeMinutes, Done: a.Done, Warning: a.Warning}
+		item := advanceDTO{Step: a.Step, Text: a.Text, LeadTimeMinutes: a.LeadTimeMinutes, Done: a.Done, Warning: a.Warning,
+			BaseRecipe: baseRecipeOf(a.BaseRecipe)}
 		if a.DoneAt != nil {
 			s := instant(*a.DoneAt)
 			item.DoneAt = &s
@@ -447,6 +451,7 @@ func viewOf(v service.CookView) viewDTO {
 		step := stepDTO{
 			Index: s.Index, Number: s.Number, Of: s.Of, Kind: string(s.Kind), Text: s.Text,
 			DurationMinutes: s.DurationMinutes, ImageURL: s.ImageURL, Uses: []useDTO{}, After: append([]int{}, s.After...),
+			BaseRecipe: baseRecipeOf(s.BaseRecipe),
 		}
 		for _, u := range s.Uses {
 			step.Uses = append(step.Uses, useDTO{IngredientID: u.IngredientID, Ingredient: u.Ingredient, Quantity: u.Quantity, Unit: u.Unit})
