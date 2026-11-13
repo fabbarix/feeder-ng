@@ -201,6 +201,15 @@ type leftoverOut struct {
 	FromDate       string  `json:"fromDate"`
 	FromMealSlotID int64   `json:"fromMealSlotId"`
 	FromCourseID   int64   `json:"fromCourseId"`
+	// B5-LO (ADR 0012): where it sits and what Feeder asks. storagePlaceId and storagePlaceName are null for a Leftover
+	// in no Storage Place (or whose place was deleted); frozenOn is null when it is not frozen; plannedPortions is what
+	// the Planned Meals served from it are planned to use.
+	StoragePlaceID   *int64  `json:"storagePlaceId"`
+	StoragePlaceName *string `json:"storagePlaceName"`
+	Frozen           bool    `json:"frozen"`
+	FrozenOn         *string `json:"frozenOn"`
+	ToAnswer         bool    `json:"toAnswer"`
+	PlannedPortions  float64 `json:"plannedPortions"`
 }
 
 type warningOut struct {
@@ -214,9 +223,11 @@ type warningOut struct {
 }
 
 type needOut struct {
-	IngredientID int64   `json:"ingredientId"`
-	Ingredient   string  `json:"ingredient"`
-	Quantity     float64 `json:"quantity"`
+	IngredientID int64           `json:"ingredientId"`
+	Ingredient   string          `json:"ingredient"`
+	Quantity     float64         `json:"quantity"`
+	BaseUnit     string          `json:"baseUnit"`
+	Lots         []lotPreviewOut `json:"lots"`
 }
 
 type cookPreviewOut struct {
@@ -405,8 +416,28 @@ func unfilledFor(u plan.Unfilled) *unfilledOut {
 		VarietyRule: u.Eliminated.VarietyRule, AdvanceStep: u.Eliminated.AdvanceStep}}
 }
 
+// leftoverFor is the payload of a Leftover that was just recorded (Cooked): it sits in no place and is not to answer.
 func leftoverFor(l plan.Leftover, t table) leftoverOut {
-	return leftoverOut{ID: l.ID, RecipeID: l.RecipeID, RecipeName: t.recipes[l.RecipeID], Portions: l.Portions,
+	return leftoverViewFor(runner.LeftoverView{Leftover: l}, t)
+}
+
+// leftoverViewFor is the payload of a Leftover as the list and the actions show it.
+func leftoverViewFor(v runner.LeftoverView, t table) leftoverOut {
+	l := v.Leftover
+	out := leftoverOut{ID: l.ID, RecipeID: l.RecipeID, RecipeName: t.recipes[l.RecipeID], Portions: l.Portions,
 		CookedOn: l.CookedOn, UseBy: l.UseBy, FromDate: l.From.Date, FromMealSlotID: l.From.MealSlotID,
-		FromCourseID: l.From.CourseID}
+		FromCourseID: l.From.CourseID, Frozen: l.Frozen(), ToAnswer: v.ToAnswer, PlannedPortions: v.PlannedPortions}
+	if l.StoragePlaceID != 0 {
+		id := l.StoragePlaceID
+		out.StoragePlaceID = &id
+	}
+	if v.StoragePlaceName != "" {
+		name := v.StoragePlaceName
+		out.StoragePlaceName = &name
+	}
+	if l.FrozenOn != "" {
+		on := l.FrozenOn
+		out.FrozenOn = &on
+	}
+	return out
 }

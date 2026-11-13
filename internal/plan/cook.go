@@ -79,18 +79,6 @@ func DependantsToUnpin(available float64, deps []Dependant) []Key {
 	return out
 }
 
-// ExpiredLeftovers are the available Leftovers with Portions > 0 whose Use-by is before today (spec §8: discarded
-// automatically, counted as waste). A Leftover is still good on its Use-by date.
-func ExpiredLeftovers(ls []Leftover, today string) []Leftover {
-	var out []Leftover
-	for _, l := range ls {
-		if l.Status == LeftoverAvailable && l.Portions > 0 && l.UseBy < today {
-			out = append(out, l)
-		}
-	}
-	return out
-}
-
 // Timed is a Planned Meal with its slot instant.
 type Timed struct {
 	Meal Meal

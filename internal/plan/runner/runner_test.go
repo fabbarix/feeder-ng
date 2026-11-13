@@ -194,47 +194,6 @@ func TestPlanCouldntPlanWhenEveryRecipeIsArchived(t *testing.T) {
 	}
 }
 
-func TestNightlyDiscardsExpiredLeftoversRecordsWasteOnceThenPlans(t *testing.T) {
-	e := newEnv(t)
-	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4], CourseID: e.main}
-	old, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["chicken"], From: src, Portions: 3, CookedOn: "2026-11-05", UseBy: "2026-11-08"})
-	fresh, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["stew"], From: src, Portions: 2, CookedOn: "2026-11-08", UseBy: "2026-11-09"}) // good today
-	if err := e.r.Nightly(ctx, "2026-11-09"); err != nil {
-		t.Fatal(err)
-	}
-	if err := e.r.Nightly(ctx, "2026-11-09"); err != nil {
-		t.Fatal(err)
-	}
-	if want := []runner.LeftoverWaste{{LeftoverID: old.ID, RecipeID: e.rec["chicken"], Portions: 3, On: "2026-11-09"}}; len(e.stock.waste) != 1 || e.stock.waste[0] != want[0] {
-		t.Errorf("waste = %+v, want exactly %+v (once, even though Nightly ran twice)", e.stock.waste, want)
-	}
-	if l, _ := e.st.Leftover(ctx, old.ID); l.Status != plan.LeftoverDiscarded {
-		t.Errorf("expired Leftover status = %q", l.Status)
-	}
-	if l, _ := e.st.Leftover(ctx, fresh.ID); l.Status != plan.LeftoverAvailable {
-		t.Errorf("a Leftover is still good on its Use-by date, got %q", l.Status)
-	}
-	if n := len(e.planMeals()); n == 0 {
-		t.Error("Nightly must plan after discarding")
-	}
-}
-
-func TestDiscardExpiredUnpinsPinnedDependantsAndSurvivesAWasteRecordingFailure(t *testing.T) {
-	e := newEnv(t)
-	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4], CourseID: e.main}
-	l, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["chicken"], From: src, Portions: 2, CookedOn: "2026-11-05", UseBy: "2026-11-08"})
-	e.st.SaveMeal(ctx, plan.Meal{Key: e.key(9), RecipeID: e.rec["chicken"], Portions: 2, State: plan.StatePlanned, Pinned: true,
-		From: &plan.Source{LeftoverID: l.ID, From: src}})
-	e.stock.wasteErr = errBoom
-	n, err := e.r.DiscardExpired(ctx)
-	if n != 1 {
-		t.Fatalf("discarded %d, want 1 (err %v)", n, err)
-	}
-	if got := e.meal(9); got.Pinned {
-		t.Error("the meal served from a discarded Leftover must be unpinned for replanning")
-	}
-}
-
 func TestInvalidateCoalescesIntoPlanRuns(t *testing.T) {
 	e := newEnv(t)
 	c, cancel := context.WithCancel(ctx)
@@ -337,26 +296,6 @@ func TestChangeRulesRollsTheRuleBackWhenTheReplanFails(t *testing.T) {
 	}
 	if n := e.bus.count("plan"); n != publishedBefore {
 		t.Errorf("a failed change published %d plan events, want none", n-publishedBefore)
-	}
-}
-
-func TestDiscardExpiredPublishesStockWasteAfterAnInTransactionWaste(t *testing.T) {
-	e := newEnv(t)
-	tx := txStock{e.stock}
-	e.r = runner.New(runner.Deps{DB: e.db, Clock: e.clk, Store: e.st, Source: e.src, Stock: tx, Events: e.bus})
-	src := plan.Key{Date: "2026-11-05", MealSlotID: e.slotIDs[4], CourseID: e.main}
-	old, _ := e.st.AddLeftover(ctx, plan.Leftover{RecipeID: e.rec["chicken"], From: src, Portions: 3, CookedOn: "2026-11-05", UseBy: "2026-11-08"})
-	if n, err := e.r.DiscardExpired(ctx); err != nil || n != 1 {
-		t.Fatalf("DiscardExpired = %d, %v; want 1, nil", n, err)
-	}
-	if len(e.stock.waste) != 1 || e.stock.waste[0].LeftoverID != old.ID {
-		t.Errorf("waste = %+v, want the discarded Leftover recorded in the transaction", e.stock.waste)
-	}
-	if n := e.bus.count("stock"); n != 1 {
-		t.Errorf("published %d stock events, want 1 after the commit", n)
-	}
-	if n, _ := e.r.DiscardExpired(ctx); n != 0 || e.bus.count("stock") != 1 {
-		t.Errorf("a run that discards nothing published a stock event (or discarded %d)", n)
 	}
 }
 

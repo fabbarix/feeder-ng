@@ -96,7 +96,7 @@ describe('the dark pass is isolated from the light findings', () => {
     expect(failAt).toBeGreaterThan(evalAt)
     expect(failAt).toBeLessThan(dark)
   })
-  it('has its own try/catch/finally; the media reset to light stays in that finally; the dark error is "could not inspect ... (dark scheme"', () => {
+  it('has its own try/catch/finally; the media reset to light stays in that finally; a dark failure is recorded through miss() with a "dark scheme" reason', () => {
     const fromDark = loop.slice(Math.max(0, loop.lastIndexOf('try {', dark)))
     const tryAt = 0
     const catchAt = fromDark.search(/\}\s*catch\s*\(/)
@@ -107,7 +107,7 @@ describe('the dark pass is isolated from the light findings', () => {
     expect(finallyAt).toBeGreaterThan(catchAt)
     const reset = fromDark.search(/value:\s*'light'/)
     expect(reset).toBeGreaterThan(finallyAt)
-    expect(fromDark).toMatch(/could not inspect \$\{tag\} \(dark scheme/)
+    expect(fromDark).toMatch(/miss\(\s*`dark scheme:/)
   })
   it('races Page.reload with sleep(', () => {
     expect(loop).toMatch(/Promise\.race\(\[\s*cdp\('Page\.reload'[\s\S]*?sleep\(/)

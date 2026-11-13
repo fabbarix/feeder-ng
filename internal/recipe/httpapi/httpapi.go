@@ -156,6 +156,7 @@ type recipeJSON struct {
 	Tags              []string      `json:"tags"`
 	CooldownDays      *int          `json:"cooldownDays"`
 	LeftoverUseByDays *int          `json:"leftoverUseByDays"`
+	FrozenUseByDays   *int          `json:"frozenUseByDays"`
 	ReheatMinutes     *int          `json:"reheatMinutes"`
 	Source            sourceJSON    `json:"source"`
 	Image             string        `json:"image"`
@@ -212,6 +213,7 @@ type recipeBody struct {
 	Tags              []string   `json:"tags"`
 	CooldownDays      *int       `json:"cooldownDays"`
 	LeftoverUseByDays *int       `json:"leftoverUseByDays"`
+	FrozenUseByDays   *int       `json:"frozenUseByDays"`
 	ReheatMinutes     *int       `json:"reheatMinutes"`
 	Source            sourceJSON `json:"source"`
 	Image             string     `json:"image"`
@@ -250,6 +252,7 @@ func (b recipeBody) input() recipe.Input {
 		Tags:              b.Tags,
 		CooldownDays:      b.CooldownDays,
 		LeftoverUseByDays: b.LeftoverUseByDays,
+		FrozenUseByDays:   b.FrozenUseByDays,
 		ReheatMinutes:     b.ReheatMinutes,
 		Source:            recipe.Source{URL: b.Source.URL, Attribution: b.Source.Attribution},
 		Image:             b.Image,
@@ -594,9 +597,10 @@ func nonNil(s []string) []string {
 func toRecipeJSON(rec recipe.Recipe) recipeJSON {
 	out := recipeJSON{
 		ID: rec.ID, Name: rec.Name, Description: rec.Description, Yield: rec.Yield, ReadyMeal: rec.ReadyMeal,
-		Tags: nonNil(rec.Tags), CooldownDays: rec.CooldownDays, LeftoverUseByDays: rec.LeftoverUseByDays, ReheatMinutes: rec.ReheatMinutes,
-		Source: sourceJSON{URL: rec.Source.URL, Attribution: rec.Source.Attribution},
-		Image:  rec.Image, ImageURL: imgs.URL(rec.Image), Archived: rec.Archived,
+		Tags: nonNil(rec.Tags), CooldownDays: rec.CooldownDays, LeftoverUseByDays: rec.LeftoverUseByDays, FrozenUseByDays: rec.FrozenUseByDays,
+		ReheatMinutes: rec.ReheatMinutes,
+		Source:        sourceJSON{URL: rec.Source.URL, Attribution: rec.Source.Attribution},
+		Image:         rec.Image, ImageURL: imgs.URL(rec.Image), Archived: rec.Archived,
 		Courses: []courseJSON{}, WholeMeal: rec.WholeMeal != nil && *rec.WholeMeal,
 		Lines: []lineJSON{}, Steps: []stepJSON{}, Advance: []advanceJSON{},
 		TotalMinutes: rec.Timing.TotalMinutes, AdvanceMinutes: rec.Timing.AdvanceMinutes,

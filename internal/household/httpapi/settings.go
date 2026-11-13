@@ -25,6 +25,7 @@ type settingsBody struct {
 	PlanningHorizonDays      int            `json:"planningHorizonDays"`
 	DefaultCooldownDays      int            `json:"defaultCooldownDays"`
 	DefaultLeftoverUseByDays int            `json:"defaultLeftoverUseByDays"`
+	FrozenUseByDays          int            `json:"frozenUseByDays"`
 	QuietHours               quietHoursBody `json:"quietHours"`
 	PlannerStyle             float64        `json:"plannerStyle"`
 	Location                 *locationBody  `json:"location"`
@@ -38,6 +39,7 @@ func settingsOut(s household.Settings) settingsBody {
 		PlanningHorizonDays:      s.PlanningHorizonDays,
 		DefaultCooldownDays:      s.DefaultCooldownDays,
 		DefaultLeftoverUseByDays: s.DefaultLeftoverUseByDays,
+		FrozenUseByDays:          s.FrozenUseByDays,
 		QuietHours:               quietHoursBody{Start: s.QuietHours.Start, End: s.QuietHours.End},
 		PlannerStyle:             s.PlannerStyle,
 		Currency:                 s.Currency,
@@ -48,12 +50,14 @@ func settingsOut(s household.Settings) settingsBody {
 	return out
 }
 
-// settingsIn is what an Admin sends. timeZoneConfigured is not accepted: saving marks it.
+// settingsIn is what an Admin sends. timeZoneConfigured is not accepted: saving marks it. FrozenUseByDays is a pointer:
+// a save without it (a client older than beta.5) keeps the stored value.
 type settingsIn struct {
 	TimeZone                 string         `json:"timeZone"`
 	PlanningHorizonDays      int            `json:"planningHorizonDays"`
 	DefaultCooldownDays      int            `json:"defaultCooldownDays"`
 	DefaultLeftoverUseByDays int            `json:"defaultLeftoverUseByDays"`
+	FrozenUseByDays          *int           `json:"frozenUseByDays"`
 	QuietHours               quietHoursBody `json:"quietHours"`
 	PlannerStyle             float64        `json:"plannerStyle"`
 	Location                 *locationBody  `json:"location"`
@@ -92,7 +96,17 @@ func (a *api) putSettings(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
-	s := in.toDomain().Normalized()
+	current, err := a.st.Settings(r.Context())
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	s := in.toDomain()
+	s.FrozenUseByDays = current.FrozenUseByDays
+	if in.FrozenUseByDays != nil {
+		s.FrozenUseByDays = *in.FrozenUseByDays
+	}
+	s = s.Normalized()
 	if err := s.Validate(); err != nil {
 		writeErr(w, err)
 		return

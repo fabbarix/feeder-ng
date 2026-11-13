@@ -288,6 +288,12 @@ func (r *Runner) SetMeal(ctx context.Context, key plan.Key, recipeID int64, batc
 // meals and reports them as Covered. Errors: ErrUnknownSlot (not a Meal Slot of that weekday), ErrInPast (before
 // today), ErrAlreadyResolved (Cooked or skipped there), ErrUnknownRecipe, ErrArchivedRecipe, ErrInvalidBatches.
 func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64, batches *float64) (SetResult, error) {
+	return r.setCell(ctx, key, recipeID, batches, 0)
+}
+
+// setCell sets the Course's meal at key to a Recipe (SetCourseMeal), or, when leftoverID is not 0, to the Recipe of that
+// Leftover served from it (UseLeftover: no batches, the Leftover's Use-by and portions checked).
+func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batches *float64, leftoverID int64) (SetResult, error) {
 	var covered []int64
 	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		in, err := r.info(ctx)
@@ -312,6 +318,14 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 		if sd.NotServed {
 			return nil, ErrNotServed
 		}
+		var pick *plan.Leftover
+		if leftoverID != 0 {
+			l, err := availableLeftover(ctx, st, leftoverID)
+			if err != nil {
+				return nil, err
+			}
+			pick, recipeID = &l, int64(l.RecipeID)
+		}
 		recipes, err := r.d.Source.Recipes(ctx)
 		if err != nil {
 			return nil, err
@@ -320,7 +334,8 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 		if !ok {
 			return nil, ErrUnknownRecipe
 		}
-		if rc.Archived {
+		// An archived Recipe refuses a meal it would be cooked for, not a Leftover of it: the food exists (ADR 0012).
+		if rc.Archived && pick == nil {
 			return nil, ErrArchivedRecipe
 		}
 		if batches != nil && *batches <= 0 {
@@ -347,6 +362,28 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 			b = *batches
 		} else if n := planner.BatchesFor(portions, rc.Yield); n > 1 {
 			b = float64(n)
+		}
+		var from *plan.Source
+		if pick != nil {
+			b = 0
+			from = &plan.Source{LeftoverID: pick.ID, From: pick.From}
+			if pick.UseBy < key.Date {
+				return nil, ErrLeftoverPastUseBy
+			}
+			// What the other Planned Meals served from it already claim (this cell's own claim does not count).
+			deps, err := st.DependantsOfLeftover(ctx, pick.ID)
+			if err != nil {
+				return nil, err
+			}
+			var others []plan.Meal
+			for _, d := range deps {
+				if d.Key != key {
+					others = append(others, d)
+				}
+			}
+			if pick.Portions-claimsOf(others) < portions-eps {
+				return nil, ErrLeftoverTooSmall
+			}
 		}
 
 		day, err := st.Meals(ctx, key.Date, key.Date)
@@ -385,7 +422,7 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 			}
 		}
 		if _, err := st.SaveMeal(ctx, plan.Meal{Key: key, RecipeID: recipeID, Batches: b, Portions: portions,
-			State: plan.StatePlanned, Pinned: true}); err != nil {
+			State: plan.StatePlanned, Pinned: true, From: from}); err != nil {
 			return nil, mapStoreErr(err)
 		}
 		for _, m := range day {
@@ -580,11 +617,12 @@ type CookPreview struct {
 	Meal           plan.Meal
 	Fresh          bool // false: served from a Leftover (nothing to deduct, no new Leftover)
 	Yield          float64
-	PortionsNeeded float64 // the slot's Attendance now
-	Proposed       float64 // plan.ProposedLeftover(Batches, Yield, PortionsNeeded); 0 when Fresh is false
-	Max            float64 // Batches x Yield: the most the stepper may reach
-	UseBy          string  // the Use-by the Leftover would get
-	Needs          []Need  // what Stock would be asked to deduct
+	PortionsNeeded float64       // the slot's Attendance now
+	Proposed       float64       // plan.ProposedLeftover(Batches, Yield, PortionsNeeded); 0 when Fresh is false
+	Max            float64       // Batches x Yield: the most the stepper may reach
+	UseBy          string        // the Use-by the Leftover would get
+	Needs          []Need        // what Stock would be asked to deduct
+	Stock          []NeedPreview // the Lots of each need in default order (nil: the Stock port cannot preview, or not Fresh)
 }
 
 // CookPreview computes the sheet. ErrNotFound, ErrAlreadyResolved.
@@ -630,6 +668,13 @@ func (r *Runner) CookPreview(ctx context.Context, key plan.Key) (CookPreview, er
 	p.Max = m.Batches * rc.Yield
 	p.UseBy = plan.LeftoverUseBy(key.Date, rc.UseByDays, in.settings.DefaultUseByDays)
 	p.Needs = needsFor(rc, m.Batches)
+	if cp, ok := r.d.Stock.(CookPreviewer); ok {
+		lots, err := cp.PreviewCooked(ctx, p.Needs)
+		if err != nil {
+			return CookPreview{}, err
+		}
+		p.Stock = lots
+	}
 	return p, nil
 }
 
@@ -683,6 +728,14 @@ func plannedForMeals(in info, recipes []planner.Recipe, meals []plan.Meal, src p
 // Any error rolls everything back: Stock is untouched, the meal stays planned, nothing is published.
 // Errors: ErrNotFound, ErrAlreadyResolved, plan.ErrInvalidLeftover.
 func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *float64) (CookedResult, error) {
+	return r.CookedUsing(ctx, key, leftoverPortions, nil)
+}
+
+// CookedUsing is Cooked with Used from (ADR 0011): usedFrom picks the Lots the meal took, per Ingredient. Without picks
+// (nil, empty, or no pick in any entry) the deduction is DeductCookedTx, as Cooked always did. With picks it is one
+// DeductCookedPickedTx call in the same transaction. Picks on a meal served from a Leftover, or a pick the Stock refuses,
+// give ErrUsedFromInvalid and nothing is written.
+func (r *Runner) CookedUsing(ctx context.Context, key plan.Key, leftoverPortions *float64, usedFrom []UsedFrom) (CookedResult, error) {
 	var warnings []Warning
 	var leftover *plan.Leftover
 	var publish func()
@@ -744,6 +797,9 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 		}
 
 		if !m.Fresh() {
+			if hasPicks(usedFrom) {
+				return nil, ErrUsedFromInvalid
+			}
 			// Served from a Leftover: consume the portions it needed from that Leftover (floor 0).
 			src, err := r.leftoverSource(ctx, st, m)
 			if err != nil {
@@ -760,7 +816,8 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 				if err := st.SetLeftoverPortions(ctx, src.ID, left); err != nil {
 					return nil, err
 				}
-				if err := r.unpinMisfits(ctx, st, src.From, left, in); err != nil {
+				// By id: a frozen part and the part that stayed may share a source meal (docs/dev/design/b5-lo.md §2.9).
+				if _, err := r.unpinLeftoverMisfits(ctx, st, src.ID, left, in); err != nil {
 					return nil, err
 				}
 			}
@@ -778,7 +835,13 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 		if err := plan.CheckLeftoverPortions(portions, m.Batches*rc.Yield); err != nil {
 			return nil, err
 		}
-		d, err := r.d.Stock.DeductCookedTx(ctx, tx, needsFor(rc, m.Batches))
+		needs := needsFor(rc, m.Batches)
+		var d Deduction
+		if hasPicks(usedFrom) {
+			d, err = r.deductPicked(ctx, tx, []CookedMeal{{Needs: needs, UsedFrom: usedFrom}})
+		} else {
+			d, err = r.d.Stock.DeductCookedTx(ctx, tx, needs)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -812,6 +875,26 @@ func (r *Runner) Cooked(ctx context.Context, key plan.Key, leftoverPortions *flo
 	}
 	r.resolved(ctx, key)
 	return CookedResult{Meal: cooked, Leftover: leftover, Warnings: warnings, PlannedFor: plannedFor}, nil
+}
+
+// hasPicks reports whether any Used from entry names a Lot.
+func hasPicks(usedFrom []UsedFrom) bool {
+	for _, u := range usedFrom {
+		if len(u.Picks) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// deductPicked is the Used from deduction of Cooked meals inside tx: one DeductCookedPickedTx call with a CookedMeal per
+// meal, in order. A Stock port that cannot take picks is a wiring error.
+func (r *Runner) deductPicked(ctx context.Context, tx *sql.Tx, meals []CookedMeal) (Deduction, error) {
+	pd, ok := r.d.Stock.(PickedDeducter)
+	if !ok {
+		return Deduction{}, errors.New("runner: the Stock port cannot deduct Used from picks")
+	}
+	return pd.DeductCookedPickedTx(ctx, tx, meals)
 }
 
 // eps absorbs float noise in portion arithmetic.

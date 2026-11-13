@@ -113,8 +113,8 @@ describe('Pantry: frozen Leftovers', () => {
     setup()
     await screen.findByText('Chilli')
     await userEvent.click(screen.getByRole('switch', { name: 'Group by Storage Place' }))
-    expect(screen.getByText('Chilli')).toBeInTheDocument()
-    expect(screen.getByText('Garage Freezer')).toBeInTheDocument()
+    const row = screen.getByText('Chilli').closest('li') as HTMLElement
+    expect(row).toHaveTextContent('3 portions · Use by 10 Feb · Garage Freezer')
   })
 
   it('By Ingredient never lists Leftovers', async () => {

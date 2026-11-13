@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { AllCookedRow } from '../lib/toConfirm'
+import { noUsedFrom } from '../test-utils'
 import { MarkAllCookedSheet, type MarkAllCookedSheetProps } from './MarkAllCookedSheet'
 
 const rows: AllCookedRow[] = [
@@ -13,7 +14,7 @@ const rows: AllCookedRow[] = [
 
 function setup(over: Partial<MarkAllCookedSheetProps> = {}) {
   const h = { onClose: vi.fn(), onLeftoverChange: vi.fn(), onConfirm: vi.fn() }
-  render(<MarkAllCookedSheet open rows={rows} isLoading={false} busy={false} error={null} {...h} {...over} />)
+  render(<MarkAllCookedSheet open rows={rows} isLoading={false} busy={false} error={null} usedFrom={noUsedFrom()} {...h} {...over} />)
   return h
 }
 

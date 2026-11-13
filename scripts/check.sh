@@ -6,6 +6,16 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 mkdir -p build
+
+# One check per worktree (b5-pl): flock -n on build/check.lock, held on fd 8 for this script's whole life. It is taken BEFORE the log is
+# truncated, so a refused run leaves the first run's check.log alone. The kernel drops the lock when the holder dies (no stale-lock handling).
+# fd 8 is closed in every child (`8>&-`), so nothing this run starts can keep the lock after it has gone. The wrapper's own lock is
+# build/page-layout.lock (fd 9), a different file, so the page-layout step never blocks on this one.
+if ! { exec 8>"$ROOT/build/check.lock" && flock -n 8; }; then
+  echo "check.sh FAILED: another check is already running in this worktree (lock $ROOT/build/check.lock is held); not run" >&2
+  exit 1
+fi
+
 LOG="$ROOT/build/check.log"
 : >"$LOG"
 
@@ -13,7 +23,7 @@ step() {
   local name="$1"
   shift
   printf '\n==> %s\n' "$name" | tee -a "$LOG"
-  "$@" 2>&1 | tee -a "$LOG"
+  "$@" 8>&- 2>&1 | tee -a "$LOG"
   local rc=${PIPESTATUS[0]}
   if [ "$rc" -ne 0 ]; then
     printf 'CHECK FAILED: %s (exit %s)\n' "$name" "$rc" | tee -a "$LOG"
@@ -32,9 +42,10 @@ step "pnpm install (frozen lockfile)" pnpm -C web install --frozen-lockfile
 step "typecheck" pnpm -C web typecheck
 step "vitest" pnpm -C web test
 step "vite build" pnpm -C web build
-# Page-layout guard (R2-L): WARN mode, never fails the run until a route is flipped in scripts/check-page-layout.modes.
-# PAGE_LAYOUT=skip skips it, PAGE_LAYOUT=full runs all six viewports (default: quick profile).
-step "page layout guard (warn)" bash "$ROOT/scripts/check-page-layout.sh"
+# Page-layout guard (R2-L): a route x viewport that is not inspected, or a refused run (a concurrent one), fails the run in every mode.
+# Rule findings are WARN until a route is flipped in scripts/check-page-layout.modes. Missing Chrome or a missing frontend (the 503 'frontend not built' page) is a WARN here; a failed vite build already failed at the vite step above.
+# PAGE_LAYOUT=skip skips it, PAGE_LAYOUT=full runs all six viewports and fails on any guard that did not run (default: quick profile).
+step "page layout guard" bash "$ROOT/scripts/check-page-layout.sh"
 step "go vet" go vet ./...
 step "go test" go test ./...
 
@@ -51,7 +62,7 @@ run_shell_tests() {
   fi
   for f in "${tests[@]}"; do
     printf -- '--> %s\n' "${f#"$ROOT"/}"
-    if ! bash "$f"; then
+    if ! bash "$f" 8>&-; then
       printf 'FAILED: %s\n' "${f#"$ROOT"/}"
       status=1
     fi

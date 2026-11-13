@@ -179,6 +179,8 @@ function SessionCookScreen(): ReactNode {
           }}
           busy={marked.busy}
           error={marked.error}
+          courseId={marked.courseId}
+          usedFrom={marked.usedFrom}
         />
       ) : null}
     </div>

@@ -62,6 +62,7 @@ func mount(r *app.Router, d app.Deps) {
 	// Team C-RX (docs/dev/design/crs-crx.md): a literal, so the mux prefers it to the {date}/{slotId} patterns.
 	r.User("GET /api/plan/couldnt-plan/exclusions", a.couldntExclusions)
 	r.User("GET /api/plan/leftovers", a.leftovers)
+	a.leftoverRoutes(r) // B5-LO: Had it, Threw it out, Freeze it, Take out, answer (leftover.go)
 	r.User("POST /api/plan/regenerate", a.regenerate)
 	// Team C3 (docs/dev/design/crs-c3.md §1): the course-less routes are gone. The six old words answer 404 for every
 	// method, registered explicitly: otherwise the mux answers 405 through PUT .../{slotId}/{courseId}. A method-less
@@ -165,6 +166,8 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 		status, code = http.StatusNotFound, "unknown_slot"
 	case errors.Is(err, runner.ErrInPast):
 		status, code = http.StatusUnprocessableEntity, "in_past"
+	case errors.Is(err, runner.ErrUsedFromInvalid):
+		status, code = http.StatusUnprocessableEntity, "used_from_invalid"
 	case errors.Is(err, runner.ErrNotServed):
 		status, code = http.StatusUnprocessableEntity, "not_served"
 	case errors.Is(err, runner.ErrAlreadyResolved):
@@ -181,6 +184,26 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 		status, code, field = http.StatusUnprocessableEntity, "validation_failed", "batches"
 	case errors.Is(err, plan.ErrInvalidLeftover):
 		status, code, field = http.StatusUnprocessableEntity, "validation_failed", "leftoverPortions"
+	case errors.Is(err, runner.ErrLeftoverPastUseBy):
+		status, code = http.StatusConflict, "leftover_past_use_by"
+	case errors.Is(err, runner.ErrLeftoverFrozen):
+		status, code = http.StatusConflict, "leftover_frozen"
+	case errors.Is(err, runner.ErrLeftoverNotFrozen):
+		status, code = http.StatusConflict, "leftover_not_frozen"
+	case errors.Is(err, runner.ErrLeftoverNotToAnswer):
+		status, code = http.StatusConflict, "leftover_not_to_answer"
+	case errors.Is(err, runner.ErrStoragePlaceNotFreezer):
+		status, code = http.StatusUnprocessableEntity, "storage_place_not_freezer"
+	case errors.Is(err, runner.ErrStoragePlaceFreezer):
+		status, code = http.StatusUnprocessableEntity, "storage_place_freezer"
+	case errors.Is(err, runner.ErrUnknownStoragePlace):
+		status, code = http.StatusUnprocessableEntity, "storage_place_unknown"
+	case errors.Is(err, runner.ErrInvalidAnswer):
+		status, code, field = http.StatusUnprocessableEntity, "validation_failed", "answer"
+	case errors.Is(err, runner.ErrLeftoverTooSmall):
+		status, code = http.StatusUnprocessableEntity, "leftover_too_small"
+	case errors.Is(err, plan.ErrPortionsInvalid):
+		status, code = http.StatusUnprocessableEntity, "portions_invalid"
 	case errors.Is(err, runner.ErrCourseNotInSlot):
 		status, code = http.StatusUnprocessableEntity, "course_not_in_slot"
 	case errors.Is(err, runner.ErrRecipeNotInCourse):
@@ -223,6 +246,24 @@ func messageFor(code string) string {
 		return "This Planned Meal is not due yet"
 	case "unknown_recipe":
 		return "No such Recipe"
+	case "leftover_past_use_by":
+		return "That Leftover is past its Use-by"
+	case "leftover_frozen":
+		return "That Leftover is already in the Freezer"
+	case "leftover_not_frozen":
+		return "That Leftover is not in the Freezer"
+	case "leftover_not_to_answer":
+		return "That Leftover does not need an answer"
+	case "leftover_too_small":
+		return "That Leftover has too few portions for that meal"
+	case "storage_place_not_freezer":
+		return "That Storage Place is not a Freezer"
+	case "storage_place_freezer":
+		return "A Leftover taken out cannot go into a Freezer"
+	case "storage_place_unknown":
+		return "No such Storage Place"
+	case "portions_invalid":
+		return "The portions must be above zero and no more than are left"
 	case "recipe_archived":
 		return "That Recipe is archived"
 	case "duplicate_rule":

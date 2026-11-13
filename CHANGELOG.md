@@ -7,6 +7,8 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 ### Added
 
 - **Leftovers by hand.** A Leftover past its Use-by is no longer thrown away on its own. A Leftover takes Had it (portions used outside the plan, not waste), Threw it out (waste dated the day of the action, or the day after the Use-by when the Leftover is already past it), Freeze it (into a Freezer, for the Frozen Use-by) or Take out (out of the Freezer, for the Recipe's Use-by days). Each one shows the Planned Meals it would replan.
+- **Frozen Use-by.** Each Recipe can set its own Frozen Use-by, from 1 to 365 days; the Household sets the default in its settings (90 days). A Leftover in a Freezer is not planned automatically: pick it with From the freezer in Choose a Recipe, and Cooked takes only the portions used, leaving the rest frozen.
+- **Answer a Leftover past its Use-by.** Had it, Threw it out, or Wasn't there. Had it and Wasn't there are not waste; Threw it out is waste dated the day after the Use-by. Until it is answered a Leftover past its Use-by waits on Today and is not planned again, so the Zero-waste streak holds.
 - **Stock Lots inline.** On the Pantry, each Ingredient shows its Stock Lots under its name, with the quantity, Bought on and Good until of each, so the Stock is visible without opening every Lot.
 - **Edit a Stock Lot.** Correct a Stock Lot's quantity, Bought on and Good until from its sheet. Changing Bought on suggests Good until again from the Shelf Life, unless Good until is chosen in the same edit. An Ingredient with a Shelf Life needs a Good until; "No go-off date" is offered only without one. A Storage Place is still changed with Move to.
 - **Delete a Stock Lot.** Delete removes a Stock Lot entered by mistake, such as a double Scan. It is not counted as waste.
@@ -16,6 +18,7 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 - **Dates that differ on Settings > Meal Slots.** The page lists the coming dates whose slot has its own time, is Not served, or has Guests.
 - **Mark it on the Shopping List.** The hint "Includes Tue Dinner, not marked Cooked yet" has a Mark it button that opens that slot's Mark as Cooked sheet on the Plan.
 - **Bought Planned Meals are kept.** Once a Scan or Tick by hand on the Shopping List covers part of a Planned Meal's Ingredients, the Planned Meal is Bought, and automatic replans leave it as it is. Plan and Today show a Bought chip and what was bought, and warn when a Bought Planned Meal now breaks a rule: an Exclusion, an archived Recipe or a lost Course. Regenerate asks first, naming the Bought Planned Meals it would replace, and Swap notes what stays in Stock.
+- **Used from at Mark as Cooked.** The Mark as Cooked sheet and the Mark all Cooked sheet, on Plan, Today and in Cook Mode, have a Used from row: pick the Stock Lots a Cooked Planned Meal took an Ingredient from, with the amount from each, or leave it on soonest to go off first. Mark all Cooked refuses a pick that takes more from a Stock Lot than it holds.
 
 ## [1.0.0-beta.4.2] - 2026-11-12
 

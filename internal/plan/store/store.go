@@ -456,21 +456,33 @@ func (s *Store) Unfilled(ctx context.Context, from, to string) ([]plan.Unfilled,
 
 // Leftovers.
 
-var leftoverCols = `id, recipe_id, from_date, from_meal_slot_id, from_course_id, portions, cooked_on, use_by, status`
+var leftoverCols = `id, recipe_id, from_date, from_meal_slot_id, from_course_id, portions, cooked_on, use_by, status, storage_place_id, frozen_on`
 
 func scanLeftover(sc scanner) (plan.Leftover, error) {
 	var l plan.Leftover
 	var status string
-	err := sc.Scan(&l.ID, &l.RecipeID, &l.From.Date, &l.From.MealSlotID, &l.From.CourseID, &l.Portions, &l.CookedOn, &l.UseBy, &status)
+	var place sql.NullInt64
+	var frozenOn sql.NullString
+	err := sc.Scan(&l.ID, &l.RecipeID, &l.From.Date, &l.From.MealSlotID, &l.From.CourseID, &l.Portions, &l.CookedOn, &l.UseBy, &status, &place, &frozenOn)
 	l.Status = plan.LeftoverStatus(status)
+	l.StoragePlaceID = place.Int64
+	l.FrozenOn = frozenOn.String
 	return l, err
 }
 
 // AddLeftover records an actual Leftover (Status available) and returns it with its id.
 func (s *Store) AddLeftover(ctx context.Context, l plan.Leftover) (plan.Leftover, error) {
-	res, err := s.q.ExecContext(ctx, `INSERT INTO leftovers (recipe_id, from_date, from_meal_slot_id, from_course_id, portions, cooked_on, use_by, status, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 'available', ?)`,
-		l.RecipeID, l.From.Date, l.From.MealSlotID, l.From.CourseID, l.Portions, l.CookedOn, l.UseBy, s.now())
+	var place sql.NullInt64
+	if l.StoragePlaceID != 0 {
+		place = sql.NullInt64{Int64: l.StoragePlaceID, Valid: true}
+	}
+	var frozen sql.NullString
+	if l.FrozenOn != "" {
+		frozen = sql.NullString{String: l.FrozenOn, Valid: true}
+	}
+	res, err := s.q.ExecContext(ctx, `INSERT INTO leftovers (recipe_id, from_date, from_meal_slot_id, from_course_id, portions, cooked_on, use_by, status, storage_place_id, frozen_on, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 'available', ?, ?, ?)`,
+		l.RecipeID, l.From.Date, l.From.MealSlotID, l.From.CourseID, l.Portions, l.CookedOn, l.UseBy, place, frozen, s.now())
 	if err != nil {
 		return plan.Leftover{}, mapErr(err)
 	}
@@ -541,7 +553,8 @@ func (s *Store) LeftoverSources(ctx context.Context, ids []int64) (map[int64]pla
 // LeftoverFrom returns the available Leftover produced by the Cooked meal at key, if any.
 func (s *Store) LeftoverFrom(ctx context.Context, key plan.Key) (plan.Leftover, bool, error) {
 	l, err := scanLeftover(s.q.QueryRowContext(ctx, `SELECT `+leftoverCols+` FROM leftovers
-		WHERE status = 'available' AND from_date = ? AND from_meal_slot_id = ? AND from_course_id = ? ORDER BY id DESC LIMIT 1`,
+		WHERE status = 'available' AND from_date = ? AND from_meal_slot_id = ? AND from_course_id = ?
+		ORDER BY (frozen_on IS NOT NULL), id DESC LIMIT 1`,
 		key.Date, key.MealSlotID, key.CourseID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return plan.Leftover{}, false, nil

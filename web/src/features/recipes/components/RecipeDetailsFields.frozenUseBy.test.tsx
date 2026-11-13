@@ -14,13 +14,14 @@ const view = (over = {}, errors = {}, household?: number) => {
 describe('RecipeDetailsFields: Frozen Use-by', () => {
   it('is a number field in days after Use-by, blank by default, with the Household helper', () => {
     view({}, {}, 60)
-    const names = screen.getAllByRole('spinbutton').map((f) => f.getAttribute('aria-label') ?? f.closest('label')?.textContent)
     const field = screen.getByRole('spinbutton', { name: 'Frozen Use-by' })
     expect(field).toHaveDisplayValue('')
     expect(screen.getByText("Blank uses the Household's 60 days.")).toBeInTheDocument()
-    const all = screen.getAllByRole('spinbutton')
-    expect(all.indexOf(field)).toBe(all.indexOf(screen.getByRole('spinbutton', { name: 'Use-by' })) + 1)
-    expect(names.length).toBeGreaterThan(0)
+    // Its own field after the Yield, Cool-down, Use-by and Reheat time row.
+    const reheat = screen.getByRole('spinbutton', { name: 'Reheat time' })
+    expect(reheat.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const use = screen.getByRole('spinbutton', { name: 'Use-by' })
+    expect(use.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
   it('helper says 90 days when the Household default is not known yet', () => {
     view()

@@ -5,6 +5,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import { ConfirmProvider, ToastProvider } from '../../ui'
+import type { UsedFromController } from './hooks/useUsedFrom'
 
 export interface RecordedCall {
   method: string
@@ -131,5 +132,13 @@ export function allCookedResult(over: Partial<CookedAllResult> = {}): CookedAllR
     warnings: [{ ingredientId: 11, name: 'chicken thighs', baseUnit: 'g', have: 300, need: 400, shortfall: 100, message: 'Stock shows only 300 g chicken thighs, the recipe uses 400 g' }],
     plannedFor: [{ date: '2026-11-12', mealSlotId: 3, mealSlotName: 'Lunch', recipeName: 'Roast chicken', courseId: 1 }],
     ...over,
+  }
+}
+
+/** A Used from controller with nothing to show (the required `usedFrom` of a sheet or controller in fixtures that ignore it). */
+export function noUsedFrom(): UsedFromController {
+  return {
+    expanded: () => false, toggleExpanded: () => {}, lines: () => [], summary: () => '', toggle: () => {}, setAmount: () => {},
+    entries: () => undefined, conflicts: [], hasConflict: false, conflictMessages: {}, conflictsOf: () => [],
   }
 }

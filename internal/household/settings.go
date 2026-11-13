@@ -29,10 +29,13 @@ type Settings struct {
 	PlanningHorizonDays      int
 	DefaultCooldownDays      int
 	DefaultLeftoverUseByDays int
-	QuietHours               QuietHours
-	PlannerStyle             float64 // 0 = Use what we have, 0.5 = Variety, 1 = Favourites
-	Location                 *Location
-	Currency                 string
+	// FrozenUseByDays is how long a Leftover keeps in a Freezer when its Recipe has no Frozen Use-by: 1 to 365, default
+	// 90 (ADR 0012, spec §3).
+	FrozenUseByDays int
+	QuietHours      QuietHours
+	PlannerStyle    float64 // 0 = Use what we have, 0.5 = Variety, 1 = Favourites
+	Location        *Location
+	Currency        string
 }
 
 // DefaultSettings are the settings a new Household starts with, in the given zone.
@@ -42,6 +45,7 @@ func DefaultSettings(timeZone string) Settings {
 		PlanningHorizonDays:      7,
 		DefaultCooldownDays:      7,
 		DefaultLeftoverUseByDays: 3,
+		FrozenUseByDays:          90,
 		QuietHours:               QuietHours{Start: "22:00", End: "07:00"},
 		PlannerStyle:             0.5,
 		Currency:                 "USD",
@@ -69,6 +73,9 @@ func (s Settings) Validate() error {
 	}
 	if s.DefaultLeftoverUseByDays < 1 || s.DefaultLeftoverUseByDays > 14 {
 		return fieldError("defaultLeftoverUseByDays", "must be between 1 and 14 days")
+	}
+	if s.FrozenUseByDays < 1 || s.FrozenUseByDays > 365 {
+		return fieldError("frozenUseByDays", "must be between 1 and 365 days")
 	}
 	if s.PlannerStyle < 0 || s.PlannerStyle > 1 {
 		return fieldError("plannerStyle", "must be between 0 and 1")
