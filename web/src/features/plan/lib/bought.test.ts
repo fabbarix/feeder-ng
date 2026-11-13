@@ -30,7 +30,7 @@ describe('addBoughtChip', () => {
   })
   it('the key is exported and has no status: prefix (it is a why chip)', () => {
     expect(BOUGHT_CHIP_KEY).not.toMatch(/^status:/)
-    expect(addBoughtChip([], bought, 'row')[0].key).toBe(BOUGHT_CHIP_KEY)
+    expect(addBoughtChip([], bought, 'row').map((c) => c.key)).toEqual([BOUGHT_CHIP_KEY])
   })
   it('an empty Ingredient list is not Bought: no chip, no line, no note', () => {
     const empty: BoughtInfo = { ingredients: [] }
