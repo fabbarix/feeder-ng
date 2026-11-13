@@ -28,7 +28,7 @@ export function RestockLevelTile({ level, baseUnit, system, onSave }: RestockLev
           label={strings.restock.label}
           value={form.text}
           onChange={form.setText}
-          suffix={baseUnitLabel(baseUnit, 'metric')}
+          suffix={baseUnitLabel(baseUnit, 'metric', level ?? undefined)}
           helper={strings.restock.helper}
           error={form.error ?? undefined}
           inputMode="decimal"

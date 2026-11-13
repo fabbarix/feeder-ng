@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
-import { detail, dishSoapJSON, garlicJSON } from '../supply.test-helper'
+import { detail, dishSoapJSON, garlicJSON, toiletPaperJSON } from '../supply.test-helper'
 import type { IngredientDetail } from '../types'
 
 const system = vi.hoisted(() => ({ value: 'metric' as 'metric' | 'imperial' }))
@@ -130,6 +130,13 @@ describe('SupplyScreen: the Restock level Tile', () => {
     expect(within(t).getByRole('textbox', { name: /Restock level/ })).toHaveValue('500')
     expect(within(t).getByText('ml')).toBeInTheDocument() // the stored value is always metric, as the conversion amount field
     expect(within(t).getByText('Below 2 cups')).toBeInTheDocument()
+  })
+  it('counts the field\'s unit with the level ("6 pieces", not "6 piece")', () => {
+    hook.ingredient = detail(toiletPaperJSON)
+    setup('/supplies/22')
+    const t = tile('Restock level')
+    expect(within(t).getByRole('textbox', { name: /Restock level/ })).toHaveValue('6')
+    expect(within(t).getByText('pieces')).toBeInTheDocument()
   })
   it('saves a new level in Base Units on Enter', async () => {
     setup()
