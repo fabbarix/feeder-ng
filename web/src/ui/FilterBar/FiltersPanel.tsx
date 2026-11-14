@@ -42,7 +42,7 @@ export function FiltersPanel({ id, open, onClose, anchorRef, count, onClear, sho
       className={['filter-panel', className].filter(Boolean).join(' ')}
       footer={
         <>
-          <Button ref={clear} variant="tertiary" size="sm" disabled={count === 0} onClick={onClear}>
+          <Button ref={clear} variant="secondary" size="sm" disabled={count === 0} onClick={onClear}>
             {filterBarStrings.clear}
           </Button>
           <Button ref={show} variant="secondary" size="sm" onClick={onClose}>

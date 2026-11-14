@@ -7,6 +7,12 @@ import { Button, PRIMARY_SCOPE_ATTR } from './Button'
 import { overlayStrings } from './overlayStrings'
 import './Dialog.css'
 
+/** What a sheet or dialog may set on its own Cancel. */
+export interface CancelButtonProps {
+  'data-autofocus'?: boolean
+  disabled?: boolean
+}
+
 export interface DialogProps {
   open: boolean
   /** Called on Escape and (unless `dismissOnBackdrop` is false) on a backdrop click. The parent sets `open` to false. */
@@ -27,8 +33,8 @@ export interface DialogProps {
   onCancel?: () => void
   /** The Cancel button's label. Default "Cancel". */
   cancelLabel?: string
-  /** Extra attributes for the Cancel button (ConfirmDialog sets `data-autofocus` on a danger confirm). */
-  cancelProps?: { 'data-autofocus'?: boolean }
+  /** Extra state for the Cancel button: `data-autofocus` (a danger confirm focuses Cancel), `disabled` (while busy). */
+  cancelProps?: CancelButtonProps
   /** Default true. Destructive confirms pass false. */
   dismissOnBackdrop?: boolean
   /** Element to focus on open. Default: the first [data-autofocus], else the first focusable, else the title. */

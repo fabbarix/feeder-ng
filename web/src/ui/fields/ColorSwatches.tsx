@@ -113,16 +113,13 @@ function CustomColourDialog({ initial, onCancel, onUse }: CustomColourDialogProp
     <Dialog
       open
       onClose={onCancel}
+      onCancel={onCancel}
+      cancelLabel={fieldStrings.cancel}
       title={fieldStrings.customColour}
       actions={
-        <>
-          <Button variant="tertiary" onClick={onCancel}>
-            {fieldStrings.cancel}
-          </Button>
-          <Button disabled={invalid || normal === null} onClick={() => normal && onUse(normal)}>
-            {fieldStrings.useColour}
-          </Button>
-        </>
+        <Button disabled={invalid || normal === null} onClick={() => normal && onUse(normal)}>
+          {fieldStrings.useColour}
+        </Button>
       }
     >
       <div className="colour-swatches__picker">

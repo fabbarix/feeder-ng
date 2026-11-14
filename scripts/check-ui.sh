@@ -606,6 +606,8 @@ rule_sheet_cancel() {
     inblk { if (index($0, "*/")) inblk = 0; next }
     $0 ~ /^[ \t]*\/\// { next }
     $0 ~ /^[ \t]*\/\*/ { if (!index($0, "*/")) inblk = 1; next }
+    # cancelLabel={…cancel} is how a sheet names its own Cancel: not a violation
+    { gsub(/cancelLabel=\{[^}]*\}/, "") }
     {
       if (!open && match($0, /<(BottomSheet|Dialog)([ \t>]|$)/)) {
         open = 1; hit = 0; start = FNR; ind = indent($0)

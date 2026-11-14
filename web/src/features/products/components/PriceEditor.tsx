@@ -47,7 +47,7 @@ export function PriceEditor({ shops, latestByShop, currency, today, initialShopI
       {form.serverError ? <p role="alert">{form.serverError}</p> : null}
       <FormActions
         tertiary={
-          <Button variant="tertiary" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel}>
             {strings.cancel}
           </Button>
         }

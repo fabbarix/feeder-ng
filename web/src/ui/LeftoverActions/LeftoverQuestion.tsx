@@ -29,7 +29,7 @@ export function LeftoverQuestion({ leftover, today, busy = false, onAnswer }: Le
         <Button variant="secondary" disabled={busy} onClick={() => onAnswer('had_it', leftover)}>
           {leftoverStrings.hadIt}
         </Button>
-        <Button variant="danger-tertiary" disabled={busy} onClick={() => onAnswer('threw_out', leftover)}>
+        <Button variant="danger-secondary" disabled={busy} onClick={() => onAnswer('threw_out', leftover)}>
           {leftoverStrings.threwOut}
         </Button>
         <Button variant="secondary" disabled={busy} onClick={() => onAnswer('wasnt_there', leftover)}>

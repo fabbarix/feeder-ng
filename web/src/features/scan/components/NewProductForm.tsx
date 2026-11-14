@@ -81,7 +81,7 @@ export function NewProductForm(p: NewProductSheetProps) {
         <div className="new-product__eyebrow">
           <p>{newProductStrings.eyebrow(choice.name, eyebrowKind)}</p>
           {form.line ? (
-            <Button variant="tertiary" size="sm" onClick={form.pickAnotherLine}>
+            <Button variant="secondary" size="sm" onClick={form.pickAnotherLine}>
               {newProductStrings.otherLine}
             </Button>
           ) : null}

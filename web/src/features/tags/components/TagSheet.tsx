@@ -93,7 +93,7 @@ function TagSheetForm({ sheet, newColour, onSave, onMerge, onDelete, busy }: Omi
       <FormActions
         destructive={
           editing ? (
-            <Button type="button" variant="danger-tertiary" disabled={busy} onClick={onDelete}>
+            <Button type="button" variant="danger-secondary" disabled={busy} onClick={onDelete}>
               {tagsStrings.sheet.delete}
             </Button>
           ) : undefined

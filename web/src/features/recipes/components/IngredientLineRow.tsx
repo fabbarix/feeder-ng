@@ -249,7 +249,7 @@ function PendingLine({
           </p>
           <p className="line-row__hint">{text.helper(line.ingredientName)}</p>
           <Button
-            variant="tertiary"
+            variant="secondary"
             onClick={() =>
               onChange({
                 auto: false,

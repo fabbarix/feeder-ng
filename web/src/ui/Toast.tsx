@@ -6,7 +6,7 @@ import { uiStrings } from './strings'
 import './Toast.css'
 
 /** DS-12 R-D+: only error, warning, offline and syncing carry an icon; a success toast's headline already says what happened. */
-export type ToastStatus = 'neutral' | 'success' | 'error' | 'warning' | 'offline' | 'syncing'
+export type ToastStatus = 'neutral' | 'success' | 'info' | 'error' | 'warning' | 'offline' | 'syncing'
 
 export interface ToastOptions {
   status?: ToastStatus
@@ -49,11 +49,11 @@ interface ToastItem {
 }
 
 interface ToastApi {
-  /** `show('Saved', { status: 'success' })`, or the rich form `show({ status, title, subline, body, actions })`. */
-  show: {
-    (message: string, options?: ToastOptions): void
-    (content: ToastContent): void
-  }
+  /**
+   * `show('Saved', { status: 'success' })`, or the rich form `show({ status, title, subline, body, actions })`. `options`
+   * applies to the string form only.
+   */
+  show: (arg: string | ToastContent, options?: ToastOptions) => void
 }
 
 const ToastContext = createContext<ToastApi | null>(null)
@@ -66,6 +66,7 @@ const SWIPE_DISTANCE_PX = 40
 const STATUS_ICON: Record<ToastStatus, IconName | null> = {
   neutral: null,
   success: null,
+  info: null,
   error: 'error',
   warning: 'warning',
   offline: 'offline',
@@ -132,7 +133,7 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
     [dismiss],
   )
 
-  const api = useMemo<ToastApi>(() => ({ show: show as ToastApi['show'] }), [show])
+  const api = useMemo<ToastApi>(() => ({ show }), [show])
 
   return (
     <ToastContext.Provider value={api}>

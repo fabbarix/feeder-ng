@@ -24,7 +24,7 @@ export function ShopList({ shops }: ShopListProps) {
           ))}
         </ListGroup>
       )}
-      <Button variant="tertiary" onClick={() => setOpen(true)}>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
         {strings.addShop}
       </Button>
       <AddShopSheet open={open} onClose={() => setOpen(false)} onAdded={() => setOpen(false)} />

@@ -1,6 +1,7 @@
 import { useId, useRef, type ReactNode, type RefObject } from 'react'
 import { Button, PRIMARY_SCOPE_ATTR } from './Button'
 import { CloseButton } from './CloseButton'
+import type { CancelButtonProps } from './Dialog'
 import { ActionSurface } from './lib/actionSurface'
 import { overlayStrings } from './overlayStrings'
 import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
@@ -21,6 +22,8 @@ export interface BottomSheetProps {
   onCancel?: () => void
   /** The Cancel button's label. Default "Cancel". */
   cancelLabel?: string
+  /** Extra state for the Cancel button (`disabled` while busy, `data-autofocus`). */
+  cancelProps?: CancelButtonProps
   /** Element to focus on open (default: the first interactive element of the body or footer, else the title). */
   initialFocusRef?: RefObject<HTMLElement | null>
   /**
@@ -48,6 +51,7 @@ function SheetSurface({
   footer,
   onCancel,
   cancelLabel = overlayStrings.cancel,
+  cancelProps,
   initialFocusRef,
   modal = true,
   size = 'auto',
@@ -87,7 +91,7 @@ function SheetSurface({
           <div className="sheet__footer" data-cancel={onCancel ? '' : undefined}>
             <ActionSurface>
               {onCancel ? (
-                <Button variant="secondary" className="sheet__cancel" onClick={onCancel}>
+                <Button variant="secondary" className="sheet__cancel" onClick={onCancel} {...cancelProps}>
                   {cancelLabel}
                 </Button>
               ) : null}

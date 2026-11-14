@@ -24,7 +24,7 @@ export function NotServedRow({ slot, offline = false, onPlanAgain }: NotServedRo
           <span className="plan-meal__name">{notServedRowText(slot)}</span>
         </span>
       </div>
-      <Button variant="tertiary" size="sm" disabled={offline} onClick={() => onPlanAgain(key)}>
+      <Button variant="secondary" size="sm" disabled={offline} onClick={() => onPlanAgain(key)}>
         {planAgainLabel(slot)}
       </Button>
       {offline ? <span className="plan-meal__reason">{s.slotDate.needsConnection}</span> : null}

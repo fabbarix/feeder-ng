@@ -64,7 +64,7 @@ function PhotoEditBody({ src, width, height, minSide, busy, onUse, onCancel }: P
         autoFocus
         onCancel={onCancel}
       >
-        <Button variant="tertiary" disabled={busy} onClick={onCancel}>
+        <Button variant="secondary" disabled={busy} onClick={onCancel}>
           {t.cancel}
         </Button>
         <Button variant="primary" disabled={busy} onClick={() => onUse(draft)}>

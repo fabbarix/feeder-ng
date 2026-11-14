@@ -37,7 +37,7 @@ export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric'
         {more.visible.map((lot) => {
           const actions = (
             <>
-              <Button variant="danger-tertiary" icon="throwOut" size="sm" aria-label={strings.throwOutLabel(lot.ingredientName)} onClick={() => onThrowOut(lot.id)}>
+              <Button variant="danger-secondary" icon="throwOut" size="sm" aria-label={strings.throwOutLabel(lot.ingredientName)} onClick={() => onThrowOut(lot.id)}>
                 {strings.throwOut}
               </Button>
               <Button variant="secondary" icon="tick" size="sm" aria-label={strings.keepLabel(lot.ingredientName)} onClick={() => onKeep(lot.id)}>
@@ -58,7 +58,7 @@ export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric'
         })}
       </ul>
       {more.capped ? (
-        <Button variant="tertiary" size="sm" aria-expanded={more.expanded} onClick={more.toggle}>
+        <Button variant="secondary" size="sm" aria-expanded={more.expanded} onClick={more.toggle}>
           {more.expanded ? strings.showLess : strings.showMore(more.hidden)}
         </Button>
       ) : null}

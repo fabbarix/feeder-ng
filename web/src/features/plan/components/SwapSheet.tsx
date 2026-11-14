@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BottomSheet, Button, ListGroup, ListRow, RecipeThumb } from '../../../ui'
+import { BottomSheet, ListGroup, ListRow, RecipeThumb } from '../../../ui'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { alternativeNote, swapMeta } from '../lib/choose'
 import { swapBoughtNote, type BoughtInfo } from '../lib/bought'
@@ -26,7 +26,7 @@ export function SwapSheet({ open, onClose, slot, alternatives, isLoading, onPick
   const rows = alternatives.slice(0, 3)
   const boughtNote = swapBoughtNote(bought)
   return (
-    <BottomSheet open={open} onClose={onClose} title={s.swapTitle} footer={<Button variant="tertiary" onClick={onClose}>{s.swapKeep}</Button>}>
+    <BottomSheet open={open} onClose={onClose} onCancel={onClose} cancelLabel={s.swapKeep} title={s.swapTitle}>
       <div className="plan__stack">
         {boughtNote ? <p className="plan__muted">{boughtNote}</p> : null}
         {isLoading ? <p className="plan__muted">{s.swapLoading}</p> : null}

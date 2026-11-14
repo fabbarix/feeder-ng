@@ -29,16 +29,16 @@ function TimeDialogBody({ slot, busy, onSave, onBack, onClose }: Required<Omit<S
       open
       onClose={onClose}
       title={copy.title}
+      onCancel={onClose}
+      cancelLabel={s.slotDate.timeCancel}
+      cancelProps={{ disabled: busy }}
       actions={
         <>
           {copy.back ? (
-            <Button variant="tertiary" disabled={busy} onClick={onBack}>
+            <Button variant="secondary" disabled={busy} onClick={onBack}>
               {copy.back}
             </Button>
           ) : null}
-          <Button variant="tertiary" disabled={busy} onClick={onClose}>
-            {s.slotDate.timeCancel}
-          </Button>
           <Button variant="primary" disabled={busy || !canSaveTime(slot, draft)} loading={busy} onClick={() => onSave(draft)}>
             {s.slotDate.timeSave}
           </Button>

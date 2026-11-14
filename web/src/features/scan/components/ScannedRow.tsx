@@ -42,10 +42,10 @@ function ActiveStrip({ row, onPrice, onIncrement, onDecrement, onRemove }: Strip
         <Stepper value={row.count} onChange={(next) => (next > row.count ? onIncrement() : onDecrement())} label={scanStrings.quantityOf(row.name)} size="xs" />
       )}
       <span className="scanned-row__actions">
-        <Button variant="tertiary" size="sm" aria-label={`${scanStrings.priceOf(row.name)}…`} onClick={onPrice}>
+        <Button variant="secondary" size="sm" aria-label={`${scanStrings.priceOf(row.name)}…`} onClick={onPrice}>
           {scanStrings.priceAction}
         </Button>
-        <Button variant="danger-tertiary" size="sm" aria-label={scanStrings.removeProduct(row.name)} onClick={onRemove}>
+        <Button variant="danger-secondary" size="sm" aria-label={scanStrings.removeProduct(row.name)} onClick={onRemove}>
           {scanStrings.removeAction}
         </Button>
       </span>

@@ -42,7 +42,7 @@ export function CouldntPlanTile({ group, expanded, onToggle, onFix, span = 2 }: 
       <p className="plan__muted">{group.canFix ? group.hint : `${group.hint} ${s.couldntAskAdmin}`}</p>
       {group.items.length > 1 ? (
         <div className="plan__row">
-          <Button variant="tertiary" size="sm" aria-expanded={expanded} aria-controls={expanded ? listId : undefined} onClick={onToggle}>
+          <Button variant="secondary" size="sm" aria-expanded={expanded} aria-controls={expanded ? listId : undefined} onClick={onToggle}>
             {expanded ? s.couldntHideList : s.couldntShowAll(group.items.length)}
           </Button>
         </div>

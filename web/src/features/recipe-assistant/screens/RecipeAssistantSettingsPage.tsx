@@ -106,7 +106,7 @@ export function RecipeAssistantSettingsPage() {
       <StickyActionBar column="narrow" label={raStrings.actionsLabel}>
         <FormActions
           tertiary={
-            <Button variant="tertiary" disabled={!page.dirty || page.saving} onClick={page.cancel}>
+            <Button variant="secondary" disabled={!page.dirty || page.saving} onClick={page.cancel}>
               {raStrings.cancel}
             </Button>
           }

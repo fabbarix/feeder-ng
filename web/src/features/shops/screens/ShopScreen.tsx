@@ -91,7 +91,7 @@ export function ShopScreen() {
             products={products}
             onDelete={(bid) => void attempt(() => shop.deleteBarcode(bid))}
           />
-          <Button variant="tertiary" onClick={() => setAdding(true)}>
+          <Button variant="secondary" onClick={() => setAdding(true)}>
             {strings.addShopBarcode}
           </Button>
         </Tile>

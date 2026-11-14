@@ -104,7 +104,7 @@ export function PlannedMealSheet({
               {s.pin}
             </Button>
           ),
-          <Button key="choose" variant="tertiary" icon="chooseRecipe" onClick={() => onChoose(key)}>
+          <Button key="choose" variant="secondary" icon="chooseRecipe" onClick={() => onChoose(key)}>
             {s.choose}
           </Button>,
         ].filter((a) => a !== null)
@@ -122,7 +122,7 @@ export function PlannedMealSheet({
           <p className="plan-sheet__meta">{several && course ? `${weekdayName(slot.date, 'short')} ${slot.name} · ${course.name}` : `${slot.name} · ${slot.time}`}</p>
           <p className="plan-sheet__facts">{meal.servedFromLeftover ? s.portionsNeeded(meal.portions) : s.plannedFacts(s.batches(meal.batches), s.portionsNeeded(meal.portions))}</p>
           {meal.servedFromLeftover?.leftoverId != null && onOpenLeftover ? (
-            <Button variant="tertiary" size="sm" onClick={() => onOpenLeftover(meal.servedFromLeftover!.leftoverId!)}>
+            <Button variant="secondary" size="sm" onClick={() => onOpenLeftover(meal.servedFromLeftover!.leftoverId!)}>
               {fromLeftoverLabel(meal.servedFromLeftover.date, meal.servedFromLeftover.recipeName)}
             </Button>
           ) : null}
@@ -147,15 +147,15 @@ export function PlannedMealSheet({
             <div className="plan-sheet__relaxed">
               <p className="plan__muted">{line.text}</p>
               {line.action.kind === 'markRecipes' ? (
-                <Button variant="tertiary" size="sm" onClick={() => onMarkRecipes(line.action.kind === 'markRecipes' ? line.action.courseId : 0)}>
+                <Button variant="secondary" size="sm" onClick={() => onMarkRecipes(line.action.kind === 'markRecipes' ? line.action.courseId : 0)}>
                   {line.action.label}
                 </Button>
               ) : line.action.kind === 'addRecipes' ? (
-                <Button variant="tertiary" size="sm" onClick={onAddRecipes}>
+                <Button variant="secondary" size="sm" onClick={onAddRecipes}>
                   {line.action.label}
                 </Button>
               ) : (
-                <Button variant="tertiary" size="sm" onClick={onReviewVarietyRules}>
+                <Button variant="secondary" size="sm" onClick={onReviewVarietyRules}>
                   {line.action.label}
                 </Button>
               )}

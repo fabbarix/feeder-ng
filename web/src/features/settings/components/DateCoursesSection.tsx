@@ -41,7 +41,7 @@ export function DateCoursesSection({ drafts, members, disabled, onToggle, onRese
               disabled={disabled}
               onChange={(memberId, eats) => onToggle(d.courseId, memberId, eats)}
             />
-            <Button variant="tertiary" aria-label={s.resetLabel(d.name)} disabled={disabled || !d.isOverride} onClick={() => onReset(d.courseId)}>
+            <Button variant="secondary" aria-label={s.resetLabel(d.name)} disabled={disabled || !d.isOverride} onClick={() => onReset(d.courseId)}>
               {s.reset}
             </Button>
           </div>

@@ -45,7 +45,7 @@ export function StockTakeSheet({ open, onClose, productName, ingredientName, cur
         <Button variant="secondary" icon="minus" onClick={() => onAction('minus_pack')}>
           {scanStrings.minusPack}
         </Button>
-        <Button variant="tertiary" onClick={() => setSettingTotal(true)}>
+        <Button variant="secondary" onClick={() => setSettingTotal(true)}>
           {scanStrings.setTotal}
         </Button>
       </div>

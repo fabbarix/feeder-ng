@@ -61,7 +61,7 @@ function PlaceForm({ initial, onSave, onDelete }: { initial: StoragePlace | null
       <FormActions
         destructive={
           onDelete ? (
-            <Button variant="danger-tertiary" onClick={onDelete}>
+            <Button variant="danger-secondary" onClick={onDelete}>
               {strings.places.delete}
             </Button>
           ) : undefined

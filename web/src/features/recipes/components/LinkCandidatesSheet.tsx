@@ -43,7 +43,7 @@ function CandidatesBody({ baseRecipe, onClose, onChanged }: LinkCandidatesSheetP
         title={s.offer.title}
         actions={
           <>
-            <Button variant="tertiary" onClick={s.keep}>
+            <Button variant="secondary" onClick={s.keep}>
               {t.keepIt}
             </Button>
             <Button variant="primary" onClick={() => void s.merge()}>
@@ -65,7 +65,7 @@ function CandidatesBody({ baseRecipe, onClose, onChanged }: LinkCandidatesSheetP
       title={s.status === 'ready' ? s.heading : recipeStrings.baseRecipe.picker.loading}
       actions={
         <>
-          <Button variant="tertiary" onClick={s.notNow}>
+          <Button variant="secondary" onClick={s.notNow}>
             {t.notNow}
           </Button>
           <Button variant="primary" disabled={!s.canLink} onClick={() => void s.link()}>

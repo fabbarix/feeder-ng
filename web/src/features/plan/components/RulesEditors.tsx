@@ -72,7 +72,7 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemo
               title={slotRuleTitle(labelOf(r.mealSlotId), ruleCourseName(slotOf(r.mealSlotId), r.courseId))}
               meta={r.recipeId !== undefined ? describeSlotRule(r) : undefined}
               trailing={
-                <Button variant="tertiary" size="sm" onClick={() => onRemove(r.id)}>
+                <Button variant="secondary" size="sm" onClick={() => onRemove(r.id)}>
                   {s.removeRule}
                 </Button>
               }
@@ -159,7 +159,7 @@ export function VarietyRulesEditor({ rules, tags, onSave, onRemove, error }: Var
               title=""
               meta={describeVarietyRule(r)}
               trailing={
-                <Button variant="tertiary" size="sm" onClick={() => onRemove(r.tag)}>
+                <Button variant="secondary" size="sm" onClick={() => onRemove(r.tag)}>
                   {s.removeRule}
                 </Button>
               }

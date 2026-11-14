@@ -76,18 +76,15 @@ function OpenSheet({ action, leftover, today, storagePlaces, recipeFrozenUseBy, 
     <BottomSheet
       open
       onClose={onClose}
+      onCancel={onClose}
+      cancelLabel={leftoverStrings.cancel}
       title={TITLES[action](name)}
       footer={
-        <>
-          <Button variant="tertiary" onClick={onClose}>
-            {leftoverStrings.cancel}
+        request ? (
+          <Button variant={action === 'threw-out' ? 'danger' : 'primary'} disabled={busy} onClick={() => onConfirm(request)}>
+            {actionLabel(action)}
           </Button>
-          {request ? (
-            <Button variant={action === 'threw-out' ? 'danger' : 'primary'} disabled={busy} onClick={() => onConfirm(request)}>
-              {actionLabel(action)}
-            </Button>
-          ) : null}
-        </>
+        ) : null
       }
     >
       <div className="leftover-sheet__stack">

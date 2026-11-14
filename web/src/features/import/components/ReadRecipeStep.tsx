@@ -188,7 +188,7 @@ export function ReadRecipeStep({ read, availability, headingRef, headingDescribe
         </p>
       ) : null}
       {availability.statusFailed ? (
-        <Button variant="tertiary" icon="refresh" onClick={() => availability.retry?.()}>
+        <Button variant="secondary" icon="refresh" onClick={() => availability.retry?.()}>
           {t.checkAgain}
         </Button>
       ) : null}

@@ -72,14 +72,14 @@ export function CourseRow({ course, canEdit, sortable, onAction, onUnarchive, re
             <Button variant="secondary" disabled={renaming.busy} onClick={() => onRenameSave?.()}>
               {s.save}
             </Button>
-            <Button variant="tertiary" disabled={renaming.busy} onClick={() => onRenameCancel?.()}>
+            <Button variant="secondary" disabled={renaming.busy} onClick={() => onRenameCancel?.()}>
               {s.cancel}
             </Button>
           </div>
         ) : null}
       </div>
       {canEdit && !isRenaming && course.archived && onUnarchive ? (
-        <Button variant="tertiary" aria-label={s.unarchiveLabel(course.name)} onClick={onUnarchive}>
+        <Button variant="secondary" aria-label={s.unarchiveLabel(course.name)} onClick={onUnarchive}>
           {s.unarchive}
         </Button>
       ) : null}

@@ -247,7 +247,7 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
         </button>
       </div>
       <div className="price-keypad__actions">
-        <Button variant="tertiary" onClick={() => onClose(entry())}>
+        <Button variant="secondary" onClick={() => onClose(entry())}>
           {uiStrings.close}
         </Button>
         {hasNext ? (

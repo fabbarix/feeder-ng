@@ -258,7 +258,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
         <div className="scan-screen__total">
           <strong className="scan-screen__amount">{formatMinor(scanned.totals.spentCents, c.currency)}</strong>
           {scanned.totals.unpricedCount > 0 ? (
-            <Button variant="tertiary" size="sm" onClick={() => flow.startPriceEntry()}>
+            <Button variant="secondary" size="sm" onClick={() => flow.startPriceEntry()}>
               {scanStrings.withoutPrice(scanned.totals.unpricedCount)}
             </Button>
           ) : null}
@@ -296,7 +296,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   return (
     <section className="scan-screen" data-price-entry={pricingRow ? 'open' : undefined}>
       {shop ? (
-        <PageHeader title={shop.name} actions={<Button variant="tertiary" onClick={changeShop}>{scanStrings.changeShop}</Button>} />
+        <PageHeader title={shop.name} actions={<Button variant="secondary" onClick={changeShop}>{scanStrings.changeShop}</Button>} />
       ) : (
         <PageHeader
           title={scanStrings.stockTakeHeading}

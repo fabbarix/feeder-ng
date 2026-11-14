@@ -82,14 +82,11 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
     <BottomSheet
       open={open}
       onClose={onClose}
+      onCancel={onClose}
+      cancelLabel={fieldStrings.cancel}
       title={shopStrings.addExtra}
       footer={
         <FormActions
-          tertiary={
-            <Button variant="tertiary" onClick={onClose}>
-              {fieldStrings.cancel}
-            </Button>
-          }
           primary={
             <Button type="submit" form={formId}>
               {shopStrings.save}

@@ -88,7 +88,7 @@ export function BaseRecipeLineTile({ row, ask, problems, warnings, onAnswer, onC
       ) : null}
       {ask ? <TakeOverQuestion ask={ask} onTakeOver={onTakeOver} /> : null}
       <div className="base-line-tile__actions">
-        <Button variant="tertiary" onClick={() => setPicking(true)}>
+        <Button variant="secondary" onClick={() => setPicking(true)}>
           {s.baseRecipes.chooseAnother}
         </Button>
       </div>

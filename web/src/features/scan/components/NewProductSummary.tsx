@@ -32,10 +32,10 @@ export function NewProductSummary({ name, renaming, scope, shopName, error, onRe
     <div role="note" className="new-product__summary">
       <p>{scope === 'shop' ? newProductStrings.savedAsShop(name, shopName) : newProductStrings.savedAs(name)}</p>
       <div className="new-product__summary-actions">
-        <Button variant="tertiary" size="sm" onClick={onRename}>
+        <Button variant="secondary" size="sm" onClick={onRename}>
           {newProductStrings.rename}
         </Button>
-        <Button variant="tertiary" size="sm" onClick={onToggleScope}>
+        <Button variant="secondary" size="sm" onClick={onToggleScope}>
           {scope === 'shop' ? newProductStrings.moreAnyShop : newProductStrings.moreThisShop}
         </Button>
       </div>

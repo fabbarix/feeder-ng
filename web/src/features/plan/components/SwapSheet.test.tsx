@@ -55,10 +55,11 @@ describe('SwapSheet (rows are the buttons)', () => {
     expect(onPick).toHaveBeenCalledWith(2)
   })
 
-  it('"Keep it" is a tertiary button that closes the sheet', async () => {
+  it('"Keep it" is the sheet\'s Cancel (onCancel): a secondary button that closes the sheet, and there is no Close', async () => {
     const { onClose } = setup()
     const keep = screen.getByRole('button', { name: 'Keep it' })
-    expect(keep).toHaveAttribute('data-variant', 'tertiary')
+    expect(keep).toHaveAttribute('data-variant', 'secondary')
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
     await userEvent.click(keep)
     expect(onClose).toHaveBeenCalled()
   })

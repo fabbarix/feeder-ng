@@ -95,7 +95,7 @@ export function MealSlotCard({ card, members, canEdit, addDisabled = false, loca
             {text.cardEdit(card.name)}
           </Button>
         ) : null}
-        <Button variant="tertiary" size="sm" icon="plan" aria-label={text.cardChangeDate(card.name)} onClick={() => onChangeDate(card)}>
+        <Button variant="secondary" size="sm" icon="plan" aria-label={text.cardChangeDate(card.name)} onClick={() => onChangeDate(card)}>
           {text.changeDateButton}
         </Button>
       </div>

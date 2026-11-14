@@ -50,7 +50,7 @@ export function NewProductKind(p: NewProductKindProps) {
       {existing ? (
         <div className="new-product__guard" role="status" tabIndex={-1}>
           <p>{scanStrings.guard.alreadyExists(existing.name)}</p>
-          <Button variant="tertiary" onClick={() => p.onAdopt(existing)}>
+          <Button variant="secondary" onClick={() => p.onAdopt(existing)}>
             {scanStrings.guard.useExisting(existing.name)}
           </Button>
         </div>
@@ -60,11 +60,11 @@ export function NewProductKind(p: NewProductKindProps) {
           <p>{scanStrings.guard.didYouMean(p.guard.suggestions.map((s) => s.ingredient.name).join(', '))}</p>
           <div className="new-product__chips">
             {p.guard.suggestions.map((s) => (
-              <Button key={s.ingredient.id} variant="tertiary" onClick={() => p.onAdopt(s.ingredient)}>
+              <Button key={s.ingredient.id} variant="secondary" onClick={() => p.onAdopt(s.ingredient)}>
                 {scanStrings.guard.useExisting(s.ingredient.name)}
               </Button>
             ))}
-            <Button variant="tertiary" onClick={p.onKeepNew}>
+            <Button variant="secondary" onClick={p.onKeepNew}>
               {scanStrings.guard.createAnyway(p.chosen?.name ?? '')}
             </Button>
           </div>

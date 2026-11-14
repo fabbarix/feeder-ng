@@ -138,7 +138,7 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
         onChange={(v) => setUserId(v === NO_USER ? null : Number(v))}
       />
       {canLinkMe(members, member, userId, currentUserId) ? (
-        <Button variant="tertiary" onClick={() => setUserId(currentUserId ?? null)}>
+        <Button variant="secondary" onClick={() => setUserId(currentUserId ?? null)}>
           {text.thisIsMe}
         </Button>
       ) : null}
@@ -152,7 +152,7 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
           {text.save}
         </Button>
         {member && onDelete ? (
-          <Button variant="danger-tertiary" disabled={saving} onClick={() => void onDelete()}>
+          <Button variant="danger-secondary" disabled={saving} onClick={() => void onDelete()}>
             {text.remove}
           </Button>
         ) : null}

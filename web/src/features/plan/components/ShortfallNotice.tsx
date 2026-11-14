@@ -20,7 +20,7 @@ export function ShortfallNotice({ warning, onCorrect, onDismiss }: ShortfallNoti
           <Button variant="secondary" size="sm" onClick={() => onCorrect(warning)}>
             {planStrings.correctStock}
           </Button>
-          <Button variant="tertiary" size="sm" onClick={() => onDismiss(warning)}>
+          <Button variant="secondary" size="sm" onClick={() => onDismiss(warning)}>
             {planStrings.dismiss}
           </Button>
         </div>

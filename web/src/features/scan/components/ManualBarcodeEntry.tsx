@@ -31,7 +31,7 @@ export function ManualBarcodeEntry({ recovery }: ManualBarcodeEntryProps) {
       <FormActions
         primary={<Button type="submit">{scanStrings.useBarcode}</Button>}
         tertiary={
-          <Button variant="tertiary" onClick={() => recovery.closeManual()}>
+          <Button variant="secondary" onClick={() => recovery.closeManual()}>
             {scanStrings.closeManual}
           </Button>
         }

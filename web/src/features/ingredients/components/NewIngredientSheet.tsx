@@ -56,16 +56,13 @@ export function NewIngredientSheet(props: NewIngredientSheetProps) {
     <BottomSheet
       open={open}
       onClose={close}
+      onCancel={close}
+      cancelLabel={strings.sheet.cancel}
       title={kind === 'supply' ? strings.newSupply : strings.newIngredient}
       footer={
-        <div className="new-ingredient__actions">
-          <Button variant="tertiary" onClick={close}>
-            {strings.sheet.cancel}
-          </Button>
-          <Button type="submit" form={formId} disabled={busy || pictureBusy || props.disabledReason !== undefined} aria-describedby={props.disabledReason ? reasonId : undefined}>
-            {busy ? strings.sheet.creating : words.createLabel}
-          </Button>
-        </div>
+        <Button type="submit" form={formId} disabled={busy || pictureBusy || props.disabledReason !== undefined} aria-describedby={props.disabledReason ? reasonId : undefined}>
+          {busy ? strings.sheet.creating : words.createLabel}
+        </Button>
       }
     >
       {open ? (
@@ -232,7 +229,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
           <p>{strings.sheet.alreadyExists(guard.ingredient.name)}</p>
           {onUseExisting ? (
             <Button
-              variant="tertiary"
+              variant="secondary"
               onClick={() => {
                 onUseExisting(guard.ingredient)
                 onClose()
@@ -251,7 +248,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
               ? guard.suggestions.map((s) => (
                   <Button
                     key={s.ingredient.id}
-                    variant="tertiary"
+                    variant="secondary"
                     onClick={() => {
                       onUseExisting(s.ingredient)
                       onClose()
@@ -261,7 +258,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
                   </Button>
                 ))
               : null}
-            <Button variant="tertiary" onClick={() => asked && void create(asked)}>
+            <Button variant="secondary" onClick={() => asked && void create(asked)}>
               {strings.sheet.createAnyway(typed)}
             </Button>
           </div>

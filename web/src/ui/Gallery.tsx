@@ -160,7 +160,7 @@ function CloseButtonGroup() {
 }
 
 // The warn tone (and its tile tint) arrives with B9-02's tokens.
-const DETAIL_TONES: DetailTone[] = ['spoil', 'info', 'danger', 'leftover', 'neutral']
+const DETAIL_TONES = ['spoil', 'info', 'danger', 'leftover', 'neutral'] as const satisfies readonly DetailTone[]
 
 function DetailListGroup() {
   return (

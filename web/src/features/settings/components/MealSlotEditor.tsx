@@ -131,14 +131,14 @@ function SlotForm({ slot, members, defaultWeekdays, defaultName, saving, error, 
         }
         tertiary={
           slot && onChangeDate ? (
-            <Button variant="tertiary" onClick={onChangeDate}>
+            <Button variant="secondary" onClick={onChangeDate}>
               {text.changeDateButton}
             </Button>
           ) : undefined
         }
         destructive={
           slot && onDelete ? (
-            <Button variant="danger-tertiary" disabled={saving} onClick={() => void onDelete()}>
+            <Button variant="danger-secondary" disabled={saving} onClick={() => void onDelete()}>
               {text.remove}
             </Button>
           ) : undefined

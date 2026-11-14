@@ -76,7 +76,7 @@ export function ImagePicker(props: ImagePickerProps) {
                   {t.crop}
                 </Button>
               ) : null}
-              <Button variant="tertiary" icon="delete" disabled={p.locked} onClick={p.remove}>
+              <Button variant="secondary" icon="delete" disabled={p.locked} onClick={p.remove}>
                 {t.removeImage}
               </Button>
             </div>
@@ -120,7 +120,7 @@ export function ImagePicker(props: ImagePickerProps) {
         <div role="status" aria-live="polite" className="image-picker__status">
           <span>{statusText}</span>
           {!p.loadingCrop ? (
-            <Button variant="tertiary" size="sm" onClick={p.cancel}>
+            <Button variant="secondary" size="sm" onClick={p.cancel}>
               {t.cancel}
             </Button>
           ) : null}

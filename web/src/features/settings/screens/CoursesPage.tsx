@@ -76,7 +76,7 @@ export function CoursesPage(): ReactElement {
           ) : null}
           {archived.length > 0 ? (
             <div className="courses-archived">
-              <Button variant="tertiary" aria-expanded={page.archivedOpen} onClick={page.toggleArchived}>
+              <Button variant="secondary" aria-expanded={page.archivedOpen} onClick={page.toggleArchived}>
                 {s.archivedHeading(archived.length)}
               </Button>
               {page.archivedOpen ? (

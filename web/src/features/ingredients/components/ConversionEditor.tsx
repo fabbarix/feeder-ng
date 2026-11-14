@@ -39,7 +39,7 @@ export function ConversionEditor({ conversions, base, system, onAdd, onRemove, l
                 lockedUnits.includes(c.unit) ? (
                   <span className="ingredient__locked">{strings.setByBaseRecipe}</span>
                 ) : (
-                  <Button variant="tertiary" onClick={() => onRemove(c.unit)}>
+                  <Button variant="secondary" onClick={() => onRemove(c.unit)}>
                     {strings.removeConversion(c.unit)}
                   </Button>
                 )

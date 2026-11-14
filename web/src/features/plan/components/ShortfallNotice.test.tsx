@@ -22,11 +22,11 @@ describe('ShortfallNotice', () => {
     expect(onDismiss).toHaveBeenCalledWith(warning)
   })
 
-  it('is a danger-spoil status tile; Correct Stock is secondary, Dismiss tertiary', () => {
+  it('is a danger-spoil status tile; Correct Stock is secondary, Dismiss secondary too (DS-12: no tertiary)', () => {
     render(<ShortfallNotice warning={warning} onCorrect={() => {}} onDismiss={() => {}} />)
     expect(screen.getByRole('alert')).toHaveAttribute('data-variant', 'status')
     expect(screen.getByRole('button', { name: 'Correct Stock' })).toHaveAttribute('data-variant', 'secondary')
-    expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveAttribute('data-variant', 'tertiary')
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveAttribute('data-variant', 'secondary')
   })
 })
 

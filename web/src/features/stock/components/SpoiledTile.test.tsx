@@ -59,11 +59,11 @@ describe('SpoiledTile', () => {
     expect(tile).not.toHaveAttribute('data-tone')
   })
 
-  it('Throw out is a danger tertiary with a Trash icon; Keep is a secondary with a Check icon', () => {
+  it('Throw out is a danger-secondary with a Trash icon; Keep is a secondary with a Check icon', () => {
     render(<SpoiledTile today={today} lots={[makeLot()]} onThrowOut={() => {}} onKeep={() => {}} />)
     const out = screen.getByRole('button', { name: 'Throw out chicken thighs' })
     const keep = screen.getByRole('button', { name: 'Keep chicken thighs' })
-    expect(out).toHaveAttribute('data-variant', 'danger-tertiary')
+    expect(out).toHaveAttribute('data-variant', 'danger-secondary')
     expect(keep).toHaveAttribute('data-variant', 'secondary')
     expect(out.querySelector('svg')).not.toBeNull()
     expect(keep.querySelector('svg')).not.toBeNull()
