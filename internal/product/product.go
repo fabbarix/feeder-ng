@@ -120,7 +120,7 @@ func NormalizeBarcode(raw string) (string, error) {
 	return code, nil
 }
 
-// NormalizeTypedBarcode is NormalizeBarcode for a barcode a person typed (decision SET 1, SET-04): a code made only of
+// NormalizeTypedBarcode is NormalizeBarcode for a barcode a User typed (decision SET 1, SET-04): a code made only of
 // digits must be a GTIN, 8, 12, 13 or 14 digits long with a valid check digit; a code with any other character is a
 // Shop's own label and stays accepted. A scanned code and a Shop Barcode keep NormalizeBarcode.
 func NormalizeTypedBarcode(raw string) (string, error) {
