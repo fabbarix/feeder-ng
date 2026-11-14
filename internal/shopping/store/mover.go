@@ -15,10 +15,10 @@ func init() { ingredientstore.RegisterMover(Mover{}) }
 // Name is "shopping list".
 func (Mover) Name() string { return "shopping list" }
 
-// Count is the number of extras, ticks and Not needed marks that reference the Ingredient.
+// Count is the number of extras, ticks, tick additions and Not needed marks that reference the Ingredient.
 func (Mover) Count(ctx context.Context, q ingredientstore.Querier, ingredientID int64) (int, error) {
 	total := 0
-	for _, table := range []string{"shopping_extras", "shopping_ticks", "shopping_not_needed"} {
+	for _, table := range []string{"shopping_extras", "shopping_ticks", "shopping_tick_additions", "shopping_not_needed"} {
 		var n int
 		if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table+` WHERE ingredient_id = ?`, ingredientID).Scan(&n); err != nil {
 			return 0, err
@@ -28,10 +28,14 @@ func (Mover) Count(ctx context.Context, q ingredientstore.Querier, ingredientID 
 	return total, nil
 }
 
-// Move re-points extras, ticks and Not needed marks to the merged Ingredient; a range already ticked or marked
-// Not needed for the target keeps its own.
+// Move re-points extras, ticks, their additions and Not needed marks to the merged Ingredient; a range already ticked or
+// marked Not needed for the target keeps its own state, and the moved additions join its tick.
 func (Mover) Move(ctx context.Context, tx *sql.Tx, from, to int64) error {
 	if _, err := tx.ExecContext(ctx, `UPDATE shopping_extras SET ingredient_id = ? WHERE ingredient_id = ?`, to, from); err != nil {
+		return err
+	}
+	// Every addition moves (ADR 0024): onto the moved tick, or as one more addition of a tick the target already has.
+	if _, err := tx.ExecContext(ctx, `UPDATE shopping_tick_additions SET ingredient_id = ? WHERE ingredient_id = ?`, to, from); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE shopping_ticks SET ingredient_id = ? WHERE ingredient_id = ?`, to, from); err != nil {
