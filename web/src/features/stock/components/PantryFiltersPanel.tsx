@@ -4,7 +4,7 @@ import type { ReactNode, RefObject } from 'react'
 import { FilterChipGroup, FilterSection, FiltersPanel, Switch } from '../../../ui'
 import type { StockFilter, StockKindFilter } from '../lib/filter'
 import { KIND_ICON, STORAGE_KINDS } from '../lib/kinds'
-import { showChoices, shownChoices, stockChoices, type PantryMode, type PantryShow } from '../lib/pantryFilters'
+import { STOCK_ICON, showChoices, shownChoices, stockChoices, type PantryMode, type PantryShow } from '../lib/pantryFilters'
 import { stockStrings as strings } from '../strings'
 import type { StockKind, StockLot, StorageKind, StoragePlace } from '../types'
 import { PlaceFilterList } from './PlaceFilterList'
@@ -46,7 +46,7 @@ export function PantryFiltersPanel(props: PantryFiltersPanelProps): ReactNode {
   const byPlace = mode === 'places'
   const show = showChoices(mode, hasLeftovers).map((value) => ({ value, label: value === 'leftovers' ? strings.leftoversFilter : strings.filters[value] }))
   const onShow = (value: PantryShow) => (value === 'leftovers' ? onLeftovers(!leftovers) : onStatus(value))
-  const stockOptions = stockChoices(hasSupplies).map((value) => ({ value, label: strings.stockFilter[value === 'food' ? 'food' : 'supplies'] }))
+  const stockOptions = stockChoices(hasSupplies).map((value) => ({ value, label: strings.stockFilter[value === 'food' ? 'food' : 'supplies'], icon: STOCK_ICON[value] }))
 
   return (
     <FiltersPanel id={id} open={open} onClose={onClose} anchorRef={anchorRef} count={count} onClear={onClear} showLabel={t.showStock} className="pantry-filters__panel">

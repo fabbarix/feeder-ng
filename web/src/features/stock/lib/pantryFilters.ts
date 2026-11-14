@@ -1,6 +1,7 @@
 // pantry-filter: the Pantry's filters and view in the URL, the filters that apply, the active chips and the Storage Place rows of the
 // Filters panel (docs/design/pantry-filter.md 4, 6). Plain TypeScript, no React.
 import type { FilterChip } from '../../../ui/FilterBar/types'
+import type { IconName } from '../../../ui/icons'
 import { stockStrings as strings } from '../strings'
 import type { StockLot, StockKind, StorageKind, StoragePlace } from '../types'
 import { fold, type StockFilter, type StockKindFilter } from './filter'
@@ -194,6 +195,9 @@ export function shownChoices(status: StockFilter, leftovers: boolean, mode: Pant
   return mode === 'places' && leftovers ? [...shown, 'leftovers'] : shown
 }
 
+/** b8 G2: the icon of Food (the Ingredient carrot) and of Supplies (the Supply glyph), in the panel and on the active-filter line. */
+export const STOCK_ICON: Record<StockKind, IconName> = { food: 'ingredients', supply: 'supply' }
+
 /** H6: the Food or Supplies choices the Filters panel offers: both while the Household has a Supply, none without one. */
 export function stockChoices(hasSupply: boolean): StockKind[] {
   return hasSupply ? ['food', 'supply'] : []
@@ -217,7 +221,7 @@ export function pantryFilterChips(state: PantryFilterState, mode: PantryMode, pl
   if (applied.onlyLeftovers) chips.push({ key: 'leftovers', label: strings.leftoversFilter, removeLabel: t.remove(strings.leftoversFilter), status: 'leftover' })
   if (applied.stock !== 'all') {
     const label = strings.stockFilter[applied.stock === 'food' ? 'food' : 'supplies']
-    chips.push({ key: 'stock', label, removeLabel: t.remove(label) })
+    chips.push({ key: 'stock', label, removeLabel: t.remove(label), icon: STOCK_ICON[applied.stock] })
   }
   for (const kind of STORAGE_KINDS) {
     if (!applied.kinds.includes(kind)) continue
