@@ -95,9 +95,10 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  rules: ['P27', 'P29', 'P30'],
+  rules: ['P26', 'P27', 'P29', 'P30', 'P39'],
   // font-24-settings-shops-id is defined but deferred until B9-10 (scenarios/font-24.mjs FONT_24_DEFERRED); B9-10 adds it back here.
-  scenarios: ['font-24-today', 'font-24-shop', 'font-24-recipes-id'],
+  // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
+  scenarios: ['font-24-today', 'font-24-shop', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields'],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {

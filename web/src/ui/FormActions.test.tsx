@@ -71,8 +71,8 @@ describe('FormActions.css', () => {
   })
 
   it('phone first: below 600 px it is a column-reverse stack (primary on top) with full-width buttons', () => {
-    expect(css).toMatch(/@media\s*\(max-width:\s*599px\)/)
-    const phone = css.slice(css.search(/@media\s*\(max-width:\s*599px\)/))
+    expect(css).toMatch(/@media\s*\(width < 37\.5em\)/)
+    const phone = css.slice(css.search(/@media\s*\(width < 37\.5em\)/))
     expect(phone).toMatch(/flex-direction:\s*column-reverse/)
     expect(phone).toMatch(/\.form-actions\s+\.button\s*\{[^}]*inline-size:\s*100%/)
   })

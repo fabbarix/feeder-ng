@@ -61,7 +61,7 @@ describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
     const top = d(':root')['--nav-top'] ?? ''
     expect(top).toMatch(/var\(--nav-height\).*var\(--nav-inset\).*env\(safe-area-inset-bottom/)
     expect(top).not.toMatch(/--space-/)
-    expect(media('min-width: 1024px')).toMatch(/--nav-top\s*:\s*0/)
+    expect(media('min-width: 64em')).toMatch(/--nav-top\s*:\s*0/)
   })
   it('QA-4: the bottom bar is placed with the same tokens --nav-top is built from', () => {
     const bar = d('.bottom-bar')
@@ -71,7 +71,7 @@ describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
   it('chromeless and the rail layout drop the clearance (there is no bottom bar)', () => {
     expect(d('.app-shell--chromeless')['padding']).toBe('0')
     expect(d('.app-main--full')['padding-bottom']).toBe('0')
-    expect(media('min-width: 1024px')).toMatch(/--nav-clearance\s*:\s*0/)
+    expect(media('min-width: 64em')).toMatch(/--nav-clearance\s*:\s*0/)
   })
   it('the viewport never scrolls sideways: the page is not wider than the viewport', () => {
     expect(d('.app-shell')['min-width']).toBe('0')
@@ -87,7 +87,7 @@ describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
     expect(m['padding-inline']).toBeUndefined()
   })
   it('the expanded rail (from 1440) insets its rows: margin-inline var(--space-3), and a row never overflows the 240 px rail', () => {
-    const wide = media('min-width: 1440px')
+    const wide = media('min-width: 90em')
     const link = /\.side-rail__link\s*\{([^}]*)\}/.exec(wide)?.[1] ?? ''
     expect(link).toMatch(/margin-inline\s*:\s*var\(--space-3\)/)
     expect(link).not.toMatch(/(^|[;\s])width\s*:\s*100%/)
@@ -141,13 +141,13 @@ describe('bottom bar (plan 4.5)', () => {
     expect(`${ring['box-shadow'] ?? ''} ${ring['outline'] ?? ''}`).toMatch(/var\(--color-soft/)
   })
   it('is hidden from 1024 up, where the side rail takes over', () => {
-    expect(media('min-width: 1024px')).toMatch(/\.bottom-bar\s*\{[^}]*display\s*:\s*none/)
+    expect(media('min-width: 64em')).toMatch(/\.bottom-bar\s*\{[^}]*display\s*:\s*none/)
   })
 })
 
 describe('side rail (plan 4.5)', () => {
   it('compact rail (1024-1439): the current Scan item carries the same 3 px soft ring as the expanded rail (R2-L-b)', () => {
-    const compact = media('min-width: 1024px')
+    const compact = media('min-width: 64em')
     const rule = /\.side-rail__link\[data-accent='true'\]\[aria-current='page'\]\s*\{([^}]*)\}/.exec(compact)?.[1] ?? ''
     expect(rule).toMatch(/box-shadow\s*:\s*0\s+0\s+0\s+3px\s+var\(--color-soft\)/)
     // The ring is the marker, so the fill stays the accent (no soft background on the item itself).
@@ -155,16 +155,16 @@ describe('side rail (plan 4.5)', () => {
   })
   it('is hidden on phones and 88 wide from 1024, 240 wide from 1440', () => {
     expect(d('.side-rail')['display']).toBe('none')
-    const wide = media('min-width: 1024px')
+    const wide = media('min-width: 64em')
     expect(wide).toMatch(/\.app-shell\s*\{[^}]*grid-template-columns\s*:\s*88px\s+minmax\(0,\s*1fr\)/)
     expect(wide).toMatch(/\.side-rail\s*\{[^}]*display\s*:\s*flex/)
-    expect(media('min-width: 1440px')).toMatch(/grid-template-columns\s*:\s*240px\s+minmax\(0,\s*1fr\)/)
+    expect(media('min-width: 90em')).toMatch(/grid-template-columns\s*:\s*240px\s+minmax\(0,\s*1fr\)/)
   })
   it('does not switch layout at 900 any more (that was the board bug)', () => {
     expect(code).not.toMatch(/min-width\s*:\s*900px/)
   })
   it('the current destination is a soft pill 56 x 32 behind the icon, Scan a 56 square accent', () => {
-    const wide = media('min-width: 1024px')
+    const wide = media('min-width: 64em')
     expect(wide).toMatch(/\.side-rail__link\[aria-current='page'\][^{}]*\{[^}]*background\s*:\s*var\(--color-soft\)/)
     expect(wide).toMatch(/56px/)
     expect(wide).toMatch(/\.side-rail__link\[data-accent='true'\][^{}]*\{[^}]*background\s*:\s*var\(--color-accent\)/)
@@ -184,8 +184,8 @@ describe('chromeless routes are full viewport (B3)', () => {
     expect(main['margin']).toBe('0')
   })
   it('no media query re-applies the grid to the chromeless frame', () => {
-    expect(media('min-width: 1024px')).toMatch(/\.app-shell:not\(\.app-shell--chromeless\)/)
-    expect(media('min-width: 1440px')).not.toMatch(/\.app-shell\s*\{/)
+    expect(media('min-width: 64em')).toMatch(/\.app-shell:not\(\.app-shell--chromeless\)/)
+    expect(media('min-width: 90em')).not.toMatch(/\.app-shell\s*\{/)
   })
 })
 
@@ -223,7 +223,7 @@ describe('avatar menu (5.17)', () => {
 describe('top bar', () => {
   it('b8: the brand shows at every width (the phone top bar has the wordmark too), never display: none', () => {
     expect(d('.top-bar__brand')['display']).toMatch(/^(block|inline|inline-flex|flex)$/)
-    expect(media('min-width: 1024px')).not.toMatch(/\.top-bar__brand\s*\{[^}]*display\s*:\s*none/)
+    expect(media('min-width: 64em')).not.toMatch(/\.top-bar__brand\s*\{[^}]*display\s*:\s*none/)
   })
 })
 
@@ -233,12 +233,12 @@ describe('review fixes: anchor, rows, rail pill, trigger', () => {
     expect(`${a['margin-left'] ?? ''} ${a['margin-inline-start'] ?? ''} ${a['margin-inline'] ?? ''}`).toMatch(/auto/)
   })
   it('from 1024 the grid rows do not stretch: align-content start or auto rows', () => {
-    const wide = media('min-width: 1024px')
+    const wide = media('min-width: 64em')
     const rule = /\.app-shell:not\(\.app-shell--chromeless\)\s*\{([^}]*)\}/.exec(wide)?.[1] ?? ''
     expect(rule).toMatch(/align-content\s*:\s*start|grid-template-rows\s*:\s*auto\s+auto\s+1fr|grid-auto-rows\s*:\s*(auto|min-content|max-content)/)
   })
   it('at 88 px the active destination is a 56 x 32 soft pill span behind the icon, not the whole link', () => {
-    const wide = media('min-width: 1024px')
+    const wide = media('min-width: 64em')
     const pill = /\.side-rail__pill\s*\{([^}]*)\}/.exec(wide)?.[1] ?? ''
     expect(pill).toMatch(/width\s*:\s*56px/)
     expect(pill).toMatch(/height\s*:\s*32px/)
@@ -256,8 +256,8 @@ describe('review fixes: anchor, rows, rail pill, trigger', () => {
 })
 
 describe('rail current item contrast (L-04, R2-L)', () => {
-  const rail1024 = media('min-width: 1024px')
-  const rail1440 = media('min-width: 1440px')
+  const rail1024 = media('min-width: 64em')
+  const rail1440 = media('min-width: 90em')
   const rule = (css: string, sel: string) => {
     const i = css.indexOf(sel + ' {')
     return i < 0 ? '' : css.slice(css.indexOf('{', i) + 1, css.indexOf('}', i))
@@ -370,7 +370,7 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     expect(bar()['height']).toBe('var(--nav-height)')
   })
   it('the rail takes the seventh item (Settings): 7 x 56 + gaps fit a 100dvh rail, and the rail scrolls rather than clips on short screens', () => {
-    const rail = (media('min-width: 1024px').match(/\.side-rail\s*\{([^}]*)\}/) ?? [])[1] ?? ''
+    const rail = (media('min-width: 64em').match(/\.side-rail\s*\{([^}]*)\}/) ?? [])[1] ?? ''
     expect(rail).toMatch(/max-height\s*:\s*100dvh/)
     expect(rail).toMatch(/overflow-y\s*:\s*auto/)
   })

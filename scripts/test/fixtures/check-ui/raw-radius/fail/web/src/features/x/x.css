@@ -1,0 +1,6 @@
+/* B9-07 raw-radius: 5 violations */
+.a { border-radius: 16px; }
+.b { border-radius: 0 0 12px 12px; }
+.c { border-top-left-radius: 2px; }
+.d { border-radius: calc(var(--radius-tile) - 2px); }
+.e { border-radius: 0.5rem; }

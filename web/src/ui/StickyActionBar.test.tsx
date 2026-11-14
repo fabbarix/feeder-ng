@@ -142,7 +142,7 @@ describe('StickyActionBar.css', () => {
     expect(d(".sticky-action-bar[data-column='narrow'] .sticky-action-bar__inner")['max-inline-size']).toBe('var(--page-narrow)')
   })
   it('respects the safe area from 1024 (where there is no bottom bar above it) and never covers a focused field', () => {
-    const wide = /@media \(min-width: 1024px\)\s*\{([\s\S]*?)\n\}/.exec(code)?.[1] ?? ''
+    const wide = /@media \(min-width: 64em\)\s*\{([\s\S]*?)\n\}/.exec(code)?.[1] ?? ''
     expect(wide).toMatch(/bottom\s*:[^;]*env\(safe-area-inset-bottom/)
     expect(d(':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
     expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance))')

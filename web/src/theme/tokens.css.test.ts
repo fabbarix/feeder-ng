@@ -323,8 +323,8 @@ describe('A11Y-02 focus tokens', () => {
   it('--focus-ring-offset-inset draws the ring inside a clipping container: minus the ring width', () => {
     expect(root['--focus-ring-offset-inset']).toBe('calc(-1 * var(--focus-ring-width))')
   })
-  it('the old box-shadow --focus-ring stays until B9-07 removes it (trap)', () => {
-    expect(root['--focus-ring']).toBeDefined()
+  it('the old box-shadow --focus-ring is removed by B9-07 (A11Y-02): every ring is an outline in the tokens above', () => {
+    expect(root['--focus-ring']).toBeUndefined()
   })
 })
 
