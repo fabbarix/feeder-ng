@@ -344,6 +344,7 @@ func (a *api) dateBody(r *http.Request, slot household.MealSlot, date string) (d
 	if err != nil {
 		return dateAttendanceBody{}, err
 	}
+	att = here.keepDespite(att) // a flag left from an Away deleted or changed since says nothing
 	portions, err := a.portionsWithGuests(r, here.eaters(att), row.Guests)
 	if err != nil {
 		return dateAttendanceBody{}, err
@@ -351,6 +352,13 @@ func (a *api) dateBody(r *http.Request, slot household.MealSlot, date string) (d
 	courses, err := a.dateCourses(r, slot.ID, date)
 	if err != nil {
 		return dateAttendanceBody{}, err
+	}
+	for i := range courses {
+		for j := range courses[i].Attendance {
+			if courses[i].Attendance[j].DespiteAway && !here.covers(courses[i].Attendance[j].MemberID) {
+				courses[i].Attendance[j].DespiteAway = false
+			}
+		}
 	}
 	if len(here.list) > 0 {
 		for i := range courses {

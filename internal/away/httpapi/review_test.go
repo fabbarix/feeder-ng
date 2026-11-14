@@ -89,3 +89,30 @@ func TestADryRunOfAChangeCountsOnlyTheMealSlotsWithoutTheMemberAndMarksThoseItGi
 	case <-time.After(200 * time.Millisecond):
 	}
 }
+
+func TestEatsHereAnywayIsNotShownOnceTheAwayIsDeleted(t *testing.T) {
+	f := newFixture(t)
+	a := f.add(f.Anna, map[string]any{"from": tue, "through": wed})
+	if r := f.putDate(f.tueDinner, tue, map[string]any{"attendance": []map[string]any{{"memberId": f.Anna, "despiteAway": true}, {"memberId": f.Sam}}}); r.Status != 200 {
+		t.Fatalf("PUT attendance = %d %s", r.Status, r.Body)
+	}
+	if r := f.User.Delete(fmt.Sprintf("/api/away/%d", a.ID)); r.Status != 200 {
+		t.Fatalf("DELETE = %d %s", r.Status, r.Body)
+	}
+	f.settle()
+	r := f.User.Get(fmt.Sprintf("/api/meal-slots/%d/attendance?date=%s", f.tueDinner, tue))
+	if r.Status != 200 {
+		t.Fatalf("GET attendance = %d %s", r.Status, r.Body)
+	}
+	if strings.Contains(string(r.Body), `"despiteAway":true`) {
+		t.Errorf("Who's eating = %s, want no despiteAway: Anna is not away any more", r.Body)
+	}
+	for _, at := range f.slot(tue, f.tueDinner).Attendance {
+		if at.DespiteAway {
+			t.Errorf("plan slot marks member %d despiteAway with no Away", at.MemberID)
+		}
+	}
+	if p := f.portions(tue, f.tueDinner); p != 2 {
+		t.Errorf("Tuesday Dinner = %v portions, want 2", p)
+	}
+}
