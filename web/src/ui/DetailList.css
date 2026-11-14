@@ -16,7 +16,7 @@
 }
 
 .detail-list[data-tone='info'] {
-  --detail-tone-fg: var(--status-info-fg);
+  --detail-tone-fg: var(--color-info-fg);
 }
 
 .detail-list[data-tone='warn'] {
@@ -73,7 +73,7 @@
 }
 
 .detail-list[data-tone='info'] .detail-row__state {
-  color: var(--status-info-fg);
+  color: var(--color-info-fg);
 }
 
 .detail-list[data-tone='warn'] .detail-row__state {

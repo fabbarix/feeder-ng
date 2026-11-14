@@ -74,8 +74,13 @@ describe('DetailList.css (DS-12 R-E tokens)', () => {
     expect(declarations(css, '.detail-row__detail')['color']).toBe('var(--color-muted)')
   })
 
-  it.each(['info', 'warn', 'spoil', 'danger', 'leftover', 'success'])('the %s state takes the tone foreground; neutral takes the text colour', (tone) => {
+  it.each(['warn', 'spoil', 'danger', 'leftover', 'success'])('the %s state takes the tone foreground; neutral takes the text colour', (tone) => {
     expect(declarations(css, `.detail-list[data-tone='${tone}'] .detail-row__state`)['color']).toBe(`var(--status-${tone}-fg)`)
+  })
+
+  // info is not a palette status: its tokens are --color-info-fg/-bg (styles.css); --status-info-fg does not exist.
+  it('the info state takes --color-info-fg', () => {
+    expect(declarations(css, ".detail-list[data-tone='info'] .detail-row__state")['color']).toBe('var(--color-info-fg)')
   })
 
   it('neutral state is --color-text', () => {

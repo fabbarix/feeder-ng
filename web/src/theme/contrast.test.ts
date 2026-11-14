@@ -258,3 +258,25 @@ describe('action pairs on every palette (DS-12)', () => {
     expect(contrastRatio(c.muted!, c.surface!)).toBeGreaterThanOrEqual(4.5)
   })
 })
+
+// The info tone is not a palette status: its fixed tokens --color-info-fg/-bg live in styles.css (light in :root, dark under
+// [data-scheme='dark']). DetailList's info rows (the Stock shortfall, Away) and the offline/syncing toast icon use them.
+describe('info tone pairs on every palette (DS-12 R-E, R-D+)', async () => {
+  const nodeFs = 'node:fs'
+  const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
+  const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
+  const css = readFileSync(`${cwd}/src/styles.css`, 'utf8')
+  const all = (name: string) => [...css.matchAll(new RegExp(`--color-info-${name}:\\s*(#[0-9a-fA-F]{6})`, 'g'))].map((m) => m[1]!)
+  const info = { light: { fg: all('fg')[0]!, bg: all('bg')[0]! }, dark: { fg: all('fg').at(-1)!, bg: all('bg').at(-1)! } }
+  const cases = ACCENT_PRESETS.flatMap((p) => (['light', 'dark'] as const).map((scheme) => [p.name, scheme] as const))
+
+  it.each(cases)('%s %s: a DetailRow key, state and detail are >= 4.5 on info-bg, the outline >= 3, the toast icon >= 3', (preset, scheme) => {
+    const c = generatePalette({ accent: ACCENT_PRESETS.find((p) => p.name === preset)!.hex }, scheme).colors as unknown as Record<string, string>
+    const { fg, bg } = info[scheme]
+    expect(contrastRatio(c.text!, bg), 'key').toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(fg, bg), 'state').toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(c.muted!, bg), 'detail').toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(c.outline!, bg), 'outline').toBeGreaterThanOrEqual(3)
+    expect(contrastRatio(bg, c.text!), 'toast icon').toBeGreaterThanOrEqual(3)
+  })
+})
