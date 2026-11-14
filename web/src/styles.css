@@ -3,40 +3,61 @@
 :root {
   /* One focus ring for every field control (docs/dev/design/r2f-fields.md 3); the colour follows the scheme. */
   --focus-ring: 0 0 0 2px var(--color-accent);
-  /* Type (plan 3.2): size / line / weight */
-  --text-display-size: 34px;
-  --text-display-line: 38px;
+  /* Focus (A11Y-02): one ring for every control. The colour is a token so a container can change it (on-accent on an accent
+     fill, bg on an inverse surface); inside a clipping container the ring is drawn inward; a nested control takes the inner width. */
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-inset: calc(-1 * var(--focus-ring-width));
+  --focus-ring-inner-width: 2px;
+  --focus-ring-color: var(--color-accent);
+  /* Selected state (A11Y-06): soft fill, accent-text content and a 1.5 px ring, so selection is never colour alone. */
+  --selected-bg: var(--color-soft);
+  --selected-fg: var(--color-accent-text);
+  --selected-ring: var(--color-accent-text);
+  --selected-ring-width: 1.5px;
+  /* Targets (A11Y-09): the minimum target, and the gap between the icon buttons of a set (wider on a coarse pointer, below). */
+  --target-min: 44px;
+  --icon-set-gap: var(--space-2);
+
+  /* Type (plan 3.2, DS-08): size and line in rem, so the browser text size scales every role (1rem = 16 px at the default,
+     where each value equals the old px one). Never set font-size on html or :root: the User's preference is the root. */
+  --text-display-size: 2.125rem;
+  --text-display-line: 2.375rem;
   --text-display-weight: 800;
-  --text-title-1-size: 28px;
-  --text-title-1-line: 32px;
+  --text-title-1-size: 1.75rem;
+  --text-title-1-line: 2rem;
   --text-title-1-weight: 800;
-  --text-title-2-size: 22px;
-  --text-title-2-line: 26px;
+  --text-title-2-size: 1.375rem;
+  --text-title-2-line: 1.625rem;
   --text-title-2-weight: 800;
-  --text-title-3-size: 18px;
-  --text-title-3-line: 22px;
+  --text-title-3-size: 1.125rem;
+  --text-title-3-line: 1.375rem;
   --text-title-3-weight: 800;
-  --text-body-strong-size: 15px;
-  --text-body-strong-line: 20px;
+  --text-body-strong-size: 0.9375rem;
+  --text-body-strong-line: 1.25rem;
   --text-body-strong-weight: 700;
-  --text-body-size: 15px;
-  --text-body-line: 22px;
+  --text-body-size: 0.9375rem;
+  --text-body-line: 1.375rem;
   --text-body-weight: 500;
-  --text-meta-size: 13px;
-  --text-meta-line: 18px;
+  --text-meta-size: 0.8125rem;
+  --text-meta-line: 1.125rem;
   --text-meta-weight: 500;
-  --text-label-size: 13px;
-  --text-label-line: 16px;
+  --text-label-size: 0.8125rem;
+  --text-label-line: 1rem;
   --text-label-weight: 700;
-  --text-overline-size: 12px;
-  --text-overline-line: 16px;
+  --text-overline-size: 0.75rem;
+  --text-overline-line: 1rem;
   --text-overline-weight: 800;
   --text-overline-tracking: 0.04em;
-  --text-chip-size: 12px;
-  --text-nav-size: 11px;
+  --text-chip-size: 0.75rem;
+  --text-nav-size: 0.6875rem;
   --text-nav-weight: 800;
+  /* Cook Mode's Step text keeps its size and is Medium (PC-03, SHORT-01): display text read at length is not extra-bold. */
+  --text-step-weight: 500;
 
   /* Spacing (4-pt, plan 3.3). Phone values; tablet and desktop override below. */
+  /* the icon-to-label micro gap (DS-11): the bottom bar, the MemberPill padding */
+  --space-half: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -60,7 +81,10 @@
   --tile-min-metric: 9.5rem;
   --tile-min-card: 20rem;
   --tile-min-day: 21rem;
-  --tile-min-wide: 28rem;
+  /* DS-09: 27rem keeps the two-up at the 1024 px rail handover (1024 - 88 rail - 2 x 24 gutter). */
+  --tile-min-wide: 27rem;
+  /* The Shop's card grid (SSP): a card row is never narrower than the 360 px phone row. */
+  --tile-min-row: 21.5rem;
   /* List rows (system.md 3): at least 64 px; the value column keeps quantities in one column. */
   --row-min: 64px;
   --row-value-min: 5.5rem;
@@ -86,6 +110,33 @@
   --radius-thumb-lg: 16px;
   --radius-nav: 24px;
   --radius-pill: 999px;
+  /* the Checkbox tick box, and the receipt's crop corners (DS-11) */
+  --radius-tick: 6px;
+  --radius-hairline: 2px;
+
+  /* Shell (SHORT-04/05): the safe-area insets once, with 0 fallbacks; the gap a floating bar keeps above what is below it
+     (the bottom bar, the viewport edge or the keyboard); the on-screen keyboard's height (set by the shell); the rail in short
+     landscape. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --bar-gap: var(--nav-inset);
+  --keyboard-inset: 0px;
+  --rail-compact: 64px;
+
+  /* Kitchen board (TB): one unit scales the whole board with the screen (16 px at 1280 x 800); portrait below. */
+  --board-unit: clamp(13px, min(1.25vw, 2vh), 36px);
+  --text-board-hero: calc(3.25 * var(--board-unit));
+  --text-board-title: calc(2 * var(--board-unit));
+  --text-board-body: calc(1.5 * var(--board-unit));
+  --text-board-meta: calc(1.375 * var(--board-unit));
+  --text-board-heading: calc(1.3125 * var(--board-unit));
+  --text-board-metric: calc(3.5 * var(--board-unit));
+  --text-board-control: max(20px, calc(1.25 * var(--board-unit)));
+  --board-control: max(56px, calc(3.5 * var(--board-unit)));
+  --board-chip: max(40px, calc(2.5 * var(--board-unit)));
+  --board-pad: calc(1.5 * var(--board-unit));
 
   /* Viewfinder: fixed dark frame and white reticle in both schemes (never redefined for dark) */
   --viewfinder-frame: #10131a;
@@ -144,6 +195,9 @@
   --status-pinned-fg: #3e3f7c;
   --status-pinned-bg: #e3e6fe;
   --status-pinned-solid: #5b5cb7;
+  --status-warn-fg: #564700;
+  --status-warn-bg: #f4e8bb;
+  --status-warn-solid: #766200;
   --color-info-fg: #1b4a7a;
   --color-info-bg: #d9e9fb;
   --tag-tomato-bg: oklch(0.94 0.03 29);
@@ -209,11 +263,24 @@
   }
 }
 
-@media (min-width: 1200px) {
+/* DS-09: the desktop step is at 80em (1280 px at the default text size), with the rest of the breakpoint table. */
+@media (min-width: 80em) {
   :root {
     --gutter: 32px;
     --bento-gap: 16px;
     --tile-pad: 26px;
+  }
+}
+
+@media (pointer: coarse) {
+  :root {
+    --icon-set-gap: var(--space-3);
+  }
+}
+
+@media (orientation: portrait) {
+  :root {
+    --board-unit: clamp(13px, min(2vw, 1.25vh), 36px);
   }
 }
 
@@ -228,7 +295,7 @@
 /* Dark before ThemeProvider runs: Basil dark values, no drop shadows (elevation = tone step + hairline). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-scheme='light']) {
-    --status-danger-solid: #ab413e;
+    --status-danger-solid: #ba4f4b;
     --status-danger-on-solid: #fff;
     --status-success-on-solid: #fff;
     --color-bg: #090f0b;
@@ -255,6 +322,9 @@
     --status-success-bg: #14361d;
     --status-pinned-fg: #c7cdff;
     --status-pinned-bg: #282a4b;
+    --status-warn-fg: #e4d188;
+    --status-warn-bg: #362d07;
+    --status-warn-solid: #766200;
     --color-info-fg: #a9d0f5;
     --color-info-bg: #14304c;
     --tag-tomato-bg: oklch(0.33 0.06 29);
@@ -315,13 +385,16 @@
   --status-spoil-bg: #44250c;
   --status-danger-fg: #febfb9;
   --status-danger-bg: #47211e;
-  --status-danger-solid: #ab413e;
+  --status-danger-solid: #ba4f4b;
   --status-danger-on-solid: #fff;
   --status-success-on-solid: #fff;
   --status-success-fg: #a7e2b2;
   --status-success-bg: #14361d;
   --status-pinned-fg: #c7cdff;
   --status-pinned-bg: #282a4b;
+  --status-warn-fg: #e4d188;
+  --status-warn-bg: #362d07;
+  --status-warn-solid: #766200;
   --color-info-fg: #a9d0f5;
   --color-info-bg: #14304c;
   --tag-tomato-bg: oklch(0.33 0.06 29);
@@ -369,10 +442,32 @@ body {
   min-height: 100%;
 }
 
+/* DS-07 base type roles: unclassed text is body; a section heading is title-3 and a third-level heading is body-strong, at
+   zero specificity (:where) so any class rule wins. Heading levels stay as authored; only the look is set here. */
 body {
   background: var(--color-background);
   color: var(--color-on-surface);
   -webkit-font-smoothing: antialiased;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: var(--text-body-weight);
+}
+
+:where(h1, h2, h3, h4) {
+  margin: 0;
+}
+
+:where(h2) {
+  margin-block-end: var(--space-3);
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+
+:where(h3, h4) {
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
 }
 
 button,
