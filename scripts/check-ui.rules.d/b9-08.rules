@@ -1,0 +1,9 @@
+# B9-08 (plan section 3 and 6, the W1 sweep of Plan, Cook, Today, board, notifications, access and sign-in): these seven folders
+# now fail for the sweep detectors. fail_paths lines add up across rules files (B9-07), so this file lists only B9-08's folders.
+focus-ring.fail_paths=web/src/features/plan web/src/features/cook web/src/features/today web/src/features/board web/src/features/notifications web/src/features/access web/src/features/signin
+raw-radius.fail_paths=web/src/features/plan web/src/features/cook web/src/features/today web/src/features/board web/src/features/notifications web/src/features/access web/src/features/signin
+raw-spacing.fail_paths=web/src/features/plan web/src/features/cook web/src/features/today web/src/features/board web/src/features/notifications web/src/features/access web/src/features/signin
+media-width.fail_paths=web/src/features/plan web/src/features/cook web/src/features/today web/src/features/board web/src/features/notifications web/src/features/access web/src/features/signin
+opacity-muting.fail_paths=web/src/features/plan web/src/features/cook web/src/features/today web/src/features/board web/src/features/notifications web/src/features/access web/src/features/signin
+# type-scale: Board and Cook Mode keep their literal display sizes (main-session ruling, 2026-11-14), so only these five fail.
+type-scale.fail_paths=web/src/features/plan web/src/features/today web/src/features/notifications web/src/features/access web/src/features/signin
