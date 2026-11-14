@@ -61,18 +61,18 @@ func TestSaveSlotDateRoundTripsAndDeletesTheDefaultRow(t *testing.T) {
 	}
 }
 
-func TestDeletingAMealSlotDeletesItsDateRows(t *testing.T) {
+func TestRemovingAMealSlotKeepsItsDateRows(t *testing.T) {
 	f := newFx(t)
 	slot, _, _ := f.thursday(t)
 	if err := f.st.SaveSlotDate(f.ctx, household.SlotDate{SlotID: slot.ID, Date: sdDate, Guests: 1}); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.st.DeleteSlot(f.ctx, slot.ID); err != nil {
+	if err := f.st.RemoveSlot(f.ctx, slot.ID); err != nil {
 		t.Fatal(err)
 	}
 	var n int
-	if err := f.db.QueryRow(`SELECT count(*) FROM meal_slot_dates`).Scan(&n); err != nil || n != 0 {
-		t.Errorf("%d date rows survive the Meal Slot (%v)", n, err)
+	if err := f.db.QueryRow(`SELECT count(*) FROM meal_slot_dates`).Scan(&n); err != nil || n != 1 {
+		t.Errorf("%d date rows after the removal (%v), want the 1 kept for Undo (B9-04)", n, err)
 	}
 }
 

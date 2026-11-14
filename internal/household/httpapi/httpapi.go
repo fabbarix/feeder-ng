@@ -46,6 +46,8 @@ func mount(r *app.Router, d app.Deps) {
 	r.Admin("POST /api/members", a.createMember)
 	r.Admin("PATCH /api/members/{id}", a.updateMember)
 	r.Admin("DELETE /api/members/{id}", a.deleteMember)
+	r.Admin("GET /api/members/{id}/impact", a.memberImpact)
+	r.Admin("POST /api/members/{id}/restore", a.restoreMember)
 	r.Admin("PUT /api/members/{id}/user", a.linkUser)
 
 	r.User("GET /api/meal-slots", a.listSlots)
@@ -53,6 +55,8 @@ func mount(r *app.Router, d app.Deps) {
 	r.Admin("PATCH /api/meal-slots/batch", a.updateSlotsBatch)
 	r.Admin("PATCH /api/meal-slots/{id}", a.updateSlot)
 	r.Admin("DELETE /api/meal-slots/{id}", a.deleteSlot)
+	r.Admin("GET /api/meal-slots/{id}/impact", a.slotImpact)
+	r.Admin("POST /api/meal-slots/{id}/restore", a.restoreSlot)
 
 	r.User("GET /api/meal-slots/{id}/attendance", a.getAttendance)
 	r.User("PUT /api/meal-slots/{id}/attendance", a.putAttendance)

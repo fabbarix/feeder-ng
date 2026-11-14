@@ -91,6 +91,7 @@ func TestSettingsLocationCoordinatesAndClearing(t *testing.T) {
 	}
 }
 
+// RemoveMember replaces DeleteMember (B9-04): the Member goes, a snapshot stays for Undo (removals_test.go).
 func TestMemberCRUD(t *testing.T) {
 	f := newFx(t)
 	anna := f.member(t, "Anna", 1)
@@ -109,13 +110,13 @@ func TestMemberCRUD(t *testing.T) {
 	if _, err := f.st.UpdateMember(f.ctx, 999, household.MemberInput{Name: "x", Colour: "#000000", PortionFactor: 1}); !errors.Is(err, household.ErrNotFound) {
 		t.Errorf("update unknown: %v", err)
 	}
-	if err := f.st.DeleteMember(f.ctx, sam.ID); err != nil {
+	if err := f.st.RemoveMember(f.ctx, sam.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := f.st.Member(f.ctx, sam.ID); !errors.Is(err, household.ErrNotFound) {
 		t.Errorf("after delete: %v", err)
 	}
-	if err := f.st.DeleteMember(f.ctx, sam.ID); !errors.Is(err, household.ErrNotFound) {
+	if err := f.st.RemoveMember(f.ctx, sam.ID); !errors.Is(err, household.ErrNotFound) {
 		t.Errorf("second delete: %v", err)
 	}
 }
@@ -267,7 +268,7 @@ func TestDeletingAMemberRemovesThemFromEveryAttendance(t *testing.T) {
 	anna, sam := f.member(t, "Anna", 1), f.member(t, "Sam", 0.5)
 	slot, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 4, Name: "Dinner", Time: "19:00", Attendance: []household.Attendee{{MemberID: anna.ID}, {MemberID: sam.ID}}})
 	f.st.SetDateAttendance(f.ctx, slot.ID, "2026-11-12", []household.Attendee{{MemberID: sam.ID}})
-	if err := f.st.DeleteMember(f.ctx, sam.ID); err != nil {
+	if err := f.st.RemoveMember(f.ctx, sam.ID); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := f.st.Slot(f.ctx, slot.ID)
@@ -280,19 +281,23 @@ func TestDeletingAMemberRemovesThemFromEveryAttendance(t *testing.T) {
 	}
 }
 
-func TestDeletingASlotRemovesItsOverrides(t *testing.T) {
+func TestRemovingASlotKeepsItsOverridesForUndo(t *testing.T) {
 	f := newFx(t)
 	anna := f.member(t, "Anna", 1)
 	slot, _ := f.st.CreateSlot(f.ctx, household.MealSlotInput{Weekday: 4, Name: "Dinner", Time: "19:00", Attendance: []household.Attendee{{MemberID: anna.ID}}})
 	f.st.SetDateAttendance(f.ctx, slot.ID, "2026-11-12", nil)
-	if err := f.st.DeleteSlot(f.ctx, slot.ID); err != nil {
+	if err := f.st.RemoveSlot(f.ctx, slot.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.st.Slot(f.ctx, slot.ID); !errors.Is(err, household.ErrNotFound) {
-		t.Errorf("slot after delete: %v", err)
+	if got, err := f.st.Slot(f.ctx, slot.ID); err != nil || !got.Removed {
+		t.Errorf("slot after removal: %+v, %v; want it returned with Removed true (B9-04: history keeps the name)", got, err)
 	}
-	if err := f.st.DeleteSlot(f.ctx, slot.ID); !errors.Is(err, household.ErrNotFound) {
-		t.Errorf("second delete: %v", err)
+	var n int
+	if err := f.db.QueryRow(`SELECT count(*) FROM attendance_overrides WHERE slot_id = ?`, slot.ID).Scan(&n); err != nil || n != 1 {
+		t.Errorf("%d date overrides after removal (%v), want the 1 kept", n, err)
+	}
+	if err := f.st.RemoveSlot(f.ctx, slot.ID); !errors.Is(err, household.ErrNotFound) {
+		t.Errorf("second removal: %v", err)
 	}
 }
 

@@ -75,9 +75,9 @@ func (a *api) removesOut(r *http.Request, rem household.Removals) (removesJSON, 
 	return out, nil
 }
 
-// slotNames maps every Meal Slot id to its name.
+// slotNames maps every Meal Slot id, removed ones included, to its name.
 func (a *api) slotNames(ctx context.Context) (map[int64]string, error) {
-	list, err := a.st.Slots(ctx)
+	list, err := a.st.AllSlots(ctx)
 	if err != nil {
 		return nil, err
 	}

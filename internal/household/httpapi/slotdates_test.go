@@ -415,7 +415,7 @@ func TestGuestsOfANotServedDateAreKeptForWhenItIsServedAgain(t *testing.T) {
 	}
 }
 
-func TestDeletingAMealSlotDeletesItsDates(t *testing.T) {
+func TestRemovingAMealSlotKeepsItsDates(t *testing.T) {
 	w := crsc2.New(t)
 	w.Exec(`INSERT INTO meal_slot_dates (slot_id, date, time, guests, updated_at) VALUES (?, ?, '20:00', 2, '2026-11-09T09:00:00Z')`, w.Slot, sdToday)
 	if n := w.Count(`SELECT count(*) FROM meal_slot_dates`); n != 1 {
@@ -424,8 +424,8 @@ func TestDeletingAMealSlotDeletesItsDates(t *testing.T) {
 	if r := w.Admin.Delete(path("/api/meal-slots/%d", w.Slot)); r.Status != 204 {
 		t.Fatalf("DELETE slot = %d %s", r.Status, r.Body)
 	}
-	if n := w.Count(`SELECT count(*) FROM meal_slot_dates`); n != 0 {
-		t.Errorf("%d date rows survive the Meal Slot", n)
+	if n := w.Count(`SELECT count(*) FROM meal_slot_dates`); n != 1 {
+		t.Errorf("%d date rows after the removal, want the 1 kept for Undo and the history (B9-04)", n)
 	}
 }
 

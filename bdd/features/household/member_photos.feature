@@ -52,8 +52,13 @@ Feature: Member photos
     Then the image "forgotten" is gone
     And the image "sam-face" is still there
 
-  Scenario: Removing a Member removes their photo
+  @removals
+  Scenario: A removed Member's photo stays while Undo is possible and goes after
     When I add a 40x30 PNG image named "sam-face"
     And I add the Member "Sam" with the photo "sam-face"
     And the Admin deletes the Member "Sam"
+    Then the image "sam-face" is still there
+    When 11 minutes pass
+    And I add the Member "Pia" with no photo
+    And the Admin deletes the Member "Pia"
     Then the image "sam-face" is gone

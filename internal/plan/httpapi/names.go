@@ -74,7 +74,7 @@ type table struct {
 func (n *names) load(ctx context.Context, meals ...*plan.Meal) (table, error) {
 	t := table{courses: map[int64]string{}, whole: map[int64]bool{}, recipes: map[int64]string{}, recipeReheat: map[int64]int{}, recipeMinutes: map[int64]int{}, recipePhoto: map[int64]string{},
 		members: map[int64]string{}, memberColour: map[int64]string{}, memberPhoto: map[int64]string{}, memberAvatar: map[int64]string{}, ingredients: map[int64]string{}, slots: map[int64]string{}}
-	ss, err := n.hh.Slots(ctx)
+	ss, err := n.hh.AllSlots(ctx) // removed Meal Slots included: a past meal keeps its slot's name (ADR 0021)
 	if err != nil {
 		return t, err
 	}

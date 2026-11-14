@@ -13,6 +13,8 @@ type MealSlot struct {
 	Time       string // HH:MM, household time
 	Attendance []Attendee
 	Courses    []SlotCourse // the slot's Courses in the slot's order (ADR 0008); never empty once read
+	Removed    bool         // B9-04: a removed Meal Slot keeps its history; Slot(id) and AllSlots still return it
+	RemovedAt  string       // RFC 3339 instant of the removal, "" while active
 }
 
 // MealSlotInput is what an Admin supplies to create or replace a Meal Slot.
