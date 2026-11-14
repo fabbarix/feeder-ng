@@ -168,13 +168,13 @@ type RestockInfo struct {
 // Line is one Ingredient line of the Shopping List. Quantity is what is still to buy (0 for a tick-only line).
 // A Restock Line (Restock set, Supply true) is a Supply below its Restock level (ADR 0017, decision D2).
 type Line struct {
-	IngredientID       int64
-	Name, BaseUnit     string
-	ImageURL           string
-	Supply             bool
-	Need, Available    float64
-	Quantity           float64
-	Ticked             bool
+	IngredientID    int64
+	Name, BaseUnit  string
+	ImageURL        string
+	Supply          bool
+	Need, Available float64
+	Quantity        float64
+	Ticked          bool
 	// More (SSP-02) is the part of a ticked Line's need that its tick does not cover: the Line reappears in To get with it.
 	// 0 for an open Line and for a ticked Line the tick still covers. For a Line with More, Pack and EstimatedCostCents are for More.
 	More float64

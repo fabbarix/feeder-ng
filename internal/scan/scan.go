@@ -21,6 +21,11 @@ const (
 	KindShopScan    Kind = "shop_scan"    // the phone resolved the barcode to a Product
 	KindShopUnknown Kind = "shop_unknown" // unknown barcode: create the Product, then as shop_scan
 	KindStockTake   Kind = "stock_take"   // at home, no Shop
+	// KindShopTick (B9-23, RES-03) is a Tick by hand, queued like a Scan: an Ingredient Line or an Ingredient extra, the
+	// quantity it adds to Stock (0 = Tick without adding) and the Line quantity it covers. ScannedAt is the Tick's time.
+	KindShopTick Kind = "shop_tick"
+	// KindShopUntick undoes a queued or synced Tick: one addition by its client UUID, or a Line by Ingredient and range.
+	KindShopUntick Kind = "shop_untick"
 )
 
 // Action is a Stock-take sheet action.
@@ -86,6 +91,13 @@ type Op struct {
 	// stock_take
 	Action Action   `json:"action,omitempty"`
 	Total  *float64 `json:"total,omitempty"`
+
+	// shop_tick: IngredientID or ExtraID (exactly one), Quantity (the amount added, 0 = none), Covers (the Line quantity
+	// the phone showed, SSP-02's Q0), RangeTo and ShopID. shop_untick: TickClientUUID, or IngredientID with RangeTo.
+	IngredientID   int64   `json:"ingredientId,omitempty"`
+	ExtraID        int64   `json:"extraId,omitempty"`
+	Covers         float64 `json:"covers,omitempty"`
+	TickClientUUID string  `json:"tickClientUuid,omitempty"`
 }
 
 // ErrInvalid is matched (errors.Is) by every *ValidationError.
@@ -344,10 +356,25 @@ type Applied struct {
 	Total              *float64 `json:"total,omitempty"` // stock_take: the Ingredient's Stock after
 }
 
-// Result is the outcome of one operation.
+// AlsoTickedBy is an earlier addition by another User to a Line a queued Tick synced onto (RES 2: ticked twice).
+type AlsoTickedBy struct {
+	Name     string  `json:"name"`
+	Quantity float64 `json:"quantity"`
+	By       string  `json:"by"` // "hand" | "scan"
+}
+
+// AppliedTick is what a shop_tick did: the Stock Lot it added (nil = none), the quantity, and who had ticked before it.
+type AppliedTick struct {
+	LotID        *int64         `json:"lotId"`
+	Added        float64        `json:"added"`
+	AlsoTickedBy []AlsoTickedBy `json:"alsoTickedBy"`
+}
+
+// Result is the outcome of one operation. Tick is set for an applied or duplicate shop_tick only.
 type Result struct {
-	ClientUUID string   `json:"clientUuid"`
-	Status     Status   `json:"status"`
-	Error      *ErrInfo `json:"error,omitempty"`
-	Scan       *Applied `json:"scan,omitempty"`
+	ClientUUID string       `json:"clientUuid"`
+	Status     Status       `json:"status"`
+	Error      *ErrInfo     `json:"error,omitempty"`
+	Scan       *Applied     `json:"scan,omitempty"`
+	Tick       *AppliedTick `json:"tick,omitempty"`
 }

@@ -48,6 +48,9 @@ const (
 	CodeUnknownProduct = "unknown_product"
 	CodeUnknownShop    = "unknown_shop"
 	CodeUnknownIngr    = "unknown_ingredient"
+	// CodeNotOnList (B9-23) rejects a shop_tick whose Line is no longer on the Shopping List for the range (Swapped, Not
+	// needed, or the range moved past it): the phone says "Tick not synced" and offers Add to Stock.
+	CodeNotOnList = "not_on_list"
 	// CodeBarcodeArchived rejects a shop_unknown whose barcode belongs to an archived Product (R8): the phone offers to unarchive it.
 	CodeBarcodeArchived = "barcode_archived"
 )
@@ -226,6 +229,13 @@ type Ingredients interface {
 type List interface {
 	AfterLot(ctx context.Context, in shopservice.AfterLotInput) (shopservice.Effect, error)
 	UndoLot(ctx context.Context, in shopservice.UndoLotInput) error
+	// B9-23 (RES-03): the queued Tick and untick. Tick is shopping/service.Service.Tick (the shop_tick of an Ingredient
+	// Line), TickExtra the shop_tick of an Ingredient extra, Untick the shop_untick of a Line, UntickAddition the
+	// shop_untick of one addition by its client UUID.
+	Tick(ctx context.Context, in shopservice.TickInput) (shopservice.TickResult, error)
+	TickExtra(ctx context.Context, id int64, quantity float64, shopID *int64, clientUUID string) (shopservice.TickResult, error)
+	Untick(ctx context.Context, ingredientID int64, to stock.Date) error
+	UntickAddition(ctx context.Context, clientUUID string) error
 }
 
 // Dates converts the phone's timestamp to a household date.

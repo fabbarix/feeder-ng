@@ -7,9 +7,9 @@ import "testing"
 // that when the need grew: the difference reappears in To get as "More since your tick".
 func TestMoreSinceTick(t *testing.T) {
 	for _, c := range []struct {
-		name         string
+		name          string
 		q0, added, q2 float64
-		want         float64
+		want          float64
 	}{
 		{"need grew by 750 after a tick that added what it covered", 800, 800, 750, 750},
 		{"nothing grew", 800, 800, 0, 0},
