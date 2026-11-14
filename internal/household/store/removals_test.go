@@ -483,7 +483,8 @@ func TestRemovedSlotsListsOnlyThoseWithHistoryGroupedByNameAndRemovalNewestFirst
 	if err := r.st.RemoveSlot(r.ctx, snackMon.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.st.RemoveSlot(r.ctx, snackTue.ID); err != nil { // same instant: one row
+	r.clk.Advance(3 * time.Second) // removed one call at a time, a few seconds apart: still one row
+	if err := r.st.RemoveSlot(r.ctx, snackTue.ID); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.st.RemoveSlot(r.ctx, empty.ID); err != nil {

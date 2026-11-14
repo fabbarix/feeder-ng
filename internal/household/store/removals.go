@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"sort"
 	"strings"
 	"time"
 
@@ -207,10 +208,19 @@ func unresolvedMeals(ctx context.Context, q querier, where string, args ...any) 
 	return out, nil
 }
 
-// RemovedSlots lists the removed Meal Slots that kept Cooked or Not cooked meals (the Removed Meal Slots read, SET-15):
-// the ones with the same name and the same removal instant make one row, newest removal first, then by name.
+// RemovedSlots lists the removed Meal Slots that kept Cooked or Not cooked meals (the Removed Meal Slots read, SET-15).
+// A name removed on several weekdays at once is one row: the Meal Slots with the same name whose removals are at most
+// removedTogether apart (the client removes them one call at a time). Rows are newest removal first, then by name; ids
+// and weekdays in weekday order; RemovedAt and Time are the newest removal's.
 func (s *Store) RemovedSlots(ctx context.Context) ([]household.RemovedSlot, error) {
-	out := []household.RemovedSlot{}
+	type slotRow struct {
+		id                int64
+		weekday           int
+		name, at, removed string
+		when              time.Time
+		cooked, notCooked int
+	}
+	var list []slotRow
 	err := scanAll(ctx, s.db, `SELECT ms.id, ms.weekday, ms.name, ms.time, ms.removed_at,
 			(SELECT count(*) FROM planned_meals pm WHERE pm.meal_slot_id = ms.id AND pm.state = 'cooked'),
 			(SELECT count(*) FROM planned_meals pm WHERE pm.meal_slot_id = ms.id AND pm.state = 'skipped')
@@ -218,27 +228,62 @@ func (s *Store) RemovedSlots(ctx context.Context) ([]household.RemovedSlot, erro
 		WHERE ms.removed_at IS NOT NULL
 			AND EXISTS (SELECT 1 FROM planned_meals pm WHERE pm.meal_slot_id = ms.id AND pm.state IN ('cooked', 'skipped'))
 		ORDER BY ms.removed_at DESC, ms.name, ms.weekday, ms.id`, func(r *sql.Rows) error {
-		var (
-			id                int64
-			weekday           int
-			name, at, removed string
-			cooked, notCooked int
-		)
-		if err := r.Scan(&id, &weekday, &name, &at, &removed, &cooked, &notCooked); err != nil {
+		var x slotRow
+		if err := r.Scan(&x.id, &x.weekday, &x.name, &x.at, &x.removed, &x.cooked, &x.notCooked); err != nil {
 			return err
 		}
-		if n := len(out); n > 0 && out[n-1].RemovedAt == removed && strings.EqualFold(out[n-1].Name, name) {
-			g := &out[n-1]
-			g.IDs, g.Weekdays = append(g.IDs, id), append(g.Weekdays, weekday)
-			g.Cooked += cooked
-			g.NotCooked += notCooked
-			return nil
-		}
-		out = append(out, household.RemovedSlot{IDs: []int64{id}, Name: name, Weekdays: []int{weekday}, Time: at,
-			RemovedAt: removed, Cooked: cooked, NotCooked: notCooked})
+		x.when, _ = time.Parse(time.RFC3339, x.removed)
+		list = append(list, x)
 		return nil
 	})
-	return out, err
+	if err != nil {
+		return nil, err
+	}
+	out := []household.RemovedSlot{}
+	var newest []time.Time // newest[i] is out[i]'s newest removal
+	for _, x := range list {
+		g := -1
+		for i := range out {
+			if strings.EqualFold(out[i].Name, x.name) && newest[i].Sub(x.when) <= removedTogether {
+				g = i
+				break
+			}
+		}
+		if g < 0 {
+			out = append(out, household.RemovedSlot{Name: x.name, Time: x.at, RemovedAt: x.removed})
+			newest = append(newest, x.when)
+			g = len(out) - 1
+		}
+		out[g].IDs, out[g].Weekdays = append(out[g].IDs, x.id), append(out[g].Weekdays, x.weekday)
+		out[g].Cooked += x.cooked
+		out[g].NotCooked += x.notCooked
+	}
+	for i := range out {
+		ids, days := out[i].IDs, out[i].Weekdays
+		sort.Sort(byWeekday{ids, days})
+	}
+	return out, nil
+}
+
+// removedTogether is how far apart the removals of one name on several weekdays may be to make one Removed Meal Slots row.
+const removedTogether = time.Minute
+
+// byWeekday sorts a group's ids and weekdays together by weekday.
+type byWeekday struct {
+	ids  []int64
+	days []int
+}
+
+func (b byWeekday) Len() int { return len(b.ids) }
+func (b byWeekday) Less(i, j int) bool {
+	if b.days[i] != b.days[j] {
+		return b.days[i] < b.days[j]
+	}
+	return b.ids[i] < b.ids[j]
+}
+func (b byWeekday) Swap(i, j int) {
+	b.ids[i], b.ids[j] = b.ids[j], b.ids[i]
+	b.days[i], b.days[j] = b.days[j], b.days[i]
 }
 
 // memberSnapshot is what member_removals.snapshot_json holds: the Member's row and every row that went with them.

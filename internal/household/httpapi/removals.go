@@ -70,7 +70,7 @@ func (a *api) restoreSlot(w http.ResponseWriter, r *http.Request) {
 	a.writeSlot(w, r, http.StatusOK, s)
 }
 
-// removedSlotJSON is one row of the Removed Meal Slots read: removed Meal Slots of one name and one removal, with
+// removedSlotJSON is one row of the Removed Meal Slots read: removed Meal Slots of one name removed together, with
 // the Cooked and Not cooked meals they kept (the wording is the client's).
 type removedSlotJSON struct {
 	IDs            []int64 `json:"ids"`

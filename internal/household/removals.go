@@ -24,8 +24,8 @@ type MemberImpact struct {
 	SignInEmail string // the Member's address when it is not on the Allowlist, so their sign-in ends; "" otherwise
 }
 
-// RemovedSlot is one row of the Removed Meal Slots read: the removed Meal Slots with the same name and the same
-// removal instant, with the Cooked and Not cooked meals they kept.
+// RemovedSlot is one row of the Removed Meal Slots read: the removed Meal Slots with the same name removed together
+// (at most a minute apart), with the Cooked and Not cooked meals they kept. RemovedAt is the newest of those removals.
 type RemovedSlot struct {
 	IDs       []int64
 	Name      string
