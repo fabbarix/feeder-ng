@@ -251,6 +251,10 @@ describe('shop.css: round 2', () => {
     expect(pill['border-radius']).toBe('var(--radius-pill)')
     expect(pill['font-size']).toBe('var(--text-chip-size)')
     expect(pill['font-variant-numeric']).toBe('tabular-nums')
+    // Reviewer (B9-09): the chip line now exists (B9-07); the pill keeps its 24 x 22 box (VC6: a round shape, not an oval)
+    expect(pill['line-height']).toBe('var(--text-chip-line)')
+    expect(pill['min-inline-size']).toBe('var(--space-6)')
+    expect(pill['min-block-size']).toBe('var(--text-title-3-line)')
   })
 
   it('the notice sentence is clamped to two lines with an ellipsis (the full text is in its title)', () => {

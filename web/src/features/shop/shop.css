@@ -173,11 +173,11 @@
   border-radius: var(--radius-pill);
   background: var(--color-surface-2);
   color: var(--color-text);
-  /* 12 px figures on a 16 px line (the 12 px role's line: there is no --text-chip-line token yet), the pill as tall as the title
-     line it sits in, 24 x 22, as it was with the inherited title line. */
+  /* 12 px figures on the chip line (16 px), the pill as tall as the title line it sits in, 24 x 22, as it was with the inherited
+     title line: a round-ended pill, near a circle for one digit. */
   min-block-size: var(--text-title-3-line);
   font-size: var(--text-chip-size);
-  line-height: var(--text-overline-line);
+  line-height: var(--text-chip-line);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
