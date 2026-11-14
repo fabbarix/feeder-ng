@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Button, EmptyState, ListGroup, ListPage, ListRow, PageHeader, useConfirm, useToast } from '../../../ui'
+import { Button, EmptyState, ListGroup, ListPage, ListRow, Muted, PageHeader, useConfirm, useToast } from '../../../ui'
 import { StoragePlaceSheet } from '../components/StoragePlaceSheet'
 import { useStoragePlaces } from '../hooks/useStoragePlaces'
 import { useLeftovers } from '../../../lib/leftovers/useLeftoverActions'
@@ -35,7 +35,7 @@ export function StoragePlacesScreen(): ReactElement {
 
   return (
     <ListPage header={<PageHeader title={strings.places.title} breadcrumbs={breadcrumbs} />}>
-      <p className="pg__muted">{strings.places.intro}</p>
+      <Muted>{strings.places.intro}</Muted>
       {places.isLoading ? (
         <p role="status">{strings.loading}</p>
       ) : places.places.length === 0 ? (

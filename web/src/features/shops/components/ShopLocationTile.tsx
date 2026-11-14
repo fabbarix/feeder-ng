@@ -1,4 +1,4 @@
-import { Button, Tile } from '../../../ui'
+import { Button, Muted, SectionTitle, Tile } from '../../../ui'
 import { errorText } from '../../products/lib/productForm'
 import { useSaveHere } from '../hooks/useSaveHere'
 import { strings } from '../strings'
@@ -15,8 +15,8 @@ export function ShopLocationTile({ location, onSave }: ShopLocationTileProps) {
   const here = useSaveHere(onSave)
   return (
     <Tile as="section" span="full" aria-label={strings.locationTitle}>
-      <h2 className="pg__tile-title">{strings.locationTitle}</h2>
-      <p className="pg__muted">{location ? strings.locationSaved : strings.locationNone}</p>
+      <SectionTitle>{strings.locationTitle}</SectionTitle>
+      <Muted>{location ? strings.locationSaved : strings.locationNone}</Muted>
       {here.status !== 'idle' ? <LocationStatus status={here.status} position={here.position} failure={here.failure} onRetry={here.saveHere} /> : null}
       {here.error ? (
         <p role="alert" className="pg__error">

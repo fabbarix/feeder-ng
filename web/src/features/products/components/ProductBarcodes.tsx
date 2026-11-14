@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Chip, FieldRow, IconButton, ListGroup, ListRow, TextField } from '../../../ui'
+import { Button, Chip, Cluster, FieldRow, IconButton, ListGroup, ListRow, Muted, SectionTitle, Stack, TextField } from '../../../ui'
 import { barcodeError, errorText } from '../lib/productForm'
 import { formatBarcode } from '../lib/barcodeFormat'
 import { shopBarcodeLabel } from '../../shops/lib/shopBarcodeForm'
@@ -39,21 +39,20 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, o
   const shopName = (id: number) => shops.find((s) => s.id === id)?.name ?? strings.unknownShop
 
   return (
-    <div className="pg__stack">
+    <Stack>
       {barcodes.length === 0 ? (
-        <p className="pg__muted">{strings.noBarcodes}</p>
+        <Muted>{strings.noBarcodes}</Muted>
       ) : (
-        <div className="pg__row">
+        <Cluster>
           {barcodes.map((code) => (
-            <span key={code} className="pg__row">
+            <Cluster key={code}>
               <Chip kind="tag">{formatBarcode(code)}</Chip>
               <IconButton icon="remove" label={strings.removeBarcode(formatBarcode(code))} onClick={() => onRemove(code)} />
-            </span>
+            </Cluster>
           ))}
-        </div>
+        </Cluster>
       )}
       <form
-        className="pg__stack"
         noValidate
         onSubmit={(e) => {
           e.preventDefault()
@@ -67,9 +66,9 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, o
           </Button>
         </FieldRow>
       </form>
-      <h3 className="pg__tile-title">{strings.shopBarcodesTitle}</h3>
+      <SectionTitle as="h3">{strings.shopBarcodesTitle}</SectionTitle>
       {shopBarcodes.length === 0 ? (
-        <p className="pg__muted">{strings.noShopBarcodes}</p>
+        <Muted>{strings.noShopBarcodes}</Muted>
       ) : (
         <ListGroup label={strings.shopBarcodesTitle}>
           {shopBarcodes.map((b) => (
@@ -77,6 +76,6 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, o
           ))}
         </ListGroup>
       )}
-    </div>
+    </Stack>
   )
 }

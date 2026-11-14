@@ -1,4 +1,4 @@
-import { Button, IconButton, ListGroup, ListRow } from '../../../ui'
+import { Button, Cluster, IconButton, ListGroup, ListRow, Muted, Stack } from '../../../ui'
 import { ruleSummary } from '../lib/shopBarcodeForm'
 import { strings } from '../strings'
 import type { ShopRule } from '../types'
@@ -16,9 +16,9 @@ export interface WeightRuleListProps {
 /** One row per rule: "prefix 21 · item digits 3-7 · value digits 8-12 · weight in kg, 3 decimals". Admin-only actions. */
 export function WeightRuleList({ rules, currency, isAdmin, onEdit, onDelete, onAdd }: WeightRuleListProps) {
   return (
-    <div className="pg__stack">
+    <Stack>
       {rules.length === 0 ? (
-        <p className="pg__muted">{strings.noWeightRules}</p>
+        <Muted>{strings.noWeightRules}</Muted>
       ) : (
         <ListGroup label={strings.weightRulesTitle}>
           {rules.map((r) => (
@@ -27,10 +27,10 @@ export function WeightRuleList({ rules, currency, isAdmin, onEdit, onDelete, onA
               title={ruleSummary(r, currency)}
               trailing={
                 isAdmin ? (
-                  <span className="pg__row">
+                  <Cluster>
                     <IconButton icon="edit" label={strings.editRule} onClick={() => onEdit(r)} />
                     <IconButton icon="delete" label={strings.deleteRule} onClick={() => onDelete(r)} />
-                  </span>
+                  </Cluster>
                 ) : undefined
               }
             />
@@ -42,6 +42,6 @@ export function WeightRuleList({ rules, currency, isAdmin, onEdit, onDelete, onA
           {strings.addRule}
         </Button>
       ) : null}
-    </div>
+    </Stack>
   )
 }

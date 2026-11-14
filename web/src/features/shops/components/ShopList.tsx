@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, EmptyState, ListGroup, ListRow, TextField } from '../../../ui'
+import { Button, EmptyState, ListGroup, ListRow, Stack, TextField } from '../../../ui'
 import { AddShopSheet } from './AddShopSheet'
 import { errorText } from '../../products/lib/productForm'
 import { strings } from '../strings'
@@ -14,7 +14,7 @@ export interface ShopListProps {
 export function ShopList({ shops }: ShopListProps) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="pg__stack">
+    <Stack>
       {shops.length === 0 ? (
         <EmptyState title={strings.shopsEmpty} />
       ) : (
@@ -28,7 +28,7 @@ export function ShopList({ shops }: ShopListProps) {
         {strings.addShop}
       </Button>
       <AddShopSheet open={open} onClose={() => setOpen(false)} onAdded={() => setOpen(false)} />
-    </div>
+    </Stack>
   )
 }
 
@@ -45,7 +45,6 @@ export function ShopNameForm({ initial, submitLabel, onSubmit }: ShopNameFormPro
   const [saving, setSaving] = useState(false)
   return (
     <form
-      className="pg__stack"
       onSubmit={(e) => {
         e.preventDefault()
         setSaving(true)
@@ -55,15 +54,17 @@ export function ShopNameForm({ initial, submitLabel, onSubmit }: ShopNameFormPro
           .finally(() => setSaving(false))
       }}
     >
-      <TextField label={strings.shopNameLabel} value={name} onChange={setName} />
-      {error ? (
-        <p role="alert" className="pg__error">
-          {error}
-        </p>
-      ) : null}
-      <Button type="submit" disabled={name.trim() === ''} loading={saving}>
-        {submitLabel}
-      </Button>
+      <Stack>
+        <TextField label={strings.shopNameLabel} value={name} onChange={setName} />
+        {error ? (
+          <p role="alert" className="pg__error">
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" disabled={name.trim() === ''} loading={saving}>
+          {submitLabel}
+        </Button>
+      </Stack>
     </form>
   )
 }

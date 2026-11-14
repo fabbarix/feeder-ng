@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BottomSheet, Button, TextField } from '../../../ui'
+import { BottomSheet, Button, Stack, TextField } from '../../../ui'
 import { Switch } from '../../../ui/fields/Switch'
 import { errorText } from '../../products/lib/productForm'
 import { usePosition } from '../hooks/usePosition'
@@ -36,7 +36,6 @@ function AddShopForm({ initialName, onAdded }: { initialName: string; onAdded: (
   const usable = here.status === 'ready' && here.position !== null && goodForSaving(here.position)
   return (
     <form
-      className="pg__stack"
       onSubmit={(e) => {
         e.preventDefault()
         setSaving(true)
@@ -47,17 +46,19 @@ function AddShopForm({ initialName, onAdded }: { initialName: string; onAdded: (
           .finally(() => setSaving(false))
       }}
     >
-      <TextField label={strings.shopNameLabel} value={name} onChange={setName} />
-      <Switch label={strings.saveLocationSwitch} checked={wanted && usable} disabled={!usable} onChange={setWanted} />
-      <LocationStatus status={here.status} position={here.position} failure={here.failure} onRetry={here.locate} />
-      {error ? (
-        <p role="alert" className="pg__error">
-          {error}
-        </p>
-      ) : null}
-      <Button type="submit" disabled={name.trim() === ''} loading={saving}>
-        {strings.addShop}
-      </Button>
+      <Stack>
+        <TextField label={strings.shopNameLabel} value={name} onChange={setName} />
+        <Switch label={strings.saveLocationSwitch} checked={wanted && usable} disabled={!usable} onChange={setWanted} />
+        <LocationStatus status={here.status} position={here.position} failure={here.failure} onRetry={here.locate} />
+        {error ? (
+          <p role="alert" className="pg__error">
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" disabled={name.trim() === ''} loading={saving}>
+          {strings.addShop}
+        </Button>
+      </Stack>
     </form>
   )
 }

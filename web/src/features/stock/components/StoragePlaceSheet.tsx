@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import { BottomSheet, Button, Chip, FormActions, Switch, TextField } from '../../../ui'
+import { BottomSheet, Button, Chip, FormActions, Muted, Stack, Switch, TextField } from '../../../ui'
 import { errorText } from '../../products/lib/productForm'
 import { KIND_ICON, STORAGE_KINDS } from '../lib/kinds'
 import { stockStrings as strings } from '../strings'
@@ -33,7 +33,6 @@ function PlaceForm({ initial, onSave, onDelete }: { initial: StoragePlace | null
   const [saving, setSaving] = useState(false)
   return (
     <form
-      className="pg__stack"
       onSubmit={(e) => {
         e.preventDefault()
         setSaving(true)
@@ -43,35 +42,37 @@ function PlaceForm({ initial, onSave, onDelete }: { initial: StoragePlace | null
           .finally(() => setSaving(false))
       }}
     >
-      <TextField label={strings.places.name} value={name} onChange={setName} helper={strings.places.nameHint} />
-      <div className="stock-screen__filters" role="group" aria-label={strings.places.kind}>
-        {STORAGE_KINDS.map((k) => (
-          <Chip key={k} kind="filter" icon={KIND_ICON[k]} selected={kind === k} onClick={() => setKind(k)}>
-            {strings.kinds[k]}
-          </Chip>
-        ))}
-      </div>
-      <p className="pg__muted">{strings.places.kindHint[kind]}</p>
-      <Switch label={strings.places.default} checked={isDefault} onChange={setDefault} />
-      {error ? (
-        <p role="alert" className="pg__error">
-          {error}
-        </p>
-      ) : null}
-      <FormActions
-        destructive={
-          onDelete ? (
-            <Button variant="danger-secondary" onClick={onDelete}>
-              {strings.places.delete}
+      <Stack>
+        <TextField label={strings.places.name} value={name} onChange={setName} helper={strings.places.nameHint} />
+        <div className="stock-screen__filters" role="group" aria-label={strings.places.kind}>
+          {STORAGE_KINDS.map((k) => (
+            <Chip key={k} kind="filter" icon={KIND_ICON[k]} selected={kind === k} onClick={() => setKind(k)}>
+              {strings.kinds[k]}
+            </Chip>
+          ))}
+        </div>
+        <Muted>{strings.places.kindHint[kind]}</Muted>
+        <Switch label={strings.places.default} checked={isDefault} onChange={setDefault} />
+        {error ? (
+          <p role="alert" className="pg__error">
+            {error}
+          </p>
+        ) : null}
+        <FormActions
+          destructive={
+            onDelete ? (
+              <Button variant="danger-secondary" onClick={onDelete}>
+                {strings.places.delete}
+              </Button>
+            ) : undefined
+          }
+          primary={
+            <Button type="submit" disabled={name.trim() === ''} loading={saving}>
+              {strings.places.save}
             </Button>
-          ) : undefined
-        }
-        primary={
-          <Button type="submit" disabled={name.trim() === ''} loading={saving}>
-            {strings.places.save}
-          </Button>
-        }
-      />
+          }
+        />
+      </Stack>
     </form>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react'
-import { BottomSheet, Button, FormActions, Select, TextField, useConfirm } from '../../../ui'
+import { BottomSheet, Button, FormActions, Muted, Select, Stack, TextField, useConfirm } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { capitalise, formatLotDate } from '../lib/display'
 import { checkMoveQuantity, lotMoveNote } from '../lib/move'
@@ -78,7 +78,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
   const all = formatQuantity(lot.quantity, lot.baseUnit, system)
   const options = places.filter((p) => p.id !== lot.storagePlaceId).map((p) => ({ value: p.id, label: p.name, meta: strings.kinds[p.kind] }))
   return (
-    <div className="pg__stack">
+    <Stack>
       <p className="lot-sheet__facts">
         {supply ? all : `${all} · ${describeGoOff(lot, today).label}`}
         <br />
@@ -102,7 +102,6 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
         <>
           <h3 className="lot-sheet__heading">{strings.usedUp.heading}</h3>
           <form
-            className="pg__stack"
             onSubmit={(e) => {
               e.preventDefault()
               const check = checkUsedUp(usedAmount, lot)
@@ -113,27 +112,28 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
               onUsedUp(lot, check.used)
             }}
           >
-            <TextField
-              label={strings.usedUp.amount}
-              inputMode="decimal"
-              value={usedAmount}
-              placeholder={String(lot.quantity)}
-              suffix={lot.baseUnit}
-              onChange={(v) => {
-                setUsedAmount(v)
-                setUsedError(null)
-              }}
-              helper={strings.usedUp.hint(all)}
-              error={usedError ?? undefined}
-            />
-            <FormActions primary={<Button type="submit">{strings.usedUp.button}</Button>} />
+            <Stack>
+              <TextField
+                label={strings.usedUp.amount}
+                inputMode="decimal"
+                value={usedAmount}
+                placeholder={String(lot.quantity)}
+                suffix={lot.baseUnit}
+                onChange={(v) => {
+                  setUsedAmount(v)
+                  setUsedError(null)
+                }}
+                helper={strings.usedUp.hint(all)}
+                error={usedError ?? undefined}
+              />
+              <FormActions primary={<Button type="submit">{strings.usedUp.button}</Button>} />
+            </Stack>
           </form>
         </>
       ) : null}
       <h3 className="lot-sheet__heading">{strings.moveTitle}</h3>
       {options.length > 0 ? (
         <form
-          className="pg__stack"
           onSubmit={(e) => {
             e.preventDefault()
             if (placeId === null) return
@@ -145,50 +145,52 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
             onMove(lot, placeId, check.quantity)
           }}
         >
-          {/* b8-polish: until a new place is chosen the field shows the hint; the sheet already says where the Lot is. */}
-          <Select<number>
-            label={strings.moveTo}
-            entityName="Storage Place"
-            options={options}
-            value={placeId}
-            onChange={setPlaceId}
-            placeholder={strings.chooseStoragePlace}
-          />
-          <TextField
-            label={strings.moveSome}
-            inputMode="decimal"
-            value={quantity}
-            placeholder={String(lot.quantity)}
-            onChange={(v) => {
-              setQuantity(v)
-              setError(null)
-            }}
-            suffix={lot.baseUnit}
-            helper={strings.moveSomeHint(all)}
-            error={error ?? undefined}
-          />
-          {note ? <p className="pg__muted">{note === 'freezer' ? strings.freezerNote : strings.thawNote}</p> : null}
-          <FormActions
-            secondary={
-              <Button variant="secondary" onClick={() => onSeeIngredient(lot.ingredientId)}>
-                {strings.seeIngredient(lot.ingredientName)}
-              </Button>
-            }
-            primary={
-              <Button type="submit" disabled={placeId === null}>
-                {strings.move}
-              </Button>
-            }
-          />
+          <Stack>
+            {/* b8-polish: until a new place is chosen the field shows the hint; the sheet already says where the Lot is. */}
+            <Select<number>
+              label={strings.moveTo}
+              entityName="Storage Place"
+              options={options}
+              value={placeId}
+              onChange={setPlaceId}
+              placeholder={strings.chooseStoragePlace}
+            />
+            <TextField
+              label={strings.moveSome}
+              inputMode="decimal"
+              value={quantity}
+              placeholder={String(lot.quantity)}
+              onChange={(v) => {
+                setQuantity(v)
+                setError(null)
+              }}
+              suffix={lot.baseUnit}
+              helper={strings.moveSomeHint(all)}
+              error={error ?? undefined}
+            />
+            {note ? <Muted>{note === 'freezer' ? strings.freezerNote : strings.thawNote}</Muted> : null}
+            <FormActions
+              secondary={
+                <Button variant="secondary" onClick={() => onSeeIngredient(lot.ingredientId)}>
+                  {strings.seeIngredient(lot.ingredientName)}
+                </Button>
+              }
+              primary={
+                <Button type="submit" disabled={placeId === null}>
+                  {strings.move}
+                </Button>
+              }
+            />
+          </Stack>
         </form>
       ) : (
         <>
-          <p className="pg__muted">{strings.noPlacesHint}</p>
+          <Muted>{strings.noPlacesHint}</Muted>
           <Button variant="secondary" onClick={() => onSeeIngredient(lot.ingredientId)}>
             {strings.seeIngredient(lot.ingredientName)}
           </Button>
         </>
       )}
-    </div>
+    </Stack>
   )
 }

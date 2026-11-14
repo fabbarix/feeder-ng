@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BottomSheet, Button, Chip, SearchField, Select, TextField } from '../../../ui'
+import { BottomSheet, Button, Chip, Cluster, Muted, SearchField, Select, Stack, TextField } from '../../../ui'
 import { useProducts } from '../../products/hooks/useProducts'
 import { useShopBarcodeForm } from '../hooks/useShopBarcodeForm'
 import { ruleSummary, type toShopBarcodeBody } from '../lib/shopBarcodeForm'
@@ -39,55 +39,56 @@ function AddShopBarcodeForm({ rules, currency, onClose, onAdd }: Omit<AddShopBar
   ]
   return (
     <form
-      className="pg__stack"
       noValidate
       onSubmit={(e) => {
         e.preventDefault()
         void form.submit()
       }}
     >
-      <SearchField label={strings.productSearchLabel} value={q} onChange={setQ} />
-      <p className="pg__muted">{chosen ? chosen.name : strings.productPickerHint}</p>
-      {form.errors.productId ? (
-        <p role="alert" className="pg__error">
-          {form.errors.productId}
-        </p>
-      ) : null}
-      <div className="pg__row">
-        {products.slice(0, 12).map((p) => (
-          <Chip key={p.id} kind="filter" selected={p.id === form.values.productId} onClick={() => form.set({ productId: p.id })}>
-            {p.name}
-          </Chip>
-        ))}
-      </div>
-      {rules.length > 0 ? (
-        <Select
-          label={strings.shopBarcodeRuleLabel}
-          options={ruleOptions}
-          value={form.values.ruleId === null ? '' : String(form.values.ruleId)}
-          onChange={(v) => form.set({ ruleId: v === '' ? null : Number(v) })}
-        />
-      ) : null}
-      {form.values.ruleId === null ? (
-        <TextField label={strings.shopBarcodeCodeLabel} value={form.values.code} onChange={(code) => form.set({ code })} error={form.errors.code} />
-      ) : (
-        <TextField
-          label={strings.itemCodeLabel}
-          inputMode="numeric"
-          data-size-intent="long"
-          value={form.values.itemCode}
-          onChange={(itemCode) => form.set({ itemCode })}
-          error={form.errors.itemCode}
-        />
-      )}
-      {form.serverError ? (
-        <p role="alert" className="pg__error">
-          {form.serverError}
-        </p>
-      ) : null}
-      <Button type="submit" loading={form.saving}>
-        {strings.saveShopBarcode}
-      </Button>
+      <Stack>
+        <SearchField label={strings.productSearchLabel} value={q} onChange={setQ} />
+        <Muted>{chosen ? chosen.name : strings.productPickerHint}</Muted>
+        {form.errors.productId ? (
+          <p role="alert" className="pg__error">
+            {form.errors.productId}
+          </p>
+        ) : null}
+        <Cluster>
+          {products.slice(0, 12).map((p) => (
+            <Chip key={p.id} kind="filter" selected={p.id === form.values.productId} onClick={() => form.set({ productId: p.id })}>
+              {p.name}
+            </Chip>
+          ))}
+        </Cluster>
+        {rules.length > 0 ? (
+          <Select
+            label={strings.shopBarcodeRuleLabel}
+            options={ruleOptions}
+            value={form.values.ruleId === null ? '' : String(form.values.ruleId)}
+            onChange={(v) => form.set({ ruleId: v === '' ? null : Number(v) })}
+          />
+        ) : null}
+        {form.values.ruleId === null ? (
+          <TextField label={strings.shopBarcodeCodeLabel} value={form.values.code} onChange={(code) => form.set({ code })} error={form.errors.code} />
+        ) : (
+          <TextField
+            label={strings.itemCodeLabel}
+            inputMode="numeric"
+            data-size-intent="long"
+            value={form.values.itemCode}
+            onChange={(itemCode) => form.set({ itemCode })}
+            error={form.errors.itemCode}
+          />
+        )}
+        {form.serverError ? (
+          <p role="alert" className="pg__error">
+            {form.serverError}
+          </p>
+        ) : null}
+        <Button type="submit" loading={form.saving}>
+          {strings.saveShopBarcode}
+        </Button>
+      </Stack>
     </form>
   )
 }
