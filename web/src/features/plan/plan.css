@@ -9,6 +9,7 @@
 .plan__muted {
   margin: 0;
   font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
   color: var(--color-muted);
 }
 .plan__error {
@@ -18,6 +19,7 @@
 .plan__tile-title {
   margin: 0 0 var(--space-3);
   font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
 }
 /* R13: Couldn't plan. The notice's tiles are items of the grid it sits in (the Plan's notice grid, or Today's). */
 .plan-couldnt-notice {
@@ -212,6 +214,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
   color: var(--color-muted);
 }
 .plan-meal__slot > svg {
@@ -226,6 +229,7 @@
 .plan-meal__reason {
   margin: 0;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
 }
 .plan-meal--not-served {
   grid-template-columns: minmax(0, 1fr) auto;
@@ -281,6 +285,7 @@
 }
 .plan-sheet__meta {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-muted);
 }
 .plan-sheet__facts {
@@ -289,6 +294,7 @@
 .plan-sheet__recipe {
   margin: 0;
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: 700;
 }
 .plan-sheet__actions {
@@ -327,24 +333,16 @@
   padding-block: var(--space-2);
   padding-inline: var(--space-3);
 }
-.plan-leftovers .list-row__title {
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-}
-.plan-leftovers .list-row__meta {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--space-1);
-}
+/* DS-05: the title clamp and the one-line meta are ListRow's (system.md §3); this tile does not override them. */
 /* B5-LOW: the Plan's "Leftovers to use" section: its title above its rows. */
 .plan-leftovers-section {
   display: grid;
   gap: var(--space-2);
 }
 
-/* R2-2 (L-07): the hero actions sit at the tile's end on a wide screen; the button keeps its own width. */
-@media (min-width: 820px) {
+/* R2-2 (L-07): the hero actions sit at the tile's end on a wide hero (44 rem of the hero's own width, DS-09); the button keeps
+   its own width. */
+@container plan-hero (min-width: 44rem) {
   .plan-hero__actions {
     justify-content: flex-end;
   }
@@ -363,12 +361,13 @@
 .plan__caption {
   margin: 0;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-muted);
 }
 /* The cell the URL hash names takes focus: a visible ring, not the browser default alone. */
 .plan-exclusions [tabindex="-1"]:focus {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* b5-bow: the sheet's Bought line and the Pinned/Bought warn line (token-based). */
@@ -376,10 +375,12 @@
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
 }
 
 .rule-warning-line {
   margin: 0;
   color: var(--status-spoil-fg);
   font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
 }
