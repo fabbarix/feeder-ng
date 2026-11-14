@@ -36,12 +36,23 @@ export function updateMove(pathname: string, pendingSyncCount: number, hasUnsave
   return 'prompt'
 }
 
+/**
+ * Whether the prompt was shown, per update source: the prompt comes once per session, also when the shell mounts again
+ * (the source replays the newest update to a new subscriber). Keyed by the source so each test's fake starts fresh.
+ */
+const promptedBySource = new WeakMap<object, { prompted: boolean }>()
+function sessionOf(subscribe: object): { prompted: boolean } {
+  let session = promptedBySource.get(subscribe)
+  if (!session) promptedBySource.set(subscribe, (session = { prompted: false }))
+  return session
+}
+
 export function useAppUpdate({ pendingSyncCount = 0, hasUnsavedChanges = false, subscribe = onAppUpdateReady }: AppUpdateInputs = {}): void {
   const { show } = useToast()
   const { pathname } = useLocation()
   const [ready, setReady] = useState<UpdateControls | null>(null)
   /** shown or put off with Later: the prompt comes once per session */
-  const prompted = useRef(false)
+  const session = sessionOf(subscribe)
   const applied = useRef<UpdateControls | null>(null)
 
   useEffect(() => subscribe((controls) => setReady(controls)), [subscribe])
@@ -55,8 +66,8 @@ export function useAppUpdate({ pendingSyncCount = 0, hasUnsavedChanges = false, 
       ready.applyUpdate()
       return
     }
-    if (move !== 'prompt' || prompted.current) return
-    prompted.current = true
+    if (move !== 'prompt' || session.prompted) return
+    session.prompted = true
     show({
       status: 'info',
       title: updateStrings.updateReady,
@@ -67,5 +78,5 @@ export function useAppUpdate({ pendingSyncCount = 0, hasUnsavedChanges = false, 
       ],
       durationMs: UNTIL_ACTED_ON_MS,
     })
-  }, [ready, move, show])
+  }, [ready, move, show, session])
 }

@@ -110,6 +110,16 @@ describe('the update toast', () => {
     expect(src.controls.applyUpdate).not.toHaveBeenCalled()
   })
 
+  it('a shell mounted again in the same session (after the page error boundary) does not prompt a second time', () => {
+    const src = makeSource()
+    const first = mount({ subscribe: src.subscribe })
+    src.announce()
+    first.unmount()
+    mount({ subscribe: src.subscribe })
+    src.announce() // the real source replays the newest update to a new subscriber
+    expect(show).toHaveBeenCalledTimes(1)
+  })
+
   it('unsubscribes when the shell unmounts', () => {
     const src = makeSource()
     const { unmount } = mount({ subscribe: src.subscribe })

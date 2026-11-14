@@ -41,30 +41,22 @@ interface ContainerLike extends EventTarget {
 }
 
 const listeners = new Set<(controls: UpdateControls) => void>()
-/** The latest update no listener has received yet (it may be ready before React mounts). */
-let undelivered: UpdateControls | null = null
+/** The newest update that is ready (it may be ready before React mounts, and the shell may mount again after a crash). */
+let latest: UpdateControls | null = null
 
 function announce(controls: UpdateControls, onUpdateReady?: (controls: UpdateControls) => void): void {
-  let delivered = false
-  if (onUpdateReady) {
-    onUpdateReady(controls)
-    delivered = true
-  }
-  for (const listener of [...listeners]) {
-    listener(controls)
-    delivered = true
-  }
-  undelivered = delivered ? null : controls
+  latest = controls
+  onUpdateReady?.(controls)
+  for (const listener of [...listeners]) listener(controls)
 }
 
-/** Subscribes to "an update is ready"; a listener added after it became ready is called at once. Returns the unsubscribe function. */
+/**
+ * Subscribes to "an update is ready". A listener added after it became ready (a shell mounted late, or again after the
+ * page error boundary's "Go to Today") is called at once with the newest one. Returns the unsubscribe function.
+ */
 export function onAppUpdateReady(listener: (controls: UpdateControls) => void): () => void {
   listeners.add(listener)
-  if (undelivered) {
-    const controls = undelivered
-    undelivered = null
-    listener(controls)
-  }
+  if (latest) listener(latest)
   return () => {
     listeners.delete(listener)
   }

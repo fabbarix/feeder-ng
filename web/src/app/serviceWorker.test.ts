@@ -224,9 +224,25 @@ describe('onAppUpdateReady (what the shell subscribes to)', () => {
     const listener = vi.fn()
     const off = onAppUpdateReady(listener)
     off()
+    const before = listener.mock.calls.length // an update an earlier test made ready is handed over at once
     start()
     await flush()
     container.registration.finishInstalling(container.registration.startInstalling())
-    expect(listener).not.toHaveBeenCalled()
+    expect(listener).toHaveBeenCalledTimes(before)
+  })
+
+  it('every listener gets the update, also one that subscribes after another already received it (the shell mounted again)', async () => {
+    const first = vi.fn()
+    const offFirst = onAppUpdateReady(first)
+    start()
+    await flush()
+    container.registration.finishInstalling(container.registration.startInstalling())
+    const newest = first.mock.calls.at(-1)![0]
+    const second = vi.fn()
+    const offSecond = onAppUpdateReady(second)
+    expect(second).toHaveBeenCalledTimes(1)
+    expect(second.mock.calls[0]![0]).toBe(newest)
+    offFirst()
+    offSecond()
   })
 })
