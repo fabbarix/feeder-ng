@@ -43,7 +43,8 @@ describe('Dialog onCancel (R-B)', () => {
 describe('Dialog.css (R-C)', () => {
   it('the body keeps 5 px of block padding and scroll-padding so a focus ring is never clipped', () => {
     const d = declarations(readUiCss('Dialog.css'), '.dialog__body')
-    expect(d['padding-block']).toBe('5px')
+    // B9-07: the 5 px are the ring tokens (3 px width + 2 px offset), no raw px (DS-11)
+    expect(d['padding-block']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
     expect(d['scroll-padding-block'] ?? d['scroll-padding']).toBeDefined()
   })
 })

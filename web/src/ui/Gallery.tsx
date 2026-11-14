@@ -43,6 +43,7 @@ import { Tile, TileMetric } from './Tile'
 import { TimerTile } from './TimerTile'
 import { WhyChip } from './WhyChip'
 import { OverlayGalleryGroups } from './GalleryOverlays'
+import './focusLayer.css'
 import './Gallery.css'
 
 /**
@@ -84,7 +85,7 @@ function ButtonGroup() {
           See the <Button variant="link">Planning rules</Button> for why.
         </p>
       </Cell>
-      <Cell caption='iconOnly="narrow" (label hidden below 360 px)'>
+      <Cell caption='iconOnly="narrow" (label hidden at 375 px and below)'>
         <Button variant="secondary" icon="filter" iconOnly="narrow">
           Filters
         </Button>

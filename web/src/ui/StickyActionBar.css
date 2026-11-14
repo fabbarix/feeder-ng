@@ -7,8 +7,10 @@
   --sticky-bar-clearance: calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2));
 }
 
+/* A11Y-02: and the focused control's ring (width + offset) stays clear of the bar, with --space-1 between them: with the ring room
+   alone a control scrolled into view had its ring flush against the bar's edge (P39 counts that as touching). */
 html:has(.sticky-action-bar) {
-  scroll-padding-block-end: calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance));
+  scroll-padding-block-end: calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1));
 }
 
 /* QA-4: at the end of the page the bar is the last thing in flow, so the page padding is the bar's floating gap (the gutter above
@@ -51,7 +53,7 @@ html:has(.sticky-action-bar) {
 }
 
 /* From 1024 there is no bottom bar (--nav-top is 0, so it carries no safe area): the bar clears the safe area itself. */
-@media (min-width: 1024px) {
+@media (min-width: 64em) {
   .sticky-action-bar {
     bottom: calc(var(--page-gutter) + env(safe-area-inset-bottom, 0px));
   }

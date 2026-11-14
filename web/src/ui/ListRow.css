@@ -53,8 +53,10 @@
 }
 
 .list-row__target:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: -3px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
+  /* A11Y-02 (mock a11y-02-focus-ring): the ring inside the row has rounded corners, never a square box. */
+  border-radius: var(--radius-thumb);
 }
 
 .list-row[data-selected='true'] .list-row__target {
@@ -259,7 +261,7 @@
 .list-row__extra {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
   margin-block-start: var(--space-1);
 }
 

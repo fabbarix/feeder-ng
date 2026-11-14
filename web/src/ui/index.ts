@@ -1,4 +1,6 @@
 // Barrel for the shared Bento primitives. Import screens' building blocks from here.
+// A11Y-02: the nested-control ring layer (field frames, search frames, [data-focus-scope]); loaded with every primitive.
+import './focusLayer.css'
 export { Breadcrumbs } from './Breadcrumbs'
 export type { BreadcrumbsProps, Crumb } from './Breadcrumbs'
 export { Avatar } from './Avatar'
@@ -138,6 +140,8 @@ export type { TextFieldProps } from './fields/TextField'
 export { TimeField } from './fields/TimeField'
 export type { TimeFieldProps } from './fields/TimeField'
 export { useMediaQuery } from './lib/useMediaQuery'
+export { BREAKPOINTS, NARROW, NARROW_QUERY, breakpointQuery, useBreakpoint, useNarrow } from './lib/breakpoints'
+export type { BreakpointName } from './lib/breakpoints'
 export { ViewfinderStrip } from './ViewfinderStrip'
 export type { ViewfinderStripProps } from './ViewfinderStrip'
 export { PriceKeypad } from './PriceKeypad'

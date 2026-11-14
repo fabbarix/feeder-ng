@@ -31,6 +31,9 @@
 
 /* Row 2: the view control at the start, Sort at the end; Sort's value may shrink (it ends in an ellipsis). */
 .filter-bar__view-row {
+  /* DS-09: the Sort chip's icon is a component-fit threshold, so the row is the container it is measured against (the row is in a
+     .filter-bar on the Pantry and in a ListPage's filters on Recipes, and the full width of the header in both). */
+  container: filter-bar / inline-size;
   justify-content: space-between;
 }
 
@@ -43,10 +46,10 @@
   min-inline-size: 0;
 }
 
-/* Below 420 px the Sort chip drops its leading sort icon (32 px and its 8 px gap), on both headers, so the Pantry's longest value
+/* Where the header is under 24 rem (a window under about 416 px at 16 px text; DS-09) the Sort chip drops its leading sort icon (32 px and its 8 px gap), on both headers, so the Pantry's longest value
    ("Good until", 166 px with the icon) shows in full from 360 px beside the List control (docs/design/pantry-filter.md 3). The
    combobox keeps its name "Sort"; its chevron still says it is a picker. */
-@media (max-width: 419px) {
+@container filter-bar (width < 24rem) {
   .filter-bar__sort .select__leading {
     display: none;
   }
@@ -118,7 +121,7 @@
 
 /* b8 G1: a body taller than the popover's cap (the Pantry with its Food or Supplies section, at 768 to 900 px high) scrolls inside it,
    so the footer stays visible; a wheel at its end does not scroll the page under the open panel. From 768 px only: below it the panel is a bottom sheet, which scrolls as a whole. */
-@media (min-width: 768px) {
+@media (min-width: 48em) {
   .filter-panel .popover__body {
     overflow-y: auto;
     overflow-x: hidden;

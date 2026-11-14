@@ -25,7 +25,7 @@
 }
 
 /* On a phone the metric strip is one row of up to three equal tracks. */
-@media (max-width: 599px) {
+@media (width < 37.5em) {
   .bento-grid[data-min='metric'] {
     grid-template-columns: repeat(auto-fit, minmax(calc((100% - 2 * var(--bento-gap)) / 3), 1fr));
   }

@@ -5,7 +5,7 @@
   gap: var(--space-2);
 }
 
-@media (max-width: 599px) {
+@media (width < 37.5em) {
   .form-actions {
     flex-direction: column-reverse;
   }
@@ -19,7 +19,7 @@
   }
 }
 
-@media (min-width: 600px) {
+@media (min-width: 37.5em) {
   .form-actions {
     flex-direction: row;
     align-items: center;

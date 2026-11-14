@@ -1,8 +1,6 @@
 /* Bento base styles. Colours come from the accent palette set on :root by ThemeProvider (apply.ts).
    The Basil defaults below are the first paint, before ThemeProvider runs (plan 3.1 to 3.3). */
 :root {
-  /* One focus ring for every field control (docs/dev/design/r2f-fields.md 3); the colour follows the scheme. */
-  --focus-ring: 0 0 0 2px var(--color-accent);
   /* Focus (A11Y-02): one ring for every control. The colour is a token so a container can change it (on-accent on an accent
      fill, bg on an inverse surface); inside a clipping container the ring is drawn inward; a nested control takes the inner width. */
   --focus-ring-width: 3px;
@@ -50,6 +48,7 @@
   --text-overline-weight: 800;
   --text-overline-tracking: 0.04em;
   --text-chip-size: 0.75rem;
+  --text-chip-line: 1rem;
   --text-nav-size: 0.6875rem;
   --text-nav-weight: 800;
   /* Cook Mode's Step text keeps its size and is Medium (PC-03, SHORT-01): display text read at length is not extra-bold. */
@@ -163,6 +162,9 @@
 
 :root,
 [data-scheme='light'] {
+  /* A11Y-02: a custom property resolves where it is declared, so a subtree that sets its own scheme (and accent) declares the
+     ring colour again, or it would inherit the root's accent (the Gallery's light and dark panels side by side). */
+  --focus-ring-color: var(--color-accent);
   --color-bg: #e7f4eb;
   --color-surface: #fafffc;
   --color-surface-2: #daecdf;
@@ -247,8 +249,8 @@
   --color-on-secondary-container: var(--color-accent-text);
 }
 
-/* Phone: a value column that gives the name the room (system.md 3). */
-@media (max-width: 599px) {
+/* Phone: a value column that gives the name the room (system.md 3). Below the tablet band (DS-09). */
+@media (width < 37.5em) {
   :root {
     --row-value-min: var(--row-value-narrow);
   }
@@ -365,6 +367,7 @@
 
 :root[data-scheme='dark'],
 [data-scheme='dark'] {
+  --focus-ring-color: var(--color-accent);
   --color-bg: #090f0b;
   --color-surface: #131c16;
   --color-surface-2: #1e2a22;
@@ -476,9 +479,10 @@ a {
   color: inherit;
 }
 
-:focus-visible {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 2px;
+/* A11Y-02: the one focus ring. Zero specificity, so a primitive that moves the ring (a frame, a track, inside a nested control) wins. */
+:where(:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {

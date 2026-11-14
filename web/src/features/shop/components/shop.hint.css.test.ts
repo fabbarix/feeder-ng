@@ -14,7 +14,8 @@ describe('Shop card grid: the hint has room', () => {
   it('from 768 px a Shop row takes the narrow value column through a token (no raw rem in shop.css)', () => {
     expect(wide).toMatch(/\.shop-lines \.list-row\s*\{[^}]*--row-value-min\s*:\s*var\(--row-value-narrow\)/)
     expect(styles).toMatch(/--row-value-narrow\s*:\s*4\.25rem/)
-    expect(styles).toMatch(/\(width < 37\.5em\)\s*\{[^}]*--row-value-min\s*:\s*var\(--row-value-narrow\)/)
+    // B9-07 (DS-09): the phone step is (width < 37.5em), was (max-width: 599px)
+    expect(styles).toMatch(/width\s*<\s*37\.5em\)\s*\{[^}]*--row-value-min\s*:\s*var\(--row-value-narrow\)/)
   })
   it('the meta line stays one line with an ellipsis (system.md 3): nothing in the Shop lets it wrap', () => {
     expect(listCss).toMatch(/\.list-row__meta-text\s*\{[^}]*white-space:\s*nowrap/)

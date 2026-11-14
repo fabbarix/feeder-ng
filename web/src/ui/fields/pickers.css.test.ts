@@ -48,6 +48,6 @@ describe('EmojiPicker.css', () => {
     expect(d['inline-size']).toBe('44px')
     expect(d['block-size']).toBe('44px')
     expect(declarations(emoji, ".emoji-choice[aria-checked='true']")['box-shadow']).toMatch(/var\(--color-accent\)/)
-    expect(declarations(emoji, '.emoji-choice:focus-visible')['outline']).toMatch(/var\(--color-accent\)/)
+    expect(declarations(emoji, '.emoji-choice:focus-visible')['outline']).toMatch(/var\(--focus-ring-color\)/)
   })
 })

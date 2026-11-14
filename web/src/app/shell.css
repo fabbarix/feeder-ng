@@ -9,6 +9,12 @@
   --nav-top: calc(var(--nav-height) + var(--nav-inset) + env(safe-area-inset-bottom, 0px));
 }
 
+/* A11Y-02: a control focused by Tab scrolls clear of the floating bottom bar, its whole ring (width + offset) included and a 4 px gap
+   after it, so the ring never sits flush against the bar (WCAG 2.4.11, P39). */
+html {
+  scroll-padding-block-end: calc(var(--nav-top) + var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1));
+}
+
 /* Frame */
 .app-shell {
   min-width: 0;
@@ -105,7 +111,7 @@
   margin-inline: auto;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  column-gap: 2px;
+  column-gap: var(--space-half);
   padding-inline: var(--space-1);
   align-items: center;
   background: var(--color-surface);
@@ -119,7 +125,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--space-half);
   width: 100%;
   min-width: 44px;
   height: 54px;
@@ -147,6 +153,18 @@
   box-shadow: 0 0 0 3px var(--color-soft);
 }
 
+/* A11Y-02 (R-C+): the bar is a bounded container with 4 px of padding and 2 px between its links, so an outer ring would run over
+   the next link (the current pill, the Scan button). A link rings inside itself with the inner width; its fill does not change, so a
+   focused link never looks like the current one. On the accent Scan button the ring is the on-accent colour. */
+.bottom-bar__link:focus-visible {
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+}
+
+.bottom-bar__link[data-accent='true'] {
+  --focus-ring-color: var(--color-on-accent);
+}
+
 .bottom-bar__label {
   font-size: var(--text-nav-size);
   line-height: 1;
@@ -167,9 +185,9 @@
 }
 
 /* Tablet landscape and desktop */
-@media (min-width: 1024px) {
+@media (min-width: 64em) {
   :root {
-    --nav-clearance: 0px;
+    --nav-clearance: 0;
     --nav-top: 0px;
   }
 
@@ -207,7 +225,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: var(--space-half);
     width: 56px;
     height: 56px;
     margin-inline: auto;
@@ -254,7 +272,7 @@
 }
 
 /* Expanded rail: icon and label in rows */
-@media (min-width: 1440px) {
+@media (min-width: 90em) {
   .app-shell:not(.app-shell--chromeless) {
     grid-template-columns: 240px minmax(0, 1fr);
   }
@@ -310,7 +328,7 @@
   height: 40px;
   padding: 0;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-control);
   background: var(--color-surface-2);
   cursor: pointer;
   overflow: hidden;

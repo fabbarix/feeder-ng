@@ -3,6 +3,9 @@
 import { describe, expect, it } from 'vitest'
 import { cssRules } from '../../test/cssRules'
 
+const nodeFs = 'node:fs'
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
+
 const { rules, valueFor } = cssRules(['ui/FilterBar/FilterBar.css'])
 const WIDTHS = [0, 390, 768, 1280, 1920]
 
@@ -21,18 +24,24 @@ describe('the rows', () => {
   })
 })
 
-// pantry-filter review (the user's decision): below 420 px the Sort chip has no leading sort icon, on the Recipes and the Pantry
-// headers alike, so "Good until" fits at 360 px; from 420 px the icon is back.
-describe('row 2: the Sort chip below 420 px', () => {
-  it.each([360, 390, 419])('at %i px the Sort chip hides its leading icon', (w) => {
-    expect(valueFor('.filter-bar__sort .select__leading', 'display', w)).toBe('none')
+// pantry-filter review (the user's decision): on a narrow header the Sort chip has no leading sort icon, on the Recipes and the Pantry
+// headers alike, so "Good until" fits at 360 px; on a wider one the icon is back. B9-07 (DS-09): the threshold is the header's own
+// width, a component-fit container query in rem (`@container (width < 24rem)` on the FilterBar, the chapter's table), no longer a
+// window width (it was max-width: 419px). At 16 px text and a 16 px gutter that is a window under about 416 px.
+const sortRule = /@container\s+filter-bar\s*\(\s*width\s*<\s*24rem\s*\)\s*\{\s*\.filter-bar__sort \.select__leading\s*\{\s*display:\s*none;?\s*\}\s*\}/
+const source = readFileSync(`${(globalThis as unknown as { process: { cwd: () => string } }).process.cwd()}/src/ui/FilterBar/FilterBar.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+describe('row 2: the Sort chip on a narrow header', () => {
+  it("the view row (the header's full width on both headers) is the inline-size container named filter-bar", () => {
+    expect(valueFor('.filter-bar__view-row', 'container', 0)).toBe('filter-bar / inline-size')
   })
-  it.each([420, 768, 1440])('at %i px it keeps it', (w) => {
+  it('under 24 rem of header the Sort chip hides its leading icon (a container query in rem)', () => {
+    expect(source).toMatch(sortRule)
+  })
+  it.each([360, 390, 419, 420, 768, 1440])('no window-width rule hides it (at %i px the media rules keep it)', (w) => {
     expect(valueFor('.filter-bar__sort .select__leading', 'display', w)).toBeUndefined()
   })
   it('only the Sort chip of a filter header: no other Select loses its leading visual', () => {
-    const hidden = rules.filter((r) => /select__leading/.test(r.selector))
-    expect(hidden.map((r) => r.selector)).toEqual(['.filter-bar__sort .select__leading'])
+    expect([...source.matchAll(/([^{}]*select__leading[^{}]*)\{/g)].map((m) => m[1]!.trim())).toEqual(['.filter-bar__sort .select__leading'])
   })
 })
 

@@ -10,8 +10,8 @@ describe('sheet handle (G-02)', () => {
     expect(declarations(css, '.sheet__grip')).not.toHaveProperty('display')
   })
 
-  it('is hidden in the same 768 px media block that turns the sheet into a dialog', () => {
-    const start = css.search(/@media\s*\(min-width:\s*768px\)/)
+  it('is hidden in the same 768 px (48em) media block that turns the sheet into a dialog', () => {
+    const start = css.search(/@media\s*\(min-width:\s*48em\)/)
     expect(start).toBeGreaterThan(-1)
     const block = css.slice(start, css.indexOf('@media', start + 10) === -1 ? undefined : css.indexOf('@media', start + 10))
     expect(block).toMatch(/\.sheet\s*\{/)
@@ -19,7 +19,7 @@ describe('sheet handle (G-02)', () => {
   })
 
   it('the dialog panel loses the handle gap too (padding-top equals the sheet padding, not 8 px + 12 px margin)', () => {
-    const start = css.search(/@media\s*\(min-width:\s*768px\)/)
+    const start = css.search(/@media\s*\(min-width:\s*48em\)/)
     expect(css.slice(start)).toMatch(/\.sheet__panel\s*\{[^}]*padding-block-start:\s*var\(--space-5\)/)
   })
 })
