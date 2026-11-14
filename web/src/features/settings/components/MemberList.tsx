@@ -1,4 +1,4 @@
-import { Button, EmptyState, ListGroup, ListRow, Muted } from '../../../ui'
+import { Button, EmptyState, ListGroup, ListRow } from '../../../ui'
 import { settingsStrings } from '../strings'
 import type { Member } from '../types'
 import { MemberAvatar } from './MemberAvatar'
@@ -37,7 +37,7 @@ export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEd
               title={m.name}
               meta={[linked, m.email].filter(Boolean).join(' · ') || undefined}
               leading={<MemberAvatar name={m.name} colour={m.colour} avatar={m.avatar} photo={m.photo} size="sm" />}
-              trailing={<Muted as="span">{text.portionFactor(m.portionFactor)}</Muted>}
+              trailing={<span className="settings__portion-factor">{text.portionFactor(m.portionFactor)}</span>}
               onActivate={canEdit ? () => onEdit(m) : undefined}
             />
           )

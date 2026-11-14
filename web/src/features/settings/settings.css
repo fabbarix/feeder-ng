@@ -275,3 +275,11 @@
 .meal-slot-summary__pinned {
   font-weight: var(--text-label-weight);
 }
+
+/* DS-07: a Member's Portion Factor ("×1") is a value read as data: body size in the muted colour, not the 13 px Muted hint line. */
+.settings__portion-factor {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: var(--text-body-weight);
+  color: var(--color-muted);
+}

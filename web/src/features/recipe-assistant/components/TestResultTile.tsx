@@ -38,7 +38,7 @@ export function TestResultTile({ running, result, errorMessage }: TestResultTile
           {result.ok ? (
             <p className="ra__line">
               <strong>{result.model ? `Connected to ${result.model.name}` : 'Connected'}</strong>
-              <Muted as="span">{seconds(result.latencyMs)}</Muted>
+              <span className="ra__latency">{seconds(result.latencyMs)}</span>
             </p>
           ) : null}
         </>
