@@ -1,18 +1,17 @@
 // b8-hint (docs/dev/design/b8-hint.md): the shop-hints scenario measures the worst Shop hint on every day, not the hint of the
 // day the guard runs ("Sat Breakfast +2" failed on a Saturday and passed on the Friday before with "Fri Dinner +2").
 import { describe, expect, it } from 'vitest'
+import { driverSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 
 interface Scenario { name: string; route: string; setup?: string; widths?: number[] }
 const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as { SCENARIOS: Scenario[]; ALWAYS_FAIL: string[] }
-const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+const driver = driverSource()
 const setup = driver.slice(driver.indexOf('async shopHints()'), driver.indexOf('scanScannedList:'))
 
 describe('shop-hints pins the hint to the worst case', () => {

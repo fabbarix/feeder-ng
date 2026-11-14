@@ -12,17 +12,17 @@
 //       there) that are more than 2 h 15 min past once it is in confirmZone. At least 2, for every nowMs.
 //   page-layout-seed.mjs imports pickZones, creates Breakfast, Lunch and Dinner every day, and plans exactly those targets.
 import { describe, expect, it } from 'vitest'
+import { seedSource } from './pageLayoutSources'
 
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
 const nodeFs = 'node:fs'
-const { readFileSync, existsSync } = (await import(/* @vite-ignore */ nodeFs)) as {
-  readFileSync: (p: string, enc: string) => string
+const { existsSync } = (await import(/* @vite-ignore */ nodeFs)) as {
   existsSync: (p: string) => boolean
 }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const zonesPath = resolve(cwd, '../scripts/test/fixtures/page-layout-seed-zones.mjs')
-const seed = readFileSync(resolve(cwd, '../scripts/test/fixtures/page-layout-seed.mjs'), 'utf8')
+const seed = seedSource()
 
 type Picked = { planZone: string; confirmZone: string; targets: { date: string; time: string }[] }
 // Loaded like the other script tests (pageLayoutRules.ds.test.ts): vitest cannot import a file outside web/ by absolute path.

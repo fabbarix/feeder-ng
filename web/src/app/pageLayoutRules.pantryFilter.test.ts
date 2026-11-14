@@ -2,6 +2,7 @@
 // its Filters panel open, at every width, and walks it through phone widths (docs/design/pantry-filter.md 10). The probes P17 to P20
 // read the shared filter-header classes, so they see both headers. In a browser: scripts/check-page-layout.sh on the real build.
 import { describe, expect, it } from 'vitest'
+import { driverSource, seedSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
@@ -22,8 +23,8 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   RESIZE_WALKS?: { scenario: string; from: number; to: number; step: number }[]
   resolveScenario: (s: Scenario, ids: Record<string, unknown>) => string
 }
-const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
-const seed = readFileSync(resolve(cwd, '../scripts/test/fixtures/page-layout-seed.mjs'), 'utf8')
+const driver = driverSource()
+const seed = seedSource()
 const maxPlaceName = Number(/const maxPlaceName = (\d+)/.exec(readFileSync(resolve(cwd, '../internal/stock/store/storage.go'), 'utf8'))?.[1])
 
 describe('SCENARIOS: the filtered /pantry, closed and with the panel open', () => {

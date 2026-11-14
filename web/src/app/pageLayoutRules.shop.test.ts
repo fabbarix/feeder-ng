@@ -2,20 +2,19 @@
 // profile, DS-A) with long Line names and a Line that includes Planned Meals not marked Cooked yet. After the redesign no Line name
 // breaks mid-word (P11) and no row sits under the floating bottom bar at the end of the scroll (P12).
 import { describe, expect, it } from 'vitest'
+import { seedSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
   ROUTES: [string, string][]
   PROFILES: Record<'quick' | 'full', { width: number; height: number; mobile: boolean }[]>
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
 }
-const seed = readFileSync(resolve(cwd, '../scripts/test/fixtures/page-layout-seed.mjs'), 'utf8')
+const seed = seedSource()
 
 const base = (vw: number) => ({
   vw, scrollW: vw, clientW: vw, over: [], content: { x: 24, r: vw - 24 }, railR: 0, container: { x: 24, r: vw - 24 },

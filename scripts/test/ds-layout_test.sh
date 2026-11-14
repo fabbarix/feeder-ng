@@ -69,7 +69,7 @@ M="$(title_of metric-strip.html)"
 
 # --- P12: the driver's nav probe --------------------------------------------------------------------------------------
 [ -f "$ROOT/scripts/lib/page-layout-nav-probe.js" ] && ok || bad "scripts/lib/page-layout-nav-probe.js (the P12 probe, defining feederNavProbe) is missing"
-grep -q 'page-layout-nav-probe.js' "$ROOT/scripts/check-page-layout.mjs" && ok || bad "check-page-layout.mjs must evaluate scripts/lib/page-layout-nav-probe.js (one probe, tested here)"
+cat "$ROOT/scripts/check-page-layout.mjs" $(find "$ROOT/scripts/lib/page-layout" -type f 2>/dev/null | sort) 2>/dev/null | grep -q 'page-layout-nav-probe.js' && ok || bad "check-page-layout.mjs must evaluate scripts/lib/page-layout-nav-probe.js (one probe, tested here)"
 P="$(title_of p12-covered.html)"
 [ "$(q "$P" "Array.isArray(o) && o.some((f) => /^button\.last/.test(f.sel) && f.px > 0)")" = true ] && ok || bad "a button entirely under the bottom bar must be a P12 finding (probe said: $P)"
 P="$(title_of p12-partial.html)"

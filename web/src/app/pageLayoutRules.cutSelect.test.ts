@@ -3,13 +3,12 @@
 // so a cut value is a finding that fails in every mode; the guard reads it on every probe and on each width of the phone walk.
 // In a browser: scripts/test/page-layout-recipes-header_test.sh (sort-cut.html is cut at 390 px; fixed.html is clean).
 import { describe, expect, it } from 'vitest'
+import { driverSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 
 type Finding = { rule: string; message: string }
@@ -18,7 +17,7 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => Finding[]
   resizeWalkFindings: (errors: unknown[], ctx: { width: number; route: string }, cutSelects?: unknown[]) => Finding[]
 }
-const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+const driver = driverSource()
 
 const base = (vw: number) => ({
   vw, scrollW: vw, clientW: vw, over: [], content: { x: 16, r: vw - 16 }, railR: 0, container: { x: 16, r: vw - 16 },

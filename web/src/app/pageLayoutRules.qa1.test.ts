@@ -3,13 +3,12 @@
 //   P11 text clipped by its box, or a word broken mid-word (the Board clock: "13:06" at the tile edge, "Novembe" / "r").
 // The driver's probe (scripts/check-page-layout.mjs) fills `lowContrastButtons` and `brokenText`; these are the pure rules.
 import { describe, expect, it } from 'vitest'
+import { driverSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
@@ -53,7 +52,7 @@ describe('P11: clipped text and mid-word breaks', () => {
 
 describe('the driver probes them', () => {
   it('check-page-layout.mjs reports lowContrastButtons and brokenText', () => {
-    const src = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+    const src = driverSource()
     expect(src).toContain('lowContrastButtons')
     expect(src).toContain('brokenText')
   })

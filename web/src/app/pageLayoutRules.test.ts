@@ -1,5 +1,6 @@
 // R2-L: the pure rules of the page-layout guard (scripts/lib/page-layout-rules.mjs): P1..P9, modes, profiles, the route contract.
 import { describe, expect, it } from 'vitest'
+import { driverSource } from './pageLayoutSources'
 import { pageWidthFor } from './pageWidths'
 
 const nodeModule = 'node:module'
@@ -156,7 +157,7 @@ describe('the guard script and rules carry no label exemption', () => {
   it('reads data-size-intent in the browser and does not match labels against /barcode/', async () => {
     const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
     const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
-    const script = readFileSync(`${cwd}/../scripts/check-page-layout.mjs`, 'utf8')
+    const script = driverSource()
     expect(script).toContain('data-size-intent')
     expect(script).toContain('[data-size-intent="inline"]')
     expect(script).toContain("matches('.sticky-action-bar')") // the bar spans the container: it is not page content (P3)

@@ -3,6 +3,7 @@
 //   - the seed uses realistic long names and a "not marked Cooked yet" hint, so mid-word breaks and overflow surface;
 //   - P12: at the end of a scroll, no content box of <main> is under the floating bottom bar.
 import { describe, expect, it } from 'vitest'
+import { driverSource, seedSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
@@ -15,8 +16,8 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   PROFILES: Record<'quick' | 'full', { width: number; height: number; mobile: boolean }[]>
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
 }
-const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
-const seed = readFileSync(resolve(cwd, '../scripts/test/fixtures/page-layout-seed.mjs'), 'utf8')
+const driver = driverSource()
+const seed = seedSource()
 
 const base = (vw: number) => ({
   vw, scrollW: vw, clientW: vw, over: [], content: { x: 24, r: vw - 24 }, railR: 0, container: { x: 24, r: vw - 24 },

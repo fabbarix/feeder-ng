@@ -2,13 +2,12 @@
 // The probe fills `lowContrastButtons` (light, unchanged) and `lowContrastButtonsDark` (same probe after the driver emulates
 // prefers-color-scheme: dark); the rule names the scheme in the finding. Pure rule here; the driver is checked as source.
 import { describe, expect, it } from 'vitest'
+import { driverSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
@@ -44,7 +43,7 @@ describe('P10 in the dark scheme', () => {
 })
 
 describe('the page-layout driver probes both schemes', () => {
-  const src = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+  const src = driverSource()
   it('emulates prefers-color-scheme (dark) and fills lowContrastButtonsDark', () => {
     expect(src).toContain('lowContrastButtonsDark')
     expect(src).toMatch(/Emulation\.setEmulatedMedia/)
@@ -58,7 +57,7 @@ describe('the page-layout driver probes both schemes', () => {
 // Review fix: ThemeProvider reads the system scheme once at render and then writes data-scheme, so emulating dark after the load
 // changes nothing. The driver has to reload under the emulation, wait for the page, and prove the page really is dark.
 describe('the dark pass really renders dark', () => {
-  const src = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+  const src = driverSource()
   const after = src.slice(src.indexOf("value: 'dark'"))
   it('reloads or re-navigates after the dark emulation, then settles, before the dark probe', () => {
     expect(src).toContain("value: 'dark'")
@@ -85,7 +84,7 @@ describe('the dark pass really renders dark', () => {
 
 // Review fix 2: the dark pass is isolated, so a dark environment problem never hides or repeats the light findings.
 describe('the dark pass is isolated from the light findings', () => {
-  const src = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+  const src = driverSource()
   const loop = src.slice(src.indexOf('const started = Date.now()'))
   const dark = loop.indexOf("value: 'dark'")
   const evalAt = loop.indexOf('evaluateMetrics(')
