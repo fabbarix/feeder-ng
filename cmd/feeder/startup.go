@@ -23,7 +23,8 @@ type preSnapshot struct {
 }
 
 // preSnapshots is the ordered table run before any migration (docs/dev/design/crs-plan.md §1.3,
-// docs/dev/design/b5-snap.md, docs/dev/design/b6-snap.md, docs/dev/design/b7-snap.md). 1400 first, then 1500, then 1540, then 1550.
+// docs/dev/design/b5-snap.md, docs/dev/design/b6-snap.md, docs/dev/design/b7-snap.md,
+// docs/dev/design/b8-snap.md). 1400 first, then 1500, then 1540, then 1550, then 1560.
 var preSnapshots = []preSnapshot{
 	{
 		file:      backup.PreSnapshotFile,
@@ -56,6 +57,14 @@ var preSnapshots = []preSnapshot{
 			return db.NeedsSnapshotFor(ctx, d, fsys, db.Pre1550Prefixes)
 		},
 	},
+	{
+		file:      backup.PreSnapshot1560File,
+		migration: "1560",
+		keep:      true,
+		need: func(ctx context.Context, d *sql.DB, fsys fs.FS) (bool, error) {
+			return db.NeedsSnapshotFor(ctx, d, fsys, db.Pre1560Prefixes)
+		},
+	},
 }
 
 // prepareDatabase is what run calls between db.Open and the app: for each pre-migration snapshot that is due
@@ -67,7 +76,7 @@ func prepareDatabase(ctx context.Context, d *sql.DB, dataDir string, logger *slo
 }
 
 // prepareDatabaseWith is prepareDatabase over the migration set fsys (tests pass synthetic migration files).
-// A 1500 or 1540 snapshot that already exists is never replaced (keep): it is the true database from before its migrations.
+// A 1500, 1540, 1550 or 1560 snapshot that already exists is never replaced (keep): it is the true database from before its migrations.
 // The 1400 one is taken again while 1400 is pending.
 func prepareDatabaseWith(ctx context.Context, d *sql.DB, dataDir string, logger *slog.Logger, fsys fs.FS) error {
 	dir := filepath.Join(dataDir, backup.DirName)
