@@ -68,6 +68,7 @@ Feature: The Scanned list (scan redesign, SR6)
     When I price the list scans "c1" at 129 cents
     Then the list response status is 200
     And the list Price of "Mutti passata 700 g" at "Coop" is 129 cents
+    And the list has no Price of "Mutti passata 700 g" at "Esselunga"
     And the list spent is 129 cents
 
   Scenario: An offline queue replays into the same rows and twice changes nothing

@@ -112,9 +112,11 @@ func receiptFlowSteps(sc *godog.ScenarioContext, w *World) {
 	sc.Step(`^the latest Price of "([^"]*)" at "([^"]*)" is (\d+) cents$`, func(product, shop string, cents int) error {
 		s := st()
 		r := user().Get("/api/products/" + strconv.FormatInt(s.products[product], 10) + "/prices/latest?shop=" + strconv.FormatInt(s.shops[shop], 10))
+		// prices/latest?shop= falls back to another Shop's Price when this Shop has none, so the Shop is checked too.
 		got, err := ssPath(r.Body, "priceCents")
-		if err != nil || ssNum(got) != float64(cents) {
-			return fmt.Errorf("latest Price = %s, want %d", r.Body, cents)
+		at, _ := ssPath(r.Body, "shopId")
+		if err != nil || ssNum(got) != float64(cents) || ssNum(at) != float64(s.shops[shop]) {
+			return fmt.Errorf("latest Price = %s, want %d at %s", r.Body, cents, shop)
 		}
 		return nil
 	})

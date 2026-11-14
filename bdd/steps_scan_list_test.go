@@ -121,27 +121,29 @@ func scanListSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
-	latest := func(prod, shop string) (map[string]any, error) {
+	// latest is the Product's latest Price at the Shop. GET .../prices/latest?shop= falls back to the latest at any Shop
+	// when the Shop has none (prices.feature), so a Price only counts as this Shop's when its shopId is the Shop.
+	latest := func(prod, shop string) (map[string]any, int64, error) {
 		pid, err := find("product", prod)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		sid, err := find("shop", shop)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		var p map[string]any
 		r := me().Get(fmt.Sprintf("/api/products/%d/prices/latest?shop=%d", pid, sid))
 		_ = r.JSON(&p)
-		return p, nil
+		return p, sid, nil
 	}
 	sc.Step(`^the list Price of "([^"]*)" at "([^"]*)" is (\d+) cents(?: and (\d+) cents per kg)?$`, func(prod, shop string, cents int, perKg string) error {
-		p, err := latest(prod, shop)
+		p, sid, err := latest(prod, shop)
 		if err != nil {
 			return err
 		}
-		if ssNum(p["priceCents"]) != float64(cents) {
-			return fmt.Errorf("latest Price = %v, want %d", p, cents)
+		if ssNum(p["shopId"]) != float64(sid) || ssNum(p["priceCents"]) != float64(cents) {
+			return fmt.Errorf("latest Price = %v, want %d at Shop %d", p, cents, sid)
 		}
 		if perKg != "" {
 			n, _ := strconv.Atoi(perKg)
@@ -151,13 +153,20 @@ func scanListSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	// No Price at this Shop, whatever other Shops have: the Shop's own Price list is empty.
 	sc.Step(`^the list has no Price of "([^"]*)" at "([^"]*)"$`, func(prod, shop string) error {
-		p, err := latest(prod, shop)
+		pid, err := find("product", prod)
 		if err != nil {
 			return err
 		}
-		if p["priceCents"] != nil {
-			return fmt.Errorf("latest Price = %v, want none", p)
+		sid, err := find("shop", shop)
+		if err != nil {
+			return err
+		}
+		var list []map[string]any
+		r := me().Get(fmt.Sprintf("/api/products/%d/prices?shop=%d", pid, sid))
+		if r.Status != 200 || r.JSON(&list) != nil || len(list) != 0 {
+			return fmt.Errorf("Prices at Shop %d = %d %s, want none", sid, r.Status, r.Body)
 		}
 		return nil
 	})
