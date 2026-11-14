@@ -646,7 +646,9 @@ const cutMetaProbe = `
     const range = document.createRange()
     range.selectNodeContents(t)
     const cut = Math.max(t.scrollWidth - t.clientWidth, range.getBoundingClientRect().width - box.width)
-    if (cut > 0.5) out.push({ sel: 'span.list-row__meta-text', label: t.textContent.trim(), shown: Math.round(box.width), px: Math.round(cut) })
+    // the painted text only: a compact Restock reason carries its full text in a .visually-hidden span (b8-polish)
+    const label = [...t.childNodes].filter((n) => !(n.classList && n.classList.contains('visually-hidden'))).map((n) => n.textContent).join('').trim()
+    if (cut > 0.5) out.push({ sel: 'span.list-row__meta-text', label, shown: Math.round(box.width), px: Math.round(cut) })
   }
   return out
 })()`

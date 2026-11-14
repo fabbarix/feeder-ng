@@ -253,8 +253,9 @@ export function evaluateMetrics(m, { width, kind }) {
   // is sized by its value, so a cut value means its row has no room for it ("G…", then "Good u…", passed every other rule: P16 reads
   // only .chip labels).
   for (const c of m.cutSelects ?? []) add('P22', `${c.sel} "${c.label}" shows ${c.shown} px and cuts ${c.px} px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it`)
-  // b8-shop (P23, always fails): a food Line's one-line Meal Slot hint ("Tue Dinner +1") is cut by its ellipsis.
-  for (const c of m.cutMeta ?? []) add('P23', `${c.sel} "${c.label}" shows ${c.shown} px and cuts ${c.px} px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, so it fits its row: give the row room (--row-value-min) or shorten the hint`)
+  // b8-shop (P23, always fails): a Shop row's one-line info meta is cut by its ellipsis: a food Line's Meal Slot hint ("Tue Dinner +1")
+  // or, since b8-polish, a Supply Line's Restock reason ("400/1000 ml" below 420 px).
+  for (const c of m.cutMeta ?? []) add('P23', `${c.sel} "${c.label}" shows ${c.shown} px and cuts ${c.px} px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact ("400/1000 ml") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint`)
   // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
   // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.
   for (const o of m.actionLayout ?? []) {

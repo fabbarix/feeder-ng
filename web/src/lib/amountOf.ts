@@ -1,5 +1,5 @@
 // "x of y" amounts in one Base Unit, shared by the Shop screen's Restock reason ("2 of 6") and the Scanned row's Line cover
-// ("250 of 375 g"). Each feature joins the two texts with its own copy. Plain TypeScript, no React.
+// ("250 of 375 g"). amountOfText joins them, "x of y" or the compact "x/y" (b8-polish). Plain TypeScript, no React.
 import { formatQuantity, type BaseUnit, type UnitSystem } from './units'
 
 /** Float dust: an amount this close to 0 reads 0 (the server's own tolerance). */
