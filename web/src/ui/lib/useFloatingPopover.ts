@@ -55,7 +55,11 @@ export function useFloatingPopover(
 
   useEffect(() => {
     if (!open) return
-    const onMove = () => place(anchor.current, popover.current, placement)
+    // A scroll inside the popover (its own body or list) does not move the trigger: placing again would only reset it.
+    const onMove = (e?: Event) => {
+      if (e?.type === 'scroll' && e.target instanceof Node && popover.current?.contains(e.target)) return
+      place(anchor.current, popover.current, placement)
+    }
     window.addEventListener('scroll', onMove, { capture: true, passive: true })
     window.addEventListener('resize', onMove)
     return () => {
@@ -82,7 +86,9 @@ type PlaceOptions = { align?: 'start' | 'end'; margin?: number }
 
 function place(anchorEl: HTMLElement | null, el: HTMLElement | null, options: PlaceOptions): void {
   if (!anchorEl || !el) return
-  // Measure at natural height: a previous cap must not shrink the measurement.
+  // Measure at natural height: a previous cap must not shrink the measurement. Un-capping clamps a scrolled body inside the
+  // popover (the Filters panel) back to its top, so its scroll position is put back once the cap is set again.
+  const scrolled = scrolledWithin(el)
   el.style.maxHeight = ''
   const a = anchorEl.getBoundingClientRect()
   const p = el.getBoundingClientRect()
@@ -97,4 +103,12 @@ function place(anchorEl: HTMLElement | null, el: HTMLElement | null, options: Pl
   el.style.left = `${placed.left}px`
   el.style.maxHeight = `${placed.maxHeight}px`
   el.dataset.placement = placed.placement
+  for (const [node, top] of scrolled) node.scrollTop = top
+}
+
+/** The element and its descendants that are scrolled down, with their scroll position. */
+function scrolledWithin(el: HTMLElement): [Element, number][] {
+  const out: [Element, number][] = []
+  for (const node of [el, ...el.querySelectorAll('*')]) if (node.scrollTop > 0) out.push([node, node.scrollTop])
+  return out
 }

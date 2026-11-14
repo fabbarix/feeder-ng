@@ -104,7 +104,8 @@ describe('Used up', () => {
     const sheet = await openSheet()
     expect(within(sheet).getByRole('heading', { name: 'Used up' })).toBeInTheDocument()
     const field = within(sheet).getByRole('textbox', { name: 'How much was used up' })
-    expect(field).toHaveAccessibleDescription('Leave it as 4 pieces to use up all of it.')
+    // b8 G4: the field shows its Base Unit; the shared TextField puts its suffix first in aria-describedby.
+    expect(field).toHaveAccessibleDescription('piece Leave it as 4 pieces to use up all of it.')
     expect(within(sheet).getByRole('button', { name: 'Used up' })).toBeInTheDocument()
     expect(sheet.querySelector('select, input[type="number"], input[type="date"], input[type="checkbox"]')).toBeNull()
   })
