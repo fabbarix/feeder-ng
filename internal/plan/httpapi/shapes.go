@@ -71,6 +71,29 @@ type mealOut struct {
 	// B9-12 (PC-14): a Pinned or Bought meal whose cooking would start before the Earliest start carries that start as
 	// "HH:MM" (household zone); omitted otherwise. Slot views only.
 	EarlyStart string `json:"earlyStart,omitempty"`
+	// B9-58 (A2): a Planned Meal still to cook whose cooking starts on an earlier day than the meal carries that start
+	// (household zone); omitted otherwise, and on Cooked, Not cooked and Leftover meals.
+	StartsAt *startsAtOut `json:"startsAt,omitempty"`
+}
+
+// startsAtOut is when cooking of a meal starts, on an earlier day than the meal (A2).
+type startsAtOut struct {
+	Date string `json:"date"`
+	Time string `json:"time"`
+}
+
+// startsAtFor is the start of meal m at the instant at (household zone) when it falls on an earlier day than the meal
+// and the meal is still to cook; nil otherwise. CookMinutes is 0 for a Leftover meal and a Recipe of unknown length.
+func startsAtFor(at time.Time, m *mealOut) *startsAtOut {
+	if m.State != string(plan.StatePlanned) || m.CookMinutes <= 0 {
+		return nil
+	}
+	start := at.Add(-time.Duration(m.CookMinutes) * time.Minute)
+	y, mo, d := at.Date()
+	if !start.Before(time.Date(y, mo, d, 0, 0, 0, 0, at.Location())) {
+		return nil
+	}
+	return &startsAtOut{Date: start.Format("2006-01-02"), Time: start.Format("15:04")}
 }
 
 // boughtOut lists the Ingredients a purchase was bought for the meal, by name.
@@ -184,6 +207,7 @@ func listEntryFor(e runner.ListEntry, t table) listEntryOut {
 	if e.Meal != nil {
 		out.Meal = mealFor(*e.Meal, t)
 		out.Meal.StartBy = plan.StartBy(e.At, out.Meal.CookMinutes)
+		out.Meal.StartsAt = startsAtFor(e.At, out.Meal)
 	}
 	if e.Unfilled != nil {
 		out.Unfilled = unfilledFor(*e.Unfilled)
@@ -369,6 +393,7 @@ func courseFor(c runner.CourseView, at time.Time, t table) courseOut {
 		out.Meal.StartBy = plan.StartBy(at, out.Meal.CookMinutes)
 		out.Meal.Warning = warningFor(c.Warning)
 		out.Meal.EarlyStart = c.EarlyStart
+		out.Meal.StartsAt = startsAtFor(at, out.Meal)
 		out.Meal.Resolution = resolutionFor(c.Resolution)
 	}
 	if c.Unfilled != nil {
