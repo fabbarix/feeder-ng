@@ -313,10 +313,10 @@ func NeedsPre1560Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
 	return NeedsSnapshotFor(ctx, d, Migrations(), Pre1560Prefixes)
 }
 
-// Pre1570Prefixes are the file-name prefixes of the beta.9 migrations 1570 to 1577 (docs/dev/design/b9-snap.md).
-// Pending, any of them triggers the snapshot feeder-pre-1570.db. All eight are listed now (plan section 7), so the
-// packages that add 1572 to 1577 add only their migration file.
-var Pre1570Prefixes = []string{"1570_", "1571_", "1572_", "1573_", "1574_", "1575_", "1576_", "1577_"}
+// Pre1570Prefixes are the file-name prefixes of the beta.9 migrations 1570 to 1578 (docs/dev/design/b9-snap.md).
+// Pending, any of them triggers the snapshot feeder-pre-1570.db. All nine are listed (plan section 7; 1578 is B9-58,
+// added after the plan), so the packages that add 1572 to 1578 add only their migration file.
+var Pre1570Prefixes = []string{"1570_", "1571_", "1572_", "1573_", "1574_", "1575_", "1576_", "1577_", "1578_"}
 
 // NeedsPre1570Snapshot is NeedsSnapshotFor over the embedded migrations and Pre1570Prefixes.
 func NeedsPre1570Snapshot(ctx context.Context, d *sql.DB) (bool, error) {

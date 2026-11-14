@@ -38,8 +38,8 @@ type Settings struct {
 	Currency        string
 	// EarliestStart is the earliest "HH:MM" the planner may ask someone to start cooking; "" is Off (PC-14, B9-12).
 	EarliestStart string
-	// LatestStart is the latest "HH:MM" a Recipe may be started; "" is Off (A2, B9-58). Test stub: the developer
-	// gives it the default "22:00", normalises it and validates it (must be after Earliest start when both are set).
+	// LatestStart is the latest "HH:MM" the planner may ask someone to start cooking, on the day of the meal or an
+	// earlier one; "" is Off (A2, B9-58). When both are set it is later than EarliestStart.
 	LatestStart string
 	// SetupHidden hides the first-run checklist on Today until it is shown again (TB-06, B9-12).
 	SetupHidden bool
@@ -57,15 +57,17 @@ func DefaultSettings(timeZone string) Settings {
 		PlannerStyle:             0.5,
 		Currency:                 "USD",
 		EarliestStart:            "06:30",
+		LatestStart:              "22:00",
 	}
 }
 
-// Normalized trims the city and the Earliest start, and upper-cases and trims the currency. It returns a copy.
+// Normalized trims the city, the Earliest start and the Latest start, and upper-cases and trims the currency. It returns a copy.
 func (s Settings) Normalized() Settings {
 	n := s
 	n.TimeZone = strings.TrimSpace(s.TimeZone)
 	n.Currency = strings.ToUpper(strings.TrimSpace(s.Currency))
 	n.EarliestStart = strings.TrimSpace(s.EarliestStart)
+	n.LatestStart = strings.TrimSpace(s.LatestStart)
 	if s.Location != nil {
 		n.Location = &Location{City: strings.TrimSpace(s.Location.City), Latitude: s.Location.Latitude, Longitude: s.Location.Longitude}
 	}
@@ -100,6 +102,12 @@ func (s Settings) Validate() error {
 	}
 	if s.EarliestStart != "" && !validTimeOfDay(s.EarliestStart) {
 		return fieldError("earliestStart", "must be an HH:MM time, or Off")
+	}
+	if s.LatestStart != "" && !validTimeOfDay(s.LatestStart) {
+		return fieldError("latestStart", "must be an HH:MM time, or Off")
+	}
+	if s.EarliestStart != "" && s.LatestStart != "" && minutesOf(s.LatestStart) <= minutesOf(s.EarliestStart) {
+		return fieldError("latestStart", "must be later than the Earliest start")
 	}
 	if !currencyISO.MatchString(s.Currency) {
 		return fieldError("currency", "must be a three-letter code such as EUR")
