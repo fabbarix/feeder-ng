@@ -84,7 +84,7 @@ describe('the review', () => {
 describe('apply: success', () => {
   it('posts the body with the current session uuids, then hands the results over', async () => {
     const results = [scanResult('receipt:rd-1:0')]
-    api.apply.mockResolvedValue({ ok: true, applied: 6, results })
+    api.apply.mockResolvedValue({ ok: true, applied: 6, results, undone: [] })
     publishReceiptSession({ shopId: SHOP_ID, clientUuids: [...UUIDS, 'u8'] })
     const { result, onApplied } = setup()
     act(() => result.current.setAdd('add:0', completeDraft))
@@ -97,18 +97,18 @@ describe('apply: success', () => {
       accept: [{ id: 'price:0' }, { id: 'price:1' }, { id: 'price:2' }, { id: 'weight:3' }, { id: 'quantity:4' }, { id: 'add:0' }],
       adds: [{ id: 'add:0', ingredient: { id: 31 }, productName: 'Pane casereccio', packSize: 450 }],
     })
-    expect(takePendingReceiptApplied()).toEqual({ readId: READ_ID, applied: 6, failed: false, results })
+    expect(takePendingReceiptApplied()).toEqual({ readId: READ_ID, applied: 6, failed: false, results, undone: [] })
     expect(onApplied).toHaveBeenCalledWith(6)
     expect(recallRead()).toBeUndefined()
   })
   it('uses the read\'s own uuids when no session was published', async () => {
-    api.apply.mockResolvedValue({ ok: true, applied: 5, results: [] })
+    api.apply.mockResolvedValue({ ok: true, applied: 5, results: [], undone: [] })
     const { result } = setup()
     await act(async () => { await result.current.apply() })
     expect(api.apply.mock.calls[0]?.[0].clientUuids).toEqual(UUIDS)
   })
   it('says the SERVER\'s count (a repeated id is one proposal)', async () => {
-    api.apply.mockResolvedValue({ ok: true, applied: 4, results: [] })
+    api.apply.mockResolvedValue({ ok: true, applied: 4, results: [], undone: [] })
     const { result, onApplied } = setup()
     await act(async () => { await result.current.apply() })
     expect(onApplied).toHaveBeenCalledWith(4)
@@ -122,7 +122,7 @@ describe('apply: success', () => {
     expect(result.current.applying).toBe(true)
     await act(async () => { await result.current.apply() })
     expect(api.apply).toHaveBeenCalledTimes(1)
-    await act(async () => { release({ ok: true, applied: 5, results: [] }); await p })
+    await act(async () => { release({ ok: true, applied: 5, results: [], undone: [] }); await p })
     expect(result.current.applying).toBe(false)
   })
   it('does not post with nothing checked', async () => {
@@ -179,7 +179,7 @@ describe('apply: refusals (design 7.2, 9)', () => {
     const { result } = await run(refused(0, 'network'))
     expect(result.current.error).toMatchObject({ code: 'network', action: 'retry' })
     expect(result.current.applyCount).toBe(5)
-    api.apply.mockResolvedValue({ ok: true, applied: 5, results: [] })
+    api.apply.mockResolvedValue({ ok: true, applied: 5, results: [], undone: [] })
     await act(async () => { await result.current.apply() })
     expect(api.apply).toHaveBeenCalledTimes(2)
     expect(result.current.error).toBeUndefined()
@@ -191,7 +191,7 @@ describe('apply: refusals (design 7.2, 9)', () => {
   })
   it('starting an apply again clears the old error', async () => {
     const { result } = await run(refused(409, 'receipt_session_changed'))
-    api.apply.mockResolvedValue({ ok: true, applied: 5, results: [] })
+    api.apply.mockResolvedValue({ ok: true, applied: 5, results: [], undone: [] })
     await act(async () => { await result.current.apply() })
     expect(result.current.error).toBeUndefined()
   })

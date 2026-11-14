@@ -1,7 +1,7 @@
 // SR4: the Split Scan screen (shop-scan-proposals.md 13.2 to 13.6): camera strip over the Scanned list, the Segmented
 // "Scanned N · To get N", the total and "+N without a Price", the Price entry sheet, the Remove confirm, Change Shop.
 // The controller is a fake (screens/scanScreen.testKit.tsx); the integration tests are in ScanScreen.integration.test.tsx.
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -19,6 +19,11 @@ vi.mock('../../shops/hooks/useShops', () => ({
 const lastShop = vi.hoisted(() => ({ getLastShopId: vi.fn((): number | null => 2), setLastShopId: vi.fn(), LAST_SHOP_KEY: 'x' }))
 vi.mock('../lib/lastShop', () => lastShop)
 const near = vi.hoisted(() => ({ useNearestShop: vi.fn() }))
+// Receipt reading: the Recipe Assistant is on and reads photos, so the Scanned list ends with "Read the receipt".
+const assistant = vi.hoisted(() => ({ photos: true, isAdmin: false }))
+vi.mock('../../import/hooks/useReadAvailability', () => ({
+  useReadAvailability: () => ({ loading: false, enabled: assistant.photos, isAdmin: assistant.isAdmin, photos: assistant.photos, settingsLink: false, statusFailed: false, retry: () => {} }),
+}))
 vi.mock('../../shops/hooks/useNearestShop', () => near)
 
 import { ScanScreen } from './ScanScreen'
@@ -42,6 +47,8 @@ beforeEach(() => {
   lastShop.getLastShopId.mockReturnValue(2)
   near.useNearestShop.mockReturnValue({ nearest: null, status: 'idle', position: null, failure: null, anyLocated: true, locate: vi.fn() })
   localStorage.clear()
+  assistant.photos = true
+  assistant.isAdmin = false
 })
 
 describe('Split layout', () => {
@@ -124,8 +131,54 @@ describe('Split layout', () => {
     expect(screen.getByRole('radio', { name: 'Scanned 3' })).toBeChecked()
   })
 
-  it('passes the Scanned list no footer: "Read the receipt" belongs to a later work package', () => {
+  // Changed for the receipt integration (beta.7): the footer slot now holds "Read the receipt" (was: no footer yet).
+  it('ends the Scanned list with "Read the receipt" after the rows, and publishes the session\'s applied uuids', async () => {
     open()
+    const row = screen.getByRole('button', { name: /Read the receipt/ })
+    expect(scannedList().compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(scannedList()).queryByText('Read the receipt')).toBeNull()
+    const { getReceiptSession } = await import('../../receipt/lib/receiptSession')
+    expect(getReceiptSession()).toEqual({ shopId: 2, clientUuids: ['u-1', 'u-2', 'u-3', 'u-4'] })
+  })
+
+  it('"Read the receipt" waits for queued scans, and needs a connection', () => {
+    const { unmount } = open(controllerFake({ scanned: scannedFake(sessionEntries()), pendingCount: 2 }))
+    expect(screen.getByText('Waiting for 2 Scans to sync first')).toBeInTheDocument()
+    unmount()
+    open(controllerFake({ scanned: scannedFake(sessionEntries()), online: false }))
+    expect(screen.getByText('Reading the receipt needs a connection')).toBeInTheDocument()
+  })
+
+  it('no "Read the receipt" without scans, or for a User when the assistant cannot read photos; an Admin sees the way to turn it on', () => {
+    const { unmount } = open(controllerFake({ scanned: scannedFake([]) }))
+    expect(screen.queryByText('Read the receipt')).toBeNull()
+    unmount()
+    assistant.photos = false
+    const second = open()
+    expect(screen.queryByText('Read the receipt')).toBeNull()
+    second.unmount()
+    assistant.isAdmin = true
+    open()
+    expect(screen.getByText('Read the receipt')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Turn on the Recipe Assistant in Settings' })).toHaveAttribute('href', '/settings/recipe-assistant')
+  })
+
+  it('an apply from the receipt goes into the Scanned session and refreshes the live Shopping List', async () => {
+    const { emitReceiptApplied } = await import('../../receipt/lib/appliedEvents')
+    const { applyReceiptToSession } = await import('../lib/receiptApplied')
+    const scanned = scannedFake(sessionEntries())
+    const refreshLive = vi.fn()
+    open(controllerFake({ scanned, refreshLive }))
+    const event = { readId: 'rd-1', applied: 1, failed: false, results: [], undone: ['u-3'] }
+    act(() => emitReceiptApplied(event))
+    await waitFor(() => expect(scanned.update).toHaveBeenCalledTimes(1))
+    const change = vi.mocked(scanned.update).mock.calls[0]![0]
+    expect(change(sessionEntries())).toEqual(applyReceiptToSession(sessionEntries(), event, { shopId: 2, now: 'x' }))
+    expect(refreshLive).toHaveBeenCalled()
+  })
+
+  it('Stock-take has no "Read the receipt"', () => {
+    open(controllerFake({ scanned: scannedFake(sessionEntries()) }), '/scan?mode=stocktake')
     expect(screen.queryByText('Read the receipt')).toBeNull()
   })
 

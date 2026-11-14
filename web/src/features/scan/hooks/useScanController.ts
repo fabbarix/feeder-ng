@@ -62,6 +62,8 @@ export interface ScanController {
   endSession: () => void
   /** the live Shopping List of the Shop (shop mode); undefined in Stock-take */
   list: ShoppingList | undefined
+  /** asks the live Shopping List and the Stock again (after a receipt apply) */
+  refreshLive?: () => void
   online: boolean
   pendingCount: number
   rejectedCount: number
@@ -248,6 +250,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     scanned,
     endSession: () => scanned.clear(),
     list: mode === 'shop' ? shopList.data : undefined,
+    refreshLive,
     online: sync.online,
     pendingCount: sync.pendingCount,
     rejectedCount: sync.rejectedCount,

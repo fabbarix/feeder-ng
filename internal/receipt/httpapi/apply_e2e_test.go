@@ -14,7 +14,8 @@ import (
 )
 
 type applyResult struct {
-	Applied int `json:"applied"`
+	Applied int       `json:"applied"`
+	Undone  *[]string `json:"undone"`
 	Results []struct {
 		ClientUUID string `json:"clientUuid"`
 		Status     string `json:"status"`
@@ -78,6 +79,10 @@ func TestAReadIsAppliedOnceAndItsPricesAreUpdated(t *testing.T) {
 	mustStatus(t, applyRead(t, w.user, applyBody(id, v, uuids, accept)), 200).MustJSON(t, &out)
 	if out.Applied != len(accept) {
 		t.Errorf("applied = %d, want %d", out.Applied, len(accept))
+	}
+	// Prices only: nothing undone, and the list is there, never null.
+	if out.Undone == nil || len(*out.Undone) != 0 {
+		t.Errorf("undone = %v, want []", out.Undone)
 	}
 	priced := map[string]int{}
 	for _, r := range out.Results {

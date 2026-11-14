@@ -90,7 +90,7 @@ export function useReceiptReview({ onApplied }: UseReceiptReviewOptions): UseRec
     applyingRef.current = false
     setApplying(false)
     if (out.ok) {
-      emitReceiptApplied({ readId: stored.readId, applied: out.applied, failed: false, results: out.results })
+      emitReceiptApplied({ readId: stored.readId, applied: out.applied, failed: false, results: out.results, undone: out.undone })
       forgetRead()
       setStored(undefined)
       onApplied(out.applied)

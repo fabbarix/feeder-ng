@@ -1,11 +1,12 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Icon, Page, PageWidthProvider } from '../ui'
 import { withAccessRequests } from './accessMenu'
 import { isChromeless } from './chromeless'
 import { pageWidthFor } from './pageWidths'
 import { PageErrorBoundary } from './PageErrorBoundary'
-import type { NavItem, PrimaryNavItem } from './nav'
+import type { NavItem } from './nav'
 import { MENU_NAV, PRIMARY_NAV, RAIL_NAV, sortByOrder } from './nav'
+import { isCurrentNav } from './navCurrent'
 import { ShellStatus } from './ShellStatus'
 import { shellStrings } from './strings'
 import { YourMenu } from './YourMenu'
@@ -22,21 +23,22 @@ export interface AppShellProps {
   pendingAccessRequests?: number
 }
 
-/** Plan and Settings match their sub-pages too (/plan/..., /settings/...); the other destinations match exactly. */
-const isEndMatch = (item: PrimaryNavItem) => item.id !== 'plan' && item.id !== 'settings'
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
 export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
   const { pathname } = useLocation()
   const pageWidth = pageWidthFor(pathname)
   if (isChromeless(pathname)) {
-    // The kitchen board and Cook Mode: the page alone, no bars, no avatar menu, no status slot.
+    // The kitchen board, Cook Mode and the receipt screens: the page alone, no bars, no avatar menu, no status slot. A screen
+    // that is a ui Page (the receipt ones) still takes its route's width from the table.
     return (
       <div className="app-shell app-shell--chromeless">
         <main className="app-main app-main--full">
-          <PageErrorBoundary resetKey={pathname}>
-            <Outlet />
-          </PageErrorBoundary>
+          <PageWidthProvider value={pageWidth}>
+            <PageErrorBoundary resetKey={pathname}>
+              <Outlet />
+            </PageErrorBoundary>
+          </PageWidthProvider>
         </main>
       </div>
     )
@@ -56,24 +58,23 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
         <ShellStatus pendingScans={pendingScans} />
       </div>
       <nav aria-label={shellStrings.sideRail} className="side-rail">
-        {RAIL_NAV.map((item) => (
-          <NavLink
-            key={item.id}
-            to={item.path}
-            end={isEndMatch(item)}
-            className="side-rail__link"
-            data-accent={item.accent ? 'true' : undefined}
-          >
-            {({ isActive }) => (
-              <>
-                <span className="side-rail__pill">
-                  <Icon name={item.icon} size={24} weight={isActive ? 'fill' : 'regular'} />
-                </span>
-                <span className="side-rail__label">{item.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+        {RAIL_NAV.map((item) => {
+          const isActive = isCurrentNav(item, pathname)
+          return (
+            <Link
+              key={item.id}
+              to={item.path}
+              aria-current={isActive ? 'page' : undefined}
+              className="side-rail__link"
+              data-accent={item.accent ? 'true' : undefined}
+            >
+              <span className="side-rail__pill">
+                <Icon name={item.icon} size={24} weight={isActive ? 'fill' : 'regular'} />
+              </span>
+              <span className="side-rail__label">{item.label}</span>
+            </Link>
+          )
+        })}
       </nav>
       <main className="app-main">
         <PageWidthProvider value={pageWidth}>
@@ -85,26 +86,21 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
         </PageWidthProvider>
       </main>
       <nav aria-label={shellStrings.bottomBar} className="bottom-bar">
-        {PRIMARY_NAV.map((item) => (
-          <NavLink
-            key={item.id}
-            to={item.path}
-            end={isEndMatch(item)}
-            className="bottom-bar__link"
-            data-accent={item.accent ? 'true' : undefined}
-          >
-            {({ isActive }) => (
-              <>
-                <Icon
-                  name={item.icon}
-                  size={item.accent ? 28 : 24}
-                  weight={isActive ? 'fill' : 'regular'}
-                />
-                <span className="bottom-bar__label">{item.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+        {PRIMARY_NAV.map((item) => {
+          const isActive = isCurrentNav(item, pathname)
+          return (
+            <Link
+              key={item.id}
+              to={item.path}
+              aria-current={isActive ? 'page' : undefined}
+              className="bottom-bar__link"
+              data-accent={item.accent ? 'true' : undefined}
+            >
+              <Icon name={item.icon} size={item.accent ? 28 : 24} weight={isActive ? 'fill' : 'regular'} />
+              <span className="bottom-bar__label">{item.label}</span>
+            </Link>
+          )
+        })}
       </nav>
     </div>
   )

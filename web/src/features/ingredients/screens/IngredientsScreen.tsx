@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Button, EmptyState, ListPage, PageHeader, SearchField } from '../../../ui'
+import { Button, EmptyState, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
 import { IngredientList } from '../components/IngredientList'
 import { NewIngredientSheet } from '../components/NewIngredientSheet'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
@@ -27,6 +27,9 @@ export function IngredientsScreen({ kind = 'food' }: { kind?: IngredientKind }) 
   let body
   if (list.error) {
     body = <p role="alert">{strings.actionFailed}</p>
+  } else if (list.isLoading) {
+    // The first load: rows to come, not "no match" (which would flash before the list).
+    body = <Skeleton variant="row" count={5} />
   } else if (list.ingredients.length > 0) {
     body = <IngredientList ingredients={list.ingredients} system={system} label={words.title} onOpen={(id) => navigate(`${kindBasePath(kind)}/${id}`)} />
   } else if (list.isEmpty) {

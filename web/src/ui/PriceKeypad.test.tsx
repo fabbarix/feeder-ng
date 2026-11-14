@@ -541,3 +541,30 @@ describe('PriceKeypad: compact, for a half-height sheet', () => {
     expect(css).not.toMatch(/data-compact='true'\][^{]*__key\s*\{[^}]*(min-height|block-size|height)/)
   })
 })
+
+describe('the host\'s Close (beta.7 polish)', () => {
+  it('ref.close() reports what was typed, as Escape and the Close key do', async () => {
+    const handle = { current: null as { close(): void } | null }
+    const { onClose } = setup({ ref: handle })
+    await tapKeys('1.45')
+    handle.current!.close()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 145, packCents: 145, perKgCents: null })
+  })
+})
+
+describe('the Next label where the keypad is narrow (beta.7 polish)', () => {
+  it('keeps the long accessible name and carries a short label that the CSS shows in a narrow keypad', () => {
+    setup({ hasNext: true })
+    const next = screen.getByRole('button', { name: 'Next without a Price' })
+    expect(next.querySelector('.price-keypad__next-long')).toHaveTextContent('Next without a Price')
+    expect(next.querySelector('.price-keypad__next-short')).toHaveTextContent(/^Next$/)
+  })
+  it('PriceKeypad.css swaps the labels by the keypad\'s own width, and the action buttons never wrap', () => {
+    const css = readUiCss('PriceKeypad.css')
+    expect(declarations(css, '.price-keypad')['container-type']).toBe('inline-size')
+    expect(declarations(css, '.price-keypad__next-short')['display']).toBe('none')
+    expect(css).toMatch(/@container \(max-width: 340px\)\s*{\s*\.price-keypad__next-long\s*{\s*display: none;/)
+    expect(declarations(css, '.price-keypad__actions button')['white-space']).toBe('nowrap')
+  })
+})

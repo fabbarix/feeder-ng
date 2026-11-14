@@ -30,6 +30,8 @@ vi.mock('../../products/hooks/useCurrency', () => ({ useCurrency: () => 'USD' })
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
 vi.mock('../../stock/hooks/useStock', () => ({ useStockTotals: () => ({ data: [] }) }))
 vi.mock('../api', () => ({ scanApi: h.api }))
+// Receipt reading (ScanScreen.receipt.test.tsx covers it): the assistant is off here, so no footer row.
+vi.mock('../../import/hooks/useReadAvailability', () => ({ useReadAvailability: () => ({ loading: false, enabled: false, isAdmin: false, photos: false, settingsLink: false, statusFailed: false, retry: () => {} }) }))
 vi.mock('../hooks/useCamera', () => ({
   useCamera: () => ({ status: 'ready', videoRef: { current: null }, torchSupported: false, torchOn: false, toggleTorch: vi.fn(), frame: vi.fn(), retry: vi.fn() }),
 }))

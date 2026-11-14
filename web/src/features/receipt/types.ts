@@ -140,7 +140,7 @@ export interface ApplyBody {
 
 /** What receiptApi.apply resolves with; it never rejects (a refusal, a 500 and a lost connection are all `ok: false`). */
 export type ApplyOutcome =
-  | { ok: true; applied: number; results: ScanResult[] }
+  | { ok: true; applied: number; results: ScanResult[]; undone: string[] }
   | { ok: false; status: number; code: string; message: string; id?: string; results: ScanResult[] }
 
 /** A failure of a read or an apply, reduced to what the copy needs. */
@@ -175,4 +175,6 @@ export interface ReceiptAppliedEvent {
   /** true for 500 receipt_apply_failed: `results` are the scans the put-back wrote. */
   failed: boolean
   results: ScanResult[]
+  /** The uuids of the session's scans the apply undid (a success only; absent or [] otherwise). */
+  undone?: string[]
 }

@@ -51,6 +51,7 @@ export function scannedFake(entries: SessionEntry[] = [], offline: OfflineProduc
     settle: vi.fn(),
     drop: vi.fn(),
     reprice: vi.fn(),
+    update: vi.fn(),
     clear: vi.fn(),
   }
 }

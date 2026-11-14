@@ -40,6 +40,10 @@ describe('startRead', () => {
     const f = fake(json(429, { error: { code: 'too_many_reads', message: 'x', retryAfterSeconds: 720 } }))
     await expect(createReceiptApi(f).startRead(start)).rejects.toMatchObject({ status: 429, code: 'too_many_reads', details: { retryAfterSeconds: 720 } })
   })
+  it('200 without undone (an older server): undone is []', async () => {
+    const out = await createReceiptApi(fake(json(200, { applied: 1, results: [] }))).apply(applyBody)
+    expect(out).toEqual({ ok: true, applied: 1, results: [], undone: [] })
+  })
   it.each([
     [409, 'read_in_progress'],
     [422, 'scans_empty'],
@@ -87,11 +91,11 @@ describe('getRead and cancelRead', () => {
 })
 
 describe('apply', () => {
-  it('200: ok with the count and the results', async () => {
+  it('200: ok with the count, the results and the undone uuids', async () => {
     const results = [scanResult('receipt:rd-1:0')]
-    const f = fake(json(200, { applied: 3, results }))
+    const f = fake(json(200, { applied: 3, results, undone: ['u2', 'u3'] }))
     const out = await createReceiptApi(f).apply(applyBody)
-    expect(out).toEqual({ ok: true, applied: 3, results })
+    expect(out).toEqual({ ok: true, applied: 3, results, undone: ['u2', 'u3'] })
     const [url, init] = f.mock.calls[0]!
     expect(url).toBe('/api/scan/receipt/apply')
     expect(init?.method).toBe('POST')

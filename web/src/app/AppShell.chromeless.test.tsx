@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { createElement } from 'react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { Page } from '../ui'
 import { AppShell } from './AppShell'
 
 vi.mock('./ShellStatus', () => ({ ShellStatus: () => <div data-testid="shell-status" /> }))
@@ -16,6 +17,7 @@ function at(path: string) {
           { path: 'board', element: createElement('h1', null, 'Board page') },
           { path: 'cook/recipe/:id', element: createElement('h1', null, 'Cook page') },
           { path: 'plan', element: createElement('h1', null, 'Plan page') },
+          { path: 'scan/receipt', element: <Page><h1>Receipt page</h1></Page> },
         ],
       },
     ],
@@ -46,6 +48,13 @@ describe('AppShell on chromeless routes', () => {
     const main = screen.getByRole('main')
     expect(main).toHaveClass('app-main', 'app-main--full')
     expect(main.parentElement).toHaveClass('app-shell', 'app-shell--chromeless')
+  })
+
+  // beta.7: the receipt screens are a ui Page in the chromeless frame; they still take their route's width (narrow).
+  it('/scan/receipt: a ui Page there takes the route width from the table', () => {
+    at('/scan/receipt')
+    expect(screen.getByRole('heading', { name: 'Receipt page' }).closest('.page')).toHaveAttribute('data-page-width', 'narrow')
+    expect(screen.queryByRole('navigation', { name: 'Bottom bar' })).not.toBeInTheDocument()
   })
 
   it('keeps the bars and the capped content width on ordinary routes', () => {

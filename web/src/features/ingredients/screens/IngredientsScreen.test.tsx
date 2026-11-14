@@ -5,12 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { strings } from '../strings'
 import type { Ingredient } from '../types'
 
-const state = { ingredients: [] as Ingredient[], isEmpty: false, query: '' }
+const state = { ingredients: [] as Ingredient[], isEmpty: false, isLoading: false, query: '' }
 const create = vi.fn().mockResolvedValue({})
 vi.mock('../hooks/useIngredients', () => ({
   useIngredients: (query: string) => {
     state.query = query
-    return { ingredients: state.ingredients, isEmpty: state.isEmpty, isLoading: false, error: null, create }
+    return { ingredients: state.ingredients, isEmpty: state.isEmpty, isLoading: state.isLoading, error: null, create }
   },
 }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
@@ -34,6 +34,14 @@ describe('IngredientsScreen', () => {
   beforeEach(() => {
     state.ingredients = [garlic]
     state.isEmpty = false
+    state.isLoading = false
+  })
+  it('while the list first loads, shows rows to come, never "No Ingredient matches that search"', async () => {
+    state.ingredients = []
+    state.isLoading = true
+    setup()
+    expect(screen.queryByText('No Ingredient matches that search')).toBeNull()
+    expect(await screen.findByText('Loading')).toBeInTheDocument()
   })
   it('lists the Ingredients under a heading', () => {
     setup()

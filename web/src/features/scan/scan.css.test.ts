@@ -54,3 +54,27 @@ describe('scan.css: the just-scanned wash', () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.list-row\[data-fresh\]\s*\{\s*animation: none/)
   })
 })
+
+// beta.7 polish: beside the "Add price" pill a long "x of y" wraps to a second line instead of being cut.
+describe('scan.css: the cover line beside "Add price"', () => {
+  it('lets the meta line wrap on a row marked data-meta-wrap, the tick and its text together', () => {
+    const meta = declarations(css, ".list-row[data-meta-wrap='true'] .list-row__meta")
+    expect(meta['white-space']).toBe('normal')
+    expect(meta['overflow']).toBe('visible')
+    expect(declarations(css, ".list-row[data-meta-wrap='true'] .scanned-row__meta")['flex-wrap']).toBe('wrap')
+    expect(declarations(css, '.scanned-row__cover')['display']).toBe('inline-flex')
+  })
+})
+
+// beta.7 polish: the docked Price entry keeps Close and Save in the window (desktop, no-camera message, per kg).
+describe('scan.css: the docked keypad\'s actions stay in view', () => {
+  const docked = (css.match(/@media \(min-width: 768px\) \{\s*\.scan-screen__camera \.sheet[\s\S]*?\n\}/) ?? [''])[0]
+  it('sticks the actions to the bottom of the window, on the surface', () => {
+    expect(docked).toMatch(/\.scan-screen__camera \.price-keypad__actions \{[^}]*position: sticky;[^}]*inset-block-end: 0;[^}]*background: var\(--color-surface\);/)
+  })
+  it('lets the docked sheet clip instead of scroll, so the window is what they stick to', () => {
+    expect(docked).toMatch(/\.sheet\[data-modal='false'\] \{\s*overflow: clip;/)
+    expect(docked).toMatch(/\.sheet__panel \{\s*max-height: none;/)
+    expect(docked).toMatch(/\.sheet__body \{\s*overflow: visible;/)
+  })
+})

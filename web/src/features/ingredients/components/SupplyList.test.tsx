@@ -1,5 +1,5 @@
 // H9: a Supplies list row shows its Stock level and carries a "Use" icon button (household-items.md section 4.11). Pinned props:
-//   <SupplyList supplies stock system onOpen onUse busyId label? />
+//   <SupplyList supplies stock system onOpen onUse busyIds label? />
 //   stock: ReadonlyMap<ingredientId, total> | null   null = not loaded yet: rows keep their old meta ("piece · restocks below 6
 //                                                    pieces") and every Use is disabled. A Supply missing from a loaded map has 0.
 //   The row's meta is stockLevel(...).text; below the level it takes the info tone (the meta's data-status="info", with its icon).
@@ -90,8 +90,8 @@ describe('SupplyList: the Use button', () => {
     setup(null)
     for (const name of ['Use one Toilet paper', 'Use some Dish soap', 'Use one Batteries']) expect(screen.getByRole('button', { name })).toBeDisabled()
   })
-  it('is disabled for the Supply that is busy, and only for it', () => {
-    setup(stock([[22, 4], [21, 800]]), { busyId: 22 })
+  it('is disabled for the Supplies that are busy, and only for them', () => {
+    setup(stock([[22, 4], [21, 800]]), { busyIds: new Set([22]) })
     expect(screen.getByRole('button', { name: 'Use one Toilet paper' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Use some Dish soap' })).toBeEnabled()
   })

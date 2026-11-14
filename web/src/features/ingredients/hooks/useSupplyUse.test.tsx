@@ -1,12 +1,12 @@
 // H9 (household-items.md section 4.11): the quick Use flow of the Supplies list. Pinned hook API:
 //
-//   const { request, sheet, confirm, closeSheet, busyId } = useSupplyUse()
+//   const { request, sheet, confirm, closeSheet, busyIds } = useSupplyUse()
 //   request(supply, stock)   a piece Supply: POST .../use {quantity: 1} at once; g or ml: opens the sheet (nothing is sent)
 //   sheet                    null, or { supply, stock, packSize: number | null, packLoading: boolean }; packSize comes from
 //                            GET /api/products/last-bought?ingredient=<id> (404 = null)
 //   confirm(quantity)        POST .../use {quantity}, closes the sheet
 //   closeSheet()             closes it without a request
-//   busyId                   the Supply id while its Use (or Undo) is in flight, else null
+//   busyIds                  the Supply ids whose Use (or Undo) is in flight (a set: two rows can be busy at once)
 // After a Use or an Undo it refetches Stock (invalidates ['stock']) and toasts: "Used 1 Toilet paper" with an "Undo" action,
 // "Put back 1 Toilet paper" after Undo. A refusal toasts an error (use_exceeds_stock: "There is less in Stock than that",
 // anything else "Could not use that. Try again."; a failed Undo "Could not put that back. Try again."). Offline it sends
@@ -75,11 +75,30 @@ describe('useSupplyUse: a Supply counted in pieces', () => {
     const gate = new Promise((r) => (release = r))
     mockApi({ 'POST /api/stock/ingredients/22/use': async () => (await gate, paperUsed) })
     const { result } = renderHook(() => useSupplyUse(), { wrapper })
-    expect(result.current.busyId).toBeNull()
+    expect([...result.current.busyIds]).toEqual([])
     act(() => result.current.request(toiletPaperJSON, 4))
-    await waitFor(() => expect(result.current.busyId).toBe(22))
+    await waitFor(() => expect([...result.current.busyIds]).toEqual([22]))
     release(null)
-    await waitFor(() => expect(result.current.busyId).toBeNull())
+    await waitFor(() => expect([...result.current.busyIds]).toEqual([]))
+  })
+  it('two quick Uses on different rows stay busy each until their own answer (beta.7 H9 follow-up)', async () => {
+    const batteries = { ...toiletPaperJSON, id: 23, name: 'Batteries' }
+    // Each answer waits for its own release (mockApi answers at once, so the fetch is stubbed here).
+    const release = new Map<string, () => void>()
+    vi.stubGlobal('fetch', vi.fn((url: string) => new Promise<Response>((resolve) => {
+      const id = url.includes('/23/') ? 23 : 22
+      release.set(String(id), () => resolve(new Response(JSON.stringify({ ...paperUsed, ingredientId: id }), { status: 200 })))
+    })))
+    const { result } = renderHook(() => useSupplyUse(), { wrapper })
+    act(() => result.current.request(toiletPaperJSON, 4))
+    act(() => result.current.request(batteries, 2))
+    await waitFor(() => expect([...result.current.busyIds].sort()).toEqual([22, 23]))
+    await waitFor(() => expect(release.size).toBe(2))
+    act(() => release.get('22')!())
+    await waitFor(() => expect(toast.show).toHaveBeenCalledTimes(1))
+    expect([...result.current.busyIds]).toEqual([23])
+    act(() => release.get('23')!())
+    await waitFor(() => expect([...result.current.busyIds]).toEqual([]))
   })
   it('Undo sends back exactly the Lots that were taken, then toasts "Put back 1 Toilet paper"', async () => {
     const api = mockApi({
@@ -158,7 +177,7 @@ describe('useSupplyUse: refusals and offline', () => {
     await waitFor(() => expect(toast.show).toHaveBeenCalled())
     expect(toast.show).toHaveBeenCalledWith('There is less in Stock than that', expect.objectContaining({ status: 'error' }))
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['stock'] }))
-    expect(result.current.busyId).toBeNull()
+    expect([...result.current.busyIds]).toEqual([])
   })
   it('toasts a plain failure for anything else', async () => {
     mockApi({ 'POST /api/stock/ingredients/22/use': refusal(500, 'internal') })
