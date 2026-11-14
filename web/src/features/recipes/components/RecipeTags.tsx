@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Chip } from '../../../ui'
 import { visibleTags } from '../lib/tags'
 import { recipeStrings } from '../strings'
+import '../recipes-list.css'
 
 export interface RecipeTagsProps {
   tags: readonly string[]

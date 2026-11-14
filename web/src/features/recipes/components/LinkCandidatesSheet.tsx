@@ -3,6 +3,7 @@ import { Button, Checkbox, Dialog } from '../../../ui'
 import { useLinkCandidates } from '../../../lib/baseRecipes/useLinkCandidates'
 import { recipeStrings } from '../strings'
 import { baseRecipeLinkStrings } from '../../../lib/baseRecipes/strings'
+import '../recipe-detail.css'
 
 export interface LinkCandidatesSheetProps {
   open: boolean

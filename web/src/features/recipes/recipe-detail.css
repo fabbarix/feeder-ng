@@ -1,0 +1,442 @@
+/* Recipe detail (WP-RX-0: split from recipes.css): the hero, metrics, the two-column layout, preferences, the exclusion list,
+   ingredient lines, Steps and the Cook entry. Layout and text on tokens only; the primitives carry their own look. */
+
+.recipe-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+/* Recipe detail */
+.recipe-detail__hint,
+.recipe-metric__ahead {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.recipe-metric {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  overflow-wrap: anywhere;
+}
+
+.recipe-detail__hero {
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 820px;
+  margin-inline: auto;
+}
+
+/* The detail hero is 16:9 (D-02); the thumb fills it and the image covers the box. */
+.recipe-detail__hero .tile__media {
+  aspect-ratio: 16 / 9;
+}
+
+.recipe-detail__hero .recipe-thumb[data-size='hero'] {
+  block-size: 100%;
+}
+
+/* D-01: one column below 80em (1280 px); from 80em a 360 px left column (sticky) and the Steps beside it. The two columns keep the
+   tiles' gap between them when they stack. */
+.recipe-detail__layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.recipe-detail__aside,
+.recipe-detail__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+@media (min-width: 80em) {
+  .recipe-detail__layout {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  .recipe-detail__aside {
+    position: sticky;
+    inset-block-start: var(--space-6);
+  }
+
+  .recipe-detail__hero {
+    max-inline-size: none;
+  }
+}
+
+/* A hero tile with nothing under the photo drops the bottom padding strip. */
+.recipe-detail__hero[data-variant='media']:has(> .tile__media:last-child) {
+  padding-block-end: 0;
+}
+
+/* PT: the Recipe's preferences as a table, a row per Member, a 48 px column per state. Fits 360 px: the Member column
+   shrinks and truncates, and nothing scrolls sideways (rx-pt.md section 5.5). */
+.preference-table {
+  inline-size: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.preference-table th,
+.preference-table td {
+  padding-block: var(--space-1);
+  vertical-align: middle;
+}
+
+.preference-table__member {
+  min-inline-size: 0;
+  text-align: start;
+  font-weight: var(--text-label-weight);
+}
+
+/* A state name is wider than its 48 px column at the caption size, so it never breaks inside a word: it stays on one
+   line and sits centred, overhanging into the gap between the columns. */
+.preference-table__state {
+  inline-size: 48px;
+  padding-inline: 0;
+  text-align: center;
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-body-weight);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.preference-table__head-icon {
+  display: block;
+}
+
+.preference-table__cell {
+  inline-size: 48px;
+  padding-inline: 0;
+  text-align: center;
+}
+
+.preference-table__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.preference-table__who .avatar {
+  flex-shrink: 0;
+}
+
+.preference-table__name {
+  min-inline-size: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preference-table__via {
+  display: block;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.preference-table__note {
+  margin-block: var(--space-2) 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.preference-table__row[data-highlighted='true'] {
+  background-color: var(--color-soft);
+  animation: preference-row-flash 2s ease-out;
+}
+
+@keyframes preference-row-flash {
+  from {
+    background-color: var(--color-soft-strong);
+  }
+  to {
+    background-color: var(--color-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preference-table__row[data-highlighted='true'] {
+    animation: none;
+  }
+}
+
+/* The Ingredient's exclusion list in its Dialog or Tile: a long name truncates instead of pushing the toggles out. */
+.ingredient-exclusions {
+  min-inline-size: 0;
+}
+
+.ingredient-exclusions .list-row__text {
+  min-inline-size: 0;
+}
+
+.ingredient-exclusions .list-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Ingredient lines: [menu] [quantity] [name], no bullets. The menu column is as wide as the IconButton (40 visual,
+ * 44 hit) on every line, empty where a line has no menu, so the menus, quantities and names each line up.
+ * The text sits a half-button down, so the ⋮ is centred on the first text line, even when the name wraps.
+ */
+.ingredient-lines {
+  container: ingredient-lines / inline-size;
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ingredient-lines__row {
+  display: grid;
+  grid-template-columns: var(--space-10) minmax(0, 7rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+}
+
+/* A narrow list (a phone, the side column from 80em): the menu column costs the name its room, so the quantity column
+   narrows to the list value column (system.md 3). */
+@container ingredient-lines (max-width: 25rem) {
+  .ingredient-lines__row {
+    grid-template-columns: var(--space-10) minmax(0, var(--row-value-min)) minmax(0, 1fr);
+  }
+}
+
+.ingredient-lines__row dt,
+.ingredient-lines__row dd {
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.ingredient-lines__actions {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+}
+
+.ingredient-lines__quantity,
+.ingredient-lines__name {
+  grid-row: 1;
+  padding-block-start: calc((var(--space-10) - var(--text-body-line)) / 2);
+  line-height: var(--text-body-line);
+}
+
+.ingredient-lines__quantity {
+  grid-column: 2;
+  font-weight: var(--text-label-weight);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.ingredient-lines__name {
+  grid-column: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+/* A Base recipe line reads as one sentence ("500 ml Béchamel (Base recipe)") from the quantity column on. */
+.ingredient-lines__name--base {
+  grid-column: 2 / -1;
+}
+
+.ingredient-lines__tag,
+.ingredient-lines__note {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+/* Steps: numbered rows with a soft badge. */
+.steps-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps-list__item {
+  display: flex;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: var(--text-body-weight);
+}
+
+.steps-list__number {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--radius-chip);
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+  font-weight: var(--text-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.steps-list__body {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+/* Step text is the body role at the Step weight (500, VC8): a Step sentence is never bold. */
+.steps-list__text {
+  margin: 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: var(--text-step-weight);
+  overflow-wrap: anywhere;
+}
+
+.steps-list__meta,
+.steps-list__uses {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.steps-list__photo {
+  inline-size: 72px;
+  margin-block-start: var(--space-1);
+}
+
+/* Cook / Batch entry (L-03): plain content; the StickyActionBar (below 80em) or the left column (from 80em) carries it. */
+.cook-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+@media (min-width: 80em) {
+  .cook-entry {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.cook-entry__batches {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.cook-entry__hint {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+/* BR-D: the Base recipe picker and the bulk link sheet (the detail, the editor and the import screen open them). Tokens only; rows are 44 px tap targets; the lists scroll inside the sheet. */
+.picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-block-size: 60vh;
+  overflow-y: auto;
+}
+.picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-start: var(--space-3);
+}
+.picker-group__label {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+.picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-tile-sm);
+  cursor: pointer;
+}
+.picker-row:hover,
+.picker-row:focus-visible,
+.picker-row[aria-selected="true"] {
+  background: var(--color-surface-2);
+}
+/* A full-bleed row in a scrolling sheet: its ring is drawn inside its own edge, so the list never clips it. */
+.picker-row:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
+}
+.picker-row[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.picker-row__name {
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+}
+.picker-row__detail {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+.picker-row__reason {
+  flex-basis: 100%;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+.link-candidate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-block-size: 44px;
+}
+.link-candidate__archived {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}

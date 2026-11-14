@@ -30,7 +30,8 @@ import { recipesTagPath } from '../lib/tags'
 import { showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
 import type { Recipe } from '../types'
-import '../recipes.css'
+import '../recipes-list.css'
+import '../recipe-detail.css'
 
 /**
  * Route /recipes/:id: the photo, the metrics (Yield, time and the Advance Step lead), the ingredient lines, the Steps,

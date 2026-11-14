@@ -1,0 +1,119 @@
+/* Recipes list (WP-RX-0: split from recipes.css): the Recipes screen, its tiles and chip rows, the Filters panel's Course row (the Export picker's rules are in
+   import/import.css, which already had them). Layout and text on tokens only; the primitives carry their own look. */
+
+/* The Recipes screen's root: its grid is a BentoGrid (card tracks), so the screen adds no column rule of its own. */
+.recipes-screen {
+  min-inline-size: 0;
+}
+
+.recipe-tile {
+  min-inline-size: 0;
+}
+
+.recipe-tile__name {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.recipe-tile__meta,
+.recipe-tile__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* CRS E2: the Course chips of a tile and of the detail (a plain list of tag Chips), and the Course filter row. */
+.course-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* TG-RW: the Tag chips of a tile and of the detail (a plain list of tag Chips in their colours). */
+.recipe-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* b8-recipes: a chip row's items may shrink to the row. A flex item defaults to min-inline-size: auto, so an <li> holding a long Tag
+   or Course name kept its natural width and spilled past the card (1180 px, P11/P13); with min-inline-size: 0 and a 100% cap the
+   Chip's own ellipsis does the cutting. */
+.recipe-tags > li,
+.course-chips > li {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* The Course group of the Filters panel is one line; it scrolls sideways, so it is padded by a token on both axes (the focus ring of
+   its chips is 5 px) with the matching negative margin, and its chips keep their width. */
+.course-filter {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.course-filter > .chip {
+  flex: none;
+}
+
+/* A trailing spacer: a horizontal scroller does not always keep its inline-end padding as scrollable space, so the last chip's
+   focus ring (3 px outline, 2 px offset) needs room of its own at the scroll end. */
+.course-filter::after {
+  content: '';
+  flex: none;
+  inline-size: var(--space-2);
+}
+
+.recipe-tile__meta {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.recipe-tile__time {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Beta.5 F7: the "Last cooked" line keeps to one line in the meta row. */
+.recipe-tile__cooked {
+  white-space: nowrap;
+}
+
+/* hf-recipes-filter: the Recipes header (docs/design/recipes-filter.md 3). Its rows, chip line and panel are the shared filter header
+   (ui/FilterBar/FilterBar.css, docs/design/pantry-filter.md 5); only what is the Recipes' own is here. */
+
+/* Row 3 sits one slot gap below row 2 at every width (the ListPage gap). */
+.recipes-screen .list-page__filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.recipe-tile__yield {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
