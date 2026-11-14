@@ -185,6 +185,18 @@ describe('applying the update (Reload)', () => {
     expect(reload).not.toHaveBeenCalled()
   })
 
+  it('two tabs: after the other tab applied the update (a controllerchange this tab did not ask for), Reload here reloads once', async () => {
+    const { controls, worker } = await ready()
+    // the other tab posted SKIP_WAITING: the worker activated and claimed this page too
+    container.registration.waiting = null
+    container.controllerChange()
+    expect(reload).not.toHaveBeenCalled() // never on its own: this page may be in the middle of something
+    controls.applyUpdate()
+    controls.applyUpdate()
+    expect(worker.postMessage).not.toHaveBeenCalled()
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
   it('does nothing when no worker is waiting any more (nothing posted, no reload)', async () => {
     const { controls, worker } = await ready()
     container.registration.waiting = null

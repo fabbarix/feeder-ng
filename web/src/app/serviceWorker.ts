@@ -91,6 +91,8 @@ function watch(container: ContainerLike, registration: RegistrationLike, reload:
   const announced = new WeakSet<WorkerLike>()
   let requested = false
   let reloading = false
+  /** a new worker took control without this page asking (another tab's Reload, or the beta.8 worker's own claim) */
+  let takenOver = false
 
   const check = (): void => {
     try {
@@ -110,9 +112,17 @@ function watch(container: ContainerLike, registration: RegistrationLike, reload:
     },
     applyUpdate: () => {
       const waiting = registration.waiting
-      if (!waiting) return
-      requested = true
-      waiting.postMessage(SKIP_WAITING)
+      if (waiting) {
+        requested = true
+        waiting.postMessage(SKIP_WAITING)
+        return
+      }
+      // Nothing waits any more because another Feeder tab applied the update: the new worker already controls this page,
+      // which still runs the old code, so Reload just reloads it (once).
+      if (takenOver && !reloading) {
+        reloading = true
+        reload()
+      }
     },
   })
 
@@ -127,6 +137,7 @@ function watch(container: ContainerLike, registration: RegistrationLike, reload:
 
   container.addEventListener('controllerchange', () => {
     // Only the change the User asked for reloads: the beta.8 worker still claims on its own, and so does a first install.
+    if (!requested) takenOver = true
     if (!requested || reloading) return
     reloading = true
     reload()
