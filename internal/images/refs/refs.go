@@ -20,6 +20,7 @@ var Default = []Column{
 	{"ingredients", "image"},
 	{"members", "photo"},
 	{"products", "image"},
+	{"member_removals", "photo"}, // a removed Member's photo, kept for Undo until the snapshot expires (B9-04)
 }
 
 // Columns implements images.Referencer over SQL.
