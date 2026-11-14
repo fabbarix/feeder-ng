@@ -38,6 +38,12 @@ func (Mover) Move(ctx context.Context, tx *sql.Tx, from, to int64) error {
 	if _, err := tx.ExecContext(ctx, `UPDATE shopping_tick_additions SET ingredient_id = ? WHERE ingredient_id = ?`, to, from); err != nil {
 		return err
 	}
+	// A range both Ingredients ticked: the merged tick covers both Lines (SSP-02), so a merge shows no More of its own.
+	if _, err := tx.ExecContext(ctx, `UPDATE shopping_ticks SET needed = needed + (SELECT f.needed FROM shopping_ticks f
+		WHERE f.ingredient_id = ? AND f.range_to = shopping_ticks.range_to)
+		WHERE ingredient_id = ? AND range_to IN (SELECT range_to FROM shopping_ticks WHERE ingredient_id = ?)`, from, to, from); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `UPDATE OR IGNORE shopping_ticks SET ingredient_id = ? WHERE ingredient_id = ?`, to, from); err != nil {
 		return err
 	}
