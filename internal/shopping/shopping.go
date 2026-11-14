@@ -238,7 +238,8 @@ func Derive(in Input) List {
 		lines[ing] = Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Supply: info.Supply,
 			Need: t.Needed, Available: t.Needed}
 	}
-	// Not needed: an open Line the User took off the list for this range. A ticked Line stays where it is.
+	// Not needed: an open Line the User took off the list for this range. A ticked Line stays where it is: a mark on it is
+	// on its More (SSP-02) and takes only that amount off.
 	for ing := range in.NotNeeded {
 		l, ok := lines[ing]
 		if !ok || ticked[ing] {
@@ -249,17 +250,17 @@ func Derive(in Input) List {
 	}
 	sortLines(out.NotNeeded)
 	for ing, l := range lines {
-		if ticked[ing] {
-			l.Ticked = true
-			l.Pack = nil
-			l.EstimatedCostCents = nil
+		if t, ok := in.Ticks[ing]; ok {
+			l = tickedLine(in, l, t)
 			lines[ing] = l
 		}
-		if !l.Ticked && l.EstimatedCostCents == nil {
-			out.UnpricedLines++
-		}
-		if !l.Ticked && l.EstimatedCostCents != nil {
-			out.EstimatedCostCents += *l.EstimatedCostCents
+		// An open Line, or the More of a ticked one, is still to buy.
+		if open := !l.Ticked || l.More > 0; open {
+			if l.EstimatedCostCents == nil {
+				out.UnpricedLines++
+			} else {
+				out.EstimatedCostCents += *l.EstimatedCostCents
+			}
 		}
 	}
 	for _, l := range lines {
@@ -272,6 +273,10 @@ func Derive(in Input) List {
 		if l.Ticked {
 			out.Progress.Ticked++
 		}
+		// The More row is an open row of its own (SSP-02): the list is not complete until it is ticked too.
+		if l.More > 0 {
+			out.Progress.Total++
+		}
 	}
 	for _, e := range out.Extras {
 		if e.Ticked {
@@ -280,6 +285,25 @@ func Derive(in Input) List {
 	}
 	out.Complete = out.Progress.Total > 0 && out.Progress.Ticked == out.Progress.Total
 	return out
+}
+
+// tickedLine marks a Line ticked and works out its More (SSP-02): what of its quantity now the tick does not cover, less
+// a Not needed mark on that More. A Line with More has the pack suggestion and estimate of the More; one without has none.
+func tickedLine(in Input, l Line, t Tick) Line {
+	tick := t
+	l.Ticked, l.Tick = true, &tick
+	l.Pack, l.EstimatedCostCents = nil, nil
+	more := moreSinceTick(t.Needed, t.Added, l.Quantity)
+	if nn, ok := in.NotNeeded[l.IngredientID]; ok {
+		if more -= nn.Needed; more <= eps {
+			more = 0
+		}
+	}
+	l.More = more
+	if more > 0 {
+		priceLine(&l, in, l.IngredientID, more)
+	}
+	return l
 }
 
 // mealDraw is one Planned Meal of a derivation: what it needs per required Ingredient, and how much of that its own draw
@@ -416,6 +440,9 @@ func priceLine(line *Line, in Input, ing int64, quantity float64) {
 	}
 	s := SuggestPack(quantity, p)
 	s.Bought = bought
+	if !bought {
+		s.Price = p.Price
+	}
 	line.Pack = &s
 	if price, ok := in.PackPrices[p.ProductID]; ok {
 		c := s.Count * price
@@ -505,7 +532,7 @@ func extraLines(extras []Extra, ings map[int64]IngredientInfo) []ExtraLine {
 	})
 	out := make([]ExtraLine, 0, len(sorted))
 	for _, e := range sorted {
-		l := ExtraLine{ID: e.ID, Text: e.Text, IngredientID: e.IngredientID, Ticked: e.Ticked}
+		l := ExtraLine{ID: e.ID, Text: e.Text, IngredientID: e.IngredientID, Ticked: e.Ticked, Tick: ExtraTick(e)}
 		if e.IngredientID != 0 {
 			info := ings[e.IngredientID]
 			l.Name, l.BaseUnit, l.ImageURL, l.Supply = info.Name, info.BaseUnit, info.ImageURL, info.Supply
