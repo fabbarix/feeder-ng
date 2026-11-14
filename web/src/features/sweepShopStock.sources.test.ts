@@ -63,14 +63,10 @@ describe('B9-09: the .pg__* styling is gone from Products, Shops and Stock (DS-0
     const selectors = cssRules(readFeature('products/products.css')).flatMap((r) => r.selector.split(',').map((s) => s.trim()))
     for (const gone of ['.pg', '.pg__stack', '.pg__row', '.pg__group', '.pg__tile-title', '.pg__subhead', '.pg__add-price']) expect(selectors).not.toContain(gone)
   })
-  it('.pg__muted is allowed to stay only while features/tags still uses it, and then it is the meta role in --color-muted with no opacity', () => {
-    const r = cssRules(readFeature('products/products.css')).filter((x) => x.selector === '.pg__muted')
-    if (r.length === 0) return
-    const d = Object.fromEntries(r.flatMap((x) => x.decls))
-    expect(d['opacity']).toBeUndefined()
-    expect(d['color']).toBe('var(--color-muted)')
-    expect(d['font-size']).toBe('var(--text-meta-size)')
-    expect(d['line-height']).toBe('var(--text-meta-line)')
+  it('.pg__muted is gone too (w1c): B9-10 moved features/tags and features/settings to <Muted> (its own test covers those folders), and none of these folders uses it', () => {
+    const selectors = cssRules(readFeature('products/products.css')).flatMap((r) => r.selector.split(',').map((s) => s.trim()))
+    expect(selectors).not.toContain('.pg__muted')
+    expect(sources.filter((s) => /["'`{ ]pg__muted["'`} ]/.test(s.text)).map((s) => s.file)).toEqual([])
   })
   it('the new primitives are used in their place (Muted, SectionTitle, Stack, Cluster)', () => {
     expect(readFeature('shops/components/ShopLocationTile.tsx')).toMatch(/<SectionTitle[ >]/)

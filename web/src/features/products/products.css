@@ -1,15 +1,6 @@
 /* Products and Shops screens: layout only; colours come from the theme tokens. DS-07 (B9-09): the old .pg layout and type classes
    are the ui primitives now (Stack, Cluster, SectionTitle, Muted). */
 
-/* features/tags and features/settings (B9-10's folders) still say .pg__muted: the Muted role until they move to <Muted>. */
-.pg__muted {
-  margin: 0;
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-  color: var(--color-muted);
-}
-
 /* The field-error line stays until SAFE's field-error pattern replaces it. */
 .pg__error {
   margin: 0;
