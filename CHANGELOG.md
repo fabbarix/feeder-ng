@@ -4,6 +4,40 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.8] - 2026-11-14
+
+Undo of a tick now takes back the Stock the tick added, a Receipt is read in the background, and a round of fixes to the Scan, Shop, Pantry and Recipes screens.
+
+### Added
+
+- **Tick "To get" rows on the Scan screen.** The To get tab ticks a Line by hand, with how much of it your scans already cover, and an Undo in the toast.
+- **Filter Recipes by several Tags.** Pick more than one Tag and the list shows the Recipes that have all of them. A link to the list keeps every Tag.
+- **A Receipt is read in the background.** Leave the photos screen while the Receipt is read and the read carries on; a toast says when it is ready to review, or that it failed. **Dismiss** clears a ready or failed read. Signing out drops it.
+- **Import Review says what a Base recipe changes.** When an import takes over an Ingredient with a Base recipe, the question says how many other lines in the import stay that Ingredient, and what Yes and No do to them.
+
+### Changed
+
+- **Undo of a tick takes back its Stock.** A tick adds a Stock Lot; unticking it, on the Shop screen or with Undo on the Scan screen, now takes that Lot back: all of it if it is untouched, what is left of it if some was used, and no more than the tick added ([ADR 0019](docs/adr/0019-undo-of-a-tick-takes-back-its-stock.md)). Before, the Lot stayed, so tick and Undo a few times left Stock you did not buy. A tick set by a Scan owns no Lot: Undo of the Scan still takes it back, as before.
+- **The new-Product sheet** asks **What it is** with picture chips for the Lines still to get.
+- **Cook Mode does not count Stock that has gone off** when it says what is covered. Cooked still takes from the Lots as before.
+- **The Shop header on a phone** keeps the chip symbols with shorter names ("Today", "Fri 20", "Any"), and the top bar shows the Feeder wordmark. A Line for more than one Meal Slot says "Fri Dinner +2", and a Restock Line's amount is shorter below 420 px ("400/1000 ml").
+- **Pantry and Supplies.** The Filters panel scrolls when it is taller than the screen, the Ingredients and Supplies chips have symbols, a Lot's **Move to** says "Choose a Storage Place", and Used up shows its Base Unit.
+- **No toast for a Receipt read with nothing to change.** The row still offers **Dismiss**.
+
+### Fixed
+
+- **A barcode typed before the Shop's data had loaded was lost.** It is now held and scanned once the data is there.
+- **A failed Receipt apply left a new Ingredient behind.** Every step is now put back, the new Ingredient with them.
+- **Recipe cards spilled out of their tile** at 1180 px when a Recipe had long Tags or Courses.
+- **The Recipes and Pantry Filters panels** could not scroll to their last options on a short screen.
+- **Receipt screens** had uneven spacing between their sections.
+
+### Upgrading
+
+No new settings. The database is migrated on start: 1560 records what each tick added to Stock, so its Undo can take it back. It only adds columns and one table: a tick from before the upgrade has no recorded amount, and its Undo takes back what is left of its Lot. Migrations cannot be undone.
+
+If the database already has applied migrations, Feeder first saves a checked copy of it as `feeder-pre-1560.db` in the `backups` folder of the data volume (`/data/backups`), before migration 1560 is applied. It is not listed in Settings, the nightly clean-up does not remove it, an existing copy is kept, and a fresh install takes none. If the copy cannot be written, Feeder stops with a log line naming the file and migrates nothing. To go back to 1.0.0-beta.7, restore that file as `feeder.db` before you run the older image; upgrading straight from 1.0.0-beta.6.x also writes `feeder-pre-1550.db`, which is the one to restore to go back to 1.0.0-beta.6.5. See "Upgrading from 1.0.0-beta.7.x to 1.0.0-beta.8" in `docs/dev/deploy.md`.
+
 ## [1.0.0-beta.7] - 2026-11-13
 
 Supplies (toilet paper, batteries, laundry pods), a new Scan screen whose Scanned list you price and correct as you go, and reading the Receipt from photos to fill in its Prices and weighed amounts.
@@ -396,7 +430,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.7...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.8...HEAD
+[1.0.0-beta.8]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.7...v1.0.0-beta.8
 [1.0.0-beta.7]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.5...v1.0.0-beta.7
 [1.0.0-beta.6.5]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.4...v1.0.0-beta.6.5
 [1.0.0-beta.6.4]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.3...v1.0.0-beta.6.4
