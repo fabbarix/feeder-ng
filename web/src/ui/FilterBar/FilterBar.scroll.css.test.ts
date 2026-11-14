@@ -12,6 +12,9 @@ describe('the Filters popover body', () => {
     expect(valueFor('.filter-panel .popover__body', 'overflow-x', 1280)).toBe('hidden')
     expect(valueFor('.filter-panel .popover__body', 'min-block-size', 1280)).toBe('0')
   })
+  it('keeps a wheel at the end of the body from scrolling the page under the open panel', () => {
+    expect(valueFor('.filter-panel .popover__body', 'overscroll-behavior', 1280)).toBe('contain')
+  })
   it('keeps the bottom sheet as it was (the sheet scrolls as a whole)', () => {
     expect(valueFor('.filter-panel .popover__body', 'overflow-y', 390)).toBeUndefined()
   })

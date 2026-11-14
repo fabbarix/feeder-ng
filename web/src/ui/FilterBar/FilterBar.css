@@ -117,11 +117,12 @@
 }
 
 /* b8 G1: a body taller than the popover's cap (the Pantry with its Food or Supplies section, at 768 to 900 px high) scrolls inside it,
-   so the footer stays visible. From 768 px only: below it the panel is a bottom sheet, which scrolls as a whole. */
+   so the footer stays visible; a wheel at its end does not scroll the page under the open panel. From 768 px only: below it the panel is a bottom sheet, which scrolls as a whole. */
 @media (min-width: 768px) {
   .filter-panel .popover__body {
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
     min-block-size: 0;
   }
 }
