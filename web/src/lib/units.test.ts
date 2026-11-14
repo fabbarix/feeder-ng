@@ -288,3 +288,14 @@ describe('SSP-16 review: a negative amount that rounds to zero has no sign', () 
     expect(formatQuantity(amount, base, system)).toBe(text)
   })
 })
+
+describe('SSP-16 review: very large amounts are grouped, never in exponent form', () => {
+  it.each([
+    [1e21, 'piece', '1,000,000,000,000,000,000,000 pieces'],
+    [1e24, 'g', '1,000,000,000,000,000,000,000 kg'],
+    [999999.5, 'g', '1,000 kg'],
+    [1005, 'g', '1 kg'], // rounds as toFixed does, like every other metric amount
+  ] as const)('%s %s -> %s', (amount, base, text) => {
+    expect(formatQuantity(amount, base, 'metric')).toBe(text)
+  })
+})

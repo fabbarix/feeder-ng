@@ -123,11 +123,21 @@ function metricBody(abs: number, base: 'g' | 'ml'): string {
   return `${grouped(abs / 1000, 2)} ${base === 'g' ? 'kg' : 'l'}`
 }
 
-/** trim, with the integer part grouped by "," in thousands ("1250.5" -> "1,250.5"). */
+/** One en-US formatter per number of decimals: "," groups thousands, "." is the decimal point, never an exponent. */
+const GROUPED = new Map<number, Intl.NumberFormat>()
+
+/**
+ * trim, with the integer part grouped by "," in thousands ("1250.5" -> "1,250.5"), for a non-negative n. It never writes an
+ * exponent (1e21 pieces is "1,000,000,000,000,000,000,000", not "1e+21").
+ */
 export function grouped(n: number, digits: number): string {
-  const [int, frac] = trim(n, digits).split('.')
-  const g = int!.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-  return frac === undefined ? g : `${g}.${frac}`
+  let f = GROUPED.get(digits)
+  if (!f) {
+    f = new Intl.NumberFormat('en-US', { maximumFractionDigits: digits, useGrouping: true })
+    GROUPED.set(digits, f)
+  }
+  // Rounded by toFixed first, so it rounds exactly as trim does (1005 g is "1 kg": 1005 / 1000 is stored just below 1.005).
+  return f.format(Number(n.toFixed(digits)))
 }
 
 /** Rounds to a fixed number of decimals and drops trailing zeros ("3.50" -> "3.5"). */
