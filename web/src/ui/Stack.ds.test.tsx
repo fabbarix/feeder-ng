@@ -59,10 +59,16 @@ describe('Cluster', () => {
 })
 
 describe('Stack.css uses tokens only', () => {
-  it('no px, hex or margin hacks', () => {
+  it('no px, hex or spacing margins (only the reset margin: 0)', () => {
     expect(code).not.toMatch(/\d+px/)
     expect(code).not.toMatch(/#[0-9a-f]{3,8}\b/i)
-    expect(code).not.toMatch(/margin/)
+    for (const m of code.matchAll(/margin[\w-]*\s*:\s*([^;}]+)/g)) expect(m[1].trim(), m[0]).toBe('0')
+  })
+  it('a list rendered as a Stack or a Cluster drops the UA margin, indent and bullets', () => {
+    const d = declarations(css, ':is(ul, ol):is(.stack, .cluster)')
+    expect(d['margin']).toBe('0')
+    expect(d['padding']).toBe('0')
+    expect(d['list-style']).toBe('none')
   })
 })
 

@@ -1,4 +1,5 @@
-/* DS-07: layout containers on the spacing tokens. A list rendered as a Stack or a Cluster loses its bullets and indent. */
+/* DS-07: layout containers on the spacing tokens. A list rendered as a Stack or a Cluster loses its bullets, indent and
+   the UA's block margins; the container spaces nothing outside itself. */
 .stack {
   display: grid;
   gap: var(--space-3);
@@ -23,6 +24,7 @@
 }
 
 :is(ul, ol):is(.stack, .cluster) {
-  list-style: none;
+  margin: 0;
   padding: 0;
+  list-style: none;
 }
