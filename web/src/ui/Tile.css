@@ -38,6 +38,18 @@
   color: var(--color-on-accent);
 }
 
+/* And in light it is the accent solid with on-accent text and a surface Cook button, whatever the OS says: this outranks any rule
+   still keyed on the OS scheme (prefers-color-scheme), so a User who chose Light on a dark device gets the light hero (A11Y-03). */
+:root[data-scheme='light'] .tile[data-variant='hero'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+:root[data-scheme='light'] .tile[data-variant='hero'] .button[data-variant='primary'] {
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+}
+
 /* A why chip on a hero follows the hero's colour, in light and dark alike. */
 .tile[data-variant='hero'] .chip[data-kind='why'] {
   background: color-mix(in srgb, currentColor 14%, transparent);
