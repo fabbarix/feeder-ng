@@ -396,7 +396,8 @@ See `docs/dev/deploy.md` for details.
 
 The baseline prerelease: weekly planning, shopping lists, Cook Mode, Leftover tracking, Google sign-in and Web Push, as one container with its data on one volume.
 
-[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.5...HEAD
+[Unreleased]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.7...HEAD
+[1.0.0-beta.7]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.5...v1.0.0-beta.7
 [1.0.0-beta.6.5]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.4...v1.0.0-beta.6.5
 [1.0.0-beta.6.4]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.3...v1.0.0-beta.6.4
 [1.0.0-beta.6.3]: https://github.com/fabbarix/feeder-ng/compare/v1.0.0-beta.6.2...v1.0.0-beta.6.3
