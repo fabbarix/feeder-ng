@@ -127,7 +127,7 @@ describe('BottomSheet.css: the non-modal and half variants', () => {
   })
 
   it('from 768 px a non-modal sheet is docked in the page (static), not a centred dialog', () => {
-    const wide = css.slice(css.lastIndexOf('@media (min-width: 768px)'))
+    const wide = css.slice(css.lastIndexOf('@media (min-width: 48em)'))
     expect(wide).toMatch(/\.sheet\[data-modal='false'\]\s*\{[^}]*position:\s*static/)
   })
 })

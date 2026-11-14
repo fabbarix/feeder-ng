@@ -56,7 +56,7 @@ describe('DetailList.css (DS-12 R-E tokens)', () => {
     expect(row['display']).toBe('grid')
     expect(row['grid-template-columns']).toBe('minmax(0, 1fr) auto')
     expect(row['column-gap']).toBe('var(--space-3)')
-    expect(row['row-gap']).toBe('2px')
+    expect(row['row-gap']).toBe('var(--space-half)') // 2 px (DS-11)
     expect(row['padding-block']).toBe('var(--space-2)')
     expect(declarations(css, '.detail-row__detail')['grid-column']).toMatch(/1\s*\/\s*-1|1\s*\/\s*span 2/)
   })

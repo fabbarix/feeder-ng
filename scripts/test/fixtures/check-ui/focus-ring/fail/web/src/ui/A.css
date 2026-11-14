@@ -1,0 +1,4 @@
+/* B9-07 focus-ring: 4 violations (one per offending declaration) */
+.a:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+.b:focus-visible { outline: none; }
+[data-gallery-focus] .ui-field__control { box-shadow: var(--focus-ring); }

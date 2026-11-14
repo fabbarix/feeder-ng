@@ -13,9 +13,9 @@ describe('WeekdayPicker.css', () => {
   })
   it('44 px touch targets, with a gap small enough that 7 chips are at least 44 px wide in a 326 px sheet', () => {
     expect(css).toMatch(/min-block-size\s*:\s*44px|min-height\s*:\s*44px/)
-    const gap = /gap\s*:\s*(\d+)px/.exec(css)
-    expect(gap, 'gap must be a px value of at most 2').not.toBeNull()
-    expect(Number(gap![1])).toBeLessThanOrEqual(2)
+    // B9-07 (DS-11): the chip gap is the 2 px micro gap token, --space-half
+    const gap = /\.weekday-picker__chips\s*\{[^}]*gap\s*:\s*var\(--space-half\)/.exec(css)
+    expect(gap, 'the chips gap must be --space-half (2 px)').not.toBeNull()
   })
   it('tokens only, a visible focus ring and a selected state that is not colour alone', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\b(rgba?|hsla?|oklch|oklab)\(/)

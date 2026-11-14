@@ -19,7 +19,7 @@ function media(query: RegExp): string {
   }
   return ''
 }
-const PHONE = /@media\s*\(\s*max-width\s*:\s*(5\d\d|6[0-3]\d|7[0-6]\d)px\s*\)/ // up to 767 px: phones
+const PHONE = /@media\s*\(\s*width\s*<\s*48em\s*\)/ // below 768 px at the default text size: phones (DS-09)
 
 describe('Breadcrumbs.css', () => {
   it('exists and is imported by the primitive', () => {
@@ -53,7 +53,7 @@ describe('Breadcrumbs.css', () => {
 
   it('has a visible focus ring on the links', () => {
     const d = declarations(css, '.breadcrumbs__link:focus-visible')
-    expect(d['outline']).toMatch(/3px solid var\(--color-accent\)/)
+    expect(d['outline'] ?? '').toMatch(/var\(--focus-ring-width\) solid var\(--focus-ring-color\)/)
   })
 
   it('links are at least 44 px tall (touch target)', () => {
@@ -82,7 +82,7 @@ describe('Breadcrumbs.css', () => {
     expect(declarations(css, '.breadcrumbs__item')['gap']).toMatch(/var\(--space-/)
   })
 
-  it('phone (max-width 767 px or less): only the parent crumb shows, as "‹ Parent"; the rest stay readable to screen readers', () => {
+  it('phone (width < 48em, 767 px or less): only the parent crumb shows, as "‹ Parent"; the rest stay readable to screen readers', () => {
     const phone = media(PHONE)
     expect(phone, 'a phone @media block').not.toBe('')
     expect(phone).toMatch(/\.breadcrumbs__item:not\(\[data-parent=['"]true['"]\]\)/)

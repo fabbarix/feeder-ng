@@ -1,0 +1,8 @@
+/* B9-07 media-width: 6 CSS violations (one per @media or @container line) + 2 in x.tsx */
+@media (max-width: 599px) { .a { gap: var(--space-2); } }
+@media (min-width: 1200px) { .b { gap: var(--space-2); } }
+@media (min-width: 50em) { .c { gap: var(--space-2); } }
+@media (min-width: 48em) and (max-width: 60em) { .d { gap: var(--space-2); } }
+@media (width < 22.5em) { .e { gap: var(--space-2); } }
+.host { container-type: inline-size; }
+@container (max-width: 340px) { .f { gap: var(--space-2); } }

@@ -1,0 +1,14 @@
+@media (min-width: 37.5em) { .a { gap: var(--space-2); } }
+@media (min-width: 48em) { .b { gap: var(--space-2); } }
+@media (min-width: 64em) { .c { gap: var(--space-2); } }
+@media (min-width: 80em) { .d { gap: var(--space-2); } }
+@media (min-width: 90em) and (hover: hover) { .e { gap: var(--space-2); } }
+@media (width < 37.5em) { .f { gap: var(--space-2); } }
+@media (width < 23.5em) { .g { gap: var(--space-2); } }
+@media (prefers-reduced-motion: reduce) { .h { transition: none; } }
+@media (pointer: coarse) { .i { gap: var(--space-3); } }
+@media (orientation: portrait) { .j { gap: var(--space-3); } }
+@media (max-height: 30em) { .k { gap: var(--space-3); } }
+.host { container-type: inline-size; }
+@container (min-width: 52rem) { .l { gap: var(--space-2); } }
+@container card (width < 34rem) { .m { gap: var(--space-2); } }

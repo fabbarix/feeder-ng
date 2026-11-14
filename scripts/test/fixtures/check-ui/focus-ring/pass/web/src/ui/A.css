@@ -1,0 +1,9 @@
+.ui-field__input:focus-visible { outline: none; }
+.ui-field__textarea:focus-visible { outline: none; }
+.search-field__input:focus-visible { outline: none; }
+.time-field__segment:focus-visible { outline: none; background: var(--color-soft-strong); }
+.segmented__option:focus-visible { outline: none; }
+.a:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
+.b { outline: none; }
+.c { box-shadow: inset 0 0 0 1px var(--color-outline); }
+.d { box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-color); }

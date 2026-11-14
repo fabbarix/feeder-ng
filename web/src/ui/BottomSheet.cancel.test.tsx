@@ -70,7 +70,8 @@ describe('BottomSheet.css (R-B, R-C)', () => {
   })
   it('the body keeps 5 px of block padding and scroll-padding so a focus ring is never clipped', () => {
     const d = declarations(css, '.sheet__body')
-    expect(d['padding-block']).toBe('5px')
+    // B9-07: the 5 px are the ring tokens (3 px width + 2 px offset), no raw px (DS-11)
+    expect(d['padding-block']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
     expect(d['scroll-padding-block'] ?? d['scroll-padding']).toBeDefined()
   })
   it('a sticky footer sets scroll-padding-block-end to its height', () => {
@@ -81,7 +82,8 @@ describe('BottomSheet.css (R-B, R-C)', () => {
 describe('BottomSheet.css title (VC2)', () => {
   it("centres the title's first line on the 40 px Close and lets a long title wrap beside it", () => {
     const d = declarations(readUiCss('BottomSheet.css'), '.sheet__title')
-    expect(d['padding-block-start']).toBe('calc((40px - var(--text-title-2-line)) / 2)')
+    // B9-07 (DS-11): 40 px, the Close, is --space-10
+    expect(d['padding-block-start']).toBe('calc((var(--space-10) - var(--text-title-2-line)) / 2)')
     expect(d['min-inline-size']).toBe('0')
   })
 })

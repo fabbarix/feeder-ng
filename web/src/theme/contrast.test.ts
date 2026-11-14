@@ -280,3 +280,49 @@ describe('info tone pairs on every palette (DS-12 R-E, R-D+)', async () => {
     expect(contrastRatio(bg, c.text!), 'toast icon').toBeGreaterThanOrEqual(3)
   })
 })
+
+// ---------------------------------------------------------------------------
+// B9-07 / A11Y-02: "Focus ring on every container". Every ring pair reaches 3:1 (WCAG 1.4.11) for every preset and scheme:
+//   - the accent ring on the page, on surface, surface-2, surface-3 and soft (the soft pair is also the INNER ring on a nested
+//     control's focused soft fill), and on every status and info background;
+//   - the light hero's ring is --color-on-accent (or currentColor, its text) on the accent fill;
+//   - the dark hero (soft-strong) keeps the accent ring, and its text colour is the ring when the ring is currentColor;
+//   - a toast's ring is --color-bg on the text-coloured fill.
+// ---------------------------------------------------------------------------
+describe('Focus ring on every container (A11Y-02)', () => {
+  const cases = ACCENT_PRESETS.flatMap((p) => (['light', 'dark'] as const).map((scheme) => [p.name, scheme] as const))
+  const load = (preset: string, scheme: Scheme) => {
+    const accent = ACCENT_PRESETS.find((p) => p.name === preset)!.hex
+    const palette = generatePalette({ accent }, scheme)
+    return {
+      c: palette.colors as unknown as Record<string, string>,
+      status: palette.status as unknown as Record<string, { fg: string; bg: string; solid: string }>,
+    }
+  }
+
+  it.each(cases)('%s %s: the accent ring is >= 3 on bg, surface, surface-2, surface-3 and soft', (preset, scheme) => {
+    const { c } = load(preset, scheme)
+    for (const ground of ['bg', 'surface', 'surface2', 'surface3', 'soft'] as const) {
+      expect(contrastRatio(c.accent!, c[ground]!), `accent on ${ground}`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it.each(cases)('%s %s: the accent ring is >= 3 on every status and info background', (preset, scheme) => {
+    const { c, status } = load(preset, scheme)
+    for (const name of Object.keys(status)) expect(contrastRatio(c.accent!, status[name]!.bg), `accent on ${name} bg`).toBeGreaterThanOrEqual(3)
+  })
+
+  it.each(cases)('%s %s: the ring on the hero is >= 3 (on-accent on the light accent fill; the accent on the dark soft-strong fill; the text colour on it for currentColor)', (preset, scheme) => {
+    const { c } = load(preset, scheme)
+    if (scheme === 'light') expect(contrastRatio(c.onAccent!, c.accent!)).toBeGreaterThanOrEqual(3)
+    else {
+      expect(contrastRatio(c.accent!, c.softStrong!)).toBeGreaterThanOrEqual(3)
+      expect(contrastRatio(c.text!, c.softStrong!)).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it.each(cases)('%s %s: the ring on a toast (bg colour on the text-coloured fill) is >= 3', (preset, scheme) => {
+    const { c } = load(preset, scheme)
+    expect(contrastRatio(c.bg!, c.text!)).toBeGreaterThanOrEqual(3)
+  })
+})

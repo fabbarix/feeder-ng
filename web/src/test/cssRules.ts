@@ -8,7 +8,7 @@ export interface Stylesheet {
   css: string
   /** Without its @media blocks: the base rules. */
   base: string
-  /** The body of the `@media (max-width: 599px)` block (phone), or ''. */
+  /** The body of the phone `@media` block (`(width < 37.5em)`, or the older `(max-width: 599px)`), or ''. */
   phone: string
 }
 
@@ -16,7 +16,7 @@ export interface Stylesheet {
 export function stylesheet(path: string): Stylesheet {
   const css = readFileSync(`${cwd}/${path}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
   const base = css.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '')
-  const m = css.match(/@media[^{]*max-width:\s*(?:599(?:\.98)?px|37\.4(?:rem|em))[^{]*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/)
+  const m = css.match(/@media[^{]*(?:max-width:\s*(?:599(?:\.98)?px|37\.4(?:rem|em))|width\s*<\s*37\.5(?:rem|em))[^{]*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/)
   return { css, base, phone: m?.[1] ?? '' }
 }
 
@@ -46,7 +46,7 @@ function readUnderSrc(relativeToSrc: string): string {
 export interface Rule {
   selector: string
   body: string
-  /** The min-width of the enclosing @media, or 0. */
+  /** The min-width of the enclosing @media in px (em and rem at 16 px), or 0. */
   minWidth: number
   /** The max-width of the enclosing @media, or Infinity (pantry-filter review: a max-width block is not unconditional). */
   maxWidth: number
@@ -68,9 +68,13 @@ function parse(text: string, minWidth = 0, maxWidth = Infinity): Rule[] {
     }
     const inner = text.slice(open + 1, j - 1)
     if (head.startsWith('@media')) {
-      const m = /min-width:\s*(\d+)px/.exec(head)
-      const max = /max-width:\s*(\d+(?:\.\d+)?)px/.exec(head)
-      rules.push(...parse(inner, m ? Number(m[1]) : minWidth, max ? Number(max[1]) : maxWidth))
+      // px, or em / rem at 16 px (DS-09: the breakpoint table is in em); `(width < N)` is the max-width just below N.
+      const px = (n: string, unit: string) => Number(n) * (unit === 'px' ? 1 : 16)
+      const m = /min-width:\s*(\d+(?:\.\d+)?)(px|em|rem)/.exec(head) ?? /width\s*>=\s*(\d+(?:\.\d+)?)(px|em|rem)/.exec(head)
+      const max = /max-width:\s*(\d+(?:\.\d+)?)(px|em|rem)/.exec(head)
+      const below = /width\s*<\s*(\d+(?:\.\d+)?)(px|em|rem)/.exec(head)
+      const maxPx = max ? px(max[1]!, max[2]!) : below ? px(below[1]!, below[2]!) - 0.02 : maxWidth
+      rules.push(...parse(inner, m ? px(m[1]!, m[2]!) : minWidth, maxPx))
     } else if (!head.startsWith('@')) {
       rules.push({ selector: head, body: inner, minWidth, maxWidth })
     }

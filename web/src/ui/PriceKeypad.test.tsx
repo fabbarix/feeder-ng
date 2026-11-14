@@ -564,7 +564,7 @@ describe('the Next label where the keypad is narrow (beta.7 polish)', () => {
     const css = readUiCss('PriceKeypad.css')
     expect(declarations(css, '.price-keypad')['container-type']).toBe('inline-size')
     expect(declarations(css, '.price-keypad__next-short')['display']).toBe('none')
-    expect(css).toMatch(/@container \(max-width: 340px\)\s*{\s*\.price-keypad__next-long\s*{\s*display: none;/)
+    expect(css).toMatch(/@container \(max-width: 21\.25rem\)\s*{\s*\.price-keypad__next-long\s*{\s*display: none;/)
     expect(declarations(css, '.price-keypad__actions button')['white-space']).toBe('nowrap')
   })
 })

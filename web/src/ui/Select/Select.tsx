@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { BottomSheet } from '../BottomSheet'
-import { useMediaQuery } from '../lib/useMediaQuery'
+import { useBreakpoint } from '../lib/breakpoints'
 import { floatingPopoverAttr, useFloatingPopover } from '../lib/useFloatingPopover'
 import { Icon } from '../Icon'
 import type { IconName } from '../icons'
@@ -132,7 +132,7 @@ function SelectCore<V extends string | number>({
   const baseId = useId()
   const listboxId = `${baseId}-listbox`
   const optionId = (index: number) => `${baseId}-option-${index}`
-  const phone = !useMediaQuery('(min-width: 768px)')
+  const phone = !useBreakpoint('md')
   const entity = entityName ?? label
   // A create row needs a query to be typed, so a Select that can create is searchable whatever its size.
   const showSearch = searchable ?? (Boolean(onCreate) || options.length > SEARCH_THRESHOLD)

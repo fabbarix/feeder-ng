@@ -71,7 +71,7 @@
 }
 
 /* Phone: the extras take a line of their own under the name; the actions stay on the first line. */
-@media (max-width: 767px) {
+@media (width < 48em) {
   .course-picker__extras {
     order: 1;
     flex-basis: 100%;

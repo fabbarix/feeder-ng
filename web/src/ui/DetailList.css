@@ -43,7 +43,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: var(--space-3);
-  row-gap: 2px;
+  row-gap: var(--space-half);
   padding-block: var(--space-2);
   /* the row's own colour is the tone's foreground, so the hairline below is drawn in it; each part sets its own colour */
   color: var(--detail-tone-fg);

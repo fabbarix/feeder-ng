@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Icon } from './Icon'
+import { useBreakpoint } from './lib/breakpoints'
 import { uiStrings } from './strings'
 import './Breadcrumbs.css'
 
@@ -14,6 +15,9 @@ export interface BreadcrumbsProps {
 
 /** The way up a hierarchy: ancestors are links, the last crumb is the current page. Phones show only "‹ Parent". */
 export function Breadcrumbs({ items }: BreadcrumbsProps) {
+  // A11Y-02: on a phone only the parent crumb shows; the others stay in the accessibility tree but leave the Tab order, so focus never
+  // lands on a link that is clipped to nothing.
+  const wide = useBreakpoint('md')
   if (items.length === 0) return null
   const last = items.length - 1
   return (
@@ -23,7 +27,7 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
           <li key={`${i}-${crumb.label}`} className="breadcrumbs__item" data-parent={i === last - 1 ? 'true' : undefined}>
             {i < last && crumb.to ? (
               <>
-                <Link className="breadcrumbs__link" to={crumb.to}>
+                <Link className="breadcrumbs__link" to={crumb.to} tabIndex={wide || i === last - 1 ? undefined : -1}>
                   {i === last - 1 ? <Icon name="chevron" size={14} className="breadcrumbs__back" /> : null}
                   <span className="breadcrumbs__label">{crumb.label}</span>
                 </Link>

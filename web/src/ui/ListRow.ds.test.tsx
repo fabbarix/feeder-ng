@@ -121,6 +121,6 @@ describe('ListRow anatomy: stylesheet', () => {
     expect(styles).toMatch(/--row-value-min:\s*5\.5rem/)
     // b8-shop: the phone minimum is a named token, which the Shop's card grid reuses (docs/dev/design/b8-shop.md 2)
     expect(styles).toMatch(/--row-value-narrow:\s*4\.25rem/)
-    expect(styles).toMatch(/@media\s*\(max-width:\s*599px\)\s*\{[^@]*--row-value-min:\s*var\(--row-value-narrow\)/)
+    expect(styles).toMatch(/@media\s*\(width < 37\.5em\)\s*\{[^@]*--row-value-min:\s*var\(--row-value-narrow\)/)
   })
 })

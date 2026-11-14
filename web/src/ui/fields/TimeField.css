@@ -14,9 +14,12 @@
   box-sizing: border-box;
 }
 
-.time-field:focus-within {
+/* A11Y-02: the group is the frame; it rings with the outer outline while a segment has focus. */
+.time-field:has(.time-field__segment:focus) {
   border-color: var(--color-accent);
-  box-shadow: var(--focus-ring);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
 }
 
 .time-field[data-disabled] {
@@ -74,5 +77,6 @@
 .time-field__colon {
   color: var(--color-muted);
   font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
   font-weight: var(--text-title-3-weight);
 }
