@@ -459,7 +459,8 @@ type fakeList struct {
 	calls    []string // every Tick, TickExtra, Untick, UntickAddition and AfterLot call, in order
 	ticks    []shopservice.TickInput
 	extras   []extraTickCall
-	unticks  []string // "ing:<id>:<to>" or "uuid:<uuid>"
+	extraAt  []time.Time // the phone's time each extra's tick was given
+	unticks  []string    // "ing:<id>:<to>" or "uuid:<uuid>"
 	tickErr  error
 	extraErr error
 	tickAlso []shopservice.AlsoTicked
@@ -499,9 +500,11 @@ func (f *fakeList) Tick(_ context.Context, in shopservice.TickInput) (shopservic
 	return res, nil
 }
 
-func (f *fakeList) TickExtra(_ context.Context, id int64, quantity float64, shopID *int64, clientUUID string) (shopservice.TickResult, error) {
+func (f *fakeList) TickExtraAt(_ context.Context, in shopservice.ExtraTickInput) (shopservice.TickResult, error) {
+	id, quantity, shopID, clientUUID := in.ID, in.Quantity, in.ShopID, in.ClientUUID
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.extraAt = append(f.extraAt, in.TickedAt)
 	f.calls = append(f.calls, "extra:"+clientUUID)
 	f.extras = append(f.extras, extraTickCall{id, quantity, shopID, clientUUID})
 	if err := f.extraErr; err != nil {

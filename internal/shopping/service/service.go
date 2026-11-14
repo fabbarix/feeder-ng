@@ -654,6 +654,22 @@ func (s *Service) DeleteExtra(ctx context.Context, id int64) error {
 // extra (ADR 0024). clientUUID makes a retry idempotent: a UUID already recorded answers as the first time (Created
 // false), adds no second Lot and counts the quantity into the extra's `got` only once. The User is the signed-in one.
 func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, shopID *int64, clientUUID string) (TickResult, error) {
+	return s.TickExtraAt(ctx, ExtraTickInput{ID: id, Quantity: quantity, ShopID: shopID, ClientUUID: clientUUID})
+}
+
+// ExtraTickInput is a tick of an extra. TickedAt is the phone's time of a queued tick (RES-03 shop_tick; zero = now): the
+// addition keeps it and records synced_at = now, as a queued tick of a Line does, so the extras keep their offline order.
+type ExtraTickInput struct {
+	ID         int64
+	Quantity   float64
+	ShopID     *int64
+	ClientUUID string
+	TickedAt   time.Time
+}
+
+// TickExtraAt is TickExtra with the time of a queued tick.
+func (s *Service) TickExtraAt(ctx context.Context, in ExtraTickInput) (TickResult, error) {
+	id, quantity, shopID, clientUUID := in.ID, in.Quantity, in.ShopID, in.ClientUUID
 	if !validAmount(quantity) {
 		return TickResult{}, ErrInvalid
 	}
@@ -678,7 +694,11 @@ func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, sho
 		return TickResult{Created: true, AlsoTickedBy: []AlsoTicked{}}, nil
 	}
 	u, _ := auth.UserFrom(ctx)
-	a := shopping.Addition{ClientUUID: clientUUID, UserID: u.ID, By: "hand", Quantity: quantity, Covers: math.Max(0, extra.Quantity-extra.Got)}
+	a := shopping.Addition{ClientUUID: clientUUID, UserID: u.ID, By: "hand", Quantity: quantity, Covers: math.Max(0, extra.Quantity-extra.Got),
+		TickedAt: in.TickedAt}
+	if !in.TickedAt.IsZero() {
+		a.SyncedAt = s.clk.Now()
+	}
 	if quantity > 0 {
 		// The client UUID makes a retried tick find the same Lot (Stock answers created false); only the first
 		// answer counts the quantity into the extra's got.

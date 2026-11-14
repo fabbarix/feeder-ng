@@ -884,3 +884,19 @@ func TestTheUndoOfAScanTickFromBeforeBeta9KeepsALaterTickByHand(t *testing.T) {
 		t.Errorf("TakeBack calls = %v, want Sam's Lot taken back on untick", e.stock.takes)
 	}
 }
+
+func TestAQueuedTickOfAnExtraKeepsThePhonesTimeAndItsUser(t *testing.T) {
+	e := newEnv(t)
+	x, err := e.svc.AddExtra(ctx, service.ExtraInput{IngredientID: e.ids[milk], Quantity: 2000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := startTime.Add(-30 * time.Minute)
+	if _, err := e.svc.TickExtraAt(ctx, service.ExtraTickInput{ID: x.ID, Quantity: 2000, ClientUUID: "x1", TickedAt: at}); err != nil {
+		t.Fatal(err)
+	}
+	adds, err := e.st.ExtraAdditions(ctx, x.ID)
+	if err != nil || len(adds) != 1 || !adds[0].TickedAt.Equal(at) || !adds[0].SyncedAt.Equal(startTime) {
+		t.Fatalf("additions = %+v, %v; want the phone's time and the sync time", adds, err)
+	}
+}

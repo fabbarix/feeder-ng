@@ -231,10 +231,10 @@ type List interface {
 	AfterLot(ctx context.Context, in shopservice.AfterLotInput) (shopservice.Effect, error)
 	UndoLot(ctx context.Context, in shopservice.UndoLotInput) error
 	// B9-23 (RES-03): the queued Tick and untick. Tick is shopping/service.Service.Tick (the shop_tick of an Ingredient
-	// Line), TickExtra the shop_tick of an Ingredient extra, Untick the shop_untick of a Line, UntickAddition the
+	// Line), TickExtraAt the shop_tick of an extra, Untick the shop_untick of a Line, UntickAddition the
 	// shop_untick of one addition by its client UUID.
 	Tick(ctx context.Context, in shopservice.TickInput) (shopservice.TickResult, error)
-	TickExtra(ctx context.Context, id int64, quantity float64, shopID *int64, clientUUID string) (shopservice.TickResult, error)
+	TickExtraAt(ctx context.Context, in shopservice.ExtraTickInput) (shopservice.TickResult, error)
 	Untick(ctx context.Context, ingredientID int64, to stock.Date) error
 	UntickAddition(ctx context.Context, clientUUID string) error
 }
@@ -350,14 +350,15 @@ func (s *Service) shopTick(ctx context.Context, op scan.Op) (scan.Result, error)
 		res shopservice.TickResult
 		err error
 	)
+	at, _ := time.Parse(time.RFC3339, op.ScannedAt) // Validate checked it
 	if op.ExtraID != 0 {
-		res, err = s.d.List.TickExtra(ctx, op.ExtraID, op.Quantity, op.ShopID, op.ClientUUID)
+		res, err = s.d.List.TickExtraAt(ctx, shopservice.ExtraTickInput{ID: op.ExtraID, Quantity: op.Quantity, ShopID: op.ShopID,
+			ClientUUID: op.ClientUUID, TickedAt: at.UTC()})
 	} else {
 		today, horizon, herr := s.household(ctx)
 		if herr != nil {
 			return scan.Result{}, herr
 		}
-		at, _ := time.Parse(time.RFC3339, op.ScannedAt) // Validate checked it
 		user, _ := auth.UserFrom(ctx)
 		res, err = s.d.List.Tick(ctx, shopservice.TickInput{IngredientID: op.IngredientID, To: shopping.ClampTo(today, horizon, stock.Date(op.RangeTo)),
 			ShopID: op.ShopID, Quantity: op.Quantity, ClientUUID: op.ClientUUID, UserID: user.ID, Covers: op.Covers,

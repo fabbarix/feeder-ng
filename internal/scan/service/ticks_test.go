@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/scan"
@@ -101,6 +102,9 @@ func TestAShopTickOfAnExtraTicksTheExtra(t *testing.T) {
 	}
 	if len(e.list.extras) != 1 || e.list.extras[0].ID != 9 || e.list.extras[0].Quantity != 2000 || e.list.extras[0].ClientUUID != "tick-1" || len(e.list.ticks) != 0 {
 		t.Errorf("TickExtra calls = %+v, Tick calls %+v; want the extra ticked with its UUID and no Line tick", e.list.extras, e.list.ticks)
+	}
+	if len(e.list.extraAt) != 1 || !e.list.extraAt[0].Equal(time.Date(2026, 11, 9, 10, 20, 0, 0, time.UTC)) {
+		t.Errorf("extra tick times = %v, want the phone's 10:20 (reviewer: the offline order of extras)", e.list.extraAt)
 	}
 }
 
