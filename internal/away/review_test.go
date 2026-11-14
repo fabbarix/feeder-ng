@@ -104,3 +104,15 @@ func TestAChangeCannotStretchAnAwayThatIsOverOverMealSlotsThatHaveStarted(t *tes
 		t.Errorf("CheckStart at 07:00 = %v, want nil", err)
 	}
 }
+
+func TestTheMessagesOfARefusedAwayReadAsFieldErrors(t *testing.T) {
+	for reason, want := range map[string]string{
+		"first_day_past":    "The first day cannot be in the past.",
+		"last_before_first": "The last day cannot be before the first.",
+		"away_started":      "This Away has started, so its first day cannot change.",
+	} {
+		if got := away.Message(&away.Error{Reason: reason}, "Anna"); got != want {
+			t.Errorf("Message(%s) = %q, want %q", reason, got, want)
+		}
+	}
+}

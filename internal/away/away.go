@@ -553,9 +553,9 @@ func Message(e *Error, memberName string) string {
 		}
 		return memberName + " is already away then. Change that Away instead."
 	case "first_day_past":
-		return "The first day is today or later."
+		return "The first day cannot be in the past."
 	case "last_before_first":
-		return "The last day is not before the first."
+		return "The last day cannot be before the first."
 	case "slot_started":
 		return fmt.Sprintf("A Meal Slot that has started cannot change. To bring %s back now, end the Away.", memberName)
 	case "date_invalid":
@@ -563,7 +563,7 @@ func Message(e *Error, memberName string) string {
 	case "slot_not_on_day":
 		return "Choose a Meal Slot of that day."
 	case "away_started":
-		return "This Away has started, so its first day stays."
+		return "This Away has started, so its first day cannot change."
 	}
 	return "Check the Away."
 }
