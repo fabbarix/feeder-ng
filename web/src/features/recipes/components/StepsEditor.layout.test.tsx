@@ -36,6 +36,12 @@ describe('StepsEditor: card layout', () => {
     expect(lead.closest('.field-row')).toHaveClass('step-card__timing')
     expect(lead.closest('.ui-field')!.querySelector('.ui-field__suffix')).toHaveTextContent('min')
   })
+  it('the Kind Segmented is compact (each option as wide as its label, never wrapping) and keeps the full labels', () => {
+    view([step()])
+    const kind = within(card()).getByRole('radiogroup', { name: 'Kind' })
+    expect(kind).toHaveAttribute('data-compact')
+    expect(within(kind).getAllByRole('radio').map((r) => r.textContent)).toEqual(['Active', 'Passive', 'Advance Step'])
+  })
   it('the Step text is a TextArea in the card', () => {
     view([step({ text: 'Dice the onion' })])
     expect(within(card()).getByRole('textbox', { name: 'Step text' })).toHaveValue('Dice the onion')

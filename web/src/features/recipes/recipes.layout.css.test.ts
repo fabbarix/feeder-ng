@@ -169,6 +169,14 @@ describe('E-02 / E-03: Step cards', () => {
       expect(v, `@${w}`).toMatch(/^(auto|max-content|fit-content)/)
     }
   })
+  it('the Step kind options stay on one line (P30): the control never shrinks below its content, and the row wraps Duration instead', () => {
+    const sel = '.step-card__timing > .ui-field:has(.segmented)'
+    for (const w of [0, 375, 390, 834, 1440]) {
+      expect(valueFor(sel, 'flex', w), `@${w}`).toBe('none')
+      expect(valueFor(sel, 'min-inline-size', w), `@${w}`).toBe('max-content')
+      expect(valueFor(sel, 'max-inline-size', w), `@${w}`).toBeUndefined()
+    }
+  })
   it('the "Uses" strip is a wrapping row of chips, shown only when there are uses or the + Use chip', () => {
     expect(valueFor('.step-card__uses', 'display', 0)).toBe('flex')
     expect(valueFor('.step-card__uses', 'flex-wrap', 0)).toBe('wrap')

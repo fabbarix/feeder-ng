@@ -799,10 +799,13 @@
   align-items: flex-end;
 }
 
-/* The Segmented frame is 100 % wide by default, so Duration always wrapped: it takes its content's width, and the pair shares a row. */
+/* The Step kind Segmented (compact: each option as wide as its label, never wrapping; P30) takes its content's width and never
+   shrinks below it: the timing row wraps the Duration under it instead. Its options used to share the width equally (flex: 1),
+   so "Advance Step" got a third of the control and wrapped at every width. */
 .step-card__timing > .ui-field:has(.segmented) {
+  flex: none;
   inline-size: max-content;
-  max-inline-size: 100%;
+  min-inline-size: max-content;
 }
 
 .step-card__label {

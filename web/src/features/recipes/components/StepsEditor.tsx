@@ -106,6 +106,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
               <TextArea label={recipeStrings.steps.text} rows={2} value={s.text} onChange={(text) => patch(i, { text })} />
               <FieldRow className="step-card__timing">
                 <Segmented
+                  compact
                   label={recipeStrings.steps.kind}
                   options={kindOptions}
                   value={s.kind}
