@@ -18,7 +18,7 @@ vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices:
 import { ShoppingScreen } from './ShoppingScreen'
 
 function show(shopId: number | null, wide: boolean) {
-  vi.stubGlobal('matchMedia', (query: string) => ({ matches: /min-width:\s*420px/.test(query) ? wide : false, media: query, addEventListener: () => {}, removeEventListener: () => {} }))
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: /width\s*<\s*22\.5em/.test(query) ? !wide : false, media: query, addEventListener: () => {}, removeEventListener: () => {} }))
   listHook.useShoppingList.mockReturnValue({ data: makeList(), isLoading: false, error: null, stale: false, status: 'ready', retry: vi.fn() })
   choice.useShopChoice.mockReturnValue({ shops: [{ id: 1, name: 'Coop' }], shopId, setShopId: vi.fn(), isLoading: false })
   render(
@@ -36,7 +36,7 @@ function show(shopId: number | null, wide: boolean) {
 beforeEach(() => listHook.useShoppingList.mockReset())
 afterEach(() => vi.unstubAllGlobals())
 
-describe('Shop header chips at a narrow width (< 420 px)', () => {
+describe('Shop header chips in the narrow band (width < 22.5 em, 360 px)', () => {
   it('both chips keep their icon and the row still holds both pickers and the locate button', () => {
     const { range, shop } = show(null, false)
     expect(range.querySelector('.select__leading svg')).not.toBeNull()
@@ -62,7 +62,7 @@ describe('Shop header chips at a narrow width (< 420 px)', () => {
   })
 })
 
-describe('Shop header chips at 420 px and wider', () => {
+describe('Shop header chips from 22.5 em (360 px)', () => {
   it('show the full values with their icons', () => {
     const { range, shop } = show(null, true)
     expect(range).toHaveTextContent('Until Sun 15')

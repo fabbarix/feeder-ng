@@ -1,4 +1,4 @@
-// b8-hint (docs/dev/design/b8-hint.md): below 420 px the Shop hint ("Wed Breakfast +12", the widest real one) fits a 360 px row.
+// b8-hint (docs/dev/design/b8-hint.md), B9-09 (DS-09): below 24 rem of the screen's own width (a container query, was 420 px of viewport) the Shop hint ("Wed Breakfast +12", the widest real one) fits a 360 px row.
 // The row gives its text column room through tokens: 12 px padding, 8 px gaps, the tick's hit area reaching into the start padding, a value
 // column 8 px under the phone minimum. No raw rem and no copy change.
 import { describe, expect, it } from 'vitest'
@@ -7,12 +7,13 @@ const nodeFs = 'node:fs'
 const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const css = readFileSync(`${cwd}/src/features/shop/shop.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
-const start = css.indexOf('@media (width < 420px)')
+const start = css.indexOf('@container (width < 24rem)')
 const narrow = start < 0 ? '' : css.slice(start, css.indexOf('\n}', start) + 2)
 
-describe('Shop rows below 420 px: the hint has room', () => {
-  it('has a below-420 px block (the useNarrowChips breakpoint)', () => {
+describe('Shop rows below 24 rem: the hint has room', () => {
+  it('has a below-24 rem container block, and shop.css declares the container (container-type: inline-size)', () => {
     expect(start).toBeGreaterThan(-1)
+    expect(css).toMatch(/container-type:\s*inline-size/)
   })
   it('the row gap is --space-2, its padding --space-3, and the value column is the phone minimum less --space-2', () => {
     expect(narrow).toMatch(/\.shop-lines \.list-row\s*\{[^}]*gap\s*:\s*var\(--space-2\)/)

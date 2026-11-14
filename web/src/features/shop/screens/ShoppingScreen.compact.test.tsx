@@ -19,7 +19,7 @@ vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices:
 import { ShoppingScreen } from './ShoppingScreen'
 
 function show(wide: boolean) {
-  vi.stubGlobal('matchMedia', (query: string) => ({ matches: /min-width:\s*420px/.test(query) ? wide : false, media: query, addEventListener: () => {}, removeEventListener: () => {} }))
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: /width\s*<\s*22\.5em/.test(query) ? !wide : false, media: query, addEventListener: () => {}, removeEventListener: () => {} }))
   const data = makeList({
     lines: [makeLine({ ingredientId: 20, name: 'Washing-up liquid', baseUnit: 'ml', kind: 'supply', restock: { level: 1000, stock: 400 }, need: 1000, available: 400, quantity: 600, pack: null, estimatedCostCents: null })],
     progress: { ticked: 0, total: 1 },

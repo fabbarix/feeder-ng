@@ -1,11 +1,16 @@
 // pantry-filter: the Pantry's own CSS around the shared filter header (docs/design/pantry-filter.md 2.9, 3). jsdom does not lay out;
 // the guard checks the real build (P17 to P21 on /pantry, closed and open).
 import { describe, expect, it } from 'vitest'
-import { cssRules } from '../../test/cssRules'
+import { cssRules as sheetRules } from '../../test/cssRules'
+import { cssRules, readFeature, valueAtWidth } from '../cssSweep.test-helper'
 
-const { rules, valueFor, valueAt } = cssRules(['features/stock/stock.css'])
+// B9-09: stock.css queries are em (DS-09), which test/cssRules does not read: the Stock rules go through the sweep helper.
+const { rules } = sheetRules(['features/stock/stock.css'])
+const stockRules = cssRules(readFeature('stock/stock.css'))
+const valueAt = (selector: string, prop: string, width: number) => valueAtWidth(stockRules, selector, prop, width)
+const valueFor = (selector: string, prop: string, width: number) => valueAtWidth(stockRules, selector, prop, width)
 
-const shared = cssRules(['ui/FilterBar/FilterBar.css'])
+const shared = sheetRules(['ui/FilterBar/FilterBar.css'])
 
 describe('the Filters panel', () => {
   it('keeps the shared width, 24 rem, which is the L-06 aside\'s width (so, end-aligned to Filters, it starts at the content start)', () => {

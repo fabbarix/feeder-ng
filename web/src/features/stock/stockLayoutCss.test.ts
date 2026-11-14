@@ -6,7 +6,7 @@ const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFile
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const css = readFileSync(`${cwd}/src/features/stock/stock.css`, 'utf8')
 
-const at = css.indexOf('@media (min-width: 1280px)')
+const at = css.indexOf('@media (min-width: 80em)')
 const phone = at < 0 ? css : css.slice(0, at)
 const wide = at < 0 ? '' : css.slice(at)
 const rule = (text: string, selector: string) => {
@@ -15,7 +15,7 @@ const rule = (text: string, selector: string) => {
 }
 
 describe('stock.css two-column layout', () => {
-  it('has a 1280 px block', () => {
+  it('has a 80 em (1280 px) block', () => {
     expect(at).toBeGreaterThan(-1)
   })
   it('below 1280 the layout is one column (no template columns)', () => {

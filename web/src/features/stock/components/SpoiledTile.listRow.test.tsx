@@ -1,4 +1,4 @@
-// R2-4 L-07 (second half): "Throw out or keep?" rows are ListRows. From 820 px the two actions trail the row; below it they sit under the text.
+// R2-4 L-07 (second half): "Throw out or keep?" rows are ListRows. B9-09: one DOM at every width; the container query in stock.css decides where the actions sit.
 import { render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { makeLot } from '../testData'
@@ -29,25 +29,18 @@ describe('SpoiledTile rows are ListRows', () => {
     expect(document.querySelector('.spoiled-tile__row')).toBeNull()
   })
 
-  it('from 820 px both actions trail the row, Throw out before Keep', () => {
-    viewport(820)
-    view()
-    const row = document.querySelectorAll('li.list-row')[0]!
-    const trailing = row.querySelector('.list-row__trailing') as HTMLElement
-    expect(trailing).not.toBeNull()
-    const buttons = within(trailing).getAllByRole('button')
-    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Throw out chicken thighs', 'Keep chicken thighs'])
-    expect(row.querySelector('.list-row__extra')).toBeNull()
-  })
-
-  it('below 820 px the actions sit under the text (the row grows) and the trailing slot is empty', () => {
-    viewport(600)
-    view()
-    const row = document.querySelectorAll('li.list-row')[0] as HTMLElement
-    expect(row).toHaveAttribute('data-height', 'auto')
-    expect(row.querySelector('.list-row__trailing')).toBeNull()
-    const extra = row.querySelector('.list-row__extra') as HTMLElement
-    expect(within(extra).getAllByRole('button')).toHaveLength(2)
+  // B9-09 (DS-09): the tile no longer reads the viewport. Its rows are the same at every width (the actions in the row's own slot below the
+  // text); from 44 rem of the tile's own width a container query in stock.css (@container spoiled-tile) places them beside the text.
+  it('at every viewport both actions are in the row\'s extra slot, Throw out before Keep, and the trailing slot is empty', () => {
+    for (const px of [375, 600, 820, 1280]) {
+      viewport(px)
+      const { unmount } = view()
+      const row = document.querySelectorAll('li.list-row')[0] as HTMLElement
+      expect(row.querySelector('.list-row__trailing')).toBeNull()
+      const extra = row.querySelector('.list-row__extra') as HTMLElement
+      expect(within(extra).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Throw out chicken thighs', 'Keep chicken thighs'])
+      unmount()
+    }
   })
 
   it('a row is not a tap target: only the two buttons are interactive', () => {
