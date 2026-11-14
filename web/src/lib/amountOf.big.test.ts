@@ -33,3 +33,15 @@ describe('SSP-16 amountOf with kg and l', () => {
     expect(amountOf(1000, 2000, 'g', 'imperial')).toEqual(['2 lb 3 oz', '4 lb 7 oz'])
   })
 })
+
+describe('SSP-16 review: x and y that round differently', () => {
+  it('999.96 g of 2 kg reads "1 of 2 kg", never "1000 g"', () => {
+    expect(amountOfText(999.96, 2000, 'g', 'metric')).toBe('1 of 2 kg')
+  })
+  it('999.94 g of 1 kg keeps both units', () => {
+    expect(amountOfText(999.94, 1000, 'g', 'metric')).toBe('999.9 g of 1 kg')
+  })
+  it('a piece amount that rounds to zero has no sign', () => {
+    expect(amountOf(0, -0.01, 'piece', 'metric')).toEqual(['0', '0'])
+  })
+})

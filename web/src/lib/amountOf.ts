@@ -7,7 +7,10 @@ const EPS = 1e-9
 
 /** One amount: a piece is a bare number (at most 1 decimal and grouped, as formatQuantity writes pieces); g and ml read as formatQuantity. */
 function amountText(amount: number, base: BaseUnit, system: UnitSystem): string {
-  if (base === 'piece') return (amount < 0 ? '-' : '') + grouped(Math.abs(amount), 1)
+  if (base === 'piece') {
+    const text = grouped(Math.abs(amount), 1)
+    return amount < 0 && text !== '0' ? `-${text}` : text
+  }
   return formatQuantity(amount, base, system)
 }
 
@@ -35,7 +38,8 @@ export function amountOf(x: number, y: number, base: BaseUnit, system: UnitSyste
 }
 
 /**
- * The "x of y" text of two amounts (b8-polish): "400 of 1000 ml"; with `compact` the "x/y" form, "400/1000 ml", "2/6". The unit
+ * The "x of y" text of two amounts (b8-polish): "400 of 750 ml", "400 ml of 1 l", "1.5 of 2 kg"; with `compact` the "x/y" form,
+ * "400/750 ml", "400 ml/1 l", "2/6". The unit
  * rules are amountOf's: one unit on y when both amounts share it, and a 0 for float dust.
  */
 export function amountOfText(x: number, y: number, base: BaseUnit, system: UnitSystem, opts: { compact?: boolean } = {}): string {
