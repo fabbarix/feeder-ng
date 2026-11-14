@@ -31,4 +31,4 @@ if [ "$size" -gt "$WARN_BYTES" ]; then
   echo "bundle budget: WARN: $entry is ${kb} KB brotli, over 350 KB (the budget is 400 KB)"
   exit 0
 fi
-echo "bundle budget: ok: $entry is ${kb} KB brotli (warn at 350 KB, fail over 400 KB)"
+echo "bundle budget: ok: $entry is ${kb} KB brotli, within 350 KB (the budget is 400 KB)"
