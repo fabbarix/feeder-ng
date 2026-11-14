@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
+	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/course"
 	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
@@ -112,7 +113,7 @@ func NewService(d app.Deps) *service.Service {
 	hh := NewHousehold(d)
 	stockSvc := NewStock(d)
 	return service.New(store.New(d.DB, d.Clock), service.Ports{
-		Plan:        plans{st: planstore.New(d.DB, d.Clock), hh: householdstore.New(d.DB, d.Clock), sources: runner.NewDBSources(d.DB, d.Clock, slog.Default()), courses: coursestore.New(d.DB, d.Clock),
+		Plan: plans{st: planstore.New(d.DB, d.Clock), hh: householdstore.New(d.DB, d.Clock), sources: runner.NewDBSources(d.DB, d.Clock, slog.Default()), courses: coursestore.New(d.DB, d.Clock),
 			recipes: recipestore.New(d.DB, d.Clock, nil)},
 		Stock:       stockPort{svc: stockSvc, st: stockstore.New(d.DB, d.Clock)},
 		Products:    products{st: productstore.New(d.DB, d.Clock)},
@@ -120,7 +121,41 @@ func NewService(d app.Deps) *service.Service {
 		Household:   hh,
 		Ledger:      scanstore.New(d.DB, d.Clock),
 		Bought:      boughts{st: planstore.New(d.DB, d.Clock)},
+		Adjust:      adjuster{svc: stockSvc},
+		Users:       users{auth: d.Auth},
 	}, d.Clock, d.Events)
+}
+
+// adjuster sets a Stock Lot's quantity through the Stock service (B9-23, SSP-01 Change): 0 removes the Lot.
+type adjuster struct{ svc *stockservice.Service }
+
+func (a adjuster) AdjustLot(ctx context.Context, lotID int64, quantity float64) error {
+	_, err := a.svc.AdjustLot(ctx, lotID, quantity)
+	return err
+}
+
+// users names the Users who ticked (B9-23, RES-03) by their display name.
+type users struct{ auth *auth.Service }
+
+func (u users) Names(ctx context.Context, ids []int64) (map[int64]string, error) {
+	out := map[int64]string{}
+	if u.auth == nil || len(ids) == 0 {
+		return out, nil
+	}
+	want := make(map[int64]bool, len(ids))
+	for _, id := range ids {
+		want[id] = true
+	}
+	list, err := u.auth.ListUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, usr := range list {
+		if want[usr.ID] {
+			out[usr.ID] = usr.DisplayName
+		}
+	}
+	return out, nil
 }
 
 // boughts keeps what each purchase was bought for in planned_meal_bought, through the plan store (B5-BO, ADR 0013).
@@ -338,4 +373,6 @@ var (
 	_ service.Household      = (*Household)(nil)
 	_ service.Ledger         = (*scanstore.Store)(nil)
 	_ service.BoughtRecorder = boughts{}
+	_ service.Adjuster       = adjuster{}
+	_ service.Users          = users{}
 )
