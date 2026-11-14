@@ -4,7 +4,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { stubViewportWidth } from '../viewport.test-helper'
+import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 import { courseChoices, summary } from '../fixtures.test-helper'
 import type { RecipeFilter } from '../types'
 

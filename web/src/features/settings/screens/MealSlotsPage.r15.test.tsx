@@ -6,6 +6,7 @@ import { anna, householdSettings, marco, mondayLunch, sam, thursdayDinner, tuesd
 import { ADMIN_ME, mockApi, renderWithProviders, USER_ME } from '../test-utils'
 import { MealSlotsPage } from './MealSlotsPage'
 import { findToast } from '../../../test/notices'
+import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 
 const wednesdayDinner = { ...tuesdayDinner, id: 13, weekday: 3 }
 const slots = [mondayLunch, { ...tuesdayDinner, id: 9, weekday: 1 }, tuesdayDinner, wednesdayDinner, thursdayDinner]
@@ -20,7 +21,7 @@ function routes(me: typeof ADMIN_ME, extra: Record<string, unknown> = {}) {
   })
 }
 function viewport(desktop: boolean) {
-  vi.stubGlobal('matchMedia', (q: string) => ({ matches: desktop && /1024|64em/.test(q), media: q, addEventListener() {}, removeEventListener() {} }))
+  stubViewportWidth(desktop ? 1024 : 390)
 }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 10, 9, 12, 0) })

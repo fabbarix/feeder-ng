@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { stubViewportWidth } from '../viewport.test-helper'
+import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 import { courseChoices } from '../fixtures.test-helper'
 import { RecipeFiltersPanel, type RecipeFiltersPanelProps } from './RecipeFiltersPanel'
 

@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmProvider, Page } from '../../../ui'
-import { stubViewportWidth } from '../viewport.test-helper'
+import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 import { garlic, recipe } from '../fixtures.test-helper'
 import { household } from '../household.test-helper'
 

@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { stubViewportWidth } from '../viewport.test-helper'
+import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 
 const copy = vi.hoisted(() => vi.fn())
 vi.mock('../../import/hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy }) }))
