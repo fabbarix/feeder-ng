@@ -121,7 +121,9 @@ func (c catalogue) Product(ctx context.Context, id int64) (service.ProductInfo, 
 }
 
 func (c catalogue) CreateProduct(ctx context.Context, in service.NewProduct) (service.ProductInfo, error) {
-	np := productstore.NewProduct{Input: product.Input{Name: in.Name, IngredientID: in.IngredientID, PackSize: in.PackSize, Image: in.Image}, Barcodes: in.Barcodes}
+	// Scanned: the Scan module's barcodes were read by the scanner, so the typed-code check (decision SET 1) is skipped.
+	np := productstore.NewProduct{Input: product.Input{Name: in.Name, IngredientID: in.IngredientID, PackSize: in.PackSize, Image: in.Image}, Barcodes: in.Barcodes,
+		Scanned: true}
 	for _, sb := range in.ShopBarcodes {
 		np.ShopBarcodes = append(np.ShopBarcodes, productstore.NewShopBarcode{ShopID: sb.ShopID, Code: sb.Code, RuleID: sb.RuleID, ItemCode: sb.ItemCode})
 	}
