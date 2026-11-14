@@ -16,7 +16,7 @@
  * A failed change shows an error toast. No `<main>`: the shell provides it. No tile grid.
  */
 import { useId, useMemo, useRef, useState, type ReactElement } from 'react'
-import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, PageHeader, SearchField, Skeleton, useMediaQuery, useToast } from '../../../ui'
+import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, PageHeader, SearchField, Skeleton, useToast } from '../../../ui'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { IngredientLotsRow } from '../components/IngredientLotsRow'
 import { LotEditSheet } from '../components/LotEditSheet'
@@ -83,8 +83,6 @@ export function StockScreen(): ReactElement | null {
   const { restockFor, hasSupplies } = useSupplyRestock(choices.choices, pantry.lots.data)
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
-  // The aside is a 24 rem column from 1280 px: the spoiled rows keep their actions under the text there.
-  const twoColumns = useMediaQuery('(min-width: 1280px)')
   const ready = totals.status === 'ready'
   // No empty aside: it exists when something is spoiled or the filter header is shown.
   const showAside = spoiledLots.length > 0 || ready
@@ -127,7 +125,6 @@ export function StockScreen(): ReactElement | null {
               lots={spoiledLots}
               today={today}
               system={system}
-              stacked={twoColumns}
               onThrowOut={(id) => void attempt(() => spoiled.throwOut(id))}
               onKeep={(id) => void attempt(() => spoiled.keep(id))}
             />

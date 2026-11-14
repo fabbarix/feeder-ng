@@ -37,7 +37,7 @@
   max-block-size: min(16rem, 40dvh);
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 80em) {
   .stock-screen__layout {
     /* pantry-filter: 24 rem, so row 2 of the filter header (List and "Good until") fits in full, and the 24 rem Filters panel,
        end-aligned to the Filters button at the aside's end, starts at the page content's start (P19). */
@@ -98,9 +98,36 @@
   white-space: normal;
 }
 
-/* Under the text (phone): the buttons are inside the click-through row, so they take the pointer back. */
+/* The buttons are inside the click-through row, so they take the pointer back. */
 .spoiled-tile__list .list-row__extra button {
   pointer-events: auto;
+}
+
+/* B9-09 (DS-09; was a 820 px viewport query in SpoiledTile): from 44 rem of the list's own width the two actions sit beside the
+   text, centred on the row, Throw out before Keep; below it (a phone, Stock's 24 rem aside) they stay under the text. */
+.spoiled-tile__list {
+  container: spoiled-tile / inline-size;
+}
+
+@container spoiled-tile (min-width: 44rem) {
+  .spoiled-tile__list .list-row__text {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--space-3);
+  }
+
+  .spoiled-tile__list .list-row__text > :not(.list-row__extra) {
+    grid-column: 1;
+  }
+
+  .spoiled-tile__list .list-row__extra {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+    margin-block-start: 0;
+  }
 }
 
 /* Plan's shortfall warning, as this feature's Tile (variant status, spoil). */
@@ -135,10 +162,11 @@
 .lot-sheet__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2, 8px);
+  gap: var(--space-2);
 }
 
 .lot-sheet__heading {
   margin: 0;
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
 }
