@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<title>Feeder</title>
+<!-- RES-08 mock of web/index.html after the fix. Nothing here comes from app.css: this is all that exists before the JS and CSS arrive.
+     Mock-only: ?seed=tomato-dark|basil-light|none puts a theme in localStorage before the real boot script runs. -->
+<script>
+  (function () { var q = new URLSearchParams(location.search).get('seed');
+    var T = { 'tomato-dark': { scheme: 'dark', bg: '#120b0a', surface: '#211615', surface2: '#302320', line: '#473633', text: '#f5ecea', accent: '#ff9686' },
+              'basil-light': { scheme: 'light', bg: '#e7f4eb', surface: '#fafffc', surface2: '#daecdf', line: '#c2d7c9', text: '#131d17', accent: '#34724e' } };
+    try { if (q === 'none') localStorage.removeItem('feeder.theme'); else if (T[q]) localStorage.setItem('feeder.theme', JSON.stringify(T[q])); } catch (e) {} })();
+</script>
+<!-- data-proposed: the boot script (inline, ~0.6 KB). It runs before first paint, so the first frame is already the User's theme. -->
+<script data-proposed>
+  (function () {
+    try {
+      var t = JSON.parse(localStorage.getItem('feeder.theme') || 'null');
+      if (!t || !/^#[0-9a-f]{6}$/i.test(t.bg)) return;
+      var r = document.documentElement, s = r.style;
+      r.dataset.scheme = t.scheme === 'dark' ? 'dark' : 'light';
+      s.colorScheme = r.dataset.scheme;
+      s.setProperty('--boot-bg', t.bg); s.setProperty('--boot-surface', t.surface); s.setProperty('--boot-surface-2', t.surface2);
+      s.setProperty('--boot-line', t.line); s.setProperty('--boot-text', t.text); s.setProperty('--boot-accent', t.accent);
+      var m = document.querySelector('meta[name=theme-color]') || document.head.appendChild(document.createElement('meta'));
+      m.name = 'theme-color'; m.content = t.bg;
+      r.dataset.boot = 'shell'; /* a returning User: the shell skeleton, not the centred mark */
+    } catch (e) { /* storage blocked: the default boot mark below */ }
+  })();
+</script>
+<style data-proposed>
+  html { background: var(--boot-bg, #e7f4eb); color: var(--boot-text, #131d17); }
+  @media (prefers-color-scheme: dark) { html:not([data-scheme='light']) { background: var(--boot-bg, #090f0b); color: var(--boot-text, #e3efe6); } }
+  html[data-scheme='dark'] { background: var(--boot-bg, #090f0b); }
+  body { margin: 0; font-family: system-ui, sans-serif; }
+  #root:has(> .boot-mark) { display: grid; place-items: center; min-height: 100dvh; }
+  .boot-mark { display: grid; justify-items: center; gap: 8px; font-weight: 700; color: var(--boot-accent, #34724e); }
+  .boot-shell { display: none; }
+  html[data-boot='shell'] .boot-mark { display: none; }
+  html[data-boot='shell'] #root:has(> .boot-mark) { display: block; place-items: normal; }
+  html[data-boot='shell'] .boot-shell { display: grid; inline-size: 100%; min-height: 100dvh; grid-template-columns: minmax(0, 1fr); grid-template-rows: 64px 1fr; align-content: start; }
+  .boot-shell__page > span { display: block; }
+  .boot-shell__top { display: flex; align-items: center; justify-content: space-between; padding-inline: 16px; }
+  .boot-shell__brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 20px; color: var(--boot-text); }
+  .boot-shell__brand svg { color: var(--boot-accent); }
+  .boot-shell__avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--boot-surface-2); }
+  .boot-shell__page { padding: 8px 16px 120px; display: grid; gap: 12px; align-content: start; }
+  .boot-shell__title { width: 40%; height: 32px; border-radius: 999px; background: var(--boot-surface-2); }
+  .boot-shell__tile { height: 193px; border-radius: 28px; background: var(--boot-surface); border: 1px solid var(--boot-line); }
+  .boot-shell__tile + .boot-shell__tile { height: 160px; }
+  .boot-shell__bar { position: fixed; left: 12px; right: 12px; bottom: 12px; height: 70px; max-width: 480px; margin-inline: auto; border-radius: 24px; background: var(--boot-surface); border: 1px solid var(--boot-line); }
+  .boot-shell__rail { display: none; }
+  @media (min-width: 600px) { .boot-shell__page { padding-inline: 24px; } .boot-shell__tile { height: 208px; } }
+  @media (min-width: 1024px) {
+    html[data-boot='shell'] .boot-shell { grid-template-columns: 88px 1fr; grid-template-rows: 64px 1fr; }
+    .boot-shell__top { grid-column: 1 / -1; padding-inline: 32px; }
+    .boot-shell__rail { display: grid; gap: 8px; align-content: start; justify-items: center; padding-top: 12px; }
+    .boot-shell__rail span { width: 56px; height: 56px; border-radius: 16px; background: var(--boot-surface-2); opacity: .6; }
+    .boot-shell__bar { display: none; }
+    .boot-shell__page { padding: 8px 32px; max-width: 1128px; inline-size: 100%; box-sizing: border-box; }
+    .boot-shell__tile { height: 220px; }
+  }
+  @media (prefers-reduced-motion: no-preference) { .boot-shell__tile, .boot-shell__title { animation: boot-pulse 1.6s ease-in-out infinite; } }
+  @keyframes boot-pulse { 50% { opacity: .65; } }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="boot-mark" role="img" aria-label="Feeder"><svg viewBox="0 0 512 512" width="48" height="48" aria-hidden="true" fill="currentColor"><path d="M100 214 A156 52 0 0 1 412 214 Z M100 204 H412 A12 12 0 0 1 424 216 V216 A12 12 0 0 1 412 228 H100 A12 12 0 0 1 88 216 V216 A12 12 0 0 1 100 204 Z M172 250 H340 A56 56 0 0 1 396 306 V362 A56 56 0 0 1 340 418 H172 A56 56 0 0 1 116 362 V306 A56 56 0 0 1 172 250 Z"/></svg><span aria-hidden="true">Feeder</span></div>
+  <div class="boot-shell" role="status" aria-label="Opening Feeder">
+    <div class="boot-shell__top"><span class="boot-shell__brand"><svg viewBox="0 0 512 512" width="24" height="24" aria-hidden="true" fill="currentColor"><path d="M100 214 A156 52 0 0 1 412 214 Z M100 204 H412 A12 12 0 0 1 424 216 V216 A12 12 0 0 1 412 228 H100 A12 12 0 0 1 88 216 V216 A12 12 0 0 1 100 204 Z M172 250 H340 A56 56 0 0 1 396 306 V362 A56 56 0 0 1 340 418 H172 A56 56 0 0 1 116 362 V306 A56 56 0 0 1 172 250 Z"/></svg>Feeder</span><span class="boot-shell__avatar"></span></div>
+    <div class="boot-shell__rail" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="boot-shell__page" aria-hidden="true"><span class="boot-shell__title"></span><span class="boot-shell__tile"></span><span class="boot-shell__tile"></span></div>
+    <div class="boot-shell__bar" aria-hidden="true"></div>
+  </div>
+</div>
+</body>
+</html>

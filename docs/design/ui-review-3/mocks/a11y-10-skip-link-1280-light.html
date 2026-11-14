@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en" data-scheme="light" style="--color-bg: #e7f4eb; --color-surface: #fafffc; --color-surface-2: #daecdf; --color-surface-3: #c8e0cf; --color-line: #c2d7c9; --color-outline: #677a6d; --color-text: #131d17; --color-muted: #4b5a4f; --color-accent: #34724e; --color-on-accent: #ffffff; --color-accent-text: #135533; --color-soft: #bfebcd; --color-soft-strong: #9addb2; --color-background: #e7f4eb; --color-on-background: #131d17; --color-surface-container-low: #fafffc; --color-surface-container: #daecdf; --color-surface-container-high: #c8e0cf; --color-on-surface: #131d17; --color-on-surface-variant: #4b5a4f; --color-primary: #34724e; --color-on-primary: #ffffff; --color-primary-container: #bfebcd; --color-on-primary-container: #135533; --color-secondary: #34724e; --color-on-secondary: #ffffff; --color-secondary-container: #bfebcd; --color-on-secondary-container: #135533; --status-leftover-fg: #065353; --status-leftover-bg: #c2f3f2; --status-leftover-solid: #027879; --status-spoil-fg: #6d3706; --status-spoil-bg: #fee1cf; --status-spoil-solid: #9e5106; --status-danger-fg: #742e2b; --status-danger-bg: #ffe0dc; --status-danger-solid: #ab413e; --status-success-fg: #115629; --status-success-bg: #d1f2d7; --status-success-solid: #0a7e3a; --status-pinned-fg: #3e3f7c; --status-pinned-bg: #e3e6fe; --status-pinned-solid: #5b5cb7; color-scheme: light;"><head><link rel="stylesheet" href="app.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e7f4eb">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#090f0b">
+    <meta name="description" content="Feeder: family meal planning">
+    
+    
+    
+    
+    
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#34724e">
+    <title>Feeder</title>
+    <!-- Boot paint: the page background in the right scheme before React mounts (no white flash in dark). Background only. -->
+    <style>html{background:#e7f4eb}@media (prefers-color-scheme:dark){html:not([data-scheme=light]){background:#090f0b}}html[data-scheme=dark]{background:#090f0b}#root:has(>.boot-mark){place-items:center;min-height:100dvh;display:grid}.boot-mark{justify-items:center;gap:8px;font-weight:700;display:grid}</style>
+    
+    
+  <style data-proposed>
+/* ===== A11Y proposal (docs/design/ui-review-3/a11y.md). Lift into the files named in each block. ===== */
+
+/* --- A11Y-02 styles.css :root: one focus ring --- */
+:root {
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  /* inside a clipping container (list group, sheet body, scroller) the ring is drawn inside the edge */
+  --focus-ring-offset-inset: calc(-1 * var(--focus-ring-width));
+  --focus-ring-color: var(--color-accent);
+  /* A11Y-06: selected / pressed state */
+  --selected-bg: var(--color-soft);
+  --selected-fg: var(--color-accent-text);
+  --selected-ring: var(--color-accent-text);
+  --selected-ring-width: 1.5px;
+  /* A11Y-09: targets */
+  --target-min: 44px;
+  --icon-set-gap: var(--space-2);  /* fine: a 5 px outer ring never reaches the neighbour (8 - 5 = 3 px clear) */
+}
+@media (pointer: coarse) {
+  :root { --icon-set-gap: var(--space-3); }  /* coarse: 32 + 12 = a 44 px pitch */
+}
+
+/* styles.css: the one rule (zero specificity, so a primitive that moves the ring to its frame, e.g. a field input, still wins).
+   Every primitive drops its own outline / box-shadow ring and inherits this. */
+:where(:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+
+/* Every primitive that sets its own ring today (Button, IconButton, Chip, ChoiceChip, Segmented, Switch, Checkbox, ColorSwatches,
+   TagColour, EmojiPicker, RadioCards, Slider, Menu, Breadcrumbs, TextLink, Sortable, FileDrop, ImagePicker, Tile stretch, shop
+   tick, WeekdayPicker, PriceKeypad, Stepper, TimeField segment) uses the token instead of var(--color-accent): */
+.button:focus-visible, .icon-button:focus-visible, button.chip:focus-visible, .segmented__option:focus-visible,
+.switch:focus-visible, .colour-swatch:focus-visible, .tile__stretch:focus-visible, .menu__item:focus-visible,
+.line-row__tick:focus-visible, .shop-not-needed__toggle:focus-visible, .weekday-picker__chip:focus-visible,
+.price-keypad__key:focus-visible, .price-keypad__display:focus-visible, .stepper__value:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: none;
+}
+.choice-chip:focus-visible, .checkbox__input:focus-visible + .checkbox__box {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+}
+
+/* ui/Tile.css: on an accent-filled container the ring is the on-accent colour (white in light, dark ink in dark). */
+.tile[data-variant='hero'] { --focus-ring-color: var(--color-on-accent); }
+/* --- A11Y-03 features/plan/components/TonightHero.css: key the dark hero on the chosen scheme (data-scheme, set by
+   ThemeProvider for Light, Dark and System alike), never on the OS media query or the unused data-theme attribute. --- */
+[data-scheme='dark'] .tile.plan-hero {
+  background: var(--color-soft-strong);
+  color: var(--color-text);
+  /* the dark Today hero is soft-strong, so the accent ring comes back */
+  --focus-ring-color: var(--color-accent);
+}
+[data-scheme='dark'] .tile.plan-hero .button[data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+[data-scheme='dark'] .plan-hero .plan-course__caption {
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+/* Fields: the ring is an outline on the frame (survives forced colours), never a box-shadow. The frame rings only while its
+   text entry has focus; a button inside the frame (stepper -/+, Clear search) is a nested control (R-C+ below). */
+.ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus),
+.search-field__control:has(input:focus) {
+  border-color: var(--color-accent);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
+}
+.select__trigger:focus-visible,
+.date-field__trigger:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
+}
+
+/* ui/ListRow.css: the row ring sits inside the row and clears the content by 2 px. */
+.list-row__target:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
+  border-radius: var(--radius-thumb);
+}
+
+/* --- A11Y-05 (decided: option B): the Search field and the Segmented track are a stronger fill with a 2 px bottom rule.
+   Tokens go in ui/fields/Field.css :root next to --field-border-width. Bordered fields (TextField, Select, ...) keep their outline. --- */
+:root {
+  --field-fill-strong: var(--color-surface-3);
+  --field-rule-width: 2px;
+  --field-rule-color: var(--color-outline);
+  --field-radius-ruled: var(--radius-control) var(--radius-control) var(--space-1) var(--space-1);
+}
+.search-field__control,
+.segmented {
+  background: var(--field-fill-strong);
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--field-rule-color);
+  border-radius: var(--field-radius-ruled);
+}
+.search-field__control:hover,
+.segmented:not([data-disabled]):hover {
+  background: color-mix(in oklab, var(--field-fill-strong), var(--color-text) 6%);
+}
+/* focus: the A11Y-02 ring goes round the whole shape; the rule turns accent under it */
+.search-field__control:has(input:focus) { border-block-end-color: var(--color-accent); }
+/* disabled: no fill, the rule in --color-line (exempt from 1.4.11), text muted */
+.segmented[data-disabled],
+.search-field__control:has(:disabled) {
+  background: transparent;
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--color-line);
+  color: var(--color-muted);
+}
+.segmented[data-disabled] .segmented__option[aria-checked='true'] {
+  background: transparent; color: var(--color-text);
+  box-shadow: inset 0 0 0 var(--field-border-width) var(--color-outline);
+}
+
+/* --- A11Y-06: selected / pressed (Segmented option, ChoiceChip, toggle IconButton) --- */
+.segmented__option[aria-checked='true'] {
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+.segmented__check { flex: none; }
+.segmented__option { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); }
+.icon-button[aria-pressed='true'],
+.choice-chip[aria-pressed='true'] {
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  border-color: var(--selected-ring);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+
+/* --- A11Y-09: targets on a coarse pointer --- */
+/* new ui/IconSet primitive (system.md §5.5 "one icon set"); until it lands, the three Plan containers: */
+.icon-set, .plan-row__actions, .plan-slot-head__actions, .plan-course__actions { gap: var(--icon-set-gap); }
+@media (pointer: coarse) {
+  .segmented__option { position: relative; }
+  .segmented__option::after { content: ''; position: absolute; inset: calc(-1 * var(--space-1)) calc(-0.5 * var(--space-1)); }
+  .your-menu-button, .colour-swatch, .switch { position: relative; }
+  .your-menu-button::after, .colour-swatch::after { content: ''; position: absolute; inset: -2px; }
+  .switch::after { content: ''; position: absolute; inset: -6px 0; }
+}
+
+/* --- A11Y-10: skip link (app/shell.css) --- */
+.skip-link {
+  position: fixed;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-button);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--space-4)));
+}
+.skip-link:focus-visible {
+  transform: none;
+  --focus-ring-color: var(--color-text);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skip-link { transition: transform var(--dur-1) var(--ease-out); }
+}
+
+/* --- A11Y-04: forced colours (new file ui/forcedColors.css, imported last by ui/index.ts) --- */
+@media (forced-colors: active) {
+  .button, .icon-button, .chip, .choice-chip, .your-menu-button, .line-row__tick,
+  .search-field__control, .segmented, .stepper__value, .price-keypad__key {
+    border: 1px solid ButtonText;
+  }
+  /* the ruled shape keeps its 2 px bottom rule on top of the 1 px frame */
+  .search-field__control, .segmented { border-block-end: var(--field-rule-width) solid ButtonText; }
+  .tile, .list-group, .bottom-bar, .toast { border: 1px solid CanvasText; }
+  .segmented__option[aria-checked='true'],
+  .icon-button[aria-pressed='true'],
+  .choice-chip[aria-pressed='true'],
+  .chip[aria-pressed='true'],
+  .checkbox__box[data-state='checked'],
+  .checkbox__box[data-state='mixed'],
+  .switch[aria-checked='true'] {
+    /* !important is allowed in this layer only: it must beat every variant rule (e.g. the filter chip's accent fill) */
+    forced-color-adjust: none !important;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .colour-swatch { forced-color-adjust: none; border: 1px solid CanvasText; }
+  .colour-swatch[aria-checked='true'] { box-shadow: none; outline: 3px solid Highlight; outline-offset: 3px; }
+  .bottom-bar__link[aria-current='page'],
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+  .switch { border: 1px solid ButtonText; }
+  .switch__thumb { forced-color-adjust: none; background: ButtonText; }
+  .switch[aria-checked='true'] .switch__thumb { background: HighlightText; }
+  :disabled, [aria-disabled='true'] { color: GrayText; border-color: GrayText; opacity: 1; }
+  :focus-visible,
+  .ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus),
+  .search-field__control:has(input:focus) { outline-color: Highlight; }
+  .picker-row:focus-visible { outline: var(--focus-ring-width) solid Highlight; outline-offset: var(--focus-ring-offset-inset); }
+}
+
+/* --- A11Y-06 round 1: a Segmented option never wraps; under 18 rem of field width the Check is dropped (the ring still marks the choice) --- */
+.ui-field:has(> .segmented:not([data-compact])) { container-type: inline-size; }
+.segmented__option { flex: 1 1 auto; white-space: nowrap; }
+@container (max-width: 18rem) {
+  .segmented__check { display: none; }
+  .segmented__option { padding-inline: var(--space-2); }
+}
+
+/* --- A11Y-02 R-C+ nested focus. A container marked data-focus-scope (field frames, timer pills, rail timer tiles, any pill
+   that holds buttons) keeps its own boundary; a control inside it draws a 2 px ring inside itself on a soft fill, and an
+   accent boundary on the container steps back to the neutral outline while a child has focus. One accent ring at a time. --- */
+:root { --focus-ring-inner-width: 2px; }
+:is(.ui-field__control, .search-field__control, [data-focus-scope]) :is(button, [role='button'], a):focus-visible {
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+[data-focus-scope]:has(:focus-visible) { border-color: var(--color-outline); box-shadow: inset 0 0 0 1px var(--color-outline); }
+/* at least 4 px of the container's fill between its boundary and the child: stepper buttons are 36 px in the 48 px frame
+   (1.5 px border + 4 px fill + 36 + 4 + 1.5 = 47); the ::after keeps the 44 px target */
+.ui-field--stepper .icon-button { inline-size: 36px; block-size: 36px; }
+.ui-field--stepper .icon-button::after { inset: -4px; }
+/* Segmented: arrows choose (useRovingRadios 'auto'), so the focused option is the chosen one; the ring goes round the whole
+   track (outer ring), the option draws none, and nothing nests */
+.segmented__option:focus-visible { outline: none; }
+.segmented:has(.segmented__option:focus-visible) { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
+@media (forced-colors: active) {
+  .segmented:has(.segmented__option:focus-visible) { outline-color: Highlight; }
+}
+
+/* ===== Round-1 shared rules R-A..R-D (the PC mocks' RULES_CSS, reused) ===== */
+/* R-A Buttons look like buttons. A secondary button has a fill AND a 1 px --color-outline boundary on every surface
+   (outline vs surface 4.5 / 4.9, vs status tints 3.7-4.0 light and dark). On a tinted tile (status, soft) its fill is --color-surface.
+   Tertiary (bare text) buttons are not used as actions in tiles, notices, toasts or sheet footers. */
+.button[data-variant="secondary"]{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+.tile[data-variant="status"] .icon-button,.pc-lo .icon-button,.pc-alert .icon-button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+.sheet .button[data-variant="secondary"],.dialog .button[data-variant="secondary"]{background:var(--color-surface)}
+.button[data-variant="danger-tertiary"]{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--status-danger-fg);color:var(--status-danger-fg)}
+/* R-B Close: one circular outline icon button, 40 px (52 px target through the existing ::after), never stretched; top-aligned with the title. */
+.pc-close{flex:none;align-self:flex-start;inline-size:40px;block-size:40px;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+.sheet__header{align-items:flex-start}
+/* R-C Focus rings are never clipped: every scroll container that holds controls keeps 5 px of room (3 px ring + 2 px offset);
+   nested controls are inset inside their container's padding; sticky bars set scroll-padding so a focused control is never under them. */
+.sheet__body{padding-block:5px;scroll-padding-block:5px}
+.toast{--focus-ring-color:var(--color-bg)}
+/* R-D A toast with detail: icon | headline (body-strong), muted subline (meta), optional body (body), actions as real outline buttons; Dismiss top-right. */
+.toast{align-items:center}
+.toast .toast__message{flex:1 1 auto;min-width:0}
+.pc-toast-rich{align-items:flex-start;padding:14px 10px 14px 16px}
+.pc-toast-rich > svg{margin-top:2px;flex:none}
+.pc-toast__text{flex:1 1 auto;min-width:0;display:grid;gap:2px}
+.pc-toast__text p{margin:0}
+.pc-toast__head{font-size:var(--text-body-strong-size);line-height:var(--text-body-strong-line);font-weight:700}
+.pc-toast__sub{font-size:var(--text-meta-size);line-height:var(--text-meta-line);color:color-mix(in srgb,var(--color-bg) 72%,var(--color-text))}
+.pc-toast__body{font-size:var(--text-body-size);line-height:var(--text-body-line);margin-top:4px!important}
+.pc-toast__actions{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
+.pc-tbtn{flex:none;min-block-size:40px;padding-inline:var(--space-4);border-radius:999px;background:transparent;color:var(--color-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-bg) 70%,transparent);font-weight:700}
+.pc-tclose{flex:none;inline-size:32px;block-size:32px;border-radius:999px;background:transparent;color:var(--color-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-bg) 55%,transparent)}
+/* A11Y round 1: R-B on the shared sheet header Close (the PC mocks call it .pc-close) */
+.sheet__header > .icon-button,.dialog__header > .icon-button{flex:none;align-self:flex-start;inline-size:40px;block-size:40px;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+/* A11Y round 1: R-A icon buttons on a tinted container (the dark Today hero is soft-strong) */
+[data-scheme='dark'] .tile.plan-hero .icon-button,.tile[data-variant='soft'] .icon-button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+/* A11Y round 1: R-A no bare text button as a sheet action ("Reset to usual Attendance" becomes secondary) */
+.sheet__body .button[data-variant='tertiary'][data-size='md']{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+.sheet__body .button[data-variant='tertiary'][data-size='md']:disabled{opacity:.38}
+
+</style></head>
+  <body>
+    <div id="root"><div class="app-shell"><a class="skip-link" href="#main-content">Skip to content</a><header class="top-bar"><span class="top-bar__brand"><svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><g transform="translate(-27.66 -10.48) scale(1.1080)"><path class="brand-mark__body" d="M84 236 A172 52 0 0 1 428 236 Z M164 272 H348 A60 60 0 0 1 408 332 V380 A60 60 0 0 1 348 440 H164 A60 60 0 0 1 104 380 V332 A60 60 0 0 1 164 272 Z M84 292 H100 A28 28 0 0 1 128 320 V320 A28 28 0 0 1 100 348 H84 A28 28 0 0 1 56 320 V320 A28 28 0 0 1 84 292 Z M412 292 H428 A28 28 0 0 1 456 320 V320 A28 28 0 0 1 428 348 H412 A28 28 0 0 1 384 320 V320 A28 28 0 0 1 412 292 Z"></path><path class="brand-mark__heart" d="M 256 164 C 176 118 176 48 220 42 C 240 40 252 52 256 66 C 260 52 272 40 292 42 C 336 48 336 118 256 164 Z"></path></g></svg><span class="top-bar__brand-word">Feeder</span></span><div class="your-menu-anchor"><button type="button" class="your-menu-button" aria-label="Your menu" aria-haspopup="menu" aria-expanded="false"><span class="avatar" data-size="sm" role="img" aria-label="admin">A</span></button></div></header><div class="app-status"></div><nav aria-label="Side rail" class="side-rail"><a class="side-rail__link" href="/" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z"></path></svg></span><span class="side-rail__label">Today</span></a><a class="side-rail__link" href="/plan" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-68-76a12,12,0,1,1-12-12A12,12,0,0,1,140,132Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,132ZM96,172a12,12,0,1,1-12-12A12,12,0,0,1,96,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,140,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,172Z"></path></svg></span><span class="side-rail__label">Plan</span></a><a class="side-rail__link" href="/pantry" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"></path></svg></span><span class="side-rail__label">Pantry</span></a><a class="side-rail__link" data-accent="true" href="/scan" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,48V88a8,8,0,0,1-16,0V56H184a8,8,0,0,1,0-16h40A8,8,0,0,1,232,48ZM72,200H40V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H72a8,8,0,0,0,0-16Zm152-40a8,8,0,0,0-8,8v32H184a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,224,160ZM32,96a8,8,0,0,0,8-8V56H72a8,8,0,0,0,0-16H32a8,8,0,0,0-8,8V88A8,8,0,0,0,32,96ZM80,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,80,80Zm104,88V88a8,8,0,0,0-16,0v80a8,8,0,0,0,16,0ZM144,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,144,80Zm-32,0a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,112,80Z"></path></svg></span><span class="side-rail__label">Scan</span></a><a aria-current="page" class="side-rail__link" href="/shop" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M238,82.73A8,8,0,0,0,232,80H187.63L134,18.73a8,8,0,0,0-12,0L68.37,80H24a8,8,0,0,0-7.93,9.06L31.14,202.12A16.06,16.06,0,0,0,47,216H209a16.06,16.06,0,0,0,15.86-13.88L239.93,89.06A8,8,0,0,0,238,82.73ZM81.6,184a7.32,7.32,0,0,1-.81,0,8,8,0,0,1-8-7.2l-5.6-56a8,8,0,0,1,15.92-1.6l5.6,56A8,8,0,0,1,81.6,184Zm54.4-8a8,8,0,0,1-16,0V120a8,8,0,0,1,16,0ZM89.63,80,128,36.15,166.37,80Zm99.13,40.8-5.6,56a8,8,0,0,1-7.95,7.2,7.32,7.32,0,0,1-.81,0,8,8,0,0,1-7.16-8.76l5.6-56a8,8,0,0,1,15.92,1.6Z"></path></svg></span><span class="side-rail__label">Shop</span></a><a class="side-rail__link" href="/recipes" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64ZM160,88h40a8,8,0,0,1,0,16H160a8,8,0,0,1,0-16Zm48,40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,128Zm0,32a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,160Z"></path></svg></span><span class="side-rail__label">Recipes</span></a><a class="side-rail__link" href="/settings" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"></path></svg></span><span class="side-rail__label">Settings</span></a></nav><main id="main-content" tabindex="-1" class="app-main"><div class="page" data-page-width="wide"><div class="page__body"><section class="shop-screen"><header class="page-header"><div class="page-header__row"><div class="page-header__text"><h1 class="page-header__title">Shop</h1></div><div class="page-header__actions"><button type="button" class="icon-button" aria-label="Add to Shopping List" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg></button></div></div></header><div class="shop-screen__controls"><div class="ui-field" data-appearance="chip"><span id="_r_2_-label" class="ui-field__label visually-hidden">Shop for</span><div class="select"><button type="button" role="combobox" class="select__trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="_r_2_-label" data-appearance="chip"><span class="select__leading"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-68-76a12,12,0,1,1-12-12A12,12,0,0,1,140,132Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,132ZM96,172a12,12,0,1,1-12-12A12,12,0,0,1,96,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,140,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,172Z"></path></svg></span><span class="select__value">Until Sat 21</span><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34Zm-96-84.68L128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z"></path></svg></button></div></div><div class="shop-screen__shop"><div class="ui-field" data-appearance="chip"><span id="_r_0_-label" class="ui-field__label visually-hidden">Shop</span><div class="select"><button type="button" role="combobox" class="select__trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="_r_0_-label" data-appearance="chip"><span class="select__leading"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,96a7.89,7.89,0,0,0-.3-2.2L217.35,43.6A16.07,16.07,0,0,0,202,32H54A16.07,16.07,0,0,0,38.65,43.6L24.31,93.8A7.89,7.89,0,0,0,24,96h0v16a40,40,0,0,0,16,32v72a8,8,0,0,0,8,8H208a8,8,0,0,0,8-8V144a40,40,0,0,0,16-32V96ZM54,48H202l11.42,40H42.61Zm50,56h48v8a24,24,0,0,1-48,0Zm-16,0v8a24,24,0,0,1-35.12,21.26,7.88,7.88,0,0,0-1.82-1.06A24,24,0,0,1,40,112v-8ZM200,208H56V151.2a40.57,40.57,0,0,0,8,.8,40,40,0,0,0,32-16,40,40,0,0,0,64,0,40,40,0,0,0,32,16,40.57,40.57,0,0,0,8-.8Zm4.93-75.8a8.08,8.08,0,0,0-1.8,1.05A24,24,0,0,1,168,112v-8h48v8A24,24,0,0,1,204.93,132.2Z"></path></svg></span><span class="select__value">Any Shop</span><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34Zm-96-84.68L128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z"></path></svg></button></div></div></div></div><div class="bento-grid" data-min="metric" role="group" aria-label="Summary"><div class="tile shop-metrics__tile" data-variant="surface" data-span="1" data-primary-scope=""><div role="progressbar" aria-label="Left to get" aria-valuemin="0" aria-valuemax="20" aria-valuenow="6" class="shop-metrics__bar"><span class="shop-metrics__fill" style="inline-size: 30%;"></span></div><p class="shop-metrics__figure"><span class="shop-metrics__value" data-metric="left">14</span> <span class="shop-metrics__unit">of 20 left</span></p><p class="shop-metrics__meta">6 ticked · until Sat 21</p></div><div class="tile shop-metrics__scan-tile" data-variant="surface" data-span="1" data-primary-scope=""><p class="shop-metrics__caption">12 Lines have no Price yet</p><button type="button" class="button shop-metrics__scan" data-variant="primary" data-size="sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,52V92a12,12,0,0,1-24,0V64H180a12,12,0,0,1,0-24h40A12,12,0,0,1,232,52ZM76,192H48V164a12,12,0,0,0-24,0v40a12,12,0,0,0,12,12H76a12,12,0,0,0,0-24Zm144-40a12,12,0,0,0-12,12v28H180a12,12,0,0,0,0,24h40a12,12,0,0,0,12-12V164A12,12,0,0,0,220,152ZM36,104A12,12,0,0,0,48,92V64H76a12,12,0,0,0,0-24H36A12,12,0,0,0,24,52V92A12,12,0,0,0,36,104ZM88,80A12,12,0,0,0,76,92v72a12,12,0,0,0,24,0V92A12,12,0,0,0,88,80Zm92,84V92a12,12,0,0,0-24,0v72a12,12,0,0,0,24,0ZM128,80a12,12,0,0,0-12,12v72a12,12,0,0,0,24,0V92A12,12,0,0,0,128,80Z"></path></svg>Scan</button></div></div><section aria-label="Not marked Cooked yet" class="tile shop-notice" data-variant="status" data-status="info" data-span="1" data-primary-scope=""><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"></path></svg><p class="shop-notice__text" title="Sat Breakfast, Sat Lunch and Sat Dinner aren't marked Cooked yet"><strong>Sat Breakfast</strong><span>, </span><strong>Sat Lunch</strong><span> and </span><strong>Sat Dinner</strong><span> aren't marked Cooked yet</span></p><button type="button" class="button" data-variant="secondary" data-size="sm">Mark it</button></section><section class="shop-open"><h2 class="shop-section__title">To get <span class="shop-section__count">12</span></h2><div class="shop-lines"><div class="list-group" data-primary-scope=""><ul class="list-group__list" aria-label="To get"><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Garlic" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Garlic" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">G</span></span></span><span class="list-row__text"><span class="list-row__title">Garlic</span></span><span class="list-row__value">50 g</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Gorgonzola" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Gorgonzola" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">G</span></span></span><span class="list-row__text"><span class="list-row__title">Gorgonzola</span><span class="list-row__meta" data-status="info"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M108,84a16,16,0,1,1,16,16A16,16,0,0,1,108,84Zm128,44A108,108,0,1,1,128,20,108.12,108.12,0,0,1,236,128Zm-24,0a84,84,0,1,0-84,84A84.09,84.09,0,0,0,212,128Zm-72,36.68V132a20,20,0,0,0-20-20,12,12,0,0,0-4,23.32V168a20,20,0,0,0,20,20,12,12,0,0,0,4-23.32Z"></path></svg><span class="list-row__meta-text">Sat Breakfast +2</span></span></span><span class="list-row__value">1250 g</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Lentils" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Lentils" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">L</span></span></span><span class="list-row__text"><span class="list-row__title">Lentils</span></span><span class="list-row__value">200 g</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Marjoram" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Marjoram" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">M</span></span></span><span class="list-row__text"><span class="list-row__title">Marjoram</span><span class="list-row__meta" data-status="info"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M108,84a16,16,0,1,1,16,16A16,16,0,0,1,108,84Zm128,44A108,108,0,1,1,128,20,108.12,108.12,0,0,1,236,128Zm-24,0a84,84,0,1,0-84,84A84.09,84.09,0,0,0,212,128Zm-72,36.68V132a20,20,0,0,0-20-20,12,12,0,0,0-4,23.32V168a20,20,0,0,0,20,20,12,12,0,0,0,4-23.32Z"></path></svg><span class="list-row__meta-text">Sat Dinner</span></span></span><span class="list-row__value">10 g</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Olive oil" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Olive oil" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">O</span></span></span><span class="list-row__text"><span class="list-row__title">Olive oil</span></span><span class="list-row__value">210 ml</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Onion" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Onion" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">O</span></span></span><span class="list-row__text"><span class="list-row__title">Onion</span></span><span class="list-row__value">194 pieces</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Potato" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Potato" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">P</span></span></span><span class="list-row__text"><span class="list-row__title">Potato</span></span><span class="list-row__value">650 g</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Red pepper" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Red pepper" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">R</span></span></span><span class="list-row__text"><span class="list-row__title">Red pepper</span><span class="list-row__meta" data-status="info"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M108,84a16,16,0,1,1,16,16A16,16,0,0,1,108,84Zm128,44A108,108,0,1,1,128,20,108.12,108.12,0,0,1,236,128Zm-24,0a84,84,0,1,0-84,84A84.09,84.09,0,0,0,212,128Zm-72,36.68V132a20,20,0,0,0-20-20,12,12,0,0,0-4,23.32V168a20,20,0,0,0,20,20,12,12,0,0,0,4-23.32Z"></path></svg><span class="list-row__meta-text">Sat Dinner</span></span></span><span class="list-row__value">10 pieces</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Rice" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Rice" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">R</span></span></span><span class="list-row__text"><span class="list-row__title">Rice</span></span><span class="list-row__value">110 g</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Tomato" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Tomato" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">T</span></span></span><span class="list-row__text"><span class="list-row__title">Tomato</span></span><span class="list-row__value">430 g</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Napkins" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Napkins" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">N</span></span></span><span class="list-row__text"><span class="list-row__title">Napkins</span></span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Extra virgin olive oil, cold pressed, from the farm shop near the station" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Extra virgin olive oil, cold pressed, from the farm shop near the station" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">E</span></span></span><span class="list-row__text"><span class="list-row__title">Extra virgin olive oil, cold pressed, from the farm shop near the station</span></span></li></ul></div></div></section><section class="shop-supplies" aria-labelledby="_r_4_"><h2 id="_r_4_" class="shop-section__title">Supplies <span class="shop-section__count">2</span></h2><div class="shop-lines"><div class="list-group" data-primary-scope=""><ul class="list-group__list" aria-label="Supplies"><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Kitchen roll" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Kitchen roll" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">K</span></span></span><span class="list-row__text"><span class="list-row__title">Kitchen roll</span><span class="list-row__meta" data-status="info"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M108,84a16,16,0,1,1,16,16A16,16,0,0,1,108,84Zm128,44A108,108,0,1,1,128,20,108.12,108.12,0,0,1,236,128Zm-24,0a84,84,0,1,0-84,84A84.09,84.09,0,0,0,212,128Zm-72,36.68V132a20,20,0,0,0-20-20,12,12,0,0,0-4,23.32V168a20,20,0,0,0,20,20,12,12,0,0,0,4-23.32Z"></path></svg><span class="list-row__meta-text">2 of 4</span></span></span><span class="list-row__value">2 pieces</span></li><li data-state="open" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Washing-up liquid" aria-pressed="false"></button></span><button type="button" class="list-row__target" aria-label="Washing-up liquid" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">W</span></span></span><span class="list-row__text"><span class="list-row__title">Washing-up liquid</span><span class="list-row__meta" data-status="info"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M108,84a16,16,0,1,1,16,16A16,16,0,0,1,108,84Zm128,44A108,108,0,1,1,128,20,108.12,108.12,0,0,1,236,128Zm-24,0a84,84,0,1,0-84,84A84.09,84.09,0,0,0,212,128Zm-72,36.68V132a20,20,0,0,0-20-20,12,12,0,0,0-4,23.32V168a20,20,0,0,0,20,20,12,12,0,0,0,4-23.32Z"></path></svg><span class="list-row__meta-text">400 of 1000 ml</span></span></span><span class="list-row__value">600 ml</span></li></ul></div></div></section><section class="shop-ticked"><h2 class="shop-section__title">Ticked <span class="shop-section__count">6</span></h2><div class="shop-lines"><div class="list-group" data-primary-scope=""><ul class="list-group__list" aria-label="Ticked"><li data-state="ticked" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Carrot" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></button></span><button type="button" class="list-row__target" aria-label="Carrot" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">C</span></span></span><span class="list-row__text"><span class="list-row__title">Carrot</span></span><span class="list-row__value">50 g</span></li><li data-state="ticked" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Cauliflower" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></button></span><button type="button" class="list-row__target" aria-label="Cauliflower" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">C</span></span></span><span class="list-row__text"><span class="list-row__title">Cauliflower</span></span><span class="list-row__value">12000 g</span></li><li data-state="ticked" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Chestnut mushrooms" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></button></span><button type="button" class="list-row__target" aria-label="Chestnut mushrooms" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">C</span></span></span><span class="list-row__text"><span class="list-row__title">Chestnut mushrooms</span></span><span class="list-row__value">1500 g</span></li><li data-state="ticked" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Chicken" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></button></span><button type="button" class="list-row__target" aria-label="Chicken" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">C</span></span></span><span class="list-row__text"><span class="list-row__title">Chicken</span></span><span class="list-row__value">750 g</span></li><li data-state="ticked" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Cucumber" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></button></span><button type="button" class="list-row__target" aria-label="Cucumber" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">C</span></span></span><span class="list-row__text"><span class="list-row__title">Cucumber</span></span><span class="list-row__value">4 pieces</span></li><li data-state="ticked" class="list-row" data-height="72"><span class="list-row__control"><button type="button" class="line-row__tick" aria-label="Tick Feta" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></button></span><button type="button" class="list-row__target" aria-label="Feta" aria-haspopup="dialog"></button><span class="list-row__leading"><span class="thumb" data-size="40" data-monogram="true" aria-hidden="true"><span class="thumb__monogram">F</span></span></span><span class="list-row__text"><span class="list-row__title">Feta</span></span><span class="list-row__value">300 g</span></li></ul></div></div></section><section class="shop-not-needed"><button type="button" class="shop-not-needed__toggle" aria-expanded="false" aria-controls="_r_p_">Not needed (1)<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" class="shop-not-needed__chevron" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path></svg></button></section></section></div></div></main><nav aria-label="Bottom bar" class="bottom-bar"><a class="bottom-bar__link" href="/" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z"></path></svg><span class="bottom-bar__label">Today</span></a><a class="bottom-bar__link" href="/plan" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-68-76a12,12,0,1,1-12-12A12,12,0,0,1,140,132Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,132ZM96,172a12,12,0,1,1-12-12A12,12,0,0,1,96,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,140,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,172Z"></path></svg><span class="bottom-bar__label">Plan</span></a><a class="bottom-bar__link" href="/pantry" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"></path></svg><span class="bottom-bar__label">Pantry</span></a><a class="bottom-bar__link" data-accent="true" href="/scan" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,48V88a8,8,0,0,1-16,0V56H184a8,8,0,0,1,0-16h40A8,8,0,0,1,232,48ZM72,200H40V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H72a8,8,0,0,0,0-16Zm152-40a8,8,0,0,0-8,8v32H184a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,224,160ZM32,96a8,8,0,0,0,8-8V56H72a8,8,0,0,0,0-16H32a8,8,0,0,0-8,8V88A8,8,0,0,0,32,96ZM80,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,80,80Zm104,88V88a8,8,0,0,0-16,0v80a8,8,0,0,0,16,0ZM144,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,144,80Zm-32,0a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,112,80Z"></path></svg><span class="bottom-bar__label">Scan</span></a><a aria-current="page" class="bottom-bar__link" href="/shop" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M238,82.73A8,8,0,0,0,232,80H187.63L134,18.73a8,8,0,0,0-12,0L68.37,80H24a8,8,0,0,0-7.93,9.06L31.14,202.12A16.06,16.06,0,0,0,47,216H209a16.06,16.06,0,0,0,15.86-13.88L239.93,89.06A8,8,0,0,0,238,82.73ZM81.6,184a7.32,7.32,0,0,1-.81,0,8,8,0,0,1-8-7.2l-5.6-56a8,8,0,0,1,15.92-1.6l5.6,56A8,8,0,0,1,81.6,184Zm54.4-8a8,8,0,0,1-16,0V120a8,8,0,0,1,16,0ZM89.63,80,128,36.15,166.37,80Zm99.13,40.8-5.6,56a8,8,0,0,1-7.95,7.2,7.32,7.32,0,0,1-.81,0,8,8,0,0,1-7.16-8.76l5.6-56a8,8,0,0,1,15.92,1.6Z"></path></svg><span class="bottom-bar__label">Shop</span></a><a class="bottom-bar__link" href="/recipes" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64ZM160,88h40a8,8,0,0,1,0,16H160a8,8,0,0,1,0-16Zm48,40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,128Zm0,32a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,160Z"></path></svg><span class="bottom-bar__label">Recipes</span></a><a class="bottom-bar__link" href="/settings" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"></path></svg><span class="bottom-bar__label">Settings</span></a></nav></div><div class="toast-region"><div role="status" aria-live="polite" aria-atomic="false" class="toast-live"></div><div role="alert" aria-live="assertive" aria-atomic="false" class="toast-live"></div></div></div>
+  
+
+</body></html>

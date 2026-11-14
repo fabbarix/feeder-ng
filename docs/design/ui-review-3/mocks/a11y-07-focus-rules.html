@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Focus after actions</title>
+<style>
+body{margin:0;background:#fff;font-family:Figtree,system-ui,sans-serif}
+svg{display:block;width:100%;height:auto;max-width:1100px}
+.t{font:700 15px Figtree,sans-serif;fill:#131d17}.s{font:500 13px Figtree,sans-serif;fill:#4b5a4f}.h{font:800 16px Figtree,sans-serif;fill:#131d17}
+.box{fill:#fafffc;stroke:#677a6d;stroke-width:1.5}.go{fill:#bfebcd;stroke:#135533;stroke-width:1.5}.ar{stroke:#34724e;stroke-width:2;fill:none;marker-end:url(#a)}
+</style></head><body>
+<svg viewBox="0 0 1100 560" role="img" aria-label="Where focus goes after an action">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0L10,5L0,10z" fill="#34724e"/></marker></defs>
+<text x="20" y="32" class="h">useFocusAfterRemoval / focusStepStart / toggles: where focus goes (A11Y-07)</text>
+<rect x="20" y="56" width="300" height="76" rx="14" class="box"/><text x="36" y="86" class="t">A row leaves its list</text><text x="36" y="108" class="s">Tick, Not needed, Throw out, Remove,</text><text x="36" y="124" class="s">Delete (after its confirm or Undo toast)</text>
+<path d="M320 94 H380" class="ar"/>
+<rect x="384" y="56" width="210" height="44" rx="12" class="go"/><text x="398" y="83" class="t">1. the next row's target</text>
+<rect x="384" y="108" width="210" height="44" rx="12" class="go"/><text x="398" y="135" class="t">2. else the previous row</text>
+<rect x="384" y="160" width="300" height="44" rx="12" class="go"/><text x="398" y="187" class="t">3. else the list's heading (tabindex -1)</text>
+<rect x="384" y="212" width="360" height="44" rx="12" class="go"/><text x="398" y="239" class="t">4. else the empty state's heading or its action</text>
+<path d="M600 78 H640" class="ar"/><text x="648" y="76" class="s">The Undo toast (role=status) says what happened;</text><text x="648" y="94" class="s">Undo puts the row back and focuses it</text>
+<rect x="20" y="290" width="300" height="76" rx="14" class="box"/><text x="36" y="320" class="t">A sheet changes step</text><text x="36" y="342" class="s">What is this? (More Lines, Something else),</text><text x="36" y="358" class="s">receipt review, Swap, Mark as Cooked</text>
+<path d="M320 328 H380" class="ar"/>
+<rect x="384" y="306" width="470" height="44" rx="12" class="go"/><text x="398" y="333" class="t">the new step's heading (h2/h3, tabindex -1), no ring drawn</text>
+<rect x="20" y="400" width="300" height="60" rx="14" class="box"/><text x="36" y="426" class="t">A sheet opens</text><text x="36" y="446" class="s">BottomSheet / Dialog</text>
+<path d="M320 430 H380" class="ar"/>
+<rect x="384" y="408" width="520" height="44" rx="12" class="go"/><text x="398" y="435" class="t">initialFocus, else the first field, else the title; never stays on the page</text>
+<rect x="20" y="484" width="300" height="60" rx="14" class="box"/><text x="36" y="510" class="t">A toggle flips (Pin, Exclusion)</text><text x="36" y="530" class="s">one button with aria-pressed</text>
+<path d="M320 514 H380" class="ar"/>
+<rect x="384" y="492" width="470" height="44" rx="12" class="go"/><text x="398" y="519" class="t">focus stays on the same button; its name does not change</text>
+</svg></body></html>

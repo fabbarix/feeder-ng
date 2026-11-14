@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SHORT rule set: fixed chrome by size class</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  body { margin: 0; padding: 24px; background: var(--color-bg); color: var(--color-text); font-family: Figtree, system-ui, sans-serif; }
+  h1 { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); margin: 0 0 4px; }
+  p.lead { margin: 0 0 16px; color: var(--color-muted); font-size: var(--text-body-size); line-height: var(--text-body-line); max-width: 70ch; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; background: var(--color-surface); border-radius: 20px; overflow: hidden; box-shadow: var(--elev-1); }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--color-line); font-size: var(--text-meta-size); line-height: var(--text-meta-line); }
+  thead th { background: var(--color-surface-2); font-size: var(--text-label-size); text-transform: uppercase; letter-spacing: .04em; }
+  tbody th { width: 190px; font-size: var(--text-body-strong-size); line-height: var(--text-body-strong-line); }
+  tbody th small { display: block; font-weight: 500; color: var(--color-muted); font-size: var(--text-meta-size); }
+  code { font-size: 12px; background: var(--color-surface-2); padding: 1px 4px; border-radius: 4px; }
+  .new { color: var(--color-accent-text); font-weight: 700; }
+  svg { display: block; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>Short viewports and fixed chrome: one rule set</h1>
+<p class="lead">Size classes are read from the viewport, height first. "Short" is a height under 500 px (phone landscape, an on-screen keyboard in a resizing browser, 200–400 % zoom). <span class="new">Green</span> marks what changes. Budget: fixed and sticky chrome covers at most 35 % of the height at load; a sheet's body keeps at least 6 rem and 40 % of its panel.</p>
+<table>
+<thead><tr><th>Size class (query)</th><th>Navigation</th><th>StickyActionBar</th><th>BottomSheet / Dialog</th><th>Cook Mode</th><th>Kitchen board</th></tr></thead>
+<tbody>
+<tr><th>Phone portrait<small>width ≤ 599, height ≥ 500</small></th><td>Floating bottom bar, 70 px, labels</td><td class="new">One row (Cancel · Save side by side, both real buttons: Cancel outlined), 12 px above the bar; floats only while it has something to do</td><td class="new">Sheet from the bottom, ≤ 85 dvh; footer one row, sticky: ⋮ + outlined secondary + primary; Close is the 40 px round outline, absent when the footer has Cancel</td><td>Back/Next at the bottom; <span class="new">tap zones on the Step (decision 3)</span></td><td>2 columns, scrolls</td></tr>
+<tr><th>Short landscape<small>height &lt; 500 and width ≥ 560</small></th><td class="new">Compact rail on the left, 64 px + left inset, 7 items 44 px (40 below 360 px tall); top bar 48 px; no bottom bar</td><td class="new">One row, 62 px, 12 px above the viewport edge</td><td class="new">Centred dialog up to 640 px wide, full height − 8 px; no grip; title-3</td><td class="new">Back and Next are side columns; title and the info-tone Advance Steps chip share the top row; PC timer pills; Step text weight 600</td><td class="new">4 columns, rows ≥ 8 rem, scrolls; Cook under the slot line</td></tr>
+<tr><th>Short and narrow<small>height &lt; 500 and width &lt; 560</small></th><td class="new">Bottom bar 52 px, icons only (names kept)</td><td class="new">One row, 62 px</td><td class="new">Sheet, full height − 8 px; no grip; title-3</td><td class="new">Bottom nav 52 px; title one line</td><td>2 columns, scrolls</td></tr>
+<tr><th>Very short<small>height &lt; 340</small></th><td class="new">Narrow: the bottom bar ends the page (static). Landscape: rail items 40 px</td><td class="new">Static: ends the form</td><td class="new">Footer follows the body (data-footer="flow") when the body would show &lt; 40 %</td><td>as short</td><td>as short</td></tr>
+<tr><th>On-screen keyboard up<small>coarse pointer, a text field focused, visual viewport shrunk</small></th><td class="new">Bottom bar slides away (html[data-keyboard="open"]); back on blur after 150 ms</td><td class="new">Drops to the keyboard's edge (--keyboard-inset)</td><td class="new">Body keeps ≥ 6 rem; the focused field scrolls into the body</td><td>—</td><td>—</td></tr>
+<tr><th>Tablet / desktop<small>width ≥ 600, height ≥ 500</small></th><td>Bottom bar to 1023, rail from 1024 (88 px), expanded from 1440</td><td class="new">One row; the box takes its column's width (form 840, narrow 720)</td><td>Centred dialog 560; footer one row</td><td>Step fills the height; tap zones</td><td>4 × 3 wall grid (height ≥ 560)</td></tr>
+<tr><th>Every size<small>notched devices</small></th><td colspan="5" class="new">Safe areas: every gutter is max(gutter, inset) on its side (Page, top bar, rail, sheet panel, Cook Mode, board); the top bar adds the top inset; bars add the bottom inset.</td></tr>
+</tbody>
+</table>
+<svg width="760" height="190" viewBox="0 0 760 190" role="img" aria-label="Height budget at 844 by 390, before and after">
+  <style>text{font:600 12px Figtree,sans-serif;fill:var(--color-text)} .m{fill:var(--color-muted);font-weight:500}</style>
+  <text x="0" y="14">844 × 390, Recipe detail: what covers the 390 px</text>
+  <text x="0" y="44" class="m">Before</text>
+  <rect x="70" y="30" width="600" height="22" rx="6" fill="var(--color-surface-2)"/>
+  
+  <rect x="371" y="30" width="135" height="22" fill="var(--status-danger-solid)"/><rect x="537" y="30" width="108" height="22" fill="var(--status-danger-solid)" opacity=".7"/>
+  <text x="680" y="46">41 %</text>
+  <text x="372" y="70" class="m">Cook bar 88</text><text x="540" y="70" class="m">bottom bar 70</text>
+  <text x="0" y="114" class="m">After</text>
+  <rect x="70" y="100" width="600" height="22" rx="6" fill="var(--color-surface-2)"/>
+  <rect x="544" y="100" width="108" height="22" fill="var(--color-accent)"/>
+  <text x="680" y="116">18 %</text>
+  <text x="548" y="140" class="m">Cook bar 70</text><text x="70" y="140" class="m">rail beside the page: 0 px over it</text>
+  <text x="0" y="178" class="m">Bars scaled to 600 px = 390 px of viewport height.</text>
+</svg>
+</body>
+</html>

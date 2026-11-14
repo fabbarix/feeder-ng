@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Data state model</title>
+<style>
+:root{--bg:#fafffc;--ink:#131d17;--muted:#4b5a4f;--line:#677a6d;--ok:#d7eedd;--info:#dbe7fb;--danger:#fde1de;--warn:#fbe9cf;--node:#ffffff}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1511;--ink:#e3efe6;--muted:#a9bbae;--line:#8da394;--ok:#1f3a29;--info:#1d2a44;--danger:#46201c;--warn:#3d2e14;--node:#17211b}}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 Figtree,system-ui,sans-serif}
+svg{display:block;max-width:100%;height:auto}
+text{fill:var(--ink);font-size:13px}.s{fill:var(--muted);font-size:11.5px}.t{font-weight:700;font-size:14px}
+.n{fill:var(--node);stroke:var(--line);stroke-width:1.2}.ok{fill:var(--ok)}.info{fill:var(--info)}.danger{fill:var(--danger)}.warn{fill:var(--warn)}
+.e{stroke:var(--line);stroke-width:1.4;fill:none;marker-end:url(#a)}.d{stroke-dasharray:5 4}
+</style></head><body>
+<svg viewBox="0 0 1150 560" role="img" aria-labelledby="t d"><title id="t">One state model for every data-driven screen</title><desc id="d">From Loading a screen reaches Loaded, Empty, Nothing matches, Request failed, Offline with saved data or Offline never loaded; a render error in a tile leads to Crashed tile.</desc>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="currentColor" style="fill:var(--line)"/></marker></defs>
+<text x="20" y="28" class="t" style="font-size:17px">lib/dataState.ts — screenState(query, {isEmpty, hasFilter, online})</text>
+<rect class="n" x="40" y="230" width="190" height="86" rx="14"/><text x="58" y="258" class="t">Loading</text><text x="58" y="278" class="s">Skeleton in the final shape;</text><text x="58" y="294" class="s">heights reserved from frame 1</text>
+<rect class="n ok" x="430" y="60" width="210" height="62" rx="14"/><text x="448" y="86" class="t">Loaded</text><text x="448" y="106" class="s">the content</text>
+<rect class="n ok" x="430" y="140" width="210" height="62" rx="14"/><text x="448" y="166" class="t">Empty</text><text x="448" y="186" class="s">EmptyState: truly no data</text>
+<rect class="n ok" x="430" y="220" width="210" height="62" rx="14"/><text x="448" y="246" class="t">Nothing matches</text><text x="448" y="266" class="s">EmptyState + Show all</text>
+<rect class="n info" x="430" y="300" width="210" height="62" rx="14"/><text x="448" y="326" class="t">Offline, saved</text><text x="448" y="346" class="s">content + offline banner</text>
+<rect class="n info" x="430" y="380" width="210" height="62" rx="14"/><text x="448" y="406" class="t">Offline, never loaded</text><text x="448" y="426" class="s">LoadState: unknown ≠ empty</text>
+<rect class="n danger" x="430" y="460" width="210" height="62" rx="14"/><text x="448" y="486" class="t">Request failed</text><text x="448" y="506" class="s">ErrorState + Try again</text>
+<path class="e" d="M230 255 C330 200 330 95 428 92"/><text x="268" y="120" class="s">200, data</text>
+<path class="e" d="M230 262 C330 230 340 172 428 172"/><text x="300" y="180" class="s">200, no rows</text>
+<path class="e" d="M230 270 C330 262 360 251 428 251"/><text x="300" y="243" class="s">no row matches the filter</text>
+<path class="e" d="M230 282 C330 300 360 331 428 331"/><text x="262" y="318" class="s">network down, cache has it</text>
+<path class="e" d="M230 292 C330 350 360 411 428 411"/><text x="250" y="380" class="s">network down, nothing cached</text>
+<path class="e" d="M230 300 C320 420 360 490 428 490"/><text x="216" y="468" class="s">5xx/timeout after 1 retry (~1 s);</text><text x="216" y="483" class="s">4xx at once (no retry)</text>
+<path class="e d" d="M642 331 C760 300 760 120 642 95"/><text x="700" y="210" class="s">online → refetch</text>
+<path class="e d" d="M642 411 C820 380 820 110 642 100"/><text x="772" y="300" class="s">online → fetch</text>
+<path class="e d" d="M500 524 C380 560 160 520 130 318"/><text x="230" y="545" class="s">Try again (or online / focus) → Loading, same reserved shape</text>
+<rect class="n warn" x="860" y="60" width="210" height="74" rx="14"/><text x="878" y="86" class="t">Crashed tile</text><text x="878" y="106" class="s">TileErrorBoundary keeps the slot;</text><text x="878" y="121" class="s">Try again = reset + refetch</text>
+<path class="e" d="M642 85 L858 92"/><text x="690" y="74" class="s">a render throws</text>
+<text x="860" y="190" class="t">Rules</text>
+<text x="860" y="212" class="s">• Skeleton only while nothing is known.</text>
+<text x="860" y="230" class="s">• Background refetch never shows a skeleton.</text>
+<text x="860" y="248" class="s">• A refetch that fails over saved data keeps</text>
+<text x="860" y="264" class="s">  the data and shows a one-line notice.</text>
+<text x="860" y="282" class="s">• Empty requires a successful fetch.</text>
+<text x="860" y="300" class="s">• Offline: writes show “Needs a connection”,</text>
+<text x="860" y="316" class="s">  except Ticks and Scans (queued).</text>
+<text x="860" y="334" class="s">• networkMode 'offlineFirst' (default):</text>
+<text x="860" y="350" class="s">  queryFn runs once offline, then pauses.</text>
+</svg></body></html>

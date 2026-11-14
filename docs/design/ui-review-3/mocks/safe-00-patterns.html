@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" data-scheme="light">
+<head>
+<meta charset="utf-8">
+<title>SAFE-00 Which safety pattern</title>
+<link rel="stylesheet" href="app.css">
+<style data-mock>
+body{margin:0;background:var(--color-bg);font-family:Figtree,system-ui,sans-serif;color:var(--color-text)}
+svg text{font-family:Figtree,system-ui,sans-serif;fill:var(--color-text)}
+.q{fill:var(--color-surface);stroke:var(--color-outline);stroke-width:1.5}
+.a-confirm{fill:var(--status-danger-bg);stroke:var(--status-danger-fg);stroke-width:1.5}
+.a-both{fill:var(--color-info-bg);stroke:var(--color-info-fg);stroke-width:1.5}
+.a-undo{fill:var(--status-success-bg);stroke:var(--status-success-fg);stroke-width:1.5}
+.a-none{fill:var(--color-surface-2);stroke:var(--color-outline);stroke-width:1.5}
+.t{font-size:15px;font-weight:700}.m{font-size:13px;font-weight:500}.s{font-size:12px;font-weight:600;fill:var(--color-muted)}
+.l{stroke:var(--color-outline);stroke-width:1.5;fill:none;marker-end:url(#arr)}
+.lab{font-size:12px;font-weight:800;fill:var(--color-muted)}
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1200 760" width="1200" height="760" role="img" aria-labelledby="dt">
+<title id="dt">Which safety pattern an action gets: confirm, confirm and Undo, Undo, or neither</title>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" style="fill:var(--color-outline)"/></marker></defs>
+<text x="24" y="40" style="font-size:24px;font-weight:800">Which safety pattern does an action get?</text>
+<text x="24" y="64" class="m">R1 in this chapter. Ask the questions in order; the first yes decides.</text>
+
+<rect class="q" x="24" y="96" width="520" height="92" rx="16"/>
+<text x="44" y="126" class="t">1. Does it delete or replace things the person</text>
+<text x="44" y="146" class="t">cannot see here, or that other records depend on?</text>
+<text x="44" y="170" class="s">a cascade, a bulk change, another person's data or sign-in</text>
+
+<rect class="q" x="636" y="96" width="540" height="92" rx="16"/>
+<text x="656" y="126" class="t">2. Can the server put back exactly what it took,</text>
+<text x="656" y="146" class="t">as long as nothing has built on it since?</text>
+<text x="656" y="170" class="s">a snapshot or an inverse call, guarded</text>
+<path class="l" d="M544 142 H630"/><text x="560" y="134" class="lab">YES</text>
+
+<rect class="a-both" x="636" y="236" width="260" height="150" rx="16"/>
+<text x="656" y="266" class="t">Confirm, then Undo</text>
+<text x="656" y="290" class="m">ConfirmDialog names what goes;</text>
+<text x="656" y="308" class="m">Cancel has focus. Then an</text>
+<text x="656" y="326" class="m">Undo toast for 8 s.</text>
+<text x="656" y="350" class="s">Regenerate · Remove Member ·</text>
+<text x="656" y="368" class="s">Remove Meal Slot</text>
+<path class="l" d="M766 188 V230"/><text x="774" y="214" class="lab">YES</text>
+
+<rect class="a-confirm" x="916" y="236" width="260" height="150" rx="16"/>
+<text x="936" y="266" class="t">Confirm only</text>
+<text x="936" y="290" class="m">ConfirmDialog, danger tone,</text>
+<text x="936" y="308" class="m">Cancel has focus, the button</text>
+<text x="936" y="326" class="m">names the action. No Undo.</text>
+<text x="936" y="350" class="s">Delete Shop · Ingredient · Recipe ·</text>
+<text x="936" y="368" class="s">Product · Tag · Course</text>
+<path class="l" d="M1046 188 V230"/><text x="1054" y="214" class="lab">NO</text>
+
+<rect class="q" x="24" y="300" width="520" height="92" rx="16"/>
+<text x="44" y="330" class="t">3. Does it remove, resolve or change something</text>
+<text x="44" y="350" class="t">the person might want back?</text>
+<text x="44" y="374" class="s">one thing they are looking at, or a small set</text>
+<path class="l" d="M284 188 V294"/><text x="292" y="250" class="lab">NO</text>
+
+<rect class="a-undo" x="24" y="440" width="520" height="170" rx="16"/>
+<text x="44" y="470" class="t">Act at once, then an Undo toast</text>
+<text x="44" y="494" class="m">"&lt;what happened&gt; · Undo" for 8 s (paused while pointed at or focused).</text>
+<text x="44" y="512" class="m">Undo restores exactly; then "&lt;thing&gt; is back" for 4 s.</text>
+<text x="44" y="536" class="s">Cooked · Not cooked · Throw out · Tick and add to Stock · Stock-take ±1 ·</text>
+<text x="44" y="554" class="s">Remove Step or line · barcode × · Price, Slot Rule, Variety Rule, Weight Barcode</text>
+<text x="44" y="572" class="s">Rule, Shop Barcode, Unit Conversion, extra Line removed · Archive · Not needed ·</text>
+<text x="44" y="590" class="s">Swap · Not served (asks first only when Pinned or Bought Planned Meals go)</text>
+<path class="l" d="M284 392 V434"/><text x="292" y="420" class="lab">YES</text>
+
+<rect class="a-none" x="636" y="440" width="540" height="170" rx="16"/>
+<text x="656" y="470" class="t">Neither: act at once</text>
+<text x="656" y="494" class="m">The change shows where the person is looking and the</text>
+<text x="656" y="512" class="m">same control takes it back (a toggle, a stepper, a filter).</text>
+<text x="656" y="536" class="s">Pin / Unpin · untick on the Shop · Who's eating stepper ·</text>
+<text x="656" y="554" class="s">Favourite / Dislike / Exclusion cells · filters</text>
+<path class="l" d="M544 400 C600 400 620 440 650 440"/><text x="574" y="420" class="lab">NO</text>
+
+<text x="24" y="660" class="t">Every pattern</text>
+<text x="24" y="684" class="m">A failure never leaves a half state: an error toast says what did not happen ("Couldn't remove Sam. Nothing changed. Try again.") and stays until dismissed.</text>
+<text x="24" y="704" class="m">Copy uses GLOSSARY words and names the thing ("Remove Sam?", "Sat Dinner marked Not cooked"), never "item" or "Are you sure?".</text>
+<text x="24" y="724" class="m">An action that only ever fails safe (a refusal like "can only be archived") is answered before it is offered, not after (SAFE-05).</text>
+</svg>
+</body>
+</html>

@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en" data-scheme="light" style="--color-bg: #e7f4eb; --color-surface: #fafffc; --color-surface-2: #daecdf; --color-surface-3: #c8e0cf; --color-line: #c2d7c9; --color-outline: #677a6d; --color-text: #131d17; --color-muted: #4b5a4f; --color-accent: #34724e; --color-on-accent: #ffffff; --color-accent-text: #135533; --color-soft: #bfebcd; --color-soft-strong: #9addb2; --color-background: #e7f4eb; --color-on-background: #131d17; --color-surface-container-low: #fafffc; --color-surface-container: #daecdf; --color-surface-container-high: #c8e0cf; --color-on-surface: #131d17; --color-on-surface-variant: #4b5a4f; --color-primary: #34724e; --color-on-primary: #ffffff; --color-primary-container: #bfebcd; --color-on-primary-container: #135533; --color-secondary: #34724e; --color-on-secondary: #ffffff; --color-secondary-container: #bfebcd; --color-on-secondary-container: #135533; --status-leftover-fg: #065353; --status-leftover-bg: #c2f3f2; --status-leftover-solid: #027879; --status-spoil-fg: #6d3706; --status-spoil-bg: #fee1cf; --status-spoil-solid: #9e5106; --status-danger-fg: #742e2b; --status-danger-bg: #ffe0dc; --status-danger-solid: #ab413e; --status-success-fg: #115629; --status-success-bg: #d1f2d7; --status-success-solid: #0a7e3a; --status-pinned-fg: #3e3f7c; --status-pinned-bg: #e3e6fe; --status-pinned-solid: #5b5cb7; color-scheme: light;"><head><link rel="stylesheet" href="app.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e7f4eb">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#090f0b">
+    <meta name="description" content="Feeder: family meal planning">
+    
+    
+    
+    
+    
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#34724e">
+    <title>Feeder</title>
+    <!-- Boot paint: the page background in the right scheme before React mounts (no white flash in dark). Background only. -->
+    <style>html{background:#e7f4eb}@media (prefers-color-scheme:dark){html:not([data-scheme=light]){background:#090f0b}}html[data-scheme=dark]{background:#090f0b}#root:has(>.boot-mark){place-items:center;min-height:100dvh;display:grid}.boot-mark{justify-items:center;gap:8px;font-weight:700;display:grid}</style>
+    
+    
+  <style type="text/css">/* ===== A11Y proposal (docs/design/ui-review-3/a11y.md). Lift into the files named in each block. ===== */
+
+/* --- A11Y-02 styles.css :root: one focus ring --- */
+:root {
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  /* inside a clipping container (list group, sheet body, scroller) the ring is drawn inside the edge */
+  --focus-ring-offset-inset: calc(-1 * var(--focus-ring-width));
+  --focus-ring-color: var(--color-accent);
+  /* A11Y-06: selected / pressed state */
+  --selected-bg: var(--color-soft);
+  --selected-fg: var(--color-accent-text);
+  --selected-ring: var(--color-accent-text);
+  --selected-ring-width: 1.5px;
+  /* A11Y-09: targets */
+  --target-min: 44px;
+  --icon-set-gap: var(--space-2);  /* fine: a 5 px outer ring never reaches the neighbour (8 - 5 = 3 px clear) */
+}
+@media (pointer: coarse) {
+  :root { --icon-set-gap: var(--space-3); }  /* coarse: 32 + 12 = a 44 px pitch */
+}
+
+/* styles.css: the one rule (zero specificity, so a primitive that moves the ring to its frame, e.g. a field input, still wins).
+   Every primitive drops its own outline / box-shadow ring and inherits this. */
+:where(:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+
+/* Every primitive that sets its own ring today (Button, IconButton, Chip, ChoiceChip, Segmented, Switch, Checkbox, ColorSwatches,
+   TagColour, EmojiPicker, RadioCards, Slider, Menu, Breadcrumbs, TextLink, Sortable, FileDrop, ImagePicker, Tile stretch, shop
+   tick, WeekdayPicker, PriceKeypad, Stepper, TimeField segment) uses the token instead of var(--color-accent): */
+.button:focus-visible, .icon-button:focus-visible, button.chip:focus-visible, .segmented__option:focus-visible,
+.switch:focus-visible, .colour-swatch:focus-visible, .tile__stretch:focus-visible, .menu__item:focus-visible,
+.line-row__tick:focus-visible, .shop-not-needed__toggle:focus-visible, .weekday-picker__chip:focus-visible,
+.price-keypad__key:focus-visible, .price-keypad__display:focus-visible, .stepper__value:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: none;
+}
+.choice-chip:focus-visible, .checkbox__input:focus-visible + .checkbox__box {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+}
+
+/* ui/Tile.css: on an accent-filled container the ring is the on-accent colour (white in light, dark ink in dark). */
+.tile[data-variant='hero'] { --focus-ring-color: var(--color-on-accent); }
+/* --- A11Y-03 features/plan/components/TonightHero.css: key the dark hero on the chosen scheme (data-scheme, set by
+   ThemeProvider for Light, Dark and System alike), never on the OS media query or the unused data-theme attribute. --- */
+[data-scheme='dark'] .tile.plan-hero {
+  background: var(--color-soft-strong);
+  color: var(--color-text);
+  /* the dark Today hero is soft-strong, so the accent ring comes back */
+  --focus-ring-color: var(--color-accent);
+}
+[data-scheme='dark'] .tile.plan-hero .button[data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+[data-scheme='dark'] .plan-hero .plan-course__caption {
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+/* Fields: the ring is an outline on the frame (survives forced colours), never a box-shadow. The frame rings only while its
+   text entry has focus; a button inside the frame (stepper -/+, Clear search) is a nested control (R-C+ below). */
+.ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus),
+.search-field__control:has(input:focus) {
+  border-color: var(--color-accent);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
+}
+.select__trigger:focus-visible,
+.date-field__trigger:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
+}
+
+/* ui/ListRow.css: the row ring sits inside the row and clears the content by 2 px. */
+.list-row__target:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
+  border-radius: var(--radius-thumb);
+}
+
+/* --- A11Y-05 (decided: option B): the Search field and the Segmented track are a stronger fill with a 2 px bottom rule.
+   Tokens go in ui/fields/Field.css :root next to --field-border-width. Bordered fields (TextField, Select, ...) keep their outline. --- */
+:root {
+  --field-fill-strong: var(--color-surface-3);
+  --field-rule-width: 2px;
+  --field-rule-color: var(--color-outline);
+  --field-radius-ruled: var(--radius-control) var(--radius-control) var(--space-1) var(--space-1);
+}
+.search-field__control,
+.segmented {
+  background: var(--field-fill-strong);
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--field-rule-color);
+  border-radius: var(--field-radius-ruled);
+}
+.search-field__control:hover,
+.segmented:not([data-disabled]):hover {
+  background: color-mix(in oklab, var(--field-fill-strong), var(--color-text) 6%);
+}
+/* focus: the A11Y-02 ring goes round the whole shape; the rule turns accent under it */
+.search-field__control:has(input:focus) { border-block-end-color: var(--color-accent); }
+/* disabled: no fill, the rule in --color-line (exempt from 1.4.11), text muted */
+.segmented[data-disabled],
+.search-field__control:has(:disabled) {
+  background: transparent;
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--color-line);
+  color: var(--color-muted);
+}
+.segmented[data-disabled] .segmented__option[aria-checked='true'] {
+  background: transparent; color: var(--color-text);
+  box-shadow: inset 0 0 0 var(--field-border-width) var(--color-outline);
+}
+
+/* --- A11Y-06: selected / pressed (Segmented option, ChoiceChip, toggle IconButton) --- */
+.segmented__option[aria-checked='true'] {
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+.segmented__check { flex: none; }
+.segmented__option { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); }
+.icon-button[aria-pressed='true'],
+.choice-chip[aria-pressed='true'] {
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  border-color: var(--selected-ring);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+
+/* --- A11Y-09: targets on a coarse pointer --- */
+/* new ui/IconSet primitive (system.md §5.5 "one icon set"); until it lands, the three Plan containers: */
+.icon-set, .plan-row__actions, .plan-slot-head__actions, .plan-course__actions { gap: var(--icon-set-gap); }
+@media (pointer: coarse) {
+  .segmented__option { position: relative; }
+  .segmented__option::after { content: ''; position: absolute; inset: calc(-1 * var(--space-1)) calc(-0.5 * var(--space-1)); }
+  .your-menu-button, .colour-swatch, .switch { position: relative; }
+  .your-menu-button::after, .colour-swatch::after { content: ''; position: absolute; inset: -2px; }
+  .switch::after { content: ''; position: absolute; inset: -6px 0; }
+}
+
+/* --- A11Y-10: skip link (app/shell.css) --- */
+.skip-link {
+  position: fixed;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-button);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--space-4)));
+}
+.skip-link:focus-visible {
+  transform: none;
+  --focus-ring-color: var(--color-text);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skip-link { transition: transform var(--dur-1) var(--ease-out); }
+}
+
+/* --- A11Y-04: forced colours (new file ui/forcedColors.css, imported last by ui/index.ts) --- */
+@media (forced-colors: active) {
+  .button, .icon-button, .chip, .choice-chip, .your-menu-button, .line-row__tick,
+  .search-field__control, .segmented, .stepper__value, .price-keypad__key {
+    border: 1px solid ButtonText;
+  }
+  /* the ruled shape keeps its 2 px bottom rule on top of the 1 px frame */
+  .search-field__control, .segmented { border-block-end: var(--field-rule-width) solid ButtonText; }
+  .tile, .list-group, .bottom-bar, .toast { border: 1px solid CanvasText; }
+  .segmented__option[aria-checked='true'],
+  .icon-button[aria-pressed='true'],
+  .choice-chip[aria-pressed='true'],
+  .chip[aria-pressed='true'],
+  .checkbox__box[data-state='checked'],
+  .checkbox__box[data-state='mixed'],
+  .switch[aria-checked='true'] {
+    /* !important is allowed in this layer only: it must beat every variant rule (e.g. the filter chip's accent fill) */
+    forced-color-adjust: none !important;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .colour-swatch { forced-color-adjust: none; border: 1px solid CanvasText; }
+  .colour-swatch[aria-checked='true'] { box-shadow: none; outline: 3px solid Highlight; outline-offset: 3px; }
+  .bottom-bar__link[aria-current='page'],
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+  .switch { border: 1px solid ButtonText; }
+  .switch__thumb { forced-color-adjust: none; background: ButtonText; }
+  .switch[aria-checked='true'] .switch__thumb { background: HighlightText; }
+  :disabled, [aria-disabled='true'] { color: GrayText; border-color: GrayText; opacity: 1; }
+  :focus-visible,
+  .ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus),
+  .search-field__control:has(input:focus) { outline-color: Highlight; }
+  .picker-row:focus-visible { outline: var(--focus-ring-width) solid Highlight; outline-offset: var(--focus-ring-offset-inset); }
+}
+
+/* --- A11Y-06 round 1: a Segmented option never wraps; under 18 rem of field width the Check is dropped (the ring still marks the choice) --- */
+.ui-field:has(> .segmented:not([data-compact])) { container-type: inline-size; }
+.segmented__option { flex: 1 1 auto; white-space: nowrap; }
+@container (max-width: 18rem) {
+  .segmented__check { display: none; }
+  .segmented__option { padding-inline: var(--space-2); }
+}
+
+/* --- A11Y-02 R-C+ nested focus. A container marked data-focus-scope (field frames, timer pills, rail timer tiles, any pill
+   that holds buttons) keeps its own boundary; a control inside it draws a 2 px ring inside itself on a soft fill, and an
+   accent boundary on the container steps back to the neutral outline while a child has focus. One accent ring at a time. --- */
+:root { --focus-ring-inner-width: 2px; }
+:is(.ui-field__control, .search-field__control, [data-focus-scope]) :is(button, [role='button'], a):focus-visible {
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+[data-focus-scope]:has(:focus-visible) { border-color: var(--color-outline); box-shadow: inset 0 0 0 1px var(--color-outline); }
+/* at least 4 px of the container's fill between its boundary and the child: stepper buttons are 36 px in the 48 px frame
+   (1.5 px border + 4 px fill + 36 + 4 + 1.5 = 47); the ::after keeps the 44 px target */
+.ui-field--stepper .icon-button { inline-size: 36px; block-size: 36px; }
+.ui-field--stepper .icon-button::after { inset: -4px; }
+/* Segmented: arrows choose (useRovingRadios 'auto'), so the focused option is the chosen one; the ring goes round the whole
+   track (outer ring), the option draws none, and nothing nests */
+.segmented__option:focus-visible { outline: none; }
+.segmented:has(.segmented__option:focus-visible) { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
+@media (forced-colors: active) {
+  .segmented:has(.segmented__option:focus-visible) { outline-color: Highlight; }
+}
+
+/* ===== Round-1 shared rules R-A..R-D (the PC mocks' RULES_CSS, reused) ===== */
+/* R-A Buttons look like buttons. A secondary button has a fill AND a 1 px --color-outline boundary on every surface
+   (outline vs surface 4.5 / 4.9, vs status tints 3.7-4.0 light and dark). On a tinted tile (status, soft) its fill is --color-surface.
+   Tertiary (bare text) buttons are not used as actions in tiles, notices, toasts or sheet footers. */
+.button[data-variant="secondary"]{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+.tile[data-variant="status"] .icon-button,.pc-lo .icon-button,.pc-alert .icon-button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+.sheet .button[data-variant="secondary"],.dialog .button[data-variant="secondary"]{background:var(--color-surface)}
+.button[data-variant="danger-tertiary"]{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--status-danger-fg);color:var(--status-danger-fg)}
+/* R-B Close: one circular outline icon button, 40 px (52 px target through the existing ::after), never stretched; top-aligned with the title. */
+.pc-close{flex:none;align-self:flex-start;inline-size:40px;block-size:40px;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+.sheet__header{align-items:flex-start}
+/* R-C Focus rings are never clipped: every scroll container that holds controls keeps 5 px of room (3 px ring + 2 px offset);
+   nested controls are inset inside their container's padding; sticky bars set scroll-padding so a focused control is never under them. */
+.sheet__body{padding-block:5px;scroll-padding-block:5px}
+.toast{--focus-ring-color:var(--color-bg)}
+/* R-D A toast with detail: icon | headline (body-strong), muted subline (meta), optional body (body), actions as real outline buttons; Dismiss top-right. */
+.toast{align-items:center}
+.toast .toast__message{flex:1 1 auto;min-width:0}
+.pc-toast-rich{align-items:flex-start;padding:14px 10px 14px 16px}
+.pc-toast-rich > svg{margin-top:2px;flex:none}
+.pc-toast__text{flex:1 1 auto;min-width:0;display:grid;gap:2px}
+.pc-toast__text p{margin:0}
+.pc-toast__head{font-size:var(--text-body-strong-size);line-height:var(--text-body-strong-line);font-weight:700}
+.pc-toast__sub{font-size:var(--text-meta-size);line-height:var(--text-meta-line);color:color-mix(in srgb,var(--color-bg) 72%,var(--color-text))}
+.pc-toast__body{font-size:var(--text-body-size);line-height:var(--text-body-line);margin-top:4px!important}
+.pc-toast__actions{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
+.pc-tbtn{flex:none;min-block-size:40px;padding-inline:var(--space-4);border-radius:999px;background:transparent;color:var(--color-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-bg) 70%,transparent);font-weight:700}
+.pc-tclose{flex:none;inline-size:32px;block-size:32px;border-radius:999px;background:transparent;color:var(--color-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-bg) 55%,transparent)}
+/* A11Y round 1: R-B on the shared sheet header Close (the PC mocks call it .pc-close) */
+.sheet__header > .icon-button,.dialog__header > .icon-button{flex:none;align-self:flex-start;inline-size:40px;block-size:40px;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+/* A11Y round 1: R-A icon buttons on a tinted container (the dark Today hero is soft-strong) */
+[data-scheme='dark'] .tile.plan-hero .icon-button,.tile[data-variant='soft'] .icon-button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+/* A11Y round 1: R-A no bare text button as a sheet action ("Reset to usual Attendance" becomes secondary) */
+.sheet__body .button[data-variant='tertiary'][data-size='md']{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+.sheet__body .button[data-variant='tertiary'][data-size='md']:disabled{opacity:.38}
+
+/* mock-only: draws the focus a keyboard user would see, so several focused controls fit in one picture */
+[data-mock-focus] { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
+.list-row__target[data-mock-focus] { outline-offset: var(--focus-ring-offset-inset); border-radius: var(--radius-thumb); }
+.ui-field__control[data-mock-focus], .search-field__control[data-mock-focus] { border-color: var(--color-accent); outline-offset: 0; }
+/* mock-only: nested focus (R-C+) and the Segmented track ring, drawn statically */
+[data-mock-focus-inner] { outline: var(--focus-ring-inner-width) solid var(--focus-ring-color) !important; outline-offset: calc(-1 * var(--focus-ring-inner-width)) !important; background: var(--color-soft) !important; color: var(--color-accent-text) !important; }
+[data-mock-track-focus] { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
+/* mock-only: tokens that refer to palette colours are re-declared on each themed panel (the app sets them once on :root) */
+.mk-panel { --field-fill-strong: var(--color-surface-3); --field-rule-color: var(--color-outline); --focus-ring-color: var(--color-accent); --selected-bg: var(--color-soft); --selected-fg: var(--color-accent-text); --selected-ring: var(--color-accent-text); }
+.mk-panel .tile[data-variant='hero'] { --focus-ring-color: var(--color-on-accent); }
+.mk-panel[data-scheme='dark'] .tile.plan-hero { --focus-ring-color: var(--color-accent); }
+/* mock-only: page furniture */
+@media (max-width: 500px) { .mk-grid { padding: 0; gap: 0; } .mk-panel { border-radius: 0; padding: 16px; } }
+
+.mk-grid { display: grid; gap: 12px; padding: 12px; grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
+.mk-panel { padding: 14px; border-radius: 18px; background: var(--color-bg); color: var(--color-text); display: grid; gap: 12px; align-content: start; min-inline-size: 0; }
+.mk-cap { font: 700 12px/16px Figtree, sans-serif; letter-spacing: .02em; color: var(--color-muted); margin: 0; }
+.mk-cap b { color: var(--color-text); }
+.mk-h { font: 800 15px/20px Figtree, sans-serif; margin: 12px 12px 0; color: #222; }
+.mk-sect[data-scheme='dark'] { background: #111; } .mk-sect[data-scheme='dark'] .mk-h { color: #eee; }
+</style><style data-proposed>
+/* ===== A11Y proposal (docs/design/ui-review-3/a11y.md). Lift into the files named in each block. ===== */
+
+/* --- A11Y-02 styles.css :root: one focus ring --- */
+:root {
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  /* inside a clipping container (list group, sheet body, scroller) the ring is drawn inside the edge */
+  --focus-ring-offset-inset: calc(-1 * var(--focus-ring-width));
+  --focus-ring-color: var(--color-accent);
+  /* A11Y-06: selected / pressed state */
+  --selected-bg: var(--color-soft);
+  --selected-fg: var(--color-accent-text);
+  --selected-ring: var(--color-accent-text);
+  --selected-ring-width: 1.5px;
+  /* A11Y-09: targets */
+  --target-min: 44px;
+  --icon-set-gap: var(--space-2);  /* fine: a 5 px outer ring never reaches the neighbour (8 - 5 = 3 px clear) */
+}
+@media (pointer: coarse) {
+  :root { --icon-set-gap: var(--space-3); }  /* coarse: 32 + 12 = a 44 px pitch */
+}
+
+/* styles.css: the one rule (zero specificity, so a primitive that moves the ring to its frame, e.g. a field input, still wins).
+   Every primitive drops its own outline / box-shadow ring and inherits this. */
+:where(:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+
+/* Every primitive that sets its own ring today (Button, IconButton, Chip, ChoiceChip, Segmented, Switch, Checkbox, ColorSwatches,
+   TagColour, EmojiPicker, RadioCards, Slider, Menu, Breadcrumbs, TextLink, Sortable, FileDrop, ImagePicker, Tile stretch, shop
+   tick, WeekdayPicker, PriceKeypad, Stepper, TimeField segment) uses the token instead of var(--color-accent): */
+.button:focus-visible, .icon-button:focus-visible, button.chip:focus-visible, .segmented__option:focus-visible,
+.switch:focus-visible, .colour-swatch:focus-visible, .tile__stretch:focus-visible, .menu__item:focus-visible,
+.line-row__tick:focus-visible, .shop-not-needed__toggle:focus-visible, .weekday-picker__chip:focus-visible,
+.price-keypad__key:focus-visible, .price-keypad__display:focus-visible, .stepper__value:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: none;
+}
+.choice-chip:focus-visible, .checkbox__input:focus-visible + .checkbox__box {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+}
+
+/* ui/Tile.css: on an accent-filled container the ring is the on-accent colour (white in light, dark ink in dark). */
+.tile[data-variant='hero'] { --focus-ring-color: var(--color-on-accent); }
+/* --- A11Y-03 features/plan/components/TonightHero.css: key the dark hero on the chosen scheme (data-scheme, set by
+   ThemeProvider for Light, Dark and System alike), never on the OS media query or the unused data-theme attribute. --- */
+[data-scheme='dark'] .tile.plan-hero {
+  background: var(--color-soft-strong);
+  color: var(--color-text);
+  /* the dark Today hero is soft-strong, so the accent ring comes back */
+  --focus-ring-color: var(--color-accent);
+}
+[data-scheme='dark'] .tile.plan-hero .button[data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+[data-scheme='dark'] .plan-hero .plan-course__caption {
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+/* Fields: the ring is an outline on the frame (survives forced colours), never a box-shadow. The frame rings only while its
+   text entry has focus; a button inside the frame (stepper -/+, Clear search) is a nested control (R-C+ below). */
+.ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus),
+.search-field__control:has(input:focus) {
+  border-color: var(--color-accent);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
+}
+.select__trigger:focus-visible,
+.date-field__trigger:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
+}
+
+/* ui/ListRow.css: the row ring sits inside the row and clears the content by 2 px. */
+.list-row__target:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
+  border-radius: var(--radius-thumb);
+}
+
+/* --- A11Y-05 (decided: option B): the Search field and the Segmented track are a stronger fill with a 2 px bottom rule.
+   Tokens go in ui/fields/Field.css :root next to --field-border-width. Bordered fields (TextField, Select, ...) keep their outline. --- */
+:root {
+  --field-fill-strong: var(--color-surface-3);
+  --field-rule-width: 2px;
+  --field-rule-color: var(--color-outline);
+  --field-radius-ruled: var(--radius-control) var(--radius-control) var(--space-1) var(--space-1);
+}
+.search-field__control,
+.segmented {
+  background: var(--field-fill-strong);
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--field-rule-color);
+  border-radius: var(--field-radius-ruled);
+}
+.search-field__control:hover,
+.segmented:not([data-disabled]):hover {
+  background: color-mix(in oklab, var(--field-fill-strong), var(--color-text) 6%);
+}
+/* focus: the A11Y-02 ring goes round the whole shape; the rule turns accent under it */
+.search-field__control:has(input:focus) { border-block-end-color: var(--color-accent); }
+/* disabled: no fill, the rule in --color-line (exempt from 1.4.11), text muted */
+.segmented[data-disabled],
+.search-field__control:has(:disabled) {
+  background: transparent;
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--color-line);
+  color: var(--color-muted);
+}
+.segmented[data-disabled] .segmented__option[aria-checked='true'] {
+  background: transparent; color: var(--color-text);
+  box-shadow: inset 0 0 0 var(--field-border-width) var(--color-outline);
+}
+
+/* --- A11Y-06: selected / pressed (Segmented option, ChoiceChip, toggle IconButton) --- */
+.segmented__option[aria-checked='true'] {
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+.segmented__check { flex: none; }
+.segmented__option { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); }
+.icon-button[aria-pressed='true'],
+.choice-chip[aria-pressed='true'] {
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  border-color: var(--selected-ring);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+
+/* --- A11Y-09: targets on a coarse pointer --- */
+/* new ui/IconSet primitive (system.md §5.5 "one icon set"); until it lands, the three Plan containers: */
+.icon-set, .plan-row__actions, .plan-slot-head__actions, .plan-course__actions { gap: var(--icon-set-gap); }
+@media (pointer: coarse) {
+  .segmented__option { position: relative; }
+  .segmented__option::after { content: ''; position: absolute; inset: calc(-1 * var(--space-1)) calc(-0.5 * var(--space-1)); }
+  .your-menu-button, .colour-swatch, .switch { position: relative; }
+  .your-menu-button::after, .colour-swatch::after { content: ''; position: absolute; inset: -2px; }
+  .switch::after { content: ''; position: absolute; inset: -6px 0; }
+}
+
+/* --- A11Y-10: skip link (app/shell.css) --- */
+.skip-link {
+  position: fixed;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-button);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--space-4)));
+}
+.skip-link:focus-visible {
+  transform: none;
+  --focus-ring-color: var(--color-text);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skip-link { transition: transform var(--dur-1) var(--ease-out); }
+}
+
+/* --- A11Y-04: forced colours (new file ui/forcedColors.css, imported last by ui/index.ts) --- */
+@media (forced-colors: active) {
+  .button, .icon-button, .chip, .choice-chip, .your-menu-button, .line-row__tick,
+  .search-field__control, .segmented, .stepper__value, .price-keypad__key {
+    border: 1px solid ButtonText;
+  }
+  /* the ruled shape keeps its 2 px bottom rule on top of the 1 px frame */
+  .search-field__control, .segmented { border-block-end: var(--field-rule-width) solid ButtonText; }
+  .tile, .list-group, .bottom-bar, .toast { border: 1px solid CanvasText; }
+  .segmented__option[aria-checked='true'],
+  .icon-button[aria-pressed='true'],
+  .choice-chip[aria-pressed='true'],
+  .chip[aria-pressed='true'],
+  .checkbox__box[data-state='checked'],
+  .checkbox__box[data-state='mixed'],
+  .switch[aria-checked='true'] {
+    /* !important is allowed in this layer only: it must beat every variant rule (e.g. the filter chip's accent fill) */
+    forced-color-adjust: none !important;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .colour-swatch { forced-color-adjust: none; border: 1px solid CanvasText; }
+  .colour-swatch[aria-checked='true'] { box-shadow: none; outline: 3px solid Highlight; outline-offset: 3px; }
+  .bottom-bar__link[aria-current='page'],
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+  .switch { border: 1px solid ButtonText; }
+  .switch__thumb { forced-color-adjust: none; background: ButtonText; }
+  .switch[aria-checked='true'] .switch__thumb { background: HighlightText; }
+  :disabled, [aria-disabled='true'] { color: GrayText; border-color: GrayText; opacity: 1; }
+  :focus-visible,
+  .ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus),
+  .search-field__control:has(input:focus) { outline-color: Highlight; }
+  .picker-row:focus-visible { outline: var(--focus-ring-width) solid Highlight; outline-offset: var(--focus-ring-offset-inset); }
+}
+
+/* --- A11Y-06 round 1: a Segmented option never wraps; under 18 rem of field width the Check is dropped (the ring still marks the choice) --- */
+.ui-field:has(> .segmented:not([data-compact])) { container-type: inline-size; }
+.segmented__option { flex: 1 1 auto; white-space: nowrap; }
+@container (max-width: 18rem) {
+  .segmented__check { display: none; }
+  .segmented__option { padding-inline: var(--space-2); }
+}
+
+/* --- A11Y-02 R-C+ nested focus. A container marked data-focus-scope (field frames, timer pills, rail timer tiles, any pill
+   that holds buttons) keeps its own boundary; a control inside it draws a 2 px ring inside itself on a soft fill, and an
+   accent boundary on the container steps back to the neutral outline while a child has focus. One accent ring at a time. --- */
+:root { --focus-ring-inner-width: 2px; }
+:is(.ui-field__control, .search-field__control, [data-focus-scope]) :is(button, [role='button'], a):focus-visible {
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+[data-focus-scope]:has(:focus-visible) { border-color: var(--color-outline); box-shadow: inset 0 0 0 1px var(--color-outline); }
+/* at least 4 px of the container's fill between its boundary and the child: stepper buttons are 36 px in the 48 px frame
+   (1.5 px border + 4 px fill + 36 + 4 + 1.5 = 47); the ::after keeps the 44 px target */
+.ui-field--stepper .icon-button { inline-size: 36px; block-size: 36px; }
+.ui-field--stepper .icon-button::after { inset: -4px; }
+/* Segmented: arrows choose (useRovingRadios 'auto'), so the focused option is the chosen one; the ring goes round the whole
+   track (outer ring), the option draws none, and nothing nests */
+.segmented__option:focus-visible { outline: none; }
+.segmented:has(.segmented__option:focus-visible) { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
+@media (forced-colors: active) {
+  .segmented:has(.segmented__option:focus-visible) { outline-color: Highlight; }
+}
+
+/* ===== Round-1 shared rules R-A..R-D (the PC mocks' RULES_CSS, reused) ===== */
+/* R-A Buttons look like buttons. A secondary button has a fill AND a 1 px --color-outline boundary on every surface
+   (outline vs surface 4.5 / 4.9, vs status tints 3.7-4.0 light and dark). On a tinted tile (status, soft) its fill is --color-surface.
+   Tertiary (bare text) buttons are not used as actions in tiles, notices, toasts or sheet footers. */
+.button[data-variant="secondary"]{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+.tile[data-variant="status"] .icon-button,.pc-lo .icon-button,.pc-alert .icon-button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+.sheet .button[data-variant="secondary"],.dialog .button[data-variant="secondary"]{background:var(--color-surface)}
+.button[data-variant="danger-tertiary"]{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--status-danger-fg);color:var(--status-danger-fg)}
+/* R-B Close: one circular outline icon button, 40 px (52 px target through the existing ::after), never stretched; top-aligned with the title. */
+.pc-close{flex:none;align-self:flex-start;inline-size:40px;block-size:40px;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+.sheet__header{align-items:flex-start}
+/* R-C Focus rings are never clipped: every scroll container that holds controls keeps 5 px of room (3 px ring + 2 px offset);
+   nested controls are inset inside their container's padding; sticky bars set scroll-padding so a focused control is never under them. */
+.sheet__body{padding-block:5px;scroll-padding-block:5px}
+.toast{--focus-ring-color:var(--color-bg)}
+/* R-D A toast with detail: icon | headline (body-strong), muted subline (meta), optional body (body), actions as real outline buttons; Dismiss top-right. */
+.toast{align-items:center}
+.toast .toast__message{flex:1 1 auto;min-width:0}
+.pc-toast-rich{align-items:flex-start;padding:14px 10px 14px 16px}
+.pc-toast-rich > svg{margin-top:2px;flex:none}
+.pc-toast__text{flex:1 1 auto;min-width:0;display:grid;gap:2px}
+.pc-toast__text p{margin:0}
+.pc-toast__head{font-size:var(--text-body-strong-size);line-height:var(--text-body-strong-line);font-weight:700}
+.pc-toast__sub{font-size:var(--text-meta-size);line-height:var(--text-meta-line);color:color-mix(in srgb,var(--color-bg) 72%,var(--color-text))}
+.pc-toast__body{font-size:var(--text-body-size);line-height:var(--text-body-line);margin-top:4px!important}
+.pc-toast__actions{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
+.pc-tbtn{flex:none;min-block-size:40px;padding-inline:var(--space-4);border-radius:999px;background:transparent;color:var(--color-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-bg) 70%,transparent);font-weight:700}
+.pc-tclose{flex:none;inline-size:32px;block-size:32px;border-radius:999px;background:transparent;color:var(--color-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-bg) 55%,transparent)}
+/* A11Y round 1: R-B on the shared sheet header Close (the PC mocks call it .pc-close) */
+.sheet__header > .icon-button,.dialog__header > .icon-button{flex:none;align-self:flex-start;inline-size:40px;block-size:40px;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+/* A11Y round 1: R-A icon buttons on a tinted container (the dark Today hero is soft-strong) */
+[data-scheme='dark'] .tile.plan-hero .icon-button,.tile[data-variant='soft'] .icon-button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+/* A11Y round 1: R-A no bare text button as a sheet action ("Reset to usual Attendance" becomes secondary) */
+.sheet__body .button[data-variant='tertiary'][data-size='md']{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+.sheet__body .button[data-variant='tertiary'][data-size='md']:disabled{opacity:.38}
+
+</style><style data-mock-only>
+/* mock-only: draws the focus a keyboard user would see, so several focused controls fit in one picture */
+[data-mock-focus] { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
+.list-row__target[data-mock-focus] { outline-offset: var(--focus-ring-offset-inset); border-radius: var(--radius-thumb); }
+.ui-field__control[data-mock-focus], .search-field__control[data-mock-focus] { border-color: var(--color-accent); outline-offset: 0; }
+/* mock-only: nested focus (R-C+) and the Segmented track ring, drawn statically */
+[data-mock-focus-inner] { outline: var(--focus-ring-inner-width) solid var(--focus-ring-color) !important; outline-offset: calc(-1 * var(--focus-ring-inner-width)) !important; background: var(--color-soft) !important; color: var(--color-accent-text) !important; }
+[data-mock-track-focus] { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
+/* mock-only: tokens that refer to palette colours are re-declared on each themed panel (the app sets them once on :root) */
+.mk-panel { --field-fill-strong: var(--color-surface-3); --field-rule-color: var(--color-outline); --focus-ring-color: var(--color-accent); --selected-bg: var(--color-soft); --selected-fg: var(--color-accent-text); --selected-ring: var(--color-accent-text); }
+.mk-panel .tile[data-variant='hero'] { --focus-ring-color: var(--color-on-accent); }
+.mk-panel[data-scheme='dark'] .tile.plan-hero { --focus-ring-color: var(--color-accent); }
+/* mock-only: page furniture */
+@media (max-width: 500px) { .mk-grid { padding: 0; gap: 0; } .mk-panel { border-radius: 0; padding: 16px; } }
+
+.mk-grid { display: grid; gap: 12px; padding: 12px; grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
+.mk-panel { padding: 14px; border-radius: 18px; background: var(--color-bg); color: var(--color-text); display: grid; gap: 12px; align-content: start; min-inline-size: 0; }
+.mk-cap { font: 700 12px/16px Figtree, sans-serif; letter-spacing: .02em; color: var(--color-muted); margin: 0; }
+.mk-cap b { color: var(--color-text); }
+.mk-h { font: 800 15px/20px Figtree, sans-serif; margin: 12px 12px 0; color: #222; }
+.mk-sect[data-scheme='dark'] { background: #111; } .mk-sect[data-scheme='dark'] .mk-h { color: #eee; }
+
+.mk-panel{}</style></head>
+  <body>
+    <div id="root"><div class="app-shell"><header class="top-bar"><span class="top-bar__brand"><svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><g transform="translate(-27.66 -10.48) scale(1.1080)"><path class="brand-mark__body" d="M84 236 A172 52 0 0 1 428 236 Z M164 272 H348 A60 60 0 0 1 408 332 V380 A60 60 0 0 1 348 440 H164 A60 60 0 0 1 104 380 V332 A60 60 0 0 1 164 272 Z M84 292 H100 A28 28 0 0 1 128 320 V320 A28 28 0 0 1 100 348 H84 A28 28 0 0 1 56 320 V320 A28 28 0 0 1 84 292 Z M412 292 H428 A28 28 0 0 1 456 320 V320 A28 28 0 0 1 428 348 H412 A28 28 0 0 1 384 320 V320 A28 28 0 0 1 412 292 Z"></path><path class="brand-mark__heart" d="M 256 164 C 176 118 176 48 220 42 C 240 40 252 52 256 66 C 260 52 272 40 292 42 C 336 48 336 118 256 164 Z"></path></g></svg><span class="top-bar__brand-word">Feeder</span></span><div class="your-menu-anchor"><button type="button" class="your-menu-button" aria-label="Your menu" aria-haspopup="menu" aria-expanded="false"><span class="avatar" data-size="sm" role="img" aria-label="admin">A</span></button></div></header><div class="app-status"></div><nav aria-label="Side rail" class="side-rail"><a class="side-rail__link" href="/" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z"></path></svg></span><span class="side-rail__label">Today</span></a><a class="side-rail__link" href="/plan" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-68-76a12,12,0,1,1-12-12A12,12,0,0,1,140,132Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,132ZM96,172a12,12,0,1,1-12-12A12,12,0,0,1,96,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,140,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,172Z"></path></svg></span><span class="side-rail__label">Plan</span></a><a class="side-rail__link" href="/pantry" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"></path></svg></span><span class="side-rail__label">Pantry</span></a><a class="side-rail__link" data-accent="true" href="/scan" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,48V88a8,8,0,0,1-16,0V56H184a8,8,0,0,1,0-16h40A8,8,0,0,1,232,48ZM72,200H40V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H72a8,8,0,0,0,0-16Zm152-40a8,8,0,0,0-8,8v32H184a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,224,160ZM32,96a8,8,0,0,0,8-8V56H72a8,8,0,0,0,0-16H32a8,8,0,0,0-8,8V88A8,8,0,0,0,32,96ZM80,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,80,80Zm104,88V88a8,8,0,0,0-16,0v80a8,8,0,0,0,16,0ZM144,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,144,80Zm-32,0a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,112,80Z"></path></svg></span><span class="side-rail__label">Scan</span></a><a class="side-rail__link" href="/shop" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M136,120v56a8,8,0,0,1-16,0V120a8,8,0,0,1,16,0Zm36.84-.8-5.6,56A8,8,0,0,0,174.4,184a7.32,7.32,0,0,0,.81,0,8,8,0,0,0,7.95-7.2l5.6-56a8,8,0,0,0-15.92-1.6Zm-89.68,0a8,8,0,0,0-15.92,1.6l5.6,56a8,8,0,0,0,8,7.2,7.32,7.32,0,0,0,.81,0,8,8,0,0,0,7.16-8.76ZM239.93,89.06,224.86,202.12A16.06,16.06,0,0,1,209,216H47a16.06,16.06,0,0,1-15.86-13.88L16.07,89.06A8,8,0,0,1,24,80H68.37L122,18.73a8,8,0,0,1,12,0L187.63,80H232a8,8,0,0,1,7.93,9.06ZM89.63,80h76.74L128,36.15ZM222.86,96H33.14L47,200H209Z"></path></svg></span><span class="side-rail__label">Shop</span></a><a class="side-rail__link" href="/recipes" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64ZM160,88h40a8,8,0,0,1,0,16H160a8,8,0,0,1,0-16Zm48,40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,128Zm0,32a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,160Z"></path></svg></span><span class="side-rail__label">Recipes</span></a><a aria-current="page" class="side-rail__link" href="/settings" data-discover="true"><span class="side-rail__pill"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M237.94,107.21a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A111.92,111.92,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.63a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z"></path></svg></span><span class="side-rail__label">Settings</span></a></nav><main class="app-main"><div class="page" data-page-width="default"><div class="page__body"><div class="settings"><header class="page-header"><div class="page-header__crumbs"><nav aria-label="Breadcrumb" class="breadcrumbs"><ol class="breadcrumbs__list"><li class="breadcrumbs__item" data-parent="true"><a class="breadcrumbs__link" href="/settings" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256" class="breadcrumbs__back" aria-hidden="true"><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"></path></svg><span class="breadcrumbs__label">Settings</span></a><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256" class="breadcrumbs__sep" aria-hidden="true"><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"></path></svg></li><li class="breadcrumbs__item"><span class="breadcrumbs__current" aria-current="page">Meal Slots</span></li></ol></nav></div><div class="page-header__row"><div class="page-header__text"><h1 class="page-header__title">Meal Slots</h1></div><div class="page-header__actions"><button type="button" class="button" data-variant="primary" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>Add Meal Slot</button></div></div></header><div class="ms-cards"><p class="ms-household">Everyone eats unless a Meal Slot says otherwise</p><div class="bento-grid" data-min="card"><section aria-label="Breakfast" class="tile ms-card" data-variant="surface" data-span="full" data-primary-scope=""><div class="ms-card__top"><span class="ms-card__badge"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M80,56V24a8,8,0,0,1,16,0V56a8,8,0,0,1-16,0Zm40,8a8,8,0,0,0,8-8V24a8,8,0,0,0-16,0V56A8,8,0,0,0,120,64Zm32,0a8,8,0,0,0,8-8V24a8,8,0,0,0-16,0V56A8,8,0,0,0,152,64Zm96,56v8a40,40,0,0,1-37.51,39.91,96.59,96.59,0,0,1-27,40.09H208a8,8,0,0,1,0,16H32a8,8,0,0,1,0-16H56.54A96.3,96.3,0,0,1,24,136V88a8,8,0,0,1,8-8H208A40,40,0,0,1,248,120ZM200,96H40v40a80.27,80.27,0,0,0,45.12,72h69.76A80.27,80.27,0,0,0,200,136Zm32,24a24,24,0,0,0-16-22.62V136a95.78,95.78,0,0,1-1.2,15A24,24,0,0,0,232,128Z"></path></svg></span><div class="ms-card__title"><h2 class="ms-card__name">Breakfast</h2><p class="ms-card__days">Every day</p></div><div class="ms-card__time"><span class="ms-card__clock" data-testid="usual-time">08:30</span><span class="ms-card__usual">usual time</span></div></div><div class="ms-card__split"><div class="ms-card__main"><div class="ms-fact"><span class="ms-fact__label">Courses</span><ul class="ms-courses" aria-label="Courses"><li class="ms-course"><span class="chip" data-kind="tag" title="Main"><span class="chip__label">Main</span></span></li></ul></div><div class="ms-fact"><span class="ms-fact__label">Attendance</span><div class="ms-attendance"><ul class="ms-stack" aria-label="Attending Breakfast"><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Anna" style="--avatar-colour: #e07a5f;">A</span></li><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Ben" style="--avatar-colour: #3d405b;">B</span></li><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Chiara" style="--avatar-colour: #81b29a;">C</span></li></ul><span class="ms-attendance__text">Anna, Ben, Chiara only</span></div></div><div class="ms-strip" role="group" aria-label="Breakfast by weekday"><button type="button" id="meal-slot-1" class="ms-day" data-state="runs" aria-label="Breakfast on Monday, 08:30"><span class="ms-day__name">Mon</span><span class="ms-day__time">08:30</span></button><button type="button" id="meal-slot-4" class="ms-day" data-state="runs" aria-label="Breakfast on Tuesday, 08:30"><span class="ms-day__name">Tue</span><span class="ms-day__time">08:30</span></button><button type="button" id="meal-slot-7" class="ms-day" data-state="runs" aria-label="Breakfast on Wednesday, 08:30"><span class="ms-day__name">Wed</span><span class="ms-day__time">08:30</span></button><button type="button" id="meal-slot-10" class="ms-day" data-state="runs" aria-label="Breakfast on Thursday, 08:30"><span class="ms-day__name">Thu</span><span class="ms-day__time">08:30</span></button><button type="button" id="meal-slot-13" class="ms-day" data-state="runs" aria-label="Breakfast on Friday, 08:30"><span class="ms-day__name">Fri</span><span class="ms-day__time">08:30</span></button><button type="button" id="meal-slot-16" class="ms-day" data-state="runs" aria-label="Breakfast on Saturday, 08:30"><span class="ms-day__name">Sat</span><span class="ms-day__time">08:30</span></button><button type="button" id="meal-slot-19" class="ms-day" data-state="runs" aria-label="Breakfast on Sunday, 08:30"><span class="ms-day__name">Sun</span><span class="ms-day__time">08:30</span></button></div></div></div><div class="ms-card__foot"><button type="button" class="button" data-variant="secondary" data-size="sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M230.14,70.54,185.46,25.85a20,20,0,0,0-28.29,0L33.86,149.17A19.85,19.85,0,0,0,28,163.31V208a20,20,0,0,0,20,20H92.69a19.86,19.86,0,0,0,14.14-5.86L230.14,98.82a20,20,0,0,0,0-28.28ZM91,204H52V165l84-84,39,39ZM192,103,153,64l18.34-18.34,39,39Z"></path></svg>Edit Breakfast</button><button aria-label="Change a date for Breakfast" type="button" class="button" data-variant="tertiary" data-size="sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,28H188V24a12,12,0,0,0-24,0v4H92V24a12,12,0,0,0-24,0v4H48A20,20,0,0,0,28,48V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V48A20,20,0,0,0,208,28ZM68,52a12,12,0,0,0,24,0h72a12,12,0,0,0,24,0h16V76H52V52ZM52,204V100H204V204Zm92-76a16,16,0,1,1-16-16A16,16,0,0,1,144,128Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,192,128ZM96,176a16,16,0,1,1-16-16A16,16,0,0,1,96,176Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,144,176Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,192,176Z"></path></svg>Change a date</button></div></section><section aria-label="Lunch" class="tile ms-card" data-variant="surface" data-span="full" data-primary-scope=""><div class="ms-card__top"><span class="ms-card__badge"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"></path></svg></span><div class="ms-card__title"><h2 class="ms-card__name">Lunch</h2><p class="ms-card__days">Every day</p></div><div class="ms-card__time"><span class="ms-card__clock" data-testid="usual-time">13:00</span><span class="ms-card__usual">usual time</span></div></div><div class="ms-card__split"><div class="ms-card__main"><div class="ms-fact"><span class="ms-fact__label">Courses</span><ul class="ms-courses" aria-label="Courses"><li class="ms-course"><span class="chip" data-kind="tag" title="Main"><span class="chip__label">Main</span></span></li></ul></div><div class="ms-fact"><span class="ms-fact__label">Attendance</span><div class="ms-attendance"><ul class="ms-stack" aria-label="Attending Lunch"><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Anna" style="--avatar-colour: #e07a5f;">A</span></li><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Ben" style="--avatar-colour: #3d405b;">B</span></li><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Chiara" style="--avatar-colour: #81b29a;">C</span></li></ul><span class="ms-attendance__text">Anna, Ben, Chiara only</span></div></div><div class="ms-strip" role="group" aria-label="Lunch by weekday"><button type="button" id="meal-slot-2" class="ms-day" data-state="runs" aria-label="Lunch on Monday, 13:00"><span class="ms-day__name">Mon</span><span class="ms-day__time">13:00</span></button><button type="button" id="meal-slot-5" class="ms-day" data-state="runs" aria-label="Lunch on Tuesday, 13:00"><span class="ms-day__name">Tue</span><span class="ms-day__time">13:00</span></button><button type="button" id="meal-slot-8" class="ms-day" data-state="runs" aria-label="Lunch on Wednesday, 13:00"><span class="ms-day__name">Wed</span><span class="ms-day__time">13:00</span></button><button type="button" id="meal-slot-11" class="ms-day" data-state="runs" aria-label="Lunch on Thursday, 13:00"><span class="ms-day__name">Thu</span><span class="ms-day__time">13:00</span></button><button type="button" id="meal-slot-14" class="ms-day" data-state="runs" aria-label="Lunch on Friday, 13:00"><span class="ms-day__name">Fri</span><span class="ms-day__time">13:00</span></button><button type="button" id="meal-slot-17" class="ms-day" data-state="runs" aria-label="Lunch on Saturday, 13:00"><span class="ms-day__name">Sat</span><span class="ms-day__time">13:00</span></button><button type="button" id="meal-slot-20" class="ms-day" data-state="runs" aria-label="Lunch on Sunday, 13:00"><span class="ms-day__name">Sun</span><span class="ms-day__time">13:00</span></button></div></div></div><div class="ms-card__foot"><button type="button" class="button" data-variant="secondary" data-size="sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M230.14,70.54,185.46,25.85a20,20,0,0,0-28.29,0L33.86,149.17A19.85,19.85,0,0,0,28,163.31V208a20,20,0,0,0,20,20H92.69a19.86,19.86,0,0,0,14.14-5.86L230.14,98.82a20,20,0,0,0,0-28.28ZM91,204H52V165l84-84,39,39ZM192,103,153,64l18.34-18.34,39,39Z"></path></svg>Edit Lunch</button><button aria-label="Change a date for Lunch" type="button" class="button" data-variant="tertiary" data-size="sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,28H188V24a12,12,0,0,0-24,0v4H92V24a12,12,0,0,0-24,0v4H48A20,20,0,0,0,28,48V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V48A20,20,0,0,0,208,28ZM68,52a12,12,0,0,0,24,0h72a12,12,0,0,0,24,0h16V76H52V52ZM52,204V100H204V204Zm92-76a16,16,0,1,1-16-16A16,16,0,0,1,144,128Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,192,128ZM96,176a16,16,0,1,1-16-16A16,16,0,0,1,96,176Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,144,176Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,192,176Z"></path></svg>Change a date</button></div></section><section aria-label="Dinner" class="tile ms-card" data-variant="surface" data-span="full" data-primary-scope=""><div class="ms-card__top"><span class="ms-card__badge"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M240,96a8,8,0,0,1-8,8H216v16a8,8,0,0,1-16,0V104H184a8,8,0,0,1,0-16h16V72a8,8,0,0,1,16,0V88h16A8,8,0,0,1,240,96ZM144,56h8v8a8,8,0,0,0,16,0V56h8a8,8,0,0,0,0-16h-8V32a8,8,0,0,0-16,0v8h-8a8,8,0,0,0,0,16Zm72.77,97a8,8,0,0,1,1.43,8A96,96,0,1,1,95.07,37.8a8,8,0,0,1,10.6,9.06A88.07,88.07,0,0,0,209.14,150.33,8,8,0,0,1,216.77,153Zm-19.39,14.88c-1.79.09-3.59.14-5.38.14A104.11,104.11,0,0,1,88,64c0-1.79,0-3.59.14-5.38A80,80,0,1,0,197.38,167.86Z"></path></svg></span><div class="ms-card__title"><h2 class="ms-card__name">Dinner</h2><p class="ms-card__days">Every day</p></div><div class="ms-card__time"><span class="ms-card__clock" data-testid="usual-time">19:00</span><span class="ms-card__usual">usual time</span></div></div><div class="ms-card__split"><div class="ms-card__main"><div class="ms-fact"><span class="ms-fact__label">Courses</span><ul class="ms-courses" aria-label="Courses"><li class="ms-course"><span class="chip" data-kind="tag" title="Main"><span class="chip__label">Main</span></span></li><li class="ms-course"><span class="chip" data-kind="tag" title="Side"><span class="chip__label">Side</span></span></li></ul></div><div class="ms-fact"><span class="ms-fact__label">Attendance</span><div class="ms-attendance"><ul class="ms-stack" aria-label="Attending Dinner"><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Anna" style="--avatar-colour: #e07a5f;">A</span></li><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Ben" style="--avatar-colour: #3d405b;">B</span></li><li class="ms-stack__item"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Chiara" style="--avatar-colour: #81b29a;">C</span></li></ul><span class="ms-attendance__text">Anna, Ben, Chiara only</span></div></div><div class="ms-strip" role="group" aria-label="Dinner by weekday"><button type="button" id="meal-slot-3" class="ms-day" data-state="runs" aria-label="Dinner on Monday, 19:00"><span class="ms-day__name">Mon</span><span class="ms-day__time">19:00</span></button><button type="button" id="meal-slot-6" class="ms-day" data-state="runs" aria-label="Dinner on Tuesday, 19:00"><span class="ms-day__name">Tue</span><span class="ms-day__time">19:00</span></button><button type="button" id="meal-slot-9" class="ms-day" data-state="runs" aria-label="Dinner on Wednesday, 19:00"><span class="ms-day__name">Wed</span><span class="ms-day__time">19:00</span></button><button type="button" id="meal-slot-12" class="ms-day" data-state="runs" aria-label="Dinner on Thursday, 19:00"><span class="ms-day__name">Thu</span><span class="ms-day__time">19:00</span></button><button type="button" id="meal-slot-15" class="ms-day" data-state="runs" aria-label="Dinner on Friday, 19:00"><span class="ms-day__name">Fri</span><span class="ms-day__time">19:00</span></button><button type="button" id="meal-slot-18" class="ms-day" data-state="runs" aria-label="Dinner on Saturday, 19:00"><span class="ms-day__name">Sat</span><span class="ms-day__time">19:00</span></button><button type="button" id="meal-slot-21" class="ms-day" data-state="runs" aria-label="Dinner on Sunday, 19:00"><span class="ms-day__name">Sun</span><span class="ms-day__time">19:00</span></button></div></div></div><div class="ms-card__foot"><button type="button" class="button" data-variant="secondary" data-size="sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M230.14,70.54,185.46,25.85a20,20,0,0,0-28.29,0L33.86,149.17A19.85,19.85,0,0,0,28,163.31V208a20,20,0,0,0,20,20H92.69a19.86,19.86,0,0,0,14.14-5.86L230.14,98.82a20,20,0,0,0,0-28.28ZM91,204H52V165l84-84,39,39ZM192,103,153,64l18.34-18.34,39,39Z"></path></svg>Edit Dinner</button><button aria-label="Change a date for Dinner" type="button" class="button" data-variant="tertiary" data-size="sm"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,28H188V24a12,12,0,0,0-24,0v4H92V24a12,12,0,0,0-24,0v4H48A20,20,0,0,0,28,48V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V48A20,20,0,0,0,208,28ZM68,52a12,12,0,0,0,24,0h72a12,12,0,0,0,24,0h16V76H52V52ZM52,204V100H204V204Zm92-76a16,16,0,1,1-16-16A16,16,0,0,1,144,128Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,192,128ZM96,176a16,16,0,1,1-16-16A16,16,0,0,1,96,176Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,144,176Zm48,0a16,16,0,1,1-16-16A16,16,0,0,1,192,176Z"></path></svg>Change a date</button></div></section></div></div><dialog class="sheet" aria-labelledby="_r_0_" data-primary-scope="" open="" ><div class="sheet__panel"><span class="sheet__grip" aria-hidden="true"></span><header class="sheet__header"><h2 id="_r_0_" class="sheet__title" tabindex="-1">Breakfast on Sat 14 Nov</h2><button type="button" class="icon-button" aria-label="Close" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg></button></header><div class="sheet__body"><div class="settings__stack"><div class="ui-field" data-size="md"><span id="_r_7_-label" class="ui-field__label">Date</span><div class="date-field"><button type="button" class="date-field__trigger" aria-labelledby="_r_7_-label" aria-haspopup="dialog" aria-expanded="false" data-mock-focus=""><span class="date-field__value">14 Nov 2026</span><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"></path></svg></button></div></div><p class="settings__muted">These changes affect only this date.</p><div class="attendance"><div class="attendance__row"><span class="settings__row"><span class="member-avatar" data-member-colour="#e07a5f" style="--member-colour: #e07a5f;"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Anna" style="--avatar-colour: #e07a5f;">A</span></span><div class="checkbox"><label class="checkbox__control"><input class="checkbox__input" type="checkbox" checked="" style=""><span class="checkbox__box" data-state="checked" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></span><span class="checkbox__label">Anna</span></label></div></span><div role="group" aria-label="Portion Factor for Anna" class="stepper" data-size="md"><button type="button" class="icon-button" aria-label="Decrease Portion Factor for Anna" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path></svg></button><span role="spinbutton" tabindex="0" aria-label="Portion Factor for Anna" aria-valuemin="0.25" aria-valuemax="3" aria-valuenow="1" class="stepper__value">1</span><button type="button" class="icon-button" aria-label="Increase Portion Factor for Anna" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg></button></div></div><div class="attendance__row"><span class="settings__row"><span class="member-avatar" data-member-colour="#3d405b" style="--member-colour: #3d405b;"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Ben" style="--avatar-colour: #3d405b;">B</span></span><div class="checkbox"><label class="checkbox__control"><input class="checkbox__input" type="checkbox" checked="" style=""><span class="checkbox__box" data-state="checked" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></span><span class="checkbox__label">Ben</span></label></div></span><div role="group" aria-label="Portion Factor for Ben" class="stepper" data-size="md"><button type="button" class="icon-button" aria-label="Decrease Portion Factor for Ben" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path></svg></button><span role="spinbutton" tabindex="0" aria-label="Portion Factor for Ben" aria-valuemin="0.25" aria-valuemax="3" aria-valuenow="1" class="stepper__value">1</span><button type="button" class="icon-button" aria-label="Increase Portion Factor for Ben" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg></button></div></div><div class="attendance__row"><span class="settings__row"><span class="member-avatar" data-member-colour="#81b29a" style="--member-colour: #81b29a;"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Chiara" style="--avatar-colour: #81b29a;">C</span></span><div class="checkbox"><label class="checkbox__control"><input class="checkbox__input" type="checkbox" checked="" style=""><span class="checkbox__box" data-state="checked" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"></path></svg></span><span class="checkbox__label">Chiara</span></label></div></span><div role="group" aria-label="Portion Factor for Chiara" class="stepper" data-size="md"><button type="button" class="icon-button" aria-label="Decrease Portion Factor for Chiara" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path></svg></button><span role="spinbutton" tabindex="0" aria-label="Portion Factor for Chiara" aria-valuemin="0.25" aria-valuemax="3" aria-valuenow="0.75" class="stepper__value">0.75</span><button type="button" class="icon-button" aria-label="Increase Portion Factor for Chiara" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg></button></div></div><div class="attendance__row"><span class="settings__row"><span class="member-avatar" data-member-colour="#f2cc8f" style="--member-colour: #f2cc8f;"><span class="avatar" data-size="sm" data-coloured="true" role="img" aria-label="Lucia Maria Bernadette" style="--avatar-colour: #f2cc8f;">LM</span></span><div class="checkbox"><label class="checkbox__control"><input class="checkbox__input" type="checkbox" style=""><span class="checkbox__box" data-state="unchecked" aria-hidden="true"></span><span class="checkbox__label">Lucia Maria Bernadette</span></label></div></span></div><p role="status" class="settings__muted">Portions needed: 2.75</p></div><div class="ui-field"><span id="_r_c_-label" class="ui-field__label">Guests</span><div role="group" aria-label="Guests" aria-describedby="_r_c_-helper" class="stepper" data-size="md"><button disabled="" type="button" class="icon-button" aria-label="Decrease Guests" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path></svg></button><span role="spinbutton" tabindex="0" aria-label="Guests" aria-describedby="_r_c_-helper" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0" class="stepper__value">0</span><button type="button" class="icon-button" aria-label="Increase Guests" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg></button></div><p id="_r_c_-helper" class="ui-field__helper">Each Guest eats one standard portion of every Course.</p></div><p class="settings__muted">2.75 portions of each Course</p><div class="settings__row"><button type="button" class="button" data-variant="primary" data-size="md">Save for this date</button><button type="button" class="button" data-variant="tertiary" data-size="md" disabled="">Reset to usual Attendance</button></div></div></div></div></dialog></div></div></div></main><nav aria-label="Bottom bar" class="bottom-bar"><a class="bottom-bar__link" href="/" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z"></path></svg><span class="bottom-bar__label">Today</span></a><a class="bottom-bar__link" href="/plan" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-68-76a12,12,0,1,1-12-12A12,12,0,0,1,140,132Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,132ZM96,172a12,12,0,1,1-12-12A12,12,0,0,1,96,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,140,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,172Z"></path></svg><span class="bottom-bar__label">Plan</span></a><a class="bottom-bar__link" href="/pantry" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"></path></svg><span class="bottom-bar__label">Pantry</span></a><a class="bottom-bar__link" data-accent="true" href="/scan" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,48V88a8,8,0,0,1-16,0V56H184a8,8,0,0,1,0-16h40A8,8,0,0,1,232,48ZM72,200H40V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H72a8,8,0,0,0,0-16Zm152-40a8,8,0,0,0-8,8v32H184a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,224,160ZM32,96a8,8,0,0,0,8-8V56H72a8,8,0,0,0,0-16H32a8,8,0,0,0-8,8V88A8,8,0,0,0,32,96ZM80,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,80,80Zm104,88V88a8,8,0,0,0-16,0v80a8,8,0,0,0,16,0ZM144,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,144,80Zm-32,0a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,112,80Z"></path></svg><span class="bottom-bar__label">Scan</span></a><a class="bottom-bar__link" href="/shop" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M136,120v56a8,8,0,0,1-16,0V120a8,8,0,0,1,16,0Zm36.84-.8-5.6,56A8,8,0,0,0,174.4,184a7.32,7.32,0,0,0,.81,0,8,8,0,0,0,7.95-7.2l5.6-56a8,8,0,0,0-15.92-1.6Zm-89.68,0a8,8,0,0,0-15.92,1.6l5.6,56a8,8,0,0,0,8,7.2,7.32,7.32,0,0,0,.81,0,8,8,0,0,0,7.16-8.76ZM239.93,89.06,224.86,202.12A16.06,16.06,0,0,1,209,216H47a16.06,16.06,0,0,1-15.86-13.88L16.07,89.06A8,8,0,0,1,24,80H68.37L122,18.73a8,8,0,0,1,12,0L187.63,80H232a8,8,0,0,1,7.93,9.06ZM89.63,80h76.74L128,36.15ZM222.86,96H33.14L47,200H209Z"></path></svg><span class="bottom-bar__label">Shop</span></a><a class="bottom-bar__link" href="/recipes" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64ZM160,88h40a8,8,0,0,1,0,16H160a8,8,0,0,1,0-16Zm48,40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,128Zm0,32a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,160Z"></path></svg><span class="bottom-bar__label">Recipes</span></a><a aria-current="page" class="bottom-bar__link" href="/settings" data-discover="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M237.94,107.21a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A111.92,111.92,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.63a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z"></path></svg><span class="bottom-bar__label">Settings</span></a></nav></div><div class="toast-region"><div role="status" aria-live="polite" aria-atomic="false" class="toast-live"></div><div role="alert" aria-live="assertive" aria-atomic="false" class="toast-live"></div></div></div>
+  
+
+</body></html>

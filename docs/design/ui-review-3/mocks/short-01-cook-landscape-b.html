@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en" data-scheme="light"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e7f4eb">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#090f0b">
+    <meta name="description" content="Feeder: family meal planning">
+    
+    
+    
+    
+    
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#34724e">
+    <title>SHORT-01 Cook Mode, short landscape: compact bottom nav (B)</title>
+    <!-- Boot paint: the page background in the right scheme before React mounts (no white flash in dark). Background only. -->
+    <style>html{background:#e7f4eb}@media (prefers-color-scheme:dark){html:not([data-scheme=light]){background:#090f0b}}html[data-scheme=dark]{background:#090f0b}#root:has(>.boot-mark){place-items:center;min-height:100dvh;display:grid}.boot-mark{justify-items:center;gap:8px;font-weight:700;display:grid}</style>
+    
+    <link rel="stylesheet" href="app.css">
+  <style data-theme="">html[data-scheme='light'] { --color-bg: #e7f4eb; --color-surface: #fafffc; --color-surface-2: #daecdf; --color-surface-3: #c8e0cf; --color-line: #c2d7c9; --color-outline: #677a6d; --color-text: #131d17; --color-muted: #4b5a4f; --color-accent: #34724e; --color-on-accent: #ffffff; --color-accent-text: #135533; --color-soft: #bfebcd; --color-soft-strong: #9addb2; --color-background: #e7f4eb; --color-on-background: #131d17; --color-surface-container-low: #fafffc; --color-surface-container: #daecdf; --color-surface-container-high: #c8e0cf; --color-on-surface: #131d17; --color-on-surface-variant: #4b5a4f; --color-primary: #34724e; --color-on-primary: #ffffff; --color-primary-container: #bfebcd; --color-on-primary-container: #135533; --color-secondary: #34724e; --color-on-secondary: #ffffff; --color-secondary-container: #bfebcd; --color-on-secondary-container: #135533; --status-leftover-fg: #065353; --status-leftover-bg: #c2f3f2; --status-leftover-solid: #027879; --status-spoil-fg: #6d3706; --status-spoil-bg: #fee1cf; --status-spoil-solid: #9e5106; --status-danger-fg: #742e2b; --status-danger-bg: #ffe0dc; --status-danger-solid: #ab413e; --status-success-fg: #115629; --status-success-bg: #d1f2d7; --status-success-solid: #0a7e3a; --status-pinned-fg: #3e3f7c; --status-pinned-bg: #e3e6fe; --status-pinned-solid: #5b5cb7; color-scheme: light; }
+html[data-scheme='dark'] { --color-bg: #090f0b; --color-surface: #131c16; --color-surface-2: #1e2a22; --color-surface-3: #28372d; --color-line: #303f35; --color-outline: #788c7f; --color-text: #e9f1ec; --color-muted: #aebbb2; --color-accent: #89c8a0; --color-on-accent: #051b0e; --color-accent-text: #a2e3b9; --color-soft: #143c25; --color-soft-strong: #144f30; --color-background: #090f0b; --color-on-background: #e9f1ec; --color-surface-container-low: #131c16; --color-surface-container: #1e2a22; --color-surface-container-high: #28372d; --color-on-surface: #e9f1ec; --color-on-surface-variant: #aebbb2; --color-primary: #89c8a0; --color-on-primary: #051b0e; --color-primary-container: #143c25; --color-on-primary-container: #a2e3b9; --color-secondary: #89c8a0; --color-on-secondary: #051b0e; --color-secondary-container: #143c25; --color-on-secondary-container: #a2e3b9; --status-leftover-fg: #85e4e3; --status-leftover-bg: #043535; --status-leftover-solid: #027879; --status-spoil-fg: #fec39b; --status-spoil-bg: #44250c; --status-spoil-solid: #9e5106; --status-danger-fg: #febfb9; --status-danger-bg: #47211e; --status-danger-solid: #ab413e; --status-success-fg: #a7e2b2; --status-success-bg: #14361d; --status-success-solid: #0a7e3a; --status-pinned-fg: #c7cdff; --status-pinned-bg: #282a4b; --status-pinned-solid: #5b5cb7; color-scheme: dark; }</style><style data-mock="">
+/* Mock only (not part of the design): a static <dialog open> is not in the top layer, so the scrim is drawn here. */
+.mock-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; }
+dialog[open] { z-index: 41; }
+.mock-note { position: fixed; z-index: 99; font: 600 11px/14px Figtree, sans-serif; background: #111; color: #fff; padding: 2px 6px; border-radius: 6px; }
+</style><style data-proposed="">
+/* ===== Shared round-1 rules (from the PC mocks' RULES_CSS) ===== */
+/* R-A Buttons look like buttons. A secondary button has a fill AND a 1 px --color-outline boundary on every surface
+   (outline vs surface 4.5 / 4.9, vs status tints 3.7-4.0 light and dark). On a tinted tile (status, soft) its fill is --color-surface.
+   Tertiary (bare text) buttons are not used as actions in tiles, notices, toasts or sheet footers. */
+.button[data-variant="secondary"]{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+.tile[data-variant="status"] .icon-button,.pc-lo .icon-button,.pc-alert .icon-button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline)}
+.sheet .button[data-variant="secondary"],.dialog .button[data-variant="secondary"]{background:var(--color-surface)}
+.button[data-variant="danger-tertiary"]{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--status-danger-fg);color:var(--status-danger-fg)}
+/* R-B Close: one circular outline icon button, 40 px (52 px target through the existing ::after), never stretched; top-aligned with the title. */
+.pc-close{flex:none;align-self:flex-start;inline-size:40px;block-size:40px;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+.sheet__header{align-items:flex-start}
+/* R-C Focus rings are never clipped: every scroll container that holds controls keeps 5 px of room (3 px ring + 2 px offset);
+   nested controls are inset inside their container's padding; sticky bars set scroll-padding so a focused control is never under them. */
+.sheet__body{padding-block:5px;scroll-padding-block:5px}
+.pc-focus{outline:3px solid var(--color-accent);outline-offset:2px}
+.toast .pc-focus,.toast :focus-visible{outline-color:var(--color-bg)}
+/* R-D A toast with detail: icon | headline (body-strong), muted subline (meta), optional body (body), actions as real outline buttons; Dismiss top-right. */
+.toast{align-items:center}
+.toast .toast__message{flex:1 1 auto;min-width:0}
+.pc-toast-rich{align-items:flex-start;padding:14px 10px 14px 18px}
+/* R-D+: the status icon (16 px) is part of the headline line, centred on its text; a success toast has none */
+.pc-toast__head{display:flex;align-items:center;gap:var(--space-2)}
+.pc-toast__icon{display:inline-grid;place-items:center;flex:none;block-size:var(--text-body-strong-line)}
+.toast[data-status="error"] .pc-toast__icon{color:var(--status-danger-bg)}
+.pc-toast__text{flex:1 1 auto;min-width:0;display:grid;gap:2px}
+.pc-toast__text p{margin:0}
+.pc-toast__head{font-size:var(--text-body-strong-size);line-height:var(--text-body-strong-line);font-weight:700}
+.pc-toast__sub{font-size:var(--text-meta-size);line-height:var(--text-meta-line);color:color-mix(in srgb,var(--color-bg) 72%,var(--color-text))}
+.pc-toast__body{font-size:var(--text-body-size);line-height:var(--text-body-line);margin-top:4px!important}
+.pc-toast__actions{display:flex;gap:var(--space-2);margin-top:var(--space-2)}
+.pc-tbtn{flex:none;min-block-size:40px;padding-inline:var(--space-4);border-radius:999px;background:transparent;color:var(--color-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-bg) 70%,transparent);font-weight:700}
+.pc-toast-rich .pc-tclose{align-self:flex-start}
+.pc-tclose{flex:none;inline-size:32px;block-size:32px;border-radius:999px;background:transparent;color:var(--color-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--color-bg) 55%,transparent)}
+/* R-C+ Nested focus rings: a control inside a container that has its own visible boundary (a timer pill, a status tile, a
+   rail timer tile, a chip with a remove button) draws its ring INSIDE itself: 2 px --color-accent at outline-offset -2 px on a
+   --color-soft fill. While a child has focus, a container whose boundary is accent-coloured steps it back to its neutral 1 px
+   --color-outline, so only one accent ring is ever visible; at least 4 px of fill always separates the two lines. */
+.pc-nested:focus-visible,.pc-nested[data-focus]{outline:2px solid var(--color-accent);outline-offset:-2px;background:var(--color-soft)}
+/* R-E Structured rows, not bullet lists: an item with a key, a state and detail is a row - key body-strong, state at the end
+   (body-strong, tabular figures, status colour), detail under the key in meta, muted; rows separated by 1 px --color-line. */
+.pc-srows{list-style:none;margin:0;padding:0;display:grid}
+.pc-srow{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--space-3);row-gap:2px;padding-block:var(--space-2);border-top:1px solid color-mix(in srgb,currentColor 18%,transparent)}
+.pc-srow:first-child{border-top:0}
+.pc-srow__key{font-size:var(--text-body-strong-size);line-height:var(--text-body-strong-line);font-weight:700;color:var(--color-text)}
+.pc-srow__state{font-size:var(--text-body-strong-size);line-height:var(--text-body-strong-line);font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.pc-srow__detail{grid-column:1/-1;font-size:var(--text-meta-size);line-height:var(--text-meta-line);color:var(--color-muted);font-variant-numeric:tabular-nums}
+/* R-F Bottom bar under 360 px (DS-02, decision DS 1): icon only; the current-page highlight and Scan are 44 px squircles
+   (equal width and height) centred in their track, fully inside the bar. At 320 the bar is 312 px with 6 px inline padding, so a
+   track is 42.9 px: the squircles are 40 px (radius 12 px), leaving at least 7 px to the bar's edge; the whole track (43 x 64 px)
+   stays the tap target. */
+@media (width < 22.5em){
+  .bottom-bar{left:calc(var(--space-1) + env(safe-area-inset-left,0px));right:calc(var(--space-1) + env(safe-area-inset-right,0px));column-gap:0;padding-inline:6px}
+  .bottom-bar__label{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .bottom-bar__link{min-width:0;inline-size:40px;block-size:40px;justify-self:center;border-radius:12px;gap:0}
+  .bottom-bar__link[data-accent="true"]{inline-size:40px;block-size:40px;border-radius:12px;box-shadow:none}
+}
+
+/* ===== SHORT additions to the round-1 rules ===== */
+/* R-B: the sheet's Close is the 40 px circular outline button (no class needed: the header's icon button) */
+.sheet__header > .icon-button{flex:none;align-self:flex-start;inline-size:40px;block-size:40px;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+/* R-B: a footer with Cancel shows no Close (BottomSheet closeButton={false} when the footer's FormActions has a cancel) */
+.sheet:has(.sheet__footer [data-role="cancel"]) .sheet__header > .icon-button{display:none}
+/* R-A: icon buttons in a footer (the ⋮, a destructive trash) and on a tinted strip have a boundary */
+.form-actions .icon-button,.viewfinder-strip__controls .icon-button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline);border-radius:var(--radius-button)}
+.form-actions__destructive .button{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--status-danger-fg);color:var(--status-danger-fg)}
+/* R-A: a disabled secondary keeps its boundary at the disabled opacity */
+.button[data-variant="secondary"]:disabled{box-shadow:inset 0 0 0 1px var(--color-outline)}
+
+/* styles.css / app/shell.css: new tokens (SHORT rule set, system.md §11) */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --keyboard-inset: 0px;          /* published by ui/lib/useKeyboardInset while the on-screen keyboard is up */
+  --bar-gap: var(--nav-inset);    /* the gap between stacked floating chrome (sticky bar above the bottom bar or the edge) */
+  --rail-compact: 64px;           /* the compact rail of a short landscape viewport */
+}
+/* The PC timer pill (ui/TimerPill, owned by PC-03), reused in SHORT-01's landscape layout */
+.pc-strip{display:flex;gap:var(--space-2);overflow-x:auto;scrollbar-width:none;padding:5px}
+.pc-tpill{flex:none;display:flex;align-items:center;gap:var(--space-2);min-block-size:52px;max-inline-size:78%;padding:6px 6px 6px var(--space-3);border-radius:999px;background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-outline);color:var(--color-text)}
+.pc-tpill[data-gate]{box-shadow:inset 0 0 0 2px var(--color-accent)}
+/* R-C+: the focused nested control draws its ring inside itself (2 px accent, offset -2 px) on a --color-soft fill, and while a
+   child has focus the container's own accent boundary steps back to its neutral 1 px outline: only one accent ring shows. */
+.pc-tpill [data-focus]{outline:2px solid var(--color-accent);outline-offset:-2px;background:var(--color-soft);color:var(--color-accent-text)}
+.pc-tpill:has([data-focus]),.pc-tpill:has(:focus-visible){box-shadow:inset 0 0 0 1px var(--color-outline)}
+.pc-tpill[data-state="finished"]{background:var(--status-success-bg);color:var(--status-success-fg);box-shadow:inset 0 0 0 2px var(--status-success-fg)}
+.pc-tpill__label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--text-body-strong-size);font-weight:700}
+.pc-tpill__time{font-variant-numeric:tabular-nums;font-weight:800;font-size:var(--text-title-3-size)}
+.pc-tpill .icon-button{inline-size:40px;block-size:40px;border-radius:999px;flex:none;background:var(--color-surface-2)}
+/* R-C: the strip scrolls sideways, so it keeps 5 px of room for the focus ring of its first and last control */
+.pc-strip{padding:5px}
+
+
+/* PC-04's "+N" count, reused in the landscape strip: a 28 px rounded badge (surface-2 fill, 1 px outline), at least 6 px inside the
+   pill's edge; here it is a button (it opens the Timers sheet), with a 44 px hit area through ::after and the nested ring (R-C+) */
+.pc-tpill__more{position:relative;flex:none;display:inline-grid;place-items:center;min-inline-size:28px;block-size:28px;padding-inline:var(--space-2);border:0;border-radius:999px;background:var(--color-surface-2);color:var(--color-text);box-shadow:inset 0 0 0 1px var(--color-outline);font:700 var(--text-meta-size)/1 inherit;font-family:inherit;font-variant-numeric:tabular-nums}
+.pc-tpill__more::after{content:"";position:absolute;inset:-8px}
+.pc-tpill__more[data-at='narrow']{display:none}
+.pc-tpill__more[data-focus]{outline:2px solid var(--color-accent);outline-offset:-2px;background:var(--color-soft)}
+
+/* Below 700 px wide in short landscape the chip shows its count only (the name stays "Advance Steps: 1 to do") */
+.cook-advance-chip__short { display: none; }
+@media (max-height: 499px) and (min-width: 560px) and (max-width: 699px) {
+  .cook-advance-chip__long { display: none; }
+  .cook-advance-chip__short { display: inline; }
+}
+@media (max-height: 499px) {
+  .cook-step__coach { flex-wrap: nowrap; }
+  .cook-step__coach p { font-size: var(--text-meta-size); line-height: var(--text-meta-line); }
+  .cook-step__coach .button { flex: none; white-space: nowrap; }
+  /* PC-03's length rule: a long Step (> 25 words) uses title-2 on a short viewport, as on a phone */
+  .cook-step__text[data-length="long"] { font-size: var(--text-title-2-size); line-height: var(--text-title-2-line); }
+}
+/* Portrait: Exit at the start, Ingredients and Voice at the end (PC-03) */
+.cook-top .cook-ingredients { margin-inline-start: auto; }
+:root { --text-step-weight: 500; }
+.cook-step__text { font-weight: var(--text-step-weight); }
+.cook-top .icon-button { border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-outline); }
+.cook-advance-chip { border: 0; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; min-block-size: 40px; padding-inline: var(--space-3); border-radius: 999px; background: var(--color-info-bg); color: var(--color-info-fg); box-shadow: inset 0 0 0 1px var(--color-info-fg); font-size: var(--text-meta-size); font-weight: 700; white-space: nowrap; }
+.cook-nav__tile[data-variant="secondary"] { background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-outline); }
+/* Alternative B (not recommended): Back/Next stay at the bottom, 52 px; the rest as in A */
+@media (max-height: 499px) and (min-width: 560px) {
+  .cook-screen { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); block-size: 100dvh; min-block-size: 0; max-width: none; box-sizing: border-box; padding: var(--space-2) var(--space-3); }
+  .cook-top { display: contents; }
+  .cook-top > :first-child { grid-row: 1; grid-column: 1; }
+  .cook-top > .cook-ingredients { grid-row: 1; grid-column: 4; }
+  .cook-top > .cook-voice { grid-row: 1; grid-column: 5; }
+  .cook-screen__header { grid-row: 1; grid-column: 2; min-inline-size: 0; align-self: center; }
+  .cook-screen__title { font-size: var(--text-title-3-size); line-height: var(--text-title-3-line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cook-advance-chip { grid-row: 1; grid-column: 3; align-self: center; }
+  .cook-step { grid-row: 2; grid-column: 1 / -1; min-block-size: 0; overflow-y: auto; align-content: safe center; padding-block: 5px; }
+  .cook-step__text { font-size: 1.875rem; line-height: 1.2; }
+  .cook-step__coach { padding: var(--space-2) var(--space-3); }
+  .cook-nav { grid-row: 3; grid-column: 1 / -1; position: static; padding: 0; display: grid; grid-template-columns: 1fr 2fr; gap: var(--space-2) var(--space-3); }
+  .cook-nav > .pc-strip { grid-column: 1 / -1; }
+  .pc-tpill { min-block-size: 44px; padding-block: 2px; }
+  .cook-nav__tile { min-height: 52px; }
+}</style></head>
+  <body>
+    <div id="root"><div class="app-shell app-shell--chromeless"><main class="app-main app-main--full"><div class="cook-screen"><div class="cook-top"><button type="button" class="button" data-variant="secondary" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>Exit</button><button type="button" class="icon-button cook-ingredients" aria-label="Ingredients" aria-pressed="false" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" class="ph-icon" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128ZM128,72h88a8,8,0,0,0,0-16H128a8,8,0,0,0,0,16Zm88,112H128a8,8,0,0,0,0,16h88a8,8,0,0,0,0-16ZM82.34,42.34,56,68.69,45.66,58.34A8,8,0,0,0,34.34,69.66l16,16a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,82.34,42.34Zm0,64L56,132.69,45.66,122.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Zm0,64L56,196.69,45.66,186.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Z"></path></svg></button><button type="button" class="icon-button cook-voice" aria-label="Voice commands" aria-pressed="false" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M213.92,218.62l-160-176A8,8,0,0,0,42.08,53.38L80,95.09V128a48,48,0,0,0,69.11,43.12l11.1,12.2A63.41,63.41,0,0,1,128,192a64.07,64.07,0,0,1-64-64,8,8,0,0,0-16,0,80.11,80.11,0,0,0,72,79.6V240a8,8,0,0,0,16,0V207.59a78.83,78.83,0,0,0,35.16-12.22l30.92,34a8,8,0,1,0,11.84-10.76ZM128,160a32,32,0,0,1-32-32V112.69l41.66,45.82A32,32,0,0,1,128,160Zm57.52-3.91A63.32,63.32,0,0,0,192,128a8,8,0,0,1,16,0,79.16,79.16,0,0,1-8.11,35.12,8,8,0,0,1-7.19,4.49,7.88,7.88,0,0,1-3.51-.82A8,8,0,0,1,185.52,156.09ZM84,44.87A48,48,0,0,1,176,64v64a49.19,49.19,0,0,1-.26,5,8,8,0,0,1-8,7.17,8.13,8.13,0,0,1-.84,0,8,8,0,0,1-7.12-8.79c.11-1.1.17-2.24.17-3.36V64A32,32,0,0,0,98.64,51.25,8,8,0,1,1,84,44.87Z"></path></svg></button></div><header class="cook-screen__header"><h1 class="cook-screen__title">Review roast chicken with rice and a sauce</h1></header><button type="button" class="cook-advance-chip" aria-haspopup="dialog" aria-label="Advance Steps: 1 to do"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" class="ph-icon" aria-hidden="true"><path d="M128,36A100,100,0,1,0,228,136,100.11,100.11,0,0,0,128,36Zm0,176a76,76,0,1,1,76-76A76.08,76.08,0,0,1,128,212ZM32.49,72.49a12,12,0,1,1-17-17l32-32a12,12,0,1,1,17,17Zm208,0a12,12,0,0,1-17,0l-32-32a12,12,0,1,1,17-17l32,32A12,12,0,0,1,240.49,72.49ZM176,124a12,12,0,0,1,0,24H128a12,12,0,0,1-12-12V88a12,12,0,0,1,24,0v36Z"></path></svg><span class="cook-advance-chip__long">1 Advance Step to do</span><span class="cook-advance-chip__short" aria-hidden="true">1</span></button><article aria-label="Step 1 of 5" class="tile cook-step" data-variant="surface" data-span="1" data-primary-scope=""><p class="tile__overline">Step 1 of 5 · Passive · 3 min timer</p><p class="cook-step__text">Pre-heat the oven to 220 °C.</p><span class="cook-step__zone cook-step__zone--back" data-zone="back" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path></svg></span><span class="cook-step__zone cook-step__zone--next" data-zone="next" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path></svg></span><div class="cook-step__coach"><p>Tap the right side for next, the left side for back</p><button type="button" class="button" data-variant="secondary" data-size="sm">Got it</button></div></article><div class="cook-nav"><div class="pc-strip" role="region" aria-label="Timers"><div class="pc-tpill" role="timer" aria-label="Pre-heat the oven, 2:43 left" data-gate=""><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" class="ph-icon" aria-hidden="true"><path d="M128,40a96,96,0,1,0,96,96A96.11,96.11,0,0,0,128,40Zm0,176a80,80,0,1,1,80-80A80.09,80.09,0,0,1,128,216ZM173.66,90.34a8,8,0,0,1,0,11.32l-40,40a8,8,0,0,1-11.32-11.32l40-40A8,8,0,0,1,173.66,90.34ZM96,16a8,8,0,0,1,8-8h48a8,8,0,0,1,0,16H104A8,8,0,0,1,96,16Z"></path></svg><span class="pc-tpill__label">Pre-heat the oven</span><span class="pc-tpill__time">2:43</span><button type="button" class="pc-tpill__more" data-at="narrow" aria-label="2 more timers. Show all timers">+2</button><button type="button" class="icon-button" aria-label="Pause Pre-heat the oven" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" class="ph-icon" aria-hidden="true"><path d="M200,32H160a16,16,0,0,0-16,16V208a16,16,0,0,0,16,16h40a16,16,0,0,0,16-16V48A16,16,0,0,0,200,32Zm0,176H160V48h40ZM96,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V48A16,16,0,0,0,96,32Zm0,176H56V48H96Z"></path></svg></button></div><div class="pc-tpill" role="timer" aria-label="Simmer the rice, 11:20 left"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" class="ph-icon" aria-hidden="true"><path d="M128,40a96,96,0,1,0,96,96A96.11,96.11,0,0,0,128,40Zm0,176a80,80,0,1,1,80-80A80.09,80.09,0,0,1,128,216ZM173.66,90.34a8,8,0,0,1,0,11.32l-40,40a8,8,0,0,1-11.32-11.32l40-40A8,8,0,0,1,173.66,90.34ZM96,16a8,8,0,0,1,8-8h48a8,8,0,0,1,0,16H104A8,8,0,0,1,96,16Z"></path></svg><span class="pc-tpill__label">Simmer the rice</span><span class="pc-tpill__time">11:20</span><button type="button" class="pc-tpill__more" aria-label="1 more timer. Show all timers">+1</button><button type="button" class="icon-button" aria-label="Pause Simmer the rice" data-size="md"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" class="ph-icon" aria-hidden="true"><path d="M200,32H160a16,16,0,0,0-16,16V208a16,16,0,0,0,16,16h40a16,16,0,0,0,16-16V48A16,16,0,0,0,200,32Zm0,176H160V48h40ZM96,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V48A16,16,0,0,0,96,32Zm0,176H56V48H96Z"></path></svg></button></div></div><button type="button" class="button cook-nav__tile" data-variant="secondary" data-size="lg" disabled=""><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256" class="ph-icon" aria-hidden="true"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path></svg>Back</button><button type="button" class="button cook-nav__tile" data-variant="primary" data-size="lg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256" class="ph-icon" aria-hidden="true"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path></svg>Next</button><p id="_r_0_" class="cook-nav__held" role="status"></p></div></div></main></div><div class="toast-region"><div role="status" aria-live="polite" aria-atomic="false" class="toast-live"></div><div role="alert" aria-live="assertive" aria-atomic="false" class="toast-live"></div></div></div>
+  
+
+</body></html>

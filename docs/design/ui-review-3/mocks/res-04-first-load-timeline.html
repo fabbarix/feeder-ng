@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>First load timeline</title>
+<style>
+:root{--bg:#fafffc;--ink:#131d17;--muted:#4b5a4f;--line:#c2d7c9;--a:#34724e;--b:#9cc7aa;--c:#c0392b;--d:#e8b4ad}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1511;--ink:#e3efe6;--muted:#a9bbae;--line:#2b3a30;--a:#7fcf9c;--b:#3e6b4d;--c:#ff9686;--d:#6b3a33}}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 Figtree,system-ui,sans-serif}svg{display:block;max-width:100%;height:auto}
+text{fill:var(--ink);font-size:12.5px}.s{fill:var(--muted);font-size:11.5px}.t{font-weight:700;font-size:14px}.g{stroke:var(--line)}
+</style></head><body>
+<svg viewBox="0 0 1100 430" role="img" aria-labelledby="t d"><title id="t">First visit to Today at 390 px, 400 kbit/s, 400 ms RTT, CPU ×4</title><desc id="d">Before: first paint at 7.7 s, JavaScript at 34.8 s, largest paint at 36.3 s. After compression: first paint at 1.8 s, JavaScript at 8.7 s, largest paint at 10.2 s.</desc>
+<text x="20" y="26" class="t" style="font-size:16px">First visit, Today, 390 px — 400 kbit/s, 400 ms RTT, CPU ×4 (measured on the d-res server, service worker blocked)</text>
+<g transform="translate(170,60)">
+<!-- scale: 1 s = 24 px, 0..38 s -->
+<g class="s"><line class="g" x1="0" y1="0" x2="0" y2="300"/><text x="-4" y="318">0</text>
+<line class="g" x1="120" y1="0" x2="120" y2="300"/><text x="114" y="318">5 s</text>
+<line class="g" x1="240" y1="0" x2="240" y2="300"/><text x="230" y="318">10 s</text>
+<line class="g" x1="360" y1="0" x2="360" y2="300"/><text x="350" y="318">15 s</text>
+<line class="g" x1="480" y1="0" x2="480" y2="300"/><text x="470" y="318">20 s</text>
+<line class="g" x1="600" y1="0" x2="600" y2="300"/><text x="590" y="318">25 s</text>
+<line class="g" x1="720" y1="0" x2="720" y2="300"/><text x="710" y="318">30 s</text>
+<line class="g" x1="840" y1="0" x2="840" y2="300"/><text x="830" y="318">35 s</text></g>
+<text x="-150" y="22" class="t">Before</text>
+<text x="-150" y="52">CSS 175 KB raw</text><rect x="0" y="40" width="184" height="16" rx="4" fill="var(--d)"/><text x="190" y="53" class="s">7.7 s</text>
+<text x="-150" y="80">JS 1,554 KB raw</text><rect x="0" y="68" width="836" height="16" rx="4" fill="var(--c)"/><text x="842" y="81" class="s">34.8 s</text>
+<text x="-150" y="108">On screen</text><rect x="0" y="96" width="184" height="16" rx="0" fill="var(--line)"/><text x="4" y="108" class="s">blank</text>
+<rect x="184" y="96" width="652" height="16" fill="var(--d)" opacity=".5"/><text x="190" y="108" class="s">light Basil mark, then a bare “Loading” (theme unknown, no shell)</text>
+<text x="-150" y="136">Paints</text><text x="184" y="136" class="s">▲ FCP 7.7 s</text><text x="800" y="136" class="s">▲ LCP 36.3 s · CLS 0.26</text>
+<text x="-150" y="182" class="t">After (RES-04)</text>
+<text x="-150" y="212">CSS 22.7 KB br</text><rect x="0" y="200" width="42" height="16" rx="4" fill="var(--b)"/><text x="48" y="213" class="s">1.8 s</text>
+<text x="-150" y="240">JS 367 KB br</text><rect x="0" y="228" width="209" height="16" rx="4" fill="var(--a)"/><text x="215" y="241" class="s">8.7 s</text>
+<text x="-150" y="268">On screen</text><rect x="0" y="256" width="42" height="16" fill="var(--line)"/><rect x="42" y="256" width="167" height="16" fill="var(--b)" opacity=".6"/><text x="48" y="268" class="s">shell skeleton in the User’s theme (RES-08)</text>
+<text x="-150" y="296">Paints</text><text x="42" y="296" class="s">▲ FCP 1.8 s</text><text x="232" y="296" class="s">▲ LCP 10.2 s (CLS 0.25 → ≤ 0.1 with RES-05)</text>
+</g>
+<text x="20" y="410" class="s">After = the same build behind a local proxy that serves /assets precompressed (brotli 11) with “public, max-age=31536000, immutable” — what the proposed spa.go does. Repeat visits come from the service worker (already precached).</text>
+</svg></body></html>

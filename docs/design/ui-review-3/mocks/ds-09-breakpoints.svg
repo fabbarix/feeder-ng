@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 540" role="img" aria-labelledby="t d">
+<title id="t">DS-09 breakpoint table</title><desc id="d">Seven named width bands written in em, so they move with the browser text size: at 16 px text and at 24 px text.</desc>
+<style>.h{font:800 15px Figtree,system-ui,sans-serif;fill:#131d17}.n{font:800 13px Figtree,system-ui,sans-serif;fill:#0d2617}.m{font:600 11px Figtree,system-ui,sans-serif;fill:#0d2617}.t{font:500 11px Figtree,system-ui,sans-serif;fill:#4b5a4f}.l{font:500 13px Figtree,system-ui,sans-serif;fill:#131d17}.b{font-weight:800}.ax{stroke:#677a6d}.band{stroke:#fafffc;stroke-width:1}</style>
+<rect width="1400" height="540" fill="#fafffc"/>
+<text x="40" y="30" class="h">One breakpoint table: min-width only, written in em (viewport px shown at the browser text size)</text>
+<text x="40" y="70" class="h">Default browser text size (16 px)</text>
+<rect x="40.0" y="80" width="279.5" height="44" fill="#cfe3d6" class="band"/>
+<text x="46.0" y="98" class="n">narrow</text>
+<rect x="319.5" y="80" width="186.4" height="44" fill="#b9d9c4" class="band"/>
+<text x="325.5" y="98" class="n">phone</text>
+<text x="325.5" y="116" class="m">360 px</text>
+<rect x="505.9" y="80" width="130.4" height="44" fill="#a3cfb2" class="band"/>
+<text x="511.9" y="98" class="n">tablet</text>
+<text x="511.9" y="116" class="m">600 px</text>
+<rect x="636.3" y="80" width="198.8" height="44" fill="#8dc5a0" class="band"/>
+<text x="642.3" y="98" class="n">md</text>
+<text x="642.3" y="116" class="m">768 px</text>
+<rect x="835.1" y="80" width="198.8" height="44" fill="#77bb8e" class="band"/>
+<text x="841.1" y="98" class="n">desktop</text>
+<text x="841.1" y="116" class="m">1024 px</text>
+<rect x="1033.9" y="80" width="124.2" height="44" fill="#61b17c" class="band"/>
+<text x="1039.9" y="98" class="n">desktop-wide</text>
+<text x="1039.9" y="116" class="m">1280 px</text>
+<rect x="1158.1" y="80" width="201.9" height="44" fill="#4ba76a" class="band"/>
+<text x="1164.1" y="98" class="n">wide</text>
+<text x="1164.1" y="116" class="m">1440 px</text>
+<text x="40" y="160" class="h">Browser text size 20 px: every band starts 1.25× later</text>
+<rect x="40.0" y="170" width="349.4" height="44" fill="#cfe3d6" class="band"/>
+<text x="46.0" y="188" class="n">narrow</text>
+<rect x="389.4" y="170" width="232.9" height="44" fill="#b9d9c4" class="band"/>
+<text x="395.4" y="188" class="n">phone</text>
+<text x="395.4" y="206" class="m">450 px</text>
+<rect x="622.4" y="170" width="163.1" height="44" fill="#a3cfb2" class="band"/>
+<text x="628.4" y="188" class="n">tablet</text>
+<text x="628.4" y="206" class="m">750 px</text>
+<rect x="785.4" y="170" width="248.5" height="44" fill="#8dc5a0" class="band"/>
+<text x="791.4" y="188" class="n">md</text>
+<text x="791.4" y="206" class="m">960 px</text>
+<rect x="1033.9" y="170" width="248.5" height="44" fill="#77bb8e" class="band"/>
+<text x="1039.9" y="188" class="n">desktop</text>
+<text x="1039.9" y="206" class="m">1280 px</text>
+<rect x="1282.4" y="170" width="77.6" height="44" fill="#61b17c" class="band"/>
+<text x="1288.4" y="188" class="n">desktop-wide</text>
+<text x="1288.4" y="206" class="m">1600 px</text>
+<text x="40" y="240" class="h">Browser text size 24 px: every band starts 1.5× later</text>
+<rect x="40.0" y="250" width="419.3" height="44" fill="#cfe3d6" class="band"/>
+<text x="46.0" y="268" class="n">narrow</text>
+<rect x="459.3" y="250" width="279.5" height="44" fill="#b9d9c4" class="band"/>
+<text x="465.3" y="268" class="n">phone</text>
+<text x="465.3" y="286" class="m">540 px</text>
+<rect x="738.8" y="250" width="195.7" height="44" fill="#a3cfb2" class="band"/>
+<text x="744.8" y="268" class="n">tablet</text>
+<text x="744.8" y="286" class="m">900 px</text>
+<rect x="934.5" y="250" width="298.2" height="44" fill="#8dc5a0" class="band"/>
+<text x="940.5" y="268" class="n">md</text>
+<text x="940.5" y="286" class="m">1152 px</text>
+<rect x="1232.7" y="250" width="127.3" height="44" fill="#77bb8e" class="band"/>
+<text x="1238.7" y="268" class="n">desktop</text>
+<text x="1238.7" y="286" class="m">1536 px</text>
+<line x1="40" x2="1360.0" y1="296" y2="296" class="ax"/><line x1="40.0" x2="40.0" y1="296" y2="302" class="ax"/><text x="40.0" y="316" class="t" text-anchor="middle">0</text><line x1="195.3" x2="195.3" y1="296" y2="302" class="ax"/><text x="195.3" y="316" class="t" text-anchor="middle">200</text><line x1="350.6" x2="350.6" y1="296" y2="302" class="ax"/><text x="350.6" y="316" class="t" text-anchor="middle">400</text><line x1="505.9" x2="505.9" y1="296" y2="302" class="ax"/><text x="505.9" y="316" class="t" text-anchor="middle">600</text><line x1="661.2" x2="661.2" y1="296" y2="302" class="ax"/><text x="661.2" y="316" class="t" text-anchor="middle">800</text><line x1="816.5" x2="816.5" y1="296" y2="302" class="ax"/><text x="816.5" y="316" class="t" text-anchor="middle">1000</text><line x1="971.8" x2="971.8" y1="296" y2="302" class="ax"/><text x="971.8" y="316" class="t" text-anchor="middle">1200</text><line x1="1127.1" x2="1127.1" y1="296" y2="302" class="ax"/><text x="1127.1" y="316" class="t" text-anchor="middle">1400</text><line x1="1282.4" x2="1282.4" y1="296" y2="302" class="ax"/><text x="1282.4" y="316" class="t" text-anchor="middle">1600</text><text x="1360.0" y="334" class="t" text-anchor="end">viewport width, CSS px</text>
+<rect x="40" y="337" width="14" height="14" fill="#cfe3d6"/><text x="62" y="350" class="l"><tspan class="b">narrow</tspan>  width &lt; 22.5em (below 360 px at 16 px text) — bottom bar icons only · PageHeader secondary icon-only · FilterBar view row wraps</text><rect x="40" y="361" width="14" height="14" fill="#b9d9c4"/><text x="62" y="374" class="l"><tspan class="b">phone</tspan>  min-width: 22.5em (360 px at 16 px text) — phone portrait, bottom bar with labels, sheets from the bottom</text><rect x="40" y="385" width="14" height="14" fill="#a3cfb2"/><text x="62" y="398" class="l"><tspan class="b">tablet</tspan>  min-width: 37.5em (600 px at 16 px text) — two-up form tiles, FormActions inline, board wall</text><rect x="40" y="409" width="14" height="14" fill="#8dc5a0"/><text x="62" y="422" class="l"><tspan class="b">md</tspan>  min-width: 48em (768 px at 16 px text) — sheets become centred dialogs · Menu and Select become popovers · Cook Mode tap zones</text><rect x="40" y="433" width="14" height="14" fill="#77bb8e"/><text x="62" y="446" class="l"><tspan class="b">desktop</tspan>  min-width: 64em (1024 px at 16 px text) — the rail replaces the bottom bar (88 px)</text><rect x="40" y="457" width="14" height="14" fill="#61b17c"/><text x="62" y="470" class="l"><tspan class="b">desktop-wide</tspan>  min-width: 80em (1280 px at 16 px text) — two-column details (Recipe, Pantry) · gutter 32 · bento gap 16</text><rect x="40" y="481" width="14" height="14" fill="#4ba76a"/><text x="62" y="494" class="l"><tspan class="b">wide</tspan>  min-width: 90em (1440 px at 16 px text) — the rail expands to 240 px with labels</text>
+<text x="40" y="530" class="t">Component-fit thresholds (ingredient lines 900, ms-card split 820, hero actions 820, shop chips 420, Shelf Life tiles 560) move to container queries in rem on their own container.</text>
+</svg>
