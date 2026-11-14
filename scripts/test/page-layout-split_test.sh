@@ -136,6 +136,8 @@ console.log(bad.join('; ') || 'ok')
 fi
 # a package's own seed area is found without editing index.mjs: after the base areas, by its order; a module without order fails loudly
 cp -r "$SEEDDIR" "$TMP/seed" && cp "$ROOT/scripts/test/fixtures/page-layout-seed-zones.mjs" "$TMP/" 2>/dev/null
+# the packages' real drop-ins (recipe-editor.mjs, B9-10, ...) are left out of the copy: this case checks the mechanism, not who uses it
+for f in "$TMP"/seed/*.mjs; do case "$(basename "$f" .mjs)" in index | household | recipes | shops | stock | plan | supplies | scan) ;; *) rm -f "$f" ;; esac; done
 printf 'export const order = 200\nexport async function seed() {}\n' >"$TMP/seed/zz-late.mjs"
 printf 'export const order = 100\nexport async function seed() {}\n' >"$TMP/seed/zz-early.mjs"
 out=$(node --input-type=module -e "import('$TMP/seed/index.mjs').then((m) => console.log(m.AREAS.join(',')), (e) => console.log('THROWS ' + e.message))" 2>&1)
