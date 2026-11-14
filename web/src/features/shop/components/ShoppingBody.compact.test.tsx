@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { makeLine, makeList } from '../testData'
 import { ShoppingBody } from './ShoppingBody'
@@ -25,5 +26,14 @@ describe('ShoppingBody: compact Restock reason', () => {
     expect(meta.closest('.list-row__meta')).toHaveAttribute('data-status', 'info')
     expect(supplies().getByLabelText('400 of 1000 ml')).toBeInTheDocument()
     expect(supplies().queryByText('400 of 1000 ml')).toBeNull()
+  })
+  it('a Not needed Supply row follows the same width: compact, with the full text for assistive technology', async () => {
+    const line = list().lines[0]!
+    render(<ShoppingBody {...base} list={makeList({ lines: [], notNeeded: [line], progress: { ticked: 0, total: 0 } })} compact />)
+    await userEvent.click(screen.getByRole('button', { name: 'Not needed (1)' }))
+    const notNeeded = within(screen.getByRole('list', { name: 'Not needed' }))
+    expect(notNeeded.getByText('400/1000 ml')).toBeInTheDocument()
+    expect(notNeeded.getByLabelText('400 of 1000 ml')).toBeInTheDocument()
+    expect(notNeeded.queryByText('400 of 1000 ml')).toBeNull()
   })
 })

@@ -86,7 +86,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
           </div>
         </section>
       ) : null}
-      <NotNeededGroup entries={notNeeded} onOpen={onOpenLine} />
+      <NotNeededGroup entries={notNeeded} onOpen={onOpenLine} compact={compact} />
     </>
   )
 }
