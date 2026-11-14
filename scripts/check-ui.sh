@@ -20,6 +20,15 @@
 #   word-break      12  hyphens: auto, overflow-wrap / word-wrap anywhere|break-word, word-break break-all|break-word, unless the selector
 #                       names a one-token value (email, url, link, barcode, code) (system.md 3)
 #
+# Drop-in rules (B9-03, plan section 5): a package adds its OWN rule without editing this file.
+#   scripts/check-ui.d/<slug>.sh     sourced (in name order) before the rules files are read. It calls `register_rule NAME` and
+#                                    defines rule_NAME (hyphens become underscores); the helpers viol, src_files, css_scan and
+#                                    code_match are there when the function runs. Drop-in rules run after the twelve above, in
+#                                    registration order. A registered rule without its function stops the run (exit 2).
+#   <rules file>.d/*                 more mode lines, read after the rules file, in name order (the later line wins). The default
+#                                    rules file is scripts/check-ui.rules, so scripts/check-ui.rules.d/*; `--rules F` reads F.d.
+#   Both directories are optional.
+#
 # colour-literals has a file-level allowlist, scripts/check-ui.allow-colours: `<path substring>   # reason`,
 # one line per file that holds a third party's brand colours (never a feature screen or a primitive). An entry
 # without a reason is ignored; an entry matches every colour-literals violation in each file it is a substring of.
@@ -59,25 +68,50 @@ VIOL="$TMP/violations.tsv" # rule <TAB> file <TAB> line <TAB> message
 : >"$VIOL"
 
 RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link image-input type-scale opacity-muting word-break)
+BUILTIN_COUNT=${#RULE_NAMES[@]}
+
+# ------------------------------------------------------------ drop-in rules
+# register_rule NAME: called by a scripts/check-ui.d/*.sh file; the rule runs after the built-in ones.
+register_rule() {
+  local r
+  [ -n "${1:-}" ] || { echo "check-ui: register_rule needs a name" >&2; exit 2; }
+  for r in "${RULE_NAMES[@]}"; do [ "$r" = "$1" ] && { echo "check-ui: rule '$1' is registered twice" >&2; exit 2; }; done
+  RULE_NAMES+=("$1")
+}
+if [ -d "$SCRIPT_DIR/check-ui.d" ]; then
+  for f in "$SCRIPT_DIR"/check-ui.d/*.sh; do
+    [ -f "$f" ] || continue
+    # shellcheck source=/dev/null
+    . "$f"
+  done
+fi
+for r in "${RULE_NAMES[@]:$BUILTIN_COUNT}"; do
+  declare -F "rule_${r//-/_}" >/dev/null || { echo "check-ui: rule '$r' is registered in scripts/check-ui.d but defines no rule_${r//-/_}()" >&2; exit 2; }
+done
 
 # ---------------------------------------------------------------- rules file
 declare -A MODE FAIL_PATHS
 for r in "${RULE_NAMES[@]}"; do MODE[$r]=warn; FAIL_PATHS[$r]=""; done
-if [ -f "$RULES_FILE" ]; then
+RULES_FILES=()
+[ -f "$RULES_FILE" ] && RULES_FILES+=("$RULES_FILE")
+if [ -d "$RULES_FILE.d" ]; then
+  for f in "$RULES_FILE.d"/*; do [ -f "$f" ] && RULES_FILES+=("$f"); done
+fi
+for RF in "${RULES_FILES[@]}"; do
   while IFS= read -r line || [ -n "$line" ]; do
     line="${line%%#*}"
     [ -z "${line//[[:space:]]/}" ] && continue
     key="${line%%=*}"; val="${line#*=}"
     key="${key//[[:space:]]/}"; val="${val#"${val%%[![:space:]]*}"}"; val="${val%"${val##*[![:space:]]}"}"
     case "$key" in
-      *.fail_paths) name="${key%.fail_paths}"; [ -n "${MODE[$name]+x}" ] || { echo "check-ui: unknown rule '$name' in $RULES_FILE" >&2; exit 2; }
+      *.fail_paths) name="${key%.fail_paths}"; [ -n "${MODE[$name]+x}" ] || { echo "check-ui: unknown rule '$name' in $RF" >&2; exit 2; }
                     norm=""; for p in $val; do norm+="${p%/} "; done   # "web/ui/" behaves like "web/ui"
                     FAIL_PATHS[$name]="$norm" ;;
-      *) [ -n "${MODE[$key]+x}" ] || { echo "check-ui: unknown rule '$key' in $RULES_FILE" >&2; exit 2; }
+      *) [ -n "${MODE[$key]+x}" ] || { echo "check-ui: unknown rule '$key' in $RF" >&2; exit 2; }
          case "$val" in warn|fail) MODE[$key]="$val" ;; *) echo "check-ui: rule '$key' must be warn or fail, got '$val'" >&2; exit 2 ;; esac ;;
     esac
-  done <"$RULES_FILE"
-fi
+  done <"$RF"
+done
 
 # ------------------------------------------------------------------- helpers
 viol() { printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" >>"$VIOL"; }
@@ -533,6 +567,9 @@ rule_word_break() {
 rule_type_scale
 rule_opacity_muting
 rule_word_break
+
+# Drop-in rules (scripts/check-ui.d), in registration order.
+for r in "${RULE_NAMES[@]:$BUILTIN_COUNT}"; do "rule_${r//-/_}"; done
 
 # File-level colour allowlist (WP3b): drop colour-literals violations in files named by an entry that has a reason.
 if [ -f "$ALLOW_COLOURS" ]; then
