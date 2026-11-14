@@ -633,6 +633,23 @@ const cutSelectProbe = `
   return out
 })()`
 
+// b8-shop (P23): the Shop's info hints in the card grid (a Meal Slot hint or a Supply's Restock reason) cut by their ellipsis. The text is
+// measured with a Range like cutSelectProbe, so the ellipsis is found whatever it paints.
+const cutMetaProbe = `
+(() => {
+  const main = document.querySelector('main')
+  const out = []
+  for (const t of (main ? main.querySelectorAll('.shop-lines .list-row__meta[data-status="info"] .list-row__meta-text') : [])) {
+    if (t.getClientRects().length === 0) continue
+    const box = t.getBoundingClientRect()
+    const range = document.createRange()
+    range.selectNodeContents(t)
+    const cut = Math.max(t.scrollWidth - t.clientWidth, range.getBoundingClientRect().width - box.width)
+    if (cut > 0.5) out.push({ sel: 'span.list-row__meta-text', label: t.textContent.trim(), shown: Math.round(box.width), px: Math.round(cut) })
+  }
+  return out
+})()`
+
 // beta.7 (H8, SR6, RR5): the setups of the scenarios with a `setup` (page-layout-rules.mjs SCENARIOS). Each one runs in the page
 // opened at the scenario's `start` and brings it to the state the probes measure: a sheet open, a Scan session with rows, a receipt
 // photo, a done read. A step whose state does not show throws, so the probe is not inspected (and fails) instead of measuring the
@@ -721,6 +738,14 @@ const SETUPS = {
   async shopSuppliesGroup() {
     await until(`!!document.querySelector('.shop-supplies .list-row')`, 'the Supplies group of the Shop list (a Supply below its Restock level)')
   },
+  // b8-shop: the header chips (the Shop for and the Shop pickers) shown, the list loaded.
+  async shopHeader() {
+    await until(`document.querySelectorAll('.shop-screen__controls .select__trigger[data-appearance="chip"]').length >= 2 && !document.querySelector('.skeleton')`, 'the Shop header chips')
+  },
+  // b8-shop (P23): an info hint in the card grid (the Supplies group's Restock reason or a Meal Slot hint), so the probe measures one.
+  async shopHints() {
+    await until(`!!document.querySelector('.shop-lines .list-row__meta[data-status="info"]')`, 'an info hint on a Shop row')
+  },
   scanScannedList: scannedList,
   async scanRowActive() {
     await scannedList()
@@ -795,7 +820,7 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
     m.lowContrastButtons = await evaluate(buttonProbe)
     m.navOverlap = await evaluate(`(() => { ${navProbeSource}\n; return feederNavProbe() })()`)
     m.tileOverflow = await evaluate(tileProbe)
-    Object.assign(m, { clippedChips: await evaluate(chipProbe), crushedChips: await evaluate(crushedProbe) })
+    Object.assign(m, { clippedChips: await evaluate(chipProbe), crushedChips: await evaluate(crushedProbe), cutMeta: await evaluate(cutMetaProbe) })
     m.actionLayout = await evaluate(actionProbe)
     m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
     // hf-recipes-filter round 2: the chip line, its focus rings and hit areas, the popover's alignment and the header's spacing.
