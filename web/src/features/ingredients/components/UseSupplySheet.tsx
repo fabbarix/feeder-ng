@@ -59,6 +59,7 @@ export function UseSupplySheet({ supply, stock, packSize, system, busy = false, 
       }
     >
       <TextField
+        size="sm"
         label={S.howMuch}
         value={text}
         onChange={(next) => {

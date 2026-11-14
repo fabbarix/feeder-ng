@@ -24,6 +24,10 @@ describe('UseSupplySheet', () => {
     expect(field()).toBeInTheDocument()
     expect(screen.getByRole('dialog')).toHaveTextContent('ml')
   })
+  it('beta.7 (page-layout guard P4): the amount is a short field (size sm), not a 320 px one, in the centred sheet from 768 px', () => {
+    setup()
+    expect(field().closest('[data-size]')).toHaveAttribute('data-size', 'sm')
+  })
   it('is prefilled with the pack size of the Product last bought', () => {
     setup({ packSize: 500 })
     expect(field()).toHaveValue('500')

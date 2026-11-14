@@ -2,3 +2,5 @@
 # An adoption package flips its routes to fail when it merges (patterns: exact, :id, trailing /*).
 default=warn
 fail_routes=/settings /settings/household /settings/preferences /settings/members /settings/courses /settings/notifications /settings/tags /settings/allowlist /settings/shops /settings/shops/:id /ingredients /ingredients/:id /products /products/:id /settings/recipe-assistant /settings/meal-slots /pantry /shop /scan /recipes/import /recipes/export /board /cook/* /recipes/:id /recipes/:id/edit /recipes/new / /plan /plan/couldnt-plan/excluded
+# beta.7 (H8, RR5): the Supplies pages and the receipt screens fail on their findings from the start.
+fail_routes=/supplies /supplies/:id /scan/receipt /scan/receipt/review

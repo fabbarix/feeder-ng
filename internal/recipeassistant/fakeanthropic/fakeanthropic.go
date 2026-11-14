@@ -374,6 +374,9 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request, req Request) {
 		reply.Text = BaseRecipesFile()
 	case "base-reference":
 		reply.Text = BaseReferenceFile()
+	case "receipt":
+		// beta.7 (RR5): a readable receipt built from the request's Scanned rows (receipt.go).
+		reply.Text = ReceiptAnswer(first)
 	case "invalid-then-valid":
 		if turns < 2 {
 			reply.Text = InvalidFile()
