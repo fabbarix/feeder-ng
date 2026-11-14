@@ -19,7 +19,7 @@ export const COLOR_TOKENS = [
 ] as const
 export type ColorToken = (typeof COLOR_TOKENS)[number]
 
-export const STATUS_NAMES = ['leftover', 'spoil', 'danger', 'success', 'pinned'] as const
+export const STATUS_NAMES = ['leftover', 'spoil', 'danger', 'success', 'pinned', 'warn'] as const
 export type StatusName = (typeof STATUS_NAMES)[number]
 export interface StatusColors {
   fg: Hex
@@ -55,6 +55,11 @@ export const STATUS_PALETTE: Record<StatusName, Record<Scheme, StatusColors>> = 
   pinned: {
     light: { fg: '#3e3f7c', bg: '#e3e6fe', solid: '#5b5cb7' },
     dark: { fg: '#c7cdff', bg: '#282a4b', solid: '#5b5cb7' },
+  },
+  // STUB (B9-02 test author): a copy of spoil so the tests compile; the developer sets the DS-06 warn colours.
+  warn: {
+    light: { fg: '#6d3706', bg: '#fee1cf', solid: '#9e5106' },
+    dark: { fg: '#fec39b', bg: '#44250c', solid: '#9e5106' },
   },
 }
 
