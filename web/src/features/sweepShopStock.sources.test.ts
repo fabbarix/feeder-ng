@@ -23,10 +23,21 @@ describe('B9-09: no width query in code (DS-09)', () => {
     expect(code('stock/screens/StockScreen.tsx')).toMatch(/useBreakpoint\(\s*['"]desktopWide['"]\s*\)/)
     expect(code('stock/screens/StockScreen.tsx')).not.toMatch(/1280/)
   })
-  it('Shop: the header chips and the narrow rows read useNarrow() (the DS-09 narrow band), not 420 px', () => {
+  // Main session ruling (B9-09): the header chips and the compact Restock reason keep today's 420 px, so no supported phone (375 to
+  // 414 px) changes what it shows; useNarrow() (below 23.5 em) would show the full text at 390 px. One named exception in the Shop's
+  // own lib, in em, until B9-15's container-driven chip fitting replaces it.
+  it('Shop: the header chips and the compact Restock reason read the Shop\'s one named exception, (width < 26.25em), from lib/narrowChips', () => {
     const hook = code('shop/hooks/useNarrowChips.ts')
-    expect(hook).toMatch(/useNarrow\(\)/)
-    expect(hook).not.toMatch(/420|min-width/)
+    expect(hook).toMatch(/useMediaQuery\(NARROW_CHIPS_QUERY\)/)
+    expect(hook).toMatch(/from '\.\.\/lib\/narrowChips'/)
+    expect(hook).not.toMatch(/420|min-width|px/)
+    const lib = readFeature('shop/lib/narrowChips.ts')
+    expect(code('shop/lib/narrowChips.ts')).toMatch(/export const NARROW_CHIPS_QUERY = '\(width < 26\.25em\)'/)
+    expect(lib).toMatch(/B9-15/)
+  })
+  it('the only width query string in these sources is that exception (26.25 em, in shop/lib/narrowChips.ts)', () => {
+    const found = sources.flatMap((s) => [...s.text.matchAll(/\((?:min-|max-)?width\s*[:<>]=?\s*[\d.]+(?:px|em|rem)\)/g)].map((m) => `${s.file}: ${m[0]}`))
+    expect(found).toEqual(['shop/lib/narrowChips.ts: (width < 26.25em)'])
   })
   it('Stock: the spoiled tile no longer reads the viewport (its layout is the container query in stock.css)', () => {
     const tile = code('stock/components/SpoiledTile.tsx')

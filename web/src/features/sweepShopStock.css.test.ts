@@ -8,7 +8,7 @@ import { sweepRules, sweepStylesheets, rel, type CssRule } from './cssSweep.test
 const rules = sweepRules()
 const where = (r: CssRule) => `${r.file}: ${r.selector}${r.context.length ? ` in ${r.context.join(' ')}` : ''}`
 const decl = (r: CssRule, prop: string) => r.decls.filter(([p]) => p === prop).map(([, v]) => v)
-const BAND_EM = [22.5, 37.5, 48, 64, 80, 90] // the DS-09 table: narrow, tablet, md, desktop, desktop-wide, wide
+const BAND_EM = [23.5, 37.5, 48, 64, 80, 90] // the DS-09 table (ui/lib/breakpoints): narrow (below 376 px, amendment A1), tablet, md, desktop, desktop-wide, wide
 
 describe('B9-09: the sweep reads the seven folders', () => {
   it('finds the stylesheets of the folders (so no check below passes on nothing)', () => {
@@ -29,7 +29,7 @@ describe('B9-09: width queries are the DS-09 em table (min-width only, or width 
     const bad = widthQueries.filter(({ c }) => /\d\s*px|max-width/.test(c)).map(({ c, r }) => `${where(r)} -> ${c}`)
     expect(bad).toEqual([])
   })
-  it('every width condition is (min-width: Xem) or (width < Xem) with X in 22.5, 37.5, 48, 64, 80, 90', () => {
+  it('every width condition is (min-width: Xem) or (width < Xem) with X in 23.5, 37.5, 48, 64, 80, 90', () => {
     const bad: string[] = []
     for (const { c, r } of widthQueries) {
       const conds = [...c.matchAll(/\((min-width:\s*([\d.]+)em|width\s*<\s*([\d.]+)em|[^)]*width[^)]*)\)/g)]

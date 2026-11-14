@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RangePicker } from './RangePicker'
 
-// b8-shop: below 22.5 em (360 px) the chip keeps its calendar icon and shows the short value; the list shows the full labels.
+// b8-shop, B9-09: below 26.25 em (420 px; lib/narrowChips) the chip keeps its calendar icon and shows the short value; the list shows the full labels.
 function viewport(wide: boolean) {
   vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: /width\s*<\s*22\.5em/.test(query) ? !wide : false,
+    matches: /width\s*<\s*26\.25em/.test(query) ? !wide : false,
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -48,7 +48,7 @@ describe('RangePicker at a narrow width', () => {
   })
 })
 
-describe('RangePicker from 22.5 em (360 px)', () => {
+describe('RangePicker from 26.25 em (420 px)', () => {
   it('shows the full "Until Fri 20" and sets no title', () => {
     viewport(true)
     render(<RangePicker {...props} />)
