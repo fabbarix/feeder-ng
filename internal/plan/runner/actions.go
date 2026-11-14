@@ -306,8 +306,10 @@ func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batc
 		}
 		return out
 	}
-	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key, undoable: true, targets: targets}, func(tx *sql.Tx, st *store.Store) (func(), error) {
-		covered = nil
+	var freed []plan.Key // the Leftover the replaced meal was served from may now go to a later meal
+	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key, undoable: true, targets: targets,
+		freed: func() []plan.Key { return freed }}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+		covered, freed = nil, nil
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -427,6 +429,8 @@ func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batc
 			return nil, err
 		case old.State != plan.StatePlanned:
 			return nil, ErrAlreadyResolved
+		case old.From != nil:
+			freed = append(freed, old.From.From)
 		case old.Fresh():
 			// The meal being replaced was the source of its Leftover dependants: they no longer have it.
 			if err := r.unpinMisfits(ctx, st, old.Key, 0, in); err != nil {

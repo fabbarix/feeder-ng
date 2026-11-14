@@ -156,15 +156,22 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 			clear = append(clear, plan.CellKeys(s)...)
 		}
 	case o.after != nil:
-		// Swap, Choose and confirm keep every later meal that is still valid (PC-01, B9-11): nothing is cleared here.
-		// What the change breaks is replanned all the same: a meal served from the Leftover of the meal that was
-		// replaced loses its source (the planner replans it), and invalidOnRead below drops what no longer fits.
-		if _, ok, err := r.slotAt(ctx, in, *o.after); err != nil {
+		// Swap, Choose and confirm keep every later meal that is still valid (PC-01, B9-11). Only the probe run of
+		// leftoverCells treats every later unpinned cell as empty, to find where the target's Leftover would be served;
+		// the write itself clears just those cells (o.alsoClear). A meal served from the Leftover of the meal that was
+		// replaced loses its source and is replanned by the planner, and invalidOnRead drops what no longer fits.
+		target, ok, err := r.slotAt(ctx, in, *o.after)
+		if err != nil {
 			return plan.Snapshot{}, err
-		} else if !ok {
+		}
+		if !ok {
 			return plan.Snapshot{}, ErrUnknownSlot
 		}
+		if o.probe {
+			clear = append(clear, laterCells(slots, in, target, *o.after)...)
+		}
 	}
+	clear = append(clear, o.alsoClear...)
 
 	clear = append(clear, invalidOnRead(slots, meals, rules, recipes, clear)...)
 	vrules, err := st.VarietyRules(ctx)
@@ -213,6 +220,64 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 		Lots: lots, ShelfLife: shelf, Packs: packs,
 		Leftovers: leftovers, History: history,
 	}, nil
+}
+
+// laterCells are the cells walked after the target cell: later slots, and the Courses of its own slot walked after it.
+func laterCells(slots []plan.SlotInfo, in info, target time.Time, after plan.Key) []plan.Key {
+	var out []plan.Key
+	for _, s := range slots {
+		at, err := plan.SlotInstant(s.Key.Date, s.Time, in.zone)
+		if err != nil {
+			continue
+		}
+		for _, k := range plan.CellKeys(s) {
+			later := at.After(target) || (at.Equal(target) && s.Key.MealSlotID > after.MealSlotID)
+			// Within the same occurrence the Courses the walk visits after the target are later too.
+			sameSlot := at.Equal(target) && s.Key.MealSlotID == after.MealSlotID
+			if later || (sameSlot && walkRank(s, k.CourseID) > walkRank(s, after.CourseID)) {
+				out = append(out, k)
+			}
+		}
+	}
+	return out
+}
+
+// leftoverCells are the later cells that the Leftover of the target, or of the meal the target was served from before
+// (o.freed), would serve if every later unpinned cell were free: a probe planning run that writes nothing. The write
+// then clears just those cells, so a Swap to a Recipe that leaves a Leftover, or away from a meal served from one, still
+// plans that Leftover instead of wasting it, and every other later meal that is still valid is kept (B9-11, PC-01).
+func (r *Runner) leftoverCells(ctx context.Context, st *store.Store, o runOpts) ([]plan.Key, error) {
+	probe := o
+	probe.probe, probe.alsoClear = true, nil
+	snap, err := r.snapshot(ctx, st, probe)
+	if err != nil {
+		return nil, err
+	}
+	in, err := plan.BuildInput(snap)
+	if err != nil {
+		return nil, err
+	}
+	res, err := planner.Plan(in)
+	if err != nil {
+		return nil, err
+	}
+	sources := map[planner.SlotKey]bool{pkeyOf(*o.after): true}
+	if o.freed != nil {
+		for _, k := range o.freed() {
+			sources[pkeyOf(k)] = true
+		}
+	}
+	var out []plan.Key
+	for _, p := range res.Placements {
+		if p.From != nil && sources[p.From.FromSlot] {
+			out = append(out, plan.Key{Date: string(p.Key.Date), MealSlotID: p.Key.MealSlotID, CourseID: p.Key.CourseID})
+		}
+	}
+	return out, nil
+}
+
+func pkeyOf(k plan.Key) planner.SlotKey {
+	return planner.SlotKey{Date: planner.Date(k.Date), MealSlotID: k.MealSlotID, CourseID: k.CourseID}
 }
 
 // walkRank is the Course's place in the planner's walk inside its slot occurrence: the main Course first, then the

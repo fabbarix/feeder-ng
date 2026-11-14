@@ -96,8 +96,11 @@ func New(d Deps) *Runner {
 // runOpts selects what one planning run clears before it plans.
 type runOpts struct {
 	clearAll   bool      // Slot or Variety Rules changed: unpinned meals are treated as empty
-	after      *plan.Key // Swap, set, confirm: the target, which must be a Meal Slot of its date (later valid meals are kept, B9-11)
-	regenerate bool      // bump the generation and redo every unpinned meal (planner.Regenerate)
+	after      *plan.Key // Swap, set, confirm: the target; later valid meals are kept, except where its Leftover goes (B9-11)
+	probe      bool      // leftoverCells' probe run: every unpinned meal after the target is treated as empty
+	alsoClear  []plan.Key
+	freed      func() []plan.Key // the source of the Leftover the target was served from before the write
+	regenerate bool              // bump the generation and redo every unpinned meal (planner.Regenerate)
 	// afterPlan runs inside the transaction once the replan is written (not after the commit).
 	afterPlan func(ctx context.Context, st *store.Store) error
 	// B9-11. undoable: a replanning write by a User (Swap, Choose, Pin, Unpin, Regenerate, Apply), which issues an undo
@@ -230,6 +233,13 @@ func (r *Runner) planIn(ctx context.Context, st *store.Store, reason plan.Reason
 		if _, err := st.BumpGeneration(ctx); err != nil {
 			return Summary{}, err
 		}
+	}
+	if o.after != nil && !o.regenerate {
+		keys, err := r.leftoverCells(ctx, st, o)
+		if err != nil {
+			return Summary{}, err
+		}
+		o.alsoClear = keys
 	}
 	snap, err := r.snapshot(ctx, st, o)
 	if err != nil {
