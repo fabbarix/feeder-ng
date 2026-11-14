@@ -25,7 +25,11 @@ describe('Shop rows below 24 rem: the hint has room', () => {
     const control = narrow.match(/\.shop-lines \.list-row__control\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(control).not.toMatch(/size\s*:|width\s*:|height\s*:/)
   })
+  // Reviewer (B9-09): the slice starts at the block's own head, `@container (width < 24rem)`, whose 24rem is the threshold, not a
+  // value inside the block; only the declarations after the head's `{` are checked.
   it('no raw rem in the block', () => {
-    expect(narrow).not.toMatch(/\d(\.\d+)?rem/)
+    const body = narrow.slice(narrow.indexOf('{') + 1)
+    expect(body).not.toBe('')
+    expect(body).not.toMatch(/\d(\.\d+)?rem/)
   })
 })
