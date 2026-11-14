@@ -345,3 +345,24 @@ func TestAHeldMealInTheHoursBetweenLatestAndEarliestStartIsNeverMovedByASettings
 		t.Errorf("state = %q, want the Pinned meal kept", got)
 	}
 }
+
+func TestAToConfirmEntryCarriesNoStart(t *testing.T) {
+	// Monday 07:00 Breakfast, 22 h: its start (Sunday 09:00) was the day before, but the slot time is past (the clock
+	// reads Monday 12:00), so the To confirm list shows no start chip; startsAt is for the slot views only.
+	w := newOvernightWorld(t, 22*60)
+	mon := w.AddSlot(1, "Breakfast", "07:00", w.Main)
+	w.Meal("2026-11-09", mon, w.Main, w.roast, "planned", false)
+	r := w.User.Get("/api/plan/to-confirm")
+	var out struct {
+		Slots []struct {
+			Meal map[string]json.RawMessage `json:"meal"`
+		} `json:"slots"`
+	}
+	r.MustJSON(t, &out)
+	if r.Status != 200 || len(out.Slots) != 1 || out.Slots[0].Meal == nil {
+		t.Fatalf("GET /api/plan/to-confirm = %d %s, want the one Monday meal", r.Status, r.Body)
+	}
+	if v, ok := out.Slots[0].Meal["startsAt"]; ok {
+		t.Errorf("To confirm meal.startsAt = %s, want it omitted", v)
+	}
+}

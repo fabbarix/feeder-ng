@@ -73,7 +73,8 @@ type mealOut struct {
 	// "HH:MM" (household zone); omitted otherwise. Slot views only.
 	EarlyStart string `json:"earlyStart,omitempty"`
 	// B9-58 (A2): a Planned Meal still to cook whose cooking starts on an earlier day than the meal carries that start
-	// (household zone); omitted otherwise, and on Cooked, Not cooked and Leftover meals.
+	// (household zone); omitted otherwise, and on Cooked, Not cooked and Leftover meals. Slot views only, like
+	// earlyStart: the lists (To confirm) hold meals whose slot time is past.
 	StartsAt *startsAtOut `json:"startsAt,omitempty"`
 }
 
@@ -208,7 +209,6 @@ func listEntryFor(e runner.ListEntry, t table) listEntryOut {
 	if e.Meal != nil {
 		out.Meal = mealFor(*e.Meal, t)
 		out.Meal.StartBy = plan.StartBy(e.At, out.Meal.CookMinutes)
-		out.Meal.StartsAt = startsAtFor(e.At, out.Meal)
 	}
 	if e.Unfilled != nil {
 		out.Unfilled = unfilledFor(*e.Unfilled)
