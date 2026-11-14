@@ -3,6 +3,7 @@
 import { ListRow } from '../../../ui/ListRow'
 import { Icon } from '../../../ui/Icon'
 import { Thumb } from '../../../ui/Thumb'
+import '../../../ui/fields/Field.css' // the shared .visually-hidden utility (the full Restock reason of a compact row)
 import { rowMeta, rowValue, type RowGroup, type RowMeta } from '../lib/rows'
 import type { ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
@@ -51,13 +52,18 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, compact }: Lin
   )
 }
 
-/** The meta text; with a fullText the visible compact text is named by the full one for assistive technology (b8-polish). */
+/**
+ * The meta text. With a fullText (b8-polish) the compact text is painted and hidden from assistive technology, and the full one is
+ * read instead through the shared .visually-hidden text (the pattern of CourseChips and MealSlotWeekStrip). The hidden text comes
+ * last: it is absolutely positioned at the end of the painted text, so it adds nothing to the width P23 measures.
+ */
 function metaNode(meta: RowMeta) {
   if (!meta.text) return undefined
   if (!meta.fullText) return meta.text
   return (
-    <span role="img" aria-label={meta.fullText}>
-      {meta.text}
-    </span>
+    <>
+      <span aria-hidden="true">{meta.text}</span>
+      <span className="visually-hidden">{meta.fullText}</span>
+    </>
   )
 }

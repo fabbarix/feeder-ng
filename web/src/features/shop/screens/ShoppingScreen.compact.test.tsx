@@ -40,12 +40,12 @@ afterEach(() => vi.unstubAllGlobals())
 describe('Shop screen: the Restock reason by width', () => {
   it('below 420 px it is compact, with the full text for assistive technology', () => {
     show(false)
-    expect(screen.getByText('400/1000 ml')).toBeInTheDocument()
-    expect(screen.getByLabelText('400 of 1000 ml')).toBeInTheDocument()
+    expect(screen.getByText('400/1000 ml')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByText('400 of 1000 ml')).toHaveClass('visually-hidden')
   })
   it('from 420 px it is the full text', () => {
     show(true)
-    expect(screen.getByText('400 of 1000 ml')).toBeInTheDocument()
+    expect(screen.getByText('400 of 1000 ml')).not.toHaveClass('visually-hidden')
     expect(screen.queryByText('400/1000 ml')).toBeNull()
   })
 })
