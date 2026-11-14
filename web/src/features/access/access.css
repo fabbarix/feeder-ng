@@ -1,11 +1,11 @@
 /* Access Requests: layout only; colours come from the theme tokens. */
 /* Phone: a request row is the avatar and the text on one line, the actions under the text (right-aligned); title and meta
    wrap instead of truncating. The Recent activity rows wrap the same way. */
-@media (max-width: 599px) {
+@media (width < 37.5em) {
   .access__list .list-row[data-height] {
     flex-wrap: wrap;
     block-size: auto;
-    min-block-size: 64px;
+    min-block-size: var(--row-min);
     padding-block: var(--space-2);
   }
   .access__list .list-row__text {
@@ -35,6 +35,7 @@
 .access__overline {
   margin: var(--space-2) 0 0;
   font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -75,6 +76,7 @@
 }
 .access__you-label {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-on-surface-variant);
 }
 
@@ -93,6 +95,6 @@
   color: var(--color-on-accent);
   font-size: var(--text-meta-size);
   font-weight: 700;
-  line-height: 1;
+  line-height: var(--text-meta-line);
   pointer-events: none;
 }

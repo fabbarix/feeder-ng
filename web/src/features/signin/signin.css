@@ -2,12 +2,12 @@
   display: grid;
   place-items: center;
   min-height: 100vh;
-  padding: 24px 16px;
+  padding: var(--space-6) var(--space-4);
   background: var(--color-background);
 }
 .signin__tile {
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
   width: 100%;
   max-width: 400px;
   margin-inline: auto;
@@ -19,7 +19,8 @@
 }
 .signin__title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: var(--text-title-1-size);
+  line-height: var(--text-title-1-line);
   text-align: center;
 }
 .signin__text {
@@ -27,7 +28,7 @@
 }
 .signin__alert {
   margin: 0;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-tile);
   background: var(--color-surface-container);
   color: var(--color-text);
@@ -36,20 +37,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-height: 48px;
-  padding: 0 20px;
-  border-radius: 999px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--color-outline);
   background: var(--color-surface);
   color: var(--color-on-surface);
   font: inherit;
   font-weight: 600;
   text-decoration: none;
-}
-.signin__link:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
 }
 .signin__google-g {
   flex: none;

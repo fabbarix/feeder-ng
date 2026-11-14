@@ -1,17 +1,19 @@
 /* Notification settings: Bento tiles, Figtree, muted secondary text. */
 .notifications__heading {
-  font-size: 1.125rem;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
 }
 .notifications__muted {
   /* L12: --color-muted is already guarded to 4.5:1; fading it as well measured 4.39:1. */
   color: var(--color-muted, currentColor);
-  margin: 4px 0 0;
-  font-size: 0.9rem;
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
 }
 .notifications__this {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .notifications__types,
 .notifications__devices {
@@ -19,11 +21,11 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .notifications__type {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
