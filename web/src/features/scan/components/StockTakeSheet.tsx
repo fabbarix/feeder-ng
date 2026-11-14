@@ -11,7 +11,7 @@ export interface StockTakeSheetProps {
   onClose: () => void
   productName: string
   ingredientName: string
-  /** the formatted current Stock of the Ingredient ("1400 g", "nothing" is "0 g") */
+  /** the formatted current Stock of the Ingredient ("1.4 kg", "nothing" is "0 g") */
   currentStockText: string
   /** the formatted pack size ("700 g") */
   packText: string

@@ -62,7 +62,7 @@ function levelText(level: number, baseUnit: BaseUnit, system: UnitSystem): strin
   return baseUnit === 'piece' ? grouped(level, 1) : formatQuantity(level, baseUnit, system)
 }
 
-/** "restocks below 6", "restocks below 1000 ml", or "below Restock level 6" when Stock is under it; '' without a level. */
+/** "restocks below 6", "restocks below 1 l", or "below Restock level 6" when Stock is under it; '' without a level. */
 export function restockPhrase(restock: Restock | null, baseUnit: BaseUnit, system: UnitSystem): string {
   if (restock === null) return ''
   const level = levelText(restock.level, baseUnit, system)

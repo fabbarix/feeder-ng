@@ -1,5 +1,5 @@
 // Beta.8 (scan): the To get rows. Each open Shopping List Line is a ListEntry plus what this session's applied scans cover of
-// it ("700 of 1400 g", the same words and maths as a Scanned row), and the request that ticking it sends. No React.
+// it ("700 g of 1.4 kg", the same words and maths as a Scanned row), and the request that ticking it sends. No React.
 import { lineEntry, type ListEntry } from '../../shop/lib/lines'
 import type { ShoppingLine } from '../../shop/types'
 import type { UnitSystem } from '../../../lib/units'

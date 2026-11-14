@@ -55,7 +55,7 @@ export function slotsLabel(meals: PastPlannedMeal[] | undefined, withCourses = t
 
 /**
  * The one meta line: the Restock reason of a Supply Line (info tone), else the pack suggestion, or the info marker that names
- * the slots (never the Courses: it has to fit one line). `compact` shows the short reason ("400/1000 ml") with the full one as
+ * the slots (never the Courses: it has to fit one line). `compact` shows the short reason ("400 ml/1 l", "2/6") with the full one as
  * `fullText` (b8-polish); the other metas do not change.
  */
 export function rowMeta(entry: ListEntry, opts: { compact?: boolean } = {}): RowMeta {
