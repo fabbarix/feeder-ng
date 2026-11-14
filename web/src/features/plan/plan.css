@@ -151,6 +151,11 @@
 .plan-meal__courses > .list-row .list-row__text {
   min-inline-size: 0;
 }
+/* A11Y-02 (VC3): the row has no inline inset, so the ListRow's inset ring would run over the title's first letter and the chips.
+   Here the row's ring is the outer one, in the tile's padding. */
+.plan-meal__courses > .list-row .list-row__target:focus-visible {
+  outline-offset: var(--focus-ring-offset);
+}
 .plan-meal__courses > .list-row .list-row__trailing {
   align-self: flex-start;
 }
