@@ -69,7 +69,8 @@ func receiptFlowSteps(sc *godog.ScenarioContext, w *World) {
 			r := user().Post("/api/scan", o)
 			var res struct{ Status string }
 			_ = json.Unmarshal(r.Body, &res)
-			if r.Status != 200 || (res.Status != "duplicate" && res.Status != "applied" && res.Status != "rejected") {
+			// A replay must be recognised by its client uuid: "applied" would be the scan counted twice.
+			if r.Status != 200 || res.Status != "duplicate" {
 				return fmt.Errorf("replay %s: %d %s", uuid, r.Status, r.Body)
 			}
 		}
@@ -79,12 +80,6 @@ func receiptFlowSteps(sc *godog.ScenarioContext, w *World) {
 	sc.Step(`^the receipt flow response status is (\d+)$`, func(want int) error {
 		if last == nil || last.Status != want {
 			return fmt.Errorf("response = %v, want %d", last, want)
-		}
-		return nil
-	})
-	sc.Step(`^the receipt flow response status is not 200$`, func() error {
-		if last == nil || last.Status == 200 {
-			return fmt.Errorf("response = %v, want a refusal", last)
 		}
 		return nil
 	})

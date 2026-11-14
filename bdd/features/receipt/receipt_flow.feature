@@ -41,8 +41,9 @@ Feature: Reading and applying a receipt, end to end (receipt reading, RR5)
     Then the receipt read failed with "assistant_declined"
     And the read proposes nothing
     When I apply the read for "Esselunga" accepting "price:0"
-    Then the receipt flow response status is not 200
+    Then the receipt flow response status is 409 with the error "receipt_read_not_done"
     And the Shopping List shows 15661 cents spent
+    And the latest Price of "Mutti passata 700 g" at "Esselunga" is 7771 cents
 
   Scenario: A Scan since the read refuses the apply and writes nothing
     Given the provider will read row 0 as 2 packs at 149 cents each
