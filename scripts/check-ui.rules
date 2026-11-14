@@ -26,3 +26,8 @@ opacity-muting=warn
 opacity-muting.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan web/src/features/tags
 word-break=warn
 word-break.fail_paths=web/src/ui web/src/features/shop web/src/features/today web/src/features/plan web/src/features/tags
+# B9-01 (DS-12; plan section 9, rules 13-16): the sweep cleans every folder, so each fails everywhere.
+button-variant=fail
+close-button=fail
+sheet-cancel=fail
+bullet-notice=fail

@@ -19,7 +19,12 @@
 #   opacity-muting  11  opacity between 0.5 and 0.95 on a selector that is not a disabled state: mute text with --color-muted (system.md 2)
 #   word-break      12  hyphens: auto, overflow-wrap / word-wrap anywhere|break-word, word-break break-all|break-word, unless the selector
 #                       names a one-token value (email, url, link, barcode, code) (system.md 3)
+#   button-variant  13  variant="tertiary" | "danger-tertiary" | "accent-secondary" (DS-12 R-A: secondary, danger-secondary or link)
+#   close-button    14  <IconButton icon="close"> outside ui/CloseButton, ui/Toast and ui/Chip (DS-12 R-B: use <CloseButton>)
+#   sheet-cancel    15  a <BottomSheet> or <Dialog> passing its own {…strings.cancel} Button (DS-12 R-B: use onCancel)
+#   bullet-notice   16  a hand-written <ul>/<li> in a file that renders a Tile, Notice, Toast or Dialog (DS-12 R-E: use DetailList)
 #
+# bullet-notice has a file-level allowlist, scripts/check-ui.allow-bullets (exact paths, each with its owner and reason).
 # colour-literals has a file-level allowlist, scripts/check-ui.allow-colours: `<path substring>   # reason`,
 # one line per file that holds a third party's brand colours (never a feature screen or a primitive). An entry
 # without a reason is ignored; an entry matches every colour-literals violation in each file it is a substring of.
@@ -51,6 +56,7 @@ SRC=web/src
 ALLOW_CLASSES="$ALLOW_DIR/check-ui.allow-classnames"
 ALLOW_GLOSSARY="$ALLOW_DIR/check-ui.allow-glossary"
 ALLOW_COLOURS="$ALLOW_DIR/check-ui.allow-colours"
+ALLOW_BULLETS="$ALLOW_DIR/check-ui.allow-bullets"
 OUT="${CHECK_UI_OUT:-$ROOT/build/check-ui.txt}"
 mkdir -p "$(dirname "$OUT")"
 TMP="$(mktemp -d)"
@@ -58,7 +64,7 @@ trap 'rm -rf "$TMP"' EXIT
 VIOL="$TMP/violations.tsv" # rule <TAB> file <TAB> line <TAB> message
 : >"$VIOL"
 
-RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link image-input type-scale opacity-muting word-break)
+RULE_NAMES=(native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link image-input type-scale opacity-muting word-break button-variant close-button sheet-cancel bullet-notice)
 
 # ---------------------------------------------------------------- rules file
 declare -A MODE FAIL_PATHS
@@ -533,6 +539,117 @@ rule_word_break() {
 rule_type_scale
 rule_opacity_muting
 rule_word_break
+
+# ------------------------------------------------------------------ rule 13
+# DS-12 R-A: no tertiary action. One violation per offending variant attribute (a ternary counts each removed literal).
+rule_button_variant() {
+  local list
+  mapfile -t list < <(src_files tsx ts)
+  [ "${#list[@]}" -gt 0 ] && [ -n "${list[0]}" ] || return 0
+  awk -v RULE=button-variant -v MSG="removed Button variant; use secondary, danger-secondary, or link inside running text (DS-12 R-A)" '
+    FNR == 1 { inblk = 0 }
+    inblk { if (index($0, "*/")) inblk = 0; next }
+    $0 ~ /^[ \t]*\/\// { next }
+    $0 ~ /^[ \t]*\/\*/ { if (!index($0, "*/")) inblk = 1; next }
+    {
+      line = $0
+      while (match(line, /variant=("(tertiary|danger-tertiary|accent-secondary)"|\{[^}]*\})/)) {
+        attr = substr(line, RSTART, RLENGTH)
+        line = substr(line, RSTART + RLENGTH)
+        n = gsub(/["\047](tertiary|danger-tertiary|accent-secondary)["\047]/, "", attr)
+        for (i = 0; i < n; i++) print RULE "\t" FILENAME "\t" FNR "\t" MSG
+      }
+    }' "${list[@]}" >>"$VIOL"
+}
+
+# ------------------------------------------------------------------ rule 14
+# DS-12 R-B: one Close. An <IconButton ... icon="close"> element (one or more lines) outside CloseButton, Toast and Chip.
+rule_close_button() {
+  local list
+  mapfile -t list < <(src_files tsx | grep -vE "^$SRC/ui/(CloseButton|Toast|Chip)\.tsx$")
+  [ "${#list[@]}" -gt 0 ] && [ -n "${list[0]}" ] || return 0
+  awk -v RULE=close-button -v MSG="an IconButton with the close icon; use <CloseButton> (DS-12 R-B)" '
+    FNR == 1 { inblk = 0; el = 0 }
+    inblk { if (index($0, "*/")) inblk = 0; next }
+    $0 ~ /^[ \t]*\/\// { next }
+    $0 ~ /^[ \t]*\/\*/ { if (!index($0, "*/")) inblk = 1; next }
+    {
+      line = $0
+      while (line != "") {
+        if (!el) {
+          p = match(line, /<IconButton([^A-Za-z0-9_]|$)/)
+          if (!p) break
+          el = 1; hit = 0; start = FNR
+          line = substr(line, RSTART + 11)
+        }
+        e = index(line, ">")
+        seg = e ? substr(line, 1, e) : line
+        if (seg ~ /icon=("close"|\{["\047]close["\047]\})/) hit = 1
+        if (!e) break
+        if (hit) print RULE "\t" FILENAME "\t" start "\t" MSG
+        el = 0
+        line = substr(line, e + 1)
+      }
+    }' "${list[@]}" >>"$VIOL"
+}
+
+# ------------------------------------------------------------------ rule 15
+# DS-12 R-B: a sheet or dialog takes onCancel; it never passes its own Cancel button. One violation per <BottomSheet>/<Dialog>
+# element whose span (to its closing tag, or to the self-closing "/>" at the opener's indent) shows a {…strings.cancel} label.
+rule_sheet_cancel() {
+  local list
+  mapfile -t list < <(src_files tsx | grep -vE "^$SRC/ui/(BottomSheet|Dialog)\.tsx$")
+  [ "${#list[@]}" -gt 0 ] && [ -n "${list[0]}" ] || return 0
+  awk -v RULE=sheet-cancel -v MSG="a sheet or dialog with its own Cancel button; pass onCancel (and cancelLabel) instead (DS-12 R-B)" '
+    function indent(s) { match(s, /^[ \t]*/); return RLENGTH }
+    FNR == 1 { inblk = 0; open = 0 }
+    inblk { if (index($0, "*/")) inblk = 0; next }
+    $0 ~ /^[ \t]*\/\// { next }
+    $0 ~ /^[ \t]*\/\*/ { if (!index($0, "*/")) inblk = 1; next }
+    {
+      if (!open && match($0, /<(BottomSheet|Dialog)([ \t>]|$)/)) {
+        open = 1; hit = 0; start = FNR; ind = indent($0)
+        tag = substr($0, RSTART + 1, RLENGTH - 1); sub(/[ \t>]+$/, "", tag)
+        rest = substr($0, RSTART)
+        if (rest ~ /\{[A-Za-z_][A-Za-z0-9_.]*\.cancel\}/) hit = 1
+        # a one-line element closes on the same line
+        if (rest ~ /\/>[ \t]*\)?[ \t]*$/ || index(rest, "</" tag ">")) { if (hit) print RULE "\t" FILENAME "\t" start "\t" MSG; open = 0 }
+        next
+      }
+      if (!open) next
+      if ($0 ~ /\{[A-Za-z_][A-Za-z0-9_.]*\.cancel\}/) hit = 1
+      if (index($0, "</" tag ">") || (indent($0) == ind && $0 ~ /^[ \t]*\/>/)) {
+        if (hit) print RULE "\t" FILENAME "\t" start "\t" MSG
+        open = 0
+      }
+    }' "${list[@]}" >>"$VIOL"
+}
+
+# ------------------------------------------------------------------ rule 16
+# DS-12 R-E: structured items are rows. One violation per file that writes <ul>/<li> by hand and renders a Tile, a Notice,
+# a Toast or a Dialog (outside ui/DetailList). scripts/check-ui.allow-bullets lists the files whose lists the owning theme
+# package converts (`<path>   # owner and reason`, like check-ui.allow-colours); an entry without a reason is ignored.
+rule_bullet_notice() {
+  local f allowed=()
+  if [ -f "$ALLOW_BULLETS" ]; then
+    mapfile -t allowed < <(awk '{ h = index($0, "#"); if (!h) next; p = substr($0, 1, h - 1); r = substr($0, h + 1)
+      gsub(/^[ \t]+|[ \t]+$/, "", p); gsub(/^[ \t]+|[ \t]+$/, "", r); if (p != "" && r != "") print p }' "$ALLOW_BULLETS")
+  fi
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    local a skip=0
+    for a in "${allowed[@]}"; do [ "$f" = "$a" ] && skip=1; done
+    [ "$skip" = 1 ] && continue
+    grep -Eq '<(ul|li)([ \t>]|$)' "$f" || continue
+    grep -Eq '<Tile([ \t>]|$)|<[A-Za-z]*Notice([ \t>/]|$)|useToast\(|<Toast([ \t>]|$)|<(Confirm)?Dialog([ \t>]|$)' "$f" || continue
+    line="$(grep -nE '<(ul|li)([ \t>]|$)' "$f" | head -1 | cut -d: -f1)"
+    viol bullet-notice "$f" "$line" "a hand-written list in a Tile, Notice, Toast or Dialog file; use DetailList for items with a key, a state and detail (DS-12 R-E)"
+  done < <(src_files tsx | grep -v "^$SRC/ui/DetailList\.tsx$")
+}
+rule_button_variant
+rule_close_button
+rule_sheet_cancel
+rule_bullet_notice
 
 # File-level colour allowlist (WP3b): drop colour-literals violations in files named by an entry that has a reason.
 if [ -f "$ALLOW_COLOURS" ]; then
