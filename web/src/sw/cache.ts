@@ -3,7 +3,7 @@
 // SPA. No DOM or worker globals here, so it is unit-tested.
 
 export type RequestClass =
-  /** a page load: answer from the precached index.html when the network fails */
+  /** a page load: network first, the cached shell when the network fails */
   | 'navigation'
   /** the SSE stream: never touched by the worker */
   | 'events'
@@ -37,8 +37,18 @@ export function classifyRequest(req: RequestInfo, origin: string): RequestClass 
  * build's assets do not pile up. `manifestUrls` are as the manifest writes them (relative to `scope`).
  */
 export function staleCacheUrls(cachedUrls: readonly string[], manifestUrls: readonly string[], scope: string): string[] {
-  const wanted = new Set(manifestUrls.map((u) => new URL(u, scope).href))
+  const wanted = new Set(manifestUrls.map((u) => precacheHref(u, scope)))
   return cachedUrls.filter((u) => !wanted.has(u))
+}
+
+/** True for the manifest's own entry for the shell (`index.html`, `/index.html`, `./index.html`), not one in a sub-folder. */
+function isShellEntry(manifestUrl: string): boolean {
+  return manifestUrl.replace(/^\.?\/+/, '') === 'index.html'
+}
+
+/** The URL a manifest entry is cached under: the shell under the scope URL (RES-01), anything else resolved against the scope. */
+function precacheHref(manifestUrl: string, scope: string): string {
+  return isShellEntry(manifestUrl) ? shellUrl(scope) : new URL(manifestUrl, scope).href
 }
 
 /**
@@ -49,10 +59,25 @@ export function uniquePrecacheUrls(manifestUrls: readonly string[], scope: strin
   const seen = new Set<string>()
   const urls: string[] = []
   for (const u of manifestUrls) {
-    const href = new URL(u, scope).href
+    const href = precacheHref(u, scope)
     if (seen.has(href)) continue
     seen.add(href)
     urls.push(href)
   }
   return urls
+}
+
+/** The shell cache. The name is the FORMAT of what is stored (v2: the redirected index.html of v1 is dropped), not the build. */
+export const SHELL_CACHE = 'feeder-shell-v2'
+/** A navigation the network has not answered after this long (lie-fi) is answered from the cached shell. */
+export const NAVIGATION_TIMEOUT_MS = 4000
+
+/** The shell's cache key: the scope URL itself (`https://host/`), never `index.html`. */
+export function shellUrl(scope: string): string {
+  return new URL('./', scope).href
+}
+
+/** True when a cached shell may answer a navigation: a 200 that is not a redirected response. */
+export function isUsableShell(response: Pick<Response, 'ok' | 'status' | 'redirected'> | undefined | null): boolean {
+  return !!response && response.ok && response.status === 200 && !response.redirected
 }

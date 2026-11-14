@@ -8,16 +8,23 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AppRoot } from './app/AppRoot'
+import { AppUpdate } from './app/AppUpdate'
 import { buildRoutes, collectFeatures, discoverFeatures } from './app/features'
 import { AppProviders } from './app/providers'
 import { RouteErrorBoundary } from './app/PageErrorBoundary'
+import { registerServiceWorker } from './app/serviceWorker'
 
 const modules = discoverFeatures()
 const { navItems, statusHooks } = collectFeatures(modules)
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <AppRoot navItems={navItems} statusHooks={statusHooks} />,
+    element: (
+      <>
+        <AppRoot navItems={navItems} statusHooks={statusHooks} />
+        <AppUpdate statusHooks={statusHooks} />
+      </>
+    ),
     errorElement: <RouteErrorBoundary />,
     children: buildRoutes(modules),
   },
@@ -30,6 +37,8 @@ const router = createBrowserRouter([
       ]
     : []),
 ])
+
+registerServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

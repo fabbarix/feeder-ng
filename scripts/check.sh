@@ -88,6 +88,7 @@ if wants web; then
   step "typecheck" pnpm -C web typecheck
   step "vitest" pnpm -C web test
   step "vite build" pnpm -C web build
+  step "bundle budget" bash scripts/check-bundle-budget.sh
 fi
 # Page-layout guard (R2-L): a route x viewport that is not inspected, or a refused run (a concurrent one), fails the run in every mode.
 # Rule findings are WARN until a route is flipped in scripts/check-page-layout.modes. Missing Chrome or a missing frontend (the 503 'frontend not built' page) is a WARN here; a failed vite build already failed at the vite step above.
