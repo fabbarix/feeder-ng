@@ -147,7 +147,7 @@ func (s *Service) CourseView(ctx context.Context, date string, mealSlotID, cours
 func (s *Service) courseSteps(ctx context.Context, m MealInfo) (cook.RecipeSteps, error) {
 	sr, ok := s.cfg.Recipes.(SlotRecipes)
 	if !ok || m.Batches <= 0 {
-		return s.mealSteps(ctx, m.RecipeID, m.Batches)
+		return s.mealSteps(ctx, m.RecipeID, m.Batches, m.Date)
 	}
 	metas, err := s.cfg.Meals.Slot(ctx, m.Date, m.MealSlotID)
 	if err != nil {
@@ -157,16 +157,16 @@ func (s *Service) courseSteps(ctx context.Context, m MealInfo) (cook.RecipeSteps
 	found := false
 	for _, x := range metas {
 		if x.CourseID == m.CourseID {
-			meals = append(meals, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches})
+			meals = append(meals, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches, Date: m.Date})
 			found = true
 			break
 		}
 		if x.State == "planned" && x.Batches > 0 {
-			meals = append(meals, SlotMeal{RecipeID: x.RecipeID, Batches: x.Batches})
+			meals = append(meals, SlotMeal{RecipeID: x.RecipeID, Batches: x.Batches, Date: x.Date})
 		}
 	}
 	if !found {
-		meals = append(meals, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches})
+		meals = append(meals, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches, Date: m.Date})
 	}
 	answers, err := sr.SlotSteps(ctx, meals)
 	if err != nil {
@@ -178,11 +178,11 @@ func (s *Service) courseSteps(ctx context.Context, m MealInfo) (cook.RecipeSteps
 	return answers[len(answers)-1], nil
 }
 
-// mealSteps is the Steps of a Planned Meal's Recipe: with the meal's Batches and the Stock on hand when the Recipes port gives
-// them (MealRecipes), else the Recipe's Steps. A Leftover-served meal (no Batches) cooks nothing, so it gets the Steps.
-func (s *Service) mealSteps(ctx context.Context, recipeID int64, batches float64) (cook.RecipeSteps, error) {
+// mealSteps is the Steps of a Planned Meal's Recipe: with the meal's Batches, date and the Stock on hand when the Recipes port
+// gives them (MealRecipes), else the Recipe's Steps. A Leftover-served meal (no Batches) cooks nothing, so it gets the Steps.
+func (s *Service) mealSteps(ctx context.Context, recipeID int64, batches float64, date string) (cook.RecipeSteps, error) {
 	if mr, ok := s.cfg.Recipes.(MealRecipes); ok && batches > 0 {
-		return mr.MealSteps(ctx, recipeID, batches)
+		return mr.MealSteps(ctx, recipeID, batches, date)
 	}
 	return s.cfg.Recipes.Steps(ctx, recipeID)
 }

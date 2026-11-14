@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
-	"maps"
 	"time"
 
 	accessstore "github.com/fabbarix/feeder-ng/internal/access/store"
@@ -84,7 +83,7 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 	if err != nil {
 		return notify.Facts{}, err
 	}
-	have := stockOnHand(lots)                // what Cook Mode sees: a Base recipe's jar covers its block for the meal's Batches (BR-G)
+	stockLots := lotsOf(lots)                // what Cook Mode sees: the Stock not gone off by the meal's date covers its Base recipes (BR-G, beta.8)
 	pools := map[slotKey]map[int64]float64{} // the Stock each slot's Courses share, in Course order, per date and Meal Slot
 	trees := map[int64]treeEntry{}           // each Recipe's need tree, read once per call (no cache across calls)
 	for _, m := range meals {
@@ -123,7 +122,12 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 			key := slotKey{date: m.Key.Date, slot: m.Key.MealSlotID}
 			pool, ok := pools[key]
 			if !ok {
-				pool = maps.Clone(have)
+				// Judged on the meal's date, or today for an earlier meal (the Shopping List's and Cook Mode's clamp).
+				judged := stock.Date(m.Key.Date)
+				if stock.Date(today) > judged {
+					judged = stock.Date(today)
+				}
+				pool = stock.UsableOn(stockLots, judged)
 				pools[key] = pool
 			}
 			composed, err := s.composeMeal(ctx, m, rec, pool, trees)
@@ -291,13 +295,13 @@ func ownSteps(recipeID int64, rec recipe.Recipe, cause error, warn bool) []baser
 	return out
 }
 
-// stockOnHand is the quantity of Stock held per Ingredient.
-func stockOnHand(lots []stockstore.StoredLot) map[int64]float64 {
-	have := make(map[int64]float64, len(lots))
+// lotsOf is the Stock Lots as the stock rules read them.
+func lotsOf(lots []stockstore.StoredLot) []stock.Lot {
+	out := make([]stock.Lot, 0, len(lots))
 	for _, l := range lots {
-		have[l.IngredientID] += l.Quantity
+		out = append(out, l.Lot)
 	}
-	return have
+	return out
 }
 
 // scheduleSteps is a composed Recipe's Steps as the scheduling input (cook.Timeline), Advance Steps included. A covered
