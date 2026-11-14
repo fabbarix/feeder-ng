@@ -58,22 +58,22 @@ describe('rowMeta: one line, tone-able', () => {
 
 describe('rowValue: the quantity column', () => {
   it('the quantity is the value and the estimated cost the sub-value', () => {
-    expect(rowValue(plain)).toEqual({ value: '1400 g', subValue: '$3.18' })
+    expect(rowValue(plain)).toEqual({ value: '1.4 kg', subValue: '$3.18' })
   })
   it('no Price: no sub-value, never a dash', () => {
     const e = lineEntry(makeLine({ estimatedCostCents: null }), 'USD', 'metric')
-    expect(rowValue(e)).toEqual({ value: '1400 g' })
+    expect(rowValue(e)).toEqual({ value: '1.4 kg' })
   })
   it('a free-text extra has no value at all', () => {
     expect(rowValue(extraEntry(makeExtra(), 'metric'))).toEqual({})
   })
   it('round 2: a ticked Line keeps its quantity (what was needed) and its cost when it has one; the row mutes them', () => {
-    expect(rowValue(lineEntry(makeLine({ ticked: true, quantity: 0, estimatedCostCents: 318 }), 'USD', 'metric'))).toEqual({ value: '1400 g', subValue: '$3.18' })
-    expect(rowValue(lineEntry(makeLine({ ticked: true, quantity: 0, estimatedCostCents: null }), 'USD', 'metric'))).toEqual({ value: '1400 g' })
+    expect(rowValue(lineEntry(makeLine({ ticked: true, quantity: 0, estimatedCostCents: 318 }), 'USD', 'metric'))).toEqual({ value: '1.4 kg', subValue: '$3.18' })
+    expect(rowValue(lineEntry(makeLine({ ticked: true, quantity: 0, estimatedCostCents: null }), 'USD', 'metric'))).toEqual({ value: '1.4 kg' })
   })
   it('round 2: a ticked Ingredient extra keeps its quantity too', () => {
     const e = extraEntry(makeExtra({ text: null, ingredientId: 5, name: 'milk', baseUnit: 'ml', quantity: 1000, ticked: true }), 'metric')
-    expect(rowValue(e)).toEqual({ value: '1000 ml' })
+    expect(rowValue(e)).toEqual({ value: '1 l' })
   })
 })
 

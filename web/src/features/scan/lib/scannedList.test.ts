@@ -253,7 +253,7 @@ describe('rowMeta: the second line of a row, its size and the Line it covers (ex
   })
   it('a covered Line is done; its quantity comes from the scan that left some of it', () => {
     const entries = [applied('a', passata, {}, { onList: true, remaining: 700 }), applied('b', passata, {}, { onList: true, ticked: true, remaining: 0 })]
-    expect(rowMeta(row(entries), 'metric').cover).toEqual({ text: '1400 of 1400 g', done: true })
+    expect(rowMeta(row(entries), 'metric').cover).toEqual({ text: '1.4 of 1.4 kg', done: true })
   })
   it('a Line the first scan covered takes its quantity from the Shopping List: a ticked Line keeps what it asked for', () => {
     const op = scanOp('a', cheese, { quantity: 312, weighed: true })
@@ -268,7 +268,7 @@ describe('rowMeta: the second line of a row, its size and the Line it covers (ex
     const other = { ...passata, id: 8, name: 'Cirio passata 500 g', packSize: 500 }
     const entries = [applied('a', other, {}, { onList: true, remaining: 1000 }), applied('b', passata, {}, { onList: true, remaining: 300 })]
     const rows = buildScannedRows(entries, [...products, other])
-    expect(rows.map((r) => rowMeta(r, 'metric').cover?.text)).toEqual(['1200 of 1500 g', '1200 of 1500 g'])
+    expect(rows.map((r) => rowMeta(r, 'metric').cover?.text)).toEqual(['1.2 of 1.5 kg', '1.2 of 1.5 kg'])
   })
   it('a Supply counted in pieces is bare: "9 of 9"', () => {
     expect(rowMeta(row([applied('a', toiletPaper, {}, { onList: true, ticked: true, remaining: 0 })], makeList({ lines: [makeLine({ ingredientId: 12, baseUnit: 'piece', ticked: true, need: 9, quantity: 0 })] })), 'metric')).toEqual({

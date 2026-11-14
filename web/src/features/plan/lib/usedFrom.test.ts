@@ -145,7 +145,7 @@ describe('usedFromLines: Not sorted (a Lot in no Storage Place)', () => {
   const loose: UsedFromNeed = { ...rice, lots: [lot(9, 1000, '', null)] }
   it('reads "Not sorted" in the label and the amount label, never an empty place', () => {
     const [line] = usedFromLines([loose], { 12: { 9: 200 } }, 'metric', TODAY)
-    expect(line!.lots[0]!.label).toBe('1000 g · Not sorted')
+    expect(line!.lots[0]!.label).toBe('1 kg · Not sorted')
     expect(line!.lots[0]!.amountLabel).toBe('Amount used from Not sorted')
   })
 })

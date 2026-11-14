@@ -36,7 +36,7 @@ describe('stockLevel', () => {
   it('gives a g or ml level its unit', () => {
     expect(stockLevel(250, 500, 'ml', 'metric')).toEqual({ text: '250 ml · below Restock level 500 ml', below: true })
     expect(stockLevel(800, 500, 'ml', 'metric')).toEqual({ text: '800 ml · restocks below 500 ml', below: false })
-    expect(stockLevel(1000, 2000, 'g', 'metric')).toEqual({ text: '1000 g · below Restock level 2000 g', below: true })
+    expect(stockLevel(1000, 2000, 'g', 'metric')).toEqual({ text: '1 kg · below Restock level 2 kg', below: true })
   })
   it('shows g and ml in the household display system', () => {
     const stock = formatQuantity(1000, 'g', 'imperial')

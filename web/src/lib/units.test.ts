@@ -4,13 +4,13 @@ import { baseUnitLabel, formatConversion, formatLineQuantity, formatQuantity } f
 describe('formatQuantity metric', () => {
   it.each([
     [250, 'g', '250 g'],
-    [1400, 'g', '1400 g'],
+    [1400, 'g', '1.4 kg'],
     [0, 'g', '0 g'],
     [0.5, 'g', '0.5 g'],
     [12.345, 'g', '12.3 g'],
     [12.0, 'g', '12 g'],
     [250, 'ml', '250 ml'],
-    [1500, 'ml', '1500 ml'],
+    [1500, 'ml', '1.5 l'],
     [1, 'piece', '1 piece'],
     [3, 'piece', '3 pieces'],
     [0, 'piece', '0 pieces'],
@@ -165,5 +165,113 @@ describe('baseUnitLabel with a count', () => {
     expect(baseUnitLabel('g', 'metric', 2)).toBe('g')
     expect(baseUnitLabel('ml', 'imperial', 2)).toBe('fl oz')
     expect(baseUnitLabel('piece', 'metric')).toBe('piece')
+  })
+})
+
+// B9-22 / SSP-16 (decision SSP 7-A): metric display promotes to kg and l from 1000 g / 1000 ml. The Base Unit stays the
+// stored and entered unit; only the text changes. Numbers are grouped with "," and use "." for decimals (no locale input).
+describe('SSP-16 big quantities: formatQuantity metric promotes to kg and l', () => {
+  it.each([
+    [999, 'g', '999 g'],
+    [999.9, 'g', '999.9 g'],
+    [999.94, 'g', '999.9 g'], // rounds to 1 decimal below 1000: still grams
+    [999.96, 'g', '1 kg'], // would round to "1000 g": promoted instead, never "1000 g"
+    [1000, 'g', '1 kg'],
+    [1001, 'g', '1 kg'], // at most 2 decimals
+    [1006, 'g', '1.01 kg'],
+    [1250, 'g', '1.25 kg'],
+    [1500, 'g', '1.5 kg'],
+    [12000, 'g', '12 kg'],
+    [12500, 'g', '12.5 kg'],
+    [100000, 'g', '100 kg'],
+    [1250000, 'g', '1,250 kg'], // digits grouped
+    [999, 'ml', '999 ml'],
+    [999.96, 'ml', '1 l'],
+    [1000, 'ml', '1 l'],
+    [1250, 'ml', '1.25 l'],
+    [1500, 'ml', '1.5 l'],
+    [12000, 'ml', '12 l'],
+    [1250000, 'ml', '1,250 l'],
+  ] as const)('%s %s -> %s', (amount, base, text) => {
+    expect(formatQuantity(amount, base, 'metric')).toBe(text)
+  })
+
+  it('below 1000 nothing changes: still g and ml, 1 decimal, trailing .0 dropped', () => {
+    expect(formatQuantity(250, 'g', 'metric')).toBe('250 g')
+    expect(formatQuantity(12.345, 'g', 'metric')).toBe('12.3 g')
+    expect(formatQuantity(0, 'g', 'metric')).toBe('0 g')
+    expect(formatQuantity(0, 'ml', 'metric')).toBe('0 ml')
+  })
+
+  it('a negative amount is the positive amount with a leading "-", promoted by its absolute value', () => {
+    expect(formatQuantity(-999, 'g', 'metric')).toBe('-999 g')
+    expect(formatQuantity(-1000, 'g', 'metric')).toBe('-1 kg')
+    expect(formatQuantity(-1500, 'ml', 'metric')).toBe('-1.5 l')
+  })
+
+  it('uses a plain space and a "." decimal, with no trailing zeros', () => {
+    expect(formatQuantity(1200, 'g', 'metric')).toBe('1.2 kg')
+    expect(formatQuantity(2000, 'ml', 'metric')).toBe('2 l')
+    expect(formatQuantity(1500, 'g', 'metric')).not.toMatch(/\.0|\u00a0|\u202f/)
+  })
+
+  it('pieces are only grouped (no larger unit), 1 decimal at most', () => {
+    expect(formatQuantity(999, 'piece', 'metric')).toBe('999 pieces')
+    expect(formatQuantity(1000, 'piece', 'metric')).toBe('1,000 pieces')
+    expect(formatQuantity(1250, 'piece', 'metric')).toBe('1,250 pieces')
+    expect(formatQuantity(504, 'piece', 'metric')).toBe('504 pieces')
+    expect(formatQuantity(1250.5, 'piece', 'metric')).toBe('1,250.5 pieces')
+    expect(formatQuantity(1000000, 'piece', 'metric')).toBe('1,000,000 pieces')
+    expect(formatQuantity(-1250, 'piece', 'metric')).toBe('-1,250 pieces')
+    expect(formatQuantity(1250, 'piece', 'imperial')).toBe('1,250 pieces')
+  })
+
+  it('imperial is unchanged: no kg or l, the lb and cup rules stand', () => {
+    expect(formatQuantity(1000, 'g', 'imperial')).toBe('2 lb 3 oz')
+    expect(formatQuantity(12000, 'g', 'imperial')).toBe('26 lb 7 oz')
+    expect(formatQuantity(1500, 'ml', 'imperial')).toBe('6.25 cups')
+  })
+
+  it('formatting never changes the stored amount: the Base Unit number is read, not rewritten', () => {
+    const stored = { quantity: 12000, base: 'g' as const }
+    expect(formatQuantity(stored.quantity, stored.base, 'metric')).toBe('12 kg')
+    expect(stored).toEqual({ quantity: 12000, base: 'g' })
+  })
+})
+
+describe('SSP-16 baseUnitLabel stays the Base Unit (inputs and NumberField suffixes stay g, ml)', () => {
+  it('has no kg or l label', () => {
+    expect(baseUnitLabel('g', 'metric')).toBe('g')
+    expect(baseUnitLabel('ml', 'metric')).toBe('ml')
+  })
+})
+
+describe('SSP-16 formatConversion in metric promotes the base side too', () => {
+  it.each([
+    ['sack', 1500, 'g', '1 sack = 1.5 kg'],
+    ['bottle', 1000, 'ml', '1 bottle = 1 l'],
+    ['box', 1250, 'piece', '1 box = 1,250 pieces'],
+    ['clove', 5, 'g', '1 clove = 5 g'],
+  ] as const)('%s %s %s -> %s', (unit, toBase, base, text) => {
+    expect(formatConversion(unit, toBase, base, 'metric')).toBe(text)
+  })
+  it('imperial stays oz and fl oz', () => {
+    expect(formatConversion('sack', 1500, 'g', 'imperial')).toBe('1 sack = 52.9 oz')
+  })
+})
+
+describe('SSP-16 formatLineQuantity: g and ml lines read through formatQuantity, other units as written', () => {
+  it.each([
+    [1500, 'g', 'metric', '1.5 kg'],
+    [1000, 'ml', 'metric', '1 l'],
+    [1200, 'ml', 'metric', '1.2 l'],
+    [999, 'g', 'metric', '999 g'],
+    [1.5, 'kg', 'metric', '1.5 kg'], // as written
+    [2, 'l', 'metric', '2 l'],
+    [5, 'dl', 'metric', '5 dl'],
+    [1500, 'tbsp', 'metric', '1500 tbsp'], // not a mass or volume unit of ours: as written, ungrouped
+    [1500, 'g', 'imperial', '3 lb 5 oz'],
+  ] as const)('%s %s (%s) -> %s', (q, unit, system, text) => {
+    expect(formatLineQuantity(q, unit, system)).toBe(text)
   })
 })

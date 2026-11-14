@@ -4,7 +4,7 @@ import { priceText, extraEntry, lineEntry, listEntries, packText } from './lines
 
 describe('packText', () => {
   it('shows the quantity and the suggested packs, as in the spec', () => {
-    expect(packText(makeLine(), 'metric')).toBe('1400 g · 2 × Mutti 700 g')
+    expect(packText(makeLine(), 'metric')).toBe('1.4 kg · 2 × Mutti 700 g')
   })
 
   it('shows just the exact amount when no Product was bought yet', () => {
@@ -37,8 +37,8 @@ describe('lineEntry / extraEntry', () => {
       ingredientId: 2,
       extraId: null,
       title: 'Passata',
-      detail: '1400 g · 2 × Mutti 700 g',
-      quantityText: '1400 g',
+      detail: '1.4 kg · 2 × Mutti 700 g',
+      quantityText: '1.4 kg',
       packLine: '2 × Mutti 700 g',
       estimatedCost: '$3.18',
       ticked: false,
@@ -52,8 +52,8 @@ describe('lineEntry / extraEntry', () => {
 
   it('an unpriced open Line has no cost (null, not a dash), a ticked Line shows no pack and keeps its quantity (round 2)', () => {
     expect(lineEntry(makeLine({ estimatedCostCents: null }), 'USD', 'metric').estimatedCost).toBeNull()
-    expect(lineEntry(makeLine({ pack: null }), 'USD', 'metric')).toMatchObject({ quantityText: '1400 g', packLine: '' })
-    expect(lineEntry(makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), 'USD', 'metric')).toMatchObject({ estimatedCost: null, ticked: true, quantity: 0, quantityText: '1400 g', packLine: '' })
+    expect(lineEntry(makeLine({ pack: null }), 'USD', 'metric')).toMatchObject({ quantityText: '1.4 kg', packLine: '' })
+    expect(lineEntry(makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), 'USD', 'metric')).toMatchObject({ estimatedCost: null, ticked: true, quantity: 0, quantityText: '1.4 kg', packLine: '' })
   })
 
   it('a free-text extra has no amount and an Ingredient extra shows what remains', () => {
@@ -61,8 +61,8 @@ describe('lineEntry / extraEntry', () => {
     expect(extraEntry(makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 }), 'metric')).toMatchObject({
       key: 'extra:2',
       title: 'Milk',
-      detail: '2000 ml',
-      quantityText: '2000 ml',
+      detail: '2 l',
+      quantityText: '2 l',
       packLine: '',
       quantity: 2000,
       ingredientId: 3,
