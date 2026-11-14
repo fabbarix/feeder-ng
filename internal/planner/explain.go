@@ -1,6 +1,9 @@
 package planner
 
-import "sort"
+import (
+	"sort"
+	"time"
+)
 
 // explainExclusions says which Exclusions removed which of the cell's Recipes (docs/dev/design/crs-brx.md).
 // removed holds the ids evaluate's Exclusion count counted at cell i. It returns the records (at most
@@ -73,3 +76,13 @@ func (st *state) explainExclusions(i int, removed []RecipeID) ([]ExclusionRecord
 	}
 	return out, more
 }
+
+// EarlyStart is a Pinned Planned Meal whose cooking would have to start before the Household's Earliest start
+// (PC-14). A Pinned meal is never refused or replaced: the Plan only flags it.
+type EarlyStart struct {
+	Key     SlotKey
+	StartAt time.Time // slot time minus the Recipe's TotalMinutes
+}
+
+// EarlyStarts lists the Pinned fresh meals of in.Slots that start before in.EarliestStart, in slot order.
+func EarlyStarts(in Input) []EarlyStart { return nil }

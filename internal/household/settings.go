@@ -36,6 +36,10 @@ type Settings struct {
 	PlannerStyle    float64 // 0 = Use what we have, 0.5 = Variety, 1 = Favourites
 	Location        *Location
 	Currency        string
+	// EarliestStart is the earliest "HH:MM" the planner may ask someone to start cooking; "" is Off (PC-14, B9-12).
+	EarliestStart string
+	// SetupHidden hides the first-run checklist on Today until it is shown again (TB-06, B9-12).
+	SetupHidden bool
 }
 
 // DefaultSettings are the settings a new Household starts with, in the given zone.
