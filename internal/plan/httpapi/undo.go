@@ -2,14 +2,17 @@ package httpapi
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
+	"github.com/fabbarix/feeder-ng/internal/plan/store"
 )
 
 // B9-11 (PC-01, SAFE-03, SAFE-07): what a replanning write changed and its undo token, POST /api/plan/restore, and the
@@ -181,4 +184,60 @@ func resolutionFor(res *runner.Resolution) *resolutionOut {
 		out.MarkedAt = res.MarkedAt.UTC().Format(time.RFC3339)
 	}
 	return out
+}
+
+// Replanning writes another module owns (Who's eating, a Meal Slot's date, Away: B9-24, B9-26), through the Runner this
+// module mounts. The recipe for a handler of another module:
+//
+//	p := planhttp.ReplannerFor(d.DB) // at request time: every module is mounted by then
+//	out, err := p.Apply(r, plan.ReasonAttendanceChanged, func(ctx context.Context, tx *sql.Tx, st *store.Store) error {
+//		return hstore.SetAttendanceTx(ctx, tx, ...) // the module's own change, inside the write's transaction
+//	})
+//	if err != nil { ... } // the mutation's error, as it returned it; nothing was written
+//	httpx.WriteJSON(w, http.StatusOK, struct {
+//		household.Thing
+//		planhttp.Replan // "changes" (never null) and "undoToken"
+//	}{thing, out})
+//
+// The handler does not also publish an event that invalidates the plan: Apply replans at once and publishes the plan
+// event (with "by" and "changes") after the commit. State outside the plan rows that the Undo puts back too (Away's
+// days, the slot date, Who's eating) is registered once, at mount, with ReplannerFor(d.DB).RegisterUndo under a name that
+// stays the same across releases; Restore (POST /api/plan/restore) then puts it back with the plan rows.
+
+// Replan is what a replanning write adds to its answer: "changes" (the cells it changed beyond its target, never null)
+// and "undoToken" (left out when it issued none). Embed it in the answer's struct.
+type Replan = replanOut
+
+var replanners sync.Map // *sql.DB -> *Replanner
+
+// Replanner runs another module's write and the replan it causes in one transaction of the planning Runner.
+type Replanner struct {
+	run   *runner.Runner
+	names *names
+}
+
+// ReplannerFor returns the Replanner of the app that uses db; nil when the planning module is not mounted on it.
+func ReplannerFor(db *sql.DB) *Replanner {
+	v, _ := replanners.Load(db)
+	p, _ := v.(*Replanner)
+	return p
+}
+
+// RegisterUndo adds a participant whose state an undo token captures before each undoable write and Restore puts back.
+func (p *Replanner) RegisterUndo(name string, part runner.UndoParticipant) {
+	p.run.RegisterUndo(name, part)
+}
+
+// Apply runs mutate and one replan in ONE transaction as the request's User (runner.Apply), and returns what the answer
+// carries: the cells the replan changed and the undo token.
+func (p *Replanner) Apply(r *http.Request, reason plan.Reason, mutate func(ctx context.Context, tx *sql.Tx, st *store.Store) error) (Replan, error) {
+	ctx, o := runner.WithOutcome(actorCtx(r))
+	if _, err := p.run.Apply(ctx, reason, mutate); err != nil {
+		return Replan{}, err
+	}
+	t, err := p.names.load(r.Context())
+	if err != nil {
+		return Replan{}, err
+	}
+	return replanFor(o, t), nil
 }
