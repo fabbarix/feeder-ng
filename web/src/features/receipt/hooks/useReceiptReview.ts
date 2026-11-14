@@ -100,8 +100,9 @@ export function useReceiptReview({ onApplied }: UseReceiptReviewOptions): UseRec
     }
     // A failed put-back still re-keys the Scanned list: its results go over, and the read is stale now.
     if (out.code === 'receipt_apply_failed') emitReceiptApplied({ readId: stored.readId, applied: 0, failed: true, results: out.results })
-    // The read is kept 10 minutes by the server, and this one is past it (410): the row goes back to the plain one too.
-    if (out.status === 410) {
+    // The read is stale and the row goes back to the plain one: the put-back re-keyed the Scanned list (its uuids are not the
+    // read's any more), or the server kept it its 10 minutes and this one is past them (410).
+    if (out.code === 'receipt_apply_failed' || out.status === 410) {
       forgetRead()
       dismissBackgroundRead()
     }

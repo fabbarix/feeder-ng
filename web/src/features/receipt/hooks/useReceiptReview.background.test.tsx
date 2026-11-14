@@ -69,6 +69,15 @@ describe('the review and the row', () => {
     expect(recallRead()).toBeUndefined()
   })
 
+  it('a failed apply that was put back (receipt_apply_failed) re-keyed the Scanned list: the read and the row are forgotten (reviewer)', async () => {
+    api.apply.mockResolvedValue({ ...refused(500, 'receipt_apply_failed'), results: [scanResult('u1')] })
+    const { result } = renderHook(() => useReceiptReview({ onApplied: vi.fn() }))
+    await act(async () => { await result.current.apply() })
+    expect(result.current.error).toMatchObject({ code: 'receipt_apply_failed' })
+    expect(getBackgroundRead()).toBeUndefined()
+    expect(recallRead()).toBeUndefined()
+  })
+
   it('any other refusal (the Scanned list changed, 409) keeps the read and the ready row', async () => {
     api.apply.mockResolvedValue(refused(409, 'receipt_session_changed'))
     const { result } = renderHook(() => useReceiptReview({ onApplied: vi.fn() }))

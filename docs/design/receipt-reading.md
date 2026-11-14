@@ -100,7 +100,8 @@ Full-screen route `/scan/receipt` (the Scan session stays mounted behind it; the
   so: "Receipt read: review 9 changes" with **Review** (opens the Receipt review), or the failure's words with **Read it again**
   (error toast, stays until dismissed). On the Scan screen and the receipt routes the User sees it already, so there is no toast.
 - **A stale read.** The row goes back to the plain **Read the receipt** when the 10 minutes have passed, when the review applies
-  the read, when **Read it again** forgets it, and when an apply answers `410 receipt_read_gone` (the review says so; the read is
+  the read, when **Read it again** forgets it, when an apply fails and is put back (`receipt_apply_failed`: the Scanned list was
+  re-keyed, so the read no longer matches it), and when an apply answers `410 receipt_read_gone` (the review says so; the read is
   forgotten). A 404 while asking is the same "gone" (the server restarted): a failure with `receipt_read_gone`, or nothing at all
   when it is found out after a reload. `409 receipt_read_not_done` cannot happen from the row (it opens the review only when ready).
 - The phone polls `GET …/reads/{id}` every 1.5 s, as the Recipe Assistant's read does.

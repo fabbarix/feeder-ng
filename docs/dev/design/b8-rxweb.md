@@ -70,6 +70,7 @@ Only when the path is not `/scan` and not under `/scan/receipt`:
 | apply succeeds | `dismissBackgroundRead()` |
 | Read it again (review) | `dismissBackgroundRead()` |
 | apply 410 `receipt_read_gone` | read forgotten, row plain, review says "This read is no longer kept (10 minutes)." |
+| apply 500 `receipt_apply_failed` (put back, the Scanned list re-keyed) | read forgotten, row plain (reviewer: the old read's uuids are gone) |
 | apply 409 `receipt_session_changed` | read and row stay (as today: the review offers Read it again) |
 | poll 404 | `failed{receipt_read_gone}`; after a reload, dropped silently |
 
