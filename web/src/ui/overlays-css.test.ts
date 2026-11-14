@@ -34,7 +34,7 @@ describe('BottomSheet.css', () => {
   it('caps the height at 85dvh, scrolls the body, and becomes a centred dialog from 768px', () => {
     expect(bottomSheet).toMatch(/max-height:\s*85dvh/)
     expect(bottomSheet).toMatch(/overflow-y:\s*auto/)
-    expect(bottomSheet).toMatch(/@media\s*\(min-width:\s*768px\)/)
+    expect(bottomSheet).toMatch(/@media\s*\(min-width:\s*48em\)/)
     expect(bottomSheet).toMatch(/::backdrop/)
   })
   it('never draws a focus ring on the container', () => {

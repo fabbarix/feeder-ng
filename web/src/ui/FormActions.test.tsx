@@ -78,15 +78,15 @@ describe('FormActions.css', () => {
   })
 
   it('from 600 px: one row, right-aligned, primary not full width, destructive pushed to the far left', () => {
-    expect(css).toMatch(/@media\s*\(min-width:\s*600px\)/)
-    const desk = css.slice(css.search(/@media\s*\(min-width:\s*600px\)/))
+    expect(css).toMatch(/@media\s*\(min-width:\s*37\.5em\)/)
+    const desk = css.slice(css.search(/@media\s*\(min-width:\s*37\.5em\)/))
     expect(desk).toMatch(/justify-content:\s*flex-end/)
     expect(desk).toMatch(/\.form-actions__destructive\s*\{[^}]*margin-inline-end:\s*auto/)
     expect(desk).not.toMatch(/inline-size:\s*100%/)
   })
 
   it('the desktop rule never sets the primary full width (F-03)', () => {
-    const desk = css.slice(css.search(/@media\s*\(min-width:\s*600px\)/))
+    const desk = css.slice(css.search(/@media\s*\(min-width:\s*37\.5em\)/))
     expect(desk).not.toMatch(/form-actions__primary[^}]*(inline-size|width):\s*100%/)
   })
 })

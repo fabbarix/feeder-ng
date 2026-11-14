@@ -51,7 +51,7 @@ html:has(.sticky-action-bar) {
 }
 
 /* From 1024 there is no bottom bar (--nav-top is 0, so it carries no safe area): the bar clears the safe area itself. */
-@media (min-width: 1024px) {
+@media (min-width: 64em) {
   .sticky-action-bar {
     bottom: calc(var(--page-gutter) + env(safe-area-inset-bottom, 0px));
   }

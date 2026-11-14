@@ -4,7 +4,7 @@
 import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
 import { BottomSheet } from '../BottomSheet'
 import { floatingPopoverAttr, useFloatingPopover } from '../lib/useFloatingPopover'
-import { useMediaQuery } from '../lib/useMediaQuery'
+import { useBreakpoint } from '../lib/breakpoints'
 import { INTERACTIVE_SELECTOR } from '../lib/useModalDialog'
 import './Popover.css'
 
@@ -23,7 +23,7 @@ export interface PopoverProps {
 }
 
 export function Popover({ open, onClose, anchorRef, title, className, id, children, footer }: PopoverProps) {
-  const phone = !useMediaQuery('(min-width: 768px)')
+  const phone = !useBreakpoint('md')
   if (phone) {
     return (
       <BottomSheet open={open} onClose={onClose} title={title} footer={footer}>

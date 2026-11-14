@@ -6,7 +6,7 @@ import { Icon } from '../Icon'
 import { IconButton, type IconButtonProps } from '../IconButton'
 import { Switch } from '../fields/Switch'
 import type { IconName } from '../icons'
-import { useMediaQuery } from '../lib/useMediaQuery'
+import { useBreakpoint } from '../lib/breakpoints'
 import { ListGroup, ListRow } from '../ListRow'
 import { useMenuKeys } from './useMenuKeys'
 import './Menu.css'
@@ -54,7 +54,7 @@ interface Placed {
 
 /** G-01: a popover anchored to its IconButton from 768 px; a BottomSheet of rows below. */
 export function Menu({ label, icon = 'more', title, size = 'md', items, trigger, initialFocusId }: MenuProps) {
-  const wide = useMediaQuery('(min-width: 768px)')
+  const wide = useBreakpoint('md')
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const close = useCallback(() => setOpen(false), [])
