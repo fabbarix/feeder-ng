@@ -278,7 +278,7 @@ func (s *Store) Impact(ctx context.Context, id int64) (tag.Impact, error) {
 	    FROM slot_rules sr
 	    JOIN meal_slots ms ON ms.id = sr.meal_slot_id
 	    JOIN courses c ON c.id = sr.course_id
-	    WHERE sr.tag = ?
+	    WHERE sr.tag = ? AND ms.removed_at IS NULL -- a removed Meal Slot's rules are kept for Undo but do not apply (ADR 0021)
 	    ORDER BY ms.weekday, ms.time, ms.id, c.position`, t.Key)
 	if err != nil {
 		return tag.Impact{}, err

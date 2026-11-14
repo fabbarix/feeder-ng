@@ -358,7 +358,14 @@ func (s *Store) remove(ctx context.Context, id, replacementID int64, kind course
 	if err != nil {
 		return course.Course{}, course.Impact{}, err
 	}
-	needed := leftWithNone(recipeOwners, id) || leftWithNone(slotOwners, id)
+	// A removed Meal Slot (ADR 0021) never makes a replacement necessary: when it is left with no Course, putting it
+	// back gives it the main Course (household/store RestoreSlot).
+	activeSlotOwners, err := owners(ctx, tx, `SELECT mc.meal_slot_id, mc.course_id FROM meal_slot_courses mc
+		JOIN meal_slots ms ON ms.id = mc.meal_slot_id WHERE ms.removed_at IS NULL ORDER BY mc.meal_slot_id, mc.position`)
+	if err != nil {
+		return course.Course{}, course.Impact{}, err
+	}
+	needed := leftWithNone(recipeOwners, id) || leftWithNone(activeSlotOwners, id)
 	activeIDs := make([]int64, 0, len(active))
 	for _, a := range active {
 		activeIDs = append(activeIDs, a.ID)
@@ -386,7 +393,7 @@ func (s *Store) remove(ctx context.Context, id, replacementID int64, kind course
 	// Meal Slots: the replacement takes the removed Course's position where the slot is left with none.
 	slotChanges := course.Reassign(slotOwners, id, replacementID)
 	for slot := range slotChanges {
-		if len(slotOwners[slot]) != 1 {
+		if len(slotOwners[slot]) != 1 || replacementID == 0 { // replacementID 0: only a removed Meal Slot is left with none
 			continue
 		}
 		var pos int
@@ -471,14 +478,15 @@ func impact(ctx context.Context, q dbtx, id int64, today string) (course.Impact,
 	}
 	if err := q.QueryRowContext(ctx, `SELECT count(*),
 			COALESCE(SUM(CASE WHEN (SELECT count(*) FROM meal_slot_courses o WHERE o.meal_slot_id = mc.meal_slot_id) = 1 THEN 1 ELSE 0 END), 0)
-		FROM meal_slot_courses mc WHERE mc.course_id = ?`, id).Scan(&im.MealSlots, &im.MealSlotsOnlyThis); err != nil {
+		FROM meal_slot_courses mc JOIN meal_slots ms ON ms.id = mc.meal_slot_id
+		WHERE mc.course_id = ? AND ms.removed_at IS NULL`, id).Scan(&im.MealSlots, &im.MealSlotsOnlyThis); err != nil {
 		return im, err
 	}
 	rows, err := q.QueryContext(ctx, `SELECT pm.id, pm.date, pm.meal_slot_id, ms.name, pm.recipe_id, r.name, pm.pinned
 		FROM planned_meals pm
 		JOIN meal_slots ms ON ms.id = pm.meal_slot_id
 		JOIN recipes r ON r.id = pm.recipe_id
-		WHERE pm.course_id = ? AND pm.state = 'planned' AND pm.date >= ?
+		WHERE pm.course_id = ? AND pm.state = 'planned' AND pm.date >= ? AND ms.removed_at IS NULL
 		ORDER BY pm.date, pm.meal_slot_id`, id, today)
 	if err != nil {
 		return im, err
@@ -513,7 +521,8 @@ func impact(ctx context.Context, q dbtx, id int64, today string) (course.Impact,
 		im.PlannedMeals[i].Bought = names
 	}
 	rows, err = q.QueryContext(ctx, `SELECT id, meal_slot_id, COALESCE(recipe_id, 0), COALESCE(tag, '')
-		FROM slot_rules WHERE course_id = ? ORDER BY id`, id)
+		FROM slot_rules WHERE course_id = ?
+			AND meal_slot_id IN (SELECT id FROM meal_slots WHERE removed_at IS NULL) ORDER BY id`, id)
 	if err != nil {
 		return im, err
 	}

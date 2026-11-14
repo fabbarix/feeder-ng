@@ -824,7 +824,7 @@ func (s *Store) toBasePlan(ctx context.Context, q Querier, id int64) (recipe.ToB
 	        FROM planned_meals pm
 	        JOIN meal_slots ms ON ms.id = pm.meal_slot_id
 	        JOIN courses c ON c.id = pm.course_id
-	        WHERE pm.recipe_id = ? AND pm.state = 'planned' AND pm.date >= ?
+	        WHERE pm.recipe_id = ? AND pm.state = 'planned' AND pm.date >= ? AND ms.removed_at IS NULL
 	        ORDER BY pm.date, pm.id`, id, today)
 	if err != nil {
 		return plan, err
@@ -845,7 +845,7 @@ func (s *Store) toBasePlan(ctx context.Context, q Querier, id int64) (recipe.ToB
 	}
 	rules, err := q.QueryContext(ctx, `SELECT sr.id, ms.name, c.name FROM slot_rules sr
 	        JOIN meal_slots ms ON ms.id = sr.meal_slot_id JOIN courses c ON c.id = sr.course_id
-	        WHERE sr.recipe_id = ? ORDER BY sr.id`, id)
+	        WHERE sr.recipe_id = ? AND ms.removed_at IS NULL ORDER BY sr.id`, id) // a removed Meal Slot's rules do not apply (ADR 0021)
 	if err != nil {
 		return plan, err
 	}
