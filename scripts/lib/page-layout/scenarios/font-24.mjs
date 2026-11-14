@@ -11,17 +11,28 @@ export const FONT_24 = {
   rules: ['P1', 'P27'],
 }
 
-const slug = (route) => (route === '/' ? 'today' : route.slice(1).replace(/:/g, '').replace(/\//g, '-'))
+/**
+ * Routes whose font-24 scenario is defined but NOT registered yet, with the package that turns it on. The guard has no per-scenario
+ * mode (a modes line matches the route, scenario part dropped), so a scenario that cannot pass yet is held here instead of making
+ * its whole route warn. Main session ruling, w0b: /settings/shops/:id still draws its tiles with the .pg__* styling (P27:
+ * h2.pg__tile-title 30 px and p.pg__muted 20.4 px at 24 px text, at 390 and 1440); B9-10 removes it and deletes this entry.
+ */
+export const FONT_24_DEFERRED = { '/settings/shops/:id': 'B9-10' }
 
-/** The registry scenarios, one per route. */
-export const FONT_24_SCENARIOS = FONT_24.routes.map((route) => ({
+const slug = (route) => (route === '/' ? 'today' : route.slice(1).replace(/:/g, '').replace(/\//g, '-'))
+const scenarioOf = (route) => ({
   name: `${FONT_24.name}-${slug(route)}`,
   route,
   start: route,
   widths: FONT_24.widths,
   emulate: [FONT_24.cdp],
   rules: FONT_24.rules,
-}))
+})
+
+/** The registry scenarios, one per route that is not deferred. */
+export const FONT_24_SCENARIOS = FONT_24.routes.filter((route) => !FONT_24_DEFERRED[route]).map(scenarioOf)
 export const FONT_24_SCENARIO_NAMES = FONT_24_SCENARIOS.map((s) => s.name)
+/** The deferred scenarios, defined in full (with their owner), so the package that turns one on only deletes its FONT_24_DEFERRED entry. */
+export const FONT_24_DEFERRED_SCENARIOS = FONT_24.routes.filter((route) => FONT_24_DEFERRED[route]).map((route) => ({ ...scenarioOf(route), owner: FONT_24_DEFERRED[route] }))
 
 export default { order: 200, scenarios: FONT_24_SCENARIOS, setups: {} }

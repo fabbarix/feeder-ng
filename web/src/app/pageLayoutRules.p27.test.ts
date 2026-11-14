@@ -143,6 +143,10 @@ describe('P27 and font-24 in the page-layout registry', () => {
     scenarios: { name: string; route: string; start: string; widths: number[]; emulate: unknown[]; rules: string[] }[]
     setups: Record<string, unknown>
   }
+  const deferred = req(resolve(cwd, '../scripts/lib/page-layout/scenarios/font-24.mjs')) as {
+    FONT_24_DEFERRED: Record<string, string>
+    FONT_24_DEFERRED_SCENARIOS: unknown[]
+  }
   const probe = (req(resolve(cwd, '../scripts/lib/page-layout/probes/p27-census.mjs')) as Mod).default as {
     key: string
     scenarios: string[]
@@ -155,9 +159,9 @@ describe('P27 and font-24 in the page-layout registry', () => {
     expect(rule.evaluate({}, ctx)).toEqual([])
     expect(rule.evaluate({ p27Census: at(24, { texts: [{ sel: 'p.x', px: 21 }] }) }, ctx).map((f) => f.rule)).toEqual(['P27'])
   })
-  it('one scenario per route, at the definition widths, with its CDP text size and rules, and no setup', () => {
+  it('one scenario per route but the deferred ones, at the definition widths, with its CDP text size and rules, and no setup', () => {
     expect(reg.setups).toEqual({})
-    expect(reg.scenarios.map((s) => s.route)).toEqual(scenario.FONT_24.routes)
+    expect(reg.scenarios.map((s) => s.route)).toEqual(scenario.FONT_24.routes.filter((r) => !deferred.FONT_24_DEFERRED[r]))
     for (const s of reg.scenarios) {
       expect(s.name.startsWith('font-24-'), s.name).toBe(true)
       expect(s.start).toBe(s.route)
@@ -165,6 +169,16 @@ describe('P27 and font-24 in the page-layout registry', () => {
       expect(s.emulate).toEqual([scenario.FONT_24.cdp])
       expect(s.rules).toEqual(scenario.FONT_24.rules)
     }
+  })
+  // Main session ruling (w0b): /settings/shops/:id fails P27 at 24 px until B9-10 removes its .pg__* styling. Its scenario stays
+  // defined but is not registered; B9-10 deletes the FONT_24_DEFERRED entry, adds the name to ADDED in pageLayoutRegistry.test.ts and
+  // changes this test to expect no deferred route.
+  it('only /settings/shops/:id is deferred, owned by B9-10, and it is defined in full but not registered', () => {
+    expect(deferred.FONT_24_DEFERRED).toEqual({ '/settings/shops/:id': 'B9-10' })
+    expect(deferred.FONT_24_DEFERRED_SCENARIOS).toEqual([
+      { name: 'font-24-settings-shops-id', route: '/settings/shops/:id', start: '/settings/shops/:id', widths: [390, 1440], emulate: [scenario.FONT_24.cdp], rules: ['P1', 'P27'], owner: 'B9-10' },
+    ])
+    expect(reg.scenarios.map((s) => s.name)).not.toContain('font-24-settings-shops-id')
   })
   it('the census probe runs only on the font-24 scenarios', () => {
     expect(probe.scenarios).toEqual(reg.scenarios.map((s) => s.name))

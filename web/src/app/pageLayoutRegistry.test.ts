@@ -96,7 +96,8 @@ const ruleNum = (id: string) => Number(id.slice(1))
  */
 const ADDED = {
   rules: ['P27', 'P29', 'P30'],
-  scenarios: ['font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id'],
+  // font-24-settings-shops-id is defined but deferred until B9-10 (scenarios/font-24.mjs FONT_24_DEFERRED); B9-10 adds it back here.
+  scenarios: ['font-24-today', 'font-24-shop', 'font-24-recipes-id'],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {
