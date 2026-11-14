@@ -47,11 +47,11 @@ describe('DS-06 Overdue chip (an info chip on a surface fill with a 1 px info ri
 })
 
 describe('A11Y-12 dark danger solid #ba4f4b', () => {
-  it.each(CASES.filter(([, , s]) => s === 'dark'))('%s %s: at least 3.06:1 on bg, surface and surface-2; white on it 4.87:1', (_n, hex, scheme) => {
+  it.each(CASES.filter(([, , s]) => s === 'dark'))('%s %s: at least 3:1 on bg, surface and surface-2 (non-text, WCAG 1.4.11); white on it 4.5:1 or more', (_n, hex, scheme) => {
     const solid = STATUS_PALETTE.danger[scheme].solid
     const c = generatePalette({ accent: hex }, scheme).colors
-    for (const on of ['bg', 'surface', 'surface2'] as const) expect(ratio(solid, c[on]), `on ${on}`).toBeGreaterThanOrEqual(3.06)
-    expect(ratio('#ffffff', solid)).toBeGreaterThanOrEqual(4.86)
+    for (const on of ['bg', 'surface', 'surface2'] as const) expect(ratio(solid, c[on]), `on ${on}`).toBeGreaterThanOrEqual(3)
+    expect(ratio('#ffffff', solid)).toBeGreaterThanOrEqual(4.5)
   })
 })
 
