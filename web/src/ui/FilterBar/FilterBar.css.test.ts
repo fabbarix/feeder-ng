@@ -31,8 +31,8 @@ describe('the rows', () => {
 const sortRule = /@container\s+filter-bar\s*\(\s*width\s*<\s*24rem\s*\)\s*\{\s*\.filter-bar__sort \.select__leading\s*\{\s*display:\s*none;?\s*\}\s*\}/
 const source = readFileSync(`${(globalThis as unknown as { process: { cwd: () => string } }).process.cwd()}/src/ui/FilterBar/FilterBar.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 describe('row 2: the Sort chip on a narrow header', () => {
-  it('the header is the inline-size container named filter-bar', () => {
-    expect(valueFor('.filter-bar', 'container', 0)).toBe('filter-bar / inline-size')
+  it('the view row (the header's full width on both headers) is the inline-size container named filter-bar', () => {
+    expect(valueFor('.filter-bar__view-row', 'container', 0)).toBe('filter-bar / inline-size')
   })
   it('under 24 rem of header the Sort chip hides its leading icon (a container query in rem)', () => {
     expect(source).toMatch(sortRule)

@@ -4,8 +4,6 @@
 /* A header that is not in a ListPage stacks its rows itself, one slot gap (the ListPage gap) apart, so row 3 sits one slot gap
    below row 2 (P20). */
 .filter-bar {
-  /* DS-09: the Sort chip's icon is a component-fit threshold, so the header is the container it is measured against. */
-  container: filter-bar / inline-size;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
@@ -33,6 +31,9 @@
 
 /* Row 2: the view control at the start, Sort at the end; Sort's value may shrink (it ends in an ellipsis). */
 .filter-bar__view-row {
+  /* DS-09: the Sort chip's icon is a component-fit threshold, so the row is the container it is measured against (the row is in a
+     .filter-bar on the Pantry and in a ListPage's filters on Recipes, and the full width of the header in both). */
+  container: filter-bar / inline-size;
   justify-content: space-between;
 }
 
