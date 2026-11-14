@@ -108,9 +108,13 @@ function imperialBaseSide(toBase: number, base: BaseUnit): string {
   })
 }
 
-/** Applies the sign of amount to the body formatted from its absolute value. */
+/**
+ * Applies the sign of amount to the body formatted from its absolute value. A negative amount that rounds to zero
+ * ("-0.01 g") has no sign: it reads "0 g", never "-0 g".
+ */
 function withSign(amount: number, body: (abs: number) => string): string {
-  return (amount < 0 ? '-' : '') + body(Math.abs(amount))
+  const text = body(Math.abs(amount))
+  return amount < 0 && /[1-9]/.test(text) ? `-${text}` : text
 }
 
 /** g/ml below 1000 (after rounding to 1 decimal), kg/l from there, at most 2 decimals. */

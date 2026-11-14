@@ -275,3 +275,16 @@ describe('SSP-16 formatLineQuantity: g and ml lines read through formatQuantity,
     expect(formatLineQuantity(q, unit, system)).toBe(text)
   })
 })
+
+describe('SSP-16 review: a negative amount that rounds to zero has no sign', () => {
+  it.each([
+    [-1e-9, 'g', 'metric', '0 g'],
+    [-0.04, 'ml', 'metric', '0 ml'],
+    [-0.04, 'piece', 'metric', '0 pieces'],
+    [-0, 'g', 'metric', '0 g'],
+    [-0.001, 'g', 'imperial', '0 oz'],
+    [-0.05, 'g', 'metric', '-0.1 g'],
+  ] as const)('%s %s (%s) -> %s', (amount, base, system, text) => {
+    expect(formatQuantity(amount, base, system)).toBe(text)
+  })
+})
