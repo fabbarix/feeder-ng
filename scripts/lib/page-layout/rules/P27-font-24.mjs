@@ -98,3 +98,16 @@ export function collectP27Metrics() {
   const h1 = document.querySelector('h1')
   return { rootPx, h1: h1 ? parseFloat(getComputedStyle(h1).fontSize) : null, texts, headings }
 }
+
+/**
+ * The registry's view of P27 (w0b integration): the census lands in the metrics key `p27Census` (probes/p27-census.mjs), which
+ * only the font-24 scenarios fill; everywhere else the key is undefined and P27 reports nothing. By mode, always fail from B9-55.
+ */
+export default {
+  id: 'P27',
+  title: 'At a 24 px text size: off-role text, or a heading larger than the page title (DS-07, DS-08)',
+  always: false,
+  evaluate(m, ctx) {
+    return m.p27Census ? evaluate(m.p27Census, ctx) : []
+  },
+}

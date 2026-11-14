@@ -89,6 +89,15 @@ const put = (dir: string, rel: string, text: string) => {
   fs.writeFileSync(resolve(dir, rel), text)
 }
 const sortJson = (list: unknown[]) => list.map((x) => JSON.stringify(x)).sort()
+const ruleNum = (id: string) => Number(id.slice(1))
+/**
+ * What the packages have added with their own files since the split (w0b integration: B9-02's P27 and font-24, B9-01's P29 and P30).
+ * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
+ */
+const ADDED = {
+  rules: ['P27', 'P29', 'P30'],
+  scenarios: ['font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id'],
+}
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {
   const cases = golden('evaluate-cases.json') as { name: string; metrics: unknown; ctx: Ctx; findings: Finding[] }[]
@@ -107,11 +116,12 @@ describe('P1..P23 report exactly what they reported before the split (golden, ma
     for (const name of g.names) expect(Object.keys(facade), `export ${name}`).toContain(name)
     const f = facade as unknown as Record<string, unknown>
     for (const k of ['PAGE_WIDTH_PX', 'ROUTES', 'RESIZE_WALK', 'RESIZE_WALKS', 'RESIZE_SWEEP']) expect(f[k], k).toEqual(g[k])
-    expect(facade.ALWAYS_FAIL).toEqual(g.ALWAYS_FAIL)
+    expect(facade.ALWAYS_FAIL.filter((id) => ruleNum(id) <= 23)).toEqual(g.ALWAYS_FAIL)
   })
   it('keeps every scenario (by name, with its definition); the order across modules is free', () => {
     const g = golden('exports.json').SCENARIOS as Scenario[]
-    expect(facade.SCENARIOS.length).toBe(g.length)
+    expect(facade.SCENARIOS.length).toBe(g.length + ADDED.scenarios.length)
+    expect(facade.SCENARIOS.filter((x) => !g.some((y) => y.name === x.name)).map((x) => x.name)).toEqual(ADDED.scenarios)
     for (const s of g) expect(facade.SCENARIOS.find((x) => x.name === s.name), s.name).toEqual(s)
   })
   it('keeps the old scenario viewports', () => {
@@ -139,8 +149,8 @@ describe('one module per rule', () => {
   const dir = lib('page-layout', 'rules')
   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.mjs')).sort() : []
   const numOf = (f: string) => Number(/^P(\d+)-.+\.mjs$/.exec(f)?.[1])
-  it('rules/ holds one Pnn-<slug>.mjs for each of P1..P23 and nothing else', () => {
-    expect(files.map(numOf).sort((a, b) => a - b)).toEqual(Array.from({ length: 23 }, (_, i) => i + 1))
+  it('rules/ holds one Pnn-<slug>.mjs for each of P1..P23, plus the ones the packages added, and nothing else', () => {
+    expect(files.map(numOf).sort((a, b) => a - b)).toEqual([...Array.from({ length: 23 }, (_, i) => i + 1), ...ADDED.rules.map(ruleNum)])
   })
   it.each(files.map((f) => [f] as const))('%s: id = file number, a title, evaluate()', (f) => {
     const m = (req(resolve(dir, f)) as { default: RuleModule }).default
@@ -153,7 +163,7 @@ describe('one module per rule', () => {
   it('RULES lists exactly those modules, and ALWAYS_FAIL is the ones marked always', () => {
     expect(registry.RULES.map((r) => r.id).sort()).toEqual(files.map((f) => `P${numOf(f)}`).sort())
     expect(registry.ALWAYS_FAIL.slice().sort()).toEqual(registry.RULES.filter((r) => r.always).map((r) => r.id).sort())
-    expect(registry.ALWAYS_FAIL.slice().sort()).toEqual((golden('exports.json').ALWAYS_FAIL as string[]).slice().sort())
+    expect(registry.ALWAYS_FAIL.filter((id) => ruleNum(id) <= 23).sort()).toEqual((golden('exports.json').ALWAYS_FAIL as string[]).slice().sort())
   })
   it('each module alone reports only its own id and, over the golden cases, exactly its share of the findings', () => {
     const cases = golden('evaluate-cases.json') as { metrics: unknown; ctx: Ctx; findings: Finding[] }[]
@@ -172,13 +182,20 @@ describe('one module per rule', () => {
 })
 
 describe('P24..P43 are reserved with their owners (plan section 9)', () => {
-  const want: [string, string, 'always' | 'mode'][] = [
+  const planned: [string, string, 'always' | 'mode'][] = [
     ['P24', 'B9-13', 'always'], ['P25', 'B9-14', 'always'], ['P26', 'B9-07', 'always'], ['P27', 'B9-02', 'mode'], ['P28', 'B9-13', 'mode'],
     ['P29', 'B9-01', 'always'], ['P30', 'B9-01', 'always'], ['P31', 'B9-19', 'always'], ['P32', 'B9-19', 'mode'], ['P33', 'B9-14', 'always'],
     ['P34', 'B9-40', 'always'], ['P35', 'B9-19', 'always'], ['P36', 'B9-16', 'mode'], ['P37', 'B9-49', 'always'], ['P38', 'B9-32', 'mode'],
     ['P39', 'B9-07', 'always'], ['P40', 'B9-13', 'mode'], ['P41', 'B9-13', 'mode'], ['P42', 'B9-44', 'mode'], ['P43', 'B9-18', 'always'],
   ]
-  it('RESERVED lists P24..P43, each with its owning package, its mode and a title', () => {
+  const want = planned.filter(([id]) => !ADDED.rules.includes(id))
+  it('a rule a package has added is active with its planned mode, and no longer reserved', () => {
+    for (const [id, , mode] of planned.filter(([x]) => ADDED.rules.includes(x))) {
+      expect(registry.RULES.map((r) => r.id), id).toContain(id)
+      expect(registry.ALWAYS_FAIL.includes(id), id).toBe(mode === 'always')
+    }
+  })
+  it('RESERVED lists P24..P43 but the added ones, each with its owning package, its mode and a title', () => {
     expect(registry.RESERVED.map((r) => [r.id, r.owner, r.mode])).toEqual(want)
     for (const r of registry.RESERVED) expect(r.title.length, r.id).toBeGreaterThan(10)
   })
@@ -246,16 +263,16 @@ describe('a package adds its own files and edits no shared one', () => {
       }
     }
   })
-  it('a dark probe and a rule with evaluateDark add a dark-scheme check (P29 of B9-01 needs one); P10 is the first', () => {
-    expect(facade.DARK_PROBES.map((p) => p.name)).toEqual(['buttons'])
+  it('a dark probe and a rule with evaluateDark add a dark-scheme check; P10 and P29 (B9-01) use it', () => {
+    expect(facade.DARK_PROBES.map((p) => p.name)).toEqual(['buttons', 'action-boundary'])
     expect(facade.evaluateDarkMetrics({ lowContrastButtons: [{ label: 'Save', ratio: 2 }] }, ctx).map((f) => f.message)).toEqual(['P10 Button "Save" contrast 2:1 (dark scheme)'])
     const s = scratchLib()
     try {
       put(s.dir, 'page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'zzDemo', dark: true, source: '[]' }\n")
-      put(s.dir, 'page-layout/rules/P29-demo.mjs', "export default { id: 'P29', title: 'demo', always: true, evaluate: () => [], evaluateDark: (dm) => (dm.zzDemo ?? []).map((x) => ({ rule: 'P29', message: `P29 ${x} (dark scheme)` })) }\n")
+      put(s.dir, 'page-layout/rules/P43-demo.mjs', "export default { id: 'P43', title: 'demo', always: true, evaluate: () => [], evaluateDark: (dm) => (dm.zzDemo ?? []).map((x) => ({ rule: 'P43', message: `P43 ${x} (dark scheme)` })) }\n")
       const api = load(s.dir)
-      expect(api.DARK_PROBES.map((p) => p.name)).toEqual(['buttons', 'zz-demo'])
-      expect(api.evaluateDarkMetrics({ zzDemo: ['weak'] }, ctx).map((f) => f.message)).toEqual(['P29 weak (dark scheme)'])
+      expect(api.DARK_PROBES.map((p) => p.name)).toEqual(['buttons', 'action-boundary', 'zz-demo'])
+      expect(api.evaluateDarkMetrics({ zzDemo: ['weak'] }, ctx).map((f) => f.message)).toEqual(['P43 weak (dark scheme)'])
     } finally {
       s.done()
     }

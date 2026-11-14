@@ -130,3 +130,44 @@ describe('the font-24 scenario (DS-08)', () => {
     expect(scenario.FONT_24?.rules).toEqual(['P1', 'P27'])
   })
 })
+
+// w0b integration: P27 and font-24 load in B9-03's registry (a default export each, and the census probe).
+describe('P27 and font-24 in the page-layout registry', () => {
+  type Mod = { default: Record<string, unknown> }
+  const rule = (req(resolve(cwd, '../scripts/lib/page-layout/rules/P27-font-24.mjs')) as Mod).default as {
+    id: string
+    always: boolean
+    evaluate: (m: Record<string, unknown>, c: typeof ctx) => { rule: string }[]
+  }
+  const reg = (req(resolve(cwd, '../scripts/lib/page-layout/scenarios/font-24.mjs')) as Mod).default as {
+    scenarios: { name: string; route: string; start: string; widths: number[]; emulate: unknown[]; rules: string[] }[]
+    setups: Record<string, unknown>
+  }
+  const probe = (req(resolve(cwd, '../scripts/lib/page-layout/probes/p27-census.mjs')) as Mod).default as {
+    key: string
+    scenarios: string[]
+    source: string
+  }
+  it('the rule is P27, by mode, and reads the census from its own metrics key', () => {
+    expect(rule.id).toBe('P27')
+    expect(rule.always).toBe(false)
+    expect(probe.key).toBe('p27Census')
+    expect(rule.evaluate({}, ctx)).toEqual([])
+    expect(rule.evaluate({ p27Census: at(24, { texts: [{ sel: 'p.x', px: 21 }] }) }, ctx).map((f) => f.rule)).toEqual(['P27'])
+  })
+  it('one scenario per route, at the definition widths, with its CDP text size and rules, and no setup', () => {
+    expect(reg.setups).toEqual({})
+    expect(reg.scenarios.map((s) => s.route)).toEqual(scenario.FONT_24.routes)
+    for (const s of reg.scenarios) {
+      expect(s.name.startsWith('font-24-'), s.name).toBe(true)
+      expect(s.start).toBe(s.route)
+      expect(s.widths).toEqual(scenario.FONT_24.widths)
+      expect(s.emulate).toEqual([scenario.FONT_24.cdp])
+      expect(s.rules).toEqual(scenario.FONT_24.rules)
+    }
+  })
+  it('the census probe runs only on the font-24 scenarios', () => {
+    expect(probe.scenarios).toEqual(reg.scenarios.map((s) => s.name))
+    expect(probe.source).toContain('getComputedStyle')
+  })
+})
