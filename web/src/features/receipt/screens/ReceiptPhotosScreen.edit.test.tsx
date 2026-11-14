@@ -2,7 +2,7 @@
 // Pinned behaviour of ./ReceiptPhotosScreen (hooks stood in for, as in ReceiptPhotosScreen.test.tsx):
 //   - every row has "Edit photo N" (ReceiptPhotoList.onEdit); it opens <PhotoEditSheet title="Edit photo N" src={photo.previewUrl} width/height={photo.width/height}/>
 //     (a <dialog>) for that photo, free aspect;
-//   - Done -> `photos.applyEdit(photo.id, edit)`; the sheet is `busy` until that promise settles, then closes (a failed or no-op edit closes it too:
+//   - Use this -> `photos.applyEdit(photo.id, edit)`; the sheet is `busy` until that promise settles, then closes (a failed or no-op edit closes it too:
 //     the hook says why through `problem`); the photo's own Edit button then has focus;
 //   - Cancel, Escape and Close close it without calling applyEdit; the photo's Edit button has focus;
 //   - while the sheet is open or while photos are being prepared, "Read the receipt" is disabled (readGate `editing`);
@@ -85,7 +85,7 @@ describe('opening the editor', () => {
     expect(screen.queryByRole('button', { name: /^Edit photo/ })).toBeNull()
   })
 
-  it('opens a <dialog> named "Edit photo 2" with the free-aspect editor on that photo: crop, rotate left and right, Reset, Cancel, Done', async () => {
+  it('opens a <dialog> named "Edit photo 2" with the free-aspect editor on that photo: crop, rotate left and right, Reset, Cancel, Use this', async () => {
     show()
     expect(screen.queryByRole('dialog', { name: /^Edit photo/ })).toBeNull()
     await userEvent.click(edit(2))
@@ -94,17 +94,17 @@ describe('opening the editor', () => {
     expect(within(d).getByRole('group', { name: 'Crop image' })).toBeInTheDocument()
     expect(d.ownerDocument.querySelector('.crop-editor__image')).toHaveAttribute('src', 'blob:p/2')
     expect(within(d).getByRole('status')).toHaveTextContent('Crop area: 1500 by 2000 pixels')
-    for (const name of ['Rotate left', 'Rotate right', 'Reset', 'Cancel', 'Done']) expect(within(d).getByRole('button', { name })).toBeInTheDocument()
+    for (const name of ['Rotate left', 'Rotate right', 'Reset', 'Cancel', 'Use this']) expect(within(d).getByRole('button', { name })).toBeInTheDocument()
   })
 })
 
-describe('Done', () => {
+describe('Use this', () => {
   it('hands the photo and its edit to applyEdit, then closes the sheet and focuses the photo\'s Edit button', async () => {
     const p = photosRef.current
     show()
     await userEvent.click(edit(2))
     await userEvent.click(within(sheet(2)).getByRole('button', { name: 'Rotate right' }))
-    await userEvent.click(within(sheet(2)).getByRole('button', { name: 'Done' }))
+    await userEvent.click(within(sheet(2)).getByRole('button', { name: 'Use this' }))
     expect(p.applyEdit).toHaveBeenCalledExactlyOnceWith('p2', { turns: 1, crop: { x: 0, y: 0, width: 2000, height: 1500 } })
     await waitFor(noSheet)
     expect(edit(2)).toHaveFocus()
@@ -116,8 +116,8 @@ describe('Done', () => {
     vi.mocked(p.applyEdit).mockImplementation(() => new Promise<boolean>((r) => { finish = r }))
     show()
     await userEvent.click(edit(1))
-    await userEvent.click(within(sheet(1)).getByRole('button', { name: 'Done' }))
-    expect(within(sheet(1)).getByRole('button', { name: 'Done' })).toBeDisabled()
+    await userEvent.click(within(sheet(1)).getByRole('button', { name: 'Use this' }))
+    expect(within(sheet(1)).getByRole('button', { name: 'Use this' })).toBeDisabled()
     expect(within(sheet(1)).getByRole('button', { name: 'Cancel' })).toBeDisabled()
     await userEvent.keyboard('{Escape}')
     expect(sheet(1)).toBeInTheDocument()
@@ -130,7 +130,7 @@ describe('Done', () => {
     vi.mocked(photosRef.current.applyEdit).mockResolvedValue(false)
     show()
     await userEvent.click(edit(2))
-    await userEvent.click(within(sheet(2)).getByRole('button', { name: 'Done' }))
+    await userEvent.click(within(sheet(2)).getByRole('button', { name: 'Use this' }))
     await waitFor(noSheet)
     expect(edit(2)).toHaveFocus()
   })

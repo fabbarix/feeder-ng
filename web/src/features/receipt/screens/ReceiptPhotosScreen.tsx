@@ -62,7 +62,7 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
     returnFocusTo.current = editIndex + 1
     setEditingId(undefined)
   }
-  // Done: the edited photo is prepared again; the sheet closes whatever the outcome (the hook says why in `problem`).
+  // Use this: the edited photo is prepared again; the sheet closes whatever the outcome (the hook says why in `problem`).
   const finishEdit = async (edit: ImageEdit) => {
     if (editingId === undefined) return
     setApplying(true)
@@ -147,7 +147,7 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
         width={editing?.width ?? 0}
         height={editing?.height ?? 0}
         busy={applying}
-        onDone={(edit) => void finishEdit(edit)}
+        onUse={(edit) => void finishEdit(edit)}
         onCancel={closeEdit}
       />
       {!read.busy ? (

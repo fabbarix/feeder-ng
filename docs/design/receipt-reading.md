@@ -71,8 +71,8 @@ Full-screen route `/scan/receipt` (the Scan session stays mounted behind it; the
   top-to-bottom parts with a little overlap. The model is told the photos are consecutive parts of one receipt (§4.2).
 - **Rotate and crop**: each photo row has **Edit** beside Remove (accessible name "Edit photo N"). It opens the shared
   `PhotoEditSheet` (`ui/ImageEditor`: a modal `<dialog>` over `ImageEditor`, `aspect="free"`, Rotate left and right in 90° steps,
-  crop, Reset, **Cancel**, **Done**), the same editor Import uses for recipe photos (photo-read.md D7, D10). Escape and Close are
-  Cancel and leave the photo as it was. **Done** prepares the edited photo again with `prepareReceiptPhoto` (JPEG, long edge at
+  crop, Reset, **Cancel**, **Use this**), the same editor Import uses for recipe photos (photo-read.md D7, D10). Escape and Close are
+  Cancel and leave the photo as it was. **Use this** prepares the edited photo again with `prepareReceiptPhoto` (JPEG, long edge at
   most 2576 px, at most 8 MiB) and replaces the photo: the thumbnail shows the edit, the old preview URL is revoked, and the
   original is not kept. Focus returns to the row's Edit button. While the sheet is open or the edit is prepared, **Read the
   receipt** is disabled; Edit is disabled while a read runs. Unlike Import, a new photo does not open the editor by itself.
