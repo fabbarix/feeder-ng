@@ -68,6 +68,9 @@ type mealOut struct {
 	ReheatMinutes int `json:"reheatMinutes,omitempty"`
 	// B9-11 (SAFE-03): how a Cooked or Not cooked meal was marked and whether it can be undone; slot views only.
 	Resolution *resolutionOut `json:"resolution,omitempty"`
+	// B9-12 (PC-14): a Pinned or Bought meal whose cooking would start before the Earliest start carries that start as
+	// "HH:MM" (household zone); omitted otherwise. Slot views only.
+	EarlyStart string `json:"earlyStart,omitempty"`
 }
 
 // boughtOut lists the Ingredients a purchase was bought for the meal, by name.
@@ -93,6 +96,7 @@ type eliminationsOut struct {
 	CoolDown    int `json:"coolDown"`
 	VarietyRule int `json:"varietyRule"`
 	AdvanceStep int `json:"advanceStep"`
+	TooEarly    int `json:"tooEarly"`
 }
 
 type unfilledOut struct {
@@ -364,6 +368,7 @@ func courseFor(c runner.CourseView, at time.Time, t table) courseOut {
 		out.Meal = mealFor(*c.Meal, t)
 		out.Meal.StartBy = plan.StartBy(at, out.Meal.CookMinutes)
 		out.Meal.Warning = warningFor(c.Warning)
+		out.Meal.EarlyStart = c.EarlyStart
 		out.Meal.Resolution = resolutionFor(c.Resolution)
 	}
 	if c.Unfilled != nil {
@@ -417,7 +422,8 @@ func alternativeFor(alt runner.Alternative, t table) alternativeOut {
 func unfilledFor(u plan.Unfilled) *unfilledOut {
 	return &unfilledOut{Reason: u.Reason, SlotRuleClaimed: u.SlotRuleClaimed, Eliminated: eliminationsOut{
 		Considered: u.Eliminated.Considered, Exclusion: u.Eliminated.Exclusion, CoolDown: u.Eliminated.CoolDown,
-		VarietyRule: u.Eliminated.VarietyRule, AdvanceStep: u.Eliminated.AdvanceStep}}
+		VarietyRule: u.Eliminated.VarietyRule, AdvanceStep: u.Eliminated.AdvanceStep,
+		TooEarly: u.Eliminated.TooEarly}}
 }
 
 // leftoverFor is the payload of a Leftover that was just recorded (Cooked): it sits in no place and is not to answer.

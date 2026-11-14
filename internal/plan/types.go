@@ -125,6 +125,9 @@ type Eliminations struct {
 	CoolDown    int `json:"coolDown"`
 	VarietyRule int `json:"varietyRule"`
 	AdvanceStep int `json:"advanceStep"`
+	// TooEarly is planner.Eliminations.TooEarly (PC-14, B9-12). It rides in plan_unfilled.eliminated_json, so rows
+	// stored before it read 0.
+	TooEarly int `json:"tooEarly"`
 }
 
 // Unfilled is a slot the planner could not fill ("Couldn't plan" reason).
@@ -179,6 +182,8 @@ type Settings struct {
 	DefaultCooldownDays int
 	DefaultUseByDays    int
 	Style               float64 // Planner Style 0..1
+	// EarliestStart is the Household's Earliest start, "HH:MM" in the household zone; "" is Off (PC-14, B9-12).
+	EarliestStart string
 }
 
 // Attendee is one Member at a slot with the effective Portion Factor already resolved.

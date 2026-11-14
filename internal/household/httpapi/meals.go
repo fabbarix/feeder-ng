@@ -151,6 +151,50 @@ func (a *api) updateSlot(w http.ResponseWriter, r *http.Request) {
 	a.writeSlot(w, r, http.StatusOK, s)
 }
 
+// newSlotsIn is the body of POST /api/meal-slots/batch (the first-run sheet, TB-06).
+type newSlotsIn struct {
+	Slots []struct {
+		Name     string `json:"name"`
+		Time     string `json:"time"`
+		Weekdays []int  `json:"weekdays"`
+	} `json:"slots"`
+}
+
+// createSlotsBatch creates one Meal Slot per weekday of each entry, everyone attending, all or nothing: 201
+// {"created":[slot...]}.
+func (a *api) createSlotsBatch(w http.ResponseWriter, r *http.Request) {
+	var in newSlotsIn
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		writeErr(w, err)
+		return
+	}
+	var b household.NewSlotsInput
+	for _, e := range in.Slots {
+		b.Entries = append(b.Entries, household.NewSlotsEntry{Name: e.Name, Time: e.Time, Weekdays: e.Weekdays})
+	}
+	b = b.Normalized()
+	if err := b.Validate(); err != nil {
+		writeErr(w, err)
+		return
+	}
+	created, err := a.st.CreateSlots(r.Context(), b.Slots())
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	a.changed("mealSlots")
+	out := make([]slotBody, 0, len(created))
+	for _, s := range created {
+		body, err := a.slotOut(r, s)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		out = append(out, body)
+	}
+	httpx.WriteJSON(w, http.StatusCreated, map[string]any{"created": out})
+}
+
 // batchIn is the body of PATCH /api/meal-slots/batch. Only the fields present change; dryRun answers what
 // the same edit would do without saving it.
 type batchIn struct {

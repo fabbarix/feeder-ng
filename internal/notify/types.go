@@ -83,6 +83,8 @@ type AdvanceStepFact struct {
 	ID          int64
 	Description string        // "Marinate the chicken"
 	Lead        time.Duration // how long before the slot it must start
+	// Done: the Step is marked done in Cook Mode or on the board (cook_marks), so Compute sends nothing for it (TB-02).
+	Done bool
 }
 
 // LeftoverFact is an available Leftover.
@@ -172,6 +174,9 @@ type TimerEvent struct {
 	// It is part of the dedupe key because SQLite reuses the id of a deleted
 	// timer, so the id alone would silence a later timer's push.
 	EndedAt time.Time
+	// Scope is the cook scope the timer belongs to ("meal:<date>/<slot>/<course>", "recipe:<id>"); "" for a free
+	// timer. The Timer finished push lands in that Cook Mode (TB-14).
+	Scope string
 }
 
 // ErrGone is returned by a Sender when the push service says the subscription

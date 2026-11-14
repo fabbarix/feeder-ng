@@ -52,6 +52,9 @@ type CourseView struct {
 	History         bool   // a Course the slot no longer serves, shown for its Cooked or Not cooked meal
 	// Warning (B5-BO): the Pinned or Bought Planned Meal now breaks a hard rule (plan.HardRuleWarning), else nil.
 	Warning *plan.Warning
+	// EarlyStart (B9-12, PC-14): the "HH:MM" the Pinned or Bought Planned Meal would have to start cooking, when that is
+	// before the Household's Earliest start; "" otherwise. The Plan never moves such a meal, it only flags it.
+	EarlyStart string
 	// Resolution (B9-11) is how a Cooked or Not cooked meal was marked and whether it can be reopened; nil on an open meal.
 	Resolution *Resolution
 }

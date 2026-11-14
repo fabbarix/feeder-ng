@@ -162,6 +162,9 @@ type Recipe struct {
 	UseByDays    *int
 	Needs        []Need
 	AdvanceSteps []AdvanceStep
+	// TotalMinutes is the length of the cooking itself, Advance Steps left out (the end of the critical path of the
+	// timeline Steps, schedule.Compute). 0 = unknown: the Recipe is never too early (PC-14, B9-12).
+	TotalMinutes int
 	// CourseIDs are the Courses the Recipe is marked with (Course fit). A cell
 	// with CourseID 0 skips Course fit.
 	CourseIDs []int64
@@ -264,6 +267,9 @@ type Input struct {
 	// LastPlanned is the last planned or cooked (fresh) date per Recipe before the horizon.
 	LastPlanned  map[RecipeID]Date
 	VarietyRules []VarietyRule
+	// EarliestStart is the Household's Earliest start as "HH:MM" in the household zone; "" is Off (PC-14, B9-12). A
+	// fresh Recipe whose cooking would have to start before it, on the date of its cell, is not a candidate.
+	EarliestStart string
 }
 
 // SourceKind says where a placement's food comes from.
@@ -379,6 +385,9 @@ type Eliminations struct {
 	CoolDown    int
 	VarietyRule int
 	AdvanceStep int
+	// TooEarly counts the Recipes removed because cooking would start before Input.EarliestStart (PC-14). It comes
+	// after Exclusion and Advance Step in the order of the filters, so a Recipe counted here passed both.
+	TooEarly int
 }
 
 // Unfilled is a slot the planner could not fill.

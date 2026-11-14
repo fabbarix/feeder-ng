@@ -1,6 +1,6 @@
 // Package httpapi serves the two Today endpoints no other feature provides:
-// Advance Steps due today and the zero-waste streak. Handlers are thin: they
-// read the shared facts and the Stock dates, then respond.
+// Advance Steps due in the next 24 hours and the zero-waste streak. Handlers are
+// thin: they read the cook service's marks-aware source and the Stock dates, then respond.
 package httpapi
 
 import (
@@ -12,11 +12,9 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/cook"
 	"github.com/fabbarix/feeder-ng/internal/cook/service"
-	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
+	cookstore "github.com/fabbarix/feeder-ng/internal/cook/store"
 	hstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
-	"github.com/fabbarix/feeder-ng/internal/notify"
-	notifyapi "github.com/fabbarix/feeder-ng/internal/notify/httpapi"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/stock"
 )
@@ -24,30 +22,44 @@ import (
 func init() { app.Register(app.Module{Name: "today", Mount: mount}) }
 
 type api struct {
-	d app.Deps
+	d    app.Deps
+	cook *service.Service
 }
 
 func mount(r *app.Router, d app.Deps) {
-	a := &api{d: d}
+	db := service.NewDB(d.DB, d.Clock)
+	a := &api{d: d, cook: service.New(service.Config{
+		Store: cookstore.New(d.DB), Clock: d.Clock,
+		Recipes: db.Recipes(), Meals: db.Meals(), Waste: db.Waste(), Household: db.Household(),
+	})}
 	r.User("GET /api/today/advance-steps", a.advanceSteps)
 	r.User("GET /api/today/streak", a.streak)
 }
 
 type stepDTO struct {
-	MealDate    string `json:"mealDate"`
-	MealSlotID  int64  `json:"mealSlotId"`
-	CourseID    int64  `json:"courseId"`
-	CourseName  string `json:"courseName"`
-	RecipeName  string `json:"recipeName"`
-	Description string `json:"description"`
-	DueAt       string `json:"dueAt"`
-	DueTime     string `json:"dueTime"`
-	SlotTime    string `json:"slotTime"`
-	State       string `json:"state"`
+	// Scope and Step are the key of PUT /api/cook/marks.
+	Scope        string `json:"scope"`
+	Step         int    `json:"step"`
+	MealDate     string `json:"mealDate"`
+	MealSlotID   int64  `json:"mealSlotId"`
+	MealSlotName string `json:"mealSlotName"`
+	CourseID     int64  `json:"courseId"`
+	CourseName   string `json:"courseName"`
+	RecipeName   string `json:"recipeName"`
+	Description  string `json:"description"`
+	DueAt        string `json:"dueAt"`
+	DueTime      string `json:"dueTime"`
+	SlotTime     string `json:"slotTime"`
+	State        string `json:"state"` // "due" once DueAt has come, else "upcoming"
+	Overdue      bool   `json:"overdue"`
 }
 
-// advanceSteps lists the Advance Steps of today's Planned Meals, soonest first.
-// The facts come from the dispatcher, so Today and push agree.
+// AdvanceWindow is how far ahead Today lists Advance Steps (TB-02).
+const AdvanceWindow = 24 * time.Hour
+
+// advanceSteps lists the Advance Steps not marked done that are due within the next 24 hours, and any overdue one of
+// a meal not served yet, soonest first. They come from the board's marks-aware source (TB-02), so Today, the board
+// and the push agree.
 func (a *api) advanceSteps(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	now := a.d.Clock.Now()
@@ -56,20 +68,10 @@ func (a *api) advanceSteps(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, err)
 		return
 	}
-	f, err := notifyapi.DispatcherFor(a.d.DB).Facts(ctx, now)
+	steps, err := a.cook.AdvanceDue(ctx, AdvanceWindow)
 	if err != nil {
 		a.fail(w, err)
 		return
-	}
-	steps := notify.AdvanceStepsOn(f, plan.Today(now, loc), loc)
-	courses, err := coursestore.New(a.d.DB, a.d.Clock).List(ctx, true)
-	if err != nil {
-		a.fail(w, err)
-		return
-	}
-	courseName := map[int64]string{}
-	for _, c := range courses {
-		courseName[c.ID] = c.Name
 	}
 	out := make([]stepDTO, 0, len(steps))
 	for _, s := range steps {
@@ -78,10 +80,11 @@ func (a *api) advanceSteps(w http.ResponseWriter, r *http.Request) {
 			state = "due"
 		}
 		out = append(out, stepDTO{
-			MealDate: s.MealDate, MealSlotID: s.MealSlotID, CourseID: s.CourseID, CourseName: courseName[s.CourseID],
-			RecipeName: s.RecipeName, Description: s.Description,
-			DueAt: s.DueAt.UTC().Format(time.RFC3339), DueTime: s.DueAt.Format("15:04"), SlotTime: s.SlotAt.Format("15:04"),
-			State: state,
+			Scope: string(s.Scope), Step: s.Step,
+			MealDate: s.MealDate, MealSlotID: s.MealSlotID, MealSlotName: s.SlotName, CourseID: s.CourseID,
+			CourseName: s.CourseName, RecipeName: s.RecipeName, Description: s.Text,
+			DueAt: s.DueAt.UTC().Format(time.RFC3339), DueTime: s.DueAt.In(loc).Format("15:04"),
+			SlotTime: s.MealAt.In(loc).Format("15:04"), State: state, Overdue: s.Overdue,
 		})
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"steps": out})

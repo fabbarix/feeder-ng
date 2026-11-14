@@ -10,11 +10,8 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/household"
 )
 
-// Deep links (Payload.URL): the screen that acts on each notification.
+// Deep links (Payload.URL): the screen that acts on each notification (TB-14, decision TB 8). Each is app-relative.
 const (
-	planURL  = "/plan"
-	stockURL = "/pantry"
-
 	accessRequestsURL = "/settings/access-requests"
 	// maxBody caps a push body: it carries Google-supplied text.
 	maxBody = 200
@@ -46,6 +43,9 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 				continue
 			}
 			for _, s := range m.AdvanceSteps {
+				if s.Done { // marked done in Cook Mode or on the board (TB-02)
+					continue
+				}
 				at := m.SlotAt.Add(-s.Lead)
 				out = append(out, Candidate{
 					Key:   candidateKey(AdvanceStep, fmt.Sprintf("%s/%d/%d", meal, m.CourseID, s.ID), at),
@@ -53,11 +53,11 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 					At:    at,
 					Title: "Advance Step",
 					Body:  fmt.Sprintf("%s now for %s", s.Description, slotHHMM),
-					URL:   planURL,
+					URL:   advanceStepURL(slot.date, slot.mealSlotID, m.CourseID, s.ID),
 				})
 			}
 		}
-		if c, ok := startCooking(ms, meal, slotAt, loc); ok {
+		if c, ok := startCooking(ms, slot.date, slot.mealSlotID, slotAt, loc); ok {
 			out = append(out, c)
 		}
 		at := slotAt.Add(ConfirmAfter)
@@ -71,7 +71,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			At:    at,
 			Title: "Confirm Cooked",
 			Body:  fmt.Sprintf("Did you cook %s?", joinNames(names)),
-			URL:   planURL,
+			URL:   confirmCookedURL(slot.date, slot.mealSlotID),
 		})
 	}
 	for _, l := range f.Leftovers {
@@ -85,7 +85,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			At:    day,
 			Title: "Leftover",
 			Body:  fmt.Sprintf("Use up the %s (%s) today", l.RecipeName, portions(l.Portions)),
-			URL:   planURL,
+			URL:   leftoverURL(l.ID),
 		})
 	}
 	for _, lot := range f.Lots {
@@ -105,7 +105,7 @@ func Compute(f Facts, loc *time.Location) []Candidate {
 			At:    at,
 			Title: "Stock about to spoil",
 			Body:  fmt.Sprintf("%s is good until today and no Planned Meal uses it", lot.IngredientName),
-			URL:   stockURL,
+			URL:   stockSpoilURL(lot.ID),
 		})
 	}
 	for _, a := range f.AccessRequests {
@@ -158,7 +158,8 @@ func plannedSlots(meals []MealFact) []plannedSlot {
 // go through cook.Timeline, and the reminder falls at the slot time minus the timeline total. A Leftover
 // Course contributes its Reheat (none when it has no length); a slot with no fresh Course has none. An
 // unplaceable timeline or a zero total gives none, and nothing else is affected.
-func startCooking(ms []MealFact, meal string, slotAt time.Time, loc *time.Location) (Candidate, bool) {
+func startCooking(ms []MealFact, date string, mealSlotID int64, slotAt time.Time, loc *time.Location) (Candidate, bool) {
+	meal := fmt.Sprintf("%s/%d", date, mealSlotID)
 	var courses []cook.Course
 	names := map[int64]string{}
 	fresh := false
@@ -191,7 +192,7 @@ func startCooking(ms []MealFact, meal string, slotAt time.Time, loc *time.Locati
 		At:    at,
 		Title: "Start cooking",
 		Body:  body,
-		URL:   planURL,
+		URL:   startCookingURL(date, mealSlotID),
 	}, true
 }
 
@@ -262,42 +263,6 @@ func DueNow(cands []Candidate, now time.Time, q household.QuietHours, loc *time.
 			return out[i].SendAt.Before(out[j].SendAt)
 		}
 		return out[i].Key < out[j].Key
-	})
-	return out
-}
-
-// StepDue is one Advance Step of a Planned Meal on a day, for the Today screen.
-type StepDue struct {
-	MealDate    string
-	MealSlotID  int64
-	CourseID    int64 // the Course the Planned Meal fills (crs-c2)
-	RecipeName  string
-	Description string
-	SlotAt      time.Time
-	DueAt       time.Time // SlotAt minus the lead time
-}
-
-// AdvanceStepsOn lists the Advance Steps of the Planned Meals dated day
-// (household date), soonest first. Cooked and skipped meals and Leftover-served
-// meals have none to list.
-func AdvanceStepsOn(f Facts, day string, loc *time.Location) []StepDue {
-	var out []StepDue
-	for _, m := range f.Meals {
-		if m.Date != day || m.State != MealPlanned || m.FromLeftover {
-			continue
-		}
-		for _, s := range m.AdvanceSteps {
-			out = append(out, StepDue{
-				MealDate: m.Date, MealSlotID: m.MealSlotID, CourseID: m.CourseID, RecipeName: m.RecipeName,
-				Description: s.Description, SlotAt: m.SlotAt.In(loc), DueAt: m.SlotAt.Add(-s.Lead).In(loc),
-			})
-		}
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if !out[i].DueAt.Equal(out[j].DueAt) {
-			return out[i].DueAt.Before(out[j].DueAt)
-		}
-		return out[i].Description < out[j].Description
 	})
 	return out
 }

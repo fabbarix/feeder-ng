@@ -14,6 +14,7 @@ import (
 	accessstore "github.com/fabbarix/feeder-ng/internal/access/store"
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/cook"
+	cookstore "github.com/fabbarix/feeder-ng/internal/cook/store"
 	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	"github.com/fabbarix/feeder-ng/internal/household"
 	ingredientstore "github.com/fabbarix/feeder-ng/internal/ingredient/store"
@@ -39,6 +40,7 @@ type Source struct {
 	ings    *ingredientstore.Store
 	access  *accessstore.Store
 	courses *coursestore.Store
+	marks   *cookstore.Store // Advance Steps marked done (TB-02)
 }
 
 // New returns the production fact source over d.
@@ -53,6 +55,7 @@ func New(d *sql.DB, clk clock.Clock) *Source {
 		ings:    ingredientstore.New(d, clk),
 		access:  accessstore.New(d),
 		courses: coursestore.New(d, clk),
+		marks:   cookstore.New(d),
 	}
 }
 
@@ -135,11 +138,17 @@ func (s *Source) Facts(ctx context.Context, now time.Time) (notify.Facts, error)
 				return notify.Facts{}, err
 			}
 			mf.Steps = scheduleSteps(composed)
-			// The ID of an Advance Step is its index in the composed Steps; a covered one is not asked for.
+			// The ID of an Advance Step is its index in the composed Steps, the Step of its cook mark; a covered one is
+			// not asked for. A Step marked done in Cook Mode or on the board is Done (TB-02).
+			marks, err := s.marks.Marks(ctx, cook.MealScope(m.Key.Date, m.Key.MealSlotID, m.Key.CourseID))
+			if err != nil {
+				return notify.Facts{}, err
+			}
 			for i, st := range composed {
 				if st.Kind == schedule.Advance && !st.Covered {
+					_, done := marks[i]
 					mf.AdvanceSteps = append(mf.AdvanceSteps, notify.AdvanceStepFact{
-						ID: int64(i), Description: st.Text, Lead: time.Duration(st.LeadTimeMinutes) * time.Minute,
+						ID: int64(i), Description: st.Text, Lead: time.Duration(st.LeadTimeMinutes) * time.Minute, Done: done,
 					})
 				}
 			}

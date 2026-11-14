@@ -1,6 +1,7 @@
 package notify_test
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -221,6 +222,8 @@ func TestCandidatesAreOrderedByDueTime(t *testing.T) {
 	}
 }
 
+// TB-14 (B9-12, decision TB 8): where each notification lands. curry is the Planned Meal of date 2026-11-09, Meal Slot 3,
+// Course 5, with the Advance Step of index 11.
 func TestCandidatesDeepLinkToTheScreenThatActsOnThem(t *testing.T) {
 	rome := zone(t, "Europe/Rome")
 	f := notify.Facts{
@@ -229,14 +232,68 @@ func TestCandidatesDeepLinkToTheScreenThatActsOnThem(t *testing.T) {
 		Lots:      []notify.LotFact{{ID: 9, IngredientName: "Spinach", GoesOff: "2026-11-10"}},
 	}
 	cs := notify.Compute(f, rome)
-	want := map[notify.Type]string{
-		notify.AdvanceStep: "/plan", notify.StartCooking: "/plan", notify.ConfirmCooked: "/plan",
-		notify.LeftoverUseBy: "/plan", notify.StockSpoil: "/pantry",
+	want := map[notify.Type]struct {
+		path  string
+		query map[string]string
+	}{
+		notify.AdvanceStep:   {"/", map[string]string{"step": "meal:2026-11-09/3/5:11"}},
+		notify.StartCooking:  {"/cook/meal/2026-11-09/3", nil},
+		notify.ConfirmCooked: {"/plan", map[string]string{"mark": "2026-11-09:3"}},
+		notify.LeftoverUseBy: {"/", map[string]string{"leftover": "5"}},
+		notify.StockSpoil:    {"/pantry", map[string]string{"status": "useSoon", "lot": "9"}},
 	}
-	for typ, url := range want {
-		if got := only(t, cs, typ).URL; got != url {
-			t.Errorf("%s URL = %q, want %q", typ, got, url)
+	for typ, w := range want {
+		raw := only(t, cs, typ).URL
+		u, err := url.Parse(raw)
+		if err != nil || u.IsAbs() || u.Host != "" {
+			t.Errorf("%s URL = %q: want an app-relative URL (%v)", typ, raw, err)
+			continue
 		}
+		if u.Path != w.path {
+			t.Errorf("%s path = %q, want %q (URL %q)", typ, u.Path, w.path, raw)
+		}
+		q := u.Query()
+		if len(q) != len(w.query) {
+			t.Errorf("%s query = %v, want %v", typ, q, w.query)
+		}
+		for k, v := range w.query {
+			if q.Get(k) != v {
+				t.Errorf("%s %s = %q, want %q (URL %q)", typ, k, q.Get(k), v, raw)
+			}
+		}
+	}
+}
+
+func TestEachCoursesAdvanceStepLandsOnItsOwnScopeAndStep(t *testing.T) {
+	rome := zone(t, "Europe/Rome")
+	main, side := curry(rome), curry(rome)
+	side.CourseID, side.RecipeName = 6, "Rice"
+	side.AdvanceSteps = []notify.AdvanceStepFact{{ID: 2, Description: "Soak the rice", Lead: time.Hour}}
+	cs := byType(notify.Compute(notify.Facts{Meals: []notify.MealFact{main, side}}, rome), notify.AdvanceStep)
+	got := map[string]bool{}
+	for _, c := range cs {
+		u, _ := url.Parse(c.URL)
+		got[u.Query().Get("step")] = true
+	}
+	if len(cs) != 2 || !got["meal:2026-11-09/3/5:11"] || !got["meal:2026-11-09/3/6:2"] {
+		t.Errorf("steps = %v, want one landing per Course and Step", got)
+	}
+}
+
+// TB-02 (B9-12): a Step marked done is not pushed.
+func TestAnAdvanceStepMarkedDoneIsNotPushed(t *testing.T) {
+	rome := zone(t, "Europe/Rome")
+	m := curry(rome)
+	m.AdvanceSteps = []notify.AdvanceStepFact{
+		{ID: 11, Description: "Marinate the chicken", Lead: 4 * time.Hour, Done: true},
+		{ID: 12, Description: "Soak the lentils", Lead: 6 * time.Hour},
+	}
+	cs := byType(notify.Compute(notify.Facts{Meals: []notify.MealFact{m}}, rome), notify.AdvanceStep)
+	if len(cs) != 1 || !strings.Contains(cs[0].Body, "Soak the lentils") {
+		t.Fatalf("Advance Step pushes = %+v, want only the Step that is not done", cs)
+	}
+	if got := byType(notify.Compute(notify.Facts{Meals: []notify.MealFact{m}}, rome), notify.StartCooking); len(got) != 1 {
+		t.Errorf("Start cooking is not affected by a done Advance Step: %d", len(got))
 	}
 }
 

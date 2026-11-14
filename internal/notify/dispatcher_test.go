@@ -241,14 +241,28 @@ func TestTimerFinishedIsNotSilencedWhenSQLiteReusesADeletedTimersID(t *testing.T
 	}
 }
 
+// TB-14 (decision TB 8): Timer finished lands in the Cook Mode of the timer's scope, and on the board when it has none.
 func TestPushDeepLinks(t *testing.T) {
-	r := newRig(t, utc(2026, 11, 9, 14, 30, 0))
-	r.subs.byType[notify.TimerFinished] = []notify.Target{phone}
-	if _, err := r.d.TimerFinished(context.Background(), notify.TimerEvent{TimerID: 1, Label: "Rice", EndedAt: utc(2026, 11, 9, 14, 30, 0)}); err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name, scope, want string
+	}{
+		{"a Planned Meal's timer opens that Course's Cook Mode", "meal:2026-11-09/3/5", "/cook/meal/2026-11-09/3/5"},
+		{"a Recipe's timer opens that Recipe's Cook Mode", "recipe:12", "/cook/recipe/12"},
+		{"a free timer has no Cook Mode: the board", "", "/board"},
+		{"a scope that does not parse falls back to the board", "meal:soon", "/board"},
 	}
-	if got := r.sender.sent[0].p.URL; got != "/board" {
-		t.Errorf("Timer finished URL = %q, want /board", got)
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := newRig(t, utc(2026, 11, 9, 14, 30, 0))
+			r.subs.byType[notify.TimerFinished] = []notify.Target{phone}
+			ev := notify.TimerEvent{TimerID: int64(i + 1), Label: "Rice", Scope: tt.scope, EndedAt: utc(2026, 11, 9, 14, 30, 0)}
+			if _, err := r.d.TimerFinished(context.Background(), ev); err != nil {
+				t.Fatal(err)
+			}
+			if got := r.sender.sent[0].p.URL; got != tt.want {
+				t.Errorf("Timer finished URL = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

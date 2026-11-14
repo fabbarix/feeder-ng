@@ -21,3 +21,15 @@ func TestModuleBuildsItsSenderWithTheSafeConstructor(t *testing.T) {
 		t.Error("httpapi.go builds a push.Sender literal; use push.NewSender")
 	}
 }
+
+// TB-14 (B9-12): the Timer finished push lands in the Cook Mode of the timer's scope, so the module must hand the
+// finished timer's scope on to the dispatcher (cook.FinishedEvent already has it).
+func TestModulePassesTheFinishedTimersScopeToTheDispatcher(t *testing.T) {
+	src, err := os.ReadFile("httpapi.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(src), "Scope: ev.Scope") {
+		t.Error("httpapi.go builds notify.TimerEvent without Scope: ev.Scope")
+	}
+}

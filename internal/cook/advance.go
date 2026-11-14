@@ -1,6 +1,9 @@
 package cook
 
-import "time"
+import (
+	"sort"
+	"time"
+)
 
 // AdvanceCandidate is one Advance Step of one Planned Meal that is not cooked yet.
 type AdvanceCandidate struct {
@@ -52,4 +55,24 @@ func earlier(a, b *AdvanceDue) bool {
 		return a.MealAt.Before(b.MealAt)
 	}
 	return a.Step < b.Step
+}
+
+// AdvanceDueWithin lists the not-done candidates due within window of now whose meal is not served yet, in
+// NextAdvance order (TB-02, B9-12). A candidate is in when DueAt <= now+window and MealAt > now; an overdue Step
+// of a meal that is still ahead is in, first. NextAdvance is its first element.
+func AdvanceDueWithin(cands []AdvanceCandidate, now time.Time, window time.Duration) []AdvanceDue {
+	until := now.Add(window)
+	var out []AdvanceDue
+	for _, c := range cands {
+		if c.Done || !c.MealAt.After(now) {
+			continue
+		}
+		due := c.MealAt.Add(-time.Duration(c.LeadTimeMinutes) * time.Minute)
+		if due.After(until) {
+			continue
+		}
+		out = append(out, AdvanceDue{AdvanceCandidate: c, DueAt: due, Overdue: due.Before(now)})
+	}
+	sort.SliceStable(out, func(a, b int) bool { return earlier(&out[a], &out[b]) })
+	return out
 }

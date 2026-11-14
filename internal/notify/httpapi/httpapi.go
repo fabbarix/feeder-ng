@@ -106,7 +106,7 @@ func announceTimers(ctx context.Context, bus *events.Bus, disp *notify.Dispatche
 			if !ok {
 				return
 			}
-			if _, err := disp.TimerFinished(ctx, notify.TimerEvent{TimerID: ev.TimerID, Label: ev.Label, RecipeName: ev.RecipeName, EndedAt: ev.EndsAt}); err != nil && ctx.Err() == nil {
+			if _, err := disp.TimerFinished(ctx, notify.TimerEvent{TimerID: ev.TimerID, Label: ev.Label, RecipeName: ev.RecipeName, Scope: ev.Scope, EndedAt: ev.EndsAt}); err != nil && ctx.Err() == nil {
 				logger.Error("timer finished push failed", "err", err)
 			}
 		}
