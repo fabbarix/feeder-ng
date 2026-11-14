@@ -170,15 +170,14 @@ describe('P27 and font-24 in the page-layout registry', () => {
       expect(s.rules).toEqual(scenario.FONT_24.rules)
     }
   })
-  // Main session ruling (w0b): /settings/shops/:id fails P27 at 24 px until B9-10 removes its .pg__* styling. Its scenario stays
-  // defined but is not registered; B9-10 deletes the FONT_24_DEFERRED entry, adds the name to ADDED in pageLayoutRegistry.test.ts and
-  // changes this test to expect no deferred route.
-  it('only /settings/shops/:id is deferred, owned by B9-10, and it is defined in full but not registered', () => {
-    expect(deferred.FONT_24_DEFERRED).toEqual({ '/settings/shops/:id': 'B9-10' })
-    expect(deferred.FONT_24_DEFERRED_SCENARIOS).toEqual([
-      { name: 'font-24-settings-shops-id', route: '/settings/shops/:id', start: '/settings/shops/:id', widths: [390, 1440], emulate: [scenario.FONT_24.cdp], rules: ['P1', 'P27'], owner: 'B9-10' },
-    ])
-    expect(reg.scenarios.map((s) => s.name)).not.toContain('font-24-settings-shops-id')
+  // Main session ruling (w0b) held /settings/shops/:id until its .pg__* styling was gone. B9-09 replaced it (SectionTitle, Muted) and
+  // the page passes P27 at 24 px text, so no route is deferred: font-24-settings-shops-id is registered with the others.
+  it('no route is deferred: font-24-settings-shops-id is registered', () => {
+    expect(deferred.FONT_24_DEFERRED).toEqual({})
+    expect(deferred.FONT_24_DEFERRED_SCENARIOS).toEqual([])
+    expect(reg.scenarios.find((s) => s.name === 'font-24-settings-shops-id')).toEqual(
+      { name: 'font-24-settings-shops-id', route: '/settings/shops/:id', start: '/settings/shops/:id', widths: [390, 1440], emulate: [scenario.FONT_24.cdp], rules: ['P1', 'P27'] },
+    )
   })
   it('the census probe runs only on the font-24 scenarios', () => {
     expect(probe.scenarios).toEqual(reg.scenarios.map((s) => s.name))
