@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -72,6 +73,38 @@ func (p stockPort) Total(ctx context.Context, ingredientID int64) (float64, erro
 
 func (p stockPort) SetTotal(ctx context.Context, ingredientID int64, total float64) error {
 	_, err := p.svc.SetTotal(ctx, ingredientID, total)
+	return stockDomainError(err)
+}
+
+// SetTotalRecorded is a Stock-take that says what it took or added, so it can be undone (B9-05, SAFE-09). Each take
+// carries the Lot as it was, as JSON the ledger keeps verbatim.
+func (p stockPort) SetTotalRecorded(ctx context.Context, ingredientID int64, total float64) (service.StockChange, error) {
+	ch, err := p.svc.SetTotalRecorded(ctx, ingredientID, total)
+	if err != nil {
+		return service.StockChange{}, stockDomainError(err)
+	}
+	out := service.StockChange{AddedLotID: ch.AddedLotID}
+	for _, t := range ch.Takes {
+		lot, err := json.Marshal(t.Lot)
+		if err != nil {
+			return service.StockChange{}, err
+		}
+		out.Takes = append(out.Takes, service.TakenLot{LotID: t.Lot.ID, LotJSON: string(lot), Taken: t.Taken})
+	}
+	return out, nil
+}
+
+// GiveBack puts back what a Stock-take took (stock.GiveBack): a Lot gone since is left gone.
+func (p stockPort) GiveBack(ctx context.Context, takes []service.TakenLot) error {
+	in := make([]stockservice.LotTake, 0, len(takes))
+	for _, t := range takes {
+		var lot stockstore.StoredLot
+		if err := json.Unmarshal([]byte(t.LotJSON), &lot); err != nil {
+			return err
+		}
+		in = append(in, stockservice.LotTake{Lot: lot, Taken: t.Taken})
+	}
+	_, err := p.svc.GiveBack(ctx, in)
 	return stockDomainError(err)
 }
 
@@ -348,6 +381,7 @@ func (i ingredientsPort) DeleteUnused(ctx context.Context, id int64) (bool, erro
 // Compile-time checks.
 var (
 	_ service.Stock       = stockPort{}
+	_ service.StockTakes  = stockPort{}
 	_ service.Catalogue   = catalogue{}
 	_ service.Ingredients = ingredientsPort{}
 	_ service.Dates       = (*shoppinghttpapi.Household)(nil)
@@ -355,9 +389,11 @@ var (
 
 func newService(d app.Deps) *service.Service {
 	hh := shoppinghttpapi.NewHousehold(d)
+	stockAdapter := stockPort{svc: shoppinghttpapi.NewStock(d)}
 	return service.New(service.Deps{
 		Ledger:      scanstore.New(d.DB, d.Clock),
-		Stock:       stockPort{svc: shoppinghttpapi.NewStock(d)},
+		Stock:       stockAdapter,
+		Takes:       stockAdapter,
 		Catalogue:   catalogue{db: d.DB, st: productstore.New(d.DB, d.Clock, productstore.WithImages(images.NewGuarded(imaging.NewStore(filepath.Join(d.Config.DataDir, "images")), refs.New(d.DB))))},
 		Ingredients: ingredientsPort{st: ingredientstore.New(d.DB, d.Clock)},
 		List:        shoppinghttpapi.NewService(d),

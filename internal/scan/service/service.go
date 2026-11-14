@@ -27,8 +27,10 @@ import (
 // Errors.
 var (
 	ErrNotFound    = errors.New("scan: not found")
-	ErrNotUndoable = errors.New("scan: only a Shop scan can be undone")
 	ErrProductGone = errors.New("scan: unknown Product")
+	// ErrNotUndoable is a Stock-take asked for a Price, or one that cannot be undone: recorded before beta.9 (migration
+	// 1572) or with no StockTakes port.
+	ErrNotUndoable = errors.New("scan: a Stock-take has no Price, and this one cannot be undone")
 	// ErrUnknownIngredient is what the Catalogue and Ingredients ports return for an Ingredient that no longer
 	// exists (for example merged away while the phone was offline). Apply turns it into a rejected Result.
 	ErrUnknownIngredient = errors.New("scan: unknown Ingredient")
@@ -82,8 +84,8 @@ type StockChange struct {
 	Takes      []TakenLot
 }
 
-// StockTakes is the port a Stock-take that can be undone needs (B9-05). Deps.Takes may be nil (then a Stock-take
-// uses Stock.SetTotal and cannot be undone: ErrNotUndoable). B9-05 test stub: the developer wires it and implements the use.
+// StockTakes is the port a Stock-take that can be undone needs (B9-05). Deps.Takes may be nil: then a -1 pack or Set
+// total uses Stock.SetTotal, records nothing, and cannot be undone (ErrNotUndoable); a +1 pack can be, by its Lot.
 type StockTakes interface {
 	// SetTotalRecorded is SetTotal that also says what it took or added.
 	SetTotalRecorded(ctx context.Context, ingredientID int64, total float64) (StockChange, error)
@@ -637,6 +639,23 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 		quantity float64
 		lotID    *int64
 	)
+	// takes is what a -1 pack or Set total took, kept for Undo; nil when there is no StockTakes port (not undoable).
+	var takes []TakenLot
+	setTotal := func(total float64) error {
+		if s.d.Takes == nil {
+			return s.d.Stock.SetTotal(ctx, ing, total)
+		}
+		ch, err := s.d.Takes.SetTotalRecorded(ctx, ing, total)
+		if err != nil {
+			return err
+		}
+		takes = append([]TakenLot{}, ch.Takes...)
+		if ch.AddedLotID != 0 {
+			id := ch.AddedLotID
+			lotID = &id
+		}
+		return nil
+	}
 	switch op.Action {
 	case scan.PlusPack:
 		quantity = p.PackSize
@@ -651,11 +670,11 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 		if err != nil {
 			return scan.Result{}, err
 		}
-		if err := s.d.Stock.SetTotal(ctx, ing, maxf(0, total-quantity)); err != nil {
+		if err := setTotal(maxf(0, total-quantity)); err != nil {
 			return scan.Result{}, err
 		}
 	case scan.SetTotal:
-		if err := s.d.Stock.SetTotal(ctx, ing, *op.Total); err != nil {
+		if err := setTotal(*op.Total); err != nil {
 			return scan.Result{}, err
 		}
 	}
@@ -664,15 +683,32 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 		return scan.Result{}, err
 	}
 	pid := p.ID
+	// The Result names the Lot a +1 pack added, as before; the ledger also keeps the one a Set total up added, for Undo.
+	resultLot := lotID
+	if op.Action != scan.PlusPack {
+		resultLot = nil
+	}
 	applied := scan.Applied{IngredientID: ing, IngredientName: p.IngredientName, IngredientKind: p.IngredientKind, BaseUnit: p.BaseUnit, ProductID: pid,
-		ProductName: p.Name, ProductImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL, Quantity: quantity, LotID: lotID, Total: &after}
+		ProductName: p.Name, ProductImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL, Quantity: quantity, LotID: resultLot, Total: &after}
 	res := scan.Result{ClientUUID: op.ClientUUID, Status: scan.StatusApplied, Scan: &applied}
 	resJSON, err := json.Marshal(res)
 	if err != nil {
 		return scan.Result{}, err
 	}
+	takesJSON := ""
+	if s.d.Takes != nil && op.Action != scan.PlusPack {
+		if takes == nil {
+			takes = []TakenLot{}
+		}
+		b, err := json.Marshal(takes)
+		if err != nil {
+			return scan.Result{}, err
+		}
+		takesJSON = string(b)
+	}
 	if _, err := s.d.Ledger.Insert(ctx, store.Event{ClientUUID: op.ClientUUID, Kind: string(scan.KindStockTake),
-		ScannedAt: op.ScannedAt, ProductID: &pid, IngredientID: &ing, Quantity: quantity, LotID: lotID, ResultJSON: string(resJSON)}); err != nil {
+		ScannedAt: op.ScannedAt, ProductID: &pid, IngredientID: &ing, Quantity: quantity, LotID: lotID, TakesJSON: takesJSON,
+		ResultJSON: string(resJSON)}); err != nil {
 		if errors.Is(err, store.ErrDuplicate) {
 			return duplicate(mustGet(ctx, s.d.Ledger, op.ClientUUID))
 		}
@@ -682,9 +718,13 @@ func (s *Service) stockTake(ctx context.Context, op scan.Op) (scan.Result, error
 }
 
 // UndoResult says whether this call reversed the scan or it was already undone.
-type UndoResult struct{ Undone, AlreadyUndone bool }
+type UndoResult struct {
+	Undone, AlreadyUndone bool
+	stockTake             bool
+}
 
-// Undo reverses a Shop scan (ErrNotFound, ErrNotUndoable for a stock_take). The steps run in a fixed order and
+// Undo reverses a Shop scan or a Stock-take (ErrNotFound; ErrNotUndoable for a Stock-take that recorded nothing to
+// undo, see undoStockTake). The steps run in a fixed order and
 // each is recorded in the ledger when it succeeds, so a retry after a failure skips the steps already done and
 // UndoneAt is set only after the last one. The steps are not all idempotent on their own: List.UndoLot gives the
 // quantity back and is not, so the journal is what stops a recorded step running twice. Removing a missing Lot,
@@ -693,7 +733,8 @@ func (s *Service) Undo(ctx context.Context, clientUUID string) (UndoResult, erro
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	res, err := s.undo(ctx, clientUUID)
-	if err == nil && res.Undone {
+	// A Stock-take is not a Shop scan: Stock publishes its own event, as Apply does not publish a Stock-take either.
+	if err == nil && res.Undone && !res.stockTake {
 		s.publish()
 	}
 	return res, err
@@ -708,11 +749,11 @@ func (s *Service) undo(ctx context.Context, clientUUID string) (UndoResult, erro
 	if !ok {
 		return UndoResult{}, ErrNotFound
 	}
-	if ev.Kind == string(scan.KindStockTake) {
-		return UndoResult{}, ErrNotUndoable
-	}
 	if ev.UndoneAt != "" {
 		return UndoResult{AlreadyUndone: true}, nil
+	}
+	if ev.Kind == string(scan.KindStockTake) {
+		return s.undoStockTake(ctx, ev)
 	}
 	done := map[string]bool{}
 	for _, st := range ev.UndoSteps {
@@ -776,6 +817,59 @@ func (s *Service) undo(ctx context.Context, clientUUID string) (UndoResult, erro
 		return UndoResult{}, err
 	}
 	return UndoResult{Undone: true}, nil
+}
+
+// undoStockTake reverses a Stock-take (B9-05, SAFE-09): the Lot a +1 pack or a Set total up added is removed, and
+// what a -1 pack or a Set total down took is given back exactly as the StockTakes port reported it. The Shopping List,
+// purchases, Prices and sold-at are never touched: a Stock-take never changed them. The steps are journalled like a
+// Shop scan's. A -1 pack or Set total with no takes recorded (before migration 1572, or with no StockTakes port) is
+// ErrNotUndoable.
+func (s *Service) undoStockTake(ctx context.Context, ev store.Event) (UndoResult, error) {
+	if ev.LotID == nil && (ev.TakesJSON == "" || s.d.Takes == nil) {
+		return UndoResult{}, ErrNotUndoable
+	}
+	var takes []TakenLot
+	if ev.TakesJSON != "" {
+		if err := json.Unmarshal([]byte(ev.TakesJSON), &takes); err != nil {
+			return UndoResult{}, err
+		}
+	}
+	done := map[string]bool{}
+	for _, st := range ev.UndoSteps {
+		done[st] = true
+	}
+	steps := []struct {
+		name string
+		run  func() error
+	}{
+		{store.UndoStepLot, func() error {
+			if ev.LotID == nil {
+				return nil
+			}
+			return s.d.Stock.RemoveLot(ctx, *ev.LotID)
+		}},
+		{store.UndoStepGiveBack, func() error {
+			if len(takes) == 0 {
+				return nil
+			}
+			return s.d.Takes.GiveBack(ctx, takes)
+		}},
+	}
+	for _, st := range steps {
+		if done[st.name] {
+			continue
+		}
+		if err := st.run(); err != nil {
+			return UndoResult{}, err
+		}
+		if err := s.d.Ledger.MarkUndoStep(ctx, ev.ClientUUID, st.name); err != nil {
+			return UndoResult{}, err
+		}
+	}
+	if _, err := s.d.Ledger.MarkUndone(ctx, ev.ClientUUID); err != nil {
+		return UndoResult{}, err
+	}
+	return UndoResult{Undone: true, stockTake: true}, nil
 }
 
 // restorePrice puts back the same-day Price a scan replaced, or removes the one it wrote.
