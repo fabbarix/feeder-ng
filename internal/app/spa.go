@@ -71,7 +71,9 @@ func spaHandler(spa fs.FS) http.HandlerFunc {
 			http.ServeFileFS(w, r, spa, name)
 			return
 		}
-		if path.Ext(clean) != "" {
+		// A path with an extension, or anything under /assets/, is a file that is not there: a 404, never the shell, so a
+		// stale page asking for a deleted chunk does not get HTML where it expects a script.
+		if path.Ext(clean) != "" || name == "assets" || strings.HasPrefix(name, "assets/") {
 			http.NotFound(w, r)
 			return
 		}
