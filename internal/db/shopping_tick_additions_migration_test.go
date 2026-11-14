@@ -113,3 +113,25 @@ func TestMigration1576OnAnEmptyDatabaseCreatesTheTable(t *testing.T) {
 		t.Errorf("additions = %d, want none", n)
 	}
 }
+
+func TestMigration1576MovesATickWhoseLotIsGoneAndAnExtraTickedBefore1560(t *testing.T) {
+	d := tagsOpenAt(t, "1576_")
+	mustExec(t, d, `INSERT INTO ingredients(id,name,name_key,base_unit,created_at,updated_at) VALUES
+		(5,'passata','passata','g',?,?),(6,'milk','milk','ml',?,?)`, mts, mts, mts, mts)
+	// Line: its Lot 99 was deleted (used up) since the tick. Extra: ticked before 1560, so no Lot recorded.
+	mustExec(t, d, `INSERT INTO shopping_ticks(range_to,ingredient_id,needed,by,lot_id,lot_quantity,ticked_at) VALUES
+		('2026-11-15',5,700,'hand',99,700,'2026-11-09T10:12:00Z')`)
+	mustExec(t, d, `INSERT INTO shopping_extras(id,ingredient_id,quantity,got,ticked_on,created_at) VALUES (21,6,500,500,'2026-11-09',?)`, mts)
+	if err := db.MigrateEmbedded(context.Background(), d); err != nil {
+		t.Fatalf("1576: %v", err)
+	}
+	if n := count(t, d, `SELECT count(*) FROM shopping_tick_additions WHERE ingredient_id = 5 AND lot_id = 99 AND quantity = 700 AND used = 0`); n != 1 {
+		t.Errorf("the Line's addition = %d rows, want 1 keeping the gone Lot 99 and its 700 (no FK) with used 0", n)
+	}
+	if n := count(t, d, `SELECT count(*) FROM shopping_tick_additions WHERE extra_id = 21 AND lot_id IS NULL AND quantity = 0 AND covers = 500`); n != 1 {
+		t.Errorf("the extra's addition = %d rows, want 1 with no Lot and nothing added", n)
+	}
+	if _, err := d.Exec(`INSERT INTO shopping_tick_additions(range_to,ingredient_id,quantity,covers,used,ticked_at) VALUES ('2026-11-15',6,0,0,-1,?)`, mts); err == nil {
+		t.Error("a negative used was accepted")
+	}
+}

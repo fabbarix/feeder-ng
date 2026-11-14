@@ -726,3 +726,136 @@ func TestThePackOfAPricedFallbackCarriesTheDateCentsAndShopOfItsPrice(t *testing
 		t.Errorf("bought pack = %+v, want no Price", l.Pack)
 	}
 }
+
+// ---- Stock under every sequence (reviewer) ----
+
+func TestTheUndoOfATakeBackAfterAPartialCookedPutsBackOnlyWhatWasTaken(t *testing.T) {
+	e, _ := ticked400(t)
+	e.stock.lots[0].Quantity = 150 // a Cooked Planned Meal used 250
+	if _, err := change(e, service.ChangeInput{Quantity: 0, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 0 {
+		t.Fatalf("Stock after Take back = %v, want 0", got)
+	}
+	res, err := change(e, service.ChangeInput{Quantity: 400, UserID: ana}) // the toast's Undo
+	if err != nil || res.LotID == nil || res.Quantity != 400 {
+		t.Fatalf("Undo = %+v, %v", res, err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 150 {
+		t.Errorf("Stock after Undo = %v, want the 150 that was taken back, not 400 (250 were cooked)", got)
+	}
+	// Change down below what was cooked, then up again: Stock follows the Lot, never below 0 and never doubled.
+	if _, err := change(e, service.ChangeInput{Quantity: 100, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 0 {
+		t.Errorf("Stock after Change to 100 = %v, want 0 (250 of it were cooked)", got)
+	}
+	if _, err := change(e, service.ChangeInput{Quantity: 500, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 250 {
+		t.Errorf("Stock after Change to 500 = %v, want 250 (500 less the 250 cooked)", got)
+	}
+	l, _ := milkLine(t, e)
+	if a := additionOf(t, l, "a"); a.Quantity != 500 || tickOf(t, l).Added != 500 {
+		t.Errorf("addition %+v, want 500 added", a)
+	}
+	// Untick takes back the rest and leaves nothing behind.
+	if err := e.svc.Untick(ctx, e.ids[milk], rng); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 0 {
+		t.Errorf("Stock after untick = %v, want 0", got)
+	}
+}
+
+func TestChangeAfterTheLotWasUsedUpAddsOnlyTheDifference(t *testing.T) {
+	e, _ := ticked400(t)
+	e.stock.lots = nil // the Lot was used up by a Cooked Planned Meal
+	if _, err := change(e, service.ChangeInput{Quantity: 300, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 0 || len(e.stock.adds) != 1 {
+		t.Errorf("Stock = %v after %d adds, want nothing new: 300 is less than the 400 used", got, len(e.stock.adds))
+	}
+	if _, err := change(e, service.ChangeInput{Quantity: 600, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 200 {
+		t.Errorf("Stock = %v, want 200 (600 less the 400 used)", got)
+	}
+	// Take back and its Undo of the fresh Lot.
+	if _, err := change(e, service.ChangeInput{Quantity: 0, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := change(e, service.ChangeInput{Quantity: 600, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 200 {
+		t.Errorf("Stock after Take back and Undo = %v, want 200 again", got)
+	}
+}
+
+func TestTheUndoOfAnExtrasTakeBackMovesGotByWhatStockGotBack(t *testing.T) {
+	e := newEnv(t)
+	x, err := e.svc.AddExtra(ctx, service.ExtraInput{IngredientID: e.ids[milk], Quantity: 2000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.TickExtra(ctx, x.ID, 2000, nil, "x1"); err != nil {
+		t.Fatal(err)
+	}
+	e.stock.lots[0].Quantity = 500 // 1500 cooked
+	if _, err := e.svc.ChangeExtraTick(ctx, x.ID, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.ChangeExtraTick(ctx, x.ID, 2000); err != nil { // Undo
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 500 {
+		t.Errorf("Stock = %v, want the 500 taken back, put back", got)
+	}
+	extras, err := e.st.Extras(ctx, "2026-11-09")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ex := range extras {
+		if ex.ID == x.ID && ex.Got != 2000 {
+			t.Errorf("got = %v, want 2000 again after the Undo", ex.Got)
+		}
+	}
+}
+
+func TestAnUntickOfAnAdditionWithUnknownQuantityNeverWritesInfinity(t *testing.T) {
+	// A tick from before migration 1560: its addition has a Lot and no quantity.
+	e := newEnv(t)
+	needsMilk(e, 800)
+	lot, _, _ := e.stock.AddLot(ctx, service.StockAdd{IngredientID: e.ids[milk], Quantity: 800})
+	if err := e.st.SetTick(ctx, rng, shopping.Tick{IngredientID: e.ids[milk], Needed: 800, By: "hand"}, &lot); err != nil {
+		t.Fatal(err)
+	}
+	e.stock.lots[0].Quantity = 300 // 500 cooked
+	l, _ := milkLine(t, e)
+	if tk := tickOf(t, l); math.IsInf(tk.Added, 0) || !tk.AddedUnknown {
+		t.Fatalf("Tick %+v; want a finite Added and AddedUnknown", tk)
+	}
+	if _, err := change(e, service.ChangeInput{Quantity: 0, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 0 {
+		t.Errorf("Stock = %v, want what was left taken back", got)
+	}
+	adds, err := e.st.LineAdditions(ctx, rng, e.ids[milk])
+	if err != nil || len(adds) != 1 || adds[0].Quantity != 0 || math.IsInf(adds[0].Used, 0) {
+		t.Fatalf("additions = %+v, %v; want one of 0 with a finite Used", adds, err)
+	}
+	// Change to 400: unknown what was used, so a fresh Lot of 400.
+	if _, err := change(e, service.ChangeInput{Quantity: 400, UserID: ana}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.stock.total(e.ids[milk]); got != 400 {
+		t.Errorf("Stock = %v, want 400", got)
+	}
+}

@@ -141,37 +141,44 @@ func noneByHand(adds []store.Addition) error {
 	return ErrNotByHand
 }
 
-// changed is what changeAddition did: the result, whether anything changed, and what Stock took back on a Take back.
+// changed is what changeAddition did: the result, whether anything changed, and how much Stock moved (taken back is
+// negative). An extra's got moves with Stock.
 type changed struct {
 	result  ChangeResult
 	changed bool
-	taken   float64
-	delta   float64 // the change of what the addition says it added (0 when unknown)
+	stock   float64
 }
 
-// changeAddition sets what the addition put into Stock to q. added runs for a fresh Stock Lot (records what it was
-// bought for).
+// changeAddition sets what the addition put into Stock to q, moving Stock by what is really new or gone (ADR 0019, 0024):
+//   - Take back (q 0): what is left of its Lot goes, up to what it added; what a Cooked Planned Meal used is remembered
+//     (Used), so its Undo puts back only what was taken;
+//   - a Lot still there moves by the difference, never below 0 (what was used stays used);
+//   - with no Lot (Tick without adding, taken back, or the Lot used up), a fresh Lot holds q less what was used.
+//
+// added runs for a fresh Stock Lot (records what it was bought for).
 func (s *Service) changeAddition(ctx context.Context, a store.Addition, ingredientID int64, q float64, shopID *int64,
 	added func(lotID int64) error) (changed, error) {
 	const eps = 1e-9
 	cur, lotID := a.Quantity, a.LotID
-	unknown := math.IsInf(cur, 0)
+	unknown := math.IsInf(cur, 0) || math.IsNaN(cur)
 	if !unknown && math.Abs(q-cur) <= eps {
 		return changed{result: changeResult(lotID, cur)}, nil
 	}
 	out := changed{changed: true}
-	if !unknown {
-		out.delta = q - cur
-	}
 	if q <= eps { // Take back: what is left of the Lot, up to what the addition added
+		used := a.Used
 		if lotID != 0 {
 			taken, err := s.takeBackTaken(ctx, lotID, cur)
 			if err != nil {
 				return changed{}, err
 			}
-			out.taken = taken
+			out.stock = -taken
+			used = 0
+			if !unknown {
+				used = math.Max(0, cur-taken)
+			}
 		}
-		if err := s.st.SetAdditionLot(ctx, a.ID, 0, 0); err != nil {
+		if err := s.st.SetAdditionLot(ctx, a.ID, 0, 0, used); err != nil {
 			return changed{}, mapStoreErr(err)
 		}
 		out.result = changeResult(0, 0)
@@ -181,6 +188,7 @@ func (s *Service) changeAddition(ctx context.Context, a store.Addition, ingredie
 	if err != nil {
 		return changed{}, err
 	}
+	used := 0.0
 	switch {
 	case exists:
 		// Move the Lot by the difference; for a tick from before migration 1560 the Lot is what it added.
@@ -194,18 +202,21 @@ func (s *Service) changeAddition(ctx context.Context, a store.Addition, ingredie
 		if err := s.ports.Adjust.AdjustLot(ctx, lotID, target); err != nil {
 			return changed{}, err
 		}
+		out.stock = target - have
 		if target == 0 {
 			if err := s.ForgetLot(ctx, lotID); err != nil {
 				return changed{}, err
 			}
+			used, lotID = cur-have, 0 // all that is left of it was used
 		}
 	default:
-		// No Lot (Tick without adding, taken back) or the Lot is gone (used up): a fresh Lot for what is new.
-		more := q
+		// No Lot: what was used of it is what it added when its Lot is gone (used up), else what Take back left behind.
+		used = a.Used
 		if lotID != 0 && !unknown {
-			more = q - cur
+			used = cur
 		}
-		if more > eps {
+		lotID = 0
+		if more := q - used; more > eps {
 			id, _, err := s.ports.Stock.AddLot(ctx, StockAdd{IngredientID: ingredientID, Quantity: more, ShopID: shopID})
 			if err != nil {
 				return changed{}, err
@@ -215,10 +226,10 @@ func (s *Service) changeAddition(ctx context.Context, a store.Addition, ingredie
 					return changed{}, err
 				}
 			}
-			lotID = id
+			lotID, out.stock = id, more
 		}
 	}
-	if err := s.st.SetAdditionLot(ctx, a.ID, lotID, q); err != nil {
+	if err := s.st.SetAdditionLot(ctx, a.ID, lotID, q, used); err != nil {
 		return changed{}, mapStoreErr(err)
 	}
 	out.result = changeResult(lotID, q)
@@ -295,11 +306,7 @@ func (s *Service) ChangeExtraTick(ctx context.Context, id int64, quantity float6
 	if !c.changed {
 		return c.result, nil
 	}
-	got := c.delta
-	if quantity == 0 {
-		got = -c.taken
-	}
-	if got != 0 {
+	if got := c.stock; got != 0 {
 		if _, err := s.st.AddGot(ctx, id, got); err != nil {
 			return ChangeResult{}, mapStoreErr(err)
 		}

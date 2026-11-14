@@ -6,6 +6,8 @@
 --   range_to + ingredient_id: an addition to an Ingredient Line of that range; extra_id (range_to NULL): to an extra.
 --   lot_id NULL: the addition put no Stock Lot into Stock (Tick without adding, or taken back). No FK: the Lot may be gone.
 --   quantity NULL: a tick from before migration 1560; Take back then takes what is left of the Lot.
+--   used: with no Stock Lot (lot_id NULL), how much of what the addition put into Stock was used (by a Cooked Planned
+--     Meal) before its Lot went: a Change or the Undo of a Take back puts back only the rest, so Stock is never doubled.
 --   by: 'hand', or 'scan' for the addition a Scan made when its Stock Lot ticked the Line.
 --   ticked_at: when the User ticked (the phone's time for a queued tick); synced_at: when a queued tick synced, else NULL.
 CREATE TABLE shopping_tick_additions (
@@ -17,6 +19,7 @@ CREATE TABLE shopping_tick_additions (
     lot_id        INTEGER,
     quantity      REAL    CHECK (quantity IS NULL OR quantity >= 0),
     covers        REAL    NOT NULL DEFAULT 0 CHECK (covers >= 0),
+    used          REAL    NOT NULL DEFAULT 0 CHECK (used >= 0),
     user_id       INTEGER,
     client_uuid   TEXT    UNIQUE,
     ticked_at     TEXT    NOT NULL,

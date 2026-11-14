@@ -254,15 +254,18 @@ func (s *Store) Ticks(ctx context.Context, rangeTo stock.Date) (map[int64]shoppi
 }
 
 // Addition is a stored tick addition: one of a Line (RangeTo and IngredientID) or of an extra (ExtraID).
+// Used is, for an addition with no Stock Lot, how much of what it put into Stock a Cooked Planned Meal had used before
+// its Lot went (taken back, or changed down to nothing): a later Change adds a fresh Lot for the rest only.
 type Addition struct {
 	ID           int64
 	RangeTo      stock.Date
 	IngredientID int64
 	ExtraID      int64
+	Used         float64
 	shopping.Addition
 }
 
-const additionColumns = `id, range_to, ingredient_id, extra_id, by, lot_id, quantity, covers, user_id, client_uuid, ticked_at, synced_at`
+const additionColumns = `id, range_to, ingredient_id, extra_id, by, lot_id, quantity, covers, user_id, client_uuid, ticked_at, synced_at, used`
 
 func (s *Store) additions(ctx context.Context, where string, args ...any) ([]Addition, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT `+additionColumns+` FROM shopping_tick_additions WHERE `+where+` ORDER BY id`, args...)
@@ -292,7 +295,7 @@ func scanAddition(r scanner) (Addition, error) {
 		qty                 sql.NullFloat64
 		at                  string
 	)
-	if err := r.Scan(&a.ID, &rangeTo, &ing, &extra, &a.By, &lot, &qty, &a.Covers, &user, &uuid, &at, &sync); err != nil {
+	if err := r.Scan(&a.ID, &rangeTo, &ing, &extra, &a.By, &lot, &qty, &a.Covers, &user, &uuid, &at, &sync, &a.Used); err != nil {
 		return Addition{}, err
 	}
 	a.RangeTo, a.IngredientID, a.ExtraID = stock.Date(rangeTo.String), ing.Int64, extra.Int64
@@ -370,6 +373,9 @@ func (s *Store) insertAddition(ctx context.Context, tx *sql.Tx, rangeTo *stock.D
 	if by == "" {
 		by = "hand"
 	}
+	if math.IsInf(a.Quantity, 0) || math.IsNaN(a.Quantity) { // the unknown quantity is read from NULL, never written
+		return 0, false, ErrInvalid
+	}
 	res, err := tx.ExecContext(ctx, `INSERT INTO shopping_tick_additions (range_to, ingredient_id, extra_id, by, lot_id, quantity,
 		covers, user_id, client_uuid, ticked_at, synced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(client_uuid) DO NOTHING`,
@@ -442,13 +448,19 @@ func (s *Store) AddExtraAddition(ctx context.Context, extraID int64, today stock
 	return id, ok, err
 }
 
-// SetAdditionLot records the Stock Lot an addition now has (0 = none) and the quantity it put into Stock (ErrNotFound).
-func (s *Store) SetAdditionLot(ctx context.Context, id, lotID int64, quantity float64) error {
+// SetAdditionLot records the Stock Lot an addition now has (0 = none), the quantity it put into Stock and, with no Lot,
+// how much of it was used before its Lot went (ErrNotFound). quantity must be finite.
+func (s *Store) SetAdditionLot(ctx context.Context, id, lotID int64, quantity, used float64) error {
 	var lot sql.NullInt64
 	if lotID != 0 {
 		lot = sql.NullInt64{Int64: lotID, Valid: true}
+		used = 0
 	}
-	return s.exec(ctx, `UPDATE shopping_tick_additions SET lot_id = ?, quantity = ? WHERE id = ?`, lot, quantity, id)
+	if math.IsInf(quantity, 0) || math.IsNaN(quantity) || math.IsInf(used, 0) || math.IsNaN(used) {
+		return ErrInvalid
+	}
+	return s.exec(ctx, `UPDATE shopping_tick_additions SET lot_id = ?, quantity = ?, used = ? WHERE id = ?`, lot, quantity,
+		math.Max(0, used), id)
 }
 
 // DeleteAddition removes one addition. For a Line, the tick goes with its last addition; otherwise its needed becomes the
