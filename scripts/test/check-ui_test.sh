@@ -294,6 +294,11 @@ sd="$TMP/d8/scripts"; mkdir -p "$sd/check-ui.d"; cp "$SCRIPTS/check-ui.sh" "$sd/
 run_drop "$sd" "$DROP/pass"
 [ "$RC" -eq 2 ] && grep -q 'rule_demo_missing' <<<"$OUTPUT" && ok || bad "check-ui.d: a registered rule without rule_demo_missing() must exit 2 and name the function (rc $RC): $OUTPUT"
 
+# a file in check-ui.d that is not <slug>.sh (it would never be sourced) stops the run and is named (review of B9-03)
+sd="$(dropin_scripts d10)"; cp "$sd/check-ui.d/zz-demo-ban.sh" "$sd/check-ui.d/zz-other.bash"
+run_drop "$sd" "$DROP/pass"
+[ "$RC" -eq 2 ] && grep -q 'zz-other.bash' <<<"$OUTPUT" && ok || bad "check-ui.d: a non-.sh file must exit 2 and be named (rc $RC): $OUTPUT"
+
 # the directories are optional (the throwaway repos above have none) and --rules F reads F.d, never the script directory's own rules.d
 sd="$(dropin_scripts d9 rules-d)"            # its check-ui.rules.d says demo-ban=fail
 printf 'demo-ban=warn\n' >"$TMP/own.rules"

@@ -79,6 +79,11 @@ register_rule() {
   RULE_NAMES+=("$1")
 }
 if [ -d "$SCRIPT_DIR/check-ui.d" ]; then
+  # Only *.sh files are sourced: any other file there (a .bash, a backup) would be skipped in silence, so it stops the run.
+  for f in "$SCRIPT_DIR"/check-ui.d/*; do
+    [ -e "$f" ] || continue
+    case "$(basename "$f")" in *.sh) ;; *) echo "check-ui: $f: only <slug>.sh files go in scripts/check-ui.d" >&2; exit 2 ;; esac
+  done
   for f in "$SCRIPT_DIR"/check-ui.d/*.sh; do
     [ -f "$f" ] || continue
     # shellcheck source=/dev/null
