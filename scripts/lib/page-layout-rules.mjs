@@ -43,7 +43,7 @@ export const SCENARIOS = [
   // b8-shop (docs/dev/design/b8-shop.md 1 and 2): the header chips at the phone widths (their icons stay, the values are short), and the
   // Shop's info hints in the card grid, which P23 reads for a cut hint.
   { name: 'shop-header', route: '/shop', start: '/shop', setup: 'shopHeader', widths: [360, 390] },
-  { name: 'shop-hints', route: '/shop', start: '/shop', setup: 'shopHints', widths: [390, 834, 1440] },
+  { name: 'shop-hints', route: '/shop', start: '/shop', setup: 'shopHints', widths: [360, 390, 834, 1440] },
   // beta.7 (SR6, docs/design/shop-scan-proposals.md 13): the Scan screen in shop mode. A headless Chrome has no camera, so the
   // no-camera block shows and the guard types the seeded codes by hand. The Scanned list with its rows and the "Read the receipt" footer
   // row; a row active with its strip; the Price keypad (a non-modal half sheet on a phone, docked from 768 px); the new-Product sheet.
@@ -253,7 +253,7 @@ export function evaluateMetrics(m, { width, kind }) {
   // is sized by its value, so a cut value means its row has no room for it ("G…", then "Good u…", passed every other rule: P16 reads
   // only .chip labels).
   for (const c of m.cutSelects ?? []) add('P22', `${c.sel} "${c.label}" shows ${c.shown} px and cuts ${c.px} px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it`)
-  // b8-shop (P23, always fails): the Shop's one-line info hint ("Includes Tue Dinner +1") is cut by its ellipsis; the card grid gives it the text column.
+  // b8-shop (P23, always fails): a food Line's one-line Meal Slot hint ("Tue Dinner +1") is cut by its ellipsis.
   for (const c of m.cutMeta ?? []) add('P23', `${c.sel} "${c.label}" shows ${c.shown} px and cuts ${c.px} px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, so it fits its row: give the row room (--row-value-min) or shorten the hint`)
   // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
   // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.

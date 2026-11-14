@@ -633,14 +633,15 @@ const cutSelectProbe = `
   return out
 })()`
 
-// b8-shop (P23): the Shop's info hints in the card grid (a Meal Slot hint or a Supply's Restock reason) cut by their ellipsis. The text is
-// measured with a Range like cutSelectProbe, so the ellipsis is found whatever it paints.
+// b8-shop (P23): the Shop hint (a food Line's Meal Slot hint, "Fri Dinner +2") cut by its ellipsis, at every width. The text is measured
+// with a Range like cutSelectProbe, so the ellipsis is found whatever it paints. Review: the Supplies group's Restock reason is not read
+// here: "400 of 1000 ml" is cut by 3 px at 360 px since beta.7 (the phone row's text column), which waits for a design decision.
 const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')
   const out = []
   for (const t of (main ? main.querySelectorAll('.shop-lines .list-row__meta[data-status="info"] .list-row__meta-text') : [])) {
-    if (t.getClientRects().length === 0) continue
+    if (t.getClientRects().length === 0 || t.closest('.shop-supplies')) continue
     const box = t.getBoundingClientRect()
     const range = document.createRange()
     range.selectNodeContents(t)
@@ -742,9 +743,10 @@ const SETUPS = {
   async shopHeader() {
     await until(`document.querySelectorAll('.shop-screen__controls .select__trigger[data-appearance="chip"]').length >= 2 && !document.querySelector('.skeleton')`, 'the Shop header chips')
   },
-  // b8-shop (P23): an info hint in the card grid (the Supplies group's Restock reason or a Meal Slot hint), so the probe measures one.
+  // b8-shop (P23): a seeded Meal Slot hint on a food Line ("Fri Dinner +2", the seeder's Planned Meals not marked Cooked yet), so the
+  // probe measures a real Shop hint (the Supplies group's Restock reason alone would leave P23 nothing to read).
   async shopHints() {
-    await until(`!!document.querySelector('.shop-lines .list-row__meta[data-status="info"]')`, 'an info hint on a Shop row')
+    await until(`!!document.querySelector('.shop-open .shop-lines .list-row__meta[data-status="info"]')`, 'a Meal Slot hint on a food Line of the Shop list')
   },
   scanScannedList: scannedList,
   async scanRowActive() {
