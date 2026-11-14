@@ -77,3 +77,11 @@ describe('BottomSheet.css (R-B, R-C)', () => {
     expect(css).toMatch(/scroll-padding-block-end/)
   })
 })
+
+describe('BottomSheet.css title (VC2)', () => {
+  it("centres the title's first line on the 40 px Close and lets a long title wrap beside it", () => {
+    const d = declarations(readUiCss('BottomSheet.css'), '.sheet__title')
+    expect(d['padding-block-start']).toBe('calc((40px - var(--text-title-2-line)) / 2)')
+    expect(d['min-inline-size']).toBe('0')
+  })
+})
