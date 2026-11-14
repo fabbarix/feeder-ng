@@ -171,7 +171,8 @@ func suppliesRestockSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
-	sc.Step(`^the Line "([^"]*)" says (\d+) of (\d+) in Stock$`, func(name string, have, level int) error {
+	// The Shop copy is the bare "2 of 9" (shopStrings.restockReason); this checks the two numbers behind it, not the copy.
+	sc.Step(`^the Line "([^"]*)" says (\d+) of (\d+)$`, func(name string, have, level int) error {
 		ln, err := lineOf(name)
 		if err != nil {
 			return err

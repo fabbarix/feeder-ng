@@ -16,7 +16,7 @@ Feature: Restock Lines for Supplies
     And the Household holds 2 piece of the Supply "Toilet paper"
     When I view the Supplies list
     Then the Supplies list has a Line for "Toilet paper" of 7 piece
-    And the Line "Toilet paper" says 2 of 9 in Stock
+    And the Line "Toilet paper" says 2 of 9
     And the Line "Toilet paper" suggests 1 pack of "Lotus 9 rolls"
     And the Line "Toilet paper" has kind "supply"
     And the Supplies list has 1 entries in all
