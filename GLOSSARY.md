@@ -390,6 +390,10 @@ _Avoid_: Grocery list, basket
 A Shopping List line the User took off the list for its current range, because nothing needs buying; it adds no Stock and is not a purchase.
 _Avoid_: Not required, crossed off
 
+**Tick**:
+A Shopping List line marked as got for its range, by hand or by a Scan in a Shop. A Tick by hand also adds a Stock Lot.
+_Note_: Undo of a Tick takes back the Stock it added: what is left of that Lot, up to what the Tick added ([ADR 0019](docs/adr/0019-undo-of-a-tick-takes-back-its-stock.md)). A Scan's Tick has no Lot of its own; Undo of the Scan removes its Lot.
+
 **Shop**:
 A store the Household buys from; Products learn which Shops sell them, and prices are recorded per Shop. Any User adds one; only the Admin renames or deletes one.
 _Avoid_: Store, supermarket, retailer
