@@ -41,6 +41,8 @@ Feature: A new Product from the Scan screen (scan redesign, SR6)
     When I save the unknown barcode "5410091000004" at "Coop" as list scan "n1" for the existing Ingredient "Toilet paper" with Product "Lotus 9 rolls" of pack size 9
     Then scan "n1" was applied
     And list scan "n1" has ingredient kind "supply"
+    And scan "n1" is on the list with 0 piece remaining
+    And scan "n1" ticked the line
     And the Stock total of the Supply "Toilet paper" is 11
 
   Scenario: The pack size is the one thing that must be given
