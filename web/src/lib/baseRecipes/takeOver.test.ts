@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../http'
-import { parseTakeOver, takeOverDialog } from './takeOver'
+import { keptLinesNote, parseTakeOver, takeOverDialog } from './takeOver'
 import type { TakeOverAsk } from './types'
 
 const ask = (over: Partial<TakeOverAsk> = {}): TakeOverAsk => ({
@@ -56,7 +56,6 @@ describe('takeOverDialog: names the Recipes and the Stock affected, offers Yes o
 
 // beta.8 (docs/dev/design/b8-base.md section 1): keptLines. Pinned API in takeOver.ts: keptLinesNote(keptLines: number | undefined, baseName: string): string | null,
 // and takeOverDialog(...).note: string | undefined, the same text.
-import { keptLinesNote } from './takeOver'
 
 describe('keptLinesNote', () => {
   it('is null for 0 and for an absent count', () => {
@@ -75,6 +74,10 @@ describe('keptLines through the 409 and the dialog', () => {
   it('parseTakeOver carries keptLines when the answer has it', () => {
     const err = new ApiError(409, 'base_recipe_take_over', 'ask', { ingredient: { id: 5, name: 'béchamel' }, recipes: [], stockLots: 0, convertible: true, keptLines: 2 })
     expect(parseTakeOver(err)?.keptLines).toBe(2)
+  })
+  it('parseTakeOver leaves keptLines out of an answer without it (an older server)', () => {
+    const err = new ApiError(409, 'base_recipe_take_over', 'ask', { ingredient: { id: 5, name: 'béchamel' }, recipes: [], stockLots: 0, convertible: true })
+    expect(parseTakeOver(err)).not.toHaveProperty('keptLines')
   })
   it('takeOverDialog gives the note only above 0', () => {
     expect(takeOverDialog(ask({ keptLines: 2 }), 'Béchamel').note).toBe(keptLinesNote(2, 'Béchamel'))
