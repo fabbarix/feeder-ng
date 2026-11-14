@@ -19,9 +19,13 @@ describe('B9-09: no width query in code (DS-09)', () => {
     // a pointer query is not a width: NewProductForm keeps (pointer: coarse)
     expect(readFeature('scan/components/NewProductForm.tsx')).toMatch(/\(pointer: coarse\)/)
   })
-  it('Stock: the two-column Pantry is useBreakpoint(\'desktopWide\') (80 em, was 1280 px)', () => {
-    expect(code('stock/screens/StockScreen.tsx')).toMatch(/useBreakpoint\(\s*['"]desktopWide['"]\s*\)/)
-    expect(code('stock/screens/StockScreen.tsx')).not.toMatch(/1280/)
+  // Reviewer (B9-09): the test first asked for useBreakpoint('desktopWide') (the old 1280 px two-column Pantry). The only thing that
+  // width chose was the Spoiled tile's layout, and that is now a container query on the tile's own width (stock.css, spoiled-tile),
+  // so the screen has no width to read: it must not ask for one.
+  it('StockScreen reads no viewport width', () => {
+    const screen = code('stock/screens/StockScreen.tsx')
+    expect(screen).not.toMatch(/useBreakpoint|useNarrow|useMediaQuery|matchMedia|innerWidth/)
+    expect(screen).not.toMatch(/1280/)
   })
   // Main session ruling (B9-09): the header chips and the compact Restock reason keep today's 420 px, so no supported phone (375 to
   // 414 px) changes what it shows; useNarrow() (below 23.5 em) would show the full text at 390 px. One named exception in the Shop's
