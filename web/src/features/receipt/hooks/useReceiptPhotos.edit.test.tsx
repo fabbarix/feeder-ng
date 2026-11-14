@@ -11,7 +11,7 @@
 //     - a failure sets `problem` ('photo_too_large' | 'photo_unsupported') and leaves the photo exactly as it was;
 //     - after the screen is left, or when the photo was removed meanwhile, it makes no URL (nothing would revoke it) and changes nothing.
 //   toBody() sends the edited dataUrl, in the same place.
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ImageEdit } from '../../../ui'
 import type { ImageEngine } from '../../../ui/ImageEditor/lib/prepare'
@@ -146,6 +146,9 @@ describe('applyEdit', () => {
     let pending!: Promise<boolean>
     act(() => { pending = result.current.applyEdit(p.id, turnRight(p.width, p.height)) })
     expect(result.current).toMatchObject({ busy: true, canAdd: false })
+    // The edit decodes first; release exists only once its encode is pending.
+    await waitFor(() => expect(release).toBeTypeOf('function'))
+    expect(result.current).toMatchObject({ busy: true, canAdd: false })
     await act(async () => { release(); await pending })
     expect(result.current).toMatchObject({ busy: false, canAdd: true })
   })
@@ -216,6 +219,7 @@ describe('applyEdit', () => {
     const p = result.current.photos[0]!
     let pending!: Promise<boolean>
     act(() => { pending = result.current.applyEdit(p.id, turnRight(p.width, p.height)) })
+    await waitFor(() => expect(release).toBeTypeOf('function'))
     unmount()
     release()
     await pending
@@ -235,6 +239,7 @@ describe('applyEdit', () => {
     const p = result.current.photos[0]!
     let pending!: Promise<boolean>
     act(() => { pending = result.current.applyEdit(p.id, turnRight(p.width, p.height)) })
+    await waitFor(() => expect(release).toBeTypeOf('function'))
     act(() => result.current.remove(p.id))
     await act(async () => { release(); expect(await pending).toBe(false) })
     expect(result.current.count).toBe(0)
