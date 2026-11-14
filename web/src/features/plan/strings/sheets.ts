@@ -1,2 +1,51 @@
-// STUB (B9-08 test author): the developer moves this area's keys out of ../strings.ts into this object.
-export const sheetsStrings = {} as const
+// English UI strings of the planning feature: the Swap, Choose a Recipe and Planned Meal sheets, and a Meal Slot on one date. Glossary terms only. Re-exported by ../strings.ts as part of planStrings.
+export const sheetsStrings = {
+  // Swap sheet and its Undo
+  swapTitle: 'Swap for…',
+  swapAlternatives: 'Alternatives',
+  swapLoading: 'Finding alternatives…',
+  swapNone: 'No other Recipe fits this Meal Slot.',
+  swapKeep: 'Keep it',
+  swapped: 'Swapped',
+  undo: 'Undo',
+  // Choose a Recipe sheet
+  chooseTitle: 'Choose a Recipe',
+  chooseNone: 'There are no Recipes yet.',
+  searchRecipes: 'Search Recipes',
+  recipesList: 'Recipes',
+  minutes: (n: number) => `${n} min`,
+  // Planned Meal sheet
+  plannedFacts: (batches: string, portions: string) => `${batches} · ${portions}`,
+  // B5-F1: a Meal Slot on one date (lib/slotDate, hooks/useSlotDate, components/NotServedRow, SlotTimeDialog)
+  slotDate: {
+    whosEating: "Who's eating",
+    notServed: 'Not served',
+    timeToday: 'Time today',
+    timeOn: (day: string) => `Time on ${day}`,
+    needsConnection: 'Needs a connection',
+    /** A menu choice that is unavailable offline: "Not served · Needs a connection". */
+    unavailable: (label: string) => `${label} · Needs a connection`,
+    confirmTitle: (dayName: string) => `Not serving ${dayName}?`,
+    confirmBody: (dayName: string) => `${dayName} is left out of the plan, the Shopping List and reminders.`,
+    theseGo: 'These go:',
+    pinnedNote: 'Pinned',
+    boughtNote: (names: string) => `Bought: ${names}`,
+    boughtStays: 'What you bought stays in Stock.',
+    toast: (dayName: string) => `${dayName} is not served`,
+    row: (slot: string) => `${slot} · Not served`,
+    planAgain: (slot: string) => `Plan ${slot} again`,
+    timeTitle: (dayName: string) => `Time for ${dayName}`,
+    timeLabel: 'Time',
+    timeHelper: (usual: string) => `Usually ${usual}`,
+    timeSave: 'Save',
+    timeBack: (usual: string) => `Back to ${usual}`,
+    timeCancel: 'Cancel',
+    timeCaption: (time: string, usual: string) => `${time} · usually ${usual}`,
+    guestsSuffix: (n: number) => (n === 1 ? '+1 Guest' : `+${n} Guests`),
+    guestsCount: (n: number) => (n === 1 ? '1 Guest' : `${n} Guests`),
+    datePast: 'That date has passed, so it cannot change.',
+    slotStarted: (slot: string) => `Part of ${slot} is already Cooked or Not cooked, so it cannot be left out.`,
+    timeInvalid: 'Enter a time such as 19:30.',
+    failed: 'Could not save that. Try again.',
+  },
+} as const
