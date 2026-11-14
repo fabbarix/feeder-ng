@@ -31,9 +31,10 @@ describe('lineEntry: the short hint', () => {
     const e = lineEntry(makeLine({ pastPlannedMeals: [makePast({ courseName: 'Main' }), makePast({ courseName: 'Side' })] }), 'USD', 'metric')
     expect(e.hintShort).toBe('Includes Tue Dinner')
   })
-  it('several slots: "Includes Tue Dinner and Wed Lunch"', () => {
+  // b8-shop (docs/dev/design/b8-shop.md 2): the one-line hint names the oldest slot and counts the rest, so it fits the card grid.
+  it('several slots: "Includes Tue Dinner +1"', () => {
     const e = lineEntry(makeLine({ pastPlannedMeals: [makePast(), makePast({ date: '2026-11-04', mealSlotId: 1, mealSlotName: 'Lunch' })] }), 'USD', 'metric')
-    expect(e.hintShort).toBe('Includes Tue Dinner and Wed Lunch')
+    expect(e.hintShort).toBe('Includes Tue Dinner +1')
   })
   it('has no key without unconfirmed past meals', () => {
     expect('hintShort' in plain).toBe(false)
