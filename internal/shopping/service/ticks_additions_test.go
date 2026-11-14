@@ -447,10 +447,23 @@ func TestUntickTakesBackEveryHandAdditionAndLeavesAScansLot(t *testing.T) {
 	if e.stock.total(e.ids[milk]) != 800 {
 		t.Errorf("Stock = %v, want the scan's 800 left", e.stock.total(e.ids[milk]))
 	}
-	needsMilk(e, 800)
-	if l, _ := milkLine(t, e); l.Ticked || l.Tick != nil {
-		t.Errorf("Line after untick = %+v, want open", l)
+	// The scan's 800 still covers the need, so there is no open Line either: the Line is gone, not ticked.
+	if l, ok := milkLineIf(t, e); ok && (l.Ticked || l.Tick != nil) {
+		t.Errorf("Line after untick = %+v, want it no longer ticked", l)
 	}
+	if ticks, _ := e.st.Ticks(ctx, rng); len(ticks) != 0 {
+		t.Errorf("ticks after untick = %+v, want none", ticks)
+	}
+}
+
+// milkLineIf is the milk Line when the list has one (a Line Stock covers and nobody ticked is not on the list).
+func milkLineIf(t *testing.T, e *env) (shopping.Line, bool) {
+	t.Helper()
+	v, err := e.svc.List(ctx, service.Query{To: rng})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v.LineFor(e.ids[milk])
 }
 
 func TestUntickAdditionTakesBackThatAdditionOnly(t *testing.T) {
@@ -505,8 +518,12 @@ func TestAScanTickIsAnAdditionByScanAndItsUndoRemovesIt(t *testing.T) {
 	if err := e.svc.UndoLot(ctx, service.UndoLotInput{IngredientID: e.ids[milk], To: rng, Quantity: 1000, Unmark: true, LotID: lot}); err != nil {
 		t.Fatal(err)
 	}
-	if l, _ := milkLine(t, e); l.Ticked || l.Tick != nil {
-		t.Errorf("Line after the Scan's Undo = %+v, want open", l)
+	// The fake Stock keeps the scanned Lot (the scan service removes it), so the Line is covered and gone, not ticked.
+	if l, ok := milkLineIf(t, e); ok && (l.Ticked || l.Tick != nil) {
+		t.Errorf("Line after the Scan's Undo = %+v, want it no longer ticked", l)
+	}
+	if ticks, _ := e.st.Ticks(ctx, rng); len(ticks) != 0 {
+		t.Errorf("ticks after the Scan's Undo = %+v, want none", ticks)
 	}
 }
 
