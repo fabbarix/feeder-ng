@@ -6,13 +6,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { dishSoapJSON, toiletPaperJSON } from '../supply.test-helper'
 import type { Ingredient } from '../types'
 
-const state = { ingredients: [] as Ingredient[], isEmpty: false, query: '', kind: undefined as string | undefined }
+const state = { ingredients: [] as Ingredient[], isEmpty: false, isLoading: false, query: '', kind: undefined as string | undefined }
 const create = vi.fn().mockResolvedValue({})
 vi.mock('../hooks/useIngredients', () => ({
   useIngredients: (query: string, kind?: string) => {
     state.query = query
     state.kind = kind
-    return { ingredients: state.ingredients, isEmpty: state.isEmpty, isLoading: false, error: null, create }
+    return { ingredients: state.ingredients, isEmpty: state.isEmpty, isLoading: state.isLoading, error: null, create }
   },
 }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
@@ -40,7 +40,15 @@ describe('SuppliesScreen', () => {
   beforeEach(() => {
     state.ingredients = [toiletPaperJSON, dishSoapJSON]
     state.isEmpty = false
+    state.isLoading = false
     create.mockClear()
+  })
+  it('while the list first loads, shows rows to come, never "No Supply matches that search"', async () => {
+    state.ingredients = []
+    state.isLoading = true
+    setup()
+    expect(screen.queryByText('No Supply matches that search')).toBeNull()
+    expect(await screen.findByText('Loading')).toBeInTheDocument()
   })
   it('asks the list hook for Supplies', () => {
     setup()
