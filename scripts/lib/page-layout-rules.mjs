@@ -20,9 +20,10 @@ export const ROUTES = [
 
 /**
  * Rules that fail the guard in every mode, on warn routes too (DS-A round 2, system.md 10): horizontal overflow; P16 (hf-recipes-filter): a
- * crushed chip label; P22 (pantry-filter review): a chip Select's value cut by its ellipsis; P23 (b8-shop): a Shop hint cut by its ellipsis.
+ * crushed chip label; P22 (pantry-filter review): a chip Select's value cut by its ellipsis; P23 (b8-shop): a Shop hint cut by its ellipsis;
+ * P29 (B9-01, DS-12 R-A): an action whose boundary is under 3:1; P30 (B9-01): a Segmented option or a [data-one-line] button on two lines.
  */
-export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20', 'P21', 'P22', 'P23']
+export const ALWAYS_FAIL = ['P1', 'P13', 'P15', 'P16', 'P17', 'P18', 'P19', 'P20', 'P21', 'P22', 'P23', 'P29', 'P30']
 
 /**
  * hf-recipes-filter round 2: the filtered /recipes the guard also probes, at every width: the chips of a Side Course and a long Tag,
@@ -171,6 +172,14 @@ export function contrastRatio(fg, bg) {
  * Findings for one probe of a page: [{rule, message}], message starting with the rule id.
  * `metrics` is what the driver's in-page probe returns; ctx = {width (viewport), route, kind}.
  */
+/** B9-01 (P29): the findings of the action-boundary probe run in the dark scheme (none for an undefined or empty list). */
+export function darkBoundaryFindings(weakBoundariesDark) {
+  return (weakBoundariesDark ?? []).map((b) => ({ rule: 'P29', message: `P29 ${boundaryText(b)} (dark scheme)` }))
+}
+
+const boundaryText = (b) =>
+  `${b.sel} "${b.label}" in a ${b.surface}: its boundary is ${b.ratio}:1 against what it sits on (< 3); give it a fill and a 1 px outline (DS-12 R-A)`
+
 /** FU-4: the P10 findings of the Button probe run in the dark scheme (none for an undefined or empty list). */
 export function darkButtonFindings(lowContrastButtonsDark) {
   return (lowContrastButtonsDark ?? []).map((b) => ({ rule: 'P10', message: `P10 Button "${b.label}" contrast ${b.ratio}:1 (dark scheme)` }))
@@ -256,6 +265,11 @@ export function evaluateMetrics(m, { width, kind }) {
   // b8-shop (P23, always fails): a Shop row's one-line info meta is cut by its ellipsis: a food Line's Meal Slot hint ("Tue Dinner +1")
   // or, since b8-polish, a Supply Line's Restock reason ("400/1000 ml" below 420 px).
   for (const c of m.cutMeta ?? []) add('P23', `${c.sel} "${c.label}" shows ${c.shown} px and cuts ${c.px} px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact ("400/1000 ml") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint`)
+  // B9-01 (P29, always fails; DS-12 R-A): an action in a tile, toast, sheet footer, dialog or banner whose boundary (its outline or,
+  // without one, its fill) is under 3:1 against the surface it sits on. A link in running text is not an action.
+  for (const b of m.weakBoundaries ?? []) add('P29', boundaryText(b))
+  // B9-01 (P30, always fails): a Segmented option, or a button marked [data-one-line], whose label runs onto a second line.
+  for (const o of m.wrappedOptions ?? []) add('P30', `${o.sel} "${o.label}" runs onto ${o.lines} lines; a Segmented option is one line: the control spans its container, then the screen shortens the labels`)
   // DS-TODAY round 2 (system.md 5): an action group must not collapse, a button must hold its label, and no text may run under the
   // actions (fails in every mode, see ALWAYS_FAIL). A probe older than the field (undefined) is clean.
   for (const o of m.actionLayout ?? []) {
