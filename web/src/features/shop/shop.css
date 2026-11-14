@@ -216,7 +216,7 @@
   }
 }
 
-/* b8-hint: below 420 px (useNarrowChips, where the Restock reason is compact) the text column gets room for the widest Shop hint
+/* b8-hint, B9-09: while the list is narrower than 24 rem (a container query on .shop-lines; was a viewport below 420 px) the text column gets room for the widest Shop hint
    ("Wed Breakfast +12", about 110 px), even beside a wide quantity ("12000 g"): 12 px row padding, 8 px gaps, a value column 8 px
    under the phone minimum, and the tick's hit area (its size unchanged) reaching 8 px into the start padding, so its 24 px circle
    sits 14 px from the row's edge. The meta text gets 126 px at 360 px beside a short quantity, 119 px beside "12000 g". */
@@ -229,6 +229,15 @@
 
   .shop-lines .list-row__control {
     margin-inline-start: calc(-1 * var(--space-2));
+  }
+}
+
+/* The tick's pull above is read against its row (a ListRow is its own container), the row's padding against the list. In the
+   card grid (from 48 em) a card can be narrower than 24 rem while the list is not: the card keeps its own padding, so its tick
+   does not reach into it. */
+@media (min-width: 48em) {
+  .shop-lines .list-row__control {
+    margin-inline-start: 0;
   }
 }
 
