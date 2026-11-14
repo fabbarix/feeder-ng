@@ -145,8 +145,8 @@ describe('StickyActionBar.css', () => {
     const wide = /@media \(min-width: 64em\)\s*\{([\s\S]*?)\n\}/.exec(code)?.[1] ?? ''
     expect(wide).toMatch(/bottom\s*:[^;]*env\(safe-area-inset-bottom/)
     expect(d(':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
-    // B9-07 (A11Y-02): plus the focused control's ring (width + offset), so the ring never touches the bar (P39)
-    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--focus-ring-width) + var(--focus-ring-offset))')
+    // B9-07 (A11Y-02): plus the focused control's ring (width + offset) and a 4 px gap, so the ring never touches the bar (P39)
+    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1))')
   })
   it('uses tokens only', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
