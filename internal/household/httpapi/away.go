@@ -64,9 +64,18 @@ func (a *api) awayHere(r *http.Request, slot household.MealSlot, date string) (a
 	if err != nil {
 		return h, err
 	}
-	all, err := awaystore.All(ctx, a.d.DB, loc)
-	if err != nil || len(all) == 0 {
+	stored, err := awaystore.All(ctx, a.d.DB, loc)
+	if err != nil {
 		return h, err
+	}
+	var all []away.Away // only an Away whose dates reach this one can cover it
+	for _, x := range stored {
+		if away.Touches(x, date, date) {
+			all = append(all, x)
+		}
+	}
+	if len(all) == 0 {
+		return h, nil
 	}
 	hs, err := a.st.Slots(ctx)
 	if err != nil {

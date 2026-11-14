@@ -51,9 +51,20 @@ func (s *DBSources) awayAt(ctx context.Context, mealSlotID int64, date string) (
 	if err != nil {
 		return nil, err
 	}
-	aways, err := awaystore.All(ctx, q, loc)
-	if err != nil || len(aways) == 0 {
+	all, err := awaystore.All(ctx, q, loc)
+	if err != nil {
 		return nil, err
+	}
+	// Only an Away whose dates reach this one can cover it: on the other dates nothing more is read (the plan reads
+	// every occurrence three times).
+	var aways []away.Away
+	for _, a := range all {
+		if away.Touches(a, date, date) {
+			aways = append(aways, a)
+		}
+	}
+	if len(aways) == 0 {
+		return nil, nil
 	}
 	hs, err := s.hh.Slots(ctx)
 	if err != nil {
