@@ -36,7 +36,7 @@ export function LinkPanel({ error, busy, onSubmit, onCancel }: LinkPanelProps) {
         <Button variant="secondary" disabled={busy} onClick={() => onSubmit(text)}>
           {t.useLink}
         </Button>
-        <Button variant="tertiary" disabled={busy} onClick={onCancel}>
+        <Button variant="secondary" disabled={busy} onClick={onCancel}>
           {t.cancel}
         </Button>
       </div>

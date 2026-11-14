@@ -35,7 +35,7 @@ export function ReadProgress({ kind, state, elapsedSeconds, onCancel }: ReadProg
       </p>
       <p className="read-progress__step">{t.stepOf(at + 1, stages.length)}</p>
       {note ? <p className="read-progress__note">{note}</p> : null}
-      <Button variant="tertiary" onClick={onCancel}>
+      <Button variant="secondary" onClick={onCancel}>
         {t.cancel}
       </Button>
     </div>

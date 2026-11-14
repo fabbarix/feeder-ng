@@ -9,13 +9,15 @@ const ingredients = [{ id: 1, name: 'milk', baseUnit: 'ml' }]
 const open = () => render(<ExtraSheet open onClose={() => {}} ingredients={ingredients} onSubmit={() => {}} />)
 
 describe('ExtraSheet layout', () => {
-  it('Save and Cancel sit in the sheet footer, as one FormActions row, not in the body', () => {
+  it('Save and Cancel sit in the sheet footer (Cancel through onCancel, Save in FormActions), not in the body', () => {
     open()
     const dialog = screen.getByRole('dialog')
     const footer = dialog.querySelector('.sheet__footer')!
     expect(footer).not.toBeNull()
     expect(footer.querySelector('.form-actions__primary')).toContainElement(screen.getByRole('button', { name: 'Save' }))
-    expect(footer.querySelector('.form-actions__tertiary')).toContainElement(screen.getByRole('button', { name: 'Cancel' }))
+    expect(footer).toContainElement(screen.getByRole('button', { name: 'Cancel' }))
+    expect(footer.querySelector('button')).toHaveAccessibleName('Cancel')
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
     expect(dialog.querySelector('.sheet__body')!.querySelector('.form-actions')).toBeNull()
   })
 

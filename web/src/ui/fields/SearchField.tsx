@@ -56,7 +56,7 @@ export function SearchField({ size = 'full', label, value, onChange, onSubmit, o
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKey}
         />
-        {value !== '' ? <IconButton icon="close" label={fieldStrings.clearSearch} size="compact" onClick={clear} /> : null}
+        {value !== '' ? <IconButton icon="remove" label={fieldStrings.clearSearch} size="compact" onClick={clear} /> : null}
       </span>
     </div>
   )

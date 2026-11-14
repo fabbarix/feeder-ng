@@ -31,17 +31,12 @@ export function ApproveSheet({ request, members, membersFailed, busy, error, onA
   const offered = linkableMembers(members, request.email)
   const choice = picked !== null && offered.some((m) => m.id === picked) ? picked : null
   const footer = (
-    <span className="access__actions">
-      <Button variant="tertiary" disabled={busy} onClick={onCancel}>
-        {t.cancel}
-      </Button>
-      <Button variant="primary" disabled={busy} onClick={() => onApprove(choice ?? undefined)}>
-        {accessStrings.approve}
-      </Button>
-    </span>
+    <Button variant="primary" disabled={busy} onClick={() => onApprove(choice ?? undefined)}>
+      {accessStrings.approve}
+    </Button>
   )
   return (
-    <BottomSheet open onClose={onCancel} title={t.title} footer={footer}>
+    <BottomSheet open onClose={onCancel} onCancel={onCancel} cancelLabel={t.cancel} cancelProps={{ disabled: busy }} title={t.title} footer={footer}>
       <div className="access__stack">
         <p className="access__muted access__wrap">{t.explain(request.name, request.email)}</p>
         {error ? (

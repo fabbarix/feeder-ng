@@ -43,7 +43,7 @@ export function CouldntPlanExclusionsScreen(): ReactNode {
         <EmptyState
           title={s.couldntExclusions.emptyTitle}
           action={
-            <Link className="button" data-variant="tertiary" data-size="sm" to="/plan">
+            <Link className="button" data-variant="secondary" data-size="sm" to="/plan">
               {s.couldntExclusions.openPlan}
             </Link>
           }

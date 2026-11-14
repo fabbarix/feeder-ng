@@ -14,8 +14,8 @@ describe('FormActions', () => {
     <FormActions
       primary={<Button type="submit">Save</Button>}
       secondary={<Button variant="secondary">Save and add</Button>}
-      tertiary={<Button variant="tertiary">Cancel</Button>}
-      destructive={<Button variant="danger-tertiary">Delete</Button>}
+      tertiary={<Button variant="secondary">Cancel</Button>}
+      destructive={<Button variant="danger-secondary">Delete</Button>}
     />
   )
 
@@ -43,7 +43,7 @@ describe('FormActions', () => {
   it('sits in a BottomSheet footer and a Dialog action area without a second container', () => {
     render(
       <>
-        <BottomSheet open title="Add Member" onClose={() => {}} footer={<FormActions primary={<Button>Add</Button>} tertiary={<Button variant="tertiary">Cancel</Button>} />}>
+        <BottomSheet open title="Add Member" onClose={() => {}} footer={<FormActions primary={<Button>Add</Button>} tertiary={<Button variant="secondary">Cancel</Button>} />}>
           body
         </BottomSheet>
       </>,
@@ -55,7 +55,7 @@ describe('FormActions', () => {
 
   it('Dialog actions can carry it too', () => {
     render(
-      <Dialog open title="Delete Shop" onClose={() => {}} actions={<FormActions primary={<Button variant="danger">Delete</Button>} tertiary={<Button variant="tertiary">Keep</Button>} />}>
+      <Dialog open title="Delete Shop" onClose={() => {}} actions={<FormActions primary={<Button variant="danger">Delete</Button>} tertiary={<Button variant="secondary">Keep</Button>} />}>
         Sure?
       </Dialog>,
     )

@@ -121,7 +121,7 @@ export function ImageEditor({ src, width, height, aspect, value, onChange, minSi
       <div className="crop-editor__actions">
         <IconButton icon="rotateLeft" label={t.rotateLeft} disabled={busy} onClick={() => editor.rotate(-1)} />
         <IconButton icon="rotateRight" label={t.rotateRight} disabled={busy} onClick={() => editor.rotate(1)} />
-        <Button variant="tertiary" disabled={busy} onClick={editor.reset}>
+        <Button variant="secondary" disabled={busy} onClick={editor.reset}>
           {t.cropReset}
         </Button>
         {children ? <div className="crop-editor__confirm">{children}</div> : null}

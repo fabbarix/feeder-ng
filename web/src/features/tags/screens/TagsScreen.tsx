@@ -39,7 +39,7 @@ export function TagsScreen(): ReactElement | null {
           </ListGroup>
         </div>
       )}
-      <Button ref={page.addRef} type="button" variant="tertiary" icon="add" onClick={page.openNew}>
+      <Button ref={page.addRef} type="button" variant="secondary" icon="add" onClick={page.openNew}>
         {tagsStrings.add}
       </Button>
       <TagSheet

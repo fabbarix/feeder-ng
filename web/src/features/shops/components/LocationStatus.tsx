@@ -32,7 +32,7 @@ export function LocationStatus({ status, position, failure, onRetry }: LocationS
         {text}
       </p>
       {retry ? (
-        <Button variant="tertiary" size="sm" onClick={onRetry}>
+        <Button variant="secondary" size="sm" onClick={onRetry}>
           {strings.tryAgain}
         </Button>
       ) : null}

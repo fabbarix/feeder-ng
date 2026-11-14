@@ -4,7 +4,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PlanScreen } from './PlanScreen'
-import { findNotice, noticeWith } from '../../../test/notices'
+import { findNotice, noticeWith, findToast } from '../../../test/notices'
 import { allCookedResult, courseMeal, courseSlot, mockApi, planCourse, renderWithProviders } from '../test-utils'
 import type { CookedAllResult, CookPreview, PlanView } from '../types'
 
@@ -49,13 +49,13 @@ async function markAll(result: CookedAllResult = allCookedResult()) {
 describe('PlanScreen: Mark all Cooked outcome', () => {
   it('cheers and says where each Leftover went (a success toast, as for one Course)', async () => {
     await markAll()
-    expect(await screen.findByText('Cooked, nice one! Roast chicken: 2 portions → Thu Lunch; Green beans: 1 portion kept, good until Fri')).toBeInTheDocument()
+    expect(await findToast('Cooked, nice one! Roast chicken: 2 portions → Thu Lunch; Green beans: 1 portion kept, good until Fri')).toBeInTheDocument()
   })
 
   it('one Leftover reads exactly as the single path does', async () => {
     const one = allCookedResult()
     await markAll({ ...one, leftovers: [one.leftovers[0]!], warnings: [] })
-    expect(await screen.findByText('Cooked, nice one! 2 portions → Thu Lunch')).toBeInTheDocument()
+    expect(await findToast('Cooked, nice one! 2 portions → Thu Lunch')).toBeInTheDocument()
   })
 
   it('no Leftover: just the cheer', async () => {

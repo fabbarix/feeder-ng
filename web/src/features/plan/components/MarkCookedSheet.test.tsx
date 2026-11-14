@@ -77,7 +77,7 @@ describe('MarkCookedSheet', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Mark as Cooked' }))
     expect(h.onConfirm).toHaveBeenCalledTimes(1)
     const not = screen.getByRole('button', { name: 'Not cooked' })
-    expect(not).toHaveAttribute('data-variant', 'tertiary')
+    expect(not).toHaveAttribute('data-variant', 'secondary')
     await userEvent.click(not)
     expect(h.onNotCooked).toHaveBeenCalledTimes(1)
   })

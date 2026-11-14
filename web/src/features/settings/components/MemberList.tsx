@@ -19,7 +19,7 @@ const text = settingsStrings.member
  *  the editor; a plain User's rows are static. Admins also get "Add Member". */
 export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEdit }: MemberListProps) {
   const addButton = canEdit ? (
-    <Button variant="tertiary" onClick={onAdd}>
+    <Button variant="secondary" onClick={onAdd}>
       {text.add}
     </Button>
   ) : null

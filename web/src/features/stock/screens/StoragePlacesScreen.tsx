@@ -54,7 +54,7 @@ export function StoragePlacesScreen(): ReactElement {
           ))}
         </ListGroup>
       )}
-      <Button variant="tertiary" icon="add" onClick={() => setEditing('new')}>
+      <Button variant="secondary" icon="add" onClick={() => setEditing('new')}>
         {strings.places.add}
       </Button>
       <StoragePlaceSheet

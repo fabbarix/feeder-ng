@@ -44,7 +44,7 @@ describe('Gallery (dev catalogue)', () => {
     const { container } = render(<Gallery />)
     for (const scheme of ['light', 'dark']) {
       const section = container.querySelector<HTMLElement>(`[data-scheme="${scheme}"]`)!
-      for (const v of ['primary', 'secondary', 'accent-secondary', 'tertiary', 'danger', 'danger-tertiary']) {
+      for (const v of ['primary', 'secondary', 'danger', 'danger-secondary', 'link']) {
         expect(section.querySelector(`button[data-variant="${v}"]`), `${scheme} ${v}`).not.toBeNull()
       }
       for (const size of ['sm', 'md', 'lg', 'xl']) expect(section.querySelector(`button[data-size="${size}"]`)).not.toBeNull()

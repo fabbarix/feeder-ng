@@ -23,7 +23,7 @@ export function ShopLocationTile({ location, onSave }: ShopLocationTileProps) {
           {errorText(here.error)}
         </p>
       ) : null}
-      <Button variant="tertiary" onClick={here.saveHere} loading={here.saving || here.status === 'locating'}>
+      <Button variant="secondary" onClick={here.saveHere} loading={here.saving || here.status === 'locating'}>
         {strings.saveLocationHere}
       </Button>
     </Tile>

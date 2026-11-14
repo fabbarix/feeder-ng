@@ -76,7 +76,7 @@ function ThisDevice({
           <TypeSwitch key={type} type={type} on={device.types[type]} onChange={(on) => onSetType(device.id, type, on)} />
         ))}
       </ul>
-      <Button type="button" variant="tertiary" onClick={onDisable} disabled={busy}>
+      <Button type="button" variant="secondary" onClick={onDisable} disabled={busy}>
         {s.disable}
       </Button>
     </div>
@@ -105,7 +105,7 @@ function OtherDevices({ devices, onRemove }: { devices: PushDevice[]; onRemove: 
             key={d.id}
             title={d.label}
             trailing={
-              <Button type="button" variant="tertiary" onClick={() => onRemove(d.id)} aria-label={s.remove(d.label)}>
+              <Button type="button" variant="secondary" onClick={() => onRemove(d.id)} aria-label={s.remove(d.label)}>
                 {s.removeShort}
               </Button>
             }

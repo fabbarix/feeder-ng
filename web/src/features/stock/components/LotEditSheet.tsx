@@ -107,7 +107,7 @@ function LotEditForm({ lot, today, onClose, onSubmit }: FormProps) {
           }}
         />
       ) : null}
-      <FormActions secondary={<Button variant="tertiary" onClick={onClose}>{strings.cancel}</Button>} primary={<Button type="submit">{strings.save}</Button>} />
+      <FormActions secondary={<Button variant="secondary" onClick={onClose}>{strings.cancel}</Button>} primary={<Button type="submit">{strings.save}</Button>} />
     </form>
   )
 }

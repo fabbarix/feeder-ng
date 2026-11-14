@@ -50,10 +50,10 @@ describe('SpoiledTile: capped at 3 rows', () => {
     expect(rowsIn(container)).toHaveLength(3)
   })
 
-  it('the toggle is a real Button of the tile (tertiary), after the list, never one of the rows', () => {
+  it('the toggle is a real Button of the tile (secondary), after the list, never one of the rows', () => {
     const { container } = render(<SpoiledTile lots={lots(5)} today={today} onThrowOut={() => {}} onKeep={() => {}} />)
     const toggle = screen.getByRole('button', { name: 'Show 2 more' })
-    expect(toggle).toHaveAttribute('data-variant', 'tertiary')
+    expect(toggle).toHaveAttribute('data-variant', 'secondary')
     expect(container.querySelector('.spoiled-tile__list')!.contains(toggle)).toBe(false)
   })
 })

@@ -23,15 +23,12 @@ export function MergeTargetDialog({ state, tags, busy, onTarget, onReview, onClo
       open
       onClose={onClose}
       title={tagsStrings.merge.pickerTitle(state.source.name)}
+      onCancel={onClose}
+      cancelLabel={tagsStrings.merge.cancel}
       actions={
-        <>
-          <Button type="button" variant="tertiary" onClick={onClose}>
-            {tagsStrings.merge.cancel}
-          </Button>
-          <Button type="button" variant="primary" disabled={state.targetId === null || busy} loading={busy} onClick={onReview}>
-            {tagsStrings.merge.review}
-          </Button>
-        </>
+        <Button type="button" variant="primary" disabled={state.targetId === null || busy} loading={busy} onClick={onReview}>
+          {tagsStrings.merge.review}
+        </Button>
       }
     >
       <TagSelect label={tagsStrings.merge.pickerLabel} tags={tags} value={state.targetId} exclude={state.source.id} onChange={onTarget} />

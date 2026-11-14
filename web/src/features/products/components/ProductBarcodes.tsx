@@ -47,7 +47,7 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, o
           {barcodes.map((code) => (
             <span key={code} className="pg__row">
               <Chip kind="tag">{formatBarcode(code)}</Chip>
-              <IconButton icon="close" label={strings.removeBarcode(formatBarcode(code))} onClick={() => onRemove(code)} />
+              <IconButton icon="remove" label={strings.removeBarcode(formatBarcode(code))} onClick={() => onRemove(code)} />
             </span>
           ))}
         </div>

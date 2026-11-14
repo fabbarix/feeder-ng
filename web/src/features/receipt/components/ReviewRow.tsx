@@ -33,7 +33,7 @@ export function ReviewRow({ view, onToggle, onOpenAdd }: ReviewRowProps) {
           <span className="receipt-row__actions">
             {view.ready ? <span className="receipt-row__ready">{t.ready}</span> : null}
             {view.ready ? (
-              <Button variant="tertiary" size="sm" onClick={() => onOpenAdd(view.id)}>
+              <Button variant="secondary" size="sm" onClick={() => onOpenAdd(view.id)}>
                 {t.edit}
               </Button>
             ) : (
@@ -45,7 +45,7 @@ export function ReviewRow({ view, onToggle, onOpenAdd }: ReviewRowProps) {
         ) : null}
         {view.isMissing ? (
           <span className="receipt-row__actions">
-            <Button variant="tertiary" size="sm" onClick={() => onToggle(view.id)}>
+            <Button variant="secondary" size="sm" onClick={() => onToggle(view.id)}>
               {view.checked ? t.undo : t.remove}
             </Button>
           </span>

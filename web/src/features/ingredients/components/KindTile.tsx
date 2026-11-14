@@ -18,7 +18,7 @@ export function KindTile({ kind, name, change }: KindTileProps) {
   return (
     <Tile as="section" aria-label={strings.kind.label}>
       <p className="kind-tile__text">{kind === 'supply' ? strings.kind.thisIsSupply : strings.kind.thisIsFood}</p>
-      <Button variant="tertiary" onClick={() => change.request(target)}>
+      <Button variant="secondary" onClick={() => change.request(target)}>
         {target === 'supply' ? strings.kind.changeToSupply : strings.kind.changeToFood}
       </Button>
       {change.failure ? <p role="alert">{change.failure}</p> : null}

@@ -42,7 +42,7 @@ export function CouldntPlanExclusionTile({ group, expanded, onToggle, focusId = 
       </h2>
       {single ? null : (
         <div className="plan__row">
-          <Button variant="tertiary" size="sm" aria-expanded={expanded} aria-controls={expanded ? listId : undefined} onClick={onToggle}>
+          <Button variant="secondary" size="sm" aria-expanded={expanded} aria-controls={expanded ? listId : undefined} onClick={onToggle}>
             {expanded ? s.couldntExclusions.hideList : s.couldntExclusions.showAll(group.items.length)}
           </Button>
         </div>
@@ -105,7 +105,7 @@ function ExclusionRow({ record }: { record: ExclusionRecord }): ReactNode {
       leading={<Avatar name={record.member.name} imageUrl={record.member.photoUrl} size="md" colour={record.member.colour} glyph={record.member.avatar} />}
       trailing={
         action ? (
-          <Link className="button" data-variant="tertiary" data-size="sm" to={action.to}>
+          <Link className="button" data-variant="secondary" data-size="sm" to={action.to}>
             {action.label}
           </Link>
         ) : undefined

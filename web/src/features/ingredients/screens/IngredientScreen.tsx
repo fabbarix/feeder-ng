@@ -112,7 +112,7 @@ export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
         </form>
       ) : (
         <Button
-          variant="tertiary"
+          variant="secondary"
           onClick={() => {
             setNameText(ingredient.name)
             setRenaming(true)
@@ -200,13 +200,13 @@ export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
         <KindTile kind={kind} name={ingredient.name} change={change} />
 
         <Tile as="section" aria-label={words.mergeTitle}>
-          <Button variant="tertiary" onClick={() => setMergeOpen(true)}>
+          <Button variant="secondary" onClick={() => setMergeOpen(true)}>
             {words.mergeInto}
           </Button>
         </Tile>
 
         <Tile as="section" aria-label={words.deleteLabel}>
-          <Button variant="danger-tertiary" disabled={locked} onClick={() => setDeleteOpen(true)}>
+          <Button variant="danger-secondary" disabled={locked} onClick={() => setDeleteOpen(true)}>
             {words.deleteLabel}
           </Button>
           {locked ? <p>{strings.deleteLocked(ing.referenceCount)}</p> : null}

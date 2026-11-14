@@ -19,15 +19,13 @@ export function CourseLossDialog({ open, loss, onConfirm, onCancel }: CourseLoss
       onClose={onCancel}
       title={courseStrings.lossTitle(joinNames(loss.courseNames), loss.rules.length)}
       tone="danger"
+      onCancel={onCancel}
+      cancelLabel={courseStrings.lossCancel}
+      cancelProps={{ 'data-autofocus': true }}
       actions={
-        <>
-          <Button variant="tertiary" data-autofocus onClick={onCancel}>
-            {courseStrings.lossCancel}
-          </Button>
-          <Button variant="danger" onClick={onConfirm}>
-            {courseStrings.lossConfirm}
-          </Button>
-        </>
+        <Button variant="danger" onClick={onConfirm}>
+          {courseStrings.lossConfirm}
+        </Button>
       }
     >
       <p>{courseStrings.lossBody}</p>

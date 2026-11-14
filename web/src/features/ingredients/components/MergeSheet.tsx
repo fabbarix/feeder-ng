@@ -72,7 +72,7 @@ export function MergeSheet({ open, sourceId, onClose, onMerged, kind = 'food' }:
               {strings.mergeConfirm}
             </Button>
           ) : null}
-          <Button variant="tertiary" onClick={() => flow.selectTarget(null)}>
+          <Button variant="secondary" onClick={() => flow.selectTarget(null)}>
             {words.mergeChangeTarget}
           </Button>
           {error ? <p role="alert">{error}</p> : null}

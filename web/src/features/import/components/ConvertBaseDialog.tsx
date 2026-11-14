@@ -32,17 +32,14 @@ export function ConvertBaseDialog({ state, canConfirm, onYield, onYieldUnit, onC
       open
       onClose={onCancel}
       title={copy.title}
+      onCancel={onCancel}
+      cancelLabel={s.baseRecipes.cancel}
       actions={
-        <>
-          <Button variant="tertiary" onClick={onCancel}>
-            {s.baseRecipes.cancel}
+        state.status === 'ready' ? (
+          <Button variant="primary" disabled={!canConfirm} onClick={onConfirm}>
+            {copy.confirmLabel}
           </Button>
-          {state.status === 'ready' ? (
-            <Button variant="primary" disabled={!canConfirm} onClick={onConfirm}>
-              {copy.confirmLabel}
-            </Button>
-          ) : null}
-        </>
+        ) : null
       }
     >
       {state.status === 'loading' ? <p role="status">{s.baseRecipes.checking}</p> : null}

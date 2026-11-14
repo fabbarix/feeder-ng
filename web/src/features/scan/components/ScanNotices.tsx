@@ -22,7 +22,7 @@ export function ScanNotices({ online, pendingCount, rejectedCount, onDismissReje
       {rejectedCount > 0 ? (
         <div className="scan-notices__item" data-kind="rejected-count">
           <p>{scanStrings.rejectedCount(rejectedCount)}</p>
-          <Button variant="tertiary" onClick={onDismissRejected}>
+          <Button variant="secondary" onClick={onDismissRejected}>
             {uiStrings.dismiss}
           </Button>
         </div>
@@ -30,7 +30,7 @@ export function ScanNotices({ online, pendingCount, rejectedCount, onDismissReje
       {notices.map((n) => (
         <div key={`${n.kind}-${n.clientUuid}`} className="scan-notices__item" data-kind={n.kind}>
           <p>{n.text}</p>
-          <Button variant="tertiary" onClick={() => onDismiss(n.clientUuid)}>
+          <Button variant="secondary" onClick={() => onDismiss(n.clientUuid)}>
             {uiStrings.dismiss}
           </Button>
         </div>

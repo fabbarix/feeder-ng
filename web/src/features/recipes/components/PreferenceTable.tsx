@@ -44,7 +44,7 @@ export function PreferenceTable({ recipeName, rows, onToggle, highlightedMemberI
       <EmptyState
         headingLevel={3}
         title={recipeStrings.noMembers}
-        action={isAdmin ? <Link className="button" data-variant="tertiary" data-size="sm" to="/settings/members">{recipeStrings.addMembers}</Link> : <p>{recipeStrings.askAdmin}</p>}
+        action={isAdmin ? <Link className="button" data-variant="secondary" data-size="sm" to="/settings/members">{recipeStrings.addMembers}</Link> : <p>{recipeStrings.askAdmin}</p>}
       />
     )
   }

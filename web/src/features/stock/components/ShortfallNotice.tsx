@@ -22,7 +22,7 @@ export function ShortfallNotice({ warning, onCorrect, onDismiss, system = 'metri
         <Button variant="secondary" onClick={() => onCorrect(warning)}>
           {strings.correctStock}
         </Button>
-        <Button variant="tertiary" onClick={onDismiss}>
+        <Button variant="secondary" onClick={onDismiss}>
           {uiStrings.dismiss}
         </Button>
       </div>

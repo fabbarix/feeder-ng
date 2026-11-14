@@ -74,7 +74,7 @@ export function ReadPhotoPanel({ pages, disabled }: ReadPhotoPanelProps): ReactN
       {problem ? (
         <div role="alert" tabIndex={-1} ref={alert} className="photo-panel__alert">
           <p>{problemText(problem)}</p>
-          <Button variant="tertiary" onClick={pages.dismissProblem}>
+          <Button variant="secondary" onClick={pages.dismissProblem}>
             {t.dismiss}
           </Button>
         </div>
@@ -86,7 +86,7 @@ export function ReadPhotoPanel({ pages, disabled }: ReadPhotoPanelProps): ReactN
               <p id={restoredNote} role="status">
                 {t.restored(restored)}
               </p>
-              <Button variant="tertiary" aria-describedby={restoredNote} onClick={pages.removeRestored}>
+              <Button variant="secondary" aria-describedby={restoredNote} onClick={pages.removeRestored}>
                 {t.restoredRemove}
               </Button>
             </div>

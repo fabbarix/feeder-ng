@@ -41,7 +41,7 @@ export function ShelfLifeEditor({ days, onSave, variant = 'shelfLife' }: ShelfLi
         <FormActions
           destructive={
             days !== null ? (
-              <Button variant="danger-tertiary" onClick={form.clear}>
+              <Button variant="danger-secondary" onClick={form.clear}>
                 {copy.clear}
               </Button>
             ) : undefined

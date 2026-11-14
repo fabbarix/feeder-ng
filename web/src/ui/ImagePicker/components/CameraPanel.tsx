@@ -23,11 +23,11 @@ export function CameraPanel({ camera, disabled, onCapture, onClose }: CameraPane
           {t.capture}
         </Button>
         {camera.canSwitch ? (
-          <Button variant="tertiary" disabled={disabled} onClick={camera.switchCamera}>
+          <Button variant="secondary" disabled={disabled} onClick={camera.switchCamera}>
             {t.switchCamera}
           </Button>
         ) : null}
-        <Button variant="tertiary" icon="close" disabled={disabled} onClick={onClose}>
+        <Button variant="secondary" icon="close" disabled={disabled} onClick={onClose}>
           {t.closeCamera}
         </Button>
       </div>

@@ -352,7 +352,7 @@ export function RecipeEditorScreen(): ReactNode {
       <StickyActionBar label={recipeStrings.editorActions} column="form">
         <FormActions
           tertiary={
-            <Button variant="tertiary" onClick={() => navigate(-1)}>
+            <Button variant="secondary" onClick={() => navigate(-1)}>
               {recipeStrings.cancel}
             </Button>
           }

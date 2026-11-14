@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { makeLot, makeTotal } from '../testData'
 import { StockScreen } from './StockScreen'
+import { findToast } from '../../../test/notices'
 
 type Status = 'loading' | 'error' | 'offline' | 'empty' | 'ready'
 const hooks = vi.hoisted(() => ({
@@ -217,7 +218,7 @@ describe('StockScreen actions', () => {
     hooks.throwOut.mockRejectedValue(new Error('500'))
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Throw out chicken thighs' }))
-    expect(await screen.findByText('That did not save. Try again.')).toBeInTheDocument()
+    expect(await findToast('That did not save. Try again.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Keep chicken thighs' })).toBeEnabled()
   })
 
@@ -262,7 +263,7 @@ describe('StockScreen actions', () => {
     view()
     await openIngredientSheet()
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Throw out/ }))
-    expect(await screen.findByText('That did not save. Try again.')).toBeInTheDocument()
+    expect(await findToast('That did not save. Try again.')).toBeInTheDocument()
   })
 
   it('adds a Stock Lot by hand through the shared selects', async () => {

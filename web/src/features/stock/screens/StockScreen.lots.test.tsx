@@ -7,6 +7,7 @@ import { OPEN_INGREDIENTS_KEY } from '../hooks/useOpenIngredients'
 import { PANTRY_MODE_KEY } from '../hooks/usePantryFilters'
 import { makeLot, makeTotal } from '../testData'
 import { StockScreen } from './StockScreen'
+import { findToast } from '../../../test/notices'
 
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
@@ -127,7 +128,7 @@ describe('Pantry: Edit a Lot', () => {
     await userEvent.type(input, '650')
     await userEvent.click(within(edit).getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(api.callsTo('PATCH', '/api/stock/lots/21')).toHaveLength(1))
-    expect(await screen.findByText('That did not save. Try again.')).toBeInTheDocument()
+    expect(await findToast('That did not save. Try again.')).toBeInTheDocument()
   })
 })
 

@@ -105,7 +105,7 @@ export function ImportScreen(): ReactNode {
             <Link className="button" data-variant="primary" data-size="md" to="/recipes">
               {s.openRecipes}
             </Link>
-            <Button variant="tertiary" onClick={() => void r.reset()}>
+            <Button variant="secondary" onClick={() => void r.reset()}>
               {s.startOver}
             </Button>
           </Tile>
@@ -192,7 +192,7 @@ function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps):
       {stale ? (
         <Tile variant="status" status="danger" role="alert" as="section">
           <p>{s.stale}</p>
-          <Button variant="tertiary" onClick={() => void screen.reset()}>
+          <Button variant="secondary" onClick={() => void screen.reset()}>
             {s.startOver}
           </Button>
         </Tile>

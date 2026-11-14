@@ -31,7 +31,7 @@ export function UnitConversionPrompt({ prompt, onSave, onCancel }: UnitConversio
   }
 
   return (
-    <BottomSheet open title={c.title} onClose={onCancel}>
+    <BottomSheet open title={c.title} onClose={onCancel} onCancel={onCancel} cancelLabel={c.cancel} footer={<Button onClick={save}>{c.save}</Button>}>
       <p>{promptQuestion(prompt)}</p>
       <NumberField
         label={c.amount(prompt.baseUnit)}
@@ -43,12 +43,6 @@ export function UnitConversionPrompt({ prompt, onSave, onCancel }: UnitConversio
           setInvalid(false)
         }}
       />
-      <div className="unit-prompt__actions">
-        <Button onClick={save}>{c.save}</Button>
-        <Button variant="tertiary" onClick={onCancel}>
-          {c.cancel}
-        </Button>
-      </div>
     </BottomSheet>
   )
 }

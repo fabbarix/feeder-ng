@@ -43,7 +43,7 @@ export function MarkCookedSheet(props: MarkCookedSheetProps): ReactNode {
           {planStrings.noLeftover}
         </Button>
       ) : null}
-      <Button variant="tertiary" disabled={busy || !preview} onClick={onNotCooked}>
+      <Button variant="secondary" disabled={busy || !preview} onClick={onNotCooked}>
         {planStrings.notCooked}
       </Button>
     </div>

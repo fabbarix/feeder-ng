@@ -20,7 +20,7 @@ export function TestConnectionTile({ canRun, running, hint, result, errorMessage
   return (
     <Tile as="section" aria-label={raStrings.testConnection} span="full">
       <div>
-        <Button variant="tertiary" icon={raIcons.connect} disabled={!canRun} loading={running} onClick={onRun}>
+        <Button variant="secondary" icon={raIcons.connect} disabled={!canRun} loading={running} onClick={onRun}>
           {raStrings.testConnection}
         </Button>
       </div>

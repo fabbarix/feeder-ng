@@ -28,15 +28,13 @@ export function CourseRemoveDialog({ state, locale = 'en' }: CourseRemoveDialogP
       onClose={state.close}
       title={mode === 'delete' ? s.deleteTitle(name) : s.archiveTitle(name)}
       tone="danger"
+      onCancel={state.close}
+      cancelLabel={s.cancel}
+      cancelProps={{ 'data-autofocus': true, disabled: busy }}
       actions={
-        <>
-          <Button variant="tertiary" data-autofocus disabled={busy} onClick={state.close}>
-            {s.cancel}
-          </Button>
-          <Button variant="danger" disabled={blocked} loading={busy} onClick={() => void state.confirm()}>
-            {mode === 'delete' ? s.confirmDelete : s.confirmArchive}
-          </Button>
-        </>
+        <Button variant="danger" disabled={blocked} loading={busy} onClick={() => void state.confirm()}>
+          {mode === 'delete' ? s.confirmDelete : s.confirmArchive}
+        </Button>
       }
     >
       {mode === 'archive' ? <p role="status">{s.plannedRefusal(name)}</p> : null}

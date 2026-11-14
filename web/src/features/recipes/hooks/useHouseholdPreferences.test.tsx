@@ -30,6 +30,7 @@ vi.mock('../../../lib/sse', () => ({
 }))
 
 import { useHouseholdPreferences } from './useHouseholdPreferences'
+import { findToast } from '../../../test/notices'
 
 const store: Record<number, MemberPreferences> = {}
 const wrapper = ({ children }: { children: ReactNode }) => {
@@ -129,13 +130,13 @@ describe('useHouseholdPreferences: toggleRecipe', () => {
     const { result } = await setup()
     await act(() => result.current.toggleRecipe(1, 3, 'favourite'))
     expect(result.current.prefsByMember[1]!.recipes).toEqual({ '3': 'dislike' })
-    expect(await screen.findByText("Couldn't save Anna's Favourite. Try again.")).toBeInTheDocument()
+    expect(await findToast("Couldn't save Anna's Favourite. Try again.")).toBeInTheDocument()
   })
   it('names the tapped state in the failure Toast', async () => {
     h.api.setRecipeState.mockRejectedValue(new ApiError(500, 'internal', 'boom'))
     const { result } = await setup()
     await act(() => result.current.toggleRecipe(2, 3, 'dislike'))
-    expect(await screen.findByText("Couldn't save Ben's Dislike. Try again.")).toBeInTheDocument()
+    expect(await findToast("Couldn't save Ben's Dislike. Try again.")).toBeInTheDocument()
   })
   it('does nothing for a Member whose preferences are not loaded', async () => {
     const { result } = await setup()

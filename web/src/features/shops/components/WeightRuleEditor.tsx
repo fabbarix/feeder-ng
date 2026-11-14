@@ -100,7 +100,7 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
       ) : null}
       <FormActions
         tertiary={
-          <Button variant="tertiary" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel}>
             {strings.cancel}
           </Button>
         }

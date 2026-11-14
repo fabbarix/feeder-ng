@@ -148,7 +148,7 @@ export function ProductScreen() {
         <Tile as="section" span="full" aria-label={strings.actionsTitle}>
           <FormActions
             destructive={
-              <Button variant="danger-tertiary" onClick={() => void actions.remove()}>
+              <Button variant="danger-secondary" onClick={() => void actions.remove()}>
                 {strings.deleteProduct}
               </Button>
             }

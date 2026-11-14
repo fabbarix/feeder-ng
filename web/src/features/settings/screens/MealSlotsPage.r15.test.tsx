@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { anna, householdSettings, marco, mondayLunch, sam, thursdayDinner, tuesdayDinner } from '../components/fixtures'
 import { ADMIN_ME, mockApi, renderWithProviders, USER_ME } from '../test-utils'
 import { MealSlotsPage } from './MealSlotsPage'
+import { findToast } from '../../../test/notices'
 
 const wednesdayDinner = { ...tuesdayDinner, id: 13, weekday: 3 }
 const slots = [mondayLunch, { ...tuesdayDinner, id: 9, weekday: 1 }, tuesdayDinner, wednesdayDinner, thursdayDinner]
@@ -69,7 +70,7 @@ describe('MealSlotsPage: edit on several days', () => {
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('2000')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save Meal Slot' }))
-    expect(await screen.findByText('Updated Dinner on Tue. Fri has no Dinner, so it was skipped.')).toBeInTheDocument()
+    expect(await findToast('Updated Dinner on Tue. Fri has no Dinner, so it was skipped.')).toBeInTheDocument()
   })
 
   it('after a rename the success message uses the new name', async () => {

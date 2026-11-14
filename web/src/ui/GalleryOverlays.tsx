@@ -66,15 +66,11 @@ function DialogDemo() {
         icon="delete"
         tone="danger"
         dismissOnBackdrop={false}
+        onCancel={() => setOpen(false)}
         actions={
-          <>
-            <Button variant="tertiary" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={() => setOpen(false)}>
-              Delete
-            </Button>
-          </>
+          <Button variant="danger" onClick={() => setOpen(false)}>
+            Delete
+          </Button>
         }
       >
         <p>It is removed from future Planned Meals. Archive keeps it for history.</p>
@@ -113,6 +109,26 @@ function SheetDemo() {
   )
 }
 
+function CancelSheetDemo() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        Open sheet with Cancel
+      </Button>
+      <BottomSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        onCancel={() => setOpen(false)}
+        title="How many portions to freeze?"
+        footer={<Button onClick={() => setOpen(false)}>Freeze 1.25 portions</Button>}
+      >
+        <p>All of it. None of it is planned.</p>
+      </BottomSheet>
+    </>
+  )
+}
+
 function ToastDemo() {
   const toast = useToast()
   return (
@@ -125,6 +141,31 @@ function ToastDemo() {
       </Button>
       <Button variant="secondary" onClick={() => toast.show('Could not save', { status: 'error' })}>
         Error toast
+      </Button>
+      <Button
+        variant="secondary"
+        onClick={() =>
+          toast.show({
+            status: 'success',
+            title: 'Swapped Tue Breakfast',
+            subline: '2 other meals changed',
+            body: 'Tue Lunch is now Chicken curry. Wed Dinner is now Lentil soup.',
+            actions: [
+              { label: 'Review', ariaLabel: 'Review 2 changed meals', onClick: noop },
+              { label: 'Undo', onClick: noop },
+            ],
+          })
+        }
+      >
+        Toast with detail
+      </Button>
+      <Button
+        variant="secondary"
+        onClick={() =>
+          toast.show({ status: 'warning', title: 'Nothing was undone', subline: 'The plan changed since your Swap', body: 'Anna swapped Thu Dinner after you. Review the week and change it by hand.' })
+        }
+      >
+        Warning toast with detail
       </Button>
     </div>
   )
@@ -220,8 +261,11 @@ export function OverlayGalleryGroups(): ReactNode {
           </Cell>
         </Group>
         <Group name="BottomSheet">
-          <Cell caption="footer">
+          <Cell caption="footer, Close">
             <SheetDemo />
+          </Cell>
+          <Cell caption="onCancel: Cancel, no Close">
+            <CancelSheetDemo />
           </Cell>
         </Group>
         <Group name="Toast">

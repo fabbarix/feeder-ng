@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { BentoGrid } from './BentoGrid'
 import { Button, PRIMARY_SCOPE_ATTR, type ButtonVariant } from './Button'
 import { Chip, type ChipStatus } from './Chip'
+import { CloseButton } from './CloseButton'
+import { DetailList, DetailRow, type DetailTone } from './DetailList'
 import { EmptyState } from './EmptyState'
 import { IconButton } from './IconButton'
 import { ListGroup, ListRow } from './ListRow'
@@ -43,7 +45,7 @@ import './Gallery.css'
  * Two schemes side by side; every example sits in its own cell, so each cell is its own primary scope.
  */
 const noop = () => {}
-const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'accent-secondary', 'tertiary', 'danger', 'danger-tertiary']
+const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'danger', 'danger-secondary']
 const STATUSES: ChipStatus[] = ['leftover', 'spoil', 'danger', 'success', 'pinned']
 
 function Cell({ caption, children }: { caption: string; children: ReactNode }) {
@@ -72,6 +74,32 @@ function ButtonGroup() {
           <Button variant={v}>Cook</Button>
         </Cell>
       ))}
+      <Cell caption="link (running text only)">
+        <p>
+          See the <Button variant="link">Planning rules</Button> for why.
+        </p>
+      </Cell>
+      <Cell caption='iconOnly="narrow" (label hidden below 360 px)'>
+        <Button variant="secondary" icon="filter" iconOnly="narrow">
+          Filters
+        </Button>
+      </Cell>
+      {(['soft', 'hero'] as const).map((variant) => (
+        <Cell key={`on-${variant}`} caption={`secondary on a ${variant} tile`}>
+          <Tile variant={variant}>
+            <Button variant="secondary" size="sm">
+              Dismiss
+            </Button>
+          </Tile>
+        </Cell>
+      ))}
+      <Cell caption="secondary on a spoil tile">
+        <Tile variant="status" status="spoil">
+          <Button variant="secondary" size="sm">
+            Correct Stock
+          </Button>
+        </Tile>
+      </Cell>
       {(['sm', 'md', 'lg', 'xl'] as const).map((size) => (
         <Cell key={size} caption={size}>
           <Button size={size} icon="add">
@@ -104,6 +132,56 @@ function IconButtonGroup() {
       <Cell caption="disabled">
         <IconButton icon="edit" label="Edit" disabled />
       </Cell>
+      <Cell caption='shape="circle"'>
+        <IconButton icon="add" label="Add" shape="circle" />
+      </Cell>
+      <Cell caption="on a soft tile">
+        <Tile variant="soft">
+          <IconButton icon="more" label="More" />
+        </Tile>
+      </Cell>
+      <Cell caption="on a leftover tile">
+        <Tile variant="status" status="leftover">
+          <IconButton icon="more" label="More" />
+        </Tile>
+      </Cell>
+    </Group>
+  )
+}
+
+function CloseButtonGroup() {
+  return (
+    <Group name="CloseButton">
+      <Cell caption="40 px circle, 52 px target">
+        <CloseButton />
+      </Cell>
+    </Group>
+  )
+}
+
+// The warn tone (and its tile tint) arrives with B9-02's tokens.
+const DETAIL_TONES = ['spoil', 'info', 'danger', 'leftover', 'neutral'] as const satisfies readonly DetailTone[]
+
+function DetailListGroup() {
+  return (
+    <Group name="DetailList">
+      {DETAIL_TONES.map((tone) => (
+        <Cell key={tone} caption={`tone ${tone}`}>
+          {tone === 'neutral' ? (
+            <DetailList tone={tone} fill="surface">
+              <DetailRow label="Preferences" state="3" detail="Favourites, Dislikes and Exclusions" />
+              <DetailRow label="Sign-in" state="Ends" />
+            </DetailList>
+          ) : (
+            <Tile variant="status" status={tone}>
+              <DetailList tone={tone}>
+                <DetailRow label="Chestnut mushrooms" state="200 g short" detail="The Recipe used 300 g · Stock showed 100 g" />
+                <DetailRow label="Gorgonzola" state="none in Stock" detail="The Recipe used 250 g" />
+              </DetailList>
+            </Tile>
+          )}
+        </Cell>
+      ))}
     </Group>
   )
 }
@@ -191,7 +269,7 @@ function TileGroup() {
       <Cell caption="stretched">
         <Tile stretched={{ label: 'Open Lasagne', onActivate: noop }}>
           <h4>Lasagne</h4>
-          <Button size="sm" variant="tertiary" onClick={noop}>
+          <Button size="sm" variant="secondary" onClick={noop}>
             Keep it
           </Button>
         </Tile>
@@ -432,10 +510,10 @@ function FieldRowGroup() {
 function FormActionsGroup() {
   return (
     <Group name="FormActions">
-      <WideCell caption="Destructive, tertiary, secondary, primary">
+      <WideCell caption="Destructive, Cancel, secondary, primary">
         <FormActions
-          destructive={<Button variant="danger-tertiary">Delete</Button>}
-          tertiary={<Button variant="tertiary">Cancel</Button>}
+          destructive={<Button variant="danger-secondary">Delete</Button>}
+          tertiary={<Button variant="secondary">Cancel</Button>}
           secondary={<Button variant="secondary">Save and add</Button>}
           primary={<Button>Save</Button>}
         />
@@ -476,7 +554,7 @@ function StickyActionBarGroup() {
               <div className="gallery__spacer" />
             </Tile>
             <StickyActionBar>
-              <FormActions tertiary={<Button variant="tertiary">Cancel</Button>} primary={<Button>Save</Button>} />
+              <FormActions tertiary={<Button variant="secondary">Cancel</Button>} primary={<Button>Save</Button>} />
             </StickyActionBar>
           </Page>
         </div>
@@ -485,7 +563,7 @@ function StickyActionBarGroup() {
         <div className="gallery__frame">
           <Page width="default">
             <StickyActionBar column="narrow">
-              <FormActions tertiary={<Button variant="tertiary">Cancel</Button>} primary={<Button>Save</Button>} />
+              <FormActions tertiary={<Button variant="secondary">Cancel</Button>} primary={<Button>Save</Button>} />
             </StickyActionBar>
           </Page>
         </div>
@@ -694,6 +772,8 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <h2>{scheme === 'light' ? 'Light' : 'Dark'}</h2>
       <ButtonGroup />
       <IconButtonGroup />
+      <CloseButtonGroup />
+      <DetailListGroup />
       <ChipGroup />
       <WhyGroup />
       <TileGroup />

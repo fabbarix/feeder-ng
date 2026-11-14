@@ -38,7 +38,7 @@ export function AccessRequestList({ requests, now = new Date(), error, onApprove
                   leading={<RequestAvatar name={r.name} picture={r.picture} size="md" />}
                   trailing={
                     <span className="access__actions">
-                      <Button variant="tertiary" aria-label={accessStrings.denyLabel(r.email)} onClick={() => onDeny(r.id)}>
+                      <Button variant="secondary" aria-label={accessStrings.denyLabel(r.email)} onClick={() => onDeny(r.id)}>
                         {accessStrings.deny}
                       </Button>
                       <Button variant="secondary" aria-label={accessStrings.approveLabel(r.email)} onClick={() => onApprove(r.id)}>

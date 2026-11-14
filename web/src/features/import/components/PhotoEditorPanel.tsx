@@ -49,7 +49,7 @@ export function PhotoEditorPanel({ session, number, src, size, small, canRetake,
             {t.retake}
           </Button>
         ) : (
-          <Button variant="tertiary" onClick={onCancel}>
+          <Button variant="secondary" onClick={onCancel}>
             {t.cancel}
           </Button>
         )}

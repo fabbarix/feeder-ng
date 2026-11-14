@@ -21,12 +21,11 @@ export function LeftoverDetailsSheet({ leftover, today, onClose, onAction }: Lef
     <Dialog
       open
       onClose={onClose}
+      onCancel={onClose}
+      cancelLabel={leftoverStrings.close}
       title={detailsTitle(leftover.recipeName)}
       actions={
         <>
-          <Button variant="tertiary" onClick={onClose}>
-            {leftoverStrings.close}
-          </Button>
           {menuActions(leftover, today).map((kind) => (
             <Button key={kind} variant="secondary" onClick={() => onAction(kind, leftover)}>
               {actionLabel(kind)}

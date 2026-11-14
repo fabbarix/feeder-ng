@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { createElement } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { findNotice, noticeWith } from '../../../test/notices'
+import { findNotice, noticeWith, findToast } from '../../../test/notices'
 import { allCookedResult, courseMeal, courseSlot, mockApi, planCourse, renderWithProviders, slot } from '../../plan/test-utils'
 import type { CookPreview, PlanSlot } from '../../plan/types'
 import { TodayScreen } from './TodayScreen'
@@ -83,7 +83,7 @@ describe.each([
   it('cheers and says where each Leftover went (a success toast)', async () => {
     await open()
     await confirmAll()
-    expect(await screen.findByText('Cooked, nice one! Roast chicken: 2 portions → Thu Lunch; Green beans: 1 portion kept, good until Fri')).toBeInTheDocument()
+    expect(await findToast('Cooked, nice one! Roast chicken: 2 portions → Thu Lunch; Green beans: 1 portion kept, good until Fri')).toBeInTheDocument()
   })
 
   it('shows the Stock shortfall with Correct Stock and Dismiss', async () => {

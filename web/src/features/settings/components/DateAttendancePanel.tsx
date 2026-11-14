@@ -98,7 +98,7 @@ function DateForm({ slot, date, attendance, members, saving, dateReadOnly = fals
         <Button disabled={problem !== null} loading={saving} onClick={() => void save()}>
           {text.saveDate}
         </Button>
-        <Button variant="tertiary" disabled={!hasDateOverride(attendance) || saving} onClick={() => void onReset()}>
+        <Button variant="secondary" disabled={!hasDateOverride(attendance) || saving} onClick={() => void onReset()}>
           {text.resetDate}
         </Button>
       </div>

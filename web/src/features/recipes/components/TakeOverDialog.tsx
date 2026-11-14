@@ -23,7 +23,7 @@ export function TakeOverDialog({ ask, baseName, onAnswer, onCancel }: TakeOverDi
       title={m.title}
       actions={
         <>
-          <Button variant="tertiary" onClick={() => onAnswer(false)}>
+          <Button variant="secondary" onClick={() => onAnswer(false)}>
             {m.noLabel}
           </Button>
           <Button variant="primary" disabled={m.yesDisabledReason !== undefined} onClick={() => onAnswer(true)}>

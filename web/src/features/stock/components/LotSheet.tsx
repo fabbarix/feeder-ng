@@ -92,7 +92,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
             </Button>
           ) : null}
           {onDelete ? (
-            <Button variant="danger-tertiary" onClick={() => void askDelete()}>
+            <Button variant="danger-secondary" onClick={() => void askDelete()}>
               {strings.delete}
             </Button>
           ) : null}
@@ -170,7 +170,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
           {note ? <p className="pg__muted">{note === 'freezer' ? strings.freezerNote : strings.thawNote}</p> : null}
           <FormActions
             secondary={
-              <Button variant="tertiary" onClick={() => onSeeIngredient(lot.ingredientId)}>
+              <Button variant="secondary" onClick={() => onSeeIngredient(lot.ingredientId)}>
                 {strings.seeIngredient(lot.ingredientName)}
               </Button>
             }
@@ -184,7 +184,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
       ) : (
         <>
           <p className="pg__muted">{strings.noPlacesHint}</p>
-          <Button variant="tertiary" onClick={() => onSeeIngredient(lot.ingredientId)}>
+          <Button variant="secondary" onClick={() => onSeeIngredient(lot.ingredientId)}>
             {strings.seeIngredient(lot.ingredientName)}
           </Button>
         </>

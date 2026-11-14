@@ -11,12 +11,14 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   size?: 'md' | 'compact'
   /** Toggle: sets aria-pressed and renders the icon with weight `fill` while true. */
   pressed?: boolean
+  /** 'circle': a round button (CloseButton, the toast's Dismiss). Default: the 12 px squircle. */
+  shape?: 'circle'
   /** React 19 passes `ref` as a prop (Menu anchors its popover to the button). */
   ref?: Ref<HTMLButtonElement>
 }
 
 /** The only place an icon is allowed without a visible text label. */
-export function IconButton({ icon, label, size = 'md', pressed, type = 'button', className, ...rest }: IconButtonProps) {
+export function IconButton({ icon, label, size = 'md', pressed, shape, type = 'button', className, ...rest }: IconButtonProps) {
   if (label.trim() === '') throw new Error('IconButton needs a non-blank label (it is its accessible name)')
   return (
     <button
@@ -26,6 +28,7 @@ export function IconButton({ icon, label, size = 'md', pressed, type = 'button',
       aria-label={label}
       aria-pressed={pressed}
       data-size={size}
+      data-shape={shape}
     >
       <Icon name={icon} size={size === 'compact' ? 16 : 20} weight={pressed ? 'fill' : undefined} />
     </button>

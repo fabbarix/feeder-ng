@@ -38,7 +38,7 @@ export function WeightRuleList({ rules, currency, isAdmin, onEdit, onDelete, onA
         </ListGroup>
       )}
       {isAdmin ? (
-        <Button variant="tertiary" onClick={onAdd}>
+        <Button variant="secondary" onClick={onAdd}>
           {strings.addRule}
         </Button>
       ) : null}

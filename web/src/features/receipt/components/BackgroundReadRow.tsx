@@ -1,6 +1,6 @@
 // The Scanned list's row for a background read of this Shop (b8-rxweb, design 3.3): reading, ready or failed. It shows what
 // lib/backgroundCopy.rowView says; the press decisions are the footer's (onOpen, onDismiss).
-import { IconButton, ListRow } from '../../../ui'
+import { CloseButton, ListRow } from '../../../ui'
 import { PHOTOS_PATH, REVIEW_PATH, rowView } from '../lib/backgroundCopy'
 import type { BackgroundRead } from '../lib/backgroundRead'
 import { receiptStrings as t } from '../strings'
@@ -39,7 +39,7 @@ export function BackgroundReadRow({ state, isAdmin, onOpen, onDismiss }: Backgro
         icon="receipt"
         chevron
         onActivate={() => onOpen(to)}
-        trailing={<IconButton icon="close" label={t.dismiss} onClick={onDismiss} />}
+        trailing={<CloseButton label={t.dismiss} onClick={onDismiss} />}
       />
     )
   }
@@ -53,7 +53,7 @@ export function BackgroundReadRow({ state, isAdmin, onOpen, onDismiss }: Backgro
         onDismiss()
         onOpen(to)
       }}
-      trailing={<IconButton icon="close" label={t.dismiss} onClick={onDismiss} />}
+      trailing={<CloseButton label={t.dismiss} onClick={onDismiss} />}
     />
   )
 }

@@ -56,20 +56,36 @@
   font-weight: var(--text-title-3-weight);
 }
 
-/* Variants */
+/* Variants (DS-12 R-A: buttons look like buttons). A secondary action has a fill and a 1 px boundary on every surface; there
+   is no tertiary (bare text) action. The boundary is a custom property so hover and pressed layer over it, never replace it. */
 .button[data-variant='primary'] {
   background: var(--color-accent);
   color: var(--color-on-accent);
 }
 
 .button[data-variant='secondary'] {
-  background: var(--color-surface-2);
+  --button-boundary: var(--color-outline);
+  background: var(--color-surface);
   color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
 }
 
+/* On an accent container (a soft tile, the dark hero) the outline is under 3:1, so the boundary is accent-text (5.6-8.4:1). */
+.tile[data-variant='soft'] .button[data-variant='secondary'],
+[data-scheme='dark'] .tile[data-variant='hero'] .button[data-variant='secondary'] {
+  --button-boundary: var(--color-accent-text);
+  box-shadow: inset 0 0 0 1px var(--color-accent-text);
+}
+
+/* On the accent hero the fill is the surface (WP3b); on the light hero that fill itself is the boundary (5.7-6.4:1). */
 .tile[data-variant='hero'] .button[data-variant='secondary'] {
   background: var(--color-surface);
   color: var(--color-text);
+}
+
+[data-scheme='light'] .tile[data-variant='hero'] .button[data-variant='secondary'] {
+  --button-boundary: var(--color-surface);
+  box-shadow: none;
 }
 
 /* WP3b (plan 4.3, 5.1): the primary action on the accent hero is a surface button with accent text. */
@@ -78,28 +94,33 @@
   color: var(--color-accent-text);
 }
 
-.button[data-variant='accent-secondary'] {
-  background: var(--color-soft);
-  color: var(--color-accent-text);
-}
-
-.button[data-variant='tertiary'] {
-  background: transparent;
-  color: var(--color-accent-text);
-}
-
-.button[data-variant='tertiary']:hover:not(:disabled) {
-  text-decoration: underline;
-}
-
 .button[data-variant='danger'] {
   background: var(--status-danger-solid);
   color: var(--status-danger-on-solid);
 }
 
-.button[data-variant='danger-tertiary'] {
-  background: transparent;
+.button[data-variant='danger-secondary'] {
+  --button-boundary: var(--status-danger-fg);
+  background: var(--color-surface);
   color: var(--status-danger-fg);
+  box-shadow: inset 0 0 0 1px var(--status-danger-fg);
+}
+
+/* A link inside running text only (never on an action surface): always underlined, accent-text. */
+.button[data-variant='link'] {
+  display: inline;
+  background: none;
+  padding: 0;
+  min-block-size: auto;
+  border-radius: var(--radius-thumb);
+  color: var(--color-accent-text);
+  font: inherit;
+  text-decoration: underline;
+  text-align: start;
+}
+
+.button[data-variant='link']::after {
+  content: none;
 }
 
 /* States: hover overlay 8 %, pressed 12 % and scale .97, focus ring 3 px in accent with a 2 px offset. */
@@ -110,6 +131,22 @@
 .button:active:not(:disabled) {
   box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 12%, transparent);
   transform: scale(0.97);
+}
+
+.button[data-variant='secondary']:hover:not(:disabled),
+.button[data-variant='danger-secondary']:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--button-boundary), inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
+}
+
+.button[data-variant='secondary']:active:not(:disabled),
+.button[data-variant='danger-secondary']:active:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--button-boundary), inset 0 0 0 999px color-mix(in oklab, currentColor 12%, transparent);
+}
+
+.button[data-variant='link']:hover:not(:disabled),
+.button[data-variant='link']:active:not(:disabled) {
+  box-shadow: none;
+  transform: none;
 }
 
 .button:focus-visible {
@@ -161,5 +198,28 @@
 @media (max-width: 599px) {
   .button[data-block='phone'] {
     inline-size: 100%;
+  }
+}
+
+/* A label that must stay on one line (P30): a Segmented option, a short action. */
+.button[data-one-line] {
+  white-space: nowrap;
+}
+
+/* DS-03: iconOnly="narrow". In the narrow band (below 360 px) only the icon shows, in a square 44 px box; the label stays in
+   the accessibility tree as the button's name. */
+@media (width < 22.5em) {
+  .button[data-icon-only='narrow'] {
+    inline-size: 44px;
+    padding-inline: 0;
+  }
+
+  .button[data-icon-only='narrow'] .button__label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

@@ -35,7 +35,7 @@ export interface CourseRowProps extends CourseRowHandlers {
   actions?: CourseAction[]
   /** The small row of Today's hero block and of the 7-column week. */
   compact?: boolean
-  /** On the accent hero: an empty row's "Choose a Recipe" is a surface button (secondary), not accent text (tertiary). */
+  /** On the accent hero. "Choose a Recipe" is a secondary (surface) button everywhere since DS-12, so it no longer changes. */
   onAccent?: boolean
 }
 
@@ -44,7 +44,7 @@ export interface CourseRowProps extends CourseRowHandlers {
  * chip (lib/chips dayChip) and the "Whole meal" chip, and compact IconButtons for a planned meal, per `actions`. An
  * empty row is the dashed "Not planned" block with "Choose a Recipe". Cooked and Not cooked rows are muted, no buttons.
  */
-export function CourseRow({ row, slot, today, actions = ['swap'], compact = false, onAccent = false, onOpen, onSwap, onPin, onUnpin, onMarkCooked, onChoose }: CourseRowProps): ReactNode {
+export function CourseRow({ row, slot, today, actions = ['swap'], compact = false, onOpen, onSwap, onPin, onUnpin, onMarkCooked, onChoose }: CourseRowProps): ReactNode {
   const { course, key, caption } = row
   const meal = course.meal
   const planned = meal?.state === 'planned'
@@ -105,7 +105,7 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
             {reason && !compact ? <span className="plan-course__reason">{shortReason(cause)}</span> : null}
             {/* CRS G2: nobody attends, so there is nobody to cook for (as a lone slot). */}
             {cause !== 'nobody_attending' ? (
-              <Button variant={onAccent ? 'secondary' : 'tertiary'} size="sm" onClick={() => onChoose?.(key)}>
+              <Button variant="secondary" size="sm" onClick={() => onChoose?.(key)}>
                 {s.choose}
               </Button>
             ) : null}

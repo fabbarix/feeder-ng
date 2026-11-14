@@ -44,7 +44,7 @@ export function CourseRow({ course, ctx, count, disabled, extras, onMove, onRemo
           data-focus-key={`${course.id}:down`}
           onClick={() => onMove(1)}
         />
-        <IconButton icon="close" label={s.remove(course.name)} disabled={disabled} onClick={onRemove} />
+        <IconButton icon="remove" label={s.remove(course.name)} disabled={disabled} onClick={onRemove} />
       </div>
     </li>
   )

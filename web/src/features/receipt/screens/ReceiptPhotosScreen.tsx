@@ -98,7 +98,7 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
         {problem !== undefined ? (
           <Tile variant="soft" className="receipt-problem">
             <p>{problem}</p>
-            <Button variant="tertiary" onClick={photos.dismissProblem}>
+            <Button variant="secondary" onClick={photos.dismissProblem}>
               {t.dismiss}
             </Button>
           </Tile>

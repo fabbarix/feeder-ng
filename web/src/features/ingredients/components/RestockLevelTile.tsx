@@ -38,7 +38,7 @@ export function RestockLevelTile({ level, baseUnit, system, onSave }: RestockLev
         <FormActions
           destructive={
             level !== null ? (
-              <Button variant="danger-tertiary" onClick={form.clear}>
+              <Button variant="danger-secondary" onClick={form.clear}>
                 {strings.restock.clear}
               </Button>
             ) : undefined

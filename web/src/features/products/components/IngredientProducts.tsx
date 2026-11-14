@@ -29,7 +29,7 @@ export function IngredientProducts({ ingredientId, ingredientName, baseUnit, sys
     <Tile as="section" span="full" aria-label={strings.ingredientProductsTitle}>
       <h2 className="pg__tile-title">{strings.ingredientProductsTitle}</h2>
       {products.length === 0 ? <p>{strings.ingredientProductsEmpty}</p> : <ProductList products={products} system={system} showIngredient={false} />}
-      <Button variant="tertiary" onClick={() => setOpen(true)}>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
         {strings.newProduct}
       </Button>
       <BottomSheet open={open} onClose={() => setOpen(false)} title={strings.newProduct}>

@@ -51,10 +51,10 @@ export function ApiKeyRow({ state, last4, value, error, disabled, focusRequest =
             meta={`••••${last4}`}
             trailing={
               <>
-                <Button variant="tertiary" size="sm" disabled={disabled} onClick={onReplace}>
+                <Button variant="secondary" size="sm" disabled={disabled} onClick={onReplace}>
                   {raStrings.replace}
                 </Button>
-                <Button variant="danger-tertiary" size="sm" disabled={disabled} onClick={onRemove}>
+                <Button variant="danger-secondary" size="sm" disabled={disabled} onClick={onRemove}>
                   {raStrings.remove}
                 </Button>
               </>
@@ -83,7 +83,7 @@ export function ApiKeyRow({ state, last4, value, error, disabled, focusRequest =
       {state.canKeepSaved ? (
         <div>
           <Button
-            variant="tertiary"
+            variant="secondary"
             size="sm"
             disabled={disabled}
             onClick={() => {

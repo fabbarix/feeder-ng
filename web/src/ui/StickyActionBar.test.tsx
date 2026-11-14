@@ -32,7 +32,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 const bar = (props: Partial<React.ComponentProps<typeof StickyActionBar>> = {}) => (
   <StickyActionBar {...props}>
-    <FormActions tertiary={<Button variant="tertiary">Cancel</Button>} primary={<Button>Save</Button>} />
+    <FormActions tertiary={<Button variant="secondary">Cancel</Button>} primary={<Button>Save</Button>} />
   </StickyActionBar>
 )
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, Dialog, IngredientSelect } from '../../../ui'
+import { Dialog, IngredientSelect } from '../../../ui'
 import type { IngredientRef } from '../types'
 import { recipeStrings } from '../strings'
 
@@ -21,11 +21,8 @@ export function PlainIngredientDialog({ open, ingredients, onChoose, onCancel }:
       open
       onClose={onCancel}
       title={recipeStrings.baseRecipe.chooseIngredient}
-      actions={
-        <Button variant="tertiary" onClick={onCancel}>
-          {recipeStrings.baseRecipe.cancelChoose}
-        </Button>
-      }
+      onCancel={onCancel}
+      cancelLabel={recipeStrings.baseRecipe.cancelChoose}
     >
       <IngredientSelect
         size="full"

@@ -19,7 +19,7 @@ export function CouldntPlanExclusionSummary({ headline }: CouldntPlanExclusionSu
       </h2>
       <p className="plan__muted">{s.couldntExclusions.summaryHint}</p>
       <div className="plan__row">
-        <Link className="button" data-variant="tertiary" data-size="sm" to="/plan">
+        <Link className="button" data-variant="secondary" data-size="sm" to="/plan">
           {s.couldntExclusions.openPlan}
         </Link>
       </div>

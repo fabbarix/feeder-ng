@@ -67,8 +67,8 @@ export function TimerTile({ label, seconds, running = false, totalSeconds, onTog
             />
           ) : null}
           {onAddMinute ? <IconButton size="compact" icon="addMinute" label={`Add a minute to ${label}`} onClick={onAddMinute} /> : null}
-          {onCancel ? <IconButton size="compact" icon="close" label={`Cancel ${label}`} onClick={onCancel} /> : null}
-          {onDismiss ? <IconButton size="compact" icon="close" label={`Dismiss ${label}`} onClick={onDismiss} /> : null}
+          {onCancel ? <IconButton size="compact" icon="remove" label={`Cancel ${label}`} onClick={onCancel} /> : null}
+          {onDismiss ? <IconButton size="compact" icon="remove" label={`Dismiss ${label}`} onClick={onDismiss} /> : null}
         </div>
       ) : null}
     </Tile>

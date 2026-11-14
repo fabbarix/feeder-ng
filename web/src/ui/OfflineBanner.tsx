@@ -1,4 +1,5 @@
 import { Icon } from './Icon'
+import { ActionSurface } from './lib/actionSurface'
 import { overlayStrings } from './overlayStrings'
 import { clockTime } from './lib/time24'
 import './OfflineBanner.css'
@@ -17,9 +18,11 @@ export function OfflineBanner({ offline, savedAt, pendingScans = 0 }: OfflineBan
   const saved = savedAt ? `${overlayStrings.showingSaved}${overlayStrings.savedAt(clockTime(savedAt))}` : overlayStrings.showingSaved
   return (
     <div role="status" aria-live="polite" className="offline-banner">
-      <Icon name="offline" size={16} />
-      <span>{`${overlayStrings.offline} · ${saved}`}</span>
-      {pendingScans > 0 ? <span className="offline-banner__queue">{overlayStrings.scansWaiting(pendingScans)}</span> : null}
+      <ActionSurface>
+        <Icon name="offline" size={16} />
+        <span>{`${overlayStrings.offline} · ${saved}`}</span>
+        {pendingScans > 0 ? <span className="offline-banner__queue">{overlayStrings.scansWaiting(pendingScans)}</span> : null}
+      </ActionSurface>
     </div>
   )
 }

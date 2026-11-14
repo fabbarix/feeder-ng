@@ -150,11 +150,11 @@ describe('CouldntPlanExclusionTile: a second opt-out wording', () => {
     expect(row.querySelector('.list-row__meta')).toHaveTextContent('Rules out 4 Recipes')
   })
 
-  it('the Review link is a router link styled as a tertiary small Button, like "Open the Plan"', () => {
+  it('the Review link is a router link styled as a secondary small Button, like "Open the Plan" (DS-12: no tertiary)', () => {
     setup(groupOf(cellsOn(['2026-11-13'])))
     const link = screen.getByRole('link', { name: 'Review garlic' })
     expect(link).toHaveClass('button')
-    expect(link).toHaveAttribute('data-variant', 'tertiary')
+    expect(link).toHaveAttribute('data-variant', 'secondary')
     expect(link).toHaveAttribute('data-size', 'sm')
   })
 })

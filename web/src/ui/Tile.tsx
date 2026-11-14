@@ -2,6 +2,7 @@ import type { ElementType, HTMLAttributes, KeyboardEvent, ReactNode, Ref } from 
 import type { ChipStatus } from './Chip'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
+import { ActionSurface } from './lib/actionSurface'
 import { resolveTile, type LegacyTileSize, type LegacyTileTone } from './lib/legacy'
 import './Tile.css'
 
@@ -115,7 +116,7 @@ export function Tile({
       onClick={onClick}
       onKeyDown={onKeyDown}
     >
-      {body}
+      <ActionSurface>{body}</ActionSurface>
       {stretch}
     </Tag>
   )

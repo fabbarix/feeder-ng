@@ -223,7 +223,7 @@ function BaseRecipeSection({ recipe: r, refreshKey, onChanged }: { recipe: Recip
           </p>
         )}
         {candidates.count > 0 ? (
-          <Button variant="tertiary" onClick={() => setSheetOpen(true)}>
+          <Button variant="secondary" onClick={() => setSheetOpen(true)}>
             {t.candidatesRow(candidates.ingredientName, candidates.count)}
           </Button>
         ) : null}
