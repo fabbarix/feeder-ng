@@ -1,29 +1,57 @@
 #!/usr/bin/env node
-// CLI over modeFor for scripts/check-page-layout.sh.
+// CLI over parseModes / modeFor / countFindings (page-layout-rules.mjs) for scripts/check-page-layout.sh.
+//   page-layout-modes.mjs check <modes-file>                 exit 0, or exit 2 naming every line the parser does not know
 //   page-layout-modes.mjs mode-of <modes-file> <route>      prints warn|fail
-//   page-layout-modes.mjs count-fail <modes-file>            reads guard output on stdin, prints how many finding lines fail: on fail routes, or ALWAYS_FAIL rules anywhere
-import { readFileSync } from 'node:fs'
-import { ALWAYS_FAIL, modeFor } from './page-layout-rules.mjs'
+//   page-layout-modes.mjs count-fail <modes-file>            reads guard output on stdin, prints how many finding lines fail: on fail routes, or ALWAYS_FAIL rules anywhere,
+//                                                            unless a width<=N line covers them (the warn bridge)
+//   page-layout-modes.mjs bridge-notes <modes-file>          reads guard output on stdin, prints one count per width<=N line ("375 px: 4 findings, warn until B9-55")
+// B9-03: the files of <modes-file>.d/ (scripts/check-page-layout.modes.d/: a package's own fail_routes / warn_routes lines) are read
+// after the modes file, in name order. Lines of a key are unioned across all files, and warn_routes win over fail_routes, as in one file.
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { countFindings, modeFor, parseModes } from './page-layout-rules.mjs'
 
 const [cmd, file, route] = process.argv.slice(2)
-let text = ''
+// [name, text] of the modes file and its .d files, in reading order.
+const parts = []
 try {
-  text = readFileSync(file, 'utf8')
+  parts.push([file, readFileSync(file, 'utf8')])
 } catch {
   /* a missing modes file means warn everywhere */
 }
-if (cmd === 'mode-of') {
+let dropins = []
+try {
+  dropins = readdirSync(`${file}.d`).filter((n) => !n.startsWith('.')).sort()
+} catch {
+  /* no modes.d directory */
+}
+for (const n of dropins) {
+  try {
+    parts.push([join(`${file}.d`, n), readFileSync(join(`${file}.d`, n), 'utf8')])
+  } catch {
+    /* a directory or an unreadable entry adds nothing */
+  }
+}
+// B9-03: a line the parser does not know stops every command (exit 2), naming the file and the line.
+const errors = parts.flatMap(([name, t]) => parseModes(t).errors.map((e) => `${name}:${e.line}: ${e.why}: ${e.text}`))
+if (errors.length) {
+  for (const e of errors) console.error(`page-layout-modes: ${e}`)
+  process.exit(2)
+}
+const text = parts.map(([, t]) => t).join('\n')
+if (cmd === 'check') {
+  // validated above
+} else if (cmd === 'mode-of') {
   console.log(modeFor(text, route ?? ''))
 } else if (cmd === 'count-fail') {
-  const input = readFileSync(0, 'utf8')
-  let n = 0
-  for (const line of input.split('\n')) {
-    const m = /^\s+- \d+px (\S+): (P\d+) /.exec(line)
-    // ALWAYS_FAIL rules (horizontal overflow, P1 and P13) fail on every route, warn routes included.
-    if (m && (ALWAYS_FAIL.includes(m[2]) || modeFor(text, m[1]) === 'fail')) n++
+  // ALWAYS_FAIL rules (horizontal overflow, P1 and P13) fail on every route, warn routes included; a width<=N line makes them warn too.
+  console.log(countFindings(text, readFileSync(0, 'utf8')).fail)
+} else if (cmd === 'bridge-notes') {
+  // One line per width<=N line: "375 px: 4 findings, warn until B9-55".
+  for (const b of countFindings(text, readFileSync(0, 'utf8')).bridged) {
+    console.log(`${b.max} px: ${b.n} finding${b.n === 1 ? '' : 's'}, warn${b.until ? ` until ${b.until}` : ''}`)
   }
-  console.log(n)
 } else {
-  console.error('usage: page-layout-modes.mjs mode-of <file> <route> | count-fail <file>')
+  console.error('usage: page-layout-modes.mjs check <file> | mode-of <file> <route> | count-fail <file> | bridge-notes <file>')
   process.exit(2)
 }

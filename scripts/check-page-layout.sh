@@ -7,11 +7,16 @@
 # A guard that did not run FAILS in every mode (quick too): a refused run (a busy port, or a run already holding this
 # worktree's lock), a server or seed that did not come up, a timeout, a crash, or a driver exit 2. Only two environment gaps
 # pass in quick: no Chrome (SKIP) and no web build (WARN). Both FAIL in full (PAGE_LAYOUT=full, release QA).
-#   scripts/check-page-layout.sh                 quick profile (390, 834, 1024, 1440, 1920)
-#   PAGE_LAYOUT=full scripts/check-page-layout.sh    six viewports (release QA)
+#   scripts/check-page-layout.sh                 quick profile (375, 390, 834, 1024, 1440, 1920)
+#   PAGE_LAYOUT=full scripts/check-page-layout.sh    nine viewports (release QA; scripts/lib/page-layout-rules.mjs PROFILES)
+#   scripts/check-page-layout.sh --scenario NAME[,NAME]   only those scenarios (scripts/lib/page-layout/scenarios/), no route table:
+#                                                 a package's targeted run. The driver refuses an unknown name (exit 2).
 #   PAGE_LAYOUT=skip ...                          do nothing
 #   scripts/check-page-layout.sh --print-port [--root DIR]    the port this worktree uses (20000 + cksum(DIR) % 20000)
 #   scripts/check-page-layout.sh --mode-of ROUTE              warn|fail for a route
+# Modes: scripts/check-page-layout.modes, then every file of scripts/check-page-layout.modes.d/ (a package's own lines; B9-03).
+# A "width<=N = warn [until B9-NN]" line (the warn bridge) makes every finding at a profile viewport N px wide or less a warning,
+# always-fail rules included, and the run prints how many ("375 px: 4 findings, warn until B9-55"). An unknown line FAILS the run.
 # Overrides (tests): PAGE_LAYOUT_BUILD_DIR, PAGE_LAYOUT_PORT, PAGE_LAYOUT_MODES, PAGE_LAYOUT_SERVER_CMD, PAGE_LAYOUT_SEED_CMD,
 # PAGE_LAYOUT_GUARD_CMD, PAGE_LAYOUT_GUARD_TIMEOUT (600 s), PAGE_LAYOUT_SEED_TIMEOUT (90 s), CHROME, PAGE_LAYOUT_FAKE_CMD.
 # beta.7 (RR5): the real run also starts the fake Anthropic API (cmd/fakeanthropic, loopback, detached, stopped by its PID) and
@@ -38,6 +43,23 @@ case "${1:-}" in
     ;;
 esac
 
+# --scenario NAME[,NAME]: passed to the guard as it is.
+GUARD_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --scenario)
+      if [ $# -lt 2 ] || [ -z "$2" ] || [ "${2#--}" != "$2" ]; then
+        echo "check-page-layout.sh: usage: check-page-layout.sh [--scenario NAME[,NAME]] (--scenario needs a name)" >&2
+        exit 2
+      fi
+      GUARD_ARGS+=(--scenario "$2")
+      shift 2 ;;
+    *)
+      echo "check-page-layout.sh: usage: check-page-layout.sh [--scenario NAME[,NAME]] | --print-port [--root DIR] | --mode-of ROUTE (unknown argument $1)" >&2
+      exit 2 ;;
+  esac
+done
+
 MODE="${PAGE_LAYOUT:-quick}"
 if [ "$MODE" = skip ]; then
   echo "page layout guard: skipped (PAGE_LAYOUT=skip)"
@@ -45,6 +67,12 @@ if [ "$MODE" = skip ]; then
 fi
 PROFILE=quick
 [ "$MODE" = full ] && PROFILE=full
+
+# B9-03: a modes line the parser does not know (a mistyped key in a modes.d file) stops the run before anything starts.
+if ! node "$ROOT/scripts/lib/page-layout-modes.mjs" check "$MODES"; then
+  echo "page layout guard FAILED: the modes files ($MODES and $MODES.d/) have a line the guard does not know (above); not run"
+  exit 1
+fi
 
 CHROME="${CHROME:-google-chrome}"
 export CHROME
@@ -247,7 +275,7 @@ LIMIT=""
 command -v timeout >/dev/null 2>&1 && LIMIT="timeout -k 5 ${PAGE_LAYOUT_GUARD_TIMEOUT:-600}"
 START=$SECONDS
 # In the background and waited for, so a signal reaches the trap at once (bash defers traps while a foreground command runs).
-(cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS") 9>&- >"$OUT" 2>&1 &
+(cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS" "${GUARD_ARGS[@]}") 9>&- >"$OUT" 2>&1 &
 GUARD_PID=$!
 wait "$GUARD_PID"
 RC=$?
@@ -292,6 +320,8 @@ if ! FAILN="$(node "$ROOT/scripts/lib/page-layout-modes.mjs" count-fail "$MODES"
   echo "page layout guard FAILED: the modes file $MODES could not be read, so the fail count is unknown (${ELAPSED}s)"
   exit 1
 fi
+# The warn bridge (a width<=N = warn line): how many findings it turned into warnings, one line per bridge.
+node "$ROOT/scripts/lib/page-layout-modes.mjs" bridge-notes "$MODES" <"$OUT"
 if [ "$NI" -gt 0 ]; then
   echo "page layout guard FAILED: $NI route(s) not inspected (the ! lines above; a route that cannot be probed needs a reason in scripts/check-page-layout.exempt), ${ELAPSED}s"
 fi

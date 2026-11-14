@@ -1,19 +1,18 @@
 // DS-TODAY round 2: the page-layout guard learns P15, the review's finding on Today: a row's actions collapsed to 0 px, buttons
 // narrower than their label, text under the actions. The probe reports `actionLayout` [{ sel, why, px }]; it fails in every mode.
 import { describe, expect, it } from 'vitest'
+import { driverSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
   ALWAYS_FAIL: string[]
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
 }
-const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+const driver = driverSource()
 const base = (vw: number) => ({
   vw, scrollW: vw, clientW: vw, over: [], content: { x: 24, r: vw - 24 }, railR: 0, container: { x: 24, r: vw - 24 },
   pageWidthAttr: 'wide', fields: [], bars: [], railContrast: null, dialog: null, brokenText: [],

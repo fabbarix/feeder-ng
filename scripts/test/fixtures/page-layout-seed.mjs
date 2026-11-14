@@ -7,13 +7,16 @@
 // API. Writes build/page-layout-ids.json (recipeId, ingredientId, productId, shopId, supplyId, ...) for the guard's ":id" routes
 // and its scenarios.
 //   node scripts/test/fixtures/page-layout-seed.mjs http://127.0.0.1:<port> [--out build/page-layout-ids.json] [--email admin@example.test]
+// B9-03: the steps live in page-layout-seed/<area>.mjs (index.mjs runs them in order); this file signs in, gives them the helpers and
+// writes the ids file.
 // Best effort: a step that the API refuses is reported on stderr and skipped (the guard then probes emptier screens, which is still
 // a layout). Exit 0 whenever login worked; exit 1 when it did not, or when the Side Recipe with LONG_TAG was not created (the guard's
 // filtered /recipes scenarios would then show no Recipe, so they must not pass quietly), or when the ten Storage Places were not all
 // created (pantry-filter: the filtered /pantry scenarios need the long-named one, longPlaceId in the ids file).
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { pickZones, SLOT_TIMES } from './page-layout-seed-zones.mjs'
+import { seedAll } from './page-layout-seed/index.mjs'
+import { PLACES } from './page-layout-seed/stock.mjs'
 
 const args = process.argv.slice(2)
 const base = (args.find((a) => /^https?:/.test(a)) ?? '').replace(/\/$/, '')
@@ -69,243 +72,9 @@ if (!login.ok) {
   process.exit(1)
 }
 
-// Members (one very long name: F-ids in the review)
-for (const [name, colour, f] of [['Anna', '#e07a5f', 1], ['Ben', '#3d405b', 1], ['Chiara', '#81b29a', 0.75], ['Lucia Maria Bernadette', '#f2cc8f', 0.5]]) {
-  await step('member', 'POST', '/api/members', { name, colour, avatar: '', portionFactor: f })
-}
-const members = (await api('GET', '/api/members')).json ?? []
-const attendance = members.slice(0, 3).map((m) => ({ memberId: m.id, portionFactorOverride: null }))
-
-// Meal Slots: Breakfast, Lunch and Dinner every day (round 3: at any hour at least two of them are To confirm, see
-// page-layout-seed-zones.mjs)
-const SLOT_NAME = { '08:30': 'Breakfast', '13:00': 'Lunch', '19:00': 'Dinner' }
-for (let d = 1; d <= 7; d++) {
-  for (const time of SLOT_TIMES) await step('slot', 'POST', '/api/meal-slots', { weekday: d, name: SLOT_NAME[time], time, attendance })
-}
-
-// Ingredients
-const NAMES = ['Flour', 'Rice', 'Pasta', 'Tomato', 'Onion', 'Garlic', 'Olive oil', 'Butter', 'Milk', 'Eggs', 'Chicken', 'Lentils', 'Carrot',
-  'Potato', 'Cheese', 'Basil', 'Salt', 'Sugar', 'Lemon', 'Beans', 'Spinach', 'Cream', 'Mushroom', 'Pepper', 'Yoghurt']
-const BASE = { Milk: 'ml', 'Olive oil': 'ml', Cream: 'ml', Eggs: 'piece', Onion: 'piece', Lemon: 'piece' }
-const ing = []
-for (const [i, name] of NAMES.entries()) {
-  const r = await step('ingredient', 'POST', '/api/ingredients', {
-    name, baseUnit: BASE[name] ?? 'g', shelfLifeDays: i % 3 === 0 ? 7 : null, conversions: [],
-  })
-  if (r.ok && r.json) ing.push(r.json)
-}
-const ingredientId = ing[0]?.id ?? 1
-
-// Recipes (8 with several lines, one very long name, one Ready Meal)
-const line = (i, n) => ({ ingredientId: ing[i % ing.length]?.id ?? 1, quantity: n, unit: ing[i % ing.length]?.baseUnit ?? 'g', optional: false, note: '' })
-const RECIPES = ['Pasta al pomodoro', 'Lentil soup', 'Chicken curry', 'Risotto ai funghi', 'Spinach omelette', 'Potato gratin', 'Bean chilli',
-  'Roast chicken with lemon, garlic and thyme, a very long name that wraps over lines', 'Pancakes', 'Frozen lasagne']
-let recipeId = 1
-for (const [i, name] of RECIPES.entries()) {
-  const ready = name === 'Frozen lasagne'
-  const r = await step('recipe', 'POST', '/api/recipes', {
-    name, description: 'A seeded recipe for the layout guard.', yield: 4, readyMeal: ready, tags: i % 2 ? ['easy'] : ['quick', 'family'],
-    lines: ready ? [line(14, 400)] : [line(i, 200), line(i + 3, 100), line(i + 5, 50)],
-    steps: ready ? [] : [{ text: 'Prepare everything.', kind: 'active', durationMinutes: 10, leadTimeMinutes: 0, after: [], uses: [] }, { text: 'Cook it.', kind: 'passive', durationMinutes: 20, leadTimeMinutes: 0, after: [0], uses: [] }],
-  })
-  if (r.ok && r.json?.id && i === 0) recipeId = r.json.id
-}
-
-// hf-recipes-filter: many Tags (docs/design/recipes-filter.md), so /recipes shows its filter header as a household with dozens of
-// Tags sees it (the beta.6 Tag row crushed every chip to its dot). A Tag may exist with no Recipe (GLOSSARY); one Recipe carries
-// eight of them, with long names, so its tile's Tag line is exercised too.
-// Round 2: one very long Tag; with the Side Course it makes the active filter chips overflow into "+1" at 390 and 430 px.
-// Round 3: a Tag holds at most 40 characters (the API refuses longer ones, so the 51-character Tag of round 2 was never created). In
-// capitals this 36-character name draws a 338 px chip (with its colour dot and close icon). Beside "Side" (72 px and an 8 px gap) the
-// line needs 418 px: it overflows into "+1" below a 450 px screen (390 and 430 included) and both chips show again from 462 px (the
-// FIT_MARGIN), so the guard's 360-480 px walk and live sweep cross both edges of the fit.
-const LONG_TAG = 'HEARTY HOMEMADE MUSHROOM WELLINGTONS'
-const MANY_TAGS = ['beef', 'breakfast', 'budget', 'chicken', 'comfort food', 'curry', 'dairy-free', 'fish', 'freezer', 'gluten-free',
-  'grill', 'kids', 'leftovers', 'lunchbox', 'one-pot', 'pasta', 'pork', 'rice', 'roast', 'salad', 'slow cooker', 'soup', 'spicy',
-  'sweet', 'vegan', 'weeknight', 'batch cooking', 'high protein']
-for (const name of MANY_TAGS) await step('tag', 'POST', '/api/tags', { name, colour: '' })
-await step('many-tag recipe', 'POST', '/api/recipes', {
-  name: 'Slow cooker beef and barley stew', description: '', yield: 6, readyMeal: false,
-  tags: ['slow cooker', 'beef', 'comfort food', 'batch cooking', 'freezer', 'high protein', 'weeknight', 'one-pot'],
-  lines: [line(10, 600), line(13, 300), line(4, 2)], steps: [{ text: 'Cook it slowly.', kind: 'passive', durationMinutes: 360, leadTimeMinutes: 0, after: [], uses: [] }],
-})
-
-// Shops, Products with Prices
-const shops = []
-for (const name of ['Coop', 'Market Hall', 'Corner Shop']) {
-  const r = await step('shop', 'POST', '/api/shops', { name })
-  if (r.ok && r.json) shops.push(r.json)
-}
-const shopId = shops[0]?.id ?? 1
-let productId = 1
-// A pack in the Ingredient's own Base Unit: 500 g or 500 ml, but a few pieces (the Onion pack was "500 pieces").
-const PACK = { g: 500, ml: 500, piece: 6 }
-for (let i = 0; i < 8; i++) {
-  const item = ing[i]
-  if (!item) break
-  const r = await step('product', 'POST', '/api/products', { name: `${item.name} ${i % 2 ? 'organic ' : ''}pack`, ingredientId: item.id, packSize: PACK[item.baseUnit] ?? 500, barcodes: [ean13(`800000000${100 + i}`.slice(0, 12))] })
-  if (!r.ok || !r.json?.id) continue
-  if (i === 0) productId = r.json.id
-  if (shops[0]) await step('price', 'PUT', `/api/products/${r.json.id}/prices`, { shopId: shops[0].id, date: new Date().toISOString().slice(0, 10), priceCents: 199 + i * 25 })
-  if (i === 7) await step('archive', 'POST', `/api/products/${r.json.id}/archive`)
-}
-
-// pantry-filter: ten Storage Places (docs/design/pantry-filter.md 10), so the Pantry's Storage Place list scrolls and its chip line
-// overflows. One has a 60-character name, the API's limit (internal/stock/store maxPlaceName); it is a pantry, so a Lot in it keeps its
-// own Shelf Life (a freezer would use the frozen one) and can be Use soon. The guard's /pantry scenarios filter by Use soon and it.
-const LONG_PLACE = 'Basement pantry shelves behind the boiler, bottom left shelf'
-const PLACES = [
-  ['Kitchen Pantry', 'pantry'], ['Kitchen Fridge', 'fridge'], ['Kitchen Freezer', 'freezer'], ['Garage Fridge', 'fridge'],
-  ['Garage Freezer', 'freezer'], ['Cellar Shelves', 'pantry'], ['Utility Room Cupboard', 'pantry'], ['Drinks Fridge', 'fridge'],
-  ['Spare Chest Freezer', 'freezer'], [LONG_PLACE, 'pantry'],
-]
-const placeIds = []
-let longPlaceId = null
-for (const [name, kind] of PLACES) {
-  const r = await step('storage place', 'POST', '/api/storage-places', { name, kind })
-  if (r.ok && r.json?.id) {
-    placeIds.push(r.json.id)
-    if (name === LONG_PLACE) longPlaceId = r.json.id
-  }
-}
-
-// Stock Lots (the Stock screen), a Shopping List extra, two allowlisted Users. pantry-filter: one Lot per Storage Place, the last one
-// Not sorted, and a Use soon Lot in the long-named place (Flour keeps 7 days, bought 5 days ago: good for 2 more).
-const today = new Date().toISOString().slice(0, 10)
-for (let i = 0; i < 11; i++) {
-  const item = ing[i % ing.length]
-  const storagePlaceId = placeIds[i] // undefined past the last place: Not sorted
-  if (item) await step('lot', 'POST', '/api/stock/lots', { ingredientId: item.id, quantity: 250 + i * 40, purchased: today, source: 'manual', clientUuid: `layout-seed-${i}`, storagePlaceId })
-}
-const fiveDaysAgo = new Date(Date.now() - 5 * 86400e3).toISOString().slice(0, 10)
-if (ing[0] && longPlaceId) {
-  await step('use-soon lot', 'POST', '/api/stock/lots', { ingredientId: ing[0].id, quantity: 500, purchased: fiveDaysAgo, source: 'manual', clientUuid: 'layout-seed-use-soon', storagePlaceId: longPlaceId })
-}
-if (ing[3]) await step('extra', 'POST', '/api/shopping/extras', { text: 'Napkins', ingredientId: 0, quantity: 1 })
-// DS-SHOP: a long free-text extra, so the Shop row's two-line title (word wrap, then an ellipsis) is exercised at 834 and 1024 px
-await step('extra', 'POST', '/api/shopping/extras', { text: 'Extra virgin olive oil, cold pressed, from the farm shop near the station' })
-for (const [e, n] of [['guest.one@example.test', 'Guest One'], ['guest.two@example.test', 'Guest Two']]) {
-  await step('allowlist', 'POST', '/api/allowlist', { email: e, displayName: n, isAdmin: false })
-}
-// DS-A (ADR 0016): realistic long names, a Side Course and Planned Meals not marked Cooked yet, so the guard sees what an iPad
-// showed in beta.5 ("Cauliflo/wer", "cau-/liflower with pep-/pers", the "Includes Thu Dinner, not marked Cooked yet" hint).
-const LONG = [['Cauliflower', 'g'], ['Gorgonzola', 'g'], ['Chestnut mushrooms', 'g'], ['Cucumber', 'piece'], ['Red pepper', 'piece'], ['Feta', 'g'], ['Marjoram', 'g']]
-const longIng = {}
-for (const [name, unit] of LONG) {
-  const r = await step('ingredient', 'POST', '/api/ingredients', { name, baseUnit: unit, shelfLifeDays: 5, conversions: [] })
-  if (r.ok && r.json) longIng[name] = r.json
-}
-const lineOf = (name, q) => ({ ingredientId: longIng[name]?.id ?? ingredientId, quantity: q, unit: longIng[name]?.baseUnit ?? 'g', optional: false, note: '' })
-const listOf = (r) => (Array.isArray(r.json) ? r.json : (Object.values(r.json ?? {}).find(Array.isArray) ?? []))
-await api('POST', '/api/courses', { name: 'Side' }) // a default Course on a fresh Household (409 then)
-const courses = listOf(await api('GET', '/api/courses'))
-const mainCourse = courses.find((c) => c.main) ?? courses.find((c) => c.name === 'Main')
-const sideCourse = courses.find((c) => c.name === 'Side')
-const cook = [{ text: 'Prepare and cook.', kind: 'active', durationMinutes: 15, leadTimeMinutes: 0, after: [], uses: [] }]
-const sideIds = []
-let longTagRecipe = null
-for (const [name, lines] of [
-  ['Two-colour cauliflower with peppers', [lineOf('Cauliflower', 1500), lineOf('Red pepper', 2), lineOf('Marjoram', 2)]],
-  ['Cucumber tomato feta salad', [lineOf('Cucumber', 2), lineOf('Feta', 150), line(3, 200)]],
-]) {
-  // hf-recipes-filter round 2: the salad carries LONG_TAG, so /recipes?course=<Side>&tag=<LONG_TAG> lists it (guard SCENARIOS).
-  const tags = name.startsWith('Cucumber') ? ['vegetarian', LONG_TAG] : ['vegetarian']
-  const r = await step('side recipe', 'POST', '/api/recipes', { name, description: '', yield: 4, readyMeal: false, tags, courseIds: sideCourse ? [sideCourse.id] : undefined, lines, steps: cook })
-  if (r.ok && r.json?.id) sideIds.push(r.json.id)
-  if (r.ok && r.json?.id && tags.includes(LONG_TAG)) longTagRecipe = r.json.id
-}
-const mainR = await step('main recipe', 'POST', '/api/recipes', {
-  name: 'Cauliflower al gorgonzola with chestnut mushrooms', description: '', yield: 4, readyMeal: false, tags: ['vegetarian'],
-  lines: [lineOf('Cauliflower', 1000), lineOf('Gorgonzola', 250), lineOf('Chestnut mushrooms', 300)], steps: cook,
-})
-// Dinner serves Main and Side (a Meal Slot PATCH takes the whole slot)
-if (mainCourse && sideCourse) {
-  for (const slot of listOf(await api('GET', '/api/meal-slots')).filter((x) => x.name === 'Dinner')) {
-    const { id, ...body } = slot
-    await step('dinner courses', 'PATCH', `/api/meal-slots/${id}`, { ...body, courses: [mainCourse, sideCourse].map((c) => ({ id: c.id, optional: false, optOutMemberIds: [] })) })
-  }
-}
-// Planned Meals not marked Cooked yet (the "to-confirm" list): there is no clock to move, so the Household's time zone is moved
-// instead. pickZones (page-layout-seed-zones.mjs) gives a plan zone (UTC-12) where the slot instances are still ahead, and a
-// confirm zone (UTC+14) where they are more than 2 h 15 min past. Those instances are planned while the zone is the plan zone.
-const setZone = async (timeZone) => {
-  const cur = (await api('GET', '/api/household/settings')).json
-  if (!cur) return
-  const { timeZoneConfigured, ...rest } = cur
-  await step('time zone', 'PUT', '/api/household/settings', { ...rest, timeZone })
-}
-const zones = pickZones(Date.now())
-await setZone(zones.planZone)
-await step('plan', 'POST', '/api/plan/regenerate', {})
-const planned = (await api('GET', '/api/plan')).json?.slots ?? []
-for (const t of zones.targets) {
-  for (const s of planned.filter((x) => x.name === SLOT_NAME[t.time] && x.date === t.date)) {
-    for (const c of s.courses ?? []) {
-      const rid = c.courseId === sideCourse?.id ? sideIds[0] : mainR.json?.id
-      if (rid) await api('PUT', `/api/plan/${s.date}/${s.mealSlotId}/${c.courseId}`, { recipeId: rid }) // a past slot refuses: expected
-    }
-  }
-}
-// DS-A: the Plan chip line (system.md §6). A long-named Side with a big Yield (so its Leftovers are planned: "Leftover for …" on
-// the day it is cooked, "Leftover from …" where it is served), two Members' favourite on a planned Recipe ("Anna and Ben's
-// favourite") and a Slot Rule ("Slot Rule: Monday"), so the guard stresses one-line chips on /plan and / at 834 and 1024.
-const longSide = await step('long side', 'POST', '/api/recipes', {
-  name: 'Roasted two-colour cauliflower with sweet peppers, capers and marjoram', description: '', yield: 10, readyMeal: false, tags: ['vegetarian'],
-  courseIds: sideCourse ? [sideCourse.id] : undefined, lines: [lineOf('Cauliflower', 2000), lineOf('Red pepper', 3), lineOf('Marjoram', 3)], steps: cook,
-})
-if (longSide.ok && longSide.json?.id) sideIds.unshift(longSide.json.id)
-const favId = mainR.json?.id
-if (favId) for (const m of members.slice(0, 2)) await step('favourite', 'PUT', `/api/recipes/${favId}/preference`, { state: 'favourite', memberId: m.id })
-const mondayDinner = listOf(await api('GET', '/api/meal-slots')).find((x) => x.name === 'Dinner' && x.weekday === 1)
-if (mondayDinner && mainCourse && favId) await step('slot rule', 'POST', '/api/slot-rules', { mealSlotId: mondayDinner.id, courseId: mainCourse.id, recipeId: favId })
-await setZone(zones.confirmZone)
-await step('plan', 'POST', '/api/plan/regenerate', {})
-// Tomorrow's Dinner Side: the long Side, two Batches, so it leaves Leftovers for a later Dinner; the regenerate then plans them.
-const ahead = ((await api('GET', '/api/plan')).json?.slots ?? []).filter((x) => x.name === 'Dinner' && x.date > (new Date(Date.now() + 14 * 3600e3).toISOString().slice(0, 10)))
-const tomorrowDinner = ahead[0]
-if (tomorrowDinner && sideCourse && longSide.json?.id) {
-  await step('side batches', 'PUT', `/api/plan/${tomorrowDinner.date}/${tomorrowDinner.mealSlotId}/${sideCourse.id}`, { recipeId: longSide.json.id, batches: 2 })
-  await step('plan', 'POST', '/api/plan/regenerate', {})
-}
-const toConfirm = ((await api('GET', '/api/plan/to-confirm')).json?.slots ?? []).length
-
-// beta.7 (H8): Supplies (docs/dev/design/household-items.md). A g or ml one below its Restock level with Stock to use (the guard
-// opens its quick-Use sheet on /supplies, and its Line shows in the Shop list's Supplies group), a piece one below its level and
-// one with a long name above it. Each has a Product with a Price at the first Shop, so its Line shows packs and a cost.
-const SUPPLIES = [
-  { name: 'Washing-up liquid', baseUnit: 'ml', restockLevel: 1000, stock: 400, pack: 750, price: 249 },
-  { name: 'Kitchen roll', baseUnit: 'piece', restockLevel: 4, stock: 2, pack: 4, price: 349 },
-  { name: 'Dishwasher tablets, lemon fresh, all-in-one with salt and rinse aid', baseUnit: 'piece', restockLevel: 20, stock: 60, pack: 40, price: 899 },
-]
-let supplyId = null
-for (const [i, sup] of SUPPLIES.entries()) {
-  const r = await step('supply', 'POST', '/api/ingredients', { name: sup.name, baseUnit: sup.baseUnit, kind: 'supply', restockLevel: sup.restockLevel, conversions: [] })
-  if (!r.ok || !r.json?.id) continue
-  if (supplyId === null) supplyId = r.json.id
-  const p = await step('supply product', 'POST', '/api/products', { name: `${sup.name} ${sup.pack} ${sup.baseUnit === 'piece' ? 'pack' : sup.baseUnit}`, ingredientId: r.json.id, packSize: sup.pack, barcodes: [ean13(`80000000030${i}`)] })
-  if (p.ok && p.json?.id && shops[0]) await step('supply price', 'PUT', `/api/products/${p.json.id}/prices`, { shopId: shops[0].id, date: today, priceCents: sup.price })
-  await step('supply lot', 'POST', '/api/stock/lots', { ingredientId: r.json.id, quantity: sup.stock, purchased: today, source: 'manual', clientUuid: `layout-seed-supply-${i}` })
-}
-
-// beta.7 (SR6, RR5): the Scan screen's shop session. The guard types these barcodes (the camera is missing in a headless run): two
-// seeded Products, then one whose name carries the fake Anthropic API's receipt marker, so "Read the receipt" gets a readable
-// receipt built from the Scanned rows (internal/recipeassistant/fakeanthropic receipt.go). unknownBarcode is a valid EAN-13 of no
-// Product: it opens the new-Product sheet. With the fake's URL (PAGE_LAYOUT_FAKE_ANTHROPIC_URL, set by check-page-layout.sh) the
-// Recipe Assistant is turned on against it.
-const scanBarcodes = [0, 1].map((i) => ean13(`800000000${100 + i}`.slice(0, 12)))
-const receiptBarcode = ean13('800000000400')
-if (ing[3]) {
-  const r = await step('receipt product', 'POST', '/api/products', { name: 'Passata #fake:receipt', ingredientId: ing[3].id, packSize: 700, barcodes: [receiptBarcode] })
-  if (r.ok && r.json?.id && shops[0]) await step('receipt price', 'PUT', `/api/products/${r.json.id}/prices`, { shopId: shops[0].id, date: today, priceCents: 129 })
-}
-scanBarcodes.push(receiptBarcode)
-const unknownBarcode = ean13('800000000999')
-const fakeAnthropic = process.env.PAGE_LAYOUT_FAKE_ANTHROPIC_URL ?? ''
-let assistant = false
-if (fakeAnthropic) {
-  const r = await step('recipe assistant', 'PUT', '/api/recipe-assistant/settings', { enabled: true, baseUrl: fakeAnthropic, model: 'claude-haiku-5-5', apiKey: 'sk-page-layout-fake' })
-  assistant = r.ok
-}
+const ctx = await seedAll({ api, step, ean13 })
+const { members, ing, shops, recipeId, ingredientId, productId, shopId, toConfirm, sideCourse, longTagRecipe, LONG_TAG, placeIds, longPlaceId } = ctx
+const { supplyId, scanBarcodes, unknownBarcode, assistant } = ctx
 
 mkdirSync(dirname(out), { recursive: true })
 // hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.

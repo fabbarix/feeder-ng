@@ -3,6 +3,7 @@
 // the Scan screen in shop mode (rows, an active row, the Price keypad, the new-Product sheet) and the receipt screens (no photo, one,
 // the photo edit sheet, a done read's review). In a browser: scripts/check-page-layout.sh on the real build.
 import { describe, expect, it } from 'vitest'
+import { driverSource, seedSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
@@ -33,9 +34,9 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   resolveRoute: (p: string, ids: Record<string, unknown>) => string
   scenarioViewports: (s: Scenario, profile: Viewport[]) => Viewport[]
 }
-const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+const driver = driverSource()
 const modes = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
-const seed = readFileSync(resolve(cwd, '../scripts/test/fixtures/page-layout-seed.mjs'), 'utf8')
+const seed = seedSource()
 const wrapper = readFileSync(resolve(cwd, '../scripts/check-page-layout.sh'), 'utf8')
 const byName = (name: string) => rules.SCENARIOS.find((s) => s.name === name)
 

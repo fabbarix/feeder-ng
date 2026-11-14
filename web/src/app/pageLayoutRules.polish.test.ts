@@ -1,18 +1,17 @@
 // b8-polish (docs/dev/design/b8-polish.md 2): P23 covers the Shop's Supplies group again. The Restock reason ("400/1000 ml" on a
 // phone) is read by the same probe as the Meal Slot hint, and the scenarios that run it include 360 px, where it was cut by 3 px.
 import { describe, expect, it } from 'vitest'
+import { driverSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 
 interface Scenario { name: string; route: string; setup?: string; widths?: number[] }
 const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as { SCENARIOS: Scenario[] }
-const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+const driver = driverSource()
 const byName = (n: string) => rules.SCENARIOS.find((s) => s.name === n)
 
 describe('P23 reads the Supplies group again', () => {

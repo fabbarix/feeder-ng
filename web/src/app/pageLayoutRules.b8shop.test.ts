@@ -2,13 +2,12 @@
 // already read crushed and cut chips). (2) P23, always fails: a food Line's Meal Slot hint ("Tue Dinner +1") is cut by its ellipsis, at every
 // width (b8-polish: the Supplies group's Restock reason is read again, pageLayoutRules.polish.test.ts); scenario shop-hints at 360, 390, 834 and 1440 px. Design: docs/dev/design/b8-shop.md. In a browser: scripts/check-page-layout.sh.
 import { describe, expect, it } from 'vitest'
+import { driverSource } from './pageLayoutSources'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 
 interface Scenario { name: string; route: string; start?: string; setup?: string; widths?: number[] }
@@ -16,8 +15,9 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   ALWAYS_FAIL: string[]
   SCENARIOS: Scenario[]
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
+  PROBES: { name: string; key: string | null; source: string }[]
 }
-const driver = readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
+const driver = driverSource()
 
 const base = (vw: number) => ({
   vw, scrollW: vw, clientW: vw, over: [], content: { x: 24, r: vw - 24 }, railR: 0, container: { x: 24, r: vw - 24 },
@@ -62,7 +62,10 @@ describe('P23: the Shop hint is cut by its ellipsis', () => {
   it('the driver measures it (cutMetaProbe, with a Range like P22) and reports it as m.cutMeta', () => {
     expect(driver).toMatch(/const cutMetaProbe\s*=/)
     expect(driver).toMatch(/\.shop-lines \.list-row__meta\[data-status="info"\]/)
-    expect(driver).toMatch(/cutMeta:\s*await evaluate\(cutMetaProbe\)/)
+    // B9-03: the probe is a registry module (probes/cut-meta.mjs) under the key P23 reads; the driver's probe loop fills m.cutMeta.
+    const probe = rules.PROBES.find((p) => p.name === 'cut-meta')
+    expect(probe?.key).toBe('cutMeta')
+    expect(probe?.source).toMatch(/\.shop-lines \.list-row__meta\[data-status="info"\]/)
     // b8-polish: the Supplies group's Restock reason is read again (docs/dev/design/b8-polish.md 2)
     expect(driver).not.toMatch(/closest\('\.shop-supplies'\)/)
   })

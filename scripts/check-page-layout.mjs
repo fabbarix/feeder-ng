@@ -2,9 +2,12 @@
 // Page-layout guard (R2-L; design: docs/dev/design/r2l-page-layout.md section 5). Normally run through scripts/check-page-layout.sh,
 // which builds and starts a worktree-unique server, seeds it and maps the findings to warn/fail per route.
 //   node scripts/check-page-layout.mjs --url http://127.0.0.1:<port> [--profile quick|full] [--ids build/page-layout-ids.json]
-//                                      [--chrome /usr/bin/google-chrome] [--email admin@example.test]
+//                                      [--chrome /usr/bin/google-chrome] [--email admin@example.test] [--scenario NAME[,NAME]]
 // --url is required (no default port), so two worktrees can never probe each other's server by accident.
-// For every route x viewport it asserts P1..P9 (scripts/lib/page-layout-rules.mjs). Prints one line per finding
+// --scenario (B9-03) runs only the named scenarios (and the resize walk of a named one), no route table: a package's targeted run. An
+// unknown name is a usage error (exit 2) before Chrome starts.
+// For every route x viewport it runs the in-page probes and asserts the rules (scripts/lib/page-layout/: probes/, rules/, scenarios/,
+// through scripts/lib/page-layout-rules.mjs). Prints one line per finding
 // ("  - <w>px <route>: <rule> ...") and one per probe that was not inspected ("  ! <w>px <route>: not inspected (<reason>)").
 // Every route x viewport must be inspected: a probe that cannot run fails the guard unless its route is exempt
 // (scripts/check-page-layout.exempt, or --exempt FILE). Exit 1 on any finding or failing not-inspected entry, never OK then;
@@ -13,8 +16,10 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario, scenarioViewports } from './lib/page-layout-rules.mjs'
+import { DARK_PROBES, PROBES, PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, SETUPS, evaluateDarkMetrics, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario, scenarioViewports, selectScenarios } from './lib/page-layout-rules.mjs'
 import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
+import { installHelpers } from './lib/page-layout/helpers.mjs'
+import { emulationCalls } from './lib/page-layout/viewport.mjs'
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`)
@@ -30,6 +35,19 @@ const profileName = arg('profile', 'quick')
 const VIEWPORTS = PROFILES[profileName]
 if (!VIEWPORTS) {
   console.error(`check-page-layout: unknown --profile "${profileName}" (quick|full)`)
+  process.exit(2)
+}
+// --scenario NAME[,NAME]: checked here, before Chrome starts, so a typo costs nothing.
+const scenarioArg = process.argv.includes('--scenario') ? arg('scenario', '') : null
+if (scenarioArg !== null && (!scenarioArg || scenarioArg.startsWith('--'))) {
+  console.error('check-page-layout: usage: --scenario NAME[,NAME] (a scenario of scripts/lib/page-layout/scenarios/)')
+  process.exit(2)
+}
+let RUN_SCENARIOS = SCENARIOS
+try {
+  RUN_SCENARIOS = selectScenarios(SCENARIOS, scenarioArg ?? undefined)
+} catch (e) {
+  console.error(`check-page-layout: ${e.message}`)
   process.exit(2)
 }
 const chromeBin = arg('chrome', process.env.CHROME ?? 'google-chrome')
@@ -267,577 +285,27 @@ const settle = async () => {
   }
 }
 
-const probe = `
-(() => {
-  // A page without the app (an error page, a 503 text, a blank document) has no <main>: report what it shows instead of measuring nothing.
-  if (!document.querySelector('main')) {
-    const text = (document.body?.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 80)
-    return { hasMain: false, title: document.title.trim().slice(0, 80), text }
-  }
-  const vw = innerWidth
-  const cw = document.documentElement.clientWidth
-  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 0 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
-  const inScroller = (e) => { for (let p = e.parentElement; p; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll' || o === 'hidden') return true } return false }
-  const rgb = (c) => (c.match(/[\\d.]+/g) || []).map(Number)
-  const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
-  const contrast = (a, b) => { const [x, y] = [lum(rgb(a)), lum(rgb(b))].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
-  const main = document.querySelector('main')
-  const rail = document.querySelector('nav.side-rail')
-  const railR = rail && vis(rail) ? rail.getBoundingClientRect().right : 0
-  let minX = 1e9, maxR = 0
-  const over = []
-  for (const e of (main ? main.querySelectorAll('*') : [])) {
-    if (e.hasAttribute('data-page-width')) continue // the container itself: its padding is the gutter, not content
-    if (e.closest('.sticky-action-bar')) continue // a bar spans the content edges by design (rule P6 checks it)
-    if (!vis(e)) continue
-    if (e.matches('.sticky-action-bar')) continue // as wide as the content by design (P6 checks its alignment); its inner row is measured
-    const b = e.getBoundingClientRect()
-    if (b.width < 2) continue
-    if (b.right > cw + 1 && !inScroller(e)) over.push(e.tagName.toLowerCase() + '.' + (e.getAttribute('class') || '').split(' ')[0])
-    minX = Math.min(minX, b.x); maxR = Math.max(maxR, Math.min(b.right, cw))
-  }
-  const fields = []
-  for (const e of document.querySelectorAll('main input, main textarea, main [role=spinbutton]')) {
-    if (!vis(e) || ['hidden', 'checkbox', 'radio', 'file'].includes(e.type)) continue
-    const frame = e.closest('.ui-field') || e.closest('[data-size]') || e
-    const size = frame.getAttribute('data-size') || ''
-    const short = ['numeric', 'decimal'].includes(e.inputMode) || e.getAttribute('role') === 'spinbutton' || ['xs', 'sm'].includes(size)
-    const segment = e.closest('.time-field, .stepper')
-    fields.push({ label: (e.getAttribute('aria-label') || (e.id && document.querySelector('label[for="' + e.id + '"]')?.innerText) || e.name || '').trim().slice(0, 30), type: e.type || e.getAttribute('role'), short, segment: !!segment, long: !!e.closest('[data-size-intent="long"]'), inline: !!e.closest('[data-size-intent="inline"]'), size, w: Math.round(frame.getBoundingClientRect().width) })
-  }
-  const bars = []
-  for (const e of (main ? main.querySelectorAll('*') : [])) {
-    const s = getComputedStyle(e)
-    // P6 is about action bars stuck to the bottom of the viewport; a top-sticky side panel (the Stock aside) is not one. A dialog or a
-    // popover is in the top layer and places itself (P19 checks the popover), so it is not a page bar.
-    if ((s.position === 'sticky' || s.position === 'fixed') && s.bottom !== 'auto' && vis(e) && e.querySelector('button, a') && !e.closest('dialog, [popover]')) {
-      const b = e.getBoundingClientRect()
-      bars.push({ cls: String(e.className).split(' ')[0], x: Math.round(b.x), r: Math.round(b.right), bgAlpha: (rgb(s.backgroundColor)[3] ?? 1) })
-    }
-  }
-  const cur = rail && vis(rail) ? rail.querySelector('[aria-current="page"]') : null
-  let railContrast = null
-  if (cur) { const s = getComputedStyle(cur); let bg = s.backgroundColor; if (rgb(bg)[3] === 0) bg = getComputedStyle(cur.querySelector('.side-rail__pill') || rail).backgroundColor; if (rgb(bg)[3] === 0) bg = getComputedStyle(document.body).backgroundColor; railContrast = Math.round(contrast(s.color, bg) * 100) / 100 }
-  // P11: a clipped box (overflow hidden, text wider than the box, not an intentional ellipsis) or a word broken mid-word across lines.
-  const brokenText = []
-  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
-  for (const e of (main ? main.querySelectorAll('*') : [])) {
-    const s = getComputedStyle(e)
-    // A visually-hidden (screen-reader) box is 1 px on purpose: only boxes wider than 2 px are checked.
-    if (['hidden', 'clip'].includes(s.overflowX) && s.textOverflow !== 'ellipsis' && e.clientWidth > 2 && e.scrollWidth > e.clientWidth + 1 && vis(e) && e.innerText.trim()) {
-      brokenText.push({ sel: sel(e), why: 'clipped' })
-    }
-  }
-  const isWordChar = (c) => /[\\p{L}\\p{N}]/u.test(c)
-  const midWord = (node) => {
-    let prevTop = null
-    let prevCh = ''
-    // The whitespace-delimited token around index i, so the rule can allow emails and links.
-    const tokenAt = (i) => {
-      const v = node.nodeValue
-      let a = i
-      let b = i
-      while (a > 0 && !/\\s/.test(v[a - 1])) a--
-      while (b < v.length && !/\\s/.test(v[b])) b++
-      return v.slice(a, b)
-    }
-    for (let i = 0; i < node.nodeValue.length; i++) {
-      const ch = node.nodeValue[i]
-      if (/\\s/.test(ch)) { prevCh = ch; continue }
-      const r = document.createRange()
-      r.setStart(node, i)
-      r.setEnd(node, i + 1)
-      const rects = r.getClientRects()
-      if (!rects.length) continue
-      const top = Math.round(rects[0].top)
-      if (prevTop !== null && Math.abs(top - prevTop) > 2 && isWordChar(prevCh) && isWordChar(ch)) return tokenAt(i)
-      prevTop = top
-      prevCh = ch
-    }
-    return null
-  }
-  if (main) {
-    const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT)
-    let n = 0
-    for (let node = walker.nextNode(); node && n < 2000; node = walker.nextNode()) {
-      if (!node.nodeValue.trim() || !node.parentElement || !vis(node.parentElement)) continue
-      if (node.parentElement.closest('script, style')) continue
-      n++
-      const token = midWord(node)
-      if (token) {
-        const item = { sel: sel(node.parentElement), why: 'mid-word', token: token.slice(0, 200) }
-        if (!brokenText.some((b) => b.sel === item.sel && b.why === item.why)) brokenText.push(item)
-      }
-    }
-  }
-  const pageEl = main && main.querySelector('[data-page-width]')
-  const container = pageEl || main
-  const cb = container.getBoundingClientRect()
-  // P6: the floating action bar lines up with the container's content box (inside the gutters), as the cards above it do.
-  const ccs = getComputedStyle(container)
-  const inner = { x: Math.round(cb.x + parseFloat(ccs.paddingLeft) + parseFloat(ccs.borderLeftWidth)), r: Math.round(cb.right - parseFloat(ccs.paddingRight) - parseFloat(ccs.borderRightWidth)) }
-  return { vw, scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth, over: over.slice(0, 3),
-    content: { x: Math.round(minX === 1e9 ? 0 : minX), r: Math.round(maxR) }, railR: Math.round(railR), container: { x: Math.round(cb.x), r: Math.round(cb.right) }, containerInner: inner,
-    pageWidthAttr: pageEl ? pageEl.getAttribute('data-page-width') : null,
-    fields, bars, railContrast, brokenText, dialog: null, hasMain: true }
-})()`
-// DS-TODAY round 2 (P15, system.md 10): an action group that collapsed to 0 px, a button narrower than its label, or text that
-// runs under the group. Measured in the page for every .action-group and .plan-course__actions; fails in every mode.
-const actionProbe = `
-(() => {
-  const main = document.querySelector('main')
-  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 2 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
-  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
-  const out = []
-  for (const g of (main ? main.querySelectorAll('.action-group, .plan-course__actions') : [])) {
-    if (!vis(g)) continue
-    const gb = g.getBoundingClientRect()
-    if (gb.width < 1) { out.push({ sel: sel(g), why: 'collapsed', px: 0 }); continue }
-    for (const b of g.querySelectorAll('button')) {
-      const over = b.scrollWidth - b.clientWidth
-      // A labelled button only: an icon button's 44 px hit area is a pseudo-element that overhangs its 40 px box on purpose.
-      if (vis(b) && over > 1 && b.textContent.trim() !== '') out.push({ sel: sel(b), why: 'label-clipped', px: Math.round(over) })
-    }
-    const row = g.parentElement
-    for (const t of (row ? row.querySelectorAll('.to-confirm__text, .to-confirm__title, .to-confirm__meta, .plan-course__what') : [])) {
-      if (!vis(t) || t.contains(g) || g.contains(t)) continue
-      const tb = t.getBoundingClientRect()
-      const w = Math.min(tb.right, gb.right) - Math.max(tb.left, gb.left)
-      const h = Math.min(tb.bottom, gb.bottom) - Math.max(tb.top, gb.top)
-      if (w > 1 && h > 1) out.push({ sel: sel(t), why: 'overlaps-actions', px: Math.round(w) })
-    }
-  }
-  return out
-})()`
-// P12 (DS-A round 2, system.md 8): the probe is scripts/lib/page-layout-nav-probe.js (feederNavProbe), shared with the static
-// fixtures of scripts/test/ds-layout_test.sh. It is evaluated in the page below (m.navOverlap).
-const navProbeSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'lib', 'page-layout-nav-probe.js'), 'utf8')
-
-// P13 (DS-A round 2, system.md 10): a box whose content is wider than its tile or card (.tile, .list-group) and spills past it. A scroll
-// container (overflow-x auto or scroll) between the box and its card is intentional and not counted; clipping by overflow hidden is.
-const tileProbe = `
-(() => {
-  const main = document.querySelector('main')
-  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 2 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
-  // round 3: named by the class attribute (an svg's className is an SVGAnimatedString)
-  const sel = (e) => e.tagName.toLowerCase() + '.' + (e.getAttribute('class') || '').split(' ')[0]
-  const out = []
-  for (const card of (main ? main.querySelectorAll('.tile, .list-group') : [])) {
-    if (!vis(card)) continue
-    const cs = getComputedStyle(card)
-    const edge = card.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth)
-    for (const d of card.querySelectorAll('*')) {
-      if (!vis(d)) continue
-      const over = d.getBoundingClientRect().right - edge
-      if (over <= 1) continue
-      // round 3: only in-flow spills count. A position: absolute or fixed box (a corner menu in the tile's padding) is not one, and
-      // neither is anything inside it; a scroll container (overflow-x auto / scroll) between the box and its card is intentional.
-      let scrolled = false
-      for (let p = d; p && p !== card; p = p.parentElement) {
-        const ps = getComputedStyle(p).position
-        if (ps === 'absolute' || ps === 'fixed') { scrolled = true; break }
-      }
-      for (let p = d.parentElement; !scrolled && p && p !== card; p = p.parentElement) {
-        const o = getComputedStyle(p).overflowX
-        if (o === 'auto' || o === 'scroll') { scrolled = true; break }
-      }
-      if (!scrolled) out.push({ sel: sel(d), card: sel(card), px: Math.round(over) })
-    }
-  }
-  return out.slice(0, 3)
-})()`
-
-// P14 (ds-plan round 3): a chip whose label is cut by its ellipsis while its chip line still has room to spare. A chip cut because the
-// line is really full is not a finding: the spare room is what the line has left after its chips (and their gaps).
-const chipProbe = `
-(() => {
-  const main = document.querySelector('main')
-  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 2 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
-  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
-  const out = []
-  for (const label of (main ? main.querySelectorAll('.chip .chip__label') : [])) {
-    const chip = label.closest('.chip')
-    if (!chip || !vis(label) || label.scrollWidth <= label.clientWidth + 1) continue
-    if (getComputedStyle(label).textOverflow !== 'ellipsis') continue
-    const line = chip.parentElement
-    const cs = getComputedStyle(line)
-    const inner = line.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
-    const kids = [...line.children]
-    const used = kids.reduce((n, k) => n + k.getBoundingClientRect().width, 0) + (parseFloat(cs.columnGap) || 0) * Math.max(0, kids.length - 1)
-    const room = Math.round(inner - used)
-    if (room > 8) out.push({ sel: sel(chip), label: label.textContent.trim().slice(0, 60), room })
-  }
-  return out.slice(0, 5)
-})()`
-
-// hf-recipes-filter (P16): a visible chip whose label is crushed: the chip is on screen, its label is cut by its ellipsis, and the label is
-// narrower than 24 px while its text is longer. The chip is what is checked for visibility, not the label: a label squeezed to 0 px is
-// hidden by its own box and would otherwise be skipped.
-const crushedProbe = `
-(() => {
-  const main = document.querySelector('main')
-  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 2 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
-  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
-  const out = []
-  for (const chip of (main ? main.querySelectorAll('.chip') : [])) {
-    if (!vis(chip)) continue
-    const label = chip.querySelector('.chip__label')
-    if (!label || !(label.clientWidth < 24) || label.scrollWidth <= label.clientWidth + 1) continue
-    if (getComputedStyle(label).textOverflow !== 'ellipsis') continue
-    out.push({ sel: sel(chip), label: label.textContent.trim().slice(0, 60), px: Math.round(label.clientWidth) })
-  }
-  return out.slice(0, 5)
-})()`
-
-// P10 (run once per colour scheme): a visible, enabled Button label against the first non-transparent background at or above it (alpha is ignored, as in rule P7).
-const buttonProbe = `
-(() => {
-  const main = document.querySelector('main')
-  const vis = (e) => { const b = e.getBoundingClientRect(); const s = getComputedStyle(e); return b.width > 0 && b.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
-  const rgb = (c) => (c.match(/[\\d.]+/g) || []).map(Number)
-  const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
-  const contrast = (a, b) => { const [x, y] = [lum(rgb(a)), lum(rgb(b))].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
-  const bgOf = (e) => { for (let p = e; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor; if (rgb(c)[3] !== 0) return c } return getComputedStyle(document.body).backgroundColor }
-  const low = []
-  for (const b of (main ? main.querySelectorAll('.button:not(:disabled)') : [])) {
-    if (!vis(b)) continue
-    const ratio = Math.round(contrast(getComputedStyle(b).color, bgOf(b)) * 100) / 100
-    if (ratio < 4.5) low.push({ label: b.innerText.trim().slice(0, 40), ratio })
-  }
-  return low
-})()`
-// P8 is about a modal dialog (centred from 768 px). A non-modal sheet (dialog.show(): the Scan screen's Price keypad, docked under the
-// camera from 768 px by design, shop-scan-proposals.md 13.4) is not :modal and places itself.
-const dialogProbe = `(() => { const d = document.querySelector('dialog[open]:modal'); if (!d) return null; const b = d.getBoundingClientRect(); return { x: Math.round(b.x), w: Math.round(b.width), vw: innerWidth } })()`
-
-
-// hf-recipes-filter round 2 (P17 to P20, docs/design/recipes-filter.md 13.6). Each probe is empty on a page without the header.
-// P17: a chip line (.filter-chips, the Recipes and the Pantry header) shows a chip cut after its first one, or a chip past its end.
-const fitLinesProbe = `
-(() => {
-  const main = document.querySelector('main')
-  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
-  const out = []
-  for (const line of (main ? main.querySelectorAll('.filter-chips') : [])) {
-    const lr = line.getBoundingClientRect()
-    if (lr.width <= 2) continue
-    const chips = [...line.children].filter((c) => c.classList.contains('chip'))
-    chips.forEach((chip, i) => {
-      const r = chip.getBoundingClientRect()
-      const label = chip.querySelector('.chip__label')
-      const text = label ? label.textContent.trim().slice(0, 60) : ''
-      const cut = label ? label.scrollWidth - label.clientWidth : 0
-      if (r.width > 2 && r.right > lr.right + 1) out.push({ sel: sel(line), label: text, why: 'spill', px: Math.round(r.right - lr.right) })
-      else if (i > 0 && cut > 1) out.push({ sel: sel(line), label: text, why: 'cut', px: Math.round(label.clientWidth) })
-    })
-  }
-  return out.slice(0, 5)
-})()`
-
-// P18: a focus ring (3 px outline, 2 px offset) or a removable chip's hit area (its ::before, reaching past it) cut by a clipping
-// ancestor. Each chip is focused with focusVisible so its ring is drawn. A chip scrolled partly out of its own scroll container is skipped.
-const clippedRingsProbe = `
-(() => {
-  const main = document.querySelector('main')
-  if (!main) return []
-  const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
-  const bounds = (el) => {
-    const out = []
-    for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
-      // A dialog or a popover is in the top layer: the page's ancestors above it do not clip it.
-      if (p.matches('dialog, [popover]')) break
-      const s = getComputedStyle(p)
-      const xClip = s.overflowX !== 'visible', yClip = s.overflowY !== 'visible'
-      if (!xClip && !yClip) continue
-      const r = p.getBoundingClientRect()
-      const l = r.left + p.clientLeft, t = r.top + p.clientTop
-      const m = parseFloat(s.overflowClipMargin) || 0
-      const mx = s.overflowX === 'clip' ? m : 0, my = s.overflowY === 'clip' ? m : 0
-      out.push({ l: xClip ? l - mx : -Infinity, r: xClip ? l + p.clientWidth + mx : Infinity, t: yClip ? t - my : -Infinity, b: yClip ? t + p.clientHeight + my : Infinity, scroller: out.length === 0 })
-    }
-    return out
-  }
-  const worst = (rect, list) => Math.max(0, ...list.map((c) => Math.max(c.l - rect.l, rect.r - c.r, c.t - rect.t, rect.b - c.b)))
-  const out = []
-  // The chip line of both headers, and the chip lines of an open Filters panel (Course; the Pantry's Show and Kind).
-  const targets = [...main.querySelectorAll('.filter-chips > .chip, .course-filter > .chip, .filter-chip-group > .chip')]
-  for (const el of targets) {
-    if (el.getBoundingClientRect().width <= 2) continue
-    el.focus({ focusVisible: true })
-    const r = el.getBoundingClientRect()
-    const list = bounds(el)
-    const scroller = list.find((c) => c.scroller)
-    if (scroller && (r.left < scroller.l - 0.5 || r.right > scroller.r + 0.5)) continue
-    const label = el.textContent.trim().slice(0, 40)
-    const ring = worst({ l: r.left - 5, r: r.right + 5, t: r.top - 5, b: r.bottom + 5 }, list)
-    if (Math.round(ring) >= 1) out.push({ sel: sel(el), label, what: 'focus ring', px: Math.round(ring) })
-    const before = getComputedStyle(el, '::before')
-    if (el.matches('.chip[data-removable]') && before.position === 'absolute') {
-      const ext = Math.max(0, -parseFloat(before.top) || 0, -parseFloat(before.bottom) || 0)
-      const hit = worst({ l: r.left, r: r.right, t: r.top - ext, b: r.bottom + ext }, list)
-      if (ext > 0 && Math.round(hit) >= 1) out.push({ sel: sel(el), label, what: 'hit area', px: Math.round(hit) })
-    }
-  }
-  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur()
-  return out.slice(0, 8)
-})()`
-
-// P19 (from 768 px): an open popover (role dialog with an id) and the trigger that controls it: its end edge against the trigger's, and
-// its edges against the page content box (the padding box of <main>).
-const popoverAlignProbe = `
-(() => {
-  const pop = document.querySelector('.popover[role="dialog"][id]')
-  if (!pop) return null
-  const trigger = document.querySelector('[aria-controls="' + pop.id + '"]')
-  const main = document.querySelector('main')
-  if (!trigger || !main) return null
-  const r = pop.getBoundingClientRect()
-  if (r.width < 2) return null
-  const t = trigger.getBoundingClientRect()
-  const mr = main.getBoundingClientRect(), ms = getComputedStyle(main)
-  return {
-    dx: Math.round(r.right - t.right), left: Math.round(r.left), right: Math.round(r.right),
-    contentX: Math.round(mr.left + parseFloat(ms.paddingLeft)), contentR: Math.round(mr.right - parseFloat(ms.paddingRight)),
-  }
-})()`
-
-// P20: row 3 (the chip line) sits one slot gap below row 2 (the gap of the header's own stack, .filter-bar, or the ListPage's), and the
-// panel's sections are spaced.
-const filterSpacingProbe = `
-(() => {
-  const row2 = document.querySelector('.filter-bar__view-row'), row3 = document.querySelector('.filter-chips')
-  const stack = row3 ? row3.closest('.filter-bar, .list-page') : null
-  const slotGap = stack ? parseFloat(getComputedStyle(stack).rowGap) : NaN
-  let rowGap = null
-  if (row2 && row3 && row3.getBoundingClientRect().height > 0) rowGap = Math.round((row3.getBoundingClientRect().top - row2.getBoundingClientRect().bottom) * 10) / 10
-  const sections = [...document.querySelectorAll('.filter-panel__section')]
-  const sectionGap = sections.length >= 2 ? Math.round((sections[1].getBoundingClientRect().top - sections[0].getBoundingClientRect().bottom) * 10) / 10 : null
-  if (rowGap === null && sectionGap === null) return null
-  return { rowGap, slotGap, sectionGap }
-})()`
-
-// pantry-filter review (P22): a chip Select (a toolbar picker: the Sort of both filter headers, Shop's) whose value is cut by its ellipsis.
-// The value's text is measured with a Range (its laid-out width, whatever the ellipsis paints) and by its scroll overflow.
-const cutSelectProbe = `
-(() => {
-  const main = document.querySelector('main')
-  const out = []
-  for (const v of (main ? main.querySelectorAll('.select__trigger[data-appearance="chip"] .select__value') : [])) {
-    if (v.getClientRects().length === 0) continue
-    const box = v.getBoundingClientRect()
-    const range = document.createRange()
-    range.selectNodeContents(v)
-    const cut = Math.max(v.scrollWidth - v.clientWidth, range.getBoundingClientRect().width - box.width)
-    if (cut > 0.5) out.push({ sel: 'button.select__trigger', label: v.textContent.trim(), shown: Math.round(box.width), px: Math.round(cut) })
-  }
-  return out
-})()`
-
-// b8-shop (P23): the Shop hint (a food Line's Meal Slot hint, "Fri Dinner +2") cut by its ellipsis, at every width. The text is measured
-// with a Range per painted text node (like cutSelectProbe), so the ellipsis is found whatever it paints. b8-polish: the Supplies group's Restock reason is read
-// too; below 420 px it is the compact "400/1000 ml", which the probe measures as painted.
-const cutMetaProbe = `
-(() => {
-  const main = document.querySelector('main')
-  const out = []
-  for (const t of (main ? main.querySelectorAll('.shop-lines .list-row__meta[data-status="info"] .list-row__meta-text') : [])) {
-    if (t.getClientRects().length === 0) continue
-    const box = t.getBoundingClientRect()
-    // the painted text only: a compact Restock reason carries its full text in a .visually-hidden span (b8-polish), whose text
-    // still lays out at full width inside its 1 px clip, so its text nodes are left out of the measure and the label.
-    const walk = document.createTreeWalker(t, NodeFilter.SHOW_TEXT)
-    let left = Infinity, right = -Infinity, label = ''
-    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-      if (n.parentElement && n.parentElement.closest('.visually-hidden')) continue
-      const range = document.createRange()
-      range.selectNodeContents(n)
-      const r = range.getBoundingClientRect()
-      if (r.width > 0) { left = Math.min(left, r.left); right = Math.max(right, r.right) }
-      label += n.textContent
-    }
-    label = label.trim()
-    const cut = Math.max(t.scrollWidth - t.clientWidth, right > left ? right - left - box.width : 0)
-    if (cut > 0.5) out.push({ sel: 'span.list-row__meta-text', label, shown: Math.round(box.width), px: Math.round(cut) })
-  }
-  return out
-})()`
-
-// beta.7 (H8, SR6, RR5): the setups of the scenarios with a `setup` (page-layout-rules.mjs SCENARIOS). Each one runs in the page
-// opened at the scenario's `start` and brings it to the state the probes measure: a sheet open, a Scan session with rows, a receipt
-// photo, a done read. A step whose state does not show throws, so the probe is not inspected (and fails) instead of measuring the
-// wrong page. The dark pass replays the setup in a fresh page (the photos and the read are in memory only).
-const js = JSON.stringify
-/** Polls the page until `expr` is truthy, or throws after `ms`. */
-const until = async (expr, what, ms = 10000) => {
-  const end = Date.now() + ms
-  while (Date.now() < end) {
-    if (await evaluate(expr).catch(() => false)) return
-    await sleep(150)
-  }
-  throw new Error(`setup: ${what} did not show within ${ms / 1000} s`)
+// The in-page probes are scripts/lib/page-layout/probes/*.mjs (PROBES, run in their order after the layout probe); P10's Button probe
+// runs again in the dark scheme, and the chip Select probe in the resize walk.
+const probeSource = (name) => PROBES.find((p) => p.name === name).source
+const layoutProbe = PROBES.find((p) => p.key === null).source
+const cutSelectProbe = probeSource('cut-selects')
+// The scenario setups are scripts/lib/page-layout/scenarios/*.mjs (SETUPS); they reach this tab through helpers.mjs.
+const helpers = installHelpers({ evaluate, sleep, ids })
+/** Puts the current tab in a viewport (device metrics, and the safe-area insets of an inset viewport: viewport.mjs). */
+const emulate = async (vp, extra = []) => {
+  // B9-03: then a scenario's own CDP calls (scenario.emulate: a text size, say), before the first navigation.
+  for (const c of [...emulationCalls(vp), ...extra]) await cdp(c.method, c.params)
 }
-/** Clicks the element `expr` evaluates to, or throws. */
-const press = async (expr, what) => {
-  if (!(await evaluate(`(() => { const e = ${expr}; if (!e || e.disabled) return false; e.click(); return true })()`))) throw new Error(`setup: no ${what} to press`)
-}
-/** The element of `sel` whose trimmed text (or aria-label) is `text`, as page code. */
-const byText = (sel, text) => `[...document.querySelectorAll(${js(sel)})].find((e) => e.textContent.trim() === ${js(text)} || e.getAttribute('aria-label') === ${js(text)})`
-/** Sets a React-controlled input's value as typing does. */
-const typeInto = (sel, value) =>
-  `(() => { const e = document.querySelector(${js(sel)}); if (!e) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(e, ${js(value)}); e.dispatchEvent(new Event('input', { bubbles: true })); return true })()`
-const SCANNED_ROWS = `document.querySelectorAll('ul[aria-label="Scanned list"] > .list-row').length`
-const READ_ROW = `[...document.querySelectorAll('.scan-screen__list .list-row')].find((r) => r.querySelector('.list-row__title')?.textContent.trim() === 'Read the receipt')`
-
-/** A Shop session of the seeded Shop on /scan, the barcodes typed through the no-camera block (the storage was cleared first). */
-async function scanSession(codes) {
-  await until(`!!document.querySelector('.shop-picker, .scan-screen__split')`, 'the Scan screen')
-  if (await evaluate(`!!document.querySelector('.shop-picker')`)) {
-    await press(`document.querySelector('.shop-picker .list-row__target[aria-label=' + ${js(js(ids.shopName ?? ''))} + ']')`, `Shop "${ids.shopName}" in the picker`)
-  }
-  await until(`!!document.querySelector('.scan-screen__split')`, 'the shop session')
-  await until(`!!document.querySelector('.camera-failure')`, 'the no-camera block (a headless Chrome has no camera)', 15000)
-  for (const code of codes) {
-    const before = await evaluate(SCANNED_ROWS)
-    if (!(await evaluate(`!!document.querySelector('.camera-failure input')`))) await press(byText('.camera-failure button', 'Type the barcode instead'), '"Type the barcode instead"')
-    await until(`!!document.querySelector('.camera-failure input')`, 'the barcode field')
-    if (!(await evaluate(typeInto('.camera-failure input', code)))) throw new Error('setup: the barcode field went away')
-    await press(`document.querySelector('.camera-failure button[type=submit]')`, '"Use this barcode"')
-    const t0 = Date.now()
-    await until(`${SCANNED_ROWS} > ${before} || !!document.querySelector('dialog.sheet[open]')`, `the scan of ${code}`).catch(async (e) => {
-      const seen = await evaluate(`JSON.stringify({ rows: ${SCANNED_ROWS}, before: ${before}, input: document.querySelector('.camera-failure input')?.value, main: (document.querySelector('main')?.innerText || '').replace(/\\s+/g, ' ').slice(0, 400), toasts: [...document.querySelectorAll('.toast')].map((t) => t.innerText) })`).catch(() => '?')
-      throw new Error(`${e.message} [${seen}]`)
-    })
-    if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   scan ${code}: ${Date.now() - t0}ms`)
-  }
-  // The "Added …" toasts are transient: dismissed, so the probes and a screenshot see the screen under them.
-  await evaluate(`document.querySelectorAll('.toast > button:last-child').forEach((b) => b.click())`)
-}
-/** The seeded barcodes scanned, and the "Read the receipt" footer row ready (its scans synced, the assistant on). */
-async function scannedList() {
-  if (!ids.assistant) throw new Error('setup: the seeder did not turn the Recipe Assistant on (no fake Anthropic API), so "Read the receipt" cannot be read')
-  await scanSession(ids.scanBarcodes ?? [])
-  await until(`(() => { const r = ${READ_ROW}; return !!r && !!r.querySelector('.list-row__target') })()`, 'the "Read the receipt" footer row, ready', 15000)
-}
-/** A 640 x 1100 JPEG of a printed receipt, put in the photos screen's file input as the camera would. */
-const ADD_PHOTO = `(async () => {
-  const c = document.createElement('canvas'); c.width = 640; c.height = 1100
-  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#111'; g.font = '28px monospace'
-  ;['COOP', 'PASSATA         1.29', 'FLOUR PACK      1.99', 'KITCHEN ROLL    3.49', 'TOTAL          13.03'].forEach((t, i) => g.fillText(t, 40, 80 + i * 60))
-  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85))
-  const input = document.querySelector('.receipt-add input[type=file]')
-  if (!input) return false
-  const dt = new DataTransfer(); dt.items.add(new File([blob], 'receipt.jpg', { type: 'image/jpeg' }))
-  input.files = dt.files
-  input.dispatchEvent(new Event('change', { bubbles: true }))
-  return true
-})()`
-async function receiptPhotos(n) {
-  await scannedList()
-  await press(`(${READ_ROW})?.querySelector('.list-row__target')`, '"Read the receipt" row')
-  await until(`location.pathname === '/scan/receipt' && !!document.querySelector('.receipt-add')`, 'the receipt photos screen')
-  for (let i = 1; i <= n; i++) {
-    if (!(await evaluate(ADD_PHOTO))) throw new Error('setup: the photos screen has no file input')
-    await until(`document.querySelectorAll('.receipt-photos > li').length >= ${i}`, `receipt photo ${i}`)
-  }
-}
-
-// b8-hint (P23): the Shop hint is "<weekday> <Meal Slot> +N", so its width depends on the day the guard runs ("Fri Dinner +2"
-// passed, "Sat Breakfast +2" was cut the next day). Every food Line's hint is pinned to the worst case: the widest of the seven
-// weekdays x the household's Meal Slots, measured in the meta's own font, then " +12". The text node React owns is rewritten in
-// place, so the layout is the real one and only the words are pinned. The Supplies group's Restock reason keeps its text.
-const PIN_WORST_HINT = `(async () => {
-  const sel = '.shop-open .shop-lines .list-row__meta[data-status="info"] .list-row__meta-text'
-  const metas = [...document.querySelectorAll(sel)] // the To get section only: the Supplies group is its own section
-  if (metas.length === 0) return 'no food Line hint'
-  const r = await fetch('/api/meal-slots', { credentials: 'same-origin' })
-  if (!r.ok) return 'GET /api/meal-slots ' + r.status
-  const body = await r.json()
-  const list = Array.isArray(body) ? body : (Object.values(body ?? {}).find(Array.isArray) ?? [])
-  const names = [...new Set(list.map((s) => s.name).filter(Boolean))]
-  if (names.length === 0) return 'no Meal Slots'
-  const g = document.createElement('canvas').getContext('2d')
-  g.font = getComputedStyle(metas[0]).font
-  let worst = '', widest = -1
-  for (const day of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) for (const name of names) {
-    const w = g.measureText(day + ' ' + name).width
-    if (w > widest) { widest = w; worst = day + ' ' + name }
-  }
-  worst += ' +12'
-  for (const t of metas) {
-    const n = [...t.childNodes].find((c) => c.nodeType === Node.TEXT_NODE)
-    if (!n) return 'a hint without its own text node'
-    n.data = worst
-  }
-  return 'ok'
-})()`
-async function pinWorstHint() {
-  const res = await evaluate(PIN_WORST_HINT)
-  if (res !== 'ok') throw new Error(`setup: the Shop hint could not be pinned to the worst case (${res})`)
-}
-
-const SETUPS = {
-  async supplyUseSheet() {
-    await until(`!!document.querySelector('ul[aria-label="Supplies"] .list-row')`, 'the Supplies list')
-    // The first seeded Supply is the ml one below its Restock level: its Use opens the "how much" sheet.
-    await until(`!![...document.querySelectorAll('.list-row')].find((r) => r.querySelector('.list-row__title')?.textContent.trim() === 'Washing-up liquid')?.querySelector('.list-row__trailing button:not(:disabled)')`, 'an enabled Use on Washing-up liquid')
-    await press(`[...document.querySelectorAll('.list-row')].find((r) => r.querySelector('.list-row__title')?.textContent.trim() === 'Washing-up liquid')?.querySelector('.list-row__trailing button')`, 'Use on Washing-up liquid')
-    await until(`!!document.querySelector('dialog.sheet[open]')`, 'the quick-Use sheet')
-  },
-  async supplyPage() {
-    await until(`!!document.querySelector('main h1') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Supply page')
-  },
-  // b8-polish (P23): a Restock reason in the Supplies group ("400/1000 ml" on a phone), so the probe reads the Supplies group too.
-  async shopSuppliesGroup() {
-    await until(`!!document.querySelector('.shop-supplies .list-row__meta[data-status="info"]')`, 'a Restock reason in the Supplies group of the Shop list (a Supply below its Restock level)')
-  },
-  // b8-shop: the header chips (the Shop for and the Shop pickers) shown, the list loaded.
-  async shopHeader() {
-    await until(`document.querySelectorAll('.shop-screen__controls .select__trigger[data-appearance="chip"]').length >= 2 && !document.querySelector('.skeleton')`, 'the Shop header chips')
-  },
-  // b8-shop (P23): a seeded Meal Slot hint on a food Line ("Fri Dinner +2", the seeder's Planned Meals not marked Cooked yet), so the
-  // probe measures a real Shop hint (the Supplies group's Restock reason alone would leave P23 nothing to read).
-  async shopHints() {
-    await until(`!!document.querySelector('.shop-open .shop-lines .list-row__meta[data-status="info"]')`, 'a Meal Slot hint on a food Line of the Shop list')
-    await pinWorstHint()
-  },
-  scanScannedList: scannedList,
-  async scanRowActive() {
-    await scannedList()
-    await press(`document.querySelector('ul[aria-label="Scanned list"] > .list-row .list-row__target')`, 'the first Scanned row')
-    await until(`!!document.querySelector('.scanned-row__strip')`, 'the active row strip')
-  },
-  async scanPriceKeypad() {
-    await scannedList()
-    await press(`document.querySelector('ul[aria-label="Scanned list"] > .list-row .list-row__target')`, 'the first Scanned row')
-    await until(`!!document.querySelector('.scanned-row__strip')`, 'the active row strip')
-    await press(byText('.scanned-row__strip button', 'Price'), 'Price on the active row')
-    await until(`document.querySelector('.scan-screen')?.dataset.priceEntry === 'open' && !!document.querySelector('dialog.sheet[open]')`, 'the Price keypad')
-  },
-  async scanNewProduct() {
-    await scanSession([ids.unknownBarcode])
-    await until(`!!document.querySelector('dialog.sheet[open]')`, 'the new-Product sheet')
-  },
-  receiptPhotosEmpty: () => receiptPhotos(0),
-  receiptPhotosOne: () => receiptPhotos(1),
-  async receiptPhotoEdit() {
-    await receiptPhotos(1)
-    await press(`document.querySelector('.receipt-photos button[aria-label="Edit photo 1"]')`, '"Edit photo 1"')
-    await until(`!!document.querySelector('dialog[open]')`, 'the photo edit sheet')
-  },
-  async receiptReview() {
-    await receiptPhotos(1)
-    await press(byText('.sticky-action-bar button', 'Read the receipt'), '"Read the receipt" in the action bar')
-    await until(`location.pathname === '/scan/receipt/review'`, 'the review (a done read)', 30000)
-    await until(`!!document.querySelector('main h1') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the review content')
-  },
-}
+/** Whether a probe runs on this page: a probe with `scenarios` runs only on those scenarios' pages. */
+const probeRuns = (p, vp, scenario) => vp.width >= (p.minWidth ?? 0) && (!p.scenarios || (scenario !== null && p.scenarios.includes(scenario.name)))
 
 // Probes that did not run, one entry per route x viewport: {width, route, pattern, reason}.
 const notInspected = []
 let probes = 0
 const started = Date.now()
 /** One page at one width: navigate, settle, run every probe and report its findings; open = the Filters panel is opened first (hf-recipes-filter SCENARIOS). */
-async function probePage(vp, route, pattern, kind, open, setup = null, label = route) {
+async function probePage(vp, route, pattern, kind, open, setup = null, label = route, scenario = null) {
   probes++
   const tag = `${vp.width}px ${label}`
   const t0 = Date.now()
@@ -851,13 +319,13 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
   try {
     await closeTab()
     await openTab()
-    await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
+    await emulate(vp, scenario?.emulate)
     // beta.7: a setup starts from a clean device (no last Shop, no stored Scan session), whatever the probes before it left.
     if (setup) await cdp('Storage.clearDataForOrigin', { origin: base, storageTypes: 'local_storage,indexeddb' })
     await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
     await settle()
     if (setup) {
-      await setup()
+      await setup(helpers)
       await settle()
     }
     if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
@@ -866,25 +334,20 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
       await evaluate("document.querySelector('.filter-bar__search-row > .button')?.click()")
       await settle()
     }
-    const m = await evaluate(probe)
+    const m = await evaluate(layoutProbe)
     if (!m.hasMain) {
       miss(`no <main> element (${m.title || m.text || 'empty page'})`)
       return
     }
-    m.lowContrastButtons = await evaluate(buttonProbe)
-    m.navOverlap = await evaluate(`(() => { ${navProbeSource}\n; return feederNavProbe() })()`)
-    m.tileOverflow = await evaluate(tileProbe)
-    Object.assign(m, { clippedChips: await evaluate(chipProbe), crushedChips: await evaluate(crushedProbe), cutMeta: await evaluate(cutMetaProbe) })
-    m.actionLayout = await evaluate(actionProbe)
-    m.dialog = vp.width >= 768 ? await evaluate(dialogProbe).catch(() => null) : null
-    // hf-recipes-filter round 2: the chip line, its focus rings and hit areas, the popover's alignment and the header's spacing.
-    Object.assign(m, {
-      fitLines: await evaluate(fitLinesProbe),
-      clippedRings: await evaluate(clippedRingsProbe),
-      popoverAlign: await evaluate(popoverAlignProbe),
-      filterSpacing: await evaluate(filterSpacingProbe),
-      cutSelects: await evaluate(cutSelectProbe),
-    })
+    // Every other probe fills its metrics field, in PROBES order (the nav probe scrolls to the end, the ring probe focuses chips), from
+    // its minWidth; a soft probe (the dialog) that throws reads as nothing there.
+    for (const p of PROBES) {
+      if (p.key === null || !probeRuns(p, vp, scenario)) continue
+      // B9-03: a probe module whose key the layout probe already fills would overwrite a metric in silence. A field the layout probe
+      // leaves null is a placeholder for its probe (dialog: null, filled by the dialog probe from 768 px).
+      if (Object.hasOwn(m, p.key) && m[p.key] !== null) throw new Error(`probe ${p.name}: metrics key "${p.key}" is already filled by the layout probe`)
+      m[p.key] = p.soft ? await evaluate(p.source).catch(() => null) : await evaluate(p.source)
+    }
     // PAGE_LAYOUT_SHOTS=<dir>: a screenshot of every light probe, to see the state a scenario's setup reached (debugging only).
     if (process.env.PAGE_LAYOUT_SHOTS) {
       const { data } = await cdp('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
@@ -892,7 +355,10 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
       writeFileSync(join(process.env.PAGE_LAYOUT_SHOTS, `${vp.width}-${label.replace(/[^\w.-]+/g, '_')}.png`), Buffer.from(data, 'base64'))
     }
     // The light findings are reported first, on the light page.
-    for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
+    // ctx.scenario: the scenario's name (null on the route table); a scenario with `rules` reports only those rules' findings.
+    const ctx = { width: vp.width, route, kind, scenario: scenario?.name ?? null }
+    const reported = (f) => !scenario?.rules || scenario.rules.includes(f.rule)
+    for (const f of evaluateMetrics(m, ctx).filter(reported)) fail(`${tag}: ${f.message}`)
     // FU-4: the dark P10 pass runs after the light findings; only its P10 findings are reported, and a dark pass that did not run is not inspected.
     // The scheme is put back to light in the finally, whatever happens.
     try {
@@ -903,12 +369,12 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
         // The setup's state is in memory (the photos, the read): it is replayed in a fresh page opened in the dark scheme.
         await closeTab()
         await openTab()
-        await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
+        await emulate(vp, scenario?.emulate)
         await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
         await cdp('Storage.clearDataForOrigin', { origin: base, storageTypes: 'local_storage,indexeddb' })
         await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
         await settle()
-        await setup()
+        await setup(helpers)
       } else {
         await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
         await Promise.race([cdp('Page.reload', {}), sleep(4000)])
@@ -917,8 +383,11 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
       if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
         throw new Error('data-scheme is not dark; the scheme emulation did not apply')
       }
-      const lowContrastButtonsDark = await evaluate(buttonProbe)
-      for (const f of darkButtonFindings(lowContrastButtonsDark)) fail(`${tag}: ${f.message}`)
+      // The probes marked `dark` (P10's Button probe) run again here; only the rules' evaluateDark findings are reported, never the
+      // light ones again.
+      const darkMetrics = {}
+      for (const p of DARK_PROBES) if (probeRuns(p, vp, scenario)) darkMetrics[p.key] = p.soft ? await evaluate(p.source).catch(() => null) : await evaluate(p.source)
+      for (const f of evaluateDarkMetrics(darkMetrics, ctx).filter(reported)) fail(`${tag}: ${f.message}`)
     } catch (e) {
       miss(`dark scheme: ${e.message}`, `${label} (dark)`)
     } finally {
@@ -933,38 +402,38 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
 }
 
 for (const vp of VIEWPORTS) {
-  for (const [pattern, kind] of ROUTES) {
+  // --scenario: the named scenarios only, no route table.
+  for (const [pattern, kind] of scenarioArg ? [] : ROUTES) {
     if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(pattern)) continue
     await probePage(vp, resolveRoute(pattern, ids), pattern, kind, false)
   }
   // hf-recipes-filter round 2: the filtered /recipes, closed and with the Filters panel open (SCENARIOS).
-  for (const scenario of SCENARIOS.filter((x) => !x.widths)) {
+  for (const scenario of RUN_SCENARIOS.filter((x) => !x.widths)) {
     if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
     const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
-    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open)
+    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open, null, undefined, scenario)
   }
 }
 // beta.7 (H8, SR6, RR5): the scenarios with their own widths and a setup, at those widths in every profile. A finding or a missed probe
 // is reported on "<route>#<scenario name>", so it says which state broke; the modes file reads the scenario's route.
-for (const scenario of SCENARIOS.filter((x) => x.widths)) {
+for (const scenario of RUN_SCENARIOS.filter((x) => x.widths)) {
   if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
   const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
-  const setup = SETUPS[scenario.setup]
+  // B9-03: a scenario's setup is optional (the registry has checked that a named one exists); without one the page is probed as it
+  // loads, under the scenario's viewport and its own emulation.
+  const setup = scenario.setup ? SETUPS[scenario.setup] : null
   for (const vp of scenarioViewports(scenario, VIEWPORTS)) {
-    if (!setup) {
-      notInspected.push({ width: vp.width, route: scenario.name, pattern: scenario.route, reason: `no setup "${scenario.setup}" in the driver` })
-      continue
-    }
     // "<route>#<scenario>": one token, so the modes file reads the route (the part before #) and the line names the state.
-    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, false, setup, `${scenario.route}#${scenario.name}`)
+    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, false, setup, `${scenario.route}#${scenario.name}`, scenario)
   }
 }
 
 // hf-recipes-filter round 3 (P21, RESIZE_WALK): the closed filtered page is loaded fresh at each phone width from 360 to 480 px, and the
 // page must not break at any of them: an uncaught exception, a console error, or the error page ("Something went wrong").
-// pantry-filter: one walk per filtered header (RESIZE_WALKS: /recipes and /pantry).
+// pantry-filter: one walk per filtered header (RESIZE_WALKS: /recipes and /pantry). With --scenario, only the walk of a named scenario.
 for (const walk of RESIZE_WALKS) {
-  const walkScenario = SCENARIOS.find((x) => x.name === walk.scenario)
+  const named = SCENARIOS.find((x) => x.name === walk.scenario)
+  const walkScenario = RUN_SCENARIOS.includes(named) ? named : undefined
   if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
     for (const w of resizeWalkWidths()) {
       probes++
@@ -977,7 +446,7 @@ for (const walk of RESIZE_WALKS) {
         // Phone emulation, as the quick profile's 390 px probe: the app lays out at exactly w CSS px (documentElement.clientWidth = w; no
         // scrollbar takes 15 px of it, as it does without mobile emulation). Only a page wider than w (a horizontal overflow) reports a
         // larger innerWidth under mobile emulation; its layout width is still w.
-        await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
+        await emulate({ width: w, height: 844, mobile: true })
         await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
         await settle()
         const runtimeErrors = [...runtimeEvents]
@@ -1005,12 +474,12 @@ for (const walk of RESIZE_WALKS) {
     try {
       await closeTab()
       await openTab()
-      await cdp('Emulation.setDeviceMetricsOverride', { width: widths[0], height: 844, deviceScaleFactor: 1, mobile: true })
+      await emulate({ width: widths[0], height: 844, mobile: true })
       await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
       await settle()
       runtimeEvents.length = 0
       for (const w of widths) {
-        await cdp('Emulation.setDeviceMetricsOverride', { width: w, height: 844, deviceScaleFactor: 1, mobile: true })
+        await emulate({ width: w, height: 844, mobile: true })
         await sleep(RESIZE_SWEEP.pauseMs)
         const runtimeErrors = [...runtimeEvents]
         if (await evaluate("document.body.innerText.includes('Something went wrong')")) runtimeErrors.push({ why: 'error-page', text: 'Something went wrong' })
@@ -1028,7 +497,7 @@ for (const walk of RESIZE_WALKS) {
 ws.close()
 // A PAGE_LAYOUT_ONLY filter that matches no route inspected nothing: a usage error (exit 2), never "inspected 0 of 0" and never OK.
 if (probes === 0) {
-  console.log(`check-page-layout: PAGE_LAYOUT_ONLY=${process.env.PAGE_LAYOUT_ONLY} matches no route in ROUTES; nothing was inspected`)
+  console.log(`check-page-layout: PAGE_LAYOUT_ONLY=${process.env.PAGE_LAYOUT_ONLY} matches no route in ROUTES${scenarioArg ? ` or of --scenario ${scenarioArg}` : ''}; nothing was inspected`)
   await die(2)
 }
 const seconds = Math.round((Date.now() - started) / 1000)
