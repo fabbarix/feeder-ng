@@ -51,3 +51,23 @@ func TestDeriveNamesEveryPlannedMealOfALineOnceInDateOrder(t *testing.T) {
 		t.Errorf("PlannedMeals = %+v, want %+v (an optional need is not a need)", got, want)
 	}
 }
+
+// B9-23, extra 2: the Price behind a priced fallback travels with the pack, so the Line sheet can say "$2.99 a pack,
+// 14 Nov · not bought here yet" with no second read. Input.Priced's Pack carries it in Pack.Price; the Line's
+// PackSuggestion copies it for a priced fallback only (Bought false).
+func TestDeriveCarriesThePriceBehindAPricedFallback(t *testing.T) {
+	in := input(dinner("2026-11-09", 1, need(passata, 700), need(milk, 1000)))
+	price := &shopping.PackPrice{Cents: 299, Date: "2026-11-14", ShopID: 2}
+	in.Packs = map[int64]shopping.Pack{milk: {ProductID: 1, Name: "Milk 1 l", Size: 1000, Price: &shopping.PackPrice{Cents: 129, Date: "2026-11-01", ShopID: 1}}}
+	in.Priced = map[int64]shopping.Pack{passata: {ProductID: 7, Name: "Mutti 700 g", Size: 700, Price: price}}
+	in.PackPrices = map[int64]int{1: 129, 7: 299}
+	l := shopping.Derive(in)
+
+	p := line(t, l, passata)
+	if p.Pack == nil || p.Pack.Price == nil || *p.Pack.Price != *price {
+		t.Fatalf("Passata pack = %+v, want Price %+v", p.Pack, price)
+	}
+	if m := line(t, l, milk); m.Pack == nil || m.Pack.Price != nil {
+		t.Errorf("a Product last bought carries no Price on the pack: %+v", m.Pack)
+	}
+}

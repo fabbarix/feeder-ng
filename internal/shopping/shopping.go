@@ -75,6 +75,9 @@ type Pack struct {
 	ProductID int64
 	Name      string
 	Size      float64
+	// Price is the pack Price that chose a priced Product (Input.Priced only): what the Line sheet says ("$2.99 a pack,
+	// 14 Nov, not bought here yet"). nil for a Product last bought.
+	Price *PackPrice
 }
 
 // Extra is a manual extra: free text, or an Ingredient with a quantity (Got = scanned or ticked so far).
@@ -85,13 +88,21 @@ type Extra struct {
 	Quantity     float64
 	Got          float64
 	Ticked       bool
+	// Additions are the Stock Lots the extra's tick added (B9-23, RES-03), oldest first. Empty for a text extra.
+	Additions []Addition
 }
 
 // Tick is the ticked state of one Ingredient for the current range; Needed is the Line quantity when it was ticked.
+//
+// B9-23 (SSP-02, RES-03): a Line can be ticked more than once, so a Tick is its additions. Needed is the covered amount Q0:
+// the largest `covers` of the additions. Added is the sum of the additions' quantities (0 = no Stock added). By is the
+// first addition's. Additions are oldest first; the store fills all four from shopping_tick_additions.
 type Tick struct {
 	IngredientID int64
 	Needed       float64
 	By           string // "scan" | "hand"
+	Added        float64
+	Additions    []Addition
 }
 
 // NotNeeded is the Not needed mark of one Ingredient for the current range (B5-SH, docs/dev/design/beta5-plan.md 2.5);
@@ -145,6 +156,8 @@ type PackSuggestion struct {
 	Count     int
 	Remainder float64
 	Bought    bool
+	// Price is the Price behind a priced fallback (Bought false); nil when the Product was bought.
+	Price *PackPrice
 }
 
 // RestockInfo says why a Restock Line is on the list: the Restock level and the Stock it was compared with.
@@ -162,6 +175,11 @@ type Line struct {
 	Need, Available    float64
 	Quantity           float64
 	Ticked             bool
+	// More (SSP-02) is the part of a ticked Line's need that its tick does not cover: the Line reappears in To get with it.
+	// 0 for an open Line and for a ticked Line the tick still covers. For a Line with More, Pack and EstimatedCostCents are for More.
+	More float64
+	// Tick is the Line's tick (a copy of Input.Ticks); nil for an open Line.
+	Tick               *Tick
 	Restock            *RestockInfo
 	Pack               *PackSuggestion
 	EstimatedCostCents *int
@@ -182,6 +200,8 @@ type ExtraLine struct {
 	Supply         bool
 	Quantity       float64
 	Ticked         bool
+	// Tick is a ticked Ingredient extra's tick (Additions from Extra.Additions); nil when open or for a text extra.
+	Tick *Tick
 }
 
 // Progress is ticked over total (Ingredient Lines plus extras).

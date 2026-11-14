@@ -60,6 +60,9 @@ type Stock interface {
 type PricedPack struct {
 	Pack       shopping.Pack
 	PriceCents int
+	// Date and ShopID (B9-23) are the Price's date and Shop: the Line's pack carries them (shopping.PackPrice).
+	Date   stock.Date
+	ShopID int64
 }
 
 // Products answers "the Product last bought" (at the Shop if one was bought there), the priced Product of an
@@ -114,6 +117,11 @@ type Ports struct {
 	Household   Household
 	Ledger      Ledger
 	Bought      BoughtRecorder // optional
+	// Adjust (B9-23, SSP-01 Change) sets a Stock Lot's quantity; the real adapter is the stock service's AdjustLot.
+	// Optional: without it ChangeTick and ChangeExtraTick are ErrInvalid.
+	Adjust Adjuster
+	// Users (B9-23, RES-03) gives the names an addition shows ("who", `alsoTickedBy`). Optional: names are "" without it.
+	Users Users
 }
 
 // Service is the Shopping List use-case layer.
@@ -308,12 +316,30 @@ type TickInput struct {
 	ShopID       *int64
 	Quantity     float64
 	ClientUUID   string
+	// B9-23. UserID is who ticked (0 = unknown). Covers is the Line quantity the tick covers (SSP-02's Q0); 0 = what the
+	// list shows now: the Line's quantity, or the More of a ticked Line. TickedAt is the phone's time for a queued tick
+	// (zero = now); a queued tick (TickedAt set) records synced_at = now. RequireOnList refuses (ErrNotOnList) an
+	// Ingredient that is not on the list for the range: no open Line, no ticked Line, not marked Not needed.
+	UserID        int64
+	Covers        float64
+	TickedAt      time.Time
+	RequireOnList bool
 }
 
-// TickResult says which Stock Lot a tick added.
+// AlsoTicked is an earlier addition to the Line by another User (RES 2: "ticked twice").
+type AlsoTicked struct {
+	Name     string
+	Quantity float64
+	By       string // "hand" | "scan"
+}
+
+// TickResult says which Stock Lot a tick added. Added is this tick's quantity. AlsoTickedBy lists the additions other
+// Users made to the Line before this one (empty for the first); a retried tick (Created false) answers as the first time.
 type TickResult struct {
-	LotID   *int64
-	Created bool
+	LotID        *int64
+	Created      bool
+	Added        float64
+	AlsoTickedBy []AlsoTicked
 }
 
 // Tick ticks an Ingredient by hand for the range (ErrUnknownIngredient, ErrInvalid for a negative quantity).
@@ -608,6 +634,9 @@ type AfterLotInput struct {
 	ShopID       *int64
 	LotID        int64
 	Quantity     float64
+	// B9-23: when this Lot ticks the Line, the tick is an addition by "scan" with this client UUID and User (0 = unknown).
+	ClientUUID string
+	UserID     int64
 }
 
 // Effect is what a scanned Lot did to the list.
