@@ -1,5 +1,5 @@
 Feature: Reading a receipt
-  At the end of a shop a Member photographs the Receipt. Feeder sends up to 4 photos and today's Scanned list to the
+  At the end of a shop a User photographs the Receipt. Feeder sends up to 4 photos and today's Scanned list to the
   assistant the Admin configured for the Recipe Assistant, and shows what the assistant read as proposals. Only today's
   Scanned list, before Change Shop, can be read; the photos are never stored or logged; reads share the Recipe
   Assistant's limit. Nothing is written by a read (the Apply is a later package).
@@ -11,7 +11,7 @@ Feature: Reading a receipt
     And I am signed in as the User
     And I scanned "Mutti passata 700 g" twice at 7771 cents and "Barilla spaghetti 500 g" once at 119 cents in "Esselunga" today
 
-  Scenario: A Member reads a receipt and gets proposals, rows, totals and a fingerprint
+  Scenario: A User reads a receipt and gets proposals, rows, totals and a fingerprint
     Given the provider will read row 0 as 2 packs at 149 cents each
     When I read the receipt with 2 photos for "Esselunga"
     Then the receipt read is done
