@@ -250,15 +250,28 @@
   gap: var(--space-4);
   position: relative;
 }
-/* CRS F: the slot menu (⋮) sits in the hero's top row, on the overline's line, at the end. */
-.plan-hero__menu {
-  position: absolute;
-  top: var(--tile-pad);
-  inset-inline-end: var(--tile-pad);
+/* CRS F: the slot menu (⋮) sits in the hero's first row, at the end, vertically centred on the eyebrow. The row is as tall
+   as the 40 px button, so the Recipe name starts under it and takes the hero's whole width: the name never runs under the
+   button. The eyebrow (the Meal Slot name, up to 50 characters) wraps inside its own column, before the button. */
+.plan-hero:has(> .plan-hero__menu) {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
-/* The overline (the Meal Slot name, up to 50 characters) wraps before it reaches the slot menu: button + gap. */
-.plan-hero:has(.plan-hero__menu) .tile__overline {
-  padding-inline-end: calc(var(--space-8) + var(--space-4));
+.plan-hero:has(> .plan-hero__menu) > * {
+  grid-column: 1 / -1;
+}
+.plan-hero:has(> .plan-hero__menu) > .tile__overline {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+}
+.plan-hero__menu {
+  display: flex;
+  align-items: center;
+}
+.plan-hero:has(> .plan-hero__menu) > .plan-hero__menu {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
 }
 .plan-hero__actions,
 .plan-sheet__chips,

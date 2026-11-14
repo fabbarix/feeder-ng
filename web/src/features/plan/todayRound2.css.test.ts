@@ -60,10 +60,12 @@ describe('TonightHero.css: tokens only, no raw breakpoint', () => {
 })
 
 describe('the hero\'s slot menu and rows follow the content inset and the mockup', () => {
+  // B9-08 (the user's report: the Recipe name ran under the absolutely placed ⋮): the ⋮ is in the hero's grid flow, row 1 of the end
+  // column, so it sits at the tile padding (top and end) by the tile's own padding, not by an offset.
   it('the slot ⋮ sits at the tile padding (top and end), aligned with the content, not at 8 px', () => {
-    const d = { ...declarations(frame, '.plan-hero__menu'), ...(css.includes('.plan-hero__menu') ? declarations(css, '.plan-hero__menu') : {}) }
-    expect(d['inset-inline-end']).toBe('var(--tile-pad)')
-    expect(d['top'] ?? d['inset-block-start']).toBe('var(--tile-pad)')
+    const d = declarations(frame, '.plan-hero:has(> .plan-hero__menu) > .plan-hero__menu')
+    expect(d).toMatchObject({ 'grid-column': '2', 'grid-row': '1' })
+    expect(d['position'] ?? 'static').toBe('static')
   })
 
   it('the Course list has a divider above it and a caption column on a wide hero (container query)', () => {
