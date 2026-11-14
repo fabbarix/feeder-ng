@@ -1,4 +1,6 @@
 export { ImageEditor } from './ImageEditor'
+export { PhotoEditSheet } from './PhotoEditSheet'
+export type { PhotoEditSheetProps } from './PhotoEditSheet'
 export type { ImageEditorProps } from './ImageEditor'
 export { initialEdit, isFullEdit } from './lib/edit'
 export type { ImageEdit } from './lib/edit'

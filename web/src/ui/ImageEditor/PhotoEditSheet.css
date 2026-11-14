@@ -1,0 +1,13 @@
+/* PhotoEditSheet: inside the sheet (85dvh at most) the frame is capped at 45dvh rather than the editor's 60dvh, so the crop,
+   its readout, the turns, Reset, Cancel and Use this all fit without scrolling (a centred dialog at 1280 x 800, a phone). */
+.photo-edit-sheet .crop-editor__frame {
+  inline-size: min(100%, calc(45dvh * var(--crop-ratio, 1)));
+  max-block-size: 45dvh;
+}
+
+/* The sheet body scrolls, so it clips what overhangs it: the rotate buttons' 52 px hit areas (4 px under the 44 px action row)
+   and the 5 px focus rings (3 px outline, 2 px offset) of the buttons at its edges. Room for them, so neither scrolls nor clips. */
+.photo-edit-sheet {
+  padding-inline: var(--space-2);
+  padding-block-end: var(--space-2);
+}
