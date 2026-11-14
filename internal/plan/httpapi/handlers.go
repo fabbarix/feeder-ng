@@ -94,8 +94,14 @@ func (a *api) view(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	aways, err := a.names.planAways(ctx, v.Slots) // B9-24 (plan.go)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"today": v.Today, "horizonDays": v.HorizonDays, "updating": a.run.Updating(), "slots": slots(v.Slots, t),
+		"away": aways,
 	})
 }
 

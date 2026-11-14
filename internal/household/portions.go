@@ -4,6 +4,9 @@ package household
 type Attendee struct {
 	MemberID              int64
 	PortionFactorOverride *float64
+	// DespiteAway (B9-24, PC-08): on a date's Attendance override, the Member eats at this Meal Slot although an Away
+	// covers it ("Eats here anyway"). Never set on a usual Attendance.
+	DespiteAway bool
 }
 
 // ResolveAttendance returns the override when one exists (even an empty one),

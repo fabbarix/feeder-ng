@@ -201,14 +201,85 @@ func resolutionFor(res *runner.Resolution) *resolutionOut {
 //
 // The handler does not also publish an event that invalidates the plan: Apply replans at once and publishes the plan
 // event (with "by" and "changes") after the commit. State outside the plan rows that the Undo puts back too (Away's
-// days, the slot date, Who's eating) is registered once, at mount, with ReplannerFor(d.DB).RegisterUndo under a name that
-// stays the same across releases; Restore (POST /api/plan/restore) then puts it back with the plan rows.
+// days, the slot date, Who's eating) is registered once, at mount, with RegisterUndoFor(d.DB, name, participant) under a
+// name that stays the same across releases (it works whichever module mounts first); Restore (POST /api/plan/restore) then puts it back with the plan rows.
 
 // Replan is what a replanning write adds to its answer: "changes" (the cells it changed beyond its target, never null)
 // and "undoToken" (left out when it issued none). Embed it in the answer's struct.
 type Replan = replanOut
 
-var replanners sync.Map // *sql.DB -> *Replanner
+// replanners holds the Replanner of each app by its *sql.DB, and every undo participant registered for that database
+// (RegisterUndoFor). Modules mount in name order, so "away" mounts before "planning": Store (called at the planning
+// module's mount) registers every participant known for the database with the new Replanner. The participants are kept
+// when the planning module mounts again on the same database (testkit Restart builds the new app before closing the old
+// one, so the old Replanner is still there when "away" registers), and both are forgotten when the app closes.
+var replanners = &replannerMap{byDB: map[*sql.DB]*Replanner{}, parts: map[*sql.DB][]namedUndo{}}
+
+type namedUndo struct {
+	name string
+	part runner.UndoParticipant
+}
+
+type replannerMap struct {
+	mu    sync.Mutex
+	byDB  map[*sql.DB]*Replanner
+	parts map[*sql.DB][]namedUndo
+}
+
+// Store keeps p as the Replanner of db and registers with it every participant registered for db.
+func (m *replannerMap) Store(db *sql.DB, p *Replanner) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.byDB[db] = p
+	for _, u := range m.parts[db] {
+		p.RegisterUndo(u.name, u.part)
+	}
+}
+
+// Load returns the Replanner of db.
+func (m *replannerMap) Load(db *sql.DB) (*Replanner, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.byDB[db]
+	return p, ok
+}
+
+// register keeps the participant for db (a second registration under the same name replaces the first) and registers it
+// with db's Replanner when there is one.
+func (m *replannerMap) register(db *sql.DB, name string, part runner.UndoParticipant) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	list := m.parts[db]
+	replaced := false
+	for i := range list {
+		if list[i].name == name {
+			list[i].part, replaced = part, true
+		}
+	}
+	if !replaced {
+		list = append(list, namedUndo{name, part})
+	}
+	m.parts[db] = list
+	if p, ok := m.byDB[db]; ok {
+		p.RegisterUndo(name, part)
+	}
+}
+
+// forget drops db's Replanner and participants when p is still its Replanner (the app that mounted p is closed).
+func (m *replannerMap) forget(db *sql.DB, p *Replanner) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.byDB[db] == p {
+		delete(m.byDB, db)
+		delete(m.parts, db)
+	}
+}
+
+// RegisterUndoFor registers an undo participant for the app that uses db, whatever the module mount order: at once
+// when the planning module has mounted, else when it mounts. Call it from a module's Mount (Away: B9-24).
+func RegisterUndoFor(db *sql.DB, name string, part runner.UndoParticipant) {
+	replanners.register(db, name, part)
+}
 
 // Replanner runs another module's write and the replan it causes in one transaction of the planning Runner.
 type Replanner struct {
@@ -218,8 +289,7 @@ type Replanner struct {
 
 // ReplannerFor returns the Replanner of the app that uses db; nil when the planning module is not mounted on it.
 func ReplannerFor(db *sql.DB) *Replanner {
-	v, _ := replanners.Load(db)
-	p, _ := v.(*Replanner)
+	p, _ := replanners.Load(db)
 	return p
 }
 

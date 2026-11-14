@@ -27,6 +27,7 @@ type DBSources struct {
 	rc   *recipestore.Store
 	prod *productstore.Store
 	log  *slog.Logger
+	db   *sql.DB // B9-24: Away is read inside the write that changes it (sources_away.go)
 }
 
 // NewDBSources returns the Sources of the real features.
@@ -37,6 +38,7 @@ func NewDBSources(db *sql.DB, clk clock.Clock, logger *slog.Logger) *DBSources {
 		rc:   recipestore.New(db, clk, ingredientUnits{ing}),
 		prod: productstore.New(db, clk),
 		log:  logger,
+		db:   db,
 	}
 }
 
@@ -130,7 +132,7 @@ func (s *DBSources) Attendance(ctx context.Context, mealSlotID int64, date strin
 		}
 		out = append(out, plan.Attendee{MemberID: a.MemberID, Factor: household.EffectiveFactor(m, a)})
 	}
-	return out, nil
+	return s.withoutAway(ctx, mealSlotID, date, out)
 }
 
 // SlotCourses implements Sources: the Courses of the Meal Slot on the date in the slot's order, each with its Course
@@ -156,7 +158,7 @@ func (s *DBSources) SlotCourses(ctx context.Context, mealSlotID int64, date stri
 		}
 		out = append(out, sc)
 	}
-	return out, nil
+	return s.coursesWithoutAway(ctx, mealSlotID, date, out)
 }
 
 // SlotDate implements Sources: the effective time, Not served and Guests of the Meal Slot on the date, read through

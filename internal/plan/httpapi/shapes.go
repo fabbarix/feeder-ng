@@ -115,6 +115,8 @@ type attendeeOut struct {
 	// PE: the Member's Photo ("/api/images/<id>") and emoji, so every Avatar can draw them.
 	PhotoURL string `json:"photoUrl,omitempty"`
 	Avatar   string `json:"avatar,omitempty"`
+	// B9-24: the Member is away but eats at this Meal Slot anyway.
+	DespiteAway bool `json:"despiteAway,omitempty"`
 }
 
 type ruleOut struct {
@@ -146,6 +148,10 @@ type slotOut struct {
 	// start cooking by (omitted with CookMinutes null).
 	CookMinutes *int   `json:"cookMinutes"`
 	StartBy     string `json:"startBy,omitempty"`
+	// B9-24 (PC-08): the Members an Away takes out of this Meal Slot ([] when none), and whether that left nobody to
+	// plan for (the Courses are Couldn't plan, reason no_attendance; the chip says "Everyone is away").
+	Away         []int64 `json:"away"`
+	EveryoneAway bool    `json:"everyoneAway"`
 }
 
 // courseOut is one Course row of a slot (crs-c2 §3.1): exactly one of meal, unfilled, coveredBy and unserved is set,
@@ -404,6 +410,7 @@ func slotFor(s runner.SlotView, t table) slotOut {
 			ID: a.MemberID, Colour: t.memberColour[a.MemberID],
 			PhotoURL: t.memberPhoto[a.MemberID], Avatar: t.memberAvatar[a.MemberID]})
 	}
+	fillAwayOut(&out, s) // B9-24 (plan.go)
 	return out
 }
 

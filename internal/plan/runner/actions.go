@@ -29,6 +29,12 @@ type SlotView struct {
 	// fills them in). CookMinutes is the slot's timeline total in minutes, nil when nothing is fresh and still to cook.
 	Courses     []CourseView
 	CookMinutes *int
+	// B9-24 (PC-08): the Members of the Attendance an Away takes out of this occurrence, those who eat here although
+	// they are away ("Eats here anyway"), and whether the Away left nobody (no Member, no Guest) at a served occurrence.
+	// Filled by View.
+	Away         []int64
+	DespiteAway  []int64
+	EveryoneAway bool
 }
 
 // ListEntry is one entry of a flat list (to-confirm, couldn't plan): the slot occurrence for one Course, with that
@@ -117,6 +123,9 @@ func (r *Runner) View(ctx context.Context, from, to string) (PlanView, error) {
 			return PlanView{}, err
 		}
 		sv := occurrenceView(in, si, cells)
+		if err := r.fillAway(ctx, si, &sv); err != nil {
+			return PlanView{}, err
+		}
 		for _, rule := range rules {
 			if rule.MealSlotID == si.Key.MealSlotID {
 				sv.Rules = append(sv.Rules, rule)

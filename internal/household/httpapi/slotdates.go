@@ -23,6 +23,8 @@ type slotDateBody struct {
 	Time      *string `json:"time"`
 	UsualTime string  `json:"usualTime"`
 	Guests    int     `json:"guests"`
+	// Away (B9-24) lists the Members an Away covers at the Meal Slot on the date ([] when none).
+	Away []int64 `json:"away"`
 }
 
 // slotDateIn is a PATCH. A field that is not sent is not touched; time null means the usual time.
@@ -75,7 +77,12 @@ func (a *api) slotDateOut(r *http.Request, slot household.MealSlot, date string)
 	if err != nil {
 		return slotDateBody{}, err
 	}
-	b := slotDateBody{Date: date, NotServed: household.IsNotServed(row, att, isOverride), UsualTime: slot.Time, Guests: row.Guests}
+	here, err := a.awayHere(r, slot, date) // B9-24 (away.go)
+	if err != nil {
+		return slotDateBody{}, err
+	}
+	b := slotDateBody{Date: date, NotServed: household.IsNotServed(row, att, isOverride), UsualTime: slot.Time, Guests: row.Guests,
+		Away: here.awayMemberIDs()}
 	if row.Time != "" {
 		t := row.Time
 		b.Time = &t
