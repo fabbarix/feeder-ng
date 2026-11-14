@@ -110,6 +110,11 @@
   outline: none;
 }
 
+/* b8 G3: a group after the first starts a little lower, so its subheader reads as a new group and not as the last row's label. */
+.select__group + .select__group {
+  margin-block-start: var(--space-2);
+}
+
 .select__group-title {
   position: sticky;
   inset-block-start: 0;
