@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"strings"
 	"time"
 
@@ -106,14 +107,41 @@ func (s *Store) DeleteExtra(ctx context.Context, id int64) error {
 	return s.exec(ctx, `DELETE FROM shopping_extras WHERE id = ?`, id)
 }
 
-// TickExtra marks an extra ticked on today (ErrNotFound).
+// TickExtra marks an extra ticked on today (ErrNotFound) and records no Stock Lot.
 func (s *Store) TickExtra(ctx context.Context, id int64, today stock.Date) error {
-	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = ? WHERE id = ?`, string(today), id)
+	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = ?, tick_lot_id = NULL, tick_lot_quantity = NULL WHERE id = ?`,
+		string(today), id)
 }
 
-// UntickExtra clears the tick (ErrNotFound).
+// TickExtraLot marks an extra ticked on today (ErrNotFound) and records the Stock Lot its tick added and the quantity
+// it added (beta.8, undo).
+func (s *Store) TickExtraLot(ctx context.Context, id int64, today stock.Date, lotID int64, quantity float64) error {
+	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = ?, tick_lot_id = ?, tick_lot_quantity = ? WHERE id = ?`,
+		string(today), lotID, quantity, id)
+}
+
+// UntickExtra clears the tick and the Stock Lot it recorded (ErrNotFound).
 func (s *Store) UntickExtra(ctx context.Context, id int64) error {
-	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = NULL WHERE id = ?`, id)
+	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = NULL, tick_lot_id = NULL, tick_lot_quantity = NULL WHERE id = ?`, id)
+}
+
+// ExtraTickLot returns the Stock Lot an Ingredient extra's tick added and the quantity it added (beta.8, undo). ok is
+// false when the tick added no Lot (a text extra, a tick of 0, or a tick from before migration 1560). ErrNotFound for
+// an unknown extra.
+func (s *Store) ExtraTickLot(ctx context.Context, id int64) (lotID int64, quantity float64, ok bool, err error) {
+	var lot sql.NullInt64
+	var qty sql.NullFloat64
+	err = s.db.QueryRowContext(ctx, `SELECT tick_lot_id, tick_lot_quantity FROM shopping_extras WHERE id = ?`, id).Scan(&lot, &qty)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, 0, false, ErrNotFound
+	}
+	if err != nil {
+		return 0, 0, false, err
+	}
+	if !lot.Valid {
+		return 0, 0, false, nil
+	}
+	return lot.Int64, lotQuantity(qty), true, nil
 }
 
 // AddGot adds delta (may be negative, floor 0) to an Ingredient extra's `got` and returns the extra.
@@ -140,17 +168,29 @@ func (s *Store) AddGot(ctx context.Context, id int64, delta float64) (shopping.E
 	return e, nil
 }
 
-// SetTick ticks an Ingredient for a range (upsert). lotID is the Stock Lot a tick by hand added, if any.
+// SetTick ticks an Ingredient for a range (upsert) and records no quantity. lotID is the Stock Lot a tick by hand
+// added, if any: with no quantity recorded, Undo takes that Lot back whole. The service uses SetTickLot for a tick by
+// hand; a Scan's tick passes nil.
 func (s *Store) SetTick(ctx context.Context, rangeTo stock.Date, t shopping.Tick, lotID *int64) error {
 	var lot sql.NullInt64
 	if lotID != nil {
 		lot = sql.NullInt64{Int64: *lotID, Valid: true}
 	}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO shopping_ticks (range_to, ingredient_id, needed, by, lot_id, ticked_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+	return s.setTick(ctx, rangeTo, t, lot, sql.NullFloat64{})
+}
+
+// SetTickLot ticks an Ingredient by hand for a range and records the Stock Lot it added and the quantity it added
+// (beta.8, undo).
+func (s *Store) SetTickLot(ctx context.Context, rangeTo stock.Date, t shopping.Tick, lotID int64, quantity float64) error {
+	return s.setTick(ctx, rangeTo, t, sql.NullInt64{Int64: lotID, Valid: true}, sql.NullFloat64{Float64: quantity, Valid: true})
+}
+
+func (s *Store) setTick(ctx context.Context, rangeTo stock.Date, t shopping.Tick, lot sql.NullInt64, qty sql.NullFloat64) error {
+	_, err := s.db.ExecContext(ctx, `INSERT INTO shopping_ticks (range_to, ingredient_id, needed, by, lot_id, lot_quantity, ticked_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(range_to, ingredient_id) DO UPDATE SET needed = excluded.needed, by = excluded.by,
-			lot_id = excluded.lot_id, ticked_at = excluded.ticked_at`,
-		string(rangeTo), t.IngredientID, t.Needed, t.By, lot, s.now())
+			lot_id = excluded.lot_id, lot_quantity = excluded.lot_quantity, ticked_at = excluded.ticked_at`,
+		string(rangeTo), t.IngredientID, t.Needed, t.By, lot, qty, s.now())
 	return err
 }
 
@@ -160,19 +200,33 @@ func (s *Store) DeleteTick(ctx context.Context, rangeTo stock.Date, ingredientID
 	return err
 }
 
-// TickLot returns the Stock Lot a tick by hand added for the range (B5-BO: its records go when the tick is removed).
-// ok is false when there is no tick, or the tick added no Lot (a scan's tick, or a tick with 0).
-func (s *Store) TickLot(ctx context.Context, rangeTo stock.Date, ingredientID int64) (lotID int64, ok bool, err error) {
+// TickLot returns the Stock Lot a tick by hand added for the range and the quantity it added (beta.8, undo; its records
+// go when the Lot is gone). ok is false when there is no tick, or the tick added no Lot (a scan's tick, or a tick with
+// 0). A tick from before migration 1560 has no quantity: it reports the Lot's whole quantity as +Inf.
+func (s *Store) TickLot(ctx context.Context, rangeTo stock.Date, ingredientID int64) (lotID int64, quantity float64, ok bool, err error) {
 	var lot sql.NullInt64
-	err = s.db.QueryRowContext(ctx, `SELECT lot_id FROM shopping_ticks WHERE range_to = ? AND ingredient_id = ?`,
-		string(rangeTo), ingredientID).Scan(&lot)
+	var qty sql.NullFloat64
+	err = s.db.QueryRowContext(ctx, `SELECT lot_id, lot_quantity FROM shopping_ticks WHERE range_to = ? AND ingredient_id = ?`,
+		string(rangeTo), ingredientID).Scan(&lot, &qty)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, false, nil
+		return 0, 0, false, nil
 	}
 	if err != nil {
-		return 0, false, err
+		return 0, 0, false, err
 	}
-	return lot.Int64, lot.Valid, nil
+	if !lot.Valid {
+		return 0, 0, false, nil
+	}
+	return lot.Int64, lotQuantity(qty), true, nil
+}
+
+// lotQuantity is the quantity a tick added to its Lot; NULL (a tick from before migration 1560) means the Lot's whole
+// current quantity, which Stock expresses as +Inf.
+func lotQuantity(q sql.NullFloat64) float64 {
+	if !q.Valid {
+		return math.Inf(1)
+	}
+	return q.Float64
 }
 
 // Ticks returns the ticks of one range by Ingredient.
