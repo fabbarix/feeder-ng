@@ -297,3 +297,7 @@ const PreSnapshot1540File = "feeder-pre-1540.db"
 // PreSnapshot1550File is the name of the snapshot taken before the beta.7 migration 1550 Supplies
 // (docs/dev/design/b7-snap.md). SnapshotNamed already accepts it; List and Prune never see it.
 const PreSnapshot1550File = "feeder-pre-1550.db"
+
+// PreSnapshot1560File is the name of the snapshot taken before the beta.8 migration 1560 (Undo of a tick, ADR 0019;
+// docs/dev/design/b8-snap.md). SnapshotNamed already accepts it; List and Prune never see it.
+const PreSnapshot1560File = "feeder-pre-1560.db"

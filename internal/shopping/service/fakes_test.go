@@ -32,6 +32,43 @@ type fakeStock struct {
 	adds    []service.StockAdd
 	seen    map[string]int64
 	nextLot int64
+	takes   [][2]float64 // TakeBack calls: Lot id, amount the tick added
+	takeErr error
+}
+
+// TakeBack mirrors Stock's contract (beta.8 undo): take what is left of the Lot, up to what the tick added; an unknown
+// Lot is a no-op.
+func (f *fakeStock) TakeBack(_ context.Context, lotID int64, added float64) (service.TakenBack, error) {
+	f.takes = append(f.takes, [2]float64{float64(lotID), added})
+	if f.takeErr != nil {
+		return service.TakenBack{}, f.takeErr
+	}
+	for i, l := range f.lots {
+		if l.ID != lotID {
+			continue
+		}
+		taken := l.Quantity
+		if added < taken {
+			taken = added
+		}
+		if l.Quantity-taken <= 1e-9 {
+			f.lots = append(f.lots[:i], f.lots[i+1:]...)
+			return service.TakenBack{Taken: taken, Removed: true}, nil
+		}
+		f.lots[i].Quantity -= taken
+		return service.TakenBack{Taken: taken}, nil
+	}
+	return service.TakenBack{}, nil
+}
+
+func (f *fakeStock) total(ing int64) float64 {
+	sum := 0.0
+	for _, l := range f.lots {
+		if l.IngredientID == ing {
+			sum += l.Quantity
+		}
+	}
+	return sum
 }
 
 func (f *fakeStock) Lots(context.Context) ([]stock.Lot, error) { return f.lots, nil }
@@ -189,4 +226,8 @@ func newEnvWith(t *testing.T, more map[string]shopping.IngredientInfo) *env {
 func dinner(date string, batches float64, needs ...shopping.Need) shopping.Meal {
 	at, _ := time.Parse("2006-01-02 15:04", date+" 19:00")
 	return shopping.Meal{Date: stock.Date(date), At: at, Batches: batches, Needs: needs}
+}
+
+func stockLot(id, ing int64, qty float64) stock.Lot {
+	return stock.Lot{ID: id, IngredientID: ing, Quantity: qty, Purchased: "2026-11-01"}
 }

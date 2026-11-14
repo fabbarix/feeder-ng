@@ -303,3 +303,12 @@ var Pre1550Prefixes = []string{"1550_"}
 func NeedsPre1550Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
 	return NeedsSnapshotFor(ctx, d, Migrations(), Pre1550Prefixes)
 }
+
+// Pre1560Prefixes are the file-name prefixes of the beta.8 migration 1560 (what a Tick added to its Stock Lot, and the
+// take-backs of Undo, ADR 0019). Pending triggers the snapshot feeder-pre-1560.db (docs/dev/design/b8-snap.md).
+var Pre1560Prefixes = []string{"1560_"}
+
+// NeedsPre1560Snapshot is NeedsSnapshotFor over the embedded migrations and Pre1560Prefixes.
+func NeedsPre1560Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
+	return NeedsSnapshotFor(ctx, d, Migrations(), Pre1560Prefixes)
+}

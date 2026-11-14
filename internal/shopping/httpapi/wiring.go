@@ -231,6 +231,15 @@ func (p stockPort) AddLot(ctx context.Context, in service.StockAdd) (int64, bool
 	return v.ID, created, nil
 }
 
+// TakeBack takes back what is left of a Stock Lot a tick added, up to added (beta.8, undo; ADR 0019).
+func (p stockPort) TakeBack(ctx context.Context, lotID int64, added float64) (service.TakenBack, error) {
+	res, err := p.svc.TakeBackLot(ctx, lotID, added)
+	if err != nil {
+		return service.TakenBack{}, err
+	}
+	return service.TakenBack{Taken: res.Taken, Removed: res.Removed}, nil
+}
+
 // products answers last-bought Products, pack prices and Shop existence (T9).
 type products struct{ st *productstore.Store }
 

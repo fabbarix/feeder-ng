@@ -40,10 +40,19 @@ type Plan interface {
 	Meals(ctx context.Context, from, to stock.Date) ([]shopping.Meal, error)
 }
 
-// Stock is the projected Stock and the way to add a Lot.
+// TakenBack is what Stock took back from a Lot for an Undo of a tick (ADR 0019): Taken is what was taken, Removed
+// says the Lot is gone.
+type TakenBack struct {
+	Taken   float64
+	Removed bool
+}
+
+// Stock is the projected Stock and the way to add a Lot and to take back what a tick added.
 type Stock interface {
 	Lots(ctx context.Context) ([]stock.Lot, error)
 	AddLot(ctx context.Context, in StockAdd) (lotID int64, created bool, err error)
+	// TakeBack takes back what is left of the Lot, up to added. An unknown Lot is a no-op, not an error.
+	TakeBack(ctx context.Context, lotID int64, added float64) (TakenBack, error)
 }
 
 // Products answers "the Product last bought" (at the Shop if one was bought there) and pack prices.
@@ -310,7 +319,13 @@ func (s *Service) Tick(ctx context.Context, in TickInput) (TickResult, error) {
 		}
 		res.LotID, res.Created = &id, created
 	}
-	if err := s.st.SetTick(ctx, to, shopping.Tick{IngredientID: in.IngredientID, Needed: needed, By: "hand"}, res.LotID); err != nil {
+	t := shopping.Tick{IngredientID: in.IngredientID, Needed: needed, By: "hand"}
+	if res.LotID != nil {
+		err = s.st.SetTickLot(ctx, to, t, *res.LotID, in.Quantity)
+	} else {
+		err = s.st.SetTick(ctx, to, t, nil)
+	}
+	if err != nil {
 		return TickResult{}, err
 	}
 	s.publish("ticks")
@@ -350,27 +365,42 @@ func (s *Service) neededFor(ctx context.Context, today, to stock.Date, ingredien
 	return line.Quantity, nil
 }
 
-// Untick removes the tick (the Lot it added stays).
+// Untick removes the tick and takes back the Stock Lot it added: what is left of that Lot, up to what the tick added
+// (ADR 0019). A second untick, or an untick with no tick, changes nothing. A tick set by a Scan owns no Lot. If Stock
+// fails the tick stays, so the Undo can be tried again. Stock records the take-back with it and takes a Lot back at
+// most once, so a retry after a later step failed (the tick row is still there) takes nothing twice.
 func (s *Service) Untick(ctx context.Context, ingredientID int64, to stock.Date) error {
 	today, horizon, err := s.household(ctx)
 	if err != nil {
 		return err
 	}
 	r := shopping.ClampTo(today, horizon, to)
-	lotID, hasLot, err := s.st.TickLot(ctx, r, ingredientID)
+	lotID, added, hasLot, err := s.st.TickLot(ctx, r, ingredientID)
 	if err != nil {
 		return err
+	}
+	if hasLot {
+		if err := s.takeBack(ctx, lotID, added); err != nil {
+			return err
+		}
 	}
 	if err := s.st.DeleteTick(ctx, r, ingredientID); err != nil {
 		return err
 	}
-	if hasLot {
-		// The Lot the tick added stays in Stock; what it was bought for does not (B5-BO).
-		if err := s.ForgetLot(ctx, lotID); err != nil {
-			return err
-		}
-	}
 	s.publish("ticks")
+	return nil
+}
+
+// takeBack takes back what is left of a Stock Lot a tick added, up to added, and forgets what the Lot was bought for
+// once the Lot is gone (ADR 0013: a part-used Lot keeps its records).
+func (s *Service) takeBack(ctx context.Context, lotID int64, added float64) error {
+	taken, err := s.ports.Stock.TakeBack(ctx, lotID, added)
+	if err != nil {
+		return err
+	}
+	if taken.Removed {
+		return s.ForgetLot(ctx, lotID)
+	}
 	return nil
 }
 
@@ -453,7 +483,12 @@ func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, sho
 		}
 		res.LotID, res.Created = &lot, created
 	}
-	if err := s.st.TickExtra(ctx, id, today); err != nil {
+	if res.LotID != nil {
+		err = s.st.TickExtraLot(ctx, id, today, *res.LotID, quantity)
+	} else {
+		err = s.st.TickExtra(ctx, id, today)
+	}
+	if err != nil {
 		return TickResult{}, mapStoreErr(err)
 	}
 	s.publish("extras")
@@ -500,9 +535,33 @@ func (s *Service) Extra(ctx context.Context, id int64) (shopping.ExtraLine, erro
 	return line, nil
 }
 
-// UntickExtra clears an extra's tick.
+// UntickExtra clears an extra's tick and takes back the Stock Lot an Ingredient extra's tick added (ADR 0019): what is
+// left of it, up to the quantity the tick added. What was taken back comes off the extra's got, so an untouched Lot
+// shows the extra's full quantity again. A second untick changes nothing.
 func (s *Service) UntickExtra(ctx context.Context, id int64) error {
-	if err := s.st.UntickExtra(ctx, id); err != nil {
+	lotID, added, hasLot, err := s.st.ExtraTickLot(ctx, id)
+	if err != nil {
+		return mapStoreErr(err)
+	}
+	if !hasLot {
+		if err := s.st.UntickExtra(ctx, id); err != nil {
+			return mapStoreErr(err)
+		}
+		s.publish("extras")
+		return nil
+	}
+	// Stock answers a retried take-back with what it took the first time and changes nothing; the got and the tick
+	// change together in one statement, so a retry after a failed step takes nothing twice.
+	taken, err := s.ports.Stock.TakeBack(ctx, lotID, added)
+	if err != nil {
+		return err
+	}
+	if taken.Removed {
+		if err := s.ForgetLot(ctx, lotID); err != nil {
+			return err
+		}
+	}
+	if err := s.st.UntickExtraTakenBack(ctx, id, taken.Taken); err != nil {
 		return mapStoreErr(err)
 	}
 	s.publish("extras")

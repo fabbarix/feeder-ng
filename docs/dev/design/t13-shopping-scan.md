@@ -55,7 +55,7 @@ List view = `{today, horizonDays, from, to, defaultTo, maxTo, currency, lines:[L
 | `DELETE /api/shopping/extras/{id}` | 204; 404 |
 | `POST /api/shopping/extras/{id}/tick` `{quantity?, shopId?, clientUuid?}` / `DELETE` | 200 Extra (an Ingredient extra with `quantity > 0` also adds a Stock Lot); a repeated `clientUuid` adds no second Lot and counts `quantity` into the extra's `got` only once; DELETE unticks |
 | `POST /api/shopping/ticks` `{ingredientId, to, quantity, shopId?, clientUuid?}` | 200 `{ticked:true, lotId|null, created}`; repeated `clientUuid` adds no second Lot; 422 negative `quantity` |
-| `DELETE /api/shopping/ticks?ingredientId=&to=` | 204 |
+| `DELETE /api/shopping/ticks?ingredientId=&to=` | 204; takes back what is left of the Stock Lot the tick added, up to what it added (ADR 0019); a second untick, or none, changes nothing |
 | `GET /api/scan/offline[?shop=ID]` | `{shopId, shopName, catalog: barcode.Catalog, products:[{id,name,ingredientId,ingredientName,baseUnit,packSize,lastPriceCents|null}]}` |
 | `POST /api/scan` `Op` | 200 `Result` (`applied` or `duplicate`); 422 `rejected` ops answer `{status:"rejected", error}` with status 422 |
 | `POST /api/scan/sync` `{ops:[Op]}` | 200 `{results:[Result]}` same order |

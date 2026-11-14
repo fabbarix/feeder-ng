@@ -1,6 +1,6 @@
 // Mutations on the Shopping List: tick by hand, untick, manual extras. React hook; each success asks for a list refresh
 // through liveRefreshFor(queryClient) (WP7: one refetch per burst) and, for a
-// tick that added a Stock Lot, invalidates ['stock']. A failed call rejects and refreshes nothing.
+// tick that added a Stock Lot or an untick that takes it back, invalidates ['stock']. A failed call rejects and refreshes nothing.
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { newClientUuid } from '../../scan/lib/queue'
@@ -43,6 +43,8 @@ export function useShoppingActions(): ShoppingActions {
       async untick(ingredientId, to) {
         await shopApi.untick(ingredientId, to)
         await refreshList()
+        // Undo of a tick takes back the Stock it added (ADR 0019).
+        await refreshStock()
       },
       async addExtra(input) {
         await shopApi.addExtra(input)
@@ -61,6 +63,7 @@ export function useShoppingActions(): ShoppingActions {
       async untickExtra(id) {
         await shopApi.untickExtra(id)
         await refreshList()
+        await refreshStock()
       },
       async notNeeded(input) {
         await shopApi.notNeeded(input)
