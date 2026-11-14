@@ -1,0 +1,73 @@
+/* DS-07: a tile's title row (system.md 9, the To confirm row): badge | title (takes the room, one line) | count | action. */
+.tile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  margin-block-end: var(--space-3);
+}
+.tile-header > .section-title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tile-header > .chip {
+  flex: none;
+}
+.tile-header__action {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
+.tile-header__badge {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: var(--radius-chip);
+}
+.tile-header__badge[data-tone='neutral'] {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+.tile-header__badge[data-tone='info'] {
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+}
+.tile-header__badge[data-tone='leftover'] {
+  background: var(--status-leftover-bg);
+  color: var(--status-leftover-fg);
+}
+.tile-header__badge[data-tone='spoil'] {
+  background: var(--status-spoil-bg);
+  color: var(--status-spoil-fg);
+}
+.tile-header__badge[data-tone='warn'] {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+.tile-header__badge[data-tone='danger'] {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}
+.tile-header__badge[data-tone='success'] {
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+}
+.tile-header__badge[data-tone='pinned'] {
+  background: var(--status-pinned-bg);
+  color: var(--status-pinned-fg);
+}
+/* TB-09: on a status tile (already filled with the tone) the badge is a surface disc, the icon keeps the tone. */
+.tile[data-variant='status'] .tile-header__badge {
+  background: var(--color-surface);
+}
+/* TB-09, R-A: on a status tile the count pill is a surface fill too, never surface-2 over the tint. */
+.tile[data-variant='status'] .tile-header > .chip[data-kind='count'] {
+  background: var(--color-surface);
+}

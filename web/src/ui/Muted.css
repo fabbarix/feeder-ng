@@ -1,0 +1,8 @@
+/* DS-07: a muted line is meta in the muted colour (guarded at 4.5:1 on surface and surface-2); the container spaces it. */
+.muted {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}

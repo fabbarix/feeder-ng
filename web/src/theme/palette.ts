@@ -19,7 +19,7 @@ export const COLOR_TOKENS = [
 ] as const
 export type ColorToken = (typeof COLOR_TOKENS)[number]
 
-export const STATUS_NAMES = ['leftover', 'spoil', 'danger', 'success', 'pinned'] as const
+export const STATUS_NAMES = ['leftover', 'spoil', 'danger', 'success', 'pinned', 'warn'] as const
 export type StatusName = (typeof STATUS_NAMES)[number]
 export interface StatusColors {
   fg: Hex
@@ -46,7 +46,8 @@ export const STATUS_PALETTE: Record<StatusName, Record<Scheme, StatusColors>> = 
   },
   danger: {
     light: { fg: '#742e2b', bg: '#ffe0dc', solid: '#ab413e' },
-    dark: { fg: '#febfb9', bg: '#47211e', solid: '#ab413e' },
+    // A11Y-12: the dark solid is lighter (oklch L 0.52 -> 0.565, same hue), so a danger button keeps 3:1 on every dark surface.
+    dark: { fg: '#febfb9', bg: '#47211e', solid: '#ba4f4b' },
   },
   success: {
     light: { fg: '#115629', bg: '#d1f2d7', solid: '#0a7e3a' },
@@ -55,6 +56,11 @@ export const STATUS_PALETTE: Record<StatusName, Record<Scheme, StatusColors>> = 
   pinned: {
     light: { fg: '#3e3f7c', bg: '#e3e6fe', solid: '#5b5cb7' },
     dark: { fg: '#c7cdff', bg: '#282a4b', solid: '#5b5cb7' },
+  },
+  // DS-06: a rule or a setting that needs a decision. Hue 95 in OKLCH (mustard), 40 degrees from spoil and 70 from danger.
+  warn: {
+    light: { fg: '#564700', bg: '#f4e8bb', solid: '#766200' },
+    dark: { fg: '#e4d188', bg: '#362d07', solid: '#766200' },
   },
 }
 
@@ -126,7 +132,8 @@ export function generatePalette(input: ThemeInput, scheme: Scheme): Palette {
     muted: guard(raw.muted, [raw.surface, raw.surface2], MIN_TEXT),
     accent: guard(raw.accent, [raw.surface], MIN_BOUNDARY),
     accentText: guard(raw.accentText, [raw.surface, raw.soft, raw.softStrong], MIN_TEXT),
-    outline: guard(raw.outline, [raw.surface, raw.surface2], MIN_BOUNDARY),
+    // A11Y-12: a field or a ruled control can sit on the page and on surface-3 too.
+    outline: guard(raw.outline, [raw.bg, raw.surface, raw.surface2, raw.surface3], MIN_BOUNDARY),
   }
   c.onAccent = guard(c.onAccent, [c.accent], MIN_TEXT)
 

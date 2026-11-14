@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { contrastRatio } from './contrast'
-import { hexToOklch } from './color'
+import { hexToOklch, oklchToHex } from './color'
 import {
   COLOR_ALIASES,
   COLOR_TOKENS,
@@ -217,6 +217,41 @@ describe('status palette per scheme', () => {
     expect(STATUS_PALETTE.pinned.light.solid).toBe('#5b5cb7')
   })
 
+  // DS-06: a real warn tone, fixed like every status (never derived from the accent), hue 95 in OKLCH (mustard).
+  it('DS-06: warn is a status and carries the specimen colours', () => {
+    expect(STATUS_NAMES).toContain('warn')
+    expect(STATUS_PALETTE.warn).toEqual({
+      light: { fg: '#564700', bg: '#f4e8bb', solid: '#766200' },
+      dark: { fg: '#e4d188', bg: '#362d07', solid: '#766200' },
+    })
+  })
+
+  it('DS-06: the warn hue is at least 30 degrees from spoil and from danger (hue 95 against 55 and 25)', () => {
+    const hue = (hex: string) => hexToOklch(hex).h
+    const apart = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b))
+    for (const scheme of SCHEMES) {
+      const warn = hue(STATUS_PALETTE.warn[scheme].fg)
+      expect(apart(warn, hue(STATUS_PALETTE.spoil[scheme].fg)), `${scheme} vs spoil`).toBeGreaterThanOrEqual(30)
+      expect(apart(warn, hue(STATUS_PALETTE.danger[scheme].fg)), `${scheme} vs danger`).toBeGreaterThanOrEqual(30)
+    }
+    expect(apart(hue(STATUS_PALETTE.warn.light.solid), 95)).toBeLessThanOrEqual(10)
+  })
+
+  it('DS-06: warn stays out of the accent (same colours for every preset)', () => {
+    for (const p of PRESETS) for (const s of SCHEMES) {
+      expect(generatePalette({ accent: accentOf(p) }, s).status.warn, `${p} ${s}`).toEqual(STATUS_PALETTE.warn[s])
+    }
+  })
+
+  // A11Y-12: the dark danger fill was 2.52 to 2.99:1 on the dark surfaces; same hue, oklch L 0.52 -> 0.565.
+  it('A11Y-12: the dark danger solid is #ba4f4b, the light one is unchanged', () => {
+    expect(STATUS_PALETTE.danger.dark.solid).toBe('#ba4f4b')
+    expect(STATUS_PALETTE.danger.light.solid).toBe('#ab413e')
+    expect(contrastRatio('#ffffff', STATUS_PALETTE.danger.dark.solid)).toBeGreaterThanOrEqual(4.87 - 0.01)
+    const apart = Math.abs(hexToOklch('#ba4f4b').h - hexToOklch('#ab413e').h)
+    expect(apart).toBeLessThanOrEqual(3)
+  })
+
   it.each(STATUS_NAMES.flatMap((n) => SCHEMES.map((s) => [n, s] as const)))('%s %s: fg on bg >= 4.5, white on solid >= 4.5', (n, s) => {
     const c = STATUS_PALETTE[n][s]
     expect(contrastRatio(c.fg, c.bg)).toBeGreaterThanOrEqual(4.5)
@@ -226,6 +261,28 @@ describe('status palette per scheme', () => {
   it('each status is a distinct hue family (never relies on one colour)', () => {
     const solids = new Set(STATUS_NAMES.map((n) => STATUS_PALETTE[n].light.solid))
     expect(solids.size).toBe(STATUS_NAMES.length)
+  })
+})
+
+// A11Y-02/A11Y-12: the outline is a boundary (3:1) on every ground a field or a ruled control can sit on, surface-3 and the page
+// included, for any accent a User may pick. The 7 presets already clear 3.28; the guard protects the custom ones.
+describe('outline guard covers surface-3 and bg (A11Y-12)', () => {
+  const sweep = [0, 30, 60, 95, 140, 180, 220, 260, 300, 340].flatMap((h) =>
+    [0.04, 0.1, 0.16].flatMap((c) => [0.3, 0.55, 0.8, 0.95].map((l) => oklchToHex({ l, c, h }))),
+  )
+  it.each(SCHEMES)('%s: outline >= 3:1 on bg, surface, surface-2 and surface-3 for every swept accent', (scheme) => {
+    for (const accent of [...sweep, ...ACCENT_PRESETS.map((p) => p.hex)]) {
+      const c = generatePalette({ accent }, scheme).colors
+      for (const on of ['bg', 'surface', 'surface2', 'surface3'] as const) {
+        expect(contrastRatio(c.outline, c[on]), `${accent} ${scheme} on ${on}`).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+  it('the 7 presets keep a margin of 3.28 or more (nothing changes for them)', () => {
+    for (const p of ACCENT_PRESETS) for (const scheme of SCHEMES) {
+      const c = generatePalette({ accent: p.hex }, scheme).colors
+      for (const on of ['bg', 'surface', 'surface2', 'surface3'] as const) expect(contrastRatio(c.outline, c[on]), `${p.name} ${scheme} ${on}`).toBeGreaterThanOrEqual(3.28 - 0.005)
+    }
   })
 })
 
@@ -250,13 +307,13 @@ describe('css variables', () => {
     for (const t of COLOR_TOKENS) expect(vars[cssVarName(t)], t).toBe(p.colors[t])
   })
 
-  it('toCssVars emits all 15 status variables (5 statuses x fg|bg|solid)', () => {
+  it('toCssVars emits all 18 status variables (6 statuses x fg|bg|solid)', () => {
     const p = generatePalette({ accent: accentOf('Teal') }, 'light')
     const vars = toCssVars(p)
     for (const n of STATUS_NAMES) {
       for (const part of ['fg', 'bg', 'solid'] as const) expect(vars[statusVarName(n, part)], `${n}-${part}`).toBe(p.status[n][part])
     }
-    expect(Object.keys(vars).filter((k) => k.startsWith('--status-'))).toHaveLength(15)
+    expect(Object.keys(vars).filter((k) => k.startsWith('--status-'))).toHaveLength(18)
   })
 
   it('old variable names are aliases carrying the new token values', () => {
@@ -288,6 +345,6 @@ describe('css variables', () => {
 
   it('status colours stay out of the accent colour variables', () => {
     const vars = toCssVars(generatePalette({ accent: '#c0392b' }, 'light'))
-    expect(Object.keys(vars).some((k) => k.startsWith('--color-') && /spoil|leftover|danger|success|pinned/.test(k))).toBe(false)
+    expect(Object.keys(vars).some((k) => k.startsWith('--color-') && /spoil|leftover|danger|success|pinned|warn/.test(k))).toBe(false)
   })
 })
