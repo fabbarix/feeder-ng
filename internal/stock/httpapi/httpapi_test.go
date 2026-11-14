@@ -219,6 +219,11 @@ func TestSpoiledThrowOutKeepAndWaste(t *testing.T) {
 	if r.Status != 200 || kept.GoesOff == nil || *kept.GoesOff != "2026-11-09" {
 		t.Fatalf("keep = %d %s", r.Status, r.Body)
 	}
+	// Kept until today, it is no longer spoiled, so it cannot be thrown out today; a Lot that has gone off can.
+	if r := c.Post(fmt.Sprintf("/api/stock/lots/%d/throw-out", old.ID), nil); r.Status != 409 || r.ErrorCode() != "not_spoiled" {
+		t.Errorf("throw out after Keep = %d %s, want 409 not_spoiled", r.Status, r.Body)
+	}
+	c.Post("/api/stock/lots", map[string]any{"ingredientId": thighs, "quantity": 200, "purchased": "2026-11-01"}).MustJSON(t, &old)
 
 	var rec struct {
 		ID           int64   `json:"id"`
