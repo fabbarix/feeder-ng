@@ -406,7 +406,8 @@ func readMemberSnapshot(ctx context.Context, tx *sql.Tx, id int64) (memberSnapsh
 // household.RestoreWindowMinutes, and deletes the snapshot. A row whose Meal Slot, date change, Course, Recipe or
 // Ingredient is gone meanwhile is skipped; the User link comes back when that User exists and has no other Member.
 // household.ErrNotFound when there is no snapshot or it is more than ten minutes old; household.ErrEmailTaken when the
-// address was taken since (nothing changes).
+// address was taken since by another Member, or by a User (the Allowlist) other than the one linked again (nothing
+// changes).
 func (s *Store) RestoreMember(ctx context.Context, id int64) (household.Member, error) {
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
 		var removedAt, body string
@@ -433,6 +434,16 @@ func (s *Store) RestoreMember(ctx context.Context, id int64) (household.Member, 
 				return household.ErrEmailTaken
 			}
 			return err
+		}
+		// The address may have become a User's (the Allowlist) meanwhile: like checkEmail on create, it is refused
+		// unless it is the address of the User this Member is linked to again.
+		var userTaken bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM members m JOIN users u ON u.email = m.email
+			WHERE m.id = ? AND (m.user_id IS NULL OR m.user_id <> u.id))`, id).Scan(&userTaken); err != nil {
+			return err
+		}
+		if userTaken {
+			return household.ErrEmailTaken
 		}
 		if err := restoreMemberRows(ctx, tx, id, snap); err != nil {
 			return err

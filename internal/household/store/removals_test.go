@@ -674,6 +674,55 @@ func TestRestoreMemberIsRefusedWhenTheAddressWasTakenSince(t *testing.T) {
 	}
 }
 
+// Like checkEmail on create: an address that became a User's (the Allowlist) since the removal is refused, unless it is
+// the address of the User the Member is linked to again.
+func TestRestoreMemberIsRefusedWhenTheAddressWentOnTheAllowlistSince(t *testing.T) {
+	r := newRfx(t)
+	sam, err := r.st.CreateMember(r.ctx, household.MemberInput{Name: "Sam", Colour: "#e07a5f", PortionFactor: 1, Email: "sam@example.test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.st.RemoveMember(r.ctx, sam.ID); err != nil {
+		t.Fatal(err)
+	}
+	r.exec(`INSERT INTO users (email, display_name, created_at) VALUES ('Sam@Example.test', 'Sam', '2026-11-09T12:00:00Z')`)
+	if _, err := r.st.RestoreMember(r.ctx, sam.ID); !errors.Is(err, household.ErrEmailTaken) {
+		t.Errorf("RestoreMember = %v, want ErrEmailTaken (the address is a User's now)", err)
+	}
+	if n := r.count(`SELECT count(*) FROM members WHERE name = 'Sam'`); n != 0 {
+		t.Error("a refused restore must not bring Sam back")
+	}
+	if n := r.count(`SELECT count(*) FROM member_removals WHERE member_id = ?`, sam.ID); n != 1 {
+		t.Error("a refused restore keeps the snapshot")
+	}
+}
+
+func TestRestoreMemberKeepsTheAddressOfTheUserItIsLinkedToAgain(t *testing.T) {
+	r := newRfx(t)
+	r.exec(`INSERT INTO users (email, display_name, created_at) VALUES ('sam@example.test', 'Sam', '2026-11-09T12:00:00Z')`)
+	var uid int64
+	if err := r.d.QueryRow(`SELECT id FROM users WHERE email = 'sam@example.test'`).Scan(&uid); err != nil {
+		t.Fatal(err)
+	}
+	sam, err := r.st.CreateMember(r.ctx, household.MemberInput{Name: "Sam", Colour: "#e07a5f", PortionFactor: 1, Email: "sam@example.test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.st.LinkUser(r.ctx, sam.ID, &uid); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.st.RemoveMember(r.ctx, sam.ID); err != nil {
+		t.Fatal(err)
+	}
+	back, err := r.st.RestoreMember(r.ctx, sam.ID)
+	if err != nil {
+		t.Fatalf("RestoreMember: %v", err)
+	}
+	if back.UserID == nil || *back.UserID != uid || back.Email != "sam@example.test" {
+		t.Errorf("restored Sam = %+v, want the link to User %d and the address back", back, uid)
+	}
+}
+
 func TestRestoreMemberWorksWhenAMealSlotWasRemovedInTheMeantime(t *testing.T) {
 	r := newRfx(t)
 	sam := r.member("Sam", 1)
