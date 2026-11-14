@@ -78,6 +78,9 @@ type Warning struct {
 type Deduction struct {
 	Warnings []Warning
 	Handle   any
+	// Takes are what the deduction took, Lot by Lot (B9-11, SAFE-03): the runner keeps them in cooked_takes so that
+	// Reopen can give them back. A port that cannot say leaves it nil, and a Cooked with no takes gives nothing back.
+	Takes []Take
 }
 
 // LeftoverWaste is a Leftover discarded past its Use-by, recorded as waste.

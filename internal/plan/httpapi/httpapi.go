@@ -56,6 +56,7 @@ func mount(r *app.Router, d app.Deps) {
 	d.Scheduler.Daily("plan.nightly", "03:00", run.Nightly)
 
 	a := &api{run: run, st: st, names: newNames(d), cook: timers, tagExists: tagstore.New(d.DB).Exists}
+	replanners.Store(d.DB, &Replanner{run: run, names: a.names}) // B9-11: other modules' replanning writes (undo.go)
 	r.User("GET /api/plan", a.view)
 	r.User("GET /api/plan/to-confirm", a.toConfirm)
 	r.User("GET /api/plan/couldnt-plan", a.couldntPlan)
@@ -64,10 +65,11 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("GET /api/plan/leftovers", a.leftovers)
 	a.leftoverRoutes(r) // B5-LO: Had it, Threw it out, Freeze it, Take out, answer (leftover.go)
 	r.User("POST /api/plan/regenerate", a.regenerate)
+	r.User("POST /api/plan/restore", a.restore) // B9-11: Undo of a replanning write (undo.go)
 	// Team C3 (docs/dev/design/crs-c3.md §1): the course-less routes are gone. The six old words answer 404 for every
 	// method, registered explicitly: otherwise the mux answers 405 through PUT .../{slotId}/{courseId}. A method-less
 	// pattern would overlap that PUT pattern without either being more specific, so each method is named.
-	for _, word := range []string{"confirm", "unpin", "alternatives", "cook", "cooked", "not-cooked"} {
+	for _, word := range []string{"confirm", "unpin", "alternatives", "cook", "cooked", "not-cooked", "reopen"} {
 		for _, method := range []string{"GET", "POST", "PUT", "DELETE"} {
 			r.User(method+" /api/plan/{date}/{slotId}/"+word, notFound)
 		}
@@ -82,6 +84,8 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("POST /api/plan/{date}/{slotId}/{courseId}/not-cooked", a.notCooked)
 	r.User("POST /api/plan/{date}/{slotId}/all/cooked", a.allCooked)
 	r.User("POST /api/plan/{date}/{slotId}/all/not-cooked", a.notCookedAll)
+	r.User("POST /api/plan/{date}/{slotId}/{courseId}/reopen", a.reopen) // B9-11: Undo of Cooked and Not cooked
+	r.User("POST /api/plan/{date}/{slotId}/all/reopen", a.reopenAll)
 	r.User("GET /api/slot-rules", a.slotRules)
 	r.User("POST /api/slot-rules", a.addSlotRule)
 	r.User("DELETE /api/slot-rules/{id}", a.deleteSlotRule)
@@ -160,7 +164,7 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 	var status int
 	var code string
 	switch {
-	case errors.Is(err, runner.ErrNotFound), errors.Is(err, store.ErrNotFound):
+	case errors.Is(err, runner.ErrNotFound), errors.Is(err, store.ErrNotFound), errors.Is(err, runner.ErrUndoUnknown):
 		status, code = http.StatusNotFound, "not_found"
 	case errors.Is(err, runner.ErrUnknownSlot):
 		status, code = http.StatusNotFound, "unknown_slot"
@@ -170,6 +174,12 @@ func writeFieldErr(w http.ResponseWriter, err error, field string) {
 		status, code = http.StatusUnprocessableEntity, "used_from_invalid"
 	case errors.Is(err, runner.ErrNotServed):
 		status, code = http.StatusUnprocessableEntity, "not_served"
+	case errors.Is(err, runner.ErrPlanChanged):
+		status, code = http.StatusConflict, "plan_changed"
+	case errors.Is(err, runner.ErrLeftoverUsed):
+		status, code = http.StatusConflict, "leftover_used"
+	case errors.Is(err, runner.ErrReopenWindowOver):
+		status, code = http.StatusConflict, "reopen_window_over"
 	case errors.Is(err, runner.ErrAlreadyResolved):
 		status, code = http.StatusConflict, "already_resolved"
 	case errors.Is(err, runner.ErrNotSwappable):
@@ -238,6 +248,12 @@ func messageFor(code string) string {
 		return "No such Meal Slot on that date"
 	case "in_past":
 		return "That day is already over"
+	case "plan_changed":
+		return "The plan changed since, so nothing was undone"
+	case "leftover_used":
+		return "Some of its Leftover was already had, so Cooked can't be undone"
+	case "reopen_window_over":
+		return "It was marked on an earlier day, so it can no longer be undone"
 	case "already_resolved":
 		return "The Planned Meal is already Cooked or skipped"
 	case "not_swappable":
