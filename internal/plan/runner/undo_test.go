@@ -162,8 +162,13 @@ func TestAValidLaterMealIsKeptAfterASwap(t *testing.T) {
 
 func TestASwapWithNoOtherChangeReturnsAnEmptyListAndAToken(t *testing.T) {
 	e := weekEnv(t)
+	// No Cool-down: with 6 Recipes over 7 dinners every Recipe is planned somewhere in the week, so a Swap of Sunday to
+	// any other Recipe would put a meal earlier in the week inside its Cool-down, and the keep check rightly replans
+	// that meal (spec 7.2; see TestASwapToARecipePlannedLaterReplansThatMeal). Without Cool-down nothing else can break.
+	e.src.settings.DefaultCooldownDays = 0
+	e.mustPlan()
 	unused := ""
-	for _, name := range simpleRecipes { // Sunday is the last day: nothing follows it, so nothing else can change
+	for _, name := range simpleRecipes { // Sunday is the last day: nothing follows it, so no Leftover can move
 		if e.rec[name] != e.meal(15).RecipeID {
 			unused = name
 		}
@@ -177,6 +182,45 @@ func TestASwapWithNoOtherChangeReturnsAnEmptyListAndAToken(t *testing.T) {
 	}
 	if out.UndoToken == "" {
 		t.Error("no undo token: the Swap changed the target, so it can be undone")
+	}
+}
+
+// A Swap to a Recipe already planned later in the week puts that later meal inside the Recipe's Cool-down. Decision PC 1
+// replans only what the edit breaks, and this is what it breaks: the keep check (spec 7.2 step 2b) drops a kept meal
+// that breaks a soft rule when its cell has a strict candidate, so the later meal is replanned and listed as changed.
+// Every other later meal stays.
+func TestASwapToARecipePlannedLaterReplansThatMeal(t *testing.T) {
+	e := weekEnv(t)
+	thu := e.meal(12)
+	if thu.Pinned || !thu.Fresh() {
+		t.Fatalf("set-up: Thursday = %+v, want an unpinned fresh meal", thu)
+	}
+	before := e.shape()
+	c, out := runner.WithOutcome(ctx)
+	if _, err := e.r.SetCourseMeal(c, e.key(15), thu.RecipeID, nil); err != nil {
+		t.Fatal(err)
+	}
+	if e.meal(12).RecipeID == thu.RecipeID {
+		t.Fatalf("Thursday still holds Recipe %d, now Pinned on Sunday inside its 7-day Cool-down", thu.RecipeID)
+	}
+	var listed bool
+	for _, ch := range out.Changes {
+		if ch.Key() == e.key(12) {
+			listed = ch.Before != nil && ch.Before.RecipeID == thu.RecipeID
+		}
+	}
+	if !listed {
+		t.Errorf("changes = %+v, want Thursday listed as changed from Recipe %d", out.Changes, thu.RecipeID)
+	}
+	after := e.shape()
+	for _, ch := range out.Changes {
+		delete(before, ch.Date)
+		delete(after, ch.Date)
+	}
+	delete(before, "2026-11-15")
+	delete(after, "2026-11-15")
+	if !reflect.DeepEqual(after, before) {
+		t.Errorf("a meal that was not listed as changed moved:\n before %v\n after  %v", before, after)
 	}
 }
 
@@ -414,8 +458,18 @@ func TestAnAutomaticRunThatChangesTheRowsStalesTheToken(t *testing.T) {
 	if _, err := e.r.SetCourseMeal(c, e.key(11), e.rec["curry"], nil); err != nil {
 		t.Fatal(err)
 	}
-	e.src.archive(e.rec["curry"]) // the Recipe just chosen: the next run must replace the meal
-	e.src.recipes = e.src.recipes[:len(e.src.recipes)]
+	// A Recipe archived elsewhere: the next run replaces its unpinned meals (a Pinned one, like the curry just chosen,
+	// stays with a warning, spec 7.1, so archiving the curry would change no row).
+	var gone int64
+	for d := 12; d <= 15 && gone == 0; d++ {
+		if m := e.meal(d); !m.Pinned && m.Fresh() && m.RecipeID != e.rec["curry"] && m.RecipeID != e.rec["chicken"] {
+			gone = m.RecipeID
+		}
+	}
+	if gone == 0 {
+		t.Fatal("set-up: no unpinned fresh meal after Wednesday")
+	}
+	e.src.archive(gone)
 	if _, err := e.r.Plan(ctx, plan.ReasonRecipeChanged); err != nil {
 		t.Fatal(err)
 	}
