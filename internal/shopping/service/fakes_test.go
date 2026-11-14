@@ -95,6 +95,23 @@ type fakeProducts struct {
 	prices                    map[int64]int
 	shops                     map[int64]bool
 	lastBoughtShop, priceShop []*int64
+	// B9-06 (SSP-13): the priced Product of an Ingredient with no purchase.
+	priced           map[int64]shopping.Pack
+	pricedShop       []*int64
+	pricedAskedAbout [][]int64
+}
+
+// PricedPacks is the fallback port the service must call for Ingredients with no purchase (SSP 5).
+func (f *fakeProducts) PricedPacks(_ context.Context, ids []int64, shop *int64) (map[int64]shopping.Pack, error) {
+	f.pricedShop = append(f.pricedShop, shop)
+	f.pricedAskedAbout = append(f.pricedAskedAbout, ids)
+	out := map[int64]shopping.Pack{}
+	for _, id := range ids {
+		if p, ok := f.priced[id]; ok {
+			out[id] = p
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeProducts) LastBought(_ context.Context, _ []int64, shop *int64) (map[int64]shopping.Pack, error) {
