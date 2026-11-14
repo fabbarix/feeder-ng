@@ -20,7 +20,7 @@ import { BoardScreen } from './BoardScreen'
 const original = globalThis.matchMedia
 function width(wide: boolean) {
   globalThis.matchMedia = ((query: string) => ({
-    matches: query.includes('min-width: 600px') ? wide : false,
+    matches: query.includes('min-width: 37.5em') ? wide : false,
     media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false,
   })) as unknown as typeof globalThis.matchMedia
 }

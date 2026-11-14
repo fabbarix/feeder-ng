@@ -96,8 +96,9 @@ describe('the hero caption is readable on the accent (it was --color-muted: invi
   }
 
   it('uses the hero\'s own text colour at 85 %, never --color-muted, in light and dark', () => {
-    expect(bodies((s) => s === '.plan-hero .plan-course__caption')).toMatch(/color:\s*color-mix\(in srgb, var\(--color-on-accent\) 85%, transparent\)/)
-    expect(bodies((s) => /data-theme='dark'\] \.plan-hero .plan-course__caption$/.test(s))).toMatch(/color:\s*color-mix\(in srgb, var\(--color-text\) 85%, transparent\)/)
+    // TB-05 (B9-08): one rule for both heroes, in the hero's own colour: currentColor, so it follows ui/Tile's dark rule.
+    expect(bodies((s) => s === '.plan-hero .plan-course__caption')).toMatch(/color-mix\(in srgb, currentColor 85%, transparent\)/)
+    expect(bodies((s) => s === '.plan-hero .plan-course__caption')).not.toMatch(/--color-on-accent|--color-text/)
     for (const b of blocks.filter((x) => x.selectors.some((s) => s.includes('.plan-hero')))) expect(b.body).not.toMatch(/var\(--color-muted\)/)
   })
 

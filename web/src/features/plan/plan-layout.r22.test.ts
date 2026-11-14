@@ -4,12 +4,12 @@ import { readFeatureCss } from './test-css'
 
 const css = readFeatureCss('plan.css')
 const rules = (selector: string) => css.split('}').filter((r) => r.includes(selector))
-/** The rule bodies for `selector` found inside any @media block whose condition matches `media`. */
-const inMedia = (media: RegExp, selector: string) => {
+/** The rule bodies for `selector` found inside any @container block whose name and condition match `cond`. */
+const inContainer = (cond: RegExp, selector: string) => {
   const out: string[] = []
-  const re = /@media\s*([^{]+)\{/g
+  const re = /@container\s*([^{]+)\{/g
   for (let m = re.exec(css); m; m = re.exec(css)) {
-    if (!media.test(m[1] ?? '')) continue
+    if (!cond.test((m[1] ?? '').trim())) continue
     let depth = 1
     let i = m.index + m[0].length
     const start = i
@@ -25,8 +25,10 @@ describe('plan.css R2-2', () => {
     expect(rules('.plan-day {').join('')).toMatch(/min-width:\s*0/)
   })
 
-  it('L-07: from 820 px the hero actions sit at the end (right) of the tile, the button keeps its own width', () => {
-    const r = inMedia(/min-width:\s*820px/, '.plan-hero__actions').join('')
+  // DS-09 (B9-08): a component-fit threshold is a container query in rem on the component's own named container, not a viewport query.
+  it('L-07: from 44 rem of hero the hero actions sit at the end (right) of the tile, the button keeps its own width', () => {
+    expect(css).not.toMatch(/@media[^{]*820px/)
+    const r = inContainer(/^plan-hero\s*\(min-width:\s*44rem\)$/, '.plan-hero__actions').join('')
     expect(r).toMatch(/justify-content:\s*(flex-end|end)/)
   })
 

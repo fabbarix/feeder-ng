@@ -52,15 +52,11 @@ describe('plan.css Leftovers tile (N2)', () => {
     expect(r).toMatch(/padding-block/)
   })
 
-  // ds-plan: breaks at word edges only, no hyphenation (word-break guard); the 2-line clamp is ListRow's.
-  it('the Recipe name wraps (no nowrap) and breaks at word edges only (no hyphens, no overflow-wrap)', () => {
-    const r = rule('.plan-leftovers .list-row__title')
-    expect(r).toMatch(/white-space:\s*normal/)
-    expect(r).not.toMatch(/overflow-wrap|hyphens|anywhere|nowrap/)
-  })
-
-  it('the meta line may wrap under the name', () => {
-    expect(rule('.plan-leftovers .list-row__meta')).toMatch(/flex-wrap:\s*wrap/)
+  // DS-05 (B9-08): a screen never overrides the title clamp or the one-line meta of a ListRow. Rows that need more use wrapTitle / metaLines.
+  it('DS-05: no .plan-leftovers override of .list-row__title or .list-row__meta, and no overflow: visible on any ListRow title', () => {
+    expect(css).not.toMatch(/\.plan-leftovers\s+\.list-row__(title|meta)/)
+    expect(css).not.toMatch(/\.list-row__title[^{]*\{[^}]*overflow:\s*visible/)
+    expect(css).not.toMatch(/\.list-row__meta[^{]*\{[^}]*flex-wrap/)
   })
 
   it('the feature stylesheet does not override the ListRow lead: the icon is simply not rendered (see TodayTiles.test)', () => {
