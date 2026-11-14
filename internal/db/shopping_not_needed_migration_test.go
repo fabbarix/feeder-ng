@@ -62,11 +62,13 @@ func TestMigration1530KeepsTicksExtrasAndEveryOtherRow(t *testing.T) {
 	mustExec(t, d, `INSERT INTO ingredients(id,name,name_key,base_unit,created_at,updated_at) VALUES (5,'passata','passata','g',?,?)`, mts, mts)
 	mustExec(t, d, `INSERT INTO shopping_ticks(range_to,ingredient_id,needed,by,lot_id,ticked_at) VALUES ('2026-11-15',5,700,'hand',NULL,?)`, mts)
 	mustExec(t, d, `INSERT INTO shopping_extras(text,created_at) VALUES ('candles',?)`, mts)
-	before := rows(t, d, `SELECT * FROM shopping_ticks`)
+	// Named columns, not *: later migrations (1560 lot_quantity) add columns, and this test proves 1530 kept the rows.
+	const ticks = `SELECT range_to, ingredient_id, needed, by, lot_id, ticked_at FROM shopping_ticks`
+	before := rows(t, d, ticks)
 	if err := db.MigrateEmbedded(context.Background(), d); err != nil {
 		t.Fatalf("1530: %v", err)
 	}
-	if after := rows(t, d, `SELECT * FROM shopping_ticks`); !reflect.DeepEqual(before, after) {
+	if after := rows(t, d, ticks); !reflect.DeepEqual(before, after) {
 		t.Errorf("ticks changed: %v -> %v", before, after)
 	}
 	if n := count(t, d, `SELECT count(*) FROM shopping_extras`); n != 1 {
