@@ -19,7 +19,7 @@ const hero = (name = 'Slow cooker beef and barley stew') =>
       onCook={vi.fn()}
       onYesCooked={vi.fn()}
       onAdjust={vi.fn()}
-      menu={{ onNotCookedSlot: vi.fn() }}
+      menu={{ onNotCookedSlot: vi.fn(), onAddCourse: vi.fn() }}
     />,
   ).container
 
