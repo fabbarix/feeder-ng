@@ -68,9 +68,12 @@ describe('useShoppingActions', () => {
     expect(api.addExtra).toHaveBeenCalledWith({ text: 'candles' })
     expect(api.deleteExtra).toHaveBeenCalledWith(4)
     expect(api.untickExtra).toHaveBeenCalledWith(4)
-    // four actions inside one burst window refresh the list once
+    // four actions inside one burst window refresh the list once; each untick also refreshes Stock (ADR 0019)
     await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['shopping'] }, { cancelRefetch: false }))
-    expect(spy).toHaveBeenCalledTimes(1)
+    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey[0])
+    expect(keys.filter((k) => k === 'shopping')).toHaveLength(1)
+    expect(keys.filter((k) => k === 'stock')).toHaveLength(2)
+    expect(spy).toHaveBeenCalledTimes(3)
   })
 
   it('a failed call rejects and refreshes nothing', async () => {
