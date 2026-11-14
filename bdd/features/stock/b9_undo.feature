@@ -53,9 +53,11 @@ Feature: Stock Undo, Keep with a date and Put away (beta.9, B9-05)
 
   Scenario: Change sets a later Good until
     Given I add a Stock Lot of 200 g of "chicken thighs" bought on "2026-10-01"
-    When I keep the spoiled Stock Lot of "chicken thighs" until "2026-11-12"
+    And I keep the spoiled Stock Lot of "chicken thighs"
+    When I keep the Stock Lot of "chicken thighs" until "2026-11-12"
     Then the response status is 200
     And the response JSON field "goesOff" is "2026-11-12"
-    When I keep the spoiled Stock Lot of "chicken thighs" until "2026-11-08"
+    And the response JSON field "spoiled" is false
+    When I keep the Stock Lot of "chicken thighs" until "2026-11-08"
     Then the response status is 422
     And the error code is "validation_failed"

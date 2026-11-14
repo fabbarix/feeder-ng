@@ -337,8 +337,10 @@ func (s *Service) MoveMany(ctx context.Context, moves []PlaceMove) (MovedMany, e
 }
 
 // KeepUntil makes a spoiled Lot good until goodUntil ("" = today) in one Keep (SSP-17): its go-off date becomes that
-// day and its Kept on today, so the streak forgives its go-offs so far. A date that is not YYYY-MM-DD or is before
-// today is ErrInvalid; a Lot that has not gone off ErrNotSpoiled; an unknown Lot store.ErrNotFound.
+// day and its Kept on today, so the streak forgives its go-offs so far. A Lot kept today can be kept again with
+// another date: that is the Keep toast's Change, after the first Keep took the Lot off the spoiled list. A date that is
+// not YYYY-MM-DD or is before today is ErrInvalid; a Lot that has not gone off and was not kept today ErrNotSpoiled;
+// an unknown Lot store.ErrNotFound.
 func (s *Service) KeepUntil(ctx context.Context, lotID int64, goodUntil stock.Date) (LotView, error) {
 	today, err := s.today(ctx)
 	if err != nil {
@@ -353,9 +355,12 @@ func (s *Service) KeepUntil(ctx context.Context, lotID int64, goodUntil stock.Da
 	if goodUntil < today {
 		return LotView{}, invalid("goodUntil cannot be before today")
 	}
-	lot, err := s.spoiledLot(ctx, lotID, today)
+	lot, err := s.st.Lot(ctx, lotID)
 	if err != nil {
 		return LotView{}, err
+	}
+	if !stock.IsSpoiled(lot.Lot, today) && lot.KeptOn != today {
+		return LotView{}, ErrNotSpoiled
 	}
 	ing, err := s.ingredient(ctx, lot.IngredientID)
 	if err != nil {

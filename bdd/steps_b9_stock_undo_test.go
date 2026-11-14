@@ -89,27 +89,15 @@ func b9StockUndoSteps(sc *godog.ScenarioContext, w *World) {
 	})
 
 	// ---- Keep until a date ----
-	sc.Step(`^I keep the spoiled Stock Lot of "([^"]*)" until "([^"]*)"$`, func(name, date string) error {
-		iid, err := ing(name)
+	// The Lot is looked up among the Ingredient's Lots, not on the spoiled list: Change keeps a Lot that the first Keep
+	// already took off that list.
+	sc.Step(`^I keep the (?:spoiled )?Stock Lot of "([^"]*)" until "([^"]*)"$`, func(name, date string) error {
+		id, _, err := lotOf(name)
 		if err != nil {
 			return err
 		}
-		var out struct {
-			Lots []struct {
-				ID           int64 `json:"id"`
-				IngredientID int64 `json:"ingredientId"`
-			} `json:"lots"`
-		}
-		if err := w.Client.Get("/api/stock/spoiled").JSON(&out); err != nil {
-			return err
-		}
-		for _, l := range out.Lots {
-			if l.IngredientID == iid {
-				w.Last = w.Client.Do("POST", fmt.Sprintf("/api/stock/lots/%d/keep", l.ID), map[string]any{"goodUntil": date})
-				return nil
-			}
-		}
-		return fmt.Errorf("no spoiled Stock Lot of %q", name)
+		w.Last = w.Client.Do("POST", fmt.Sprintf("/api/stock/lots/%d/keep", id), map[string]any{"goodUntil": date})
+		return nil
 	})
 
 	// ---- Put away ----

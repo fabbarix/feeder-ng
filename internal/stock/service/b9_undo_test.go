@@ -374,6 +374,26 @@ func TestKeepUntilALaterDate(t *testing.T) {
 	}
 }
 
+// The Keep toast's Change: after Keep took the Lot off the spoiled list, a second Keep the same day sets another date.
+func TestKeepUntilChangesTheDateOfAKeepMadeToday(t *testing.T) {
+	f, now := clockFixture(t)
+	l := f.add(t, f.thighs, 200, "2026-11-01")
+	if _, err := f.svc.KeepUntil(ctx, l.ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	kept, err := f.svc.KeepUntil(ctx, l.ID, "2026-11-12")
+	if err != nil || kept.GoesOff != "2026-11-12" || kept.Spoiled {
+		t.Fatalf("Change = %+v, %v, want good until 2026-11-12", kept, err)
+	}
+	if got := f.storedLot(t, l.ID); got.KeptOn != today {
+		t.Errorf("KeptOn = %q, want %s", got.KeptOn, today)
+	}
+	*now = "2026-11-10" // the next day the Lot is neither spoiled nor kept today
+	if _, err := f.svc.KeepUntil(ctx, l.ID, "2026-11-14"); !errors.Is(err, service.ErrNotSpoiled) {
+		t.Errorf("Keep the next day of a Lot that has not gone off = %v, want ErrNotSpoiled", err)
+	}
+}
+
 func TestKeepUntilRefusesADateBeforeTodayAndNonsense(t *testing.T) {
 	f := setup(t)
 	l := f.add(t, f.thighs, 200, "2026-11-01")
