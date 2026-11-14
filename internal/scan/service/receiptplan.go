@@ -329,7 +329,7 @@ func (r *planRun) step(ctx context.Context, st receipt.Step) (func(context.Conte
 		return r.inverse(st.Inverse), nil
 
 	case receipt.OpCreateProduct:
-		id, reused, err := r.createProduct(ctx, st.Op)
+		id, reused, madeIngredient, err := r.createProduct(ctx, st.Op)
 		if err != nil {
 			return nil, err
 		}
@@ -337,7 +337,7 @@ func (r *planRun) step(ctx context.Context, st receipt.Step) (func(context.Conte
 		if reused {
 			return nil, nil
 		}
-		return r.inverse(st.Inverse), nil
+		return r.undoProduct(st.Inverse, madeIngredient), nil
 
 	case receipt.OpSetPrices:
 		res, before, err := r.setPrices(ctx, st.Op)
@@ -358,6 +358,26 @@ func (r *planRun) step(ctx context.Context, st receipt.Step) (func(context.Conte
 // inverse is the compensation of a step: its inverse operation, run again.
 func (r *planRun) inverse(op receipt.Op) func(context.Context) error {
 	return func(ctx context.Context) error { return r.exec(ctx, op) }
+}
+
+// undoProduct is the compensation of a create_product step (b8-rxgo): its inverse (delete_product) first, then, only when
+// the step created the Ingredient (madeIngredient > 0), that Ingredient. It runs after the Product, so the Product no longer
+// references it; a referenced Ingredient is left alone by DeleteUnused. If the Product could not be deleted, the Ingredient
+// is still referenced and stays.
+func (r *planRun) undoProduct(inv receipt.Op, madeIngredient int64) func(context.Context) error {
+	return func(ctx context.Context) error {
+		if err := r.exec(ctx, inv); err != nil {
+			return err
+		}
+		if madeIngredient == 0 {
+			return nil
+		}
+		_, err := r.s.d.Ingredients.DeleteUnused(ctx, madeIngredient)
+		if err != nil {
+			return fmt.Errorf("receipt apply: DeleteUnused of the new Ingredient %d: %w", madeIngredient, err)
+		}
+		return nil
+	}
 }
 
 // exec runs one operation of an inverse (or a correction): the operations the plan's steps use, against the same ports.
@@ -427,23 +447,25 @@ func (r *planRun) newScan(ctx context.Context, op receipt.Op) (scan.Result, erro
 
 // createProduct is a create_product step. A Ref whose plan scan is already in the ledger reuses that scan's Product
 // (reused is true, and nothing is made). Otherwise the Ingredient is found or created (with its kind) and the Product is
-// created without a barcode.
-func (r *planRun) createProduct(ctx context.Context, op receipt.Op) (id int64, reused bool, err error) {
+// created without a barcode. madeIngredient is the id of an Ingredient this call created (0 for none, a found or chosen
+// one): its compensation removes it (b8-rxgo). If CreateProduct fails after the Ingredient was made, it is removed here,
+// because the step has no compensation to run.
+func (r *planRun) createProduct(ctx context.Context, op receipt.Op) (id int64, reused bool, madeIngredient int64, err error) {
 	if planUUID, ok := r.scanOf[op.Ref]; ok {
 		uuid, err := r.resolveUUID(ctx, planUUID)
 		if err != nil {
-			return 0, false, err
+			return 0, false, 0, err
 		}
 		ev, found, err := r.s.d.Ledger.Get(ctx, uuid)
 		if err != nil {
-			return 0, false, err
+			return 0, false, 0, err
 		}
 		if found && ev.ProductID != nil {
-			return *ev.ProductID, true, nil
+			return *ev.ProductID, true, 0, nil
 		}
 	}
 	if op.Ingredient == nil {
-		return 0, false, fmt.Errorf("receipt apply: the Add %s has no Ingredient", op.Ref)
+		return 0, false, 0, fmt.Errorf("receipt apply: the Add %s has no Ingredient", op.Ref)
 	}
 	ingID := op.Ingredient.ID
 	if n := op.Ingredient.New; n != nil {
@@ -451,15 +473,24 @@ func (r *planRun) createProduct(ctx context.Context, op receipt.Op) (id int64, r
 		if k, ok := ingredient.ParseKind(n.Kind); ok {
 			kind = k
 		}
-		if ingID, err = r.s.d.Ingredients.Ensure(ctx, strings.TrimSpace(n.Name), n.BaseUnit, kind); err != nil {
-			return 0, false, err
+		var created bool
+		if ingID, created, err = r.s.d.Ingredients.EnsureNew(ctx, strings.TrimSpace(n.Name), n.BaseUnit, kind); err != nil {
+			return 0, false, 0, err
+		}
+		if created {
+			madeIngredient = ingID
 		}
 	}
 	p, err := r.s.d.Catalogue.CreateProduct(ctx, NewProduct{Name: op.Name, IngredientID: ingID, PackSize: float64(op.PackSize)})
 	if err != nil {
-		return 0, false, err
+		if madeIngredient != 0 {
+			if _, derr := r.s.d.Ingredients.DeleteUnused(context.WithoutCancel(ctx), madeIngredient); derr != nil {
+				err = errors.Join(err, fmt.Errorf("receipt apply: DeleteUnused of the new Ingredient %d: %w", madeIngredient, derr))
+			}
+		}
+		return 0, false, 0, err
 	}
-	return p.ID, false, nil
+	return p.ID, false, madeIngredient, nil
 }
 
 // setPrices is a set_prices step: one pack Price for all its scans. A per kg Price sets each scan's Price from its
