@@ -1,7 +1,7 @@
 Feature: Reading and applying a receipt, end to end (receipt reading, RR5)
   The two halves already have their own features: receipt_read.feature (the read) and receipt_apply.feature (the apply
   with seeded reads). These scenarios run them together through the real routes with the fake provider: read the
-  photos, review the proposals, apply the ones the Member accepts. Nothing is written until the apply, and the apply
+  photos, review the proposals, apply the ones the User accepts. Nothing is written until the apply, and the apply
   writes nothing when the session is not the one that was read. A read never queues a photo, so there is no offline
   apply; a phone that was offline reads again once its scans have synced.
 
@@ -24,7 +24,7 @@ Feature: Reading and applying a receipt, end to end (receipt reading, RR5)
     And the latest Price of "Mutti passata 700 g" at "Esselunga" is 149 cents
     And the latest Price of "Barilla spaghetti 500 g" at "Esselunga" is 119 cents
 
-  Scenario: Reading writes nothing, and a proposal the Member leaves unchecked is not applied
+  Scenario: Reading writes nothing, and a proposal the User leaves unchecked is not applied
     Given the provider will read row 0 as 2 packs at 149 cents each
     When I read the receipt with 1 photos for "Esselunga"
     Then the receipt read is done
