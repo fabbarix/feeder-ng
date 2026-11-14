@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactElement } from 'react'
-import { BottomSheet, Button, DateField, FormActions, Switch, TextField } from '../../../ui'
+import { BottomSheet, Button, DateField, FormActions, Stack, Switch, TextField } from '../../../ui'
 import { capitalise } from '../lib/display'
 import { isSupply } from '../lib/supplies'
 import { changeGoesOff, changePurchased, checkLotForm, initialForm, toggleNoGoOff, type LotForm, type LotFormErrors } from '../lib/lotEdit'
@@ -60,54 +60,56 @@ function LotEditForm({ lot, today, onClose, onSubmit }: FormProps) {
   }
 
   return (
-    <form className="pg__stack" onSubmit={save}>
-      <TextField
-        label={strings.quantity}
-        inputMode="decimal"
-        value={form.quantity}
-        suffix={lot.baseUnit}
-        error={messages.quantity}
-        onChange={(quantity) => {
-          setForm((f) => ({ ...f, quantity }))
-          setErrors((e) => ({ ...e, quantity: undefined }))
-        }}
-      />
-      <DateField
-        label={strings.purchased}
-        value={form.purchased}
-        max={today}
-        today={today}
-        error={messages.purchased}
-        onChange={(purchased) => {
-          setForm((f) => changePurchased(f, purchased, shelfLife))
-          setErrors((e) => ({ ...e, purchased: undefined, goesOff: undefined }))
-        }}
-      />
-      {goesOff ? (
+    <form onSubmit={save}>
+      <Stack>
+        <TextField
+          label={strings.quantity}
+          inputMode="decimal"
+          value={form.quantity}
+          suffix={lot.baseUnit}
+          error={messages.quantity}
+          onChange={(quantity) => {
+            setForm((f) => ({ ...f, quantity }))
+            setErrors((e) => ({ ...e, quantity: undefined }))
+          }}
+        />
         <DateField
-          label={strings.goodUntil}
-          value={form.goesOff}
-          min={form.purchased || undefined}
+          label={strings.purchased}
+          value={form.purchased}
+          max={today}
           today={today}
-          disabled={form.noGoOff}
-          error={messages.goesOff}
-          onChange={(goesOffDate) => {
-            setForm((f) => changeGoesOff(f, goesOffDate))
-            setErrors((e) => ({ ...e, goesOff: undefined }))
+          error={messages.purchased}
+          onChange={(purchased) => {
+            setForm((f) => changePurchased(f, purchased, shelfLife))
+            setErrors((e) => ({ ...e, purchased: undefined, goesOff: undefined }))
           }}
         />
-      ) : null}
-      {goesOff && shelfLife == null ? (
-        <Switch
-          label={strings.noGoOffSwitch}
-          checked={form.noGoOff}
-          onChange={(on) => {
-            setForm((f) => toggleNoGoOff(f, on, shelfLife))
-            setErrors((e) => ({ ...e, goesOff: undefined }))
-          }}
-        />
-      ) : null}
-      <FormActions secondary={<Button variant="secondary" onClick={onClose}>{strings.cancel}</Button>} primary={<Button type="submit">{strings.save}</Button>} />
+        {goesOff ? (
+          <DateField
+            label={strings.goodUntil}
+            value={form.goesOff}
+            min={form.purchased || undefined}
+            today={today}
+            disabled={form.noGoOff}
+            error={messages.goesOff}
+            onChange={(goesOffDate) => {
+              setForm((f) => changeGoesOff(f, goesOffDate))
+              setErrors((e) => ({ ...e, goesOff: undefined }))
+            }}
+          />
+        ) : null}
+        {goesOff && shelfLife == null ? (
+          <Switch
+            label={strings.noGoOffSwitch}
+            checked={form.noGoOff}
+            onChange={(on) => {
+              setForm((f) => toggleNoGoOff(f, on, shelfLife))
+              setErrors((e) => ({ ...e, goesOff: undefined }))
+            }}
+          />
+        ) : null}
+        <FormActions secondary={<Button variant="secondary" onClick={onClose}>{strings.cancel}</Button>} primary={<Button type="submit">{strings.save}</Button>} />
+      </Stack>
     </form>
   )
 }

@@ -1,4 +1,4 @@
-import { Chip } from '../../../ui'
+import { Chip, Cluster, Muted } from '../../../ui'
 import { strings } from '../strings'
 import type { Shop } from '../types'
 import '../products.css'
@@ -11,9 +11,9 @@ export interface ProductShopsProps {
 
 /** One filter Chip per Shop; selected = known to sell the Product. */
 export function ProductShops({ allShops, soldAt, onToggle }: ProductShopsProps) {
-  if (allShops.length === 0) return <p className="pg__muted">{strings.noShopsHint}</p>
+  if (allShops.length === 0) return <Muted>{strings.noShopsHint}</Muted>
   return (
-    <div className="pg__row">
+    <Cluster>
       {allShops.map((s) => {
         const sells = soldAt.some((x) => x.id === s.id)
         return (
@@ -22,6 +22,6 @@ export function ProductShops({ allShops, soldAt, onToggle }: ProductShopsProps) 
           </Chip>
         )
       })}
-    </div>
+    </Cluster>
   )
 }

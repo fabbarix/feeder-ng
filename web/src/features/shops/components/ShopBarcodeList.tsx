@@ -1,4 +1,4 @@
-import { IconButton, ListGroup, ListRow } from '../../../ui'
+import { IconButton, ListGroup, ListRow, Muted } from '../../../ui'
 import { shopBarcodeLabel } from '../lib/shopBarcodeForm'
 import { strings } from '../strings'
 import type { Product, ShopBarcode, ShopRule } from '../types'
@@ -13,7 +13,7 @@ export interface ShopBarcodeListProps {
 
 /** "PRIVATE-77 → Mutti passata" and "Weighed · prefix 21 · item 00123 → Ham", with a delete IconButton. */
 export function ShopBarcodeList({ barcodes, rules, products, onDelete }: ShopBarcodeListProps) {
-  if (barcodes.length === 0) return <p className="pg__muted">{strings.noShopBarcodes}</p>
+  if (barcodes.length === 0) return <Muted>{strings.noShopBarcodes}</Muted>
   return (
     <ListGroup label={strings.shopBarcodesTitle}>
       {barcodes.map((b) => {

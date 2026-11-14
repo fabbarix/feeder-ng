@@ -1,4 +1,4 @@
-import { Button } from '../../../ui'
+import { Button, Muted } from '../../../ui'
 import type { Position, PositionFailure } from '../../../lib/geolocation'
 import type { PositionStatus } from '../hooks/usePosition'
 import { formatDistance, goodForSaving } from '../lib/nearest'
@@ -28,9 +28,9 @@ export function LocationStatus({ status, position, failure, onRetry }: LocationS
             : strings.locationUnavailable
   return (
     <div className="shop-location">
-      <p className="pg__muted" role="status">
-        {text}
-      </p>
+      <div className="shop-location__status" role="status">
+        <Muted>{text}</Muted>
+      </div>
       {retry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
           {strings.tryAgain}

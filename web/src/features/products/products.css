@@ -1,44 +1,24 @@
-/* Products and Shops screens: layout only; colours come from the theme tokens. */
-.pg {
-  display: grid;
-  gap: 16px;
-  padding-top: 16px;
-}
-.pg__tile-title {
-  margin: 0 0 12px;
-  font-size: 1.25rem;
-}
-.pg__stack {
-  display: grid;
-  gap: 12px;
-}
-.pg__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
+/* Products and Shops screens: layout only; colours come from the theme tokens. DS-07 (B9-09): the old .pg layout and type classes
+   are the ui primitives now (Stack, Cluster, SectionTitle, Muted). */
+
+/* features/tags and features/settings (B9-10's folders) still say .pg__muted: the Muted role until they move to <Muted>. */
 .pg__muted {
   margin: 0;
-  font-size: 0.85rem;
-  opacity: 0.8;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
 }
+
+/* The field-error line stays until SAFE's field-error pattern replaces it. */
 .pg__error {
   margin: 0;
   font-weight: 600;
 }
-.pg__group {
-  display: grid;
-  gap: 8px;
-}
-.pg__subhead {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-/* A Button in a Tile column would stretch to the full width. */
-.pg__add-price {
-  align-self: flex-start;
+
+/* "Latest Price per Shop" and "Price history": third-level headings in the Prices tile, set as a muted line (Muted inside). */
+.product-prices__subhead {
+  line-height: var(--text-meta-line);
 }
 
 /* Shop Location status line with its optional "Try again". */
@@ -49,7 +29,6 @@
   gap: var(--space-2);
 }
 
-.shop-location > p {
+.shop-location__status {
   flex: 1 1 14rem;
-  margin: 0;
 }

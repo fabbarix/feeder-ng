@@ -18,7 +18,7 @@ describe('scan.css', () => {
 
 // SR4: the Split layout (shop-scan-proposals.md 13.2; mockups 01-scan-390 and 01-scan-1280).
 describe('scan.css: the Split layout', () => {
-  const wide = (css.match(/@media\s*\(min-width:\s*(\d+)px\)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g) ?? []).find((m) => m.includes('.scan-screen__split')) ?? ''
+  const wide = (css.match(/@media\s*\(min-width:\s*([\d.]+)em\)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g) ?? []).find((m) => m.includes('.scan-screen__split')) ?? ''
 
   it('stacks the camera over the list on a phone', () => {
     const d = declarations(css, '.scan-screen__split')
@@ -28,7 +28,7 @@ describe('scan.css: the Split layout', () => {
   })
 
   it('puts the camera on the left and the list on the right from a wide viewport', () => {
-    expect(wide).toMatch(/min-width:\s*(768|1024)px/)
+    expect(wide).toMatch(/min-width:\s*(48|64)em/)
     expect(wide).toMatch(/\.scan-screen__split[^}]*grid-template-columns/)
   })
 
@@ -68,7 +68,7 @@ describe('scan.css: the cover line beside "Add price"', () => {
 
 // beta.7 polish: the docked Price entry keeps Close and Save in the window (desktop, no-camera message, per kg).
 describe('scan.css: the docked keypad\'s actions stay in view', () => {
-  const docked = (css.match(/@media \(min-width: 768px\) \{\s*\.scan-screen__camera \.sheet[\s\S]*?\n\}/) ?? [''])[0]
+  const docked = (css.match(/@media \(min-width: 48em\) \{\s*\.scan-screen__camera \.sheet[\s\S]*?\n\}/) ?? [''])[0]
   it('sticks the actions to the bottom of the window, on the surface', () => {
     expect(docked).toMatch(/\.scan-screen__camera \.price-keypad__actions \{[^}]*position: sticky;[^}]*inset-block-end: 0;[^}]*background: var\(--color-surface\);/)
   })

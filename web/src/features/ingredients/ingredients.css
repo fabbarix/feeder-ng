@@ -48,6 +48,7 @@
   color: var(--color-text);
   font: inherit;
   font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
   font-weight: var(--text-label-weight);
   cursor: pointer;
 }
@@ -56,11 +57,6 @@
   border-color: var(--color-accent);
   background: var(--color-accent);
   color: var(--color-on-accent);
-}
-
-.base-unit__option:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
 }
 
 .base-unit__option:disabled {
@@ -94,7 +90,7 @@
   inline-size: 100%;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 37.5em) {
   .new-ingredient__actions {
     flex-direction: row;
     justify-content: flex-end;
@@ -117,14 +113,20 @@
 
 .base-unit__value strong {
   font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
 }
 
 /* .new-ingredient__picture: reserved for the later Ingredient picture (ImagePicker); nothing renders it yet. */
 
 
 /* L4: a half-width tile on a phone is narrower than the Shelf Life stepper (two 40 px buttons, the number and "days"), so the
-   Base Unit and Shelf Life tiles stack below 560 px. */
-@media (max-width: 559px) {
+   Base Unit and Shelf Life tiles stack while their grid is narrower than 34 rem (B9-09, DS-09: a container query on the tiles'
+   own width, was a viewport below 560 px; 34 rem is a 576 px viewport less the page gutters). */
+.ingredient__tiles {
+  container: ingredient-tiles / inline-size;
+}
+
+@container ingredient-tiles (width < 34rem) {
   .ingredient__tile {
     grid-column: 1 / -1;
   }
@@ -147,6 +149,7 @@
 .ingredient__helper,
 .ingredient__locked {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-muted);
 }
 

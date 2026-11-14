@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { Button, ListRow, Tile, useMediaQuery } from '../../../ui'
+import { Button, ListRow, Tile } from '../../../ui'
 import { useShowMore } from '../../../ui/lib/useShowMore'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { describeGoOff } from '../lib/view'
@@ -14,8 +14,6 @@ export interface SpoiledTileProps {
   onThrowOut: (lotId: number) => void
   onKeep: (lotId: number) => void
   system?: UnitSystem
-  /** Keep the actions under the text even from 820 px (a narrow column, like Stock's aside). */
-  stacked?: boolean
 }
 
 /**
@@ -23,12 +21,12 @@ export interface SpoiledTileProps {
  * --status-danger-bg/-fg in both schemes), with
  * the overline "Throw out or keep?" and the `spoiled` icon. One row per lot, with two
  * icon + label `Button size="sm"`s: Throw out = danger-tertiary with `throwOut` (Trash), Keep = secondary with `tick`
- * (Check). L-07: each lot is a `ListRow` (title = name, meta = "amount · go-off wording"); from 820 px the two buttons
- * trail the row, below it they sit under the text. Accessible names stay "Throw out <name>" / "Keep <name>". Renders nothing when lots is empty.
+ * (Check). L-07: each lot is a `ListRow` (title = name, meta = "amount · go-off wording") with the two buttons in its extra
+ * slot. B9-09 (DS-09): one DOM at every width; a container query on the list (stock.css, `spoiled-tile`) sets them beside the
+ * text from 44 rem of the tile's own width, and under it below that (a phone, or Stock's 24 rem aside). Accessible names stay "Throw out <name>" / "Keep <name>". Renders nothing when lots is empty.
  * Capped at 3 rows with a "Show N more" toggle (DS-TODAY). Exported for the Today screen.
  */
-export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric', stacked = false }: SpoiledTileProps): ReactElement | null {
-  const wide = useMediaQuery('(min-width: 820px)') && !stacked
+export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric' }: SpoiledTileProps): ReactElement | null {
   const more = useShowMore(lots)
   if (lots.length === 0) return null
   return (
@@ -47,10 +45,7 @@ export function SpoiledTile({ lots, today, onThrowOut, onKeep, system = 'metric'
           )
           const title = capitalise(lot.ingredientName)
           const meta = `${formatQuantity(lot.quantity, lot.baseUnit, system)} · ${describeGoOff(lot, today).label}`
-          // From 820 px the actions trail the row; on a phone they go under the text (the row grows).
-          return wide ? (
-            <ListRow key={lot.id} title={title} meta={meta} trailing={actions} />
-          ) : (
+          return (
             <ListRow key={lot.id} title={title} meta={meta}>
               {actions}
             </ListRow>

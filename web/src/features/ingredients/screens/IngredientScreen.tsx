@@ -122,96 +122,98 @@ export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
         </Button>
       )}
 
-      <BentoGrid min="card" label={words.detailsLabel}>
-        <Tile as="section" className="ingredient__tile" aria-label={strings.baseUnitLabel}>
-          {locked ? (
+      <div className="ingredient__tiles">
+        <BentoGrid min="card" label={words.detailsLabel}>
+          <Tile as="section" className="ingredient__tile" aria-label={strings.baseUnitLabel}>
+            {locked ? (
+              <>
+                <div className="base-unit__value" data-testid="base-unit-value">
+                  <span className="base-unit__label">{strings.baseUnitLabel}</span>
+                  <span aria-hidden="true">{' · '}</span>
+                  <strong>{ingredient.baseUnit}</strong>
+                </div>
+                <p className="base-unit__helper">{strings.baseUnitLocked(ing.referenceCount)}</p>
+              </>
+            ) : (
+              <BaseUnitPicker
+                value={ingredient.baseUnit}
+                onChange={(b) => {
+                  if (b !== ingredient.baseUnit) void attempt(() => ing.setBaseUnit(b))
+                }}
+              />
+            )}
+          </Tile>
+
+          {isFood ? (
             <>
-              <div className="base-unit__value" data-testid="base-unit-value">
-                <span className="base-unit__label">{strings.baseUnitLabel}</span>
-                <span aria-hidden="true">{' · '}</span>
-                <strong>{ingredient.baseUnit}</strong>
-              </div>
-              <p className="base-unit__helper">{strings.baseUnitLocked(ing.referenceCount)}</p>
+              <Tile as="section" className="ingredient__tile" aria-label={strings.shelfLifeTile}>
+                <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
+              </Tile>
+
+              <Tile as="section" className="ingredient__tile" aria-label={strings.frozenShelfLifeLabel}>
+                <ShelfLifeEditor
+                  variant="frozen"
+                  days={ingredient.frozenShelfLifeDays ?? null}
+                  onSave={(days) => void attempt(() => ing.setFrozenShelfLife(days))}
+                />
+              </Tile>
             </>
           ) : (
-            <BaseUnitPicker
-              value={ingredient.baseUnit}
-              onChange={(b) => {
-                if (b !== ingredient.baseUnit) void attempt(() => ing.setBaseUnit(b))
-              }}
+            <RestockLevelTile
+              level={ingredient.restockLevel ?? null}
+              baseUnit={ingredient.baseUnit}
+              system={system}
+              onSave={(level) => void attempt(() => ing.setRestockLevel(level))}
             />
           )}
-        </Tile>
 
-        {isFood ? (
-          <>
-            <Tile as="section" className="ingredient__tile" aria-label={strings.shelfLifeTile}>
-              <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
-            </Tile>
-
-            <Tile as="section" className="ingredient__tile" aria-label={strings.frozenShelfLifeLabel}>
-              <ShelfLifeEditor
-                variant="frozen"
-                days={ingredient.frozenShelfLifeDays ?? null}
-                onSave={(days) => void attempt(() => ing.setFrozenShelfLife(days))}
-              />
-            </Tile>
-          </>
-        ) : (
-          <RestockLevelTile
-            level={ingredient.restockLevel ?? null}
-            baseUnit={ingredient.baseUnit}
-            system={system}
-            onSave={(level) => void attempt(() => ing.setRestockLevel(level))}
-          />
-        )}
-
-        <Tile as="section" span="full" aria-labelledby="ingredient-picture-heading">
-          <h2 id="ingredient-picture-heading">{strings.pictureLabel}</h2>
-          <ImagePicker
-            hideLabel
-            label={strings.pictureLabel}
-            value={ingredient.image ?? ''}
-            onChange={(imageId) => void attempt(() => ing.setImage(imageId))}
-            aspect={CROP_ASPECTS.landscape}
-          />
-        </Tile>
-
-        <Tile as="section" span="full" aria-label={strings.conversionsTitle}>
-          <ConversionEditor
-            conversions={ingredient.conversions}
-            base={ingredient.baseUnit}
-            system={system}
-            lockedUnits={ingredient.baseRecipe ? ['batch', 'portion'] : undefined}
-            onAdd={(c) => void attempt(() => ing.setConversion(c))}
-            onRemove={(unit) => void attempt(() => ing.removeConversion(unit))}
-          />
-        </Tile>
-
-        <IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} system={system} />
-
-        {isFood ? (
-          <Tile as="section" id="exclusions" span="full" aria-label={strings.excludedBy}>
-            <h2>{strings.excludedBy}</h2>
-            <IngredientExclusionList ingredientId={id} ingredientName={ingredient.name} />
+          <Tile as="section" span="full" aria-labelledby="ingredient-picture-heading">
+            <h2 id="ingredient-picture-heading">{strings.pictureLabel}</h2>
+            <ImagePicker
+              hideLabel
+              label={strings.pictureLabel}
+              value={ingredient.image ?? ''}
+              onChange={(imageId) => void attempt(() => ing.setImage(imageId))}
+              aspect={CROP_ASPECTS.landscape}
+            />
           </Tile>
-        ) : null}
 
-        <KindTile kind={kind} name={ingredient.name} change={change} />
+          <Tile as="section" span="full" aria-label={strings.conversionsTitle}>
+            <ConversionEditor
+              conversions={ingredient.conversions}
+              base={ingredient.baseUnit}
+              system={system}
+              lockedUnits={ingredient.baseRecipe ? ['batch', 'portion'] : undefined}
+              onAdd={(c) => void attempt(() => ing.setConversion(c))}
+              onRemove={(unit) => void attempt(() => ing.removeConversion(unit))}
+            />
+          </Tile>
 
-        <Tile as="section" aria-label={words.mergeTitle}>
-          <Button variant="secondary" onClick={() => setMergeOpen(true)}>
-            {words.mergeInto}
-          </Button>
-        </Tile>
+          <IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} system={system} />
 
-        <Tile as="section" aria-label={words.deleteLabel}>
-          <Button variant="danger-secondary" disabled={locked} onClick={() => setDeleteOpen(true)}>
-            {words.deleteLabel}
-          </Button>
-          {locked ? <p>{strings.deleteLocked(ing.referenceCount)}</p> : null}
-        </Tile>
-      </BentoGrid>
+          {isFood ? (
+            <Tile as="section" id="exclusions" span="full" aria-label={strings.excludedBy}>
+              <h2>{strings.excludedBy}</h2>
+              <IngredientExclusionList ingredientId={id} ingredientName={ingredient.name} />
+            </Tile>
+          ) : null}
+
+          <KindTile kind={kind} name={ingredient.name} change={change} />
+
+          <Tile as="section" aria-label={words.mergeTitle}>
+            <Button variant="secondary" onClick={() => setMergeOpen(true)}>
+              {words.mergeInto}
+            </Button>
+          </Tile>
+
+          <Tile as="section" aria-label={words.deleteLabel}>
+            <Button variant="danger-secondary" disabled={locked} onClick={() => setDeleteOpen(true)}>
+              {words.deleteLabel}
+            </Button>
+            {locked ? <p>{strings.deleteLocked(ing.referenceCount)}</p> : null}
+          </Tile>
+        </BentoGrid>
+      </div>
 
       {mergeOpen ? (
         <MergeSheet

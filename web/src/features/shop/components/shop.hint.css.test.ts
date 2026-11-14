@@ -8,7 +8,7 @@ const cwd = (globalThis as unknown as { process: { cwd: () => string } }).proces
 const css = readFileSync(`${cwd}/src/features/shop/shop.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 const styles = readFileSync(`${cwd}/src/styles.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 const listCss = readFileSync(`${cwd}/src/ui/ListRow.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
-const wide = css.slice(css.indexOf('@media (min-width: 768px)'))
+const wide = css.slice(css.indexOf('@media (min-width: 48em)'))
 
 describe('Shop card grid: the hint has room', () => {
   it('from 768 px a Shop row takes the narrow value column through a token (no raw rem in shop.css)', () => {

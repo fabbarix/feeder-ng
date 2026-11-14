@@ -14,10 +14,10 @@ export const FONT_24 = {
 /**
  * Routes whose font-24 scenario is defined but NOT registered yet, with the package that turns it on. The guard has no per-scenario
  * mode (a modes line matches the route, scenario part dropped), so a scenario that cannot pass yet is held here instead of making
- * its whole route warn. Main session ruling, w0b: /settings/shops/:id still draws its tiles with the .pg__* styling (P27:
- * h2.pg__tile-title 30 px and p.pg__muted 20.4 px at 24 px text, at 390 and 1440); B9-10 removes it and deletes this entry.
+ * its whole route warn. Empty since B9-09: /settings/shops/:id (held in w0b for its .pg__* tiles) draws them with SectionTitle and
+ * Muted and passes P27 at 24 px text, so its scenario runs.
  */
-export const FONT_24_DEFERRED = { '/settings/shops/:id': 'B9-10' }
+export const FONT_24_DEFERRED = {}
 
 const slug = (route) => (route === '/' ? 'today' : route.slice(1).replace(/:/g, '').replace(/\//g, '-'))
 const scenarioOf = (route) => ({

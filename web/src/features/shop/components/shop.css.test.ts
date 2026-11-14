@@ -16,14 +16,14 @@ function read(): string {
 }
 const css = read()
 const px = (v: string | undefined) => (v && /^\d+(\.\d+)?px$/.test(v) ? Number(v.replace('px', '')) : 0)
-/** the body of the first @media block whose query matches, '' when none */
+/** the body of the first @media or @container block whose query matches, '' when none */
 function media(query: RegExp): string {
-  for (const m of css.matchAll(/@media\s*([^{]+)\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g)) if (query.test(m[1]!)) return m[2]!.replace(/"/g, "'").replace(/\s+/g, ' ')
+  for (const m of css.matchAll(/@(?:media|container)\s*([^{]+)\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g)) if (query.test(m[1]!)) return m[2]!.replace(/"/g, "'").replace(/\s+/g, ' ')
   return ''
 }
 const values = (prop: string) => [...css.matchAll(new RegExp(`(?:^|[;{\\s])${prop}\\s*:\\s*([^;}]+)`, 'g'))].map((m) => m[1]!.trim())
-const withoutQueries = css.replace(/@media\s*[^{]+\{/g, '{')
-const outsideMedia = css.replace(/@media\s*[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '')
+const withoutQueries = css.replace(/@(?:media|container)\s*[^{]+\{/g, '{')
+const outsideMedia = css.replace(/@(?:media|container)\s*[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '')
 
 describe('shop.css: tokens only', () => {
   it('exists, has no hex or rgb colour and no !important', () => {
@@ -88,20 +88,20 @@ describe('shop.css: the page', () => {
   })
 })
 
-describe('shop.css: one list on a phone, a 2-column card grid from 768 px', () => {
+describe('shop.css: one list on a phone, a 2-column card grid from 48em (768 px)', () => {
   it('below 768 px the list is the plain ListGroup column (no grid rule outside the media query)', () => {
     expect(outsideMedia.replace(/\s+/g, ' ')).not.toMatch(/\.shop-lines[^{]*\{[^}]*grid-template-columns/)
   })
 
   it('from 768 px the list is auto-fill tracks of --tile-min-card (2 columns at 768, 834, 1024), spaced by --bento-gap', () => {
-    const m = media(/min-width:\s*768px/)
+    const m = media(/min-width:\s*48em/)
     expect(m).toMatch(/\.shop-lines \.list-group__list\s*\{[^}]*display:\s*grid/)
     expect(m).toMatch(/grid-template-columns:\s*repeat\(auto-fill, minmax\(min\(var\(--tile-min-card\), 100%\), 1fr\)\)/)
     expect(m).toMatch(/gap:\s*var\(--bento-gap\)/)
   })
 
   it('in the card grid each row is its own card (surface fill, tile radius) and its content stays CENTRED in the row (system.md §3)', () => {
-    const m = media(/min-width:\s*768px/)
+    const m = media(/min-width:\s*48em/)
     const block = m.match(/\.shop-lines \.list-row\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(block).toMatch(/border-radius:\s*var\(--radius-tile-sm\)/)
     expect(block).toMatch(/background:\s*var\(--color-surface\)/)
@@ -110,7 +110,7 @@ describe('shop.css: one list on a phone, a 2-column card grid from 768 px', () =
   })
 
   it('only the grid TRACKS start at the top: the list aligns its items to start, so a short row is not stretched to a tall neighbour', () => {
-    const m = media(/min-width:\s*768px/)
+    const m = media(/min-width:\s*48em/)
     expect(m).toMatch(/\.shop-lines \.list-group__list\s*\{[^}]*align-items:\s*start/)
   })
 })
@@ -180,7 +180,7 @@ describe('shop.css: metric strip and notice', () => {
   it('metric values use the type roles: title-2, and display for the "left" number from 600 px up', () => {
     expect(declarations(css, '.shop-metrics__value')['font-size']).toBe('var(--text-title-2-size)')
     expect(declarations(css, '.shop-metrics__value')['font-variant-numeric']).toBe('tabular-nums')
-    expect(media(/min-width:\s*600px/)).toMatch(/\.shop-metrics__value\[data-metric='left'\]\s*\{[^}]*font-size:\s*var\(--text-display-size\)/)
+    expect(media(/min-width:\s*37\.5em/)).toMatch(/\.shop-metrics__value\[data-metric='left'\]\s*\{[^}]*font-size:\s*var\(--text-display-size\)/)
   })
 
   it('metric labels and captions are muted meta text', () => {
@@ -251,6 +251,10 @@ describe('shop.css: round 2', () => {
     expect(pill['border-radius']).toBe('var(--radius-pill)')
     expect(pill['font-size']).toBe('var(--text-chip-size)')
     expect(pill['font-variant-numeric']).toBe('tabular-nums')
+    // Reviewer (B9-09): the chip line now exists (B9-07); the pill keeps its 24 x 22 box (VC6: a round shape, not an oval)
+    expect(pill['line-height']).toBe('var(--text-chip-line)')
+    expect(pill['min-inline-size']).toBe('var(--space-6)')
+    expect(pill['min-block-size']).toBe('var(--text-title-3-line)')
   })
 
   it('the notice sentence is clamped to two lines with an ellipsis (the full text is in its title)', () => {
@@ -274,7 +278,7 @@ describe('shop.css: round 2', () => {
 
   it('b8: the header chips keep their icons at every width (the labels get shorter instead), so no rule hides .select__leading', () => {
     expect(css).not.toMatch(/select__leading/)
-    expect(media(/width\s*<\s*420px/)).not.toMatch(/display:\s*none/)
+    expect(media(/width\s*<\s*24rem/)).not.toMatch(/display:\s*none/)
   })
 
   it('the pickers shrink with an ellipsis before they wrap (min-inline-size 0), the locate button keeps its size', () => {

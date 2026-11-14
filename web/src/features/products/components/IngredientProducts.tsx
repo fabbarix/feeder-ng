@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { UnitSystem } from '../../../lib/units'
-import { BottomSheet, Button, Tile } from '../../../ui'
+import { BottomSheet, Button, SectionTitle, Tile } from '../../../ui'
 import { useIngredientProducts } from '../hooks/useIngredientProducts'
 import { strings } from '../strings'
 import type { BaseUnit } from '../types'
@@ -27,7 +27,7 @@ export function IngredientProducts({ ingredientId, ingredientName, baseUnit, sys
   const [open, setOpen] = useState(false)
   return (
     <Tile as="section" span="full" aria-label={strings.ingredientProductsTitle}>
-      <h2 className="pg__tile-title">{strings.ingredientProductsTitle}</h2>
+      <SectionTitle>{strings.ingredientProductsTitle}</SectionTitle>
       {products.length === 0 ? <p>{strings.ingredientProductsEmpty}</p> : <ProductList products={products} system={system} showIngredient={false} />}
       <Button variant="secondary" onClick={() => setOpen(true)}>
         {strings.newProduct}

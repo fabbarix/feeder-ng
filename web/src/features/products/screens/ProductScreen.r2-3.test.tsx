@@ -90,7 +90,8 @@ describe('ProductScreen (R2-3)', () => {
   it('left-aligns Add Price (a button in a Tile column does not stretch)', async () => {
     setup()
     const button = await screen.findByRole('button', { name: 'Add Price' })
-    expect(button).toHaveClass('pg__add-price')
-    expect(cssRule(stylesheet('src/features/products/products.css').base, '.pg__add-price')['align-self']).toBe('flex-start')
+    // B9-09 (DS-07): .pg__add-price became a Cluster round the Button; a flex row never stretches its item to the Tile's width.
+    expect(button.parentElement).toHaveClass('cluster')
+    expect(cssRule(stylesheet('src/ui/Stack.css').base, '.cluster')['display']).toBe('flex')
   })
 })

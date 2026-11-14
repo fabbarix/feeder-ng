@@ -1,4 +1,4 @@
-import { Button, FieldRow, FormActions, Select, TextField } from '../../../ui'
+import { Button, FieldRow, FormActions, SectionTitle, Select, Stack, TextField } from '../../../ui'
 import type { ValueKind } from '../../scan/lib/barcode'
 import type { RuleBody } from '../api'
 import { useRuleForm } from '../hooks/useRuleForm'
@@ -40,76 +40,73 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
   )
   return (
     <form
-      className="pg__stack"
       noValidate
       onSubmit={(e) => {
         e.preventDefault()
         void form.submit()
       }}
     >
-      {text(strings.prefixLabel, 'prefix', 'sm')}
-      <div className="pg__group">
-        <p className="pg__subhead" aria-hidden="true">
-          {strings.itemCodeGroup}
-        </p>
-        <FieldRow label={strings.itemCodeGroup}>
-          {text(strings.itemStartLabel, 'itemStart')}
-          {text(strings.itemLengthLabel, 'itemLength')}
+      <Stack>
+        {text(strings.prefixLabel, 'prefix', 'sm')}
+        <div>
+          <SectionTitle as="h3">{strings.itemCodeGroup}</SectionTitle>
+          <FieldRow label={strings.itemCodeGroup}>
+            {text(strings.itemStartLabel, 'itemStart')}
+            {text(strings.itemLengthLabel, 'itemLength')}
+          </FieldRow>
+        </div>
+        <div>
+          <SectionTitle as="h3">{strings.valueGroup}</SectionTitle>
+          <FieldRow label={strings.valueGroup}>
+            {text(strings.valueStartLabel, 'valueStart')}
+            {text(strings.valueLengthLabel, 'valueLength')}
+            {text(strings.decimalPlacesLabel, 'decimalPlaces')}
+          </FieldRow>
+        </div>
+        <FieldRow>
+          <Select<ValueKind>
+            size="md"
+            label={strings.valueKindLabel}
+            options={[
+              { value: 'weight', label: strings.kindWeight },
+              { value: 'price', label: strings.kindPrice },
+            ]}
+            value={v.kind}
+            onChange={(kind) => form.setField('kind', kind)}
+          />
+          <Select
+            size="md"
+            label={strings.valueUnitLabel}
+            options={unitOptions(v.kind, currency).map((o) => ({ value: o.value, label: o.label }))}
+            value={v.unit}
+            onChange={(unit) => form.setField('unit', unit)}
+          />
         </FieldRow>
-      </div>
-      <div className="pg__group">
-        <p className="pg__subhead" aria-hidden="true">
-          {strings.valueGroup}
-        </p>
-        <FieldRow label={strings.valueGroup}>
-          {text(strings.valueStartLabel, 'valueStart')}
-          {text(strings.valueLengthLabel, 'valueLength')}
-          {text(strings.decimalPlacesLabel, 'decimalPlaces')}
-        </FieldRow>
-      </div>
-      <FieldRow>
-        <Select<ValueKind>
-          size="md"
-          label={strings.valueKindLabel}
-          options={[
-            { value: 'weight', label: strings.kindWeight },
-            { value: 'price', label: strings.kindPrice },
-          ]}
-          value={v.kind}
-          onChange={(kind) => form.setField('kind', kind)}
+        <TextField label={strings.sampleLabel} helper={strings.sampleHint} inputMode="numeric" data-size-intent="long" value={form.sample} onChange={form.setSample} />
+        <RulePreview preview={form.preview} currency={currency} unit={v.unit} />
+        {form.shownError && form.errorField === null ? (
+          <p role="alert" className="pg__error">
+            {form.shownError}
+          </p>
+        ) : null}
+        {form.serverError ? (
+          <p role="alert" className="pg__error">
+            {form.serverError}
+          </p>
+        ) : null}
+        <FormActions
+          tertiary={
+            <Button variant="secondary" onClick={onCancel}>
+              {strings.cancel}
+            </Button>
+          }
+          primary={
+            <Button type="submit" loading={form.saving}>
+              {strings.saveRule}
+            </Button>
+          }
         />
-        <Select
-          size="md"
-          label={strings.valueUnitLabel}
-          options={unitOptions(v.kind, currency).map((o) => ({ value: o.value, label: o.label }))}
-          value={v.unit}
-          onChange={(unit) => form.setField('unit', unit)}
-        />
-      </FieldRow>
-      <TextField label={strings.sampleLabel} helper={strings.sampleHint} inputMode="numeric" data-size-intent="long" value={form.sample} onChange={form.setSample} />
-      <RulePreview preview={form.preview} currency={currency} unit={v.unit} />
-      {form.shownError && form.errorField === null ? (
-        <p role="alert" className="pg__error">
-          {form.shownError}
-        </p>
-      ) : null}
-      {form.serverError ? (
-        <p role="alert" className="pg__error">
-          {form.serverError}
-        </p>
-      ) : null}
-      <FormActions
-        tertiary={
-          <Button variant="secondary" onClick={onCancel}>
-            {strings.cancel}
-          </Button>
-        }
-        primary={
-          <Button type="submit" loading={form.saving}>
-            {strings.saveRule}
-          </Button>
-        }
-      />
+      </Stack>
     </form>
   )
 }

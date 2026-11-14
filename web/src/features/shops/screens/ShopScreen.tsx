@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useMe } from '../../../app/useMe'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, EmptyState, IconButton, ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, EmptyState, IconButton, ListGroup, ListRow, Muted, PageHeader, SectionTitle, Stack, Tile } from '../../../ui'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useProducts } from '../../products/hooks/useProducts'
 import { formatMinor } from '../../products/lib/money'
@@ -48,10 +48,10 @@ export function ShopScreen() {
     if (shop.isLoading) return <p role="status">{strings.loading}</p>
     if (shop.error instanceof ApiError && shop.error.status === 404) {
       return (
-        <div className="pg">
+        <Stack gap="4">
           <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
           <EmptyState title={strings.notFoundTitle} />
-        </div>
+        </Stack>
       )
     }
     return <p role="alert">{strings.actionFailed}</p>
@@ -60,7 +60,7 @@ export function ShopScreen() {
   const productName = (pid: number) => products.find((p) => p.id === pid)?.name ?? strings.unknownProduct
 
   return (
-    <div className="pg">
+    <Stack gap="4">
       <PageHeader
         title={shop.shop.name}
         breadcrumbs={breadcrumbs}
@@ -73,7 +73,7 @@ export function ShopScreen() {
           ) : undefined
         }
       />
-      {isAdmin ? null : <p className="pg__muted">{strings.adminOnly}</p>}
+      {isAdmin ? null : <Muted>{strings.adminOnly}</Muted>}
       {error ? (
         <p role="alert" className="pg__error">
           {error}
@@ -84,7 +84,7 @@ export function ShopScreen() {
         <ShopLocationTile location={shop.shop.location} onSave={shop.saveLocation} />
 
         <Tile as="section" span="full" aria-label={strings.shopBarcodesTitle}>
-          <h2 className="pg__tile-title">{strings.shopBarcodesTitle}</h2>
+          <SectionTitle>{strings.shopBarcodesTitle}</SectionTitle>
           <ShopBarcodeList
             barcodes={shop.barcodes}
             rules={shop.rules}
@@ -97,7 +97,7 @@ export function ShopScreen() {
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.weightRulesTitle}>
-          <h2 className="pg__tile-title">{strings.weightRulesTitle}</h2>
+          <SectionTitle>{strings.weightRulesTitle}</SectionTitle>
           <WeightRuleList
             rules={shop.rules}
             currency={currency}
@@ -109,9 +109,9 @@ export function ShopScreen() {
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.pricesTitle}>
-          <h2 className="pg__tile-title">{strings.pricesTitle}</h2>
+          <SectionTitle>{strings.pricesTitle}</SectionTitle>
           {prices.length === 0 ? (
-            <p className="pg__muted">{strings.noPrices}</p>
+            <Muted>{strings.noPrices}</Muted>
           ) : (
             <ListGroup label={strings.pricesTitle}>
               {prices.map((p) => (
@@ -175,6 +175,6 @@ export function ShopScreen() {
           {strings.confirmDeleteShop}
         </Button>
       </BottomSheet>
-    </div>
+    </Stack>
   )
 }

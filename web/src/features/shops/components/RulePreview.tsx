@@ -1,3 +1,4 @@
+import { Muted } from '../../../ui'
 import { previewText, type RulePreview as Preview } from '../lib/rulePreview'
 
 export interface RulePreviewProps {
@@ -10,8 +11,8 @@ export interface RulePreviewProps {
 /** Renders previewText(preview, currency, unit) in an element with role="status" (polite live region). */
 export function RulePreview({ preview, currency, unit }: RulePreviewProps) {
   return (
-    <p role="status" className="pg__muted">
-      {previewText(preview, currency, unit)}
-    </p>
+    <div role="status">
+      <Muted>{previewText(preview, currency, unit)}</Muted>
+    </div>
   )
 }

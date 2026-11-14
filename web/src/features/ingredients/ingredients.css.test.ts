@@ -49,7 +49,7 @@ describe('ingredients.css, shared Base Unit picker (R2-3)', () => {
 
 
 describe('ingredients.css, Ingredient detail tiles on a phone (L4)', () => {
-  it('stacks the Base Unit and Shelf Life tiles below 560 px so the Shelf Life stepper fits its tile', () => {
-    expect(css).toMatch(/@media \(max-width: 559px\)\s*\{\s*\.ingredient__tile\s*\{\s*grid-column:\s*1\s*\/\s*-1/)
+  it('stacks the Base Unit and Shelf Life tiles below 34 rem of their own container so the Shelf Life stepper fits its tile (DS-09)', () => {
+    expect(css).toMatch(/@container ingredient-tiles \(width < 34rem\)\s*\{\s*\.ingredient__tile\s*\{\s*grid-column:\s*1\s*\/\s*-1/)
   })
 })

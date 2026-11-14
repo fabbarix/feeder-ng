@@ -9,6 +9,7 @@
 .receipt-section__title {
   margin: 0;
   font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
   font-weight: var(--text-overline-weight);
   letter-spacing: var(--text-overline-tracking);
   text-transform: uppercase;
@@ -30,6 +31,7 @@
 .receipt-hint {
   margin: 0;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
@@ -55,6 +57,7 @@
 
 .receipt-photo__title {
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: var(--text-body-strong-weight);
   color: var(--color-text);
 }
@@ -76,6 +79,7 @@
 .receipt-note {
   margin: 0;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
 }
 
@@ -88,6 +92,7 @@
 .receipt-progress__title {
   margin: 0;
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: var(--text-body-strong-weight);
   color: var(--color-text);
 }
@@ -95,6 +100,7 @@
 .receipt-progress__note {
   margin: 0;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
@@ -104,7 +110,7 @@
   display: block;
   height: 4px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: var(--radius-hairline);
   background: var(--color-surface-2);
 }
 
@@ -113,7 +119,7 @@
   position: absolute;
   inset-block: 0;
   inline-size: 40%;
-  border-radius: 2px;
+  border-radius: var(--radius-hairline);
   background: var(--color-accent);
   animation: receipt-indeterminate 1.4s ease-in-out infinite;
 }
@@ -137,17 +143,20 @@
 .receipt-alert__message {
   margin: 0;
   font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
 }
 
 .receipt-problem p {
   margin: 0;
   font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
 }
 
 .receipt-reasons {
   display: grid;
   gap: var(--space-1);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-muted);
 }
 
@@ -164,6 +173,7 @@
 .receipt-empty {
   margin: 0;
   font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
   color: var(--color-text);
 }
 
@@ -175,6 +185,7 @@
 
 .receipt-metric__value {
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: var(--text-body-strong-weight);
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
@@ -197,6 +208,7 @@
 
 .receipt-row__line {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
@@ -212,6 +224,7 @@
 
 .receipt-row__ready {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   color: var(--color-accent-text);
 }
@@ -242,12 +255,14 @@
 
 .receipt-row__title {
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: var(--text-body-strong-weight);
   color: var(--color-text);
 }
 
 .receipt-row__change {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   color: var(--color-text);
 }
@@ -256,6 +271,7 @@
   display: grid;
   justify-items: end;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   color: var(--color-text);
   font-variant-numeric: tabular-nums;

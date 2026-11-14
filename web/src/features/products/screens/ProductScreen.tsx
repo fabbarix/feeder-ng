@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, Chip, CROP_ASPECTS, EmptyState, FormActions, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, Chip, Cluster, CROP_ASPECTS, EmptyState, FormActions, ImagePicker, Muted, PageHeader, SectionTitle, Stack, TextField, Tile } from '../../../ui'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { displayName } from '../../ingredients/lib/names'
 import { PriceEditor } from '../components/PriceEditor'
@@ -43,10 +43,10 @@ export function ProductScreen() {
     if (p.isLoading) return <p role="status">{strings.loading}</p>
     if (p.error instanceof ApiError && p.error.status === 404) {
       return (
-        <div className="pg">
+        <Stack gap="4">
           <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
           <EmptyState title={strings.notFoundTitle} />
-        </div>
+        </Stack>
       )
     }
     return <p role="alert">{strings.actionFailed}</p>
@@ -58,16 +58,16 @@ export function ProductScreen() {
   const error = packError ?? actions.error
 
   return (
-    <div className="pg">
+    <Stack gap="4">
       <PageHeader title={product.name} breadcrumbs={breadcrumbs} />
-      <p className="pg__muted">
+      <Muted>
         <Link to={`/ingredients/${product.ingredientId}`}>{displayName(product.ingredientName)}</Link> · {formatPackSize(product.packSize, product.baseUnit, system)}
-      </p>
+      </Muted>
       {product.archived ? (
-        <div className="pg__row">
+        <Cluster>
           <Chip kind="state">{strings.archivedChip}</Chip>
-          <p className="pg__muted">{strings.archivedNote}</p>
-        </div>
+          <Muted>{strings.archivedNote}</Muted>
+        </Cluster>
       ) : null}
       {error ? (
         <p role="alert" className="pg__error">
@@ -77,9 +77,7 @@ export function ProductScreen() {
 
       <BentoGrid min="card">
         <Tile as="section" span="full" aria-labelledby="product-picture-heading">
-          <h2 id="product-picture-heading" className="pg__tile-title">
-            {strings.pictureLabel}
-          </h2>
+          <SectionTitle id="product-picture-heading">{strings.pictureLabel}</SectionTitle>
           <ImagePicker
             hideLabel
             label={strings.pictureLabel}
@@ -90,35 +88,36 @@ export function ProductScreen() {
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.packSizeTitle}>
-          <h2 className="pg__tile-title">{strings.packSizeTitle}</h2>
+          <SectionTitle>{strings.packSizeTitle}</SectionTitle>
           <form
-            className="pg__stack"
             noValidate
             onSubmit={(e) => {
               e.preventDefault()
               if (packSize !== null) void attempt(() => p.setPackSize(packSize)).then(() => setPackText(null))
             }}
           >
-            <TextField
-              size="sm"
-              label={strings.packSizeLabel(product.baseUnit)}
-              inputMode="decimal"
-              value={packValue}
-              onChange={setPackText}
-              error={packSize === null ? strings.errPackSize : undefined}
-            />
-            <FormActions
-              primary={
-                <Button type="submit" disabled={packSize === null || packSize === product.packSize}>
-                  {strings.savePackSize}
-                </Button>
-              }
-            />
+            <Stack>
+              <TextField
+                size="sm"
+                label={strings.packSizeLabel(product.baseUnit)}
+                inputMode="decimal"
+                value={packValue}
+                onChange={setPackText}
+                error={packSize === null ? strings.errPackSize : undefined}
+              />
+              <FormActions
+                primary={
+                  <Button type="submit" disabled={packSize === null || packSize === product.packSize}>
+                    {strings.savePackSize}
+                  </Button>
+                }
+              />
+            </Stack>
           </form>
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.barcodesTitle}>
-          <h2 className="pg__tile-title">{strings.barcodesTitle}</h2>
+          <SectionTitle>{strings.barcodesTitle}</SectionTitle>
           <ProductBarcodes
             barcodes={product.barcodes}
             shopBarcodes={product.shopBarcodes}
@@ -130,18 +129,24 @@ export function ProductScreen() {
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.shopsTitle}>
-          <h2 className="pg__tile-title">{strings.shopsTitle}</h2>
+          <SectionTitle>{strings.shopsTitle}</SectionTitle>
           <ProductShops allShops={p.shops} soldAt={product.shops} onToggle={(shopId, sells) => void attempt(() => p.setSoldAt(shopId, sells))} />
         </Tile>
 
         <Tile as="section" span="full" aria-label={strings.pricesTitle}>
-          <h2 className="pg__tile-title">{strings.pricesTitle}</h2>
-          <h3 className="pg__muted">{strings.latestPrices}</h3>
+          <SectionTitle>{strings.pricesTitle}</SectionTitle>
+          <h3 className="product-prices__subhead">
+            <Muted as="span">{strings.latestPrices}</Muted>
+          </h3>
           <PriceList prices={product.latestPrices} shops={p.shops} currency={currency} onDelete={(priceId) => void attempt(() => p.deletePrice(priceId))} />
-          <Button className="pg__add-price" variant="secondary" icon="add" onClick={() => setPricing(true)}>
-            {strings.addPrice}
-          </Button>
-          <h3 className="pg__muted">{strings.priceHistory}</h3>
+          <Cluster>
+            <Button variant="secondary" icon="add" onClick={() => setPricing(true)}>
+              {strings.addPrice}
+            </Button>
+          </Cluster>
+          <h3 className="product-prices__subhead">
+            <Muted as="span">{strings.priceHistory}</Muted>
+          </h3>
           <PriceList prices={p.prices} shops={p.shops} currency={currency} onDelete={(priceId) => void attempt(() => p.deletePrice(priceId))} />
         </Tile>
 
@@ -180,6 +185,6 @@ export function ProductScreen() {
           onCancel={() => setPricing(false)}
         />
       </BottomSheet>
-    </div>
+    </Stack>
   )
 }

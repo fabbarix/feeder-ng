@@ -111,7 +111,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 37.5em) {
   .shop-metrics__value[data-metric='left'] {
     font-size: var(--text-display-size);
     font-weight: var(--text-display-weight);
@@ -173,17 +173,23 @@
   border-radius: var(--radius-pill);
   background: var(--color-surface-2);
   color: var(--color-text);
+  /* 12 px figures on the chip line (16 px), the pill as tall as the title line it sits in, 24 x 22, as it was with the inherited
+     title line: a round-ended pill, near a circle for one digit. */
+  min-block-size: var(--text-title-3-line);
   font-size: var(--text-chip-size);
+  line-height: var(--text-chip-line);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .shop-lines {
   min-width: 0;
+  /* B9-09 (DS-09): the narrow-row block below is a container query on this list's own width. */
+  container-type: inline-size;
 }
 
 /* One list on a phone: the ListGroup column. From 768 px the same rows become a 2-column card grid, and the controls sit side by side. */
-@media (min-width: 768px) {
+@media (min-width: 48em) {
   .shop-lines .list-group {
     background: none;
     box-shadow: none;
@@ -210,11 +216,11 @@
   }
 }
 
-/* b8-hint: below 420 px (useNarrowChips, where the Restock reason is compact) the text column gets room for the widest Shop hint
+/* b8-hint, B9-09: while the list is narrower than 24 rem (a container query on .shop-lines; was a viewport below 420 px) the text column gets room for the widest Shop hint
    ("Wed Breakfast +12", about 110 px), even beside a wide quantity ("12000 g"): 12 px row padding, 8 px gaps, a value column 8 px
    under the phone minimum, and the tick's hit area (its size unchanged) reaching 8 px into the start padding, so its 24 px circle
    sits 14 px from the row's edge. The meta text gets 126 px at 360 px beside a short quantity, 119 px beside "12000 g". */
-@media (width < 420px) {
+@container (width < 24rem) {
   .shop-lines .list-row {
     gap: var(--space-2);
     padding-inline: var(--space-3);
@@ -223,6 +229,15 @@
 
   .shop-lines .list-row__control {
     margin-inline-start: calc(-1 * var(--space-2));
+  }
+}
+
+/* The tick's pull above is read against its row (a ListRow is its own container), the row's padding against the list. In the
+   card grid (from 48 em) a card can be narrower than 24 rem while the list is not: the card keeps its own padding, so its tick
+   does not reach into it. */
+@media (min-width: 48em) {
+  .shop-lines .list-row__control {
+    margin-inline-start: 0;
   }
 }
 
@@ -270,9 +285,11 @@
   color: var(--status-success-on-solid);
 }
 
+/* A11Y-02: the one ring, drawn inside the 44 px hit area round the 24 px circle. Below 24 rem the hit area reaches 8 px into the
+   row's 12 px padding (see the narrow block), so an outer ring would be cut by the list's clipped edge. */
 .line-row__tick:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
 }
 
 /* A ticked Line: its title is struck through and muted. A Not needed Line is muted the same way, without a strike. */
@@ -369,11 +386,6 @@
 
 .shop-not-needed__toggle[aria-expanded='true'] .shop-not-needed__chevron {
   transform: rotate(90deg);
-}
-
-.shop-not-needed__toggle:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
 }
 
 /* Completion: the celebration sits above every tile. */

@@ -1,4 +1,4 @@
-import { IconButton, ListGroup, ListRow } from '../../../ui'
+import { IconButton, ListGroup, ListRow, Muted } from '../../../ui'
 import { formatMinor, formatPricePerKg } from '../lib/money'
 import { strings } from '../strings'
 import type { Price, Shop } from '../types'
@@ -13,7 +13,7 @@ export interface PriceListProps {
 
 /** Rows "Corner Market · 2026-11-05 · $1.59 · $2.27 / kg (worked out from the pack size)", newest first as given. */
 export function PriceList({ prices, shops, currency, onDelete }: PriceListProps) {
-  if (prices.length === 0) return <p className="pg__muted">{strings.noPrices}</p>
+  if (prices.length === 0) return <Muted>{strings.noPrices}</Muted>
   const shopName = (id: number) => shops.find((s) => s.id === id)?.name ?? strings.unknownShop
   return (
     <ListGroup label={strings.pricesTitle}>
