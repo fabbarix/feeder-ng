@@ -79,7 +79,7 @@ func TestMigrations1573And1574LeaveThePlanRowsAlone(t *testing.T) {
 	if n := count(t, d, `SELECT count(*) FROM cooked_takes`); n != 0 {
 		t.Errorf("cooked_takes has %d rows after the upgrade, want none: a meal Cooked before has no record and cannot be reopened", n)
 	}
-	if n := count(t, d, `PRAGMA foreign_key_check`); n != 0 {
-		t.Errorf("foreign_key_check reports %d problems", n)
+	if bad := rows(t, d, `PRAGMA foreign_key_check`); len(bad) != 0 {
+		t.Errorf("foreign_key_check = %v, want empty", bad)
 	}
 }
