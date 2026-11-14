@@ -36,7 +36,12 @@ function phaseOf(bg: BackgroundRead | undefined): ReadPhase {
 
 export function useReceiptRead(session: ReadSessionInput): UseReceiptRead {
   const bg = useBackgroundRead(session.shopId)
-  const phase = phaseOf(bg)
+  // The store holds one read; one of another Shop that is still reading refuses this Shop's start, with the server's own words for it.
+  // It lasts while that read does.
+  const any = useBackgroundRead()
+  const [refused, setRefused] = useState(false)
+  const blocked = refused && any?.status === 'reading' && any.shopId !== session.shopId
+  const phase = blocked ? 'failed' : phaseOf(bg)
   const startedAt = bg?.status === 'reading' ? bg.startedAt : undefined
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -65,13 +70,25 @@ export function useReceiptRead(session: ReadSessionInput): UseReceiptRead {
   return {
     phase,
     busy: phase === 'starting' || phase === 'running',
-    error: bg?.status === 'failed' ? bg.error : undefined,
+    error: bg?.status === 'failed' ? bg.error : blocked ? { code: 'read_in_progress' } : undefined,
     elapsedSeconds: startedAt === undefined ? 0 : Math.max(0, Math.floor((now - startedAt) / 1000)),
     connectionLost: bg?.status === 'reading' ? bg.connectionLost : false,
     readId: bg !== undefined && bg.status !== 'failed' ? bg.readId : undefined,
-    start: (photos) => startBackgroundRead(session, photos),
-    cancel: () => cancelBackgroundRead(),
+    start: async (photos) => {
+      const other = getBackgroundRead()
+      if (other?.status === 'reading' && other.shopId !== session.shopId) {
+        setRefused(true)
+        return
+      }
+      setRefused(false)
+      await startBackgroundRead(session, photos)
+    },
+    // Only this Shop's read: another Shop's is not this screen's to stop.
+    cancel: async () => {
+      if (bg !== undefined) await cancelBackgroundRead()
+    },
     reset: () => {
+      setRefused(false)
       if (bg?.status === 'failed') dismissBackgroundRead()
     },
   }
