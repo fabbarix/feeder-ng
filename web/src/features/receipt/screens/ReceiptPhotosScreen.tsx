@@ -3,8 +3,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useConnectivity } from '../../../app/useConnectivity'
 import { useReadAvailability } from '../../import/hooks/useReadAvailability'
-import { Button, FormActions, IconButton, ImageFileInput, Page, PageHeader, PhotoEditSheet, StickyActionBar, Tile, useConfirm, type ImageEdit, type ImageFileInputHandle } from '../../../ui'
+import { Button, FormActions, IconButton, ImageFileInput, Page, PhotoEditSheet, StickyActionBar, Tile, useConfirm, type ImageEdit, type ImageFileInputHandle } from '../../../ui'
 import { ReadProgress } from '../components/ReadProgress'
+import { ReceiptPageHeader } from '../components/ReceiptPageHeader'
 import { ReceiptAlert } from '../components/ReceiptAlert'
 import { ReceiptPhotoList } from '../components/ReceiptPhotoList'
 import { useReceiptPhotos } from '../hooks/useReceiptPhotos'
@@ -90,7 +91,7 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
   const problem = photos.problem ? describeReceiptError({ code: photos.problem }, { isAdmin }).message : undefined
 
   return (
-    <Page header={<PageHeader title={t.readTitle} leading={<IconButton icon="back" label={t.back} onClick={leave} />} />}>
+    <Page header={<ReceiptPageHeader title={t.readTitle} leading={<IconButton icon="back" label={t.back} onClick={leave} />} />}>
       <section className="receipt-section" ref={photosSection}>
         <h2 className="receipt-section__title">{photosTitle(photos.count)}</h2>
         {photos.count > 0 ? <ReceiptPhotoList photos={photos.photos} disabled={rowsBusy} onRemove={photos.remove} onEdit={openEdit} /> : null}

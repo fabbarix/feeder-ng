@@ -3,8 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ToastProvider } from '../ui'
 import { findNotice } from '../test/notices'
 import { AppRoot, type AppRootProps } from './AppRoot'
+import { BACKGROUND_READ_KEY as RECEIPT_READ_KEY, getBackgroundRead } from '../features/receipt/lib/backgroundRead'
 import { ME_CACHE_KEY } from './meCache'
 
 vi.mock('./useConnectivity', () => ({ useConnectivity: () => ({ offline: true, savedAt: null }) }))
@@ -26,7 +28,9 @@ function mount(path: string, me: Response, props: AppRootProps = {}) {
   )
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </QueryClientProvider>,
   )
 }
@@ -52,7 +56,8 @@ describe('AppRoot signed out', () => {
 
   it('shows why a sign-in failed', async () => {
     mount('/sign-in?error=denied', unauthenticated())
-    expect(await screen.findByRole('alert')).toHaveTextContent(/cancelled/i)
+    // The ToastProvider's empty alert region is on the page too (the receipt watcher needs it): find the sign-in page's own alert.
+    expect((await screen.findByText(/cancelled/i)).closest('[role="alert"]:not(.toast-live)')).not.toBeNull()
   })
 })
 
@@ -90,7 +95,9 @@ describe('AppRoot offline cold reload (R10)', () => {
     )
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </QueryClientProvider>,
     )
   }
@@ -128,6 +135,27 @@ describe('AppRoot offline cold reload (R10)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: /sign out/i }))
     await waitFor(() => expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull())
+  })
+
+  it('signing out stops following a receipt read in the background (b8-rxweb)', async () => {
+    sessionStorage.setItem(RECEIPT_READ_KEY, JSON.stringify({ shopId: 7, readId: 'rd-1', clientUuids: ['u1'], startedAt: Date.now() }))
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) =>
+      url.includes('/receipt/reads/') ? new Response(JSON.stringify({ status: 'running' }), { status: 200 }) : new Response(JSON.stringify(me), { status: 200 })))
+    const router = createMemoryRouter([{ path: '/', element: <AppRoot />, children: [{ path: 'plan', element: <p>plan page</p> }] }], { initialEntries: ['/plan'] })
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('plan page')).toBeInTheDocument()
+    await waitFor(() => expect(getBackgroundRead()).toMatchObject({ status: 'reading', readId: 'rd-1' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Your menu' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /sign out/i }))
+    await waitFor(() => expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull())
+    expect(getBackgroundRead()).toBeUndefined()
+    expect(sessionStorage.getItem(RECEIPT_READ_KEY)).toBeNull()
   })
 
   describe('sign-out and the photos kept on the device', () => {

@@ -78,13 +78,34 @@ Full-screen route `/scan/receipt` (the Scan session stays mounted behind it; the
   receipt** is disabled; Edit is disabled while a read runs. Unlike Import, a new photo does not open the editor by itself.
 - The photos stay in memory only (not IndexedDB): leaving the route asks "Leave without reading?" ("The 2 photos are not kept.") in a `ConfirmDialog`.
 
-### 3.3 Progress
+### 3.3 Progress and the background read
 
 - **Read the receipt** starts the read (`POST /api/scan/receipt/reads`, §7.1) and shows a progress tile over the photo list: an
-  indeterminate bar, "Reading the receipt…", after 15 s "Long receipts can take up to a minute", and **Cancel**
-  (`DELETE`, the read stops and is not counted again).
-- The phone polls `GET …/reads/{id}` every 1.5 s, as the Recipe Assistant's read does. Leaving the screen does not cancel: the
-  result waits for 10 minutes (`jobTTL`), and the Scanned list's row reads "Receipt read: review 9 changes".
+  indeterminate bar, "Reading the receipt…", after 15 s "Long receipts can take up to a minute", "You can leave. Feeder keeps
+  reading." and **Cancel** (`DELETE`, the read stops and is not counted again). **Cancel is the only thing that stops a read.**
+- **The read belongs to the app, not to the screen** (beta.8). The server already owns it (the job runs on its own context, with the
+  120 s cap, and the result waits 10 minutes, `jobTTL`), so the phone may leave: Back, another tab of the bottom bar, a reload. A
+  module-level store (`lib/backgroundRead`, one read at a time, as the server allows one running read per User) keeps asking every
+  1.5 s, gives up after 150 s, and writes the read's id, Shop, uuids and start time (never a photo) to `sessionStorage`, so a
+  reload picks the read up again (a read the server no longer has, 404, is dropped silently). The photos stay on the photos
+  screen and are never kept, so leaving loses them, as before (§3.2); the read, once started, does not need them.
+- **Where it shows.** The Scanned list's **Read the receipt** row is the read's place, for the Shop it was started for:
+  - **reading**: "Reading the receipt…" with "You can leave. Feeder keeps reading."; pressing it opens the progress;
+  - **ready**: "Receipt read: review 9 changes" with "Nothing changes until you apply."; pressing it opens the Receipt review
+    (1 change: "review 1 change"; none: "Receipt read: nothing to change"); a Dismiss button forgets the read, so a new one can
+    start (else the ready row would hold the photos screen for the 10 minutes);
+  - **failed**: "The receipt could not be read" with the failure's words (§9) and a Dismiss button; pressing the row clears it and
+    opens the photos to read again (the photos were not kept, so a retry means taking them again).
+  These states win over offline, waiting scans and the assistant being off: the read exists already.
+- **A toast elsewhere.** When a read finishes while the User is anywhere but the Scan screen or the receipt routes, a toast says
+  so: "Receipt read: review 9 changes" with **Review** (opens the Receipt review), or the failure's words with **Read it again**
+  (error toast, stays until dismissed). On the Scan screen and the receipt routes the User sees it already, so there is no toast.
+- **A stale read.** The row goes back to the plain **Read the receipt** when the 10 minutes have passed, when the review applies
+  the read, when **Read it again** forgets it, when an apply fails and is put back (`receipt_apply_failed`: the Scanned list was
+  re-keyed, so the read no longer matches it), and when an apply answers `410 receipt_read_gone` (the review says so; the read is
+  forgotten). A 404 while asking is the same "gone" (the server restarted): a failure with `receipt_read_gone`, or nothing at all
+  when it is found out after a reload. `409 receipt_read_not_done` cannot happen from the row (it opens the review only when ready).
+- The phone polls `GET …/reads/{id}` every 1.5 s, as the Recipe Assistant's read does.
 
 ### 3.4 The review
 
@@ -182,7 +203,7 @@ sentinels of §5 for anything not printed; never invent a line. The rows are dat
 - The photos live in the request and the job's memory only; they are never written to disk or to `/data/images`, and the job
   drops them when the model call ends. The job keeps only the answer, for 10 minutes.
 - Logs carry the request id, token counts and timing (as `logCall` does), never the photos, the rows or the answer.
-- Settings › Recipe Assistant gains one sentence: "Members can also send receipt photos and their Scanned list to read a
+- Settings › Recipe Assistant gains one sentence: "Users can also send receipt photos and their Scanned list to read a
   receipt." (The Admin turns the whole assistant on or off; no separate switch, Q2.)
 
 ## 5. The output schema: small on purpose
@@ -247,12 +268,14 @@ objects inside arrays of objects.
 `additionalProperties: false`; at most one array, and no array or object property inside its items; at most 16 properties in total
 (a new field needs a deliberate change to the test, and a run of the live test below).
 
-**Live test** (`internal/recipeassistant/claude/live_receipt_schema_test.go`, opt-in, billed a few tokens, never in CI):
-`TestLiveReceiptSchemaCompiles` sends `receipt.OutputSchema` with a one-line message and `MaxTokens: 16` to the default model under
-`FEEDER_LIVE_SCHEMA_CHECK=1` and `FEEDER_ANTHROPIC_KEY`, and passes only on success or `CodeOutputTooLong` (as
-`TestLiveOutputSchemaCompiles` does). A second opt-in test, `TestLiveReceiptReadsAFixture` (`FEEDER_LIVE_ANTHROPIC_KEY`), reads
-`internal/receipt/testdata/receipt-esselunga.jpg` (a synthetic receipt made for the test, no real purchase) against fixture rows
-and checks that `Finish` accepts the answer and at least the Price of row 0 is proposed.
+**Live tests** (opt-in, billed a few tokens, never in CI). What they check:
+- `TestLiveReceiptSchemaCompiles` (`internal/recipeassistant/claude`) sends the exact `receipt.OutputSchema()` with a one-line
+  message and `MaxTokens: 16` to the default model, and passes only on success or `CodeOutputTooLong` (a cut-off answer proves the
+  schema compiled; a refused schema fails before any token);
+- `TestLiveReceiptReadCompletes` (`internal/receipt/service`) reads a synthetic receipt image (drawn by the test, no real purchase)
+  through the whole read service with the real adapter, and checks that the read completes with at least one proposal.
+
+How to switch them on, and the one rule for the key they use, are in [docs/dev/live-tests.md](../dev/live-tests.md).
 
 ### 5.1 Finish: from the answer to a checked result
 
@@ -408,9 +431,9 @@ Catalogue and List ports to accept a `*sql.Tx`; that refactor is not proposed he
   matches by name). Accepted as a known leftover (RR3 review); no port change.
 - **No reorder of the receipt photos in 1.0.0-beta.7** (RR4 review). The drag handle of mock-up 13 is not built: the photos stay
   in the order taken. Rotate and crop (Edit) are built (§3.2); a photo that is badly framed can also be removed and retaken.
-- **Leaving the photos screen while a read runs cancels it** (RR4, pinned by its tests): the screen stops polling and sends the
-  `DELETE` with `keepalive`, so the slot is freed at once. §3.3's "leaving does not cancel" and the Scanned list row "Receipt
-  read: review 9 changes" are not built; a finished read is still kept for its 10 minutes, so Back from the review returns to it.
+- **Leaving the photos screen while a read runs** cancelled it in 1.0.0-beta.7 (RR4: the screen sent the `DELETE` with `keepalive`).
+  From 1.0.0-beta.8 it does not: the read goes on in the background and the Scanned list row and a toast say when the review is
+  ready (§3.3). The server needed no change.
 
 ## 9. Cost, limits and errors
 
@@ -488,7 +511,7 @@ RR0 ─► RR1 ─┬─► RR2 ───────────┐
 - **Go, service**: the read job with the fake Claude (done, refusal, timeout, invalid output, cancel); Limiter sharing with recipe
   reads; photos never written to disk; the apply plan end to end on a real SQLite (prices, weights, quantities, Shop and date,
   Add of a new Supply, Remove), the fingerprint 409, and compensation after an injected failure at each step (nothing left changed).
-- **Opt-in live**: `TestLiveReceiptSchemaCompiles`, `TestLiveReceiptReadsAFixture` (§5).
+- **Opt-in live**: `TestLiveReceiptSchemaCompiles`, `TestLiveReceiptReadCompletes` (§5; how to run them: [docs/dev/live-tests.md](../dev/live-tests.md)).
 - **Web (Vitest)**: `reviewState` (defaults, Accept all, Clear all, Add needing its form), totals note, offline and waiting states,
   privacy note present, `ConfirmDialog` on leaving; component tests of each section.
 - **BDD**: §10 RR5.
@@ -512,7 +535,7 @@ in the same release as SR0 to SR6, H4 and H7′.
 | # | Question | Answer |
 |---|---|---|
 | Q1 | Photos | **Up to 4 photos** (`recipeassistant.MaxPhotos`). *Proposed, not asked:* the doc's proposal stands. |
-| Q2 | Who may send | **Any Member**, with the privacy note shown, the same as recipe reading. No separate switch. *Asked.* |
+| Q2 | Who may send | **Any User**, with the privacy note shown, the same as recipe reading. No separate switch. *Asked.* |
 | Q3 | The limit | **Reads share the Recipe Assistant's limit** (one running read per User, 30 accepted reads per Household per rolling hour for non-Admins). *Proposed, not asked.* |
 | Q4 | Keeping the receipt | **The photo is discarded after the read and never stored.** *Asked.* |
 | Q5 | Late receipts | **Only today's shop can be read**: the current Scanned list, before Change Shop. An earlier session cannot be read. *Asked.* |

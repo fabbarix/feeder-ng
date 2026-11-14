@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatPriceMinor } from '../../../ui/lib/moneyInput'
-import { Button, FormActions, IconButton, Page, PageHeader, StickyActionBar, useConfirm, useToast } from '../../../ui'
+import { Button, FormActions, IconButton, Page, StickyActionBar, useConfirm, useToast } from '../../../ui'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { ReceiptAlert } from '../components/ReceiptAlert'
+import { ReceiptPageHeader } from '../components/ReceiptPageHeader'
 import { ReviewSection } from '../components/ReviewSection'
 import { ReviewSummary } from '../components/ReviewSummary'
 import { useReceiptReview } from '../hooks/useReceiptReview'
@@ -51,7 +52,7 @@ export function ReceiptReviewScreen({ renderAdd }: ReceiptReviewScreenProps = {}
   }, [highlightId])
 
   const header = (
-    <PageHeader title={t.reviewTitle} leading={<IconButton icon="back" label={t.back} onClick={() => void leave()} />} />
+    <ReceiptPageHeader title={t.reviewTitle} leading={<IconButton icon="back" label={t.back} onClick={() => void leave()} />} />
   )
 
   // Back with rows checked asks first; the read stays kept for its 10 minutes.

@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { http } from '../lib/http'
 import { SignedOut } from '../features/signin/components/SignedOut'
 import { forgetStoredPhotos } from '../features/import'
+import { ReceiptReadWatcher, resetBackgroundRead } from '../features/receipt'
 import { clearCachedMe } from './meCache'
 import type { ShellStatusHook } from './features'
 import { AppShell } from './AppShell'
@@ -35,6 +36,7 @@ export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
 
   const signOut = async () => {
     clearCachedMe() // forget the remembered User first: signing out must never leave it behind
+    resetBackgroundRead() // a receipt read in the background is this User's: it stops being followed, and its kept result goes
     try {
       await forgetStoredPhotos() // the photos kept on the device for a photo read go too
     } catch {
@@ -43,13 +45,17 @@ export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
     await http.post('/api/logout')
     queryClient.setQueryData(ME_QUERY_KEY, null)
   }
+  // The receipt read goes on in the background while a User is signed in; the watcher (one, above both shell frames) says when it ends.
   return (
-    <AppShell
-      user={{ displayName: me.data.displayName }}
-      onSignOut={signOut}
-      navItems={navItems}
-      pendingScans={pendingScans}
-      pendingAccessRequests={pendingAccessRequests}
-    />
+    <>
+      <ReceiptReadWatcher />
+      <AppShell
+        user={{ displayName: me.data.displayName }}
+        onSignOut={signOut}
+        navItems={navItems}
+        pendingScans={pendingScans}
+        pendingAccessRequests={pendingAccessRequests}
+      />
+    </>
   )
 }

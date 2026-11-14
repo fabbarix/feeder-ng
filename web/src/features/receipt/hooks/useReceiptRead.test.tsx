@@ -12,11 +12,14 @@
 //     cancel(): Promise<void>               DELETE, back to 'idle'
 //     reset(): void                         clears a failure ('idle')
 //   }
+//   b8-rxweb: the hook is a binding to lib/backgroundRead (the read belongs to the app): phase 'starting' = reading without a readId, 'running' = reading, 'done' = ready,
+//   'failed' = failed, 'idle' = nothing or another Shop's read. Unmounting does NOT cancel; it only clears a failure the screen was showing.
 //   On done the finished read is kept with rememberRead (lib/readStore) with the session it was made from.
 // Pinned constants of ../lib/readPolling: POLL_INTERVAL_MS = 1500, POLL_TIMEOUT_MS = 150_000 (the server cuts a read at 120 s), LONG_READ_AFTER_S = 15.
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
+import { dismissBackgroundRead, getBackgroundRead, resetBackgroundRead } from '../lib/backgroundRead'
 import { forgetRead, recallRead } from '../lib/readStore'
 import { LONG_READ_AFTER_S, POLL_INTERVAL_MS, POLL_TIMEOUT_MS } from '../lib/readPolling'
 import { readDone, SHOP_ID, UUIDS } from '../fixtures.test-helper'
@@ -39,12 +42,16 @@ async function begin(h: ReturnType<typeof setup>) {
 beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
+  resetBackgroundRead()
   forgetRead()
   api.startRead.mockResolvedValue({ id: 'rd-1' })
   api.getRead.mockResolvedValue(running)
   api.cancelRead.mockResolvedValue(undefined)
 })
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  resetBackgroundRead()
+  vi.useRealTimers()
+})
 
 describe('constants', () => {
   it('poll every 1.5 s, give up after 150 s, say "long" after 15 s', () => {
@@ -248,21 +255,72 @@ describe('cancel and leaving', () => {
     expect(h.result.current.phase).toBe('idle')
     expect(recallRead()).toBeUndefined()
   })
-  it('leaving the screen while running stops polling and frees the slot (a best-effort DELETE that outlives the page)', async () => {
+  it('leaving the screen while running does NOT cancel: the read goes on in the background (b8-rxweb; design 3.3)', async () => {
     const h = setup()
     await begin(h)
-    h.unmount()
-    expect(api.cancelRead).toHaveBeenCalledWith('rd-1', { keepalive: true })
-    await tick(10_000)
-    expect(api.getRead).not.toHaveBeenCalled()
-  })
-  it('leaving after the read is done sends no DELETE', async () => {
-    api.getRead.mockResolvedValue(readDone())
-    const h = setup()
-    await begin(h)
-    await tick(POLL_INTERVAL_MS)
     h.unmount()
     expect(api.cancelRead).not.toHaveBeenCalled()
+    expect(getBackgroundRead()).toMatchObject({ status: 'reading', readId: 'rd-1' })
+    api.getRead.mockResolvedValue(readDone())
+    await tick(POLL_INTERVAL_MS)
+    expect(getBackgroundRead()).toMatchObject({ status: 'ready', readId: 'rd-1' })
+    expect(recallRead()).toMatchObject({ readId: 'rd-1' })
+  })
+  it('coming back to the screen while the read runs shows it running, with the seconds so far', async () => {
+    const first = setup()
+    await begin(first)
+    first.unmount()
+    await tick(20_000)
+    const back = setup()
+    expect(back.result.current).toMatchObject({ phase: 'running', busy: true, readId: 'rd-1' })
+    await tick(1000)
+    expect(back.result.current.elapsedSeconds).toBeGreaterThanOrEqual(LONG_READ_AFTER_S)
+  })
+  it('coming back after the read finished shows it done', async () => {
+    const first = setup()
+    await begin(first)
+    first.unmount()
+    api.getRead.mockResolvedValue(readDone())
+    await tick(POLL_INTERVAL_MS)
+    expect(setup().result.current).toMatchObject({ phase: 'done', busy: false })
+  })
+  it('a read of another Shop is not this screen\'s read', async () => {
+    const other = renderHook(() => useReceiptRead({ shopId: SHOP_ID + 1, clientUuids: UUIDS }))
+    const mine = setup()
+    await begin(mine)
+    expect(other.result.current.phase).toBe('idle')
+  })
+  it('starting while another Shop\'s read runs says a receipt is already being read, until that read ends (reviewer)', async () => {
+    const mine = setup()
+    await begin(mine)
+    const other = renderHook(() => useReceiptRead({ shopId: SHOP_ID + 1, clientUuids: UUIDS }))
+    await act(async () => { await other.result.current.start(photos) })
+    expect(api.startRead).toHaveBeenCalledTimes(1)
+    expect(other.result.current).toMatchObject({ phase: 'failed', busy: false, error: { code: 'read_in_progress' } })
+    await act(async () => { await other.result.current.cancel() })
+    expect(getBackgroundRead()).toMatchObject({ status: 'reading', shopId: SHOP_ID })
+    expect(api.cancelRead).not.toHaveBeenCalled()
+    api.getRead.mockResolvedValue(readDone())
+    await tick(POLL_INTERVAL_MS)
+    expect(other.result.current.phase).toBe('idle')
+  })
+  it('leaving the screen on a failure the screen showed clears it, so the Scan screen does not show it again', async () => {
+    api.startRead.mockRejectedValue(new ApiError(0, 'network', 'down'))
+    const h = setup()
+    await begin(h)
+    expect(getBackgroundRead()).toMatchObject({ status: 'failed' })
+    h.unmount()
+    expect(getBackgroundRead()).toBeUndefined()
+  })
+  it('a failure that came while the screen was away is still there when it comes back', async () => {
+    const first = setup()
+    await begin(first)
+    first.unmount()
+    api.getRead.mockResolvedValue({ status: 'failed', error: { code: 'no_receipt_found', message: 'm' } })
+    await tick(POLL_INTERVAL_MS)
+    const back = setup()
+    expect(back.result.current).toMatchObject({ phase: 'failed', error: { code: 'no_receipt_found' } })
+    dismissBackgroundRead()
   })
   it('leaving while idle sends no DELETE', () => {
     setup().unmount()

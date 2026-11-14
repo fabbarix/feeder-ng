@@ -10,6 +10,8 @@ export const routes: RouteObject[] = [
 ]
 
 export { ReadReceiptFooter } from './components/ReadReceiptFooter'
+export { ReceiptReadWatcher } from './components/ReceiptReadWatcher'
+export { resetBackgroundRead } from './lib/backgroundRead'
 export type { ReadReceiptFooterProps } from './components/ReadReceiptFooter'
 export { ReceiptReviewScreen } from './screens/ReceiptReviewScreen'
 export { ReceiptReviewRoute } from './screens/ReceiptReviewRoute'
