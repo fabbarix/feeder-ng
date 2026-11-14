@@ -11,9 +11,13 @@
   color: var(--color-muted);
 }
 
-.search-field__control:focus-within {
+/* A11Y-02: the frame rings while its input has focus; Clear search inside it rings inside itself (ui/focusLayer.css). */
+.search-field__control:has(input:focus) {
   color: var(--color-text);
-  box-shadow: var(--focus-ring);
+  border-color: var(--color-accent);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
 }
 
 .search-field__input {

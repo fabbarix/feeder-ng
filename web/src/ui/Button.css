@@ -4,7 +4,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-inline-size: 0;
   max-inline-size: 100%;
   block-size: fit-content;
@@ -22,7 +22,7 @@
 /* Sizes: sm 36 high (hit area padded to 44 by ::after), md 44, lg 52, xl 64. */
 .button[data-size='sm'] {
   min-block-size: 36px;
-  padding-inline: 14px;
+  padding-inline: var(--space-3);
   border-radius: var(--radius-thumb);
   font-size: var(--text-label-size);
   font-weight: var(--text-label-weight);
@@ -36,13 +36,13 @@
 
 .button[data-size='md'] {
   min-block-size: 44px;
-  padding-inline: 18px;
+  padding-inline: var(--space-4);
   border-radius: var(--radius-button);
 }
 
 .button[data-size='lg'] {
   min-block-size: 52px;
-  padding-inline: 20px;
+  padding-inline: var(--space-5);
   border-radius: var(--radius-button);
   font-size: var(--text-body-strong-size);
   font-weight: var(--text-title-3-weight);
@@ -50,7 +50,7 @@
 
 .button[data-size='xl'] {
   min-block-size: 64px;
-  padding-inline: 24px;
+  padding-inline: var(--space-6);
   border-radius: var(--radius-button-lg);
   font-size: var(--text-title-3-size);
   font-weight: var(--text-title-3-weight);
@@ -150,8 +150,8 @@
 }
 
 .button:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .button:disabled {
@@ -195,7 +195,7 @@
   inline-size: 100%;
 }
 
-@media (max-width: 599px) {
+@media (width < 37.5em) {
   .button[data-block='phone'] {
     inline-size: 100%;
   }
@@ -206,9 +206,9 @@
   white-space: nowrap;
 }
 
-/* DS-03: iconOnly="narrow". In the narrow band (below 360 px) only the icon shows, in a square 44 px box; the label stays in
+/* DS-03: iconOnly="narrow". In the narrow band (NARROW, 375 px and below at 16 px text; amendment A1) only the icon shows, in a square 44 px box; the label stays in
    the accessibility tree as the button's name. */
-@media (width < 22.5em) {
+@media (width < 23.5em) {
   .button[data-icon-only='narrow'] {
     inline-size: 44px;
     padding-inline: 0;

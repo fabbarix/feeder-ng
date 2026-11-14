@@ -1,8 +1,6 @@
 /* Bento base styles. Colours come from the accent palette set on :root by ThemeProvider (apply.ts).
    The Basil defaults below are the first paint, before ThemeProvider runs (plan 3.1 to 3.3). */
 :root {
-  /* One focus ring for every field control (docs/dev/design/r2f-fields.md 3); the colour follows the scheme. */
-  --focus-ring: 0 0 0 2px var(--color-accent);
   /* Focus (A11Y-02): one ring for every control. The colour is a token so a container can change it (on-accent on an accent
      fill, bg on an inverse surface); inside a clipping container the ring is drawn inward; a nested control takes the inner width. */
   --focus-ring-width: 3px;
@@ -247,8 +245,8 @@
   --color-on-secondary-container: var(--color-accent-text);
 }
 
-/* Phone: a value column that gives the name the room (system.md 3). */
-@media (max-width: 599px) {
+/* Phone: a value column that gives the name the room (system.md 3). Below the tablet band (DS-09). */
+@media (width < 37.5em) {
   :root {
     --row-value-min: var(--row-value-narrow);
   }
@@ -476,9 +474,10 @@ a {
   color: inherit;
 }
 
-:focus-visible {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 2px;
+/* A11Y-02: the one focus ring. Zero specificity, so a primitive that moves the ring (a frame, a track, inside a nested control) wins. */
+:where(:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {

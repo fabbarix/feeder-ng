@@ -19,6 +19,29 @@
   background: var(--color-accent);
   color: var(--color-on-accent);
   border-radius: var(--radius-hero);
+  /* A11Y-02, TB-05: the ring inside a hero is the hero's own text colour (its currentColor), never the accent it sits on. It is
+     spelled as the token rather than the keyword: a custom property holding currentColor resolves on the focused control (the Cook
+     button's accent-text), not on the hero. */
+  --focus-ring-color: var(--color-on-accent);
+}
+
+/* A11Y-03, TB-05: the dark hero follows the chosen Colour mode (data-scheme, set for Light, Dark and System), never the OS. In dark
+   it is the darker accent container with the text colour, and its primary action (Cook) is accent solid. */
+:root[data-scheme='dark'] .tile[data-variant='hero'] {
+  background: var(--color-soft-strong);
+  color: var(--color-text);
+  --focus-ring-color: var(--color-text);
+}
+
+:root[data-scheme='dark'] .tile[data-variant='hero'] .button[data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* A why chip on a hero follows the hero's colour, in light and dark alike. */
+.tile[data-variant='hero'] .chip[data-kind='why'] {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: inherit;
 }
 
 .tile[data-variant='soft'] {
@@ -136,8 +159,8 @@
 }
 
 .tile__stretch:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: -3px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
 }
 
 /* Inner controls sit above the stretched target; a ListRow target inside a tile keeps its own absolute layer.
@@ -156,7 +179,7 @@
 .tile-metric {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-half);
 }
 
 .tile-metric__value {

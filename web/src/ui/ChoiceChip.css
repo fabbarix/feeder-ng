@@ -36,8 +36,8 @@
 
 /* Inside the pill: a sheet body scrolls (overflow) and would clip a ring drawn outside it. */
 .choice-chip:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: -3px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
 }
 
 .choice-chip:disabled {
@@ -72,6 +72,7 @@
   flex: none;
   color: var(--color-muted);
   font-size: var(--text-chip-size);
+  line-height: var(--text-label-line);
   font-weight: var(--text-meta-weight);
 }
 

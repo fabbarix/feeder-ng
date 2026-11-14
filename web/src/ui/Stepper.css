@@ -15,11 +15,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.stepper__value:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
-
 .stepper[data-size='sm'] {
   justify-self: start;
   gap: var(--space-1);
@@ -51,5 +46,6 @@
 .stepper__unit {
   color: var(--color-muted);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
 }

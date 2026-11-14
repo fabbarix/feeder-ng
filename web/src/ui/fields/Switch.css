@@ -15,6 +15,7 @@
 
 .switch-row__label {
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: var(--text-body-strong-weight);
 }
 
@@ -22,13 +23,17 @@
   margin: 0;
   color: var(--color-on-surface-variant);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
 }
 
 .switch {
+  /* 52 x 32 track, 26 thumb: the thumb sits (32 - 26) / 2 = 3 px in from the track's edge. */
+  --switch-track: 32px;
+  --switch-thumb: 26px;
   position: relative;
   flex: none;
   inline-size: 52px;
-  block-size: 32px;
+  block-size: var(--switch-track);
   padding: 0;
   border: 0;
   border-radius: var(--radius-pill);
@@ -43,10 +48,10 @@
 
 .switch__thumb {
   position: absolute;
-  inset-block-start: 3px;
-  inset-inline-start: 3px;
-  inline-size: 26px;
-  block-size: 26px;
+  inset-block-start: calc((var(--switch-track) - var(--switch-thumb)) / 2);
+  inset-inline-start: calc((var(--switch-track) - var(--switch-thumb)) / 2);
+  inline-size: var(--switch-thumb);
+  block-size: var(--switch-thumb);
   border-radius: 50%;
   background: var(--color-surface);
   box-shadow: var(--elev-1);
@@ -58,8 +63,8 @@
 }
 
 .switch:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .switch:disabled {

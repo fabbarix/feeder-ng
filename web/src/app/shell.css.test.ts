@@ -114,7 +114,7 @@ describe('bottom bar (plan 4.5)', () => {
     expect(link['height']).toBe('54px')
     expect(link['border-radius']).toBe('var(--radius-button)')
     expect(link['flex-direction']).toBe('column')
-    expect(link['gap']).toBe('2px')
+    expect(link['gap']).toBe('var(--space-half)') // B9-07 (DS-11): the 2 px micro gap token
     expect(link['color']).toBe('var(--color-muted)')
     const label = d('.bottom-bar__label')
     expect(label['font-size']).toBe('var(--text-nav-size)')
@@ -205,7 +205,7 @@ describe('avatar menu (5.17)', () => {
     const trigger = d('.your-menu-button')
     expect(trigger['width']).toBe('40px')
     expect(trigger['height']).toBe('40px')
-    expect(trigger['border-radius']).toBe('14px')
+    expect(trigger['border-radius']).toBe('var(--radius-control)') // 14 px (DS-11)
   })
   it('Sign out is danger tertiary text; the divider is a hairline', () => {
     expect(d(".your-menu__item[data-tone='danger']")['color']).toBe('var(--status-danger-fg)')
@@ -247,7 +247,7 @@ describe('review fixes: anchor, rows, rail pill, trigger', () => {
   })
   it('the avatar trigger is a 40 px square with radius 14', () => {
     const t = d('.your-menu-button')
-    expect([t['width'], t['height'], t['border-radius']]).toEqual(['40px', '40px', '14px'])
+    expect([t['width'], t['height'], t['border-radius']]).toEqual(['40px', '40px', 'var(--radius-control)']) // 14 px (DS-11)
   })
   it('the avatar trigger paints a surface-2 square, so the round avatar sits inside a rounded square, not alone', () => {
     const t = d('.your-menu-button')
@@ -286,7 +286,7 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     const root = declarations(readStylesCss().replace(/\/\*[\s\S]*?\*\//g, ''), ':root')
     return (v: string | undefined): number => {
       const raw = (v ?? '0').trim()
-      const t = /^var\((--space-\d+)\)$/.exec(raw)
+      const t = /^var\((--space-(?:\d+|half))\)$/.exec(raw) // B9-07 (DS-11): --space-half is the 2 px micro gap
       if (t) return Number.parseFloat(root[t[1]!] ?? 'NaN')
       return /^0(px)?$/.test(raw) ? 0 : Number.parseFloat(raw)
     }
