@@ -23,7 +23,7 @@ func TestALegacyTickWithALotButNoQuantitySaysAddedNullAndTakeBackTakesWhatIsLeft
 	} else {
 		r.MustJSON(t, &lot)
 	}
-	if r := c.Patch("/api/stock/lots/"+itoa(lot.ID), map[string]any{"quantity": 150}); r.Status != 200 { // a Cooked meal used 250
+	if r := c.Patch("/api/stock/lots/"+itoa(lot.ID), map[string]any{"quantity": 150}); r.Status != 200 { // a Cooked Planned Meal used 250
 		t.Fatalf("use = %d %s", r.Status, r.Body)
 	}
 	if _, err := env.DB.Exec(`INSERT INTO shopping_ticks(range_to,ingredient_id,needed,by,ticked_at)
