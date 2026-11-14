@@ -1,9 +1,8 @@
-// B9-10 (DS-04, DS-07): the page-layout files this package adds, and the one it cannot turn on. Pure modules, no browser.
+// B9-10 (DS-04, DS-07): the page-layout files this package adds. (The large-text scenario font-24-settings-shops-id is B9-09's to re-enable.) Pure modules, no browser.
 //  - scenario recipe-editor-long-tag (scripts/lib/page-layout/scenarios/recipe-editor.mjs): the editor of the Recipe that carries the
 //    36-character Tag, at 375 and 390 (A1: 375 replaces 320). Before the .tag-input fix P13 finds the chip, its control and its label
 //    15 px past the tile at 375.
 //  - the seed step (page-layout-seed/recipe-editor.mjs) that gives the seeded Recipe that Tag.
-//  - the held scenario font-24-settings-shops-id: its cause is in features/shops and features/products (B9-09's), not here.
 import { describe, expect, it } from 'vitest'
 
 const nodeModule = 'node:module'
@@ -51,16 +50,5 @@ describe('the seed step that gives the seeded Recipe the long Tag', () => {
     expect(put!.body.tags).toContain('HEARTY HOMEMADE MUSHROOM WELLINGTONS')
     expect(put!.body.tags.length).toBeGreaterThan(1)
     expect(ctx.LONG_TAG.length).toBeLessThanOrEqual(40)
-  })
-})
-
-describe('font-24-settings-shops-id stays held: its cure is B9-09, not B9-10', () => {
-  // /settings/shops/:id is features/shops/screens/ShopScreen.tsx, which draws h2.pg__tile-title and p.pg__muted from
-  // features/products/products.css. Both folders are B9-09's. B9-10 owns no file of the cause, so it cannot turn the scenario on;
-  // the main session re-enables it (delete the FONT_24_DEFERRED entry) after B9-09 merges.
-  const f24 = req(scripts('lib/page-layout/scenarios/font-24.mjs')) as { FONT_24_DEFERRED: Record<string, string>; FONT_24_SCENARIO_NAMES: string[] }
-  it('is still deferred, and no file of the five folders of B9-10 is where the .pg__* look comes from', () => {
-    expect(f24.FONT_24_DEFERRED['/settings/shops/:id']).toBeDefined()
-    expect(f24.FONT_24_SCENARIO_NAMES).not.toContain('font-24-settings-shops-id')
   })
 })
