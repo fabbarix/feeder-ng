@@ -1,7 +1,7 @@
 // /settings/tags (ListPage): the Tags by name, each as a pill with what uses it. Add, edit, merge and delete through the sheet.
 import type { ReactElement } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Button, Chip, EmptyState, ListGroup, ListPage, ListRow, PageHeader } from '../../../ui'
+import { Button, Chip, EmptyState, ListGroup, ListPage, ListRow, Muted, PageHeader } from '../../../ui'
 import { MergeTargetDialog } from '../components/MergeTargetDialog'
 import { TagSheet } from '../components/TagSheet'
 import { useTagsPage } from '../hooks/useTagsPage'
@@ -15,7 +15,7 @@ export function TagsScreen(): ReactElement | null {
   const breadcrumbs = useBreadcrumbs()
   return (
     <ListPage className="tags-screen" header={<PageHeader title={tagsStrings.title} breadcrumbs={breadcrumbs} />}>
-      <p className="pg__muted">{tagsStrings.intro}</p>
+      <Muted>{tagsStrings.intro}</Muted>
       {page.isLoading ? (
         <p role="status">{tagsStrings.loading}</p>
       ) : page.isError ? (

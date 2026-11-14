@@ -1,5 +1,5 @@
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Button, FormActions, PageHeader, StickyActionBar, Tile } from '../../../ui'
+import { Button, FormActions, Muted, PageHeader, StickyActionBar, Tile } from '../../../ui'
 import { ApiKeyRow } from '../components/ApiKeyRow'
 import { AssistantToggleTile } from '../components/AssistantToggleTile'
 import { ConnectionTile } from '../components/ConnectionTile'
@@ -21,9 +21,11 @@ export function RecipeAssistantSettingsPage() {
     return (
       <div className="ra">
         {header}
-        <p role="status" className="ra__muted">
-          {raStrings.loading}
-        </p>
+        <div role="status">
+          <Muted>
+            {raStrings.loading}
+          </Muted>
+        </div>
       </div>
     )
   }

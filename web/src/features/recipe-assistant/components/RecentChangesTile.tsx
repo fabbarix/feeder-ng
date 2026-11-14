@@ -1,4 +1,4 @@
-import { ListGroup, ListRow, Tile } from '../../../ui'
+import { ListGroup, ListRow, Muted, Tile } from '../../../ui'
 import { changeRow, type ModelNames } from '../lib/changes'
 import { raStrings } from '../strings'
 import type { SettingsChange } from '../types'
@@ -17,7 +17,7 @@ export function RecentChangesTile({ changes, now, modelNames }: RecentChangesTil
   return (
     <Tile as="section" aria-label={raStrings.recentChanges} span="full">
       {changes.length === 0 ? (
-        <p className="ra__muted">{raStrings.noChanges}</p>
+        <Muted>{raStrings.noChanges}</Muted>
       ) : (
         <ListGroup label={raStrings.recentChanges}>
           {changes.map((c, i) => {

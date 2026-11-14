@@ -1,4 +1,4 @@
-import { Icon } from '../../../ui'
+import { Icon, Muted } from '../../../ui'
 import { checkCopy } from '../lib/errors'
 import { raStrings } from '../strings'
 import type { TestResult } from '../types'
@@ -17,7 +17,7 @@ const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`
 export function TestResultTile({ running, result, errorMessage }: TestResultTileProps) {
   return (
     <div className="ra__result" role="status" aria-live="polite">
-      {running ? <p className="ra__muted">{raStrings.testing}</p> : null}
+      {running ? <Muted>{raStrings.testing}</Muted> : null}
       {!running && errorMessage ? (
         <p className="ra__line">
           <Icon name="error" size={20} />
@@ -38,7 +38,7 @@ export function TestResultTile({ running, result, errorMessage }: TestResultTile
           {result.ok ? (
             <p className="ra__line">
               <strong>{result.model ? `Connected to ${result.model.name}` : 'Connected'}</strong>
-              <span className="ra__muted">{seconds(result.latencyMs)}</span>
+              <Muted as="span">{seconds(result.latencyMs)}</Muted>
             </p>
           ) : null}
         </>

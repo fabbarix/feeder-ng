@@ -24,10 +24,6 @@
   flex: 1;
   min-inline-size: 0;
 }
-.ra__muted {
-  margin: 0;
-  color: var(--color-muted);
-}
 .ra__line {
   display: flex;
   align-items: center;

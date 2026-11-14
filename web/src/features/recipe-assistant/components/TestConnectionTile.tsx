@@ -1,4 +1,4 @@
-import { Button, Tile } from '../../../ui'
+import { Button, Muted, Tile } from '../../../ui'
 import { raIcons } from '../icons'
 import { raStrings } from '../strings'
 import type { TestResult } from '../types'
@@ -24,7 +24,7 @@ export function TestConnectionTile({ canRun, running, hint, result, errorMessage
           {raStrings.testConnection}
         </Button>
       </div>
-      {hint ? <p className="ra__muted">{hint}</p> : null}
+      {hint ? <Muted>{hint}</Muted> : null}
       <TestResultTile running={running} result={result} errorMessage={errorMessage} />
     </Tile>
   )
