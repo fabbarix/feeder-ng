@@ -26,6 +26,8 @@ import { CoursePicker, type CoursePickerProps } from './CoursePicker/CoursePicke
 import type { CourseChoice } from '../lib/courses'
 import { Stepper } from './Stepper'
 import type { FieldSize } from './fields/Field'
+import { Muted } from './Muted'
+import { Overline } from './Overline'
 import { Page } from './Page'
 import { PageHeader } from './PageHeader'
 import { StickyActionBar } from './StickyActionBar'
@@ -34,6 +36,9 @@ import { MemberPill } from './MemberPill/MemberPill'
 import { WeekdayPicker } from './WeekdayPicker/WeekdayPicker'
 import { ProgressTile } from './ProgressTile'
 import { RecipeThumb } from './RecipeThumb'
+import { SectionTitle } from './SectionTitle'
+import { Cluster, Stack } from './Stack'
+import { TileHeader } from './TileHeader'
 import { Tile, TileMetric } from './Tile'
 import { TimerTile } from './TimerTile'
 import { WhyChip } from './WhyChip'
@@ -161,6 +166,28 @@ function CloseButtonGroup() {
 
 // The warn tone (and its tile tint) arrives with B9-02's tokens.
 const DETAIL_TONES = ['spoil', 'info', 'danger', 'leftover', 'neutral'] as const satisfies readonly DetailTone[]
+
+// B9-02 (DS-07, DS-08): the type and layout primitives.
+function TypeLayoutGroup() {
+  return (
+    <Group name="SectionTitle, TileHeader, Muted, Overline, Stack, Cluster">
+      <Cell caption="Tile with TileHeader, Stack and Cluster">
+        <Tile>
+          <Stack>
+            <TileHeader icon="leftover" title="Leftovers" count={2} />
+            <Overline>This week</Overline>
+            <SectionTitle as="h3">Chicken curry</SectionTitle>
+            <Muted>2 Portions, use by Thursday</Muted>
+            <Cluster>
+              <Button variant="secondary">Plan</Button>
+              <Button variant="secondary">Threw it out</Button>
+            </Cluster>
+          </Stack>
+        </Tile>
+      </Cell>
+    </Group>
+  )
+}
 
 function DetailListGroup() {
   return (
@@ -774,6 +801,7 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <IconButtonGroup />
       <CloseButtonGroup />
       <DetailListGroup />
+      <TypeLayoutGroup />
       <ChipGroup />
       <WhyGroup />
       <TileGroup />
