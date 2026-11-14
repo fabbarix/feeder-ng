@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -27,8 +28,12 @@ func (f fixture) storedLot(t *testing.T, id int64) store.StoredLot {
 	return l
 }
 
-// withoutCreatedAt compares Lots the way a person would: created_at is when the row was written.
-func withoutCreatedAt(l store.StoredLot) store.StoredLot { l.CreatedAt = time.Time{}; return l }
+// sameLot compares Lots the way a person would, by value (StoragePlaceID, ProductID and ShopID are pointers, so == would
+// compare addresses), leaving out created_at, which is when the row was written.
+func sameLot(a, b store.StoredLot) bool {
+	a.CreatedAt, b.CreatedAt = time.Time{}, time.Time{}
+	return reflect.DeepEqual(a, b)
+}
 
 // ---- GiveBack ----
 
@@ -71,7 +76,7 @@ func TestGiveBackPutsAnEmptiedLotBackWithItsIdDatesAndStoragePlace(t *testing.T)
 		t.Fatalf("GiveBack = %+v, %v", out, err)
 	}
 	after := f.storedLot(t, lot.ID) // the same id
-	if withoutCreatedAt(after) != withoutCreatedAt(before) {
+	if !sameLot(after, before) {
 		t.Errorf("Lot after = %+v, want exactly the Lot before %+v (id, dates, Storage Place, source)", after, before)
 	}
 }
@@ -204,7 +209,7 @@ func TestUndoThrowOutPutsTheLotBackAsItWasAndRemovesTheWaste(t *testing.T) {
 	if view.ID != lot.ID || view.Quantity != 200 || view.GoesOff != "2026-11-06" || !view.Spoiled || view.IngredientName != "chicken thighs" {
 		t.Errorf("view = %+v", view)
 	}
-	if after := f.storedLot(t, lot.ID); withoutCreatedAt(after) != withoutCreatedAt(before) {
+	if after := f.storedLot(t, lot.ID); !sameLot(after, before) {
 		t.Errorf("Lot after Undo = %+v, want the Lot as before the Throw out %+v (id, dates, KeptOn, Storage Place)", after, before)
 	}
 	if recs, _ := f.svc.Waste(ctx, "", ""); len(recs) != 0 {
