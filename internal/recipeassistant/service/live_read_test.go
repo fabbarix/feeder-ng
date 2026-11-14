@@ -47,7 +47,7 @@ func TestLiveReadWithABaseRecipe(t *testing.T) {
 	if os.Getenv("FEEDER_LIVE_SCHEMA_CHECK") != "1" {
 		t.Skip("FEEDER_LIVE_SCHEMA_CHECK=1 is not set")
 	}
-	key, _ := anthropickey.Lookup()
+	key, _ := anthropickey.Lookup(os.Getenv)
 	if key == "" {
 		t.Skip(anthropickey.SkipReason())
 	}

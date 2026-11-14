@@ -36,7 +36,7 @@ To finish: 400 g fresh egg lasagne sheets, 120 g grated Parmigiano Reggiano, 20 
 // Anthropic API and checks the answer is a valid Recipe File. It runs only with a live key set (anthropickey.Lookup,
 // docs/dev/live-tests.md; FEEDER_LIVE_ANTHROPIC_BASE_URL and FEEDER_LIVE_ANTHROPIC_MODEL are optional); it is billed.
 func TestLiveReadStreamsARecipe(t *testing.T) {
-	key, _ := anthropickey.Lookup()
+	key, _ := anthropickey.Lookup(os.Getenv)
 	if key == "" {
 		t.Skip(anthropickey.SkipReason())
 	}
