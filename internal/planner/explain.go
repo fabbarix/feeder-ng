@@ -77,14 +77,14 @@ func (st *state) explainExclusions(i int, removed []RecipeID) ([]ExclusionRecord
 	return out, more
 }
 
-// EarlyStart is a Pinned or Bought Planned Meal whose cooking would have to start before the Household's Earliest
-// start (PC-14). Both are held where they are: the Plan never refuses or moves them, it only flags them.
+// EarlyStart is a Pinned or Bought Planned Meal whose cooking would have to start outside the Household's start
+// window: before the Earliest start, or after the Latest start (PC-14, A2). Both are held where they are: the Plan never refuses or moves them, it only flags them.
 type EarlyStart struct {
 	Key     SlotKey
 	StartAt time.Time // slot time minus the Recipe's TotalMinutes
 }
 
-// EarlyStarts lists the Pinned and Bought (Held) fresh meals of in.Slots that start before in.EarliestStart, in slot
+// EarlyStarts lists the Pinned and Bought (Held) fresh meals of in.Slots that start outside the start window, in slot
 // order. Unpinned Planned meals are refiltered by the planner instead, and Cooked or Not cooked meals are past.
 func EarlyStarts(in Input) []EarlyStart {
 	if in.EarliestStart == "" {
@@ -109,7 +109,7 @@ func EarlyStarts(in Input) []EarlyStart {
 		if !ok {
 			continue
 		}
-		if start, early := startsTooEarly(s.At, r.TotalMinutes, in.EarliestStart); early {
+		if start, outside := outsideStartWindow(s.At, r.TotalMinutes, in.EarliestStart, in.LatestStart); outside {
 			out = append(out, EarlyStart{Key: s.Key, StartAt: start})
 		}
 	}

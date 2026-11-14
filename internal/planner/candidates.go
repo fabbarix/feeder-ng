@@ -127,7 +127,7 @@ func (st *state) evaluate(i int, portions float64, opts evalOpts) (strict []brea
 
 // tally applies the hard filters to Recipe r for cell i, in order, and counts the
 // first that removes it. One Recipe per slot and the Whole meal hold-back count in
-// Considered only; Exclusion, Advance Step and Too early (PC-14) are counted. It reports whether r
+// Considered only; Exclusion, Advance Step and Too early (PC-14, A2) are counted. It reports whether r
 // passes every hard filter. Cool-down and Variety Rules are soft and never counted.
 func (st *state) tally(i int, r Recipe, e *Eliminations) (hardPass bool) {
 	slot := st.slots[i]
@@ -142,7 +142,7 @@ func (st *state) tally(i int, r Recipe, e *Eliminations) (hardPass bool) {
 	case st.advanceBlocked(i, r):
 		e.AdvanceStep++
 		return false
-	case st.tooEarly(i, r):
+	case st.tooEarly(i, r), st.startPassed(i, r):
 		e.TooEarly++
 		return false
 	}
@@ -278,27 +278,62 @@ func (st *state) advanceBlocked(i int, r Recipe) bool {
 	return false
 }
 
-// tooEarly reports whether cooking Recipe r for cell i would have to start before the Household's Earliest start
-// (PC-14). Off ("") and a Recipe of unknown length (TotalMinutes 0) are never too early.
+// tooEarly reports whether cooking Recipe r for cell i would have to start outside the Household's start window
+// (PC-14, A2). Earliest start Off and a Recipe of unknown length (TotalMinutes 0) are never too early. Kept meals are
+// checked with this alone (keepCheck): their cooking may already have begun.
 func (st *state) tooEarly(i int, r Recipe) bool {
-	_, early := startsTooEarly(st.slots[i].At, r.TotalMinutes, st.in.EarliestStart)
-	return early
+	_, outside := outsideStartWindow(st.slots[i].At, r.TotalMinutes, st.in.EarliestStart, st.in.LatestStart)
+	return outside
 }
 
-// startsTooEarly returns when cooking of the given length starts for a slot at `at`, and whether that is before the
-// earliest "HH:MM" on the slot's own date, in the slot's zone. Starting exactly at the earliest start is allowed.
-func startsTooEarly(at time.Time, totalMinutes int, earliest string) (time.Time, bool) {
+// startPassed reports whether cooking Recipe r for cell i would have to start on an earlier day than the meal and
+// before Now: a fresh candidate that can no longer be started in time (A2). A start on the meal's own day is not
+// checked against Now.
+func (st *state) startPassed(i int, r Recipe) bool {
+	at := st.slots[i].At
+	start, _ := outsideStartWindow(at, r.TotalMinutes, "", "")
+	return startsOnEarlierDay(at, start) && start.Before(st.in.Now)
+}
+
+// outsideStartWindow returns when cooking of the given length starts for a slot at `at` (real elapsed minutes), and
+// whether that start is outside the start window, read in the slot's zone:
+//   - Earliest start Off ("") or totalMinutes 0: never outside;
+//   - Latest start Off: the start must be on the slot's own date, at or after the Earliest start;
+//   - both set: the start's time of day must be from the Earliest start to the Latest start, both ends allowed, on
+//     whatever day it falls.
+func outsideStartWindow(at time.Time, totalMinutes int, earliest, latest string) (time.Time, bool) {
 	start := at.Add(-time.Duration(totalMinutes) * time.Minute)
-	if earliest == "" || totalMinutes <= 0 {
+	from, ok := clockMinutes(earliest)
+	if !ok || totalMinutes <= 0 {
 		return start, false
+	}
+	to, ok := clockMinutes(latest)
+	if !ok {
+		y, mo, d := at.Date()
+		limit := time.Date(y, mo, d, from/60, from%60, 0, 0, at.Location())
+		return start, start.Before(limit)
+	}
+	h, m, sec := start.Clock()
+	of := h*60 + m
+	return start, of < from || of > to || (of == to && sec > 0)
+}
+
+// startsOnEarlierDay reports whether start falls on an earlier date than at, both read in at's zone.
+func startsOnEarlierDay(at, start time.Time) bool {
+	y, mo, d := at.Date()
+	return start.Before(time.Date(y, mo, d, 0, 0, 0, 0, at.Location()))
+}
+
+// clockMinutes parses "HH:MM" into minutes after midnight; "" or a malformed value is not ok (Off).
+func clockMinutes(hhmm string) (int, bool) {
+	if hhmm == "" {
+		return 0, false
 	}
 	var h, m int
-	if _, err := fmt.Sscanf(earliest, "%d:%d", &h, &m); err != nil {
-		return start, false
+	if _, err := fmt.Sscanf(hhmm, "%d:%d", &h, &m); err != nil {
+		return 0, false
 	}
-	y, mo, d := at.Date()
-	limit := time.Date(y, mo, d, h, m, 0, 0, at.Location())
-	return start, start.Before(limit)
+	return h*60 + m, true
 }
 
 // relaxedBefore is the relaxed order (spec 7.2 step 2b), keys 1 to 6: not reserved
