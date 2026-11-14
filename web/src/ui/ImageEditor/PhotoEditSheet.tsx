@@ -6,6 +6,7 @@ import { Button } from '../Button'
 import { ImageEditor } from './ImageEditor'
 import { initialEdit, type ImageEdit } from './lib/edit'
 import { imageEditorStrings as t } from './strings'
+import './PhotoEditSheet.css'
 
 export interface PhotoEditSheetProps {
   open: boolean
@@ -50,24 +51,26 @@ interface PhotoEditBodyProps {
 function PhotoEditBody({ src, width, height, minSide, busy, onUse, onCancel }: PhotoEditBodyProps) {
   const [draft, setDraft] = useState<ImageEdit>(() => initialEdit({ width, height }, 'free'))
   return (
-    <ImageEditor
-      src={src}
-      width={width}
-      height={height}
-      aspect="free"
-      value={draft}
-      onChange={setDraft}
-      minSide={minSide}
-      busy={busy}
-      autoFocus
-      onCancel={onCancel}
-    >
-      <Button variant="tertiary" disabled={busy} onClick={onCancel}>
-        {t.cancel}
-      </Button>
-      <Button variant="primary" disabled={busy} onClick={() => onUse(draft)}>
-        {t.useThis}
-      </Button>
-    </ImageEditor>
+    <div className="photo-edit-sheet">
+      <ImageEditor
+        src={src}
+        width={width}
+        height={height}
+        aspect="free"
+        value={draft}
+        onChange={setDraft}
+        minSide={minSide}
+        busy={busy}
+        autoFocus
+        onCancel={onCancel}
+      >
+        <Button variant="tertiary" disabled={busy} onClick={onCancel}>
+          {t.cancel}
+        </Button>
+        <Button variant="primary" disabled={busy} onClick={() => onUse(draft)}>
+          {t.useThis}
+        </Button>
+      </ImageEditor>
+    </div>
   )
 }
