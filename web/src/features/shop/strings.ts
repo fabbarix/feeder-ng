@@ -72,8 +72,9 @@ export const shopStrings = {
   neededAfterAll: 'Needed after all',
   markIt: 'Mark it',
   includes: (slots: string) => `Includes ${slots}`,
-  // b8-shop: the one-line hint names the first slot and counts the rest ("Includes Tue Dinner +1")
-  includesMore: (slot: string, n: number) => `Includes ${slot} +${n}`,
+  // b8-shop: a row's one-line hint names the first slot and counts the rest ("Tue Dinner +1"), led by the info icon. No "Includes":
+  // it does not fit a 360 px row or a 3-column card (P23); the notice above the list and the Line's sheet say the whole sentence.
+  slotMore: (slot: string, n: number) => `${slot} +${n}`,
   unconfirmedMeals: (slots: string) => `Includes ${slots}, not marked Cooked yet`,
   // DS-SHOP round 2: the short notice ("Tue Dinner isn't marked Cooked yet") and the metric strip's meta line
   isnt: " isn't marked Cooked yet",
