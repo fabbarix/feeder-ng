@@ -7,7 +7,7 @@
 # A guard that did not run FAILS in every mode (quick too): a refused run (a busy port, or a run already holding this
 # worktree's lock), a server or seed that did not come up, a timeout, a crash, or a driver exit 2. Only two environment gaps
 # pass in quick: no Chrome (SKIP) and no web build (WARN). Both FAIL in full (PAGE_LAYOUT=full, release QA).
-#   scripts/check-page-layout.sh                 quick profile (320, 390, 834, 1024, 1440, 1920)
+#   scripts/check-page-layout.sh                 quick profile (375, 390, 834, 1024, 1440, 1920)
 #   PAGE_LAYOUT=full scripts/check-page-layout.sh    nine viewports (release QA; scripts/lib/page-layout-rules.mjs PROFILES)
 #   scripts/check-page-layout.sh --scenario NAME[,NAME]   only those scenarios (scripts/lib/page-layout/scenarios/), no route table:
 #                                                 a package's targeted run. The driver refuses an unknown name (exit 2).

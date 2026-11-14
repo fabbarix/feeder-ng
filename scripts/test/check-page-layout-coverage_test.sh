@@ -69,7 +69,7 @@ JS
   grep -q '! 390px /settings: not inspected' <<<"$DOUT" && ok || bad "the not-inspected route must be listed as '! 390px /settings: not inspected (...)' (got: $DOUT)"
   grep -q 'no <main>' <<<"$DOUT" && ok || bad "the reason must say the page has no <main> element, not a raw getBoundingClientRect TypeError (got: $DOUT)"
   grep -q 'getBoundingClientRect' <<<"$DOUT" && bad "the raw TypeError must not reach the output" || ok
-  # DS-A, B9-03: the quick profile has 6 viewports (320, 390, 834, 1024, 1440, 1920)
+  # DS-A, B9-03: the quick profile has 6 viewports (375, 390, 834, 1024, 1440, 1920)
   grep -q 'coverage: inspected 0 of 6 (not inspected 6: 0 exempt, 6 failing)' <<<"$DOUT" && ok || bad "the summary must count inspected and not inspected routes (got: $DOUT)"
   grep -q 'check-page-layout: OK' <<<"$DOUT" && bad "the guard must not print OK when routes were not inspected" || ok
   # an explicit exemption turns that route's lines into 'exempt' and the run passes

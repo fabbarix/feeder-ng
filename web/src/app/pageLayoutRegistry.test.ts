@@ -336,18 +336,22 @@ describe('--scenario: selectScenarios', () => {
 
 describe('profiles and viewports (plan section 9)', () => {
   const v = (width: number, height: number, mobile: boolean): Viewport => ({ width, height, mobile })
-  it('quick: 320x568, 390x844, 834x1194, 1024x1366, 1440x900, 1920x1080', () => {
-    expect(facade.PROFILES.quick).toEqual([v(320, 568, true), v(390, 844, true), v(834, 1194, false), v(1024, 1366, false), v(1440, 900, false), v(1920, 1080, false)])
+  it('quick: 375x667 (the smallest supported width), 390x844, 834x1194, 1024x1366, 1440x900, 1920x1080', () => {
+    expect(facade.PROFILES.quick).toEqual([v(375, 667, true), v(390, 844, true), v(834, 1194, false), v(1024, 1366, false), v(1440, 900, false), v(1920, 1080, false)])
   })
   // Ruling of the main session (2026-11-14): full keeps 2560x1440 (the plan's list omitted it by oversight; the Kitchen board is reviewed there).
-  it('full: 320x568, 390x844, 430x932, 844x390, 820x1180, 1180x820, 1440x900, 1920x1080, 2560x1440', () => {
+  it('full: 375x667, 390x844, 430x932, 844x390, 820x1180, 1180x820, 1440x900, 1920x1080, 2560x1440', () => {
     expect(facade.PROFILES.full).toEqual([
-      v(320, 568, true), v(390, 844, true), v(430, 932, true), v(844, 390, true), v(820, 1180, false), v(1180, 820, false), v(1440, 900, false), v(1920, 1080, false),
+      v(375, 667, true), v(390, 844, true), v(430, 932, true), v(844, 390, true), v(820, 1180, false), v(1180, 820, false), v(1440, 900, false), v(1920, 1080, false),
       v(2560, 1440, false),
     ])
   })
-  it('scenario-only viewports: 568x320 (landscape phone), 320x256 (400 % zoom), 844x390 with a safe-area inset', () => {
-    expect(facade.SCENARIO_VIEWPORTS['568x320']).toEqual(v(568, 320, true))
+  // The user's ruling (2026-11-14): 375 px is the smallest supported width.
+  it('no profile viewport is narrower than 375 px', () => {
+    for (const vp of [...facade.PROFILES.quick, ...facade.PROFILES.full]) expect(vp.width).toBeGreaterThanOrEqual(375)
+  })
+  it('scenario-only viewports: 667x375 (the smallest phone in landscape), 320x256 (400 % zoom), 844x390 with a safe-area inset', () => {
+    expect(facade.SCENARIO_VIEWPORTS['667x375']).toEqual(v(667, 375, true))
     expect(facade.SCENARIO_VIEWPORTS['320x256']).toEqual(v(320, 256, false))
     const inset = facade.SCENARIO_VIEWPORTS['844x390-inset']!
     expect([inset.width, inset.height, inset.mobile]).toEqual([844, 390, true])
@@ -358,8 +362,8 @@ describe('profiles and viewports (plan section 9)', () => {
     expect(a.bottom).toBeGreaterThan(0)
   })
   it('a scenario names its viewports by number (the old ones) or by key', () => {
-    const s = { name: 'x', route: '/', widths: [390, '568x320', '320x256', '844x390-inset'] }
-    expect(facade.scenarioViewports(s, []).map((x) => [x.width, x.height])).toEqual([[390, 844], [568, 320], [320, 256], [844, 390]])
+    const s = { name: 'x', route: '/', widths: [390, '667x375', '320x256', '844x390-inset'] }
+    expect(facade.scenarioViewports(s, []).map((x) => [x.width, x.height])).toEqual([[390, 844], [667, 375], [320, 256], [844, 390]])
     expect(() => facade.scenarioViewports({ ...s, widths: ['7x7'] }, [])).toThrow(/7x7/)
   })
   it('the driver emulates through emulationCalls(vp): metrics, plus Emulation.setSafeAreaInsetsOverride when the viewport has an inset', () => {
