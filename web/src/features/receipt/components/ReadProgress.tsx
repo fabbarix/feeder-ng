@@ -14,6 +14,7 @@ export function ReadProgress({ elapsedSeconds, connectionLost, onCancel }: ReadP
     <Tile as="section" variant="soft" className="receipt-progress">
       <div className="receipt-progress__status" role="status" aria-live="polite">
         <p className="receipt-progress__title">{t.reading}</p>
+        <p className="receipt-progress__note">{t.readingRowMeta}</p>
         <span className="receipt-progress__bar" aria-hidden="true" />
         {elapsedSeconds >= LONG_READ_AFTER_S ? <p className="receipt-progress__note">{t.longRead}</p> : null}
         {connectionLost ? <p className="receipt-progress__note">{t.lostConnection}</p> : null}

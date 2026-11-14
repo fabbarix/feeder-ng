@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { ReceiptReadWatcher } from '../features/receipt'
 import { Icon, Page, PageWidthProvider } from '../ui'
 import { withAccessRequests } from './accessMenu'
 import { isChromeless } from './chromeless'
@@ -33,6 +34,7 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
     // that is a ui Page (the receipt ones) still takes its route's width from the table.
     return (
       <div className="app-shell app-shell--chromeless">
+        <ReceiptReadWatcher />
         <main className="app-main app-main--full">
           <PageWidthProvider value={pageWidth}>
             <PageErrorBoundary resetKey={pathname}>
@@ -45,6 +47,7 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
   }
   return (
     <div className="app-shell">
+      <ReceiptReadWatcher />
       <header className="top-bar">
         <span className="top-bar__brand">{shellStrings.brand}</span>
         <YourMenu
