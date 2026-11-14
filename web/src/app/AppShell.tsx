@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Icon, Page, PageWidthProvider } from '../ui'
 import { withAccessRequests } from './accessMenu'
+import { BrandMark } from './BrandMark'
 import { isChromeless } from './chromeless'
 import { pageWidthFor } from './pageWidths'
 import { PageErrorBoundary } from './PageErrorBoundary'
@@ -46,7 +47,10 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
   return (
     <div className="app-shell">
       <header className="top-bar">
-        <span className="top-bar__brand">{shellStrings.brand}</span>
+        <span className="top-bar__brand">
+          <BrandMark />
+          <span className="top-bar__brand-word">{shellStrings.brand}</span>
+        </span>
         <YourMenu
           user={user}
           items={withAccessRequests([...MENU_NAV, ...sortByOrder(navItems)], pendingAccessRequests)}
