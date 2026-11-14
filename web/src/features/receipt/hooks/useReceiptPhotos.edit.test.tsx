@@ -18,7 +18,10 @@ import type { ImageEngine } from '../../../ui/ImageEditor/lib/prepare'
 import { useReceiptPhotos } from './useReceiptPhotos'
 
 const MIB = 1024 * 1024
-/** decode answers the size of the blob an encode made (3000 x 2000 for a file), so a second edit sees the first edit's output. */
+/**
+ * decode answers the size of the blob an encode made (3000 x 2000 for a file), so a second edit sees the first edit's output.
+ * encode writes its options into the bytes, so each different encode has its own dataUrl.
+ */
 function fakeEngine(over: { size?: () => number; source?: { width: number; height: number } } = {}) {
   const made = new WeakMap<Blob, { width: number; height: number }>()
   const decoded: Blob[] = []
@@ -31,7 +34,11 @@ function fakeEngine(over: { size?: () => number; source?: { width: number; heigh
     }) as ImageEngine['decode'],
     encode: (async (_i: unknown, o: { width: number; height: number; turns: number; crop?: unknown; type: string }) => {
       encoded.push(o)
-      const blob = new Blob([new Uint8Array(over.size?.() ?? 1000)], { type: o.type })
+      // The bytes carry the encode's options, so two different edits never make the same dataUrl.
+      const tag = new TextEncoder().encode(JSON.stringify({ turns: o.turns, crop: o.crop, width: o.width, height: o.height }))
+      const bytes = new Uint8Array(Math.max(over.size?.() ?? 1000, tag.length))
+      bytes.set(tag)
+      const blob = new Blob([bytes], { type: o.type })
       made.set(blob, { width: o.width, height: o.height })
       return blob
     }) as unknown as ImageEngine['encode'],
