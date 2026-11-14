@@ -26,7 +26,14 @@ function setup(over: Partial<ToGetListProps> = {}) {
       <Where />
     </MemoryRouter>,
   )
-  return { props, list: screen.getByRole('list', { name: 'To get' }), ...view }
+  // Lazy: the empty-state test renders no list, so it must not be looked up before the test asks for it.
+  return {
+    props,
+    get list() {
+      return screen.getByRole('list', { name: 'To get' })
+    },
+    ...view,
+  }
 }
 const tickSvg = (weight: 'bold' | 'fill', name: 'successOpen' | 'success') => {
   const { container } = render(<Icon name={name} size={14} weight={weight} />)
