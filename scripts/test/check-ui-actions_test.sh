@@ -6,8 +6,7 @@
 #   bullet-notice   16  a hand-written <ul>/<li> in a file that renders a Tile, Notice, Toast or Dialog, outside ui/DetailList (use DetailList)
 # Counting units, which the fixtures fix: one violation per offending JSX attribute / element for rules 13 to 15, one per file for 16.
 # Each fails everywhere (the sweep cleans every feature folder), so the committed check-ui.rules sets each to fail, with no fail_paths.
-# Written before the rules exist: it fails until the Developer adds scripts/check-ui.d/{button-variant,close-button,sheet-cancel,bullet-notice}.*
-# (or the rules in check-ui.sh before the guard split is merged) and the sweep.
+# The rules are drop-ins: scripts/check-ui.d/{button-variant,close-button,sheet-cancel,bullet-notice}.sh, modes in check-ui.rules.d/b9-01.rules.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -71,10 +70,12 @@ run_ui "$FIX/bullet-notice/fail" "$(rules_file bullet-notice warn)"
 grep -q 'use DetailList for items with a key, a state and detail' "$TMP/out.txt" && ok || bad "bullet-notice: the message must read 'use DetailList for items with a key, a state and detail'"
 for f in NoticeTile ChangedToast AwayDialog; do grep -q "$f" "$TMP/out.txt" && ok || bad "bullet-notice: the report must name $f.tsx"; done
 
-# --- the committed rules file: all four fail everywhere (the sweep cleans every folder), so no fail_paths
+# --- the committed rules: all four fail everywhere (the sweep cleans every folder), so no fail_paths. Since the guard split
+# (B9-03) the rules are drop-ins in scripts/check-ui.d/<rule>.sh and their modes live in scripts/check-ui.rules.d/b9-01.rules.
 for r in "${NEW[@]}"; do
-  grep -Eq "^$r=fail\$" "$SCRIPTS/check-ui.rules" && ok || bad "check-ui.rules must set $r=fail"
-  grep -Eq "^$r\.fail_paths=" "$SCRIPTS/check-ui.rules" && bad "check-ui.rules: $r fails everywhere, it takes no fail_paths" || ok
+  grep -qs "^register_rule $r\$" "$SCRIPTS/check-ui.d/$r.sh" && ok || bad "scripts/check-ui.d/$r.sh must register $r"
+  grep -Eqs "^$r=fail\$" "$SCRIPTS/check-ui.rules.d/b9-01.rules" && ok || bad "check-ui.rules.d/b9-01.rules must set $r=fail"
+  grep -Eqs "^$r\.fail_paths=" "$SCRIPTS/check-ui.rules" "$SCRIPTS"/check-ui.rules.d/* && bad "check-ui rules: $r fails everywhere, it takes no fail_paths" || ok
 done
 
 # --- the real tree passes the committed rules (the sweep is done: no tertiary variant, no own Cancel, no bullet notice)
