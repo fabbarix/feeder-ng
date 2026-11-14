@@ -25,8 +25,9 @@
 
 .date-field__trigger:focus-visible {
   border-color: var(--color-accent);
-  box-shadow: var(--focus-ring);
-  outline: none;
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
 }
 
 .date-field__trigger:disabled {
@@ -63,6 +64,7 @@
 
 .date-field__month {
   font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
   font-weight: var(--text-title-3-weight);
 }
 
@@ -77,6 +79,7 @@
   padding-block: var(--space-1);
   color: var(--color-muted);
   font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
   font-weight: var(--text-overline-weight);
 }
 
@@ -117,6 +120,10 @@
 }
 
 .date-field__grid button:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 1px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
+}
+
+.date-field__grid button[data-selected] {
+  --focus-ring-color: var(--color-on-accent);
 }

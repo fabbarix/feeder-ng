@@ -11,6 +11,7 @@
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
 }
 
@@ -25,15 +26,11 @@
   padding: var(--space-1) var(--space-2);
 }
 
-.price-keypad__display:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
-
 .price-keypad__error {
   margin: 0;
   color: var(--status-danger-fg);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   text-align: center;
 }
 
@@ -42,6 +39,7 @@
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -83,6 +81,7 @@
   background: var(--color-surface-2);
   color: var(--color-text);
   font-size: var(--text-title-1-size);
+  line-height: var(--text-title-1-line);
   font-weight: var(--text-title-1-weight);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
@@ -90,11 +89,6 @@
 
 .price-keypad__key:active {
   background: var(--color-surface-3);
-}
-
-.price-keypad__key:focus-visible {
-  box-shadow: var(--focus-ring);
-  outline: none;
 }
 
 .price-keypad__actions {
@@ -112,7 +106,7 @@
   display: none;
 }
 
-@container (max-width: 340px) {
+@container (max-width: 21.25rem) {
   .price-keypad__next-long {
     display: none;
   }

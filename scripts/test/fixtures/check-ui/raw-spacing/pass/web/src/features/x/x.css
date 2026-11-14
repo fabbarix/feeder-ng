@@ -1,0 +1,10 @@
+:root { --space-half: 2px; --gutter: 24px; }
+.a { padding: 0 var(--space-3); }
+.b { margin: 0 auto; }
+.c { gap: var(--space-2); }
+.d { padding: 1px; }
+.e { inset: 0; }
+.f { margin-inline: calc(-1 * var(--space-2)); }
+.g { padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset)); }
+.h { inline-size: 44px; min-block-size: 48px; border-width: 2px; }
+.i { padding-inline: var(--space-half) var(--space-2); }

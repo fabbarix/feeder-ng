@@ -1,8 +1,9 @@
 // R11a: the shared Breadcrumbs primitive (replaces BackLink). Ancestors are links, the current page is plain text.
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Breadcrumbs } from './Breadcrumbs'
+import { stubViewportWidth } from './lib/viewport.test-helper'
 
 const two = [{ label: 'Settings', to: '/settings' }, { label: 'Meal Slots' }]
 const three = [{ label: 'Recipes', to: '/recipes' }, { label: 'Chicken & leek pie', to: '/recipes/7' }, { label: 'Edit' }]
@@ -100,5 +101,20 @@ describe('Breadcrumbs', () => {
     const { container } = show(two)
     expect(container.querySelector('.back-link')).toBeNull()
     expect(screen.queryByRole('link', { name: /^back to/i })).toBeNull()
+  })
+
+  describe('B9-07 (A11Y-02): on a phone the clipped crumbs leave the Tab order', () => {
+    afterEach(() => vi.unstubAllGlobals())
+    it('below 48em only the parent link is tabbable; the others stay links in the accessibility tree', () => {
+      stubViewportWidth(390)
+      show(three)
+      expect(screen.getByRole('link', { name: 'Recipes' })).toHaveAttribute('tabindex', '-1')
+      expect(screen.getByRole('link', { name: 'Chicken & leek pie' })).not.toHaveAttribute('tabindex')
+    })
+    it('from 48em every link is tabbable', () => {
+      stubViewportWidth(1024)
+      show(three)
+      expect(screen.getByRole('link', { name: 'Recipes' })).not.toHaveAttribute('tabindex')
+    })
   })
 })

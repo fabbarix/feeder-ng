@@ -26,14 +26,14 @@
   display: flex;
   flex-direction: column;
   max-height: 85dvh;
-  padding: 8px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-2) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
 }
 
 .sheet__grip {
   align-self: center;
   inline-size: 36px;
   block-size: 4px;
-  margin-block-end: 12px;
+  margin-block-end: var(--space-3);
   border-radius: var(--radius-pill);
   background: var(--color-surface-3);
 }
@@ -51,7 +51,8 @@
 .sheet__title {
   min-inline-size: 0;
   margin: 0;
-  padding-block-start: calc((40px - var(--text-title-2-line)) / 2);
+  /* --space-10 is the 40 px Close */
+  padding-block-start: calc((var(--space-10) - var(--text-title-2-line)) / 2);
   font-size: var(--text-title-2-size);
   font-weight: var(--text-title-2-weight);
   line-height: var(--text-title-2-line);
@@ -71,13 +72,13 @@
   margin-inline: calc(-1 * var(--space-2));
   padding-inline: var(--space-2);
   /* R-C: 5 px of block room too (3 px ring + 2 px offset), and a focused control scrolled into view keeps it. */
-  padding-block: 5px;
-  scroll-padding-block: 5px;
+  padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  scroll-padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 }
 
 /* A sticky bar inside the scrolling body: a control scrolled into view stops above it, never under it. */
 .sheet__body:has(.sticky-action-bar) {
-  scroll-padding-block-end: calc(var(--sticky-bar-clearance) + 5px);
+  scroll-padding-block-end: calc(var(--sticky-bar-clearance) + var(--focus-ring-width) + var(--focus-ring-offset));
 }
 
 .sheet__footer {
@@ -123,7 +124,7 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48em) {
   .sheet {
     inset: 0;
     margin: auto;
@@ -174,7 +175,7 @@
   margin-block-end: var(--space-1);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48em) {
   .sheet[data-modal='false'] {
     position: static;
     inset: auto;

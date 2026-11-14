@@ -85,17 +85,22 @@ legend.ui-field__label {
   transition: border-color var(--dur-1) var(--ease-out);
 }
 
-.ui-field__control:focus-within {
-  border-color: var(--color-accent);
-  box-shadow: var(--focus-ring);
-}
-
 .ui-field[data-invalid] .ui-field__control {
   border-color: var(--status-danger-fg);
 }
 
-.ui-field[data-invalid] .ui-field__control:focus-within {
+/* An invalid field keeps the danger border while focused: this rule (0,5,0) outranks the ring rule below (0,3,0). */
+.ui-field[data-invalid] .ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus) {
   border-color: var(--status-danger-fg);
+}
+
+/* A11Y-02: the frame rings while its text entry has focus (not on :focus-within), so a button inside it is a nested control
+   that rings inside itself (ui/focusLayer.css) and the two rings never fuse. */
+.ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus) {
+  border-color: var(--color-accent);
+  box-shadow: none;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
 }
 
 .ui-field--stepper .ui-field__control {
@@ -178,6 +183,7 @@ legend.ui-field__label {
 .ui-field__suffix {
   color: var(--color-muted);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   white-space: nowrap;
 }

@@ -3,7 +3,7 @@
    On a page with a sticky action bar it is lifted by the bar's room too (FU-1), so a toast never covers Save or Start Cook Mode. */
 .toast-region {
   position: fixed;
-  inset-inline: 16px;
+  inset-inline: var(--space-4);
   bottom: calc(var(--nav-top) + var(--space-3));
   z-index: 30;
   display: flex;
@@ -18,7 +18,7 @@ html:has(.sticky-action-bar) .toast-region {
 
 /* A phone with a non-modal half sheet open (the Price keypad beside the Scanned list): the toast sits above the sheet, so
    "Added … · Undo" never covers its keys. The height is the half sheet's (BottomSheet.css). */
-@media (max-width: 767.98px) {
+@media (width < 48em) {
   html:has(.sheet[data-modal='false'][data-size='half']) .toast-region {
     bottom: calc(max(50dvh, min(480px, 85dvh)) + var(--space-3));
   }
@@ -50,6 +50,8 @@ html:has(.sticky-action-bar) .toast-region {
   border-radius: var(--radius-button);
   background: var(--color-text);
   color: var(--color-bg);
+  /* A11Y-02: on the inverse fill the ring is the bg colour; every control inside takes it from the one global ring. */
+  --focus-ring-color: var(--color-bg);
   box-shadow: var(--elev-2);
   touch-action: pan-x;
   animation: toast-in var(--dur-2) var(--ease-out);
@@ -74,9 +76,9 @@ html:has(.sticky-action-bar) .toast-region {
 
 .toast[data-layout='stack'] .toast__content {
   display: grid;
-  row-gap: 2px;
-  /* the headline's 20 px line centres on the 32 px Dismiss */
-  padding-block-start: 6px;
+  row-gap: var(--space-half);
+  /* the headline's 20 px line centres on the 32 px Dismiss (--space-8) */
+  padding-block-start: calc((var(--space-8) - var(--text-body-strong-line)) / 2);
 }
 
 /* The headline: body-strong. A status icon (R-D+) is its first item, 16 px, centred on the 20 px line. */
@@ -176,7 +178,7 @@ html:has(.sticky-action-bar) .toast-region {
   block-size: 32px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--color-bg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-bg) 55%, transparent);
@@ -191,17 +193,11 @@ html:has(.sticky-action-bar) .toast-region {
   content: '';
   position: absolute;
   inset: -6px;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
 }
 
 .toast__dismiss:hover {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-bg) 55%, transparent), inset 0 0 0 999px color-mix(in srgb, var(--color-bg) 10%, transparent);
-}
-
-/* The focus ring on the inverse fill is the bg colour. */
-.toast :focus-visible {
-  outline: 3px solid var(--color-bg);
-  outline-offset: 2px;
 }
 
 @keyframes toast-in {

@@ -46,7 +46,7 @@ describe('BentoGrid: minimum tile width', () => {
   })
 
   it('on a phone (< 600 px) the strip is one row of up to three equal tracks, with the same cap', () => {
-    const phone = code(css).match(/@media\s*\(max-width:\s*599px\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
+    const phone = code(css).match(/@media\s*\(width < 37\.5em\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
     const v = phone.match(/\.bento-grid\[data-min='metric'\]\s*\{[^}]*grid-template-columns:\s*([^;]+);/)?.[1] ?? ''
     expect(v).toMatch(/^repeat\(auto-fit, minmax\(/)
     expect(v).toContain(CAP)

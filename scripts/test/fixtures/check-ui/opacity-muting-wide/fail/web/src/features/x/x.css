@@ -1,0 +1,4 @@
+/* B9-07 widened opacity-muting (0.05 to 0.95): 3 violations */
+.course-eaters__pill[aria-pressed="false"] { opacity: 0.45; }
+.card__time { opacity: 0.4; }
+.badge { opacity: 10%; }

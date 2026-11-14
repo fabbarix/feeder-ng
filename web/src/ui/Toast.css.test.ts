@@ -41,10 +41,10 @@ describe('Toast.css (R-D)', () => {
     expect(d['align-self']).toBe('flex-start')
   })
 
-  it('the focus ring on a toast is --color-bg', () => {
-    const rules = ruleBlocks(css).filter((r) => r.selectors.some((s) => /^\.toast .*:focus-visible/.test(norm(s))))
-    expect(rules.length).toBeGreaterThan(0)
-    expect(rules.map((r) => r.body).join(' ')).toContain('var(--color-bg)')
+  it('the focus ring on a toast is --color-bg: the toast sets --focus-ring-color once (A11Y-02), no ring rule of its own', () => {
+    const own = ruleBlocks(css).filter((r) => r.selectors.some((s) => norm(s) === '.toast'))
+    expect(own.map((r) => r.body).join(' ')).toMatch(/--focus-ring-color:\s*var\(--color-bg\)/)
+    expect(ruleBlocks(css).filter((r) => r.selectors.some((s) => /:focus-visible/.test(norm(s))) && /outline/.test(r.body))).toEqual([])
   })
 
   it('the old column layout is gone: no .toast > svg, no tertiary action style', () => {

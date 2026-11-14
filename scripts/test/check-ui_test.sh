@@ -280,6 +280,17 @@ run_drop "$sd" "$DROP/fail"
 printf 'demo-ban=warn\ndemo-ban.fail_paths=web/src/ui\n' >"$sd/check-ui.rules.d/p.rules"
 run_drop "$sd" "$DROP/fail"
 [ "$RC" -eq 0 ] && ok || bad "check-ui.rules.d: fail_paths elsewhere must not fail (rc $RC)"
+# B9-07: fail_paths add up across the rules file and the rules.d files (each sweep lists only its own folders): a later file that
+# lists other folders does not take the earlier file's away
+sd="$(dropin_scripts d5b '' $'demo-ban=warn\ndemo-ban.fail_paths=web/src/features/y')"; mkdir -p "$sd/check-ui.rules.d"
+printf 'demo-ban.fail_paths=web/src/app\n' >"$sd/check-ui.rules.d/a.rules"
+printf 'demo-ban.fail_paths=web/src/ui web/src/features/z\n' >"$sd/check-ui.rules.d/b.rules"
+run_drop "$sd" "$DROP/fail"
+[ "$RC" -eq 1 ] && ok || bad "check-ui.rules.d: fail_paths add up (a.rules lists web/src/app, the later b.rules other folders: the violations under web/src/app still fail), got rc $RC"
+grep -q "demo-ban .*fail in web/src/features/y web/src/app web/src/ui web/src/features/z" <<<"$OUTPUT" && ok || bad "check-ui.rules.d: the summary lists every file's fail_paths in reading order: $OUTPUT"
+printf 'demo-ban.fail_paths=web/src/app/ web/src/app\n' >"$sd/check-ui.rules.d/c.rules"
+run_drop "$sd" "$DROP/fail"
+grep -q "fail in web/src/features/y web/src/app web/src/ui web/src/features/z\]" <<<"$OUTPUT" && ok || bad "check-ui.rules.d: a prefix listed again (with or without a slash) is listed once: $OUTPUT"
 
 # a rules.d file that names a rule nobody registered is the same error as in the rules file
 sd="$(dropin_scripts d6)"; mkdir -p "$sd/check-ui.rules.d"; echo 'no-such-rule=fail' >"$sd/check-ui.rules.d/x.rules"
