@@ -69,7 +69,7 @@ function SessionCookScreen(): ReactNode {
   useWakeLock(wake)
   useTimerAlarm(timers.timers, alarm)
   const [voiceOn, setVoiceOn] = useVoicePreference()
-  const tapZones = useMediaQuery('(min-width: 768px)')
+  const tapZones = useMediaQuery('(min-width: 48em)')
   const [coachOn, dismissCoach] = useCoachMark()
   const marked = useMarkCooked(session.markCookedKey)
   const stock = useStockSheet((id) => marked.dismissWarning(id))

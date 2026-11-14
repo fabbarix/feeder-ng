@@ -30,6 +30,7 @@
 .cook-screen__title {
   margin: 0;
   font-size: var(--text-title-1-size);
+  line-height: var(--text-title-1-line);
   flex: 1 1 auto;
 }
 
@@ -50,7 +51,7 @@
   align-content: start;
 }
 
-/* §2.7: 30/800 on the phone, 58/800 on the tablet (see the 768 px block). */
+/* §2.7: 30/800 on the phone, 58/800 on the tablet (see the 48 em block). */
 .cook-step__text {
   margin: 0;
   font-size: 1.875rem;
@@ -153,6 +154,7 @@
 .cook-timers__heading {
   margin: 0;
   font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
 }
 
 .cook-advance__list,
@@ -202,6 +204,7 @@
 
 .cook-timers__place {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-muted);
 }
 
@@ -228,7 +231,7 @@
 }
 
 /* Tablet and up (§2.7): the Step tile fills the height, the timers sit 2-up beneath it, the nav last. */
-@media (min-width: 768px) {
+@media (min-width: 48em) {
   .cook-screen {
     display: flex;
     flex-direction: column;
@@ -249,6 +252,7 @@
 .reheat-time {
   margin: 0;
   font-size: 3.5rem;
+  line-height: 1.2;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -268,19 +272,22 @@
 .cook-courses {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-block: 0.5rem;
+  gap: var(--space-2);
+  margin-block: var(--space-2);
 }
+/* Secondary lines of the Step: the muted colour (not a fade). */
 .cook-step__course,
 .cook-step__clock {
-  font-size: 0.875rem;
-  opacity: 0.8;
   margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.2;
 }
 .cook-advance__course {
-  font-size: 0.9375rem;
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: 600;
-  margin: 0.5rem 0 0.25rem;
 }
 
 /* BR-H: Base recipes in Cook Mode (the chip of a Base recipe Step, "<name> ready", the Stock-covered lines). Tokens only. */

@@ -80,7 +80,7 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
   useWakeLock(wake)
   useTimerAlarm(tl.timers.timers, alarm)
   const [voiceOn, setVoiceOn] = useVoicePreference()
-  const tapZones = useMediaQuery('(min-width: 768px)')
+  const tapZones = useMediaQuery('(min-width: 48em)')
   const [coachOn, dismissCoach] = useCoachMark()
   const formatUse = useFormatUse()
   const finish = () => navigate('/')
