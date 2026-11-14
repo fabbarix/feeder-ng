@@ -57,6 +57,8 @@ type Meal struct {
 	SlotID     int64
 	SlotName   string
 	CourseName string
+	// SSP-14: the Recipe's name, what a Line's PlannedMeals name ("" = unknown).
+	RecipeName string
 }
 
 // IngredientInfo is what a Line shows about its Ingredient.
@@ -67,7 +69,8 @@ type IngredientInfo struct {
 	RestockLevel   *float64 // a Supply's Restock level in Base Units; nil = none. Food never has one (decision D3)
 }
 
-// Pack is the pack size (Base Units) of the Product last bought for an Ingredient.
+// Pack is the pack size (Base Units) of the Product last bought for an Ingredient, or of its priced Product before
+// any purchase (Input.Priced).
 type Pack struct {
 	ProductID int64
 	Name      string
@@ -107,6 +110,15 @@ type PastMeal struct {
 	CourseName   string
 }
 
+// PlannedMeal is a Planned Meal a Line is for (SSP-14): its date, Meal Slot, Course and Recipe.
+type PlannedMeal struct {
+	Date         stock.Date
+	MealSlotID   int64
+	MealSlotName string
+	CourseName   string
+	RecipeName   string
+}
+
 // Input is everything Derive needs.
 type Input struct {
 	Now         time.Time
@@ -115,19 +127,24 @@ type Input struct {
 	Lots        []stock.Lot
 	Ingredients map[int64]IngredientInfo
 	Packs       map[int64]Pack // by Ingredient: the Product last bought
-	PackPrices  map[int64]int  // by Product: cents per pack (latest Price at the selected Shop, else any Shop); absent = no Price
-	Extras      []Extra
-	Ticks       map[int64]Tick      // by Ingredient, for this range
-	NotNeeded   map[int64]NotNeeded // by Ingredient, for this range
+	// Priced is, by Ingredient, the priced Product used when nothing was bought (decision SSP 5, SSP-13): a Pack in
+	// Packs always wins over it.
+	Priced     map[int64]Pack
+	PackPrices map[int64]int // by Product: cents per pack (latest Price at the selected Shop, else any Shop); absent = no Price
+	Extras     []Extra
+	Ticks      map[int64]Tick      // by Ingredient, for this range
+	NotNeeded  map[int64]NotNeeded // by Ingredient, for this range
 }
 
-// PackSuggestion is "2 x Mutti 700 g": Count packs, Remainder left over.
+// PackSuggestion is "2 x Mutti 700 g": Count packs, Remainder left over. Bought says the Product was bought before
+// (the Product last bought); false is the priced fallback of an Ingredient never bought (SSP-13).
 type PackSuggestion struct {
 	ProductID int64
 	Name      string
 	Size      float64
 	Count     int
 	Remainder float64
+	Bought    bool
 }
 
 // RestockInfo says why a Restock Line is on the list: the Restock level and the Stock it was compared with.
@@ -150,6 +167,9 @@ type Line struct {
 	EstimatedCostCents *int
 	// PastPlannedMeals are the uncooked meals of slots already past that this Line's need includes (date, slot, Course order).
 	PastPlannedMeals []PastMeal
+	// PlannedMeals are every Planned Meal whose need includes this Ingredient, past or ahead, in date and time order
+	// (SSP-14). A Leftover meal needs nothing and is never one; a Restock Line has none.
+	PlannedMeals []PlannedMeal
 }
 
 // ExtraLine is a manual extra in the list; Quantity is the remaining amount of an Ingredient extra.
@@ -325,11 +345,18 @@ func derivedLines(in Input) map[int64]Line {
 	need := map[int64]float64{}
 	short := map[int64]float64{}
 	pastFor := map[int64][]PastMeal{}
+	plannedFor := map[int64][]PlannedMeal{}
 	for _, d := range draws(in) {
 		m := d.meal
 		past := m.SlotID != 0 && m.At.Before(in.Now)
+		pm := PlannedMeal{Date: m.Date, MealSlotID: m.SlotID, MealSlotName: m.SlotName, CourseName: m.CourseName, RecipeName: m.RecipeName}
 		for ing, q := range d.need {
 			need[ing] += q
+			if q > eps {
+				if p := plannedFor[ing]; len(p) == 0 || p[len(p)-1] != pm {
+					plannedFor[ing] = append(p, pm)
+				}
+			}
 		}
 		for ing, s := range d.short {
 			short[ing] += s
@@ -350,22 +377,29 @@ func derivedLines(in Input) map[int64]Line {
 		}
 		info := in.Ingredients[ing]
 		line := Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Supply: info.Supply,
-			Need: total, Available: total - quantity, Quantity: quantity, PastPlannedMeals: pastFor[ing]}
+			Need: total, Available: total - quantity, Quantity: quantity, PastPlannedMeals: pastFor[ing], PlannedMeals: plannedFor[ing]}
 		priceLine(&line, in, ing, quantity)
 		out[ing] = line
 	}
 	return out
 }
 
-// priceLine gives a Line the pack suggestion for quantity and, with a Price for that pack, its estimated cost.
+// priceLine gives a Line the pack suggestion for quantity and, with a Price for that pack, its estimated cost. The
+// Product last bought comes first; with none, the Ingredient's priced Product (SSP-13).
 func priceLine(line *Line, in Input, ing int64, quantity float64) {
-	if p, ok := in.Packs[ing]; ok {
-		s := SuggestPack(quantity, p)
-		line.Pack = &s
-		if price, ok := in.PackPrices[p.ProductID]; ok {
-			c := s.Count * price
-			line.EstimatedCostCents = &c
+	p, bought := in.Packs[ing]
+	if !bought {
+		var ok bool
+		if p, ok = in.Priced[ing]; !ok {
+			return
 		}
+	}
+	s := SuggestPack(quantity, p)
+	s.Bought = bought
+	line.Pack = &s
+	if price, ok := in.PackPrices[p.ProductID]; ok {
+		c := s.Count * price
+		line.EstimatedCostCents = &c
 	}
 }
 

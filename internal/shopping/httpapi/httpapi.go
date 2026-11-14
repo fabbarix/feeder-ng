@@ -42,6 +42,7 @@ type packJSON struct {
 	Size      float64 `json:"size"`
 	Count     int     `json:"count"`
 	Remainder float64 `json:"remainder"`
+	Bought    bool    `json:"bought"` // SSP-13: the Product last bought; false for the priced Product of an Ingredient never bought
 }
 
 type lineJSON struct {
@@ -56,6 +57,7 @@ type lineJSON struct {
 	Pack               *packJSON      `json:"pack"`
 	EstimatedCostCents *int           `json:"estimatedCostCents"`
 	PastPlannedMeals   []pastMealJSON `json:"pastPlannedMeals"` // B5-SH: always sent, [] when none
+	PlannedMeals       []plannedJSON  `json:"plannedMeals"`     // SSP-14: always sent, [] when none
 	Kind               string         `json:"kind"`             // H4: "food" or "supply"
 	Restock            *restockJSON   `json:"restock"`          // H4: a Restock Line's level and Stock; null otherwise
 }
@@ -70,6 +72,15 @@ type pastMealJSON struct {
 	MealSlotID   int64  `json:"mealSlotId"`
 	MealSlotName string `json:"mealSlotName"`
 	CourseName   string `json:"courseName"`
+}
+
+// plannedJSON is a Planned Meal a Line is for (SSP-14).
+type plannedJSON struct {
+	Date         string `json:"date"`
+	MealSlotID   int64  `json:"mealSlotId"`
+	MealSlotName string `json:"mealSlotName"`
+	CourseName   string `json:"courseName"`
+	RecipeName   string `json:"recipeName"`
 }
 
 type extraJSON struct {
@@ -130,7 +141,7 @@ type tickJSON struct {
 func lineToJSON(l shopping.Line) lineJSON {
 	out := lineJSON{IngredientID: l.IngredientID, Name: l.Name, BaseUnit: l.BaseUnit, ImageURL: l.ImageURL, Need: l.Need, Available: l.Available,
 		Quantity: l.Quantity, Ticked: l.Ticked, EstimatedCostCents: l.EstimatedCostCents, PastPlannedMeals: []pastMealJSON{},
-		Kind: kindName(l.Supply)}
+		PlannedMeals: []plannedJSON{}, Kind: kindName(l.Supply)}
 	if l.Restock != nil {
 		out.Restock = &restockJSON{Level: l.Restock.Level, Stock: l.Restock.Stock}
 	}
@@ -138,8 +149,13 @@ func lineToJSON(l shopping.Line) lineJSON {
 		out.PastPlannedMeals = append(out.PastPlannedMeals, pastMealJSON{Date: string(p.Date), MealSlotID: p.MealSlotID,
 			MealSlotName: p.MealSlotName, CourseName: p.CourseName})
 	}
+	for _, p := range l.PlannedMeals {
+		out.PlannedMeals = append(out.PlannedMeals, plannedJSON{Date: string(p.Date), MealSlotID: p.MealSlotID,
+			MealSlotName: p.MealSlotName, CourseName: p.CourseName, RecipeName: p.RecipeName})
+	}
 	if l.Pack != nil {
-		out.Pack = &packJSON{ProductID: l.Pack.ProductID, Name: l.Pack.Name, Size: l.Pack.Size, Count: l.Pack.Count, Remainder: l.Pack.Remainder}
+		out.Pack = &packJSON{ProductID: l.Pack.ProductID, Name: l.Pack.Name, Size: l.Pack.Size, Count: l.Pack.Count,
+			Remainder: l.Pack.Remainder, Bought: l.Pack.Bought}
 	}
 	return out
 }
