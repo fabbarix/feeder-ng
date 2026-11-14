@@ -51,11 +51,12 @@
   align-content: start;
 }
 
-/* §2.7: 30/800 on the phone, 58/800 on the tablet (see the 48 em block). */
+/* §2.7: 30 px on the phone, 58 px on the tablet (see the 48 em block). DS-07 (system.md 1): display text read at length is not
+   extra-bold, so the Step text is Medium, --text-step-weight (500; the user's choice, decisions.md). */
 .cook-step__text {
   margin: 0;
   font-size: 1.875rem;
-  font-weight: 800;
+  font-weight: var(--text-step-weight);
   line-height: 1.2;
 }
 
