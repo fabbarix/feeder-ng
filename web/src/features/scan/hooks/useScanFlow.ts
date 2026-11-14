@@ -1,7 +1,7 @@
 // The scan flow: a read becomes a Shop scan, an unknown-barcode sheet, an ask-weight sheet or a Stock-take sheet; a Shop
 // scan goes into the Scanned list with the "Added" Toast (functional spec §10.1, §10.2; shop-scan-proposals.md 13). React
 // hook; every side effect is injected so tests use fakes.
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { Scanned } from '../lib/barcode'
@@ -175,6 +175,17 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   const [pricing, setPricing] = useState<PricingState | null>(null)
   // SR3: the scans whose Undo is under way.
   const undoing = useRef(new Set<string>())
+  // b8-scanflake: the reads made while the offline data was loading, in order.
+  const held = useRef<Scanned[]>([])
+  const hasOffline = deps.offline !== null
+  useEffect(() => {
+    if (!hasOffline || held.current.length === 0) return
+    const reads = held.current
+    held.current = []
+    void (async () => {
+      for (const scanned of reads) await onScanRef.current(scanned)
+    })()
+  }, [hasOffline])
 
   /**
    * SR3: the Toast after a scan: "Added {product}" with Undo for 5 s. Undo fires once, and not at all when the scan
@@ -250,7 +261,12 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
 
   const onScan = async (scanned: Scanned): Promise<void> => {
     const d = depsRef.current
-    if (!d.offline) return
+    // b8-scanflake: the camera does not read before the offline data is in, but a typed barcode can arrive first; it is held and
+    // handled when the data comes (the effect below), instead of being lost after its field was cleared.
+    if (!d.offline) {
+      held.current.push(scanned)
+      return
+    }
     const stockTake = d.mode === 'stocktake'
     setBanner(null)
     offeredArchivedRef.current = false
@@ -286,6 +302,9 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
         return
     }
   }
+  // The held reads are handled by this render's onScan (it reads the deps through depsRef).
+  const onScanRef = useRef(onScan)
+  onScanRef.current = onScan
 
   /** R8: a barcode_archived rejection opens the unarchive offer (or, after "Create a new Product instead", a warning). */
   const archivedRejection = async (ownerId: number, target: UnknownTarget): Promise<void> => {
