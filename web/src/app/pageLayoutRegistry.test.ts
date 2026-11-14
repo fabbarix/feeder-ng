@@ -339,9 +339,11 @@ describe('profiles and viewports (plan section 9)', () => {
   it('quick: 320x568, 390x844, 834x1194, 1024x1366, 1440x900, 1920x1080', () => {
     expect(facade.PROFILES.quick).toEqual([v(320, 568, true), v(390, 844, true), v(834, 1194, false), v(1024, 1366, false), v(1440, 900, false), v(1920, 1080, false)])
   })
-  it('full: 320x568, 390x844, 430x932, 844x390, 820x1180, 1180x820, 1440x900, 1920x1080', () => {
+  // Ruling of the main session (2026-11-14): full keeps 2560x1440 (the plan's list omitted it by oversight; the Kitchen board is reviewed there).
+  it('full: 320x568, 390x844, 430x932, 844x390, 820x1180, 1180x820, 1440x900, 1920x1080, 2560x1440', () => {
     expect(facade.PROFILES.full).toEqual([
       v(320, 568, true), v(390, 844, true), v(430, 932, true), v(844, 390, true), v(820, 1180, false), v(1180, 820, false), v(1440, 900, false), v(1920, 1080, false),
+      v(2560, 1440, false),
     ])
   })
   it('scenario-only viewports: 568x320 (landscape phone), 320x256 (400 % zoom), 844x390 with a safe-area inset', () => {
