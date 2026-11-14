@@ -30,6 +30,12 @@
   gap: var(--space-2);
   margin: 0;
 }
+/* A11Y-02: Replace and Remove stand 8 px apart, so their focus rings never touch (the row's trailing gap is 4 px). */
+.ra__key-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
 /* DS-07: the test's latency ("1.2 s") is a value on the "Connected" line: body size in the muted colour, not the 13 px Muted hint. */
 .ra__latency {
   font-size: var(--text-body-size);
