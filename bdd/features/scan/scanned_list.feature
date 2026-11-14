@@ -40,7 +40,7 @@ Feature: The Scanned list (scan redesign, SR6)
     When I remove list scan "l2"
     And I remove list scan "l1"
     Then the shopping Stock total of "passata" is 0 g
-    And the list spent is 0 cents
+    And the redesign Shopping List shows 0 cents spent
     When I view the Shopping List at "Coop"
     Then the Shopping List line "passata" is not ticked
     And the Shopping List extra "passata" still needs 1400 g
@@ -51,7 +51,7 @@ Feature: The Scanned list (scan redesign, SR6)
     When I scan the Product "Mutti passata 700 g" at "Coop" at 129 cents as list scan "l1-back"
     Then scan "l1-back" was applied
     And the shopping Stock has 1 Lots of "passata"
-    And the list spent is 129 cents
+    And the redesign Shopping List shows 129 cents spent
 
   Scenario: Remove keeps the Price and the Shop link the Product had before
     Given "Mutti passata 700 g" has a Price of 159 cents at "Coop"
@@ -66,10 +66,10 @@ Feature: The Scanned list (scan redesign, SR6)
     Given I scan the Product "Mutti passata 700 g" at "Coop" as list scan "c1"
     And I scan the Product "Mutti passata 700 g" at "Esselunga" as list scan "e1"
     When I price the list scans "c1" at 129 cents
-    Then the list response status is 200
+    Then the response status is 200
     And the list Price of "Mutti passata 700 g" at "Coop" is 129 cents
     And the list has no Price of "Mutti passata 700 g" at "Esselunga"
-    And the list spent is 129 cents
+    And the redesign Shopping List shows 129 cents spent
 
   Scenario: An offline queue replays into the same rows and twice changes nothing
     Given the phone caches the offline data for "Coop"
@@ -81,4 +81,4 @@ Feature: The Scanned list (scan redesign, SR6)
     When the phone syncs its queue
     Then the sync results are "duplicate, duplicate"
     And the shopping Stock has 2 Lots of "passata"
-    And the list spent is 258 cents
+    And the redesign Shopping List shows 258 cents spent

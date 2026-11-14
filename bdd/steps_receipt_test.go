@@ -77,30 +77,10 @@ func receiptFlowSteps(sc *godog.ScenarioContext, w *World) {
 		return nil
 	})
 
-	sc.Step(`^the receipt flow response status is (\d+)$`, func(want int) error {
-		if last == nil || last.Status != want {
-			return fmt.Errorf("response = %v, want %d", last, want)
-		}
-		return nil
-	})
-	sc.Step(`^the receipt flow response status is (\d+) with the error "([^"]*)"$`, func(want int, code string) error {
-		if last == nil || last.Status != want || last.ErrorCode() != code {
-			return fmt.Errorf("response = %v, want %d %s", last, want, code)
-		}
-		return nil
-	})
 	sc.Step(`^the receipt flow response applied (\d+) proposals?$`, func(want int) error {
 		var out struct{ Applied int }
 		if err := last.JSON(&out); err != nil || out.Applied != want {
 			return fmt.Errorf("response = %s, want applied %d", last.Body, want)
-		}
-		return nil
-	})
-	sc.Step(`^the Shopping List shows (\d+) cents spent$`, func(want int) error {
-		r := user().Get("/api/shopping/list")
-		got, err := ssPath(r.Body, "summary.spentCents")
-		if err != nil || ssNum(got) != float64(want) {
-			return fmt.Errorf("summary.spentCents = %v (%v), want %d", got, err, want)
 		}
 		return nil
 	})

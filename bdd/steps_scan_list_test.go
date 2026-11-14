@@ -101,26 +101,6 @@ func scanListSteps(sc *godog.ScenarioContext, w *World) {
 		w.Last = me().Patch("/api/scan/prices", body)
 		return nil
 	})
-	sc.Step(`^the list response status is (\d+) with the error "([^"]*)"$`, func(want int, code string) error {
-		if w.Last == nil || w.Last.Status != want || w.Last.ErrorCode() != code {
-			return fmt.Errorf("response = %v, want %d %s", w.Last, want, code)
-		}
-		return nil
-	})
-	sc.Step(`^the list response status is (\d+)$`, func(want int) error {
-		if w.Last == nil || w.Last.Status != want {
-			return fmt.Errorf("response = %v, want %d", w.Last, want)
-		}
-		return nil
-	})
-	sc.Step(`^the list spent is (\d+) cents$`, func(want int) error {
-		r := me().Get("/api/shopping/list")
-		got, err := ssPath(r.Body, "summary.spentCents")
-		if err != nil || ssNum(got) != float64(want) {
-			return fmt.Errorf("summary.spentCents = %v (%v), want %d: %s", got, err, want, r.Body)
-		}
-		return nil
-	})
 	// latest is the Product's latest Price at the Shop. GET .../prices/latest?shop= falls back to the latest at any Shop
 	// when the Shop has none (prices.feature), so a Price only counts as this Shop's when its shopId is the Shop.
 	latest := func(prod, shop string) (map[string]any, int64, error) {
