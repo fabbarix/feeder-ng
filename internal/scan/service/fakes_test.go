@@ -513,6 +513,10 @@ func newEnv(t *testing.T) *env {
 		bus:    &bus{},
 	}
 	e.ing.inUse = func(id int64) bool {
+		// The scan ledger protects an Ingredient as the real store does (store.Mover, undone scans included).
+		if n, err := (store.Mover{}).Count(context.Background(), db, id); err != nil || n > 0 {
+			return true
+		}
 		e.cat.mu.Lock()
 		defer e.cat.mu.Unlock()
 		for _, p := range e.cat.products {

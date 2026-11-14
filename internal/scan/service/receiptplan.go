@@ -250,6 +250,9 @@ type planRun struct {
 	restored []scan.Result
 	// undone are the uuids the plan's Undo steps undid in this run.
 	undone []string
+	// written are the uuids of the new scans this run applied (b8-rxgo): a put-back lets them go of an Ingredient the
+	// run created (Ledger.ReleaseIngredient) before removing it.
+	written []string
 }
 
 // errNoFreeUUID: every suffix of a plan uuid is taken by a put-back attempt (never expected; see resolveUUID).
@@ -308,6 +311,7 @@ func (r *planRun) step(ctx context.Context, st receipt.Step) (func(context.Conte
 		if res.Status != scan.StatusApplied {
 			return nil, nil
 		}
+		r.written = append(r.written, res.ClientUUID)
 		return r.inverse(st.Inverse), nil
 
 	case receipt.OpUndo:
@@ -362,8 +366,10 @@ func (r *planRun) inverse(op receipt.Op) func(context.Context) error {
 
 // undoProduct is the compensation of a create_product step (b8-rxgo): its inverse (delete_product) first, then, only when
 // the step created the Ingredient (madeIngredient > 0), that Ingredient. It runs after the Product, so the Product no longer
-// references it; a referenced Ingredient is left alone by DeleteUnused. If the Product could not be deleted, the Ingredient
-// is still referenced and stays.
+// references it, and after the inverses of this run's scans, which are undone by then: those undone scans let go of the
+// Ingredient (Ledger.ReleaseIngredient) so the scan ledger does not keep it; a scan whose Undo failed is still live and
+// keeps it. Anything else that references it keeps it too (DeleteUnused). If the Product could not be deleted, the
+// Ingredient is still referenced and stays.
 func (r *planRun) undoProduct(inv receipt.Op, madeIngredient int64) func(context.Context) error {
 	return func(ctx context.Context) error {
 		if err := r.exec(ctx, inv); err != nil {
@@ -371,6 +377,9 @@ func (r *planRun) undoProduct(inv receipt.Op, madeIngredient int64) func(context
 		}
 		if madeIngredient == 0 {
 			return nil
+		}
+		if _, err := r.s.d.Ledger.ReleaseIngredient(ctx, r.written, madeIngredient); err != nil {
+			return fmt.Errorf("receipt apply: releasing the new Ingredient %d from the put-back scans: %w", madeIngredient, err)
 		}
 		_, err := r.s.d.Ingredients.DeleteUnused(ctx, madeIngredient)
 		if err != nil {

@@ -16,7 +16,8 @@ func init() { ingredientstore.RegisterMover(Mover{}) }
 // Name is "scan events".
 func (Mover) Name() string { return "scan events" }
 
-// Count is the number of applied scans that reference the Ingredient.
+// Count is the number of scans that reference the Ingredient, undone ones included: an undone scan keeps protecting its
+// Ingredient. The only rows let go are a failed receipt apply's own put-back scans (Store.ReleaseIngredient, b8-rxgo).
 func (Mover) Count(ctx context.Context, q ingredientstore.Querier, ingredientID int64) (int, error) {
 	var n int
 	err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM scan_events WHERE ingredient_id = ?`, ingredientID).Scan(&n)

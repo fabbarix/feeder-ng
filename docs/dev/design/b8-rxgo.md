@@ -29,6 +29,21 @@ is joined into the step's error). An Ingredient chosen by id, found by name, or 
 (`false, nil`) is never removed and is not an error. A `DeleteUnused` error is a put-back error (`Compensation`), like
 any other inverse. If `delete_product` fails, the Ingredient is still referenced and stays: reported as before.
 
+The scan ledger and the put-back (review). The run's new scans are put back by Undo, which marks them undone but keeps
+their rows (their uuids stay taken, so a retry writes under `#n`, receipt-reading §7.2), and the scan ledger's reference
+mover (`scan/store.Mover.Count`) counts every row, undone ones included. So the undone scans kept the new Ingredient "in
+use". Options weighed: (a) count only live scans: rejected, it would change the delete and Merge protection for every
+Ingredient, letting a user delete one that undone history rows still point at; (b) delete the run's undone rows: rejected,
+it frees their uuids and breaks the `#n` retry rule; (c) chosen: keep `Count` protective and let the put-back release only
+its own rows. `scan/store.Store.ReleaseIngredient(uuids, ingredientID)` sets `ingredient_id = NULL` on the rows among
+`uuids` that reference that Ingredient **and are undone**; `undoProduct` calls it with the uuids of the new scans this run
+applied (`planRun.written`), just before `DeleteUnused`. A scan whose Undo failed is not undone, keeps the reference (its
+retried Undo needs it) and so keeps the Ingredient. Safe for the readers of undone rows: `scan_events.ingredient_id` has no
+foreign key; Undo returns "already undone" before it reads the Ingredient; Merge's `Move` re-points by id, and a NULL is
+never moved; the receipt `undone` answer, the session loader and Totals skip undone rows or read only the uuid.
+The service fakes now count the scan ledger as a reference (`store.Mover.Count` on the fake env's database), as the real
+store does, so the fake tests catch the leak too; `scan/store` has a unit test for the release.
+
 No SQL schema, API or UI change; the 500 `receipt_apply_failed` answer is unchanged. No BDD scenario: the effect is
 invisible unless a step fails, and a failure cannot be injected through the UI. The Go tests cover it twice, on fakes
 (`internal/scan/service/receiptplan_orphan_test.go`) and on the real app and SQLite (`internal/scan/httpapi/receipt_test.go`).
