@@ -221,9 +221,9 @@ describe('avatar menu (5.17)', () => {
 })
 
 describe('top bar', () => {
-  it('drops the brand word on phones, shows it from 1024', () => {
-    expect(d('.top-bar__brand')['display']).toBe('none')
-    expect(media('min-width: 1024px')).toMatch(/\.top-bar__brand\s*\{[^}]*display\s*:\s*(block|inline)/)
+  it('b8: the brand shows at every width (the phone top bar has the wordmark too), never display: none', () => {
+    expect(d('.top-bar__brand')['display']).toMatch(/^(block|inline|inline-flex|flex)$/)
+    expect(media('min-width: 1024px')).not.toMatch(/\.top-bar__brand\s*\{[^}]*display\s*:\s*none/)
   })
 })
 

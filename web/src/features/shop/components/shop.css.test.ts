@@ -272,9 +272,9 @@ describe('shop.css: round 2', () => {
     expect(css).not.toMatch(/\.shop-screen__controls[^{]*\{[^}]*grid-template-columns/)
   })
 
-  it('beta.7: below 420 px the header chips drop their leading icons (as the Sort chip of the filter headers), so both values fit at 360 px', () => {
-    expect(media(/width\s*<\s*420px/)).toMatch(/\.shop-screen__controls \.select__leading\s*\{\s*display:\s*none;?\s*\}/)
-    expect(outsideMedia).not.toMatch(/select__leading/)
+  it('b8: the header chips keep their icons at every width (the labels get shorter instead), so no rule hides .select__leading', () => {
+    expect(css).not.toMatch(/select__leading/)
+    expect(media(/width\s*<\s*420px/)).not.toMatch(/display:\s*none/)
   })
 
   it('the pickers shrink with an ellipsis before they wrap (min-inline-size 0), the locate button keeps its size', () => {
