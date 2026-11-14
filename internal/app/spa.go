@@ -1,11 +1,14 @@
 package app
 
 import (
+	"bytes"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // iconFiles are the Family Pot icons at the root of the built frontend. They keep stable, unhashed URLs, so they are
@@ -47,30 +50,125 @@ func spaHandler(spa fs.FS) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		if name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/"); name != "" {
-			if info, err := fs.Stat(spa, name); err == nil && !info.IsDir() {
-				switch {
-				case iconFiles[name]:
-					w.Header().Set("Cache-Control", "public, max-age=86400")
-				case name == "manifest.webmanifest":
-					// install metadata must revalidate
-					w.Header().Set("Cache-Control", "no-cache")
-				}
-				http.ServeFileFS(w, r, spa, name)
+		name := strings.TrimPrefix(clean, "/")
+		if name == "" || name == "index.html" {
+			// The shell is written directly: http.ServeFileFS answers /index.html with a 301 to "./", and a redirected
+			// response cannot answer an offline navigation from the service worker's cache (RES-01).
+			serveIndex(w, r, spa)
+			return
+		}
+		if info, err := fs.Stat(spa, name); err == nil && !info.IsDir() {
+			switch {
+			case strings.HasPrefix(name, "assets/"):
+				serveAsset(w, r, spa, name)
 				return
+			case iconFiles[name]:
+				w.Header().Set("Cache-Control", "public, max-age=86400")
+			case name == "manifest.webmanifest", name == "sw.js", name == "registerSW.js":
+				// install metadata and the worker scripts must revalidate, or a new version is never found
+				w.Header().Set("Cache-Control", "no-cache")
 			}
+			http.ServeFileFS(w, r, spa, name)
+			return
 		}
 		if path.Ext(clean) != "" {
 			http.NotFound(w, r)
 			return
 		}
-		index, err := fs.ReadFile(spa, "index.html")
-		if err != nil {
-			http.Error(w, "frontend not built: run make build", http.StatusServiceUnavailable)
+		serveIndex(w, r, spa)
+	}
+}
+
+// serveIndex writes the SPA shell with no-cache, for "/", "/index.html" and every client-side route.
+func serveIndex(w http.ResponseWriter, r *http.Request, spa fs.FS) {
+	index, err := fs.ReadFile(spa, "index.html")
+	if err != nil {
+		http.Error(w, "frontend not built: run make build", http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Content-Length", strconv.Itoa(len(index)))
+	if r.Method == http.MethodHead {
+		return
+	}
+	_, _ = w.Write(index)
+}
+
+// immutableAsset is the cache policy of a content-hashed file under /assets/ (RES-04).
+const immutableAsset = "public, max-age=31536000, immutable"
+
+// encodable are the asset types the build precompresses; fonts and images are already compressed formats.
+var encodable = map[string]bool{".js": true, ".mjs": true, ".css": true, ".svg": true, ".html": true, ".json": true, ".webmanifest": true}
+
+// serveAsset serves a content-hashed file as immutable, from its .br or .gz sibling when the client accepts one.
+// A Range request is answered from the raw file: a byte range of a compressed body would mean nothing to the client.
+func serveAsset(w http.ResponseWriter, r *http.Request, spa fs.FS, name string) {
+	h := w.Header()
+	h.Set("Cache-Control", immutableAsset)
+	ext := path.Ext(name)
+	if !encodable[ext] {
+		http.ServeFileFS(w, r, spa, name)
+		return
+	}
+	h.Add("Vary", "Accept-Encoding")
+	if r.Header.Get("Range") == "" {
+		for _, enc := range negotiateEncodings(r.Header.Get("Accept-Encoding")) {
+			data, err := fs.ReadFile(spa, name+enc.suffix)
+			if err != nil {
+				continue
+			}
+			if ct := mime.TypeByExtension(ext); ct != "" {
+				h.Set("Content-Type", ct)
+			}
+			h.Set("Content-Encoding", enc.name)
+			var mod time.Time
+			if info, err := fs.Stat(spa, name); err == nil {
+				mod = info.ModTime()
+			}
+			http.ServeContent(w, r, name, mod, bytes.NewReader(data))
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-cache")
-		_, _ = w.Write(index)
 	}
+	http.ServeFileFS(w, r, spa, name)
+}
+
+type contentEncoding struct{ name, suffix string }
+
+// negotiateEncodings lists the precompressed encodings the client accepts, brotli first. A quality of 0 refuses one.
+func negotiateEncodings(acceptEncoding string) []contentEncoding {
+	accepted := map[string]bool{}
+	refused := map[string]bool{}
+	wildcard := false
+	for _, part := range strings.Split(acceptEncoding, ",") {
+		fields := strings.Split(part, ";")
+		coding := strings.ToLower(strings.TrimSpace(fields[0]))
+		if coding == "" {
+			continue
+		}
+		ok := true
+		for _, param := range fields[1:] {
+			k, v, found := strings.Cut(strings.TrimSpace(param), "=")
+			if found && strings.EqualFold(strings.TrimSpace(k), "q") {
+				if q, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil && q <= 0 {
+					ok = false
+				}
+			}
+		}
+		switch {
+		case coding == "*":
+			wildcard = ok
+		case ok:
+			accepted[coding] = true
+		default:
+			refused[coding] = true
+		}
+	}
+	var out []contentEncoding
+	for _, enc := range []contentEncoding{{"br", ".br"}, {"gzip", ".gz"}} {
+		if accepted[enc.name] || (wildcard && !refused[enc.name]) {
+			out = append(out, enc)
+		}
+	}
+	return out
 }
