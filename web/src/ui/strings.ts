@@ -20,6 +20,8 @@ export const uiStrings = {
   backspace: 'Backspace',
   save: 'Save',
   nextWithoutPrice: 'Next without a Price',
+  /** The same action where the keypad is narrow (the docked sheet in a desktop column); its accessible name stays the long one. */
+  nextShort: 'Next',
   enterAbove0: 'Enter a number above 0',
   lastTimeHere: (price: string, date: string) => `Last time here ${price} · ${date}`,
   noPriceAt: (shop: string) => `No Price at ${shop} yet`,

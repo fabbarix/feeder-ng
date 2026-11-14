@@ -239,3 +239,28 @@
     padding-block-end: max(50dvh, min(480px, 85dvh));
   }
 }
+
+/* The docked Price entry (from 768 px, under the paused camera): Close and Save stay at the bottom of the window while the
+   keypad is in view, so Save is never below the fold (the no-camera message, a Last-time chip and per kg make the sheet tall).
+   The sheet clips rather than scrolls there, so the window is what the actions stick to. */
+@media (min-width: 768px) {
+  .scan-screen__camera .sheet[data-modal='false'] {
+    overflow: clip;
+  }
+
+  .scan-screen__camera .sheet[data-modal='false'] .sheet__panel {
+    max-height: none;
+  }
+
+  .scan-screen__camera .sheet[data-modal='false'] .sheet__body {
+    overflow: visible;
+  }
+
+  .scan-screen__camera .price-keypad__actions {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 1;
+    padding-block: var(--space-2);
+    background: var(--color-surface);
+  }
+}

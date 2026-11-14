@@ -251,8 +251,9 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
           {uiStrings.close}
         </Button>
         {hasNext ? (
-          <Button onClick={commit}>
-            {uiStrings.nextWithoutPrice} <Icon name="next" size={20} />
+          <Button onClick={commit} aria-label={uiStrings.nextWithoutPrice}>
+            <span className="price-keypad__next-long">{uiStrings.nextWithoutPrice}</span>
+            <span className="price-keypad__next-short">{uiStrings.nextShort}</span> <Icon name="next" size={20} />
           </Button>
         ) : (
           <Button onClick={commit}>{uiStrings.save}</Button>

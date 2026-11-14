@@ -65,3 +65,16 @@ describe('scan.css: the cover line beside "Add price"', () => {
     expect(declarations(css, '.scanned-row__cover')['display']).toBe('inline-flex')
   })
 })
+
+// beta.7 polish: the docked Price entry keeps Close and Save in the window (desktop, no-camera message, per kg).
+describe('scan.css: the docked keypad\'s actions stay in view', () => {
+  const docked = (css.match(/@media \(min-width: 768px\) \{\s*\.scan-screen__camera \.sheet[\s\S]*?\n\}/) ?? [''])[0]
+  it('sticks the actions to the bottom of the window, on the surface', () => {
+    expect(docked).toMatch(/\.scan-screen__camera \.price-keypad__actions \{[^}]*position: sticky;[^}]*inset-block-end: 0;[^}]*background: var\(--color-surface\);/)
+  })
+  it('lets the docked sheet clip instead of scroll, so the window is what they stick to', () => {
+    expect(docked).toMatch(/\.sheet\[data-modal='false'\] \{\s*overflow: clip;/)
+    expect(docked).toMatch(/\.sheet__panel \{\s*max-height: none;/)
+    expect(docked).toMatch(/\.sheet__body \{\s*overflow: visible;/)
+  })
+})

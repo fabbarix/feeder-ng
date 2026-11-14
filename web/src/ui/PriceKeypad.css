@@ -1,5 +1,7 @@
 /* PriceKeypad (shop-scan-proposals.md 13.4): the keys are 44 px or more (system.md), the figures tabular. Tokens only. */
 .price-keypad {
+  /* Its own width decides the Next label (below), wherever it is docked. */
+  container-type: inline-size;
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
@@ -99,6 +101,25 @@
   display: flex;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.price-keypad__actions button {
+  white-space: nowrap;
+}
+
+/* "Next without a Price" reads "Next" where the keypad is narrow, so the primary never wraps (its accessible name stays long). */
+.price-keypad__next-short {
+  display: none;
+}
+
+@container (max-width: 340px) {
+  .price-keypad__next-long {
+    display: none;
+  }
+
+  .price-keypad__next-short {
+    display: inline;
+  }
 }
 
 /* compact: a half-height sheet. Less air between the parts and the keys; the keys keep their 44 px minimum. */
