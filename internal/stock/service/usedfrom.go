@@ -68,7 +68,13 @@ func (s *Service) DeductForCookedPickedTx(ctx context.Context, tx *sql.Tx, meals
 		idxs := plan.byIng[id]
 		ing := plan.needs[idxs[0]].ing
 		changed := false
-		_, err := s.st.UpdateTx(ctx, tx, id, func(lots []stock.Lot) (store.Mutation, error) {
+		before, err := lotsByID(ctx, s.st, tx, id)
+		if err != nil {
+			return PickedDeduction{}, err
+		}
+		var taken []stock.Taken
+		_, err = s.st.UpdateTx(ctx, tx, id, func(lots []stock.Lot) (store.Mutation, error) {
+			taken = nil
 			// Step A: every pick of every meal, validated and taken before any default rest.
 			a, err := stock.DeductPicked(lots, 0, plan.picks[id])
 			if err != nil {
@@ -77,6 +83,7 @@ func (s *Service) DeductForCookedPickedTx(ctx context.Context, tx *sql.Tx, meals
 			if len(a.Taken) > 0 {
 				changed = true
 			}
+			taken = append(taken, a.Taken...)
 			// Step B: each meal's rest, in meal order.
 			cur := a.Lots
 			for _, i := range idxs {
@@ -87,6 +94,7 @@ func (s *Service) DeductForCookedPickedTx(ctx context.Context, tx *sql.Tx, meals
 				if len(rest.Taken) > 0 {
 					changed = true
 				}
+				taken = append(taken, rest.Taken...)
 				if rest.Shortfall > 0 {
 					warnings[i] = &Warning{
 						IngredientID: id,
@@ -104,6 +112,7 @@ func (s *Service) DeductForCookedPickedTx(ctx context.Context, tx *sql.Tx, meals
 		if err != nil {
 			return PickedDeduction{}, err
 		}
+		d.Takes = appendTakes(d.Takes, before, taken)
 		if changed {
 			d.ChangedIngredientIDs = append(d.ChangedIngredientIDs, id)
 		}

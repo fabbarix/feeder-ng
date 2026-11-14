@@ -465,6 +465,9 @@ func (s *Service) DeductForCooked(ctx context.Context, needs []stock.Need) ([]Wa
 type Deduction struct {
 	Warnings             []Warning
 	ChangedIngredientIDs []int64
+	// Takes are what the deduction took, Lot by Lot, in consumption order, with each Lot as it was before (B9-11,
+	// SAFE-03): Planning keeps them so that an Undo of Cooked gives exactly that back (GiveBackTx).
+	Takes []LotTake
 }
 
 // DeductForCookedTx is DeductForCooked inside the caller's transaction (Planning
@@ -489,6 +492,30 @@ func (s *Service) PublishDeduction(d Deduction) {
 	if len(d.ChangedIngredientIDs) > 0 {
 		s.publish(map[string]any{"changed": "lots", "ingredientIds": d.ChangedIngredientIDs})
 	}
+}
+
+// lotsByID reads an Ingredient's stored Lots inside tx, by id: what a take records as the Lot before.
+func lotsByID(ctx context.Context, st *store.Store, tx *sql.Tx, ingredientID int64) (map[int64]store.StoredLot, error) {
+	lots, err := st.LotsOfTx(ctx, tx, ingredientID)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64]store.StoredLot, len(lots))
+	for _, l := range lots {
+		out[l.ID] = l
+	}
+	return out, nil
+}
+
+// appendTakes adds what was taken from each Lot, with the Lot as it was before. Takes of a Lot it has no record of
+// are left out (they cannot be given back).
+func appendTakes(out []LotTake, before map[int64]store.StoredLot, taken []stock.Taken) []LotTake {
+	for _, t := range taken {
+		if l, ok := before[t.LotID]; ok && t.Quantity > 0 {
+			out = append(out, LotTake{Lot: l, Taken: t.Quantity})
+		}
+	}
+	return out
 }
 
 // deduction is one resolved need: the Ingredient looked up and the need to take out.
@@ -530,16 +557,23 @@ func (s *Service) apply(ctx context.Context, tx *sql.Tx, todo []deduction) (Dedu
 	for _, t := range todo {
 		var have, shortfall float64
 		changed := false
-		_, err := s.st.UpdateTx(ctx, tx, t.ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
+		before, err := lotsByID(ctx, s.st, tx, t.ing.ID)
+		if err != nil {
+			return Deduction{}, err
+		}
+		var taken []stock.Taken
+		_, err = s.st.UpdateTx(ctx, tx, t.ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
 			have = stock.Total(lots)
 			res := stock.Deduct(lots, t.need.Quantity)
 			shortfall = res.Shortfall
 			changed = len(res.Taken) > 0
+			taken = res.Taken
 			return store.Mutation{Lots: res.Lots, Today: today}, nil
 		})
 		if err != nil {
 			return Deduction{}, err
 		}
+		d.Takes = appendTakes(d.Takes, before, taken)
 		if changed {
 			d.ChangedIngredientIDs = append(d.ChangedIngredientIDs, t.ing.ID)
 		}
