@@ -7,7 +7,7 @@ const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFile
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const css = readFileSync(`${cwd}/src/features/board/board.css`, 'utf8')
 
-const at = css.indexOf('@media (min-width: 600px)')
+const at = css.indexOf('@media (min-width: 37.5em)')
 const base = at < 0 ? css : css.slice(0, at)
 const wall = at < 0 ? '' : css.slice(at)
 const rule = (text: string, selector: string) => {
@@ -16,7 +16,7 @@ const rule = (text: string, selector: string) => {
 }
 
 describe('board.css phone grid', () => {
-  it('has a 600 px block', () => {
+  it('has a 37.5em (600 px) block', () => {
     expect(at).toBeGreaterThan(-1)
   })
   it('the default grid is 2 columns with content-height rows', () => {
@@ -29,7 +29,8 @@ describe('board.css phone grid', () => {
     const r = rule(wall, '  .board-screen .board-grid')
     expect(r).toMatch(/grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/)
     expect(r).toMatch(/grid-template-rows:\s*repeat\(3, minmax\(0, 1fr\)\)/)
-    expect(r).toMatch(/height:\s*calc\(100vh - 48px\)/)
+    // B9-08 (DS-11): the screen less its padding, 2 x --space-6 (48 px), in the token.
+    expect(r).toMatch(/height:\s*calc\(100vh - 2 \* var\(--space-6\)\)/)
   })
   it('a phone tile has a readable minimum height (the clock does not clip)', () => {
     expect(rule(base, '.board-cell')).toMatch(/min-height:\s*\d+(\.\d+)?rem/)
@@ -37,7 +38,7 @@ describe('board.css phone grid', () => {
 })
 
 const clockAt = css.indexOf('.board-clock__date {')
-const clockWallAt = css.indexOf('@media (min-width: 600px)', clockAt)
+const clockWallAt = css.indexOf('@media (min-width: 37.5em)', clockAt)
 const clockBase = css.slice(0, clockWallAt)
 const clockWall = css.slice(clockWallAt)
 

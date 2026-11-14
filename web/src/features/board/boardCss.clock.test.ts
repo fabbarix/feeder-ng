@@ -56,8 +56,9 @@ describe('board.css: the clock tile at tablet widths (768-1024 px)', () => {
     const calcs = () => [lastSize('.board-clock__time'), lastSize('.board-clock__date')]
 
     it('the tile declares one horizontal padding variable and pads its sides with it', () => {
-      expect(padX()).toMatch(/^\d+px$/)
-      expect(tile()).toMatch(/padding:\s*\d+px var\(--board-tile-pad-x\)\s*;/)
+      // B9-08 (DS-11): the variable and the block padding are spacing tokens (20 px is --space-5, 16 px --space-4), no raw px.
+      expect(padX()).toMatch(/^var\(--space-\d+\)$/)
+      expect(tile()).toMatch(/padding:\s*var\(--space-\d+\) var\(--board-tile-pad-x\)\s*;/)
     })
 
     it('the time and date calcs subtract 2 * that same variable, not the page-wide --tile-pad', () => {

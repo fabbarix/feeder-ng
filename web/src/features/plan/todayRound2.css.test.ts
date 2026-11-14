@@ -55,15 +55,19 @@ describe('TonightHero.css: tokens only, no raw breakpoint', () => {
   it('the hero title steps up with a container query on the hero, not a raw @media (min-width: 520px)', () => {
     expect(css).not.toMatch(/@media[^{]*\b520px/)
     expect(css).toMatch(/@container[^{]*min-width/)
-    expect(declarations(css, '.plan-hero')['container-type']).toBe('inline-size')
+    // B9-08: the hero names its container (`container: plan-hero / inline-size`), the shorthand of name and type.
+    const d = declarations(css, '.plan-hero')
+    expect(d['container-type'] ?? /\/\s*(\S+)\s*$/.exec(d.container ?? '')?.[1]).toBe('inline-size')
   })
 })
 
 describe('the hero\'s slot menu and rows follow the content inset and the mockup', () => {
+  // B9-08 (the user's report: the Recipe name ran under the absolutely placed ⋮): the ⋮ is in the hero's grid flow, row 1 of the end
+  // column, so it sits at the tile padding (top and end) by the tile's own padding, not by an offset.
   it('the slot ⋮ sits at the tile padding (top and end), aligned with the content, not at 8 px', () => {
-    const d = { ...declarations(frame, '.plan-hero__menu'), ...(css.includes('.plan-hero__menu') ? declarations(css, '.plan-hero__menu') : {}) }
-    expect(d['inset-inline-end']).toBe('var(--tile-pad)')
-    expect(d['top'] ?? d['inset-block-start']).toBe('var(--tile-pad)')
+    const d = declarations(frame, '.plan-hero:has(> .plan-hero__menu) > .plan-hero__menu')
+    expect(d).toMatchObject({ 'grid-column': '2', 'grid-row': '1' })
+    expect(d['position'] ?? 'static').toBe('static')
   })
 
   it('the Course list has a divider above it and a caption column on a wide hero (container query)', () => {
@@ -96,8 +100,9 @@ describe('the hero caption is readable on the accent (it was --color-muted: invi
   }
 
   it('uses the hero\'s own text colour at 85 %, never --color-muted, in light and dark', () => {
-    expect(bodies((s) => s === '.plan-hero .plan-course__caption')).toMatch(/color:\s*color-mix\(in srgb, var\(--color-on-accent\) 85%, transparent\)/)
-    expect(bodies((s) => /data-theme='dark'\] \.plan-hero .plan-course__caption$/.test(s))).toMatch(/color:\s*color-mix\(in srgb, var\(--color-text\) 85%, transparent\)/)
+    // TB-05 (B9-08): one rule for both heroes, in the hero's own colour: currentColor, so it follows ui/Tile's dark rule.
+    expect(bodies((s) => s === '.plan-hero .plan-course__caption')).toMatch(/color-mix\(in srgb, currentColor 85%, transparent\)/)
+    expect(bodies((s) => s === '.plan-hero .plan-course__caption')).not.toMatch(/--color-on-accent|--color-text/)
     for (const b of blocks.filter((x) => x.selectors.some((s) => s.includes('.plan-hero')))) expect(b.body).not.toMatch(/var\(--color-muted\)/)
   })
 

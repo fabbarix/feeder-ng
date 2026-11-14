@@ -80,20 +80,17 @@ describe('plan.css: the Today hero', () => {
     expect(css).not.toContain('.plan-hero__start')
   })
 
-  it.each([
-    ['prefers-color-scheme dark', ":root:not([data-theme='light']) .plan-hero"],
-    ['an explicit dark theme', ":root[data-theme='dark'] .plan-hero"],
-  ])('in dark mode (%s) the hero is the darker accent container, with --color-text', (_n, selector) => {
-    const d = declarations(css.replace(/@media[^{]*\{/g, ''), selector) // media wrappers are unwrapped by ruleBlocks-style text
-    expect(d['background']).toBe('var(--color-soft-strong)')
-    expect(d['color']).toBe('var(--color-text)')
+  // TB-05 (B9-08): the dark hero rule lives in ui/Tile.css keyed on data-scheme; the four data-theme blocks are gone from here.
+  it('TB-05: TonightHero.css has no dark-mode block of its own (no data-theme, no prefers-color-scheme, no data-scheme)', () => {
+    expect(css).not.toMatch(/data-theme/)
+    expect(css).not.toMatch(/prefers-color-scheme/)
+    expect(css).not.toMatch(/data-scheme/)
   })
 
-  it('in dark mode its Cook button is accent solid (the container is pastel-dark, so the button must stand out)', () => {
-    const hit = blocks.find((b) => b.selectors.some((s) => s.includes('.plan-hero') && s.includes("[data-variant='primary']") && s.includes('data-theme')))
-    expect(hit, 'no dark rule for the hero\'s primary button').toBeDefined()
-    expect(hit!.body).toMatch(/background:\s*var\(--color-accent\)/)
-    expect(hit!.body).toMatch(/color:\s*var\(--color-on-accent\)/)
+  it('TB-05: the hero paints no background or text colour of its own for dark (the Tile rule does)', () => {
+    for (const b of blocks.filter((x) => x.selectors.some((s) => /^\.plan-hero(\s|$)/.test(s) && !s.includes('.chip') && !s.includes('__')))) {
+      expect(b.body, b.selectors.join(',')).not.toMatch(/background:\s*var\(--color-soft-strong\)/)
+    }
   })
 })
 

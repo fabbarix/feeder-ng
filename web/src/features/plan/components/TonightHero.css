@@ -24,17 +24,24 @@
   flex: 1 1 auto;
   margin: 0;
   font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
   font-weight: 800;
 }
-/* The count of rows is a pill: a neutral container, round, padded. */
+/* The count of rows is a pill: a neutral container, round, padded. On the meta line it is a circle for one digit (as wide as it
+   is tall) and a pill from two digits (VC6). */
 .to-confirm__count {
+  box-sizing: border-box;
+  min-inline-size: calc(var(--text-meta-line) + 2 * var(--space-1));
   padding-inline: var(--space-2);
   padding-block: var(--space-1);
   border-radius: var(--radius-chip);
   background: var(--color-surface-2);
   color: var(--color-text);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 .to-confirm__list {
   list-style: none;
@@ -82,11 +89,13 @@
   background: var(--color-surface-2);
   color: var(--color-text);
   font-size: var(--text-label-size);
+  line-height: var(--text-meta-line);
   font-weight: 700;
   text-align: center;
 }
 .to-confirm__when > span:first-child {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -98,12 +107,14 @@
 .to-confirm__title {
   margin: 0;
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: 700;
 }
 .to-confirm__meta {
   min-inline-size: 0;
   margin: 0;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -115,8 +126,9 @@
 }
 
 /* ---- The hero ---- */
+/* A named size container: plan.css places the hero actions by the hero's own width (@container plan-hero). */
 .plan-hero {
-  container-type: inline-size;
+  container: plan-hero / inline-size;
 }
 .plan-hero__body {
   display: flex;
@@ -131,17 +143,20 @@
 .plan-hero__name {
   margin: 0;
   font-size: var(--text-title-2-size);
+  line-height: var(--text-title-2-line);
 }
 /* The title steps up to title-1 from 35 rem of hero (a container query, not the viewport). */
 @container (min-width: 35rem) {
   .plan-hero__name {
     font-size: var(--text-title-1-size);
+    line-height: var(--text-title-1-line);
   }
 }
 /* After the slot time: "<Recipe> cooked?" under the title. */
 .plan-hero__ask {
   margin: 0;
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: 700;
 }
 /* The why chips stay on one line: a row that never wraps, clipped by the row, each chip may shrink. */
@@ -155,28 +170,10 @@
 .plan-hero__chips > * {
   min-inline-size: 0;
 }
-/* On the accent hero a why chip is on-accent at 18 % (neutral, never an accent-soft fill). */
+/* On the accent hero a why chip is on-accent at 18 % (neutral, never an accent-soft fill). The hero's colours in dark, and its
+   focus ring, are ui/Tile's hero rule (TB-05): this file has no dark block of its own. */
 .plan-hero .chip[data-kind='why'] {
   background: color-mix(in srgb, var(--color-on-accent) 18%, transparent);
-  color: var(--color-on-accent);
-}
-/* In dark mode the hero is the darker accent container with the text colour; its Cook button is accent solid. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .plan-hero {
-    background: var(--color-soft-strong);
-    color: var(--color-text);
-  }
-  :root:not([data-theme='light']) .plan-hero [data-variant='primary'] {
-    background: var(--color-accent);
-    color: var(--color-on-accent);
-  }
-}
-:root[data-theme='dark'] .plan-hero {
-  background: var(--color-soft-strong);
-  color: var(--color-text);
-}
-:root[data-theme='dark'] .plan-hero [data-variant='primary'] {
-  background: var(--color-accent);
   color: var(--color-on-accent);
 }
 
@@ -200,18 +197,11 @@
 .plan-course__caption {
   margin: 0;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-muted);
 }
 .plan-hero .plan-course__caption {
-  color: color-mix(in srgb, var(--color-on-accent) 85%, transparent);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .plan-hero .plan-course__caption {
-    color: color-mix(in srgb, var(--color-text) 85%, transparent);
-  }
-}
-:root[data-theme='dark'] .plan-hero .plan-course__caption {
-  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+  color: color-mix(in srgb, currentColor 85%, transparent);
 }
 /* On a wide hero the caption is its own column, before the name. */
 @container (min-width: 35rem) {
@@ -220,7 +210,7 @@
     align-items: center;
     column-gap: var(--space-4);
   }
-  .plan-hero .plan-course__caption {
+  .plan-hero .plan-course > .plan-course__caption {
     grid-column: 1;
   }
   .plan-hero .plan-course__body {

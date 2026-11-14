@@ -6,7 +6,7 @@ const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFile
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const css = readFileSync(`${cwd}/src/features/cook/cook.css`, 'utf8')
 
-const mediaAt = css.indexOf('@media (min-width: 768px)')
+const mediaAt = css.indexOf('@media (min-width: 48em)')
 const phoneCss = mediaAt < 0 ? css : css.slice(0, mediaAt)
 const tabletCss = mediaAt < 0 ? '' : css.slice(mediaAt)
 

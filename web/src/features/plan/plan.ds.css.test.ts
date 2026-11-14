@@ -85,7 +85,8 @@ describe('the Meal Slot header', () => {
     const actions = d('.plan-slot-head__actions')
     expect(actions['display']).toBe('inline-flex')
     expect(actions['flex']).toBe('none')
-    expect(actions['gap']).toBe('var(--space-1)')
+    // B9-08 (A11Y-02, P39): 8 px between the icon buttons, so a focused button's ring (3 px at a 2 px offset) never meets the next.
+    expect(actions['gap']).toBe('var(--space-2)')
   })
 
   it('the slot NAME is never truncated: no ellipsis, no overflow hidden, no nowrap on the label or the name', () => {

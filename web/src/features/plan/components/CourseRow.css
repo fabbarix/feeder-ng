@@ -37,6 +37,7 @@
   color: inherit;
   font-family: inherit;
   font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
   font-weight: 700;
   text-align: start;
   display: -webkit-box;

@@ -109,17 +109,3 @@ export function useVoicePreference(): [boolean, (on: boolean) => void] {
   }, [])
   return [on, set]
 }
-
-/** True while the media query matches (false where matchMedia is missing). */
-export function useMediaQuery(query: string): boolean {
-  const read = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(query).matches
-  const [matches, setMatches] = useState(read)
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const mql = window.matchMedia(query)
-    const onChange = () => setMatches(mql.matches)
-    mql.addEventListener('change', onChange)
-    return () => mql.removeEventListener('change', onChange)
-  }, [query])
-  return matches
-}
