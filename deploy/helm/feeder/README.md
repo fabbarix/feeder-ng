@@ -25,6 +25,7 @@ Lint the chart with the CI values: `helm lint deploy/helm/feeder -f deploy/helm/
 - **`/data` ownership.** `/data` must be writable by uid/gid 65532. `fsGroup: 65532` makes most dynamically provisioned volumes writable, but `fsGroup` is not enough on its own: an `existingClaim` whose volume ignores `fsGroup` (hostPath, NFS, some CSI drivers) must be chowned beforehand with `chown 65532:65532` on the volume's directory.
 - **Fixed port.** `FEEDER_ADDR` must stay `:8080` under the chart: the container port, the Service target and the probes are hardcoded to 8080.
 - **HTTPS in front.** Camera scanning, Web Push and Google sign-in need HTTPS, so `baseUrl` is the public https URL and an ingress or proxy must terminate TLS.
+- **Compression and caching are Feeder's.** Feeder sends its scripts and styles precompressed (brotli or gzip) with long `Cache-Control` headers, so the ingress needs nothing beyond what the chart sets (ingress-nginx compression is a controller-wide ConfigMap setting, not a per-Ingress annotation). A proxy in front must pass `Content-Encoding` and `Cache-Control` through unchanged, and keep `proxy-buffering: "off"` for `/api/events`, the live updates stream.
 
 ## Google sign-in
 
