@@ -35,6 +35,8 @@ const (
 var (
 	// ErrNotFound is returned for an unknown Stock Lot.
 	ErrNotFound = errors.New("stock lot not found")
+	// ErrWasteNotFound is returned for an unknown waste record; it is also ErrNotFound (errors.Is).
+	ErrWasteNotFound = fmt.Errorf("%w: no such waste record", ErrNotFound)
 	// ErrDuplicateUUID is returned if a client UUID is reused for a different Ingredient.
 	ErrDuplicateUUID = errors.New("client uuid already used for another Stock Lot")
 )
@@ -79,7 +81,7 @@ type WasteRecord struct {
 	// such waste on LotGoesOff+1, the day the Lot went off, not on WastedOn.
 	LotGoesOff stock.Date
 	// LotJSON is the thrown-out Lot as it was (store.StoredLot as JSON), kept by Throw out so Undo can put it back (B9-05,
-	// migration 1572). "" for other waste and for waste recorded before 1572. B9-05 test stub: nothing writes it yet.
+	// migration 1572). "" for other waste and for waste recorded before 1572.
 	LotJSON string
 }
 
@@ -377,7 +379,7 @@ func (s *Store) AddWasteTx(ctx context.Context, tx *sql.Tx, w WasteRecord) (Wast
 // Waste lists waste records with WastedOn in [from, to] (an empty bound is
 // open), ordered by date then ID.
 func (s *Store) Waste(ctx context.Context, from, to stock.Date) ([]WasteRecord, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, ingredient_id, quantity, wasted_on, reason, lot_id, lot_goes_off
+	rows, err := s.db.QueryContext(ctx, `SELECT `+wasteColumns+`
 		FROM stock_waste
 		WHERE (? = '' OR wasted_on >= ?) AND (? = '' OR wasted_on <= ?)
 		ORDER BY wasted_on, id`, string(from), string(from), string(to), string(to))
@@ -387,25 +389,89 @@ func (s *Store) Waste(ctx context.Context, from, to stock.Date) ([]WasteRecord, 
 	defer rows.Close()
 	out := []WasteRecord{}
 	for rows.Next() {
-		var (
-			w      WasteRecord
-			ing    sql.NullInt64
-			lot    sql.NullInt64
-			goes   sql.NullString
-			on     string
-			reason string
-		)
-		if err := rows.Scan(&w.ID, &ing, &w.Quantity, &on, &reason, &lot, &goes); err != nil {
+		w, err := scanWaste(rows)
+		if err != nil {
 			return nil, err
 		}
-		w.WastedOn = stock.Date(on)
-		w.Reason = Reason(reason)
-		w.IngredientID = optInt(ing)
-		w.LotID = optInt(lot)
-		w.LotGoesOff = stock.Date(goes.String)
 		out = append(out, w)
 	}
 	return out, rows.Err()
+}
+
+// WasteTx returns one waste record inside tx, or ErrWasteNotFound.
+func (s *Store) WasteTx(ctx context.Context, tx *sql.Tx, id int64) (WasteRecord, error) {
+	w, err := scanWaste(tx.QueryRowContext(ctx, `SELECT `+wasteColumns+` FROM stock_waste WHERE id = ?`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return WasteRecord{}, ErrWasteNotFound
+	}
+	return w, err
+}
+
+// DeleteWasteTx removes one waste record inside tx (Undo of a Throw out), or ErrWasteNotFound.
+func (s *Store) DeleteWasteTx(ctx context.Context, tx *sql.Tx, id int64) error {
+	res, err := tx.ExecContext(ctx, `DELETE FROM stock_waste WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrWasteNotFound
+	}
+	return nil
+}
+
+const wasteColumns = `id, ingredient_id, quantity, wasted_on, reason, lot_id, lot_goes_off, lot_json`
+
+func scanWaste(r scanner) (WasteRecord, error) {
+	var (
+		w          WasteRecord
+		ing, lot   sql.NullInt64
+		goes, js   sql.NullString
+		on, reason string
+	)
+	if err := r.Scan(&w.ID, &ing, &w.Quantity, &on, &reason, &lot, &goes, &js); err != nil {
+		return WasteRecord{}, err
+	}
+	w.WastedOn = stock.Date(on)
+	w.Reason = Reason(reason)
+	w.IngredientID = optInt(ing)
+	w.LotID = optInt(lot)
+	w.LotGoesOff = stock.Date(goes.String)
+	w.LotJSON = js.String
+	return w, nil
+}
+
+// RestoreLotTx puts a Stock Lot back inside tx with its own id and everything it had (dates, Kept on, source, Product,
+// Shop, client UUID, Storage Place, created at), as a give-back or the Undo of a Throw out does. A Storage Place
+// removed since leaves the Lot Not sorted. A go-off record of the Lot goes: the Lot is in Stock again, and its go-off
+// counts once more if it leaves Stock gone off.
+func (s *Store) RestoreLotTx(ctx context.Context, tx *sql.Tx, l StoredLot) (StoredLot, error) {
+	place := l.StoragePlaceID
+	if place != nil {
+		if _, err := placeByID(ctx, tx, *place); errors.Is(err, ErrPlaceNotFound) {
+			place = nil
+		} else if err != nil {
+			return StoredLot{}, err
+		}
+	}
+	src := l.Source
+	if src == "" {
+		src = SourceManual
+	}
+	created := s.now()
+	if !l.CreatedAt.IsZero() {
+		created = l.CreatedAt.UTC().Format(time.RFC3339)
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO stock_lots
+		(id, ingredient_id, quantity, purchased, goes_off, source, product_id, shop_id, client_uuid, created_at, kept_on, storage_place_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		l.ID, l.IngredientID, l.Quantity, string(l.Purchased), nullDate(l.GoesOff), string(src), nullInt(l.ProductID),
+		nullInt(l.ShopID), nullString(l.ClientUUID), created, nullDate(l.KeptOn), nullInt(place)); err != nil {
+		return StoredLot{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM stock_go_offs WHERE lot_id = ?`, l.ID); err != nil {
+		return StoredLot{}, err
+	}
+	return scanLot(tx.QueryRowContext(ctx, `SELECT `+lotColumns+` FROM stock_lots WHERE id = ?`, l.ID))
 }
 
 // queryer is satisfied by *sql.DB and *sql.Tx.
@@ -453,8 +519,9 @@ func insertWaste(ctx context.Context, q queryer, w WasteRecord, createdAt string
 		return WasteRecord{}, fmt.Errorf("stock: unknown waste reason %q", w.Reason)
 	}
 	res, err := q.ExecContext(ctx, `INSERT INTO stock_waste
-		(ingredient_id, quantity, wasted_on, reason, lot_id, lot_goes_off, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		nullInt(w.IngredientID), w.Quantity, string(w.WastedOn), string(w.Reason), nullInt(w.LotID), nullDate(w.LotGoesOff), createdAt)
+		(ingredient_id, quantity, wasted_on, reason, lot_id, lot_goes_off, lot_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		nullInt(w.IngredientID), w.Quantity, string(w.WastedOn), string(w.Reason), nullInt(w.LotID), nullDate(w.LotGoesOff),
+		nullString(w.LotJSON), createdAt)
 	if err != nil {
 		return WasteRecord{}, err
 	}
