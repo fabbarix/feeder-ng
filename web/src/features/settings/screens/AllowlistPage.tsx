@@ -1,4 +1,4 @@
-import { Tile } from '../../../ui'
+import { Muted, Tile } from '../../../ui'
 import { AllowlistPanel } from '../components/AllowlistPanel'
 import { SettingsHeader } from '../components/SettingsHeader'
 import { useAllowlistPage } from '../hooks/useAllowlistPage'
@@ -24,7 +24,7 @@ export function AllowlistPage() {
             onRemove={page.remove}
           />
         ) : (
-          <p className="settings__muted">{settingsStrings.allowlistAdminOnly}</p>
+          <Muted>{settingsStrings.allowlistAdminOnly}</Muted>
         )}
       </Tile>
     </div>

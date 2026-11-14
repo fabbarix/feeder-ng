@@ -1,7 +1,7 @@
 // The Meal Slot editor's Courses field: the shared ordered CoursePicker with, in every chosen row, the Optional switch and
 // "Who eats it". Renders and wires events; the rules are in lib/slotCourses.
 import type { CourseChoice } from '../../../lib/courses'
-import { CoursePicker, Switch } from '../../../ui'
+import { CoursePicker, Muted, Switch } from '../../../ui'
 import { coursesStrings } from '../coursesStrings'
 import { attendeesOf, withCourseIds, withEater, withOptional } from '../lib/slotCourses'
 import type { AttendanceEntry, Member, SlotCourseInput } from '../types'
@@ -48,7 +48,7 @@ export function SlotCoursesField({ courses, members, attendance, value, onChange
             <div className="slot-courses__eaters">
               <span className="slot-courses__label">{s.whoEats}</span>
               {attendees.length === 0 ? (
-                <p className="settings__muted">{s.chooseWhoAttends}</p>
+                <Muted>{s.chooseWhoAttends}</Muted>
               ) : (
                 <CourseEaters
                   courseName={course.name}

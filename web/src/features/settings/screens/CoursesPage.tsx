@@ -2,7 +2,7 @@
 import type { ReactElement } from 'react'
 import type { Course } from '../../../lib/courses'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Button, ListPage, PageHeader, Sortable, TextField, type SortableRenderContext } from '../../../ui'
+import { Button, ListPage, Muted, PageHeader, Sortable, TextField, type SortableRenderContext } from '../../../ui'
 import { CourseRemoveDialog } from '../components/CourseRemoveDialog'
 import { CourseRow } from '../components/CourseRow'
 import { coursesStrings as s } from '../coursesStrings'
@@ -31,8 +31,8 @@ export function CoursesPage(): ReactElement {
 
   return (
     <ListPage header={<PageHeader title={s.title} breadcrumbs={breadcrumbs} />}>
-      <p className="pg__muted">{s.intro}</p>
-      {!isAdmin && !courses.isPending && !courses.isError ? <p className="pg__muted">{s.readOnly}</p> : null}
+      <Muted>{s.intro}</Muted>
+      {!isAdmin && !courses.isPending && !courses.isError ? <Muted>{s.readOnly}</Muted> : null}
       {courses.isPending ? (
         <p role="status">{s.loading}</p>
       ) : courses.isError ? (
@@ -71,7 +71,7 @@ export function CoursesPage(): ReactElement {
               <Button type="submit" variant="secondary" disabled={!page.canAdd}>
                 {s.addButton}
               </Button>
-              {!page.canAdd ? <p className="pg__muted">{s.atLimit}</p> : null}
+              {!page.canAdd ? <Muted>{s.atLimit}</Muted> : null}
             </form>
           ) : null}
           {archived.length > 0 ? (
