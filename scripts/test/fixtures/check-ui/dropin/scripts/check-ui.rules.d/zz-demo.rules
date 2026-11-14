@@ -1,0 +1,2 @@
+# the mode of a package's own rule, in its own file
+demo-ban=fail

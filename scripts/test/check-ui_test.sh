@@ -211,6 +211,8 @@ sandbox() { # name rules-file
   local d="$TMP/repo-$1"
   mkdir -p "$d/scripts" "$d/web"
   cp "$SCRIPTS/check.sh" "$SCRIPTS/check-ui.sh" "$d/scripts/"
+  # B9-03: check-ui.sh loads check-ui.d/* and check-ui.rules.d/* beside it, so the throwaway repo carries the real ones
+  for dir in check-ui.d check-ui.rules.d; do [ -d "$SCRIPTS/$dir" ] && cp -r "$SCRIPTS/$dir" "$d/scripts/$dir"; done
   cp "$2" "$d/scripts/check-ui.rules"
   cp -r "$FIX/sizing/fail/web/src" "$d/web/src"
   echo "$d"
@@ -224,6 +226,86 @@ d="$(sandbox fail "$(rules_file sizing fail)")"
 CHECK_ONLY=ui bash "$d/scripts/check.sh" >"$TMP/check-fail.out" 2>&1
 [ $? -ne 0 ] && ok || bad "check.sh must fail when a fail-mode rule has violations"
 grep -q "CHECK FAILED" "$d/build/check.log" && ok || bad "failure must be recorded in build/check.log"
+
+# --- B9-03: a package adds its OWN rule files (plan section 5): scripts/check-ui.d/*.sh registers and defines a rule, and
+# scripts/check-ui.rules.d/* sets its mode, read after the rules file (the directory of a rules file F is F.d).
+DROP="$FIX/dropin"
+dropin_scripts() { # NAME [with-rules-d] [mode-line-for-main-rules] -> $TMP/NAME/scripts with check-ui.sh and the demo rule
+  local d="$TMP/$1/scripts"
+  mkdir -p "$d/check-ui.d"
+  cp "$SCRIPTS/check-ui.sh" "$d/"
+  cp "$DROP/scripts/check-ui.d/zz-demo-ban.sh" "$d/check-ui.d/"
+  printf '%s\n' "${3:-# no rules}" >"$d/check-ui.rules"
+  if [ "${2:-}" = rules-d ]; then mkdir -p "$d/check-ui.rules.d"; cp "$DROP/scripts/check-ui.rules.d/zz-demo.rules" "$d/check-ui.rules.d/"; fi
+  echo "$d"
+}
+run_drop() { # SCRIPTS_DIR ROOT [extra args] -> RC, OUTPUT
+  local sd="$1" root="$2"; shift 2
+  OUTPUT="$(CHECK_UI_ALLOW_DIR="$TMP/noallow" CHECK_UI_OUT="$TMP/out.txt" bash "$sd/check-ui.sh" --root "$root" "$@" 2>&1)"
+  RC=$?
+}
+sd="$(dropin_scripts d1)"
+run_drop "$sd" "$DROP/fail"
+[ "$RC" -eq 0 ] && [ "$(count_of demo-ban)" = 2 ] && ok || bad "check-ui.d: the drop-in rule runs and counts its 2 violations, in warn mode by default (rc $RC, got '$(count_of demo-ban)'): $OUTPUT"
+grep -q "demo-ban .*\[warn\]" <<<"$OUTPUT" && ok || bad "check-ui.d: the summary shows the drop-in rule with its mode"
+run_drop "$sd" "$DROP/pass"
+[ "$RC" -eq 0 ] && [ "$(count_of demo-ban)" = 0 ] && ok || bad "check-ui.d: the pass fixture is clean under the drop-in rule (rc $RC)"
+# the twelve rules stay first and in order; a drop-in rule comes after them
+run_drop "$sd" "$DROP/fail"
+order="$(sed -nE 's/^ +([a-z-]+) +[0-9]+ violations.*/\1/p' <<<"$OUTPUT" | tr '\n' ' ')"
+[ "$order" = "native-ui phosphor colour-literals class-hooks sizing glossary native-search back-link image-input type-scale opacity-muting word-break demo-ban " ] && ok || bad "check-ui: the 12 rules in their order, then the drop-in rules (got: $order)"
+
+sd="$(dropin_scripts d2 rules-d)"
+run_drop "$sd" "$DROP/fail"
+[ "$RC" -eq 1 ] && grep -q "demo-ban .*\[fail\]" <<<"$OUTPUT" && ok || bad "check-ui.rules.d: demo-ban=fail in a rules.d file must fail the fail fixture (rc $RC): $OUTPUT"
+run_drop "$sd" "$DROP/pass"
+[ "$RC" -eq 0 ] && ok || bad "check-ui.rules.d: the pass fixture still passes with demo-ban=fail (rc $RC)"
+
+# a rules.d file is read AFTER the rules file, so it wins; of two rules.d files the later one (by name) wins
+sd="$(dropin_scripts d3 rules-d 'demo-ban=warn')"
+run_drop "$sd" "$DROP/fail"
+[ "$RC" -eq 1 ] && ok || bad "check-ui.rules.d: a rules.d line overrides the rules file (rules file warn, rules.d fail -> fail), got rc $RC"
+sd="$(dropin_scripts d4 '' 'demo-ban=fail')"
+mkdir -p "$sd/check-ui.rules.d"; echo 'demo-ban=warn' >"$sd/check-ui.rules.d/aa.rules"; echo 'demo-ban=fail' >"$sd/check-ui.rules.d/bb.rules"
+run_drop "$sd" "$DROP/fail"
+[ "$RC" -eq 1 ] && ok || bad "check-ui.rules.d: the later file by name wins (aa warn, bb fail -> fail), got rc $RC"
+echo 'demo-ban=warn' >"$sd/check-ui.rules.d/cc.rules"
+run_drop "$sd" "$DROP/fail"
+[ "$RC" -eq 0 ] && ok || bad "check-ui.rules.d: cc.rules (warn) comes after bb.rules (fail) and wins, got rc $RC"
+# fail_paths in a rules.d file
+sd="$(dropin_scripts d5)"; mkdir -p "$sd/check-ui.rules.d"
+printf 'demo-ban=warn\ndemo-ban.fail_paths=web/src/app\n' >"$sd/check-ui.rules.d/p.rules"
+run_drop "$sd" "$DROP/fail"
+[ "$RC" -eq 1 ] && ok || bad "check-ui.rules.d: demo-ban.fail_paths=web/src/app must fail violations under it (rc $RC)"
+printf 'demo-ban=warn\ndemo-ban.fail_paths=web/src/ui\n' >"$sd/check-ui.rules.d/p.rules"
+run_drop "$sd" "$DROP/fail"
+[ "$RC" -eq 0 ] && ok || bad "check-ui.rules.d: fail_paths elsewhere must not fail (rc $RC)"
+
+# a rules.d file that names a rule nobody registered is the same error as in the rules file
+sd="$(dropin_scripts d6)"; mkdir -p "$sd/check-ui.rules.d"; echo 'no-such-rule=fail' >"$sd/check-ui.rules.d/x.rules"
+run_drop "$sd" "$DROP/pass"
+[ "$RC" -eq 2 ] && grep -q "unknown rule 'no-such-rule'" <<<"$OUTPUT" && ok || bad "check-ui.rules.d: an unregistered rule must exit 2 with \"unknown rule 'no-such-rule'\" (rc $RC): $OUTPUT"
+sd="$(dropin_scripts d7)"; mkdir -p "$sd/check-ui.rules.d"; echo 'demo-ban=maybe' >"$sd/check-ui.rules.d/x.rules"
+run_drop "$sd" "$DROP/pass"
+[ "$RC" -eq 2 ] && ok || bad "check-ui.rules.d: an unknown mode must exit 2 (rc $RC)"
+
+# a drop-in that registers a rule but defines no rule_<name> function stops the run
+sd="$TMP/d8/scripts"; mkdir -p "$sd/check-ui.d"; cp "$SCRIPTS/check-ui.sh" "$sd/"; cp "$DROP/scripts/missing-fn/check-ui.d/zz-demo-missing.sh" "$sd/check-ui.d/"; : >"$sd/check-ui.rules"
+run_drop "$sd" "$DROP/pass"
+[ "$RC" -eq 2 ] && grep -q 'rule_demo_missing' <<<"$OUTPUT" && ok || bad "check-ui.d: a registered rule without rule_demo_missing() must exit 2 and name the function (rc $RC): $OUTPUT"
+
+# the directories are optional (the throwaway repos above have none) and --rules F reads F.d, never the script directory's own rules.d
+sd="$(dropin_scripts d9 rules-d)"            # its check-ui.rules.d says demo-ban=fail
+printf 'demo-ban=warn\n' >"$TMP/own.rules"
+run_drop "$sd" "$DROP/fail" --rules "$TMP/own.rules"
+[ "$RC" -eq 0 ] && ok || bad "--rules FILE must not read the script directory's check-ui.rules.d (rc $RC): the explicit rules file is the whole truth"
+mkdir -p "$TMP/own.rules.d"; echo 'demo-ban=fail' >"$TMP/own.rules.d/x.rules"
+run_drop "$sd" "$DROP/fail" --rules "$TMP/own.rules"
+[ "$RC" -eq 1 ] && ok || bad "--rules FILE reads FILE.d (own.rules.d: demo-ban=fail -> fail), rc $RC"
+rm -rf "$TMP/own.rules.d"
+# the real tree has the hook directories, and check-ui.sh documents them
+[ -d "$SCRIPTS/check-ui.d" ] && [ -d "$SCRIPTS/check-ui.rules.d" ] && ok || bad "scripts/check-ui.d/ and scripts/check-ui.rules.d/ must exist"
+grep -q 'check-ui.d' "$SCRIPTS/check-ui.sh" && grep -q 'rules.d' "$SCRIPTS/check-ui.sh" && ok || bad "check-ui.sh must document and implement check-ui.d and check-ui.rules.d"
 
 printf 'check-ui_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

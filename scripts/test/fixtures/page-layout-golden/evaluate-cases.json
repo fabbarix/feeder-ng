@@ -1,0 +1,1432 @@
+[
+ {
+  "name": "clean at 1440px /settings",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1440,
+   "clientW": 1440,
+   "over": [],
+   "content": {
+    "x": 480,
+    "r": 1200
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "pageWidthAttr": "narrow",
+   "fields": [],
+   "bars": [],
+   "railContrast": 7,
+   "dialog": null
+  },
+  "ctx": {
+   "width": 1440,
+   "route": "/settings",
+   "kind": "narrow"
+  },
+  "findings": []
+ },
+ {
+  "name": "clean at 390px /plan",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1440,
+   "clientW": 1440,
+   "over": [],
+   "content": {
+    "x": 480,
+    "r": 1200
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "pageWidthAttr": "narrow",
+   "fields": [],
+   "bars": [],
+   "railContrast": 7,
+   "dialog": null
+  },
+  "ctx": {
+   "width": 390,
+   "route": "/plan",
+   "kind": "wide"
+  },
+  "findings": [
+   {
+    "rule": "P9",
+    "message": "P9 the page container says data-page-width=\"narrow\", the route table says \"wide\""
+   }
+  ]
+ },
+ {
+  "name": "clean at 900px /board",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1440,
+   "clientW": 1440,
+   "over": [],
+   "content": {
+    "x": 480,
+    "r": 1200
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "pageWidthAttr": "narrow",
+   "fields": [],
+   "bars": [],
+   "railContrast": 7,
+   "dialog": null
+  },
+  "ctx": {
+   "width": 900,
+   "route": "/board",
+   "kind": "full"
+  },
+  "findings": []
+ },
+ {
+  "name": "clean at 1920px /shop",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1440,
+   "clientW": 1440,
+   "over": [],
+   "content": {
+    "x": 480,
+    "r": 1200
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "pageWidthAttr": "narrow",
+   "fields": [],
+   "bars": [],
+   "railContrast": 7,
+   "dialog": null
+  },
+  "ctx": {
+   "width": 1920,
+   "route": "/shop",
+   "kind": "wide"
+  },
+  "findings": [
+   {
+    "rule": "P9",
+    "message": "P9 the page container says data-page-width=\"narrow\", the route table says \"wide\""
+   }
+  ]
+ },
+ {
+  "name": "everything-broken at 1440px /settings",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1500,
+   "clientW": 1440,
+   "over": [
+    "div.tile",
+    "p.x"
+   ],
+   "content": {
+    "x": 300,
+    "r": 1300
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "containerInner": {
+    "x": 452,
+    "r": 1228
+   },
+   "pageWidthAttr": "wide",
+   "fields": [
+    {
+     "label": "Qty",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400
+    },
+    {
+     "label": "Name",
+     "type": "text",
+     "short": false,
+     "segment": false,
+     "size": "md",
+     "w": 100
+    },
+    {
+     "label": "Code",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400,
+     "long": true
+    },
+    {
+     "label": "Tag",
+     "type": "text",
+     "short": false,
+     "segment": false,
+     "size": "md",
+     "w": 100,
+     "inline": true
+    }
+   ],
+   "bars": [
+    {
+     "cls": "sticky-action-bar",
+     "x": 100,
+     "r": 900,
+     "bgAlpha": 0
+    }
+   ],
+   "railContrast": 3.2,
+   "dialog": {
+    "x": 10,
+    "w": 800,
+    "vw": 1440
+   },
+   "lowContrastButtons": [
+    {
+     "label": "Save",
+     "ratio": 2.1
+    }
+   ],
+   "lowContrastButtonsDark": [
+    {
+     "label": "Cancel",
+     "ratio": 3.3
+    }
+   ],
+   "brokenText": [
+    {
+     "sel": "p.a",
+     "why": "clipped"
+    },
+    {
+     "sel": "p.b",
+     "why": "mid-word",
+     "token": "abc"
+    },
+    {
+     "sel": "a.c",
+     "why": "mid-word",
+     "token": "a@b.c"
+    }
+   ],
+   "navOverlap": [
+    {
+     "sel": "button.last",
+     "px": 12
+    }
+   ],
+   "tileOverflow": [
+    {
+     "sel": "span.name",
+     "px": 9,
+     "card": "tile"
+    }
+   ],
+   "clippedChips": [
+    {
+     "sel": ".chip",
+     "label": "Dairy",
+     "room": 40
+    }
+   ],
+   "crushedChips": [
+    {
+     "sel": ".chip",
+     "label": "Beef",
+     "px": 8
+    }
+   ],
+   "fitLines": [
+    {
+     "sel": ".filter-chips",
+     "label": "Fish",
+     "why": "cut",
+     "px": 20
+    },
+    {
+     "sel": ".filter-chips",
+     "label": "Curry",
+     "why": "past",
+     "px": 30
+    }
+   ],
+   "clippedRings": [
+    {
+     "sel": ".chip",
+     "label": "Tag",
+     "what": "focus ring",
+     "px": 3
+    }
+   ],
+   "popoverAlign": {
+    "dx": 12,
+    "left": 10,
+    "right": 2000,
+    "contentX": 100,
+    "contentR": 1300
+   },
+   "filterSpacing": {
+    "rowGap": 2,
+    "slotGap": 8,
+    "sectionGap": 4
+   },
+   "runtimeErrors": [
+    {
+     "why": "exception",
+     "text": "boom"
+    }
+   ],
+   "cutSelects": [
+    {
+     "sel": ".select",
+     "label": "Sort",
+     "shown": 60,
+     "px": 20
+    }
+   ],
+   "cutMeta": [
+    {
+     "sel": ".meta",
+     "label": "Fri Dinner +2",
+     "shown": 90,
+     "px": 12
+    }
+   ],
+   "actionLayout": [
+    {
+     "sel": ".action-group",
+     "why": "collapsed"
+    },
+    {
+     "sel": ".action-group",
+     "why": "label-clipped",
+     "px": 4
+    },
+    {
+     "sel": ".action-group",
+     "why": "under",
+     "px": 6
+    }
+   ]
+  },
+  "ctx": {
+   "width": 1440,
+   "route": "/settings",
+   "kind": "narrow"
+  },
+  "findings": [
+   {
+    "rule": "P1",
+    "message": "P1 sideways scroll (scrollWidth 1500 > 1440)"
+   },
+   {
+    "rule": "P1",
+    "message": "P1 elements past the right edge: div.tile, p.x"
+   },
+   {
+    "rule": "P2",
+    "message": "P2 content is off-centre by -40px (content 300-1300, area 240-1440)"
+   },
+   {
+    "rule": "P3",
+    "message": "P3 content is 1000px wide; a narrow page is at most 720px"
+   },
+   {
+    "rule": "P4",
+    "message": "P4 short field \"Qty\" is 400px wide (max 240; set size=\"xs|sm\")"
+   },
+   {
+    "rule": "P5",
+    "message": "P5 field \"Name\" collapsed to 100px"
+   },
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar has a transparent background"
+   },
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar (100-900) does not line up with the page content (452-1228)"
+   },
+   {
+    "rule": "P7",
+    "message": "P7 current rail item contrast 3.2:1 (< 4.5)"
+   },
+   {
+    "rule": "P8",
+    "message": "P8 dialog 800px wide at x=10"
+   },
+   {
+    "rule": "P9",
+    "message": "P9 the page container says data-page-width=\"wide\", the route table says \"narrow\""
+   },
+   {
+    "rule": "P10",
+    "message": "P10 Button \"Save\" contrast 2.1:1 (< 4.5)"
+   },
+   {
+    "rule": "P10",
+    "message": "P10 Button \"Cancel\" contrast 3.3:1 (dark scheme)"
+   },
+   {
+    "rule": "P11",
+    "message": "P11 p.a: clipped"
+   },
+   {
+    "rule": "P11",
+    "message": "P11 p.b: mid-word"
+   },
+   {
+    "rule": "P12",
+    "message": "P12 button.last is under the bottom bar by 12 px at the end of the scroll; add clearance (--nav-clearance)"
+   },
+   {
+    "rule": "P13",
+    "message": "P13 span.name spills 9 px past its tile; give its track min-inline-size: 0 or let it wrap or scroll"
+   },
+   {
+    "rule": "P14",
+    "message": "P14 .chip \"Dairy\" is cut by its ellipsis with 40 px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap"
+   },
+   {
+    "rule": "P16",
+    "message": "P16 .chip \"Beef\" is crushed to 8 px: its label is cut by its ellipsis; give the chip its natural width (flex 0 1 auto, min-inline-size) and let the line take fewer chips or a \"+N\""
+   },
+   {
+    "rule": "P17",
+    "message": "P17 .filter-chips \"Fish\" is cut by its ellipsis (20 px of its label) after the first chip; a chip that does not fit goes into \"+N\", it is never shown cut or past the line"
+   },
+   {
+    "rule": "P17",
+    "message": "P17 .filter-chips \"Curry\" runs 30 px past the end of its line; a chip that does not fit goes into \"+N\", it is never shown cut or past the line"
+   },
+   {
+    "rule": "P18",
+    "message": "P18 .chip \"Tag\": its focus ring is cut by a clipping ancestor by 3 px; do not clip the line, or pad it by the ring (5 px) and the hit area (9 px)"
+   },
+   {
+    "rule": "P19",
+    "message": "P19 the open popover's end edge is 12 px past its trigger's end edge; end-align it with the trigger"
+   },
+   {
+    "rule": "P19",
+    "message": "P19 the open popover leaves the page content box (x 10 to 2000, content 100 to 1300); keep it inside the page"
+   },
+   {
+    "rule": "P20",
+    "message": "P20 row 3 sits 2 px below row 2; it must sit one slot gap (8 px) below it"
+   },
+   {
+    "rule": "P20",
+    "message": "P20 two panel sections are 4 px apart; space them at least 12 px"
+   },
+   {
+    "rule": "P21",
+    "message": "P21 the page broke (exception): boom; the chip line must settle at every width, not loop (docs/design/recipes-filter.md 14)"
+   },
+   {
+    "rule": "P22",
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+   },
+   {
+    "rule": "P23",
+    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400/1000 ml\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group collapsed to 0 px; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group clips its label by 4 px; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group runs 6 px under the actions; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   }
+  ]
+ },
+ {
+  "name": "everything-broken at 390px /plan",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1500,
+   "clientW": 1440,
+   "over": [
+    "div.tile",
+    "p.x"
+   ],
+   "content": {
+    "x": 300,
+    "r": 1300
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "containerInner": {
+    "x": 452,
+    "r": 1228
+   },
+   "pageWidthAttr": "wide",
+   "fields": [
+    {
+     "label": "Qty",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400
+    },
+    {
+     "label": "Name",
+     "type": "text",
+     "short": false,
+     "segment": false,
+     "size": "md",
+     "w": 100
+    },
+    {
+     "label": "Code",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400,
+     "long": true
+    },
+    {
+     "label": "Tag",
+     "type": "text",
+     "short": false,
+     "segment": false,
+     "size": "md",
+     "w": 100,
+     "inline": true
+    }
+   ],
+   "bars": [
+    {
+     "cls": "sticky-action-bar",
+     "x": 100,
+     "r": 900,
+     "bgAlpha": 0
+    }
+   ],
+   "railContrast": 3.2,
+   "dialog": {
+    "x": 10,
+    "w": 800,
+    "vw": 1440
+   },
+   "lowContrastButtons": [
+    {
+     "label": "Save",
+     "ratio": 2.1
+    }
+   ],
+   "lowContrastButtonsDark": [
+    {
+     "label": "Cancel",
+     "ratio": 3.3
+    }
+   ],
+   "brokenText": [
+    {
+     "sel": "p.a",
+     "why": "clipped"
+    },
+    {
+     "sel": "p.b",
+     "why": "mid-word",
+     "token": "abc"
+    },
+    {
+     "sel": "a.c",
+     "why": "mid-word",
+     "token": "a@b.c"
+    }
+   ],
+   "navOverlap": [
+    {
+     "sel": "button.last",
+     "px": 12
+    }
+   ],
+   "tileOverflow": [
+    {
+     "sel": "span.name",
+     "px": 9,
+     "card": "tile"
+    }
+   ],
+   "clippedChips": [
+    {
+     "sel": ".chip",
+     "label": "Dairy",
+     "room": 40
+    }
+   ],
+   "crushedChips": [
+    {
+     "sel": ".chip",
+     "label": "Beef",
+     "px": 8
+    }
+   ],
+   "fitLines": [
+    {
+     "sel": ".filter-chips",
+     "label": "Fish",
+     "why": "cut",
+     "px": 20
+    },
+    {
+     "sel": ".filter-chips",
+     "label": "Curry",
+     "why": "past",
+     "px": 30
+    }
+   ],
+   "clippedRings": [
+    {
+     "sel": ".chip",
+     "label": "Tag",
+     "what": "focus ring",
+     "px": 3
+    }
+   ],
+   "popoverAlign": {
+    "dx": 12,
+    "left": 10,
+    "right": 2000,
+    "contentX": 100,
+    "contentR": 1300
+   },
+   "filterSpacing": {
+    "rowGap": 2,
+    "slotGap": 8,
+    "sectionGap": 4
+   },
+   "runtimeErrors": [
+    {
+     "why": "exception",
+     "text": "boom"
+    }
+   ],
+   "cutSelects": [
+    {
+     "sel": ".select",
+     "label": "Sort",
+     "shown": 60,
+     "px": 20
+    }
+   ],
+   "cutMeta": [
+    {
+     "sel": ".meta",
+     "label": "Fri Dinner +2",
+     "shown": 90,
+     "px": 12
+    }
+   ],
+   "actionLayout": [
+    {
+     "sel": ".action-group",
+     "why": "collapsed"
+    },
+    {
+     "sel": ".action-group",
+     "why": "label-clipped",
+     "px": 4
+    },
+    {
+     "sel": ".action-group",
+     "why": "under",
+     "px": 6
+    }
+   ]
+  },
+  "ctx": {
+   "width": 390,
+   "route": "/plan",
+   "kind": "wide"
+  },
+  "findings": [
+   {
+    "rule": "P1",
+    "message": "P1 sideways scroll (scrollWidth 1500 > 1440)"
+   },
+   {
+    "rule": "P1",
+    "message": "P1 elements past the right edge: div.tile, p.x"
+   },
+   {
+    "rule": "P5",
+    "message": "P5 field \"Name\" collapsed to 100px"
+   },
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar has a transparent background"
+   },
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar (100-900) does not line up with the page content (452-1228)"
+   },
+   {
+    "rule": "P7",
+    "message": "P7 current rail item contrast 3.2:1 (< 4.5)"
+   },
+   {
+    "rule": "P10",
+    "message": "P10 Button \"Save\" contrast 2.1:1 (< 4.5)"
+   },
+   {
+    "rule": "P10",
+    "message": "P10 Button \"Cancel\" contrast 3.3:1 (dark scheme)"
+   },
+   {
+    "rule": "P11",
+    "message": "P11 p.a: clipped"
+   },
+   {
+    "rule": "P11",
+    "message": "P11 p.b: mid-word"
+   },
+   {
+    "rule": "P12",
+    "message": "P12 button.last is under the bottom bar by 12 px at the end of the scroll; add clearance (--nav-clearance)"
+   },
+   {
+    "rule": "P13",
+    "message": "P13 span.name spills 9 px past its tile; give its track min-inline-size: 0 or let it wrap or scroll"
+   },
+   {
+    "rule": "P14",
+    "message": "P14 .chip \"Dairy\" is cut by its ellipsis with 40 px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap"
+   },
+   {
+    "rule": "P16",
+    "message": "P16 .chip \"Beef\" is crushed to 8 px: its label is cut by its ellipsis; give the chip its natural width (flex 0 1 auto, min-inline-size) and let the line take fewer chips or a \"+N\""
+   },
+   {
+    "rule": "P17",
+    "message": "P17 .filter-chips \"Fish\" is cut by its ellipsis (20 px of its label) after the first chip; a chip that does not fit goes into \"+N\", it is never shown cut or past the line"
+   },
+   {
+    "rule": "P17",
+    "message": "P17 .filter-chips \"Curry\" runs 30 px past the end of its line; a chip that does not fit goes into \"+N\", it is never shown cut or past the line"
+   },
+   {
+    "rule": "P18",
+    "message": "P18 .chip \"Tag\": its focus ring is cut by a clipping ancestor by 3 px; do not clip the line, or pad it by the ring (5 px) and the hit area (9 px)"
+   },
+   {
+    "rule": "P20",
+    "message": "P20 row 3 sits 2 px below row 2; it must sit one slot gap (8 px) below it"
+   },
+   {
+    "rule": "P20",
+    "message": "P20 two panel sections are 4 px apart; space them at least 12 px"
+   },
+   {
+    "rule": "P21",
+    "message": "P21 the page broke (exception): boom; the chip line must settle at every width, not loop (docs/design/recipes-filter.md 14)"
+   },
+   {
+    "rule": "P22",
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+   },
+   {
+    "rule": "P23",
+    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400/1000 ml\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group collapsed to 0 px; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group clips its label by 4 px; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group runs 6 px under the actions; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   }
+  ]
+ },
+ {
+  "name": "everything-broken at 900px /board",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1500,
+   "clientW": 1440,
+   "over": [
+    "div.tile",
+    "p.x"
+   ],
+   "content": {
+    "x": 300,
+    "r": 1300
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "containerInner": {
+    "x": 452,
+    "r": 1228
+   },
+   "pageWidthAttr": "wide",
+   "fields": [
+    {
+     "label": "Qty",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400
+    },
+    {
+     "label": "Name",
+     "type": "text",
+     "short": false,
+     "segment": false,
+     "size": "md",
+     "w": 100
+    },
+    {
+     "label": "Code",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400,
+     "long": true
+    },
+    {
+     "label": "Tag",
+     "type": "text",
+     "short": false,
+     "segment": false,
+     "size": "md",
+     "w": 100,
+     "inline": true
+    }
+   ],
+   "bars": [
+    {
+     "cls": "sticky-action-bar",
+     "x": 100,
+     "r": 900,
+     "bgAlpha": 0
+    }
+   ],
+   "railContrast": 3.2,
+   "dialog": {
+    "x": 10,
+    "w": 800,
+    "vw": 1440
+   },
+   "lowContrastButtons": [
+    {
+     "label": "Save",
+     "ratio": 2.1
+    }
+   ],
+   "lowContrastButtonsDark": [
+    {
+     "label": "Cancel",
+     "ratio": 3.3
+    }
+   ],
+   "brokenText": [
+    {
+     "sel": "p.a",
+     "why": "clipped"
+    },
+    {
+     "sel": "p.b",
+     "why": "mid-word",
+     "token": "abc"
+    },
+    {
+     "sel": "a.c",
+     "why": "mid-word",
+     "token": "a@b.c"
+    }
+   ],
+   "navOverlap": [
+    {
+     "sel": "button.last",
+     "px": 12
+    }
+   ],
+   "tileOverflow": [
+    {
+     "sel": "span.name",
+     "px": 9,
+     "card": "tile"
+    }
+   ],
+   "clippedChips": [
+    {
+     "sel": ".chip",
+     "label": "Dairy",
+     "room": 40
+    }
+   ],
+   "crushedChips": [
+    {
+     "sel": ".chip",
+     "label": "Beef",
+     "px": 8
+    }
+   ],
+   "fitLines": [
+    {
+     "sel": ".filter-chips",
+     "label": "Fish",
+     "why": "cut",
+     "px": 20
+    },
+    {
+     "sel": ".filter-chips",
+     "label": "Curry",
+     "why": "past",
+     "px": 30
+    }
+   ],
+   "clippedRings": [
+    {
+     "sel": ".chip",
+     "label": "Tag",
+     "what": "focus ring",
+     "px": 3
+    }
+   ],
+   "popoverAlign": {
+    "dx": 12,
+    "left": 10,
+    "right": 2000,
+    "contentX": 100,
+    "contentR": 1300
+   },
+   "filterSpacing": {
+    "rowGap": 2,
+    "slotGap": 8,
+    "sectionGap": 4
+   },
+   "runtimeErrors": [
+    {
+     "why": "exception",
+     "text": "boom"
+    }
+   ],
+   "cutSelects": [
+    {
+     "sel": ".select",
+     "label": "Sort",
+     "shown": 60,
+     "px": 20
+    }
+   ],
+   "cutMeta": [
+    {
+     "sel": ".meta",
+     "label": "Fri Dinner +2",
+     "shown": 90,
+     "px": 12
+    }
+   ],
+   "actionLayout": [
+    {
+     "sel": ".action-group",
+     "why": "collapsed"
+    },
+    {
+     "sel": ".action-group",
+     "why": "label-clipped",
+     "px": 4
+    },
+    {
+     "sel": ".action-group",
+     "why": "under",
+     "px": 6
+    }
+   ]
+  },
+  "ctx": {
+   "width": 900,
+   "route": "/board",
+   "kind": "full"
+  },
+  "findings": [
+   {
+    "rule": "P1",
+    "message": "P1 sideways scroll (scrollWidth 1500 > 1440)"
+   },
+   {
+    "rule": "P1",
+    "message": "P1 elements past the right edge: div.tile, p.x"
+   },
+   {
+    "rule": "P4",
+    "message": "P4 short field \"Qty\" is 400px wide (max 240; set size=\"xs|sm\")"
+   },
+   {
+    "rule": "P5",
+    "message": "P5 field \"Name\" collapsed to 100px"
+   },
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar has a transparent background"
+   },
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar (100-900) does not line up with the page content (452-1228)"
+   },
+   {
+    "rule": "P7",
+    "message": "P7 current rail item contrast 3.2:1 (< 4.5)"
+   },
+   {
+    "rule": "P8",
+    "message": "P8 dialog 800px wide at x=10"
+   },
+   {
+    "rule": "P10",
+    "message": "P10 Button \"Save\" contrast 2.1:1 (< 4.5)"
+   },
+   {
+    "rule": "P10",
+    "message": "P10 Button \"Cancel\" contrast 3.3:1 (dark scheme)"
+   },
+   {
+    "rule": "P11",
+    "message": "P11 p.a: clipped"
+   },
+   {
+    "rule": "P11",
+    "message": "P11 p.b: mid-word"
+   },
+   {
+    "rule": "P12",
+    "message": "P12 button.last is under the bottom bar by 12 px at the end of the scroll; add clearance (--nav-clearance)"
+   },
+   {
+    "rule": "P13",
+    "message": "P13 span.name spills 9 px past its tile; give its track min-inline-size: 0 or let it wrap or scroll"
+   },
+   {
+    "rule": "P14",
+    "message": "P14 .chip \"Dairy\" is cut by its ellipsis with 40 px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap"
+   },
+   {
+    "rule": "P16",
+    "message": "P16 .chip \"Beef\" is crushed to 8 px: its label is cut by its ellipsis; give the chip its natural width (flex 0 1 auto, min-inline-size) and let the line take fewer chips or a \"+N\""
+   },
+   {
+    "rule": "P17",
+    "message": "P17 .filter-chips \"Fish\" is cut by its ellipsis (20 px of its label) after the first chip; a chip that does not fit goes into \"+N\", it is never shown cut or past the line"
+   },
+   {
+    "rule": "P17",
+    "message": "P17 .filter-chips \"Curry\" runs 30 px past the end of its line; a chip that does not fit goes into \"+N\", it is never shown cut or past the line"
+   },
+   {
+    "rule": "P18",
+    "message": "P18 .chip \"Tag\": its focus ring is cut by a clipping ancestor by 3 px; do not clip the line, or pad it by the ring (5 px) and the hit area (9 px)"
+   },
+   {
+    "rule": "P19",
+    "message": "P19 the open popover's end edge is 12 px past its trigger's end edge; end-align it with the trigger"
+   },
+   {
+    "rule": "P19",
+    "message": "P19 the open popover leaves the page content box (x 10 to 2000, content 100 to 1300); keep it inside the page"
+   },
+   {
+    "rule": "P20",
+    "message": "P20 row 3 sits 2 px below row 2; it must sit one slot gap (8 px) below it"
+   },
+   {
+    "rule": "P20",
+    "message": "P20 two panel sections are 4 px apart; space them at least 12 px"
+   },
+   {
+    "rule": "P21",
+    "message": "P21 the page broke (exception): boom; the chip line must settle at every width, not loop (docs/design/recipes-filter.md 14)"
+   },
+   {
+    "rule": "P22",
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+   },
+   {
+    "rule": "P23",
+    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400/1000 ml\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group collapsed to 0 px; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group clips its label by 4 px; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group runs 6 px under the actions; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   }
+  ]
+ },
+ {
+  "name": "everything-broken at 1920px /shop",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1500,
+   "clientW": 1440,
+   "over": [
+    "div.tile",
+    "p.x"
+   ],
+   "content": {
+    "x": 300,
+    "r": 1300
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "containerInner": {
+    "x": 452,
+    "r": 1228
+   },
+   "pageWidthAttr": "wide",
+   "fields": [
+    {
+     "label": "Qty",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400
+    },
+    {
+     "label": "Name",
+     "type": "text",
+     "short": false,
+     "segment": false,
+     "size": "md",
+     "w": 100
+    },
+    {
+     "label": "Code",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400,
+     "long": true
+    },
+    {
+     "label": "Tag",
+     "type": "text",
+     "short": false,
+     "segment": false,
+     "size": "md",
+     "w": 100,
+     "inline": true
+    }
+   ],
+   "bars": [
+    {
+     "cls": "sticky-action-bar",
+     "x": 100,
+     "r": 900,
+     "bgAlpha": 0
+    }
+   ],
+   "railContrast": 3.2,
+   "dialog": {
+    "x": 10,
+    "w": 800,
+    "vw": 1440
+   },
+   "lowContrastButtons": [
+    {
+     "label": "Save",
+     "ratio": 2.1
+    }
+   ],
+   "lowContrastButtonsDark": [
+    {
+     "label": "Cancel",
+     "ratio": 3.3
+    }
+   ],
+   "brokenText": [
+    {
+     "sel": "p.a",
+     "why": "clipped"
+    },
+    {
+     "sel": "p.b",
+     "why": "mid-word",
+     "token": "abc"
+    },
+    {
+     "sel": "a.c",
+     "why": "mid-word",
+     "token": "a@b.c"
+    }
+   ],
+   "navOverlap": [
+    {
+     "sel": "button.last",
+     "px": 12
+    }
+   ],
+   "tileOverflow": [
+    {
+     "sel": "span.name",
+     "px": 9,
+     "card": "tile"
+    }
+   ],
+   "clippedChips": [
+    {
+     "sel": ".chip",
+     "label": "Dairy",
+     "room": 40
+    }
+   ],
+   "crushedChips": [
+    {
+     "sel": ".chip",
+     "label": "Beef",
+     "px": 8
+    }
+   ],
+   "fitLines": [
+    {
+     "sel": ".filter-chips",
+     "label": "Fish",
+     "why": "cut",
+     "px": 20
+    },
+    {
+     "sel": ".filter-chips",
+     "label": "Curry",
+     "why": "past",
+     "px": 30
+    }
+   ],
+   "clippedRings": [
+    {
+     "sel": ".chip",
+     "label": "Tag",
+     "what": "focus ring",
+     "px": 3
+    }
+   ],
+   "popoverAlign": {
+    "dx": 12,
+    "left": 10,
+    "right": 2000,
+    "contentX": 100,
+    "contentR": 1300
+   },
+   "filterSpacing": {
+    "rowGap": 2,
+    "slotGap": 8,
+    "sectionGap": 4
+   },
+   "runtimeErrors": [
+    {
+     "why": "exception",
+     "text": "boom"
+    }
+   ],
+   "cutSelects": [
+    {
+     "sel": ".select",
+     "label": "Sort",
+     "shown": 60,
+     "px": 20
+    }
+   ],
+   "cutMeta": [
+    {
+     "sel": ".meta",
+     "label": "Fri Dinner +2",
+     "shown": 90,
+     "px": 12
+    }
+   ],
+   "actionLayout": [
+    {
+     "sel": ".action-group",
+     "why": "collapsed"
+    },
+    {
+     "sel": ".action-group",
+     "why": "label-clipped",
+     "px": 4
+    },
+    {
+     "sel": ".action-group",
+     "why": "under",
+     "px": 6
+    }
+   ]
+  },
+  "ctx": {
+   "width": 1920,
+   "route": "/shop",
+   "kind": "wide"
+  },
+  "findings": [
+   {
+    "rule": "P1",
+    "message": "P1 sideways scroll (scrollWidth 1500 > 1440)"
+   },
+   {
+    "rule": "P1",
+    "message": "P1 elements past the right edge: div.tile, p.x"
+   },
+   {
+    "rule": "P2",
+    "message": "P2 content is off-centre by -40px (content 300-1300, area 240-1440)"
+   },
+   {
+    "rule": "P4",
+    "message": "P4 short field \"Qty\" is 400px wide (max 240; set size=\"xs|sm\")"
+   },
+   {
+    "rule": "P5",
+    "message": "P5 field \"Name\" collapsed to 100px"
+   },
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar has a transparent background"
+   },
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar (100-900) does not line up with the page content (452-1228)"
+   },
+   {
+    "rule": "P7",
+    "message": "P7 current rail item contrast 3.2:1 (< 4.5)"
+   },
+   {
+    "rule": "P8",
+    "message": "P8 dialog 800px wide at x=10"
+   },
+   {
+    "rule": "P10",
+    "message": "P10 Button \"Save\" contrast 2.1:1 (< 4.5)"
+   },
+   {
+    "rule": "P10",
+    "message": "P10 Button \"Cancel\" contrast 3.3:1 (dark scheme)"
+   },
+   {
+    "rule": "P11",
+    "message": "P11 p.a: clipped"
+   },
+   {
+    "rule": "P11",
+    "message": "P11 p.b: mid-word"
+   },
+   {
+    "rule": "P12",
+    "message": "P12 button.last is under the bottom bar by 12 px at the end of the scroll; add clearance (--nav-clearance)"
+   },
+   {
+    "rule": "P13",
+    "message": "P13 span.name spills 9 px past its tile; give its track min-inline-size: 0 or let it wrap or scroll"
+   },
+   {
+    "rule": "P14",
+    "message": "P14 .chip \"Dairy\" is cut by its ellipsis with 40 px spare on its line; let the chips take their natural width (flex 0 1 auto, min-inline-size 0) and no percentage cap"
+   },
+   {
+    "rule": "P16",
+    "message": "P16 .chip \"Beef\" is crushed to 8 px: its label is cut by its ellipsis; give the chip its natural width (flex 0 1 auto, min-inline-size) and let the line take fewer chips or a \"+N\""
+   },
+   {
+    "rule": "P17",
+    "message": "P17 .filter-chips \"Fish\" is cut by its ellipsis (20 px of its label) after the first chip; a chip that does not fit goes into \"+N\", it is never shown cut or past the line"
+   },
+   {
+    "rule": "P17",
+    "message": "P17 .filter-chips \"Curry\" runs 30 px past the end of its line; a chip that does not fit goes into \"+N\", it is never shown cut or past the line"
+   },
+   {
+    "rule": "P18",
+    "message": "P18 .chip \"Tag\": its focus ring is cut by a clipping ancestor by 3 px; do not clip the line, or pad it by the ring (5 px) and the hit area (9 px)"
+   },
+   {
+    "rule": "P19",
+    "message": "P19 the open popover's end edge is 12 px past its trigger's end edge; end-align it with the trigger"
+   },
+   {
+    "rule": "P19",
+    "message": "P19 the open popover leaves the page content box (x 10 to 2000, content 100 to 1300); keep it inside the page"
+   },
+   {
+    "rule": "P20",
+    "message": "P20 row 3 sits 2 px below row 2; it must sit one slot gap (8 px) below it"
+   },
+   {
+    "rule": "P20",
+    "message": "P20 two panel sections are 4 px apart; space them at least 12 px"
+   },
+   {
+    "rule": "P21",
+    "message": "P21 the page broke (exception): boom; the chip line must settle at every width, not loop (docs/design/recipes-filter.md 14)"
+   },
+   {
+    "rule": "P22",
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+   },
+   {
+    "rule": "P23",
+    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400/1000 ml\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group collapsed to 0 px; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group clips its label by 4 px; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   },
+   {
+    "rule": "P15",
+    "message": "P15 .action-group runs 6 px under the actions; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   }
+  ]
+ }
+]
