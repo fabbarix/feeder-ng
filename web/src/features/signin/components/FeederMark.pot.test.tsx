@@ -34,9 +34,11 @@ describe('FeederMark (Family Pot, mono)', () => {
     expect(svg.outerHTML).not.toMatch(/#[0-9a-f]{3,8}\b/i)
     expect(svg.querySelector('path')).toHaveAttribute('fill', 'currentColor')
   })
-  it('takes the hero text colour from tokens in signin.css', () => {
+  // B9-08 (TB-05): the hero is the accent in light and soft-strong in dark (ui/Tile), so the mark inherits the hero's text colour
+  // instead of fixing on-accent, which drew a near-black pot on the dark hero.
+  it('takes the hero text colour (inherits it) in signin.css', () => {
     const css = readFileSync(`${cwd}/src/features/signin/signin.css`, 'utf8')
-    expect(css).toMatch(/\.signin__mark\s*\{[^}]*color:\s*var\(--color-on-accent\)/)
+    expect(css).toMatch(/\.signin__mark\s*\{[^}]*color:\s*(inherit|currentColor)/)
     expect(css).not.toMatch(/\.signin__mark\s*\{[^}]*#[0-9a-f]{3,8}/i)
   })
 })

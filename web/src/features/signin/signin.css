@@ -14,8 +14,9 @@
 }
 .signin__mark {
   justify-self: center;
-  /* The hero tile is the accent fill, so the mark takes the hero's text colour. */
-  color: var(--color-on-accent);
+  /* The mark takes the hero's text colour: on-accent on the light accent hero, the text colour on the dark soft-strong hero
+     (ui/Tile's hero rule, TB-05). A fixed on-accent drew a near-black pot on the dark hero. */
+  color: inherit;
 }
 .signin__title {
   margin: 0;
