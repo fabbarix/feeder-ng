@@ -43,8 +43,11 @@ type Event struct {
 	ProductCreated bool
 	MergedInto     *int64
 	ExtraID        *int64 // the manual extra the scan counted against
-	ResultJSON     string
-	UndoneAt       string // "" while not undone
+	// TakesJSON is what a Stock-take (-1 pack, Set total) took from each Stock Lot, so its Undo gives exactly that back
+	// (migration 1572; "[]" when it took nothing). "" for other scans and for a Stock-take recorded before 1572.
+	TakesJSON  string
+	ResultJSON string
+	UndoneAt   string // "" while not undone
 	// UndoSteps are the Undo steps that already ran (UndoStep* constants, in the order they ran), kept so a retried
 	// Undo skips them. Empty before Undo starts; UndoneAt is set after the last one.
 	UndoSteps []string
@@ -57,6 +60,8 @@ const (
 	UndoStepPurchase = "purchase" // the purchase is deleted
 	UndoStepPrice    = "price"    // the Price is deleted or the replaced one restored
 	UndoStepSoldAt   = "sold_at"  // the Product is un-sold at the Shop (only if this scan linked it)
+	// UndoStepGiveBack is a Stock-take's: what it took from Stock is given back (B9-05).
+	UndoStepGiveBack = "give_back"
 )
 
 // Store is the ledger.
@@ -72,7 +77,7 @@ func (s *Store) now() string { return s.clk.Now().UTC().Format(time.RFC3339) }
 
 const eventColumns = `client_uuid, kind, scanned_at, applied_at, seq, shop_id, product_id, ingredient_id, quantity,
 	price_cents, range_to, on_list, ticked, lot_id, purchase_id, sold_at_added, price_id, prev_price_json,
-	product_created, merged_into, extra_id, result_json, undone_at, undo_steps`
+	product_created, merged_into, extra_id, result_json, undone_at, undo_steps, takes_json`
 
 // Insert records an applied operation (ErrDuplicate when the client UUID exists). It sets AppliedAt (now) and Seq (1, 2, ... in insert order).
 func (s *Store) Insert(ctx context.Context, e Event) (Event, error) {
@@ -81,12 +86,12 @@ func (s *Store) Insert(ctx context.Context, e Event) (Event, error) {
 		e.ClientUUID, e.Kind, e.ScannedAt, e.AppliedAt, nullInt(e.ShopID), nullInt(e.ProductID), nullInt(e.IngredientID),
 		e.Quantity, nullIntPtr(e.PriceCents), nullDate(e.RangeTo), e.OnList, e.Ticked, nullInt(e.LotID), nullInt(e.PurchaseID),
 		e.SoldAtAdded, nullInt(e.PriceID), nullString(e.PrevPriceJSON), e.ProductCreated, nullInt(e.MergedInto), nullInt(e.ExtraID),
-		e.ResultJSON,
+		e.ResultJSON, nullString(e.TakesJSON),
 	}
 	_, err := s.db.ExecContext(ctx, `INSERT INTO scan_events (client_uuid, kind, scanned_at, applied_at, seq, shop_id, product_id,
 		ingredient_id, quantity, price_cents, range_to, on_list, ticked, lot_id, purchase_id, sold_at_added, price_id,
-		prev_price_json, product_created, merged_into, extra_id, result_json)
-		VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(seq), 0) + 1 FROM scan_events), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		prev_price_json, product_created, merged_into, extra_id, result_json, takes_json)
+		VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(seq), 0) + 1 FROM scan_events), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		args...)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
@@ -110,13 +115,13 @@ func (s *Store) Get(ctx context.Context, clientUUID string) (Event, bool, error)
 	var (
 		e                                                                     Event
 		shop, product, ingredient, lot, purchase, price, merged, extra, cents sql.NullInt64
-		rangeTo, prevPrice, undone, steps                                     sql.NullString
+		rangeTo, prevPrice, undone, steps, takes                              sql.NullString
 		onList, ticked, soldAt, created                                       bool
 		quantity                                                              sql.NullFloat64
 	)
 	err := row.Scan(&e.ClientUUID, &e.Kind, &e.ScannedAt, &e.AppliedAt, &e.Seq, &shop, &product, &ingredient, &quantity,
 		&cents, &rangeTo, &onList, &ticked, &lot, &purchase, &soldAt, &price, &prevPrice, &created, &merged, &extra,
-		&e.ResultJSON, &undone, &steps)
+		&e.ResultJSON, &undone, &steps, &takes)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Event{}, false, nil
 	}
@@ -135,6 +140,7 @@ func (s *Store) Get(ctx context.Context, clientUUID string) (Event, bool, error)
 	e.OnList, e.Ticked, e.SoldAtAdded, e.ProductCreated = onList, ticked, soldAt, created
 	e.PrevPriceJSON = prevPrice.String
 	e.UndoneAt = undone.String
+	e.TakesJSON = takes.String
 	if steps.String != "" {
 		e.UndoSteps = strings.Split(steps.String, ",")
 	}
