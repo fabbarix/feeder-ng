@@ -12,7 +12,7 @@ export interface UseTagFilterSearch {
   emptyText: string | null
 }
 
-export function useTagFilterSearch(known: readonly TagCount[], selected: string, colourOf?: (name: string) => string | undefined): UseTagFilterSearch {
+export function useTagFilterSearch(known: readonly TagCount[], selected: readonly string[], colourOf?: (name: string) => string | undefined): UseTagFilterSearch {
   const [query, setQuery] = useState('')
   const rows = tagFilterRows(known, selected, query, colourOf)
   const typed = query.trim()

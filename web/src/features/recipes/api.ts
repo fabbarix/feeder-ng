@@ -17,7 +17,8 @@ const base = '/api/recipes'
 function listQuery(f: RecipeFilter): string {
   const params = new URLSearchParams()
   if (f.q) params.set('q', f.q)
-  if (f.tag) params.set('tag', f.tag)
+  // b8-recipes: one ?tag= per Tag; the server keeps the Recipes that carry every one.
+  for (const name of f.tags ?? []) params.append('tag', name)
   if (f.archived) params.set('archived', f.archived)
   if (f.course !== undefined) params.set('course', String(f.course))
   // The name sort is the server's default, so it is not sent.

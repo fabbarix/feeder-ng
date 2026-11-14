@@ -20,7 +20,7 @@ import '../recipes.css'
 /**
  * Route /recipes: the header ("New Recipe" and the More overflow with Import, Export, Copy Agent Prompt and Show
  * archived), two one-line rows (Search and Filters; Kind and Sort) and the active filter chips, then the Recipes as media
- * Tiles. Course and Tag are chosen in the Filters panel. Opening a Tile goes to /recipes/:id.
+ * Tiles. Course and Tags are chosen in the Filters panel. Opening a Tile goes to /recipes/:id.
  */
 export function RecipesScreen(): ReactNode {
   const navigate = useNavigate()
@@ -29,7 +29,7 @@ export function RecipesScreen(): ReactNode {
   const [showArchived, setShowArchived] = useState(false)
   const { choices } = useCourses()
   const { sort, setSort } = useRecipeSort()
-  // The filters live in the URL (?kind, ?course, ?tag): a link or the back button brings them back.
+  // The filters live in the URL (?kind, ?course, ?tag once per Tag): a link or the back button brings them back.
   const filters = useRecipeFilters(choices, known, colourOf)
   const bases = filters.kind === 'base'
   const [panelOpen, setPanelOpen] = useState(false)
@@ -37,7 +37,7 @@ export function RecipesScreen(): ReactNode {
   const panelId = useId()
   const filter: RecipeFilter = {
     q: q.trim() || undefined,
-    tag: filters.tag || undefined,
+    tags: filters.tags.length ? filters.tags : undefined,
     course: bases ? undefined : (filters.course ?? undefined),
     archived: showArchived ? 'all' : 'no',
     sort: bases ? undefined : sort,
@@ -117,9 +117,9 @@ export function RecipesScreen(): ReactNode {
             course={filters.course}
             onCourse={filters.setCourse}
             known={known}
-            tag={filters.tag}
+            tags={filters.tags}
             colourOf={colourOf}
-            onTag={filters.setTag}
+            onToggleTag={filters.toggleTag}
             count={filters.count}
             onClear={filters.clear}
           />

@@ -21,7 +21,7 @@ export function useRecipes(filter: RecipeFilter): UseRecipes {
   useRecipeLiveUpdates()
   const list = useQuery({ queryKey: ['recipes', filter], queryFn: () => recipesApi.list(filter) })
   const tags = useQuery({ queryKey: ['tags'], queryFn: recipesApi.tags })
-  const filtered = Boolean(filter.q || filter.tag || filter.course !== undefined || (filter.archived && filter.archived !== 'no'))
+  const filtered = Boolean(filter.q || filter.tags?.length || filter.course !== undefined || (filter.archived && filter.archived !== 'no'))
   // The server sorts too; sorting again keeps the order right when a live update changes a date.
   const sort = filter.sort
   const recipes = useMemo(() => (list.data === undefined ? [] : sort ? sortRecipes(list.data, sort) : list.data), [list.data, sort])

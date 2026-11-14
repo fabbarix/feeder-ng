@@ -8,14 +8,14 @@ import type { TagCount } from '../types'
 
 export interface TagFilterListProps {
   known: TagCount[]
-  /** The Tag in force, '' for none. */
-  selected: string
+  /** The Tags in force, in the order chosen. */
+  selected: string[]
   colourOf?: (name: string) => string | undefined
-  /** Choosing a Tag (the one in force again clears it). */
-  onSelect: (name: string) => void
+  /** Choosing a Tag: it is added, or removed when it is in force (the list stays open). */
+  onToggle: (name: string) => void
 }
 
-export function TagFilterList({ known, selected, colourOf, onSelect }: TagFilterListProps): ReactNode {
+export function TagFilterList({ known, selected, colourOf, onToggle }: TagFilterListProps): ReactNode {
   const { query, setQuery, rows, emptyText } = useTagFilterSearch(known, selected, colourOf)
   const options = rows.map((r) => ({
     value: r.name,
@@ -31,8 +31,9 @@ export function TagFilterList({ known, selected, colourOf, onSelect }: TagFilter
       onQueryChange={setQuery}
       options={options}
       selected={rows.filter((r) => r.selected).map((r) => r.name)}
-      onToggle={onSelect}
+      onToggle={onToggle}
       emptyText={emptyText}
+      multiple
     />
   )
 }
