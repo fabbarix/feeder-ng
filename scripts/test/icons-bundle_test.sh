@@ -15,7 +15,9 @@ ICONS="$WEB/src/ui/icons.ts"
 # the PM raised the budget to the new size + sensible headroom (~1.1 kB, 90 B was not sensible).
 # Pantry added the Storage Place kind glyphs (Snowflake, ThermometerCold) after Shop Location's MapPin: 44,800 B, so
 # the budget moved to 45 KiB, keeping about 1.2 kB of headroom again.
-BUDGET=46080
+# beta.7 added the Supplies, Scanned list, receipt and photo-edit glyphs: 47,047 B, so the budget moved to 47 KiB
+# (about 1.1 kB of headroom, as before).
+BUDGET=48128
 MIN_MODULES=107   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key; +1 in photo-read: Images; +1 in beta.5 WP D: ShoppingCart)
 PLUGIN="$WEB/vite.phosphor-weights.ts"
 if [ ! -f "$PLUGIN" ]; then
