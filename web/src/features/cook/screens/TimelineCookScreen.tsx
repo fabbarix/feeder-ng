@@ -32,7 +32,7 @@ import { TimelineAdvanceTile } from '../components/TimelineAdvanceTile'
 import { useCoachMark } from '../hooks/useCoachMark'
 import { useCookTimeline } from '../hooks/useCookTimeline'
 import { useFormatUse } from '../hooks/useFormatUse'
-import { useMediaQuery, useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
+import { useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
 import { sameScope } from '../lib/scope'
 import {
   allMode as isAllMode,
@@ -47,7 +47,7 @@ import {
 import type { VoiceCommand } from '../lib/voice'
 import { cookStrings } from '../strings'
 import type { CookTimelineTarget } from '../types'
-import { EmptyState, Button } from '../../../ui'
+import { EmptyState, Button, useBreakpoint } from '../../../ui'
 import '../cook.css'
 
 /** The plan key of one Course of the slot (crs-c3: every key names its Course). */
@@ -80,7 +80,7 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
   useWakeLock(wake)
   useTimerAlarm(tl.timers.timers, alarm)
   const [voiceOn, setVoiceOn] = useVoicePreference()
-  const tapZones = useMediaQuery('(min-width: 48em)')
+  const tapZones = useBreakpoint('md')
   const [coachOn, dismissCoach] = useCoachMark()
   const formatUse = useFormatUse()
   const finish = () => navigate('/')

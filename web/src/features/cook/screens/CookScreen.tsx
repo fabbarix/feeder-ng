@@ -17,7 +17,7 @@ import { StepTile } from '../components/StepTile'
 import { useCoachMark } from '../hooks/useCoachMark'
 import { useCookSession } from '../hooks/useCookSession'
 import { useFormatUse } from '../hooks/useFormatUse'
-import { useMediaQuery, useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
+import { useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
 import { useStepGate } from '../hooks/useStepGate'
 import { useTimers } from '../hooks/useTimers'
 import { advanceOnScreen } from '../lib/advance'
@@ -25,7 +25,7 @@ import { cookSourceFrom, exitPathFor, timelineTargetFrom, type CookRouteParams }
 import { TimelineCookScreen } from './TimelineCookScreen'
 import type { VoiceCommand } from '../lib/voice'
 import { cookStrings } from '../strings'
-import { Button, EmptyState } from '../../../ui'
+import { Button, EmptyState, useBreakpoint } from '../../../ui'
 import '../cook.css'
 
 /**
@@ -69,7 +69,7 @@ function SessionCookScreen(): ReactNode {
   useWakeLock(wake)
   useTimerAlarm(timers.timers, alarm)
   const [voiceOn, setVoiceOn] = useVoicePreference()
-  const tapZones = useMediaQuery('(min-width: 48em)')
+  const tapZones = useBreakpoint('md')
   const [coachOn, dismissCoach] = useCoachMark()
   const marked = useMarkCooked(session.markCookedKey)
   const stock = useStockSheet((id) => marked.dismissWarning(id))
