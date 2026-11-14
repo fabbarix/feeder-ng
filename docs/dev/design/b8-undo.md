@@ -11,8 +11,8 @@ Tick a Line by hand (Shop screen, or the Scan screen's To get tab), Undo: the Li
 1. `Untick` reads the tick's `lot_id` and `lot_quantity` (what the tick added).
 2. `Ports.Stock.TakeBack(lotID, added)` -> `TakenBack{Taken, Removed}`. The real adapter calls the Stock service `TakeBackLot`, which runs `stock.TakeBack` inside one `store.Update` transaction (read, reduce or remove, write), publishes one `stock` event when something was taken.
 3. If `Removed`, `ForgetLot` (planned_meal_bought records); if the Lot only shrank the records stay.
-4. The tick row is deleted last, so a Stock failure leaves the tick for a retry.
-5. `UntickExtra` does the same through two new columns on `shopping_extras` and gives `Taken` back to `got` (`AddGot(-taken)`) so the extra shows its full quantity again.
+4. The tick row is deleted last, so a Stock failure leaves the tick for a retry. `TakeBackLot` records the take-back (`stock_lot_take_backs`) in its transaction and answers a repeat for the same Lot with the first result without changing Stock, so a retry after `ForgetLot` or `DeleteTick` failed takes nothing twice.
+5. `UntickExtra` does the same through two new columns on `shopping_extras` and takes `Taken` off `got` in the same statement that clears the tick (`UntickExtraTakenBack`) so the extra shows its full quantity again.
 
 Cases (all in `stock.TakeBack`, pure): untouched -> removed; partly used -> what is left, removed; edited up or topped up -> only `added` goes; edited down -> removed; unknown Lot -> no-op; `added <= 0` -> no-op; float rest <= 1e-9 counts as gone. A scan's tick (no Lot) and a tick of 0 change no Stock. Second untick, or none: no-op (no tick row). Retried tick (same client id, `created:false`): same Lot, one take-back.
 

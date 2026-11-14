@@ -367,7 +367,8 @@ func (s *Service) neededFor(ctx context.Context, today, to stock.Date, ingredien
 
 // Untick removes the tick and takes back the Stock Lot it added: what is left of that Lot, up to what the tick added
 // (ADR 0019). A second untick, or an untick with no tick, changes nothing. A tick set by a Scan owns no Lot. If Stock
-// fails the tick stays, so the Undo can be tried again.
+// fails the tick stays, so the Undo can be tried again. Stock records the take-back with it and takes a Lot back at
+// most once, so a retry after a later step failed (the tick row is still there) takes nothing twice.
 func (s *Service) Untick(ctx context.Context, ingredientID int64, to stock.Date) error {
 	today, horizon, err := s.household(ctx)
 	if err != nil {
@@ -535,30 +536,32 @@ func (s *Service) Extra(ctx context.Context, id int64) (shopping.ExtraLine, erro
 }
 
 // UntickExtra clears an extra's tick and takes back the Stock Lot an Ingredient extra's tick added (ADR 0019): what is
-// left of it, up to the quantity the tick added, which goes back to the extra's got so it shows its full quantity
-// again. A second untick changes nothing.
+// left of it, up to the quantity the tick added. What was taken back comes off the extra's got, so an untouched Lot
+// shows the extra's full quantity again. A second untick changes nothing.
 func (s *Service) UntickExtra(ctx context.Context, id int64) error {
 	lotID, added, hasLot, err := s.st.ExtraTickLot(ctx, id)
 	if err != nil {
 		return mapStoreErr(err)
 	}
-	if hasLot {
-		taken, err := s.ports.Stock.TakeBack(ctx, lotID, added)
-		if err != nil {
+	if !hasLot {
+		if err := s.st.UntickExtra(ctx, id); err != nil {
+			return mapStoreErr(err)
+		}
+		s.publish("extras")
+		return nil
+	}
+	// Stock answers a retried take-back with what it took the first time and changes nothing; the got and the tick
+	// change together in one statement, so a retry after a failed step takes nothing twice.
+	taken, err := s.ports.Stock.TakeBack(ctx, lotID, added)
+	if err != nil {
+		return err
+	}
+	if taken.Removed {
+		if err := s.ForgetLot(ctx, lotID); err != nil {
 			return err
 		}
-		if taken.Taken > 0 {
-			if _, err := s.st.AddGot(ctx, id, -taken.Taken); err != nil {
-				return mapStoreErr(err)
-			}
-		}
-		if taken.Removed {
-			if err := s.ForgetLot(ctx, lotID); err != nil {
-				return err
-			}
-		}
 	}
-	if err := s.st.UntickExtra(ctx, id); err != nil {
+	if err := s.st.UntickExtraTakenBack(ctx, id, taken.Taken); err != nil {
 		return mapStoreErr(err)
 	}
 	s.publish("extras")

@@ -125,6 +125,13 @@ func (s *Store) UntickExtra(ctx context.Context, id int64) error {
 	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = NULL, tick_lot_id = NULL, tick_lot_quantity = NULL WHERE id = ?`, id)
 }
 
+// UntickExtraTakenBack clears an Ingredient extra's tick and the Stock Lot it recorded, and takes taken (what Stock took
+// back) off its got (floor 0), in one statement, so a retried Undo never takes it off twice (beta.8, undo; ErrNotFound).
+func (s *Store) UntickExtraTakenBack(ctx context.Context, id int64, taken float64) error {
+	return s.exec(ctx, `UPDATE shopping_extras SET got = MAX(0, got - ?), ticked_on = NULL, tick_lot_id = NULL,
+		tick_lot_quantity = NULL WHERE id = ?`, taken, id)
+}
+
 // ExtraTickLot returns the Stock Lot an Ingredient extra's tick added and the quantity it added (beta.8, undo). ok is
 // false when the tick added no Lot (a text extra, a tick of 0, or a tick from before migration 1560). ErrNotFound for
 // an unknown extra.
