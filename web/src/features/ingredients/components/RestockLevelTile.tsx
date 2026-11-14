@@ -25,6 +25,7 @@ export function RestockLevelTile({ level, baseUnit, system, onSave }: RestockLev
         }}
       >
         <TextField
+          size="sm"
           label={strings.restock.label}
           value={form.text}
           onChange={form.setText}
