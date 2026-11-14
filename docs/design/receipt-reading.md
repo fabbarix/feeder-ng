@@ -273,6 +273,8 @@ objects inside arrays of objects.
 `internal/receipt/testdata/receipt-esselunga.jpg` (a synthetic receipt made for the test, no real purchase) against fixture rows
 and checks that `Finish` accepts the answer and at least the Price of row 0 is proposed.
 
+The lookup order of these keys (`FEEDER_ANTHROPIC_KEY`, then `FEEDER_LIVE_ANTHROPIC_KEY`, then `ANTHROPIC_KEY`) is defined in [docs/dev/live-tests.md](../dev/live-tests.md).
+
 ### 5.1 Finish: from the answer to a checked result
 
 `receipt.Finish(raw []byte, rows []Row) (Answer, []Warning, error)`, pure:
