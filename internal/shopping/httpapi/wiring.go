@@ -19,6 +19,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
 	planstore "github.com/fabbarix/feeder-ng/internal/plan/store"
 	productstore "github.com/fabbarix/feeder-ng/internal/product/store"
+	recipestore "github.com/fabbarix/feeder-ng/internal/recipe/store"
 	scanstore "github.com/fabbarix/feeder-ng/internal/scan/store"
 	"github.com/fabbarix/feeder-ng/internal/shopping"
 	"github.com/fabbarix/feeder-ng/internal/shopping/service"
@@ -111,7 +112,8 @@ func NewService(d app.Deps) *service.Service {
 	hh := NewHousehold(d)
 	stockSvc := NewStock(d)
 	return service.New(store.New(d.DB, d.Clock), service.Ports{
-		Plan:        plans{st: planstore.New(d.DB, d.Clock), hh: householdstore.New(d.DB, d.Clock), sources: runner.NewDBSources(d.DB, d.Clock, slog.Default()), courses: coursestore.New(d.DB, d.Clock)},
+		Plan:        plans{st: planstore.New(d.DB, d.Clock), hh: householdstore.New(d.DB, d.Clock), sources: runner.NewDBSources(d.DB, d.Clock, slog.Default()), courses: coursestore.New(d.DB, d.Clock),
+			recipes: recipestore.New(d.DB, d.Clock, nil)},
 		Stock:       stockPort{svc: stockSvc, st: stockstore.New(d.DB, d.Clock)},
 		Products:    products{st: productstore.New(d.DB, d.Clock)},
 		Ingredients: ingredients{st: ingredientstore.New(d.DB, d.Clock)},
@@ -146,6 +148,7 @@ type plans struct {
 	hh      *householdstore.Store
 	sources *runner.DBSources
 	courses *coursestore.Store
+	recipes *recipestore.Store // names the Recipe of each Planned Meal (SSP-14)
 }
 
 func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, error) {
@@ -166,6 +169,16 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 	byID := make(map[int64][]shopping.Need, len(trees))
 	for id, tree := range trees {
 		byID[id] = shopping.NeedsFromTree(tree)
+	}
+	// One read of every Recipe's name, archived included (a Planned Meal may keep an archived Recipe); it does not
+	// load the catalog (SSP-14: a Line's Planned Meals name their Recipe).
+	summaries, err := p.recipes.List(ctx, recipestore.ListFilter{Kind: "all", Archived: "all"})
+	if err != nil {
+		return nil, err
+	}
+	recipeNames := make(map[int64]string, len(summaries))
+	for _, r := range summaries {
+		recipeNames[r.ID] = r.Name
 	}
 	slots := map[int64]household.MealSlot{}
 	courseNames := map[int64]string{}
@@ -199,7 +212,8 @@ func (p plans) Meals(ctx context.Context, _, to stock.Date) ([]shopping.Meal, er
 			return nil, err
 		}
 		out = append(out, shopping.Meal{Date: stock.Date(m.Key.Date), At: at, Batches: m.Batches, Needs: byID[m.RecipeID],
-			MealID: m.ID, SlotID: m.Key.MealSlotID, SlotName: slot.Name, CourseName: courseNames[m.Key.CourseID]})
+			MealID: m.ID, SlotID: m.Key.MealSlotID, SlotName: slot.Name, CourseName: courseNames[m.Key.CourseID],
+			RecipeName: recipeNames[m.RecipeID]})
 	}
 	return out, nil
 }
