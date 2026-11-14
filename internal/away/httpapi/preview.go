@@ -12,7 +12,8 @@ import (
 )
 
 // The dry run (?dryRun=1) of a new or changed Away: the Meal Slots of the Planning Horizon it leaves the Member out of,
-// each with its portions now and with the Away, by day; and from when, past the horizon, the planner plans without
+// each with its portions now and with the Away, by day (for a change, also the Meal Slots it gives back whose portions
+// change, marked "back" and not counted in slotsWithout, so "9 Meal Slots without Ben" counts only those he misses); and from when, past the horizon, the planner plans without
 // them. Nothing is written, nothing is published and no token is issued.
 
 type previewSlotOut struct {
@@ -22,6 +23,8 @@ type previewSlotOut struct {
 	PortionsBefore float64 `json:"portionsBefore"`
 	PortionsAfter  float64 `json:"portionsAfter"`
 	Changes        bool    `json:"changes"`
+	// Back is a Meal Slot the stored Away covered and the changed one gives back (a PATCH): not counted in slotsWithout.
+	Back bool `json:"back"`
 }
 
 type previewDayOut struct {
@@ -49,7 +52,7 @@ func (a *api) preview(w http.ResponseWriter, r *http.Request, sc scene, x away.A
 		day := previewDayOut{Date: d.Date, Slots: []previewSlotOut{}}
 		for _, m := range d.Meals {
 			day.Slots = append(day.Slots, previewSlotOut{MealSlotID: m.MealSlotID, MealSlotName: m.MealSlotName, Time: m.Time,
-				PortionsBefore: m.Before, PortionsAfter: m.After, Changes: m.Changed()})
+				PortionsBefore: m.Before, PortionsAfter: m.After, Changes: m.Changed(), Back: m.Back})
 		}
 		out.Days = append(out.Days, day)
 	}
@@ -126,7 +129,7 @@ func (a *api) previewMeals(r *http.Request, sc scene, x away.Away, before *away.
 			}
 			m := away.Meal{Date: date, MealSlotID: ms.ID, MealSlotName: ms.Name, Time: at,
 				Before: away.Portions(all, date, occ, sc.slots, seats, row.Guests),
-				After:  away.Portions(with, date, occ, sc.slots, seats, row.Guests)}
+				After:  away.Portions(with, date, occ, sc.slots, seats, row.Guests), Back: !covers}
 			if covers || m.Changed() {
 				meals = append(meals, m)
 			}

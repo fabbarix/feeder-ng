@@ -422,6 +422,9 @@ type Meal struct {
 	Time         string
 	Before       float64
 	After        float64
+	// Back is a Meal Slot the stored Away covered and the changed one gives back: the Member eats there again. It is
+	// listed when its portions change, and not counted among the Meal Slots without the Member.
+	Back bool
 }
 
 // Changed says whether the Away changes the portions of the Meal Slot.
@@ -458,7 +461,9 @@ func Summarise(meals []Meal) Summary {
 	})
 	s := Summary{Days: []DayRow{}}
 	for _, m := range sorted {
-		s.SlotsWithout++
+		if !m.Back {
+			s.SlotsWithout++
+		}
 		if m.Changed() {
 			s.MealsChanged++
 		}

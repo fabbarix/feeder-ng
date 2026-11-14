@@ -35,3 +35,57 @@ func TestAChangeCannotGiveBackAMealSlotThatHasStarted(t *testing.T) {
 		t.Errorf("Tuesday Dinner = %v portions, want 2: Anna is back", p)
 	}
 }
+
+func TestADryRunOfAChangeCountsOnlyTheMealSlotsWithoutTheMemberAndMarksThoseItGivesBack(t *testing.T) {
+	f := newFixture(t)
+	a := f.add(f.Anna, map[string]any{"from": tue, "through": wed})
+	f.settle()
+	ch, cancel := f.Env.App.Deps.Events.Subscribe("household", "plan")
+	defer cancel()
+	before := f.revision()
+	r := f.User.Patch(fmt.Sprintf("/api/away/%d?dryRun=1", a.ID), map[string]any{"through": tue})
+	if r.Status != 200 {
+		t.Fatalf("dry run = %d %s", r.Status, r.Body)
+	}
+	var s struct {
+		SlotsWithout int `json:"slotsWithout"`
+		MealsChanged int `json:"mealsChanged"`
+		Days         []struct {
+			Date  string `json:"date"`
+			Slots []struct {
+				MealSlotID     int64   `json:"mealSlotId"`
+				PortionsBefore float64 `json:"portionsBefore"`
+				PortionsAfter  float64 `json:"portionsAfter"`
+				Changes        bool    `json:"changes"`
+				Back           bool    `json:"back"`
+			} `json:"slots"`
+		} `json:"days"`
+		UndoToken string `json:"undoToken"`
+	}
+	r.MustJSON(t, &s)
+	if s.SlotsWithout != 2 || s.MealsChanged != 1 {
+		t.Errorf("summary = %s, want 2 Meal Slots without Anna (Tuesday) and 1 meal changing (Wednesday Dinner, back to 2)", r.Body)
+	}
+	if n := len(s.Days); n != 2 || s.Days[1].Date != wed || len(s.Days[1].Slots) != 1 {
+		t.Fatalf("days = %s, want Tuesday and Wednesday", r.Body)
+	}
+	if w := s.Days[1].Slots[0]; w.MealSlotID != f.wedDinner || !w.Back || !w.Changes || w.PortionsBefore != 1 || w.PortionsAfter != 2 {
+		t.Errorf("Wednesday Dinner = %+v, want back, 1 → 2", w)
+	}
+	for _, sl := range s.Days[0].Slots {
+		if sl.Back {
+			t.Errorf("Tuesday slot %d marked back: Anna still misses it", sl.MealSlotID)
+		}
+	}
+	if s.UndoToken != "" || f.revision() != before {
+		t.Errorf("a dry run of a change issued a token (%q) or replanned", s.UndoToken)
+	}
+	if got := f.list(f.Anna); len(got) != 1 || got[0].Through == nil || *got[0].Through != wed {
+		t.Errorf("a dry run of a change wrote it: %+v", got)
+	}
+	select {
+	case e := <-ch:
+		t.Errorf("a dry run of a change published %s", e.Data)
+	case <-time.After(200 * time.Millisecond):
+	}
+}

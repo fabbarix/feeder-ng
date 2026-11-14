@@ -116,3 +116,13 @@ func TestTheMessagesOfARefusedAwayReadAsFieldErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestSummariseDoesNotCountTheMealSlotsAChangeGivesBack(t *testing.T) {
+	s := away.Summarise([]away.Meal{
+		{Date: tue, MealSlotID: 23, MealSlotName: "Dinner", Time: "19:00", Before: 2, After: 1},
+		{Date: wed, MealSlotID: 33, MealSlotName: "Dinner", Time: "19:00", Before: 1, After: 2, Back: true},
+	})
+	if s.SlotsWithout != 1 || s.MealsChanged != 2 {
+		t.Errorf("SlotsWithout = %d, MealsChanged = %d, want 1 (Tue Dinner) and 2 (both change)", s.SlotsWithout, s.MealsChanged)
+	}
+}
