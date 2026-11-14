@@ -100,6 +100,14 @@ func moreSinceTick(q0, added, q2 float64) float64 {
 	return more
 }
 
+// CoversOfMore is the covers of a tick of a ticked Line's More row (SSP-02, ADR 0023): the More, stacked on what the
+// tick already covered (what it covered or what it added, whichever is more). A tick of the More row therefore leaves no
+// More whatever it adds: with Stock it bought the difference, without (Tick without adding) the User has it covered.
+// An addition to a ticked Line with no More (RES 2: a second shopper's tick of the same need) keeps the covers it has.
+func CoversOfMore(t Tick, more float64) float64 {
+	return math.Max(t.Needed, t.addedForCover()) + math.Max(0, more)
+}
+
 // AddedOf is the sum of what the additions put into Stock, always finite: an addition that does not know its quantity
 // (+Inf, a tick from before migration 1560) is left out of the sum and reported by unknown instead.
 func AddedOf(as []Addition) (sum float64, unknown bool) {

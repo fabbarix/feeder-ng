@@ -87,6 +87,18 @@ Feature: A tick by hand adds Stock, covers an amount and can be ticked twice (be
     When I view the Shopping List
     Then the Shopping List is complete
 
+  Scenario: Tick without adding on the More row says the difference is covered
+    Given I tick "chicken thighs" with 400 g as tick "t1"
+    And the shopping dinners are pinned:
+      | date       | recipe           | batches |
+      | 2026-11-09 | chicken traybake | 2       |
+    When I tick "chicken thighs" without adding Stock as tick "t2"
+    Then the shopping Stock total of "chicken thighs" is 400 g
+    And the line "chicken thighs" has 2 additions
+    And the line "chicken thighs" shows nothing more since the tick
+    When I view the Shopping List
+    Then the Shopping List is complete
+
   Scenario: Shopping List complete waits for a reopened Line
     Given I tick "chicken thighs" with 400 g as tick "t1"
     When I view the Shopping List

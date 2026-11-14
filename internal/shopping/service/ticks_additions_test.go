@@ -186,11 +186,76 @@ func TestTickingTheMoreRowCoversOnlyTheDifference(t *testing.T) {
 	}
 	tickMilk(t, e, service.TickInput{Quantity: 750, ClientUUID: "b", UserID: ana})
 	l, v = milkLine(t, e)
-	if b := additionOf(t, l, "b"); b.Covers != 750 {
-		t.Errorf("second addition Covers = %v, want 750 (the difference), not the whole need", b.Covers)
+	// The More row's tick covers the 750 on top of the 800 the tick covered: 1550 in all (reviewer: covers stack, so
+	// that a tick of the More row without adding also clears it; see the next test).
+	if b := additionOf(t, l, "b"); b.Covers != 1550 {
+		t.Errorf("second addition Covers = %v, want 1550 (the difference on top of the 800 covered)", b.Covers)
 	}
-	if tickOf(t, l).Needed != 800 || tickOf(t, l).Added != 1550 || l.More != 0 || !v.Complete {
-		t.Errorf("Tick %+v More %v complete %v; want covering 800, 1550 added, no more, complete", l.Tick, l.More, v.Complete)
+	if tickOf(t, l).Needed != 1550 || tickOf(t, l).Added != 1550 || l.More != 0 || !v.Complete {
+		t.Errorf("Tick %+v More %v complete %v; want covering 1550, 1550 added, no more, complete", l.Tick, l.More, v.Complete)
+	}
+	if e.stock.total(e.ids[milk]) != 1550 {
+		t.Errorf("Stock = %v, want 1550: the More row's tick added only the difference", e.stock.total(e.ids[milk]))
+	}
+}
+
+func TestTickingTheMoreRowWithoutAddingSaysItIsCoveredAndTheMoreGoes(t *testing.T) {
+	// SSP-02, decision SSP 3: "Tick without adding" on the More row means the User has the difference covered.
+	e := newEnv(t)
+	needsMilk(e, 800)
+	tickMilk(t, e, service.TickInput{Quantity: 800, ClientUUID: "a", UserID: ana})
+	needsMilk(e, 1550)
+	tickMilk(t, e, service.TickInput{Quantity: 0, ClientUUID: "b", UserID: ana})
+	l, v := milkLine(t, e)
+	if !l.Ticked || l.More != 0 || !v.Complete || v.Progress.Total != 1 || tickOf(t, l).Added != 800 {
+		t.Fatalf("Line %+v Tick %+v progress %+v complete %v; want ticked, no More, complete, 800 added", l, l.Tick, v.Progress, v.Complete)
+	}
+	if e.stock.total(e.ids[milk]) != 800 || len(e.stock.adds) != 1 {
+		t.Errorf("Stock = %v after %d adds, want the first 800 only", e.stock.total(e.ids[milk]), len(e.stock.adds))
+	}
+	// Taking the More row's tick back (its untick) brings the More back; the first tick stays.
+	if err := e.svc.UntickAddition(ctx, "b"); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ := milkLine(t, e); !l.Ticked || math.Abs(l.More-750) > 1e-6 || tickOf(t, l).Needed != 800 {
+		t.Errorf("after untick of the More row's tick: Line %+v Tick %+v; want 750 more again, covering 800", l, l.Tick)
+	}
+}
+
+func TestTickingTheMoreRowWithLessThanTheMoreLeavesNothingMore(t *testing.T) {
+	// The More row ticked with a smaller pack: the tick covers the More, as a first tick covers its Line.
+	e := newEnv(t)
+	needsMilk(e, 800)
+	tickMilk(t, e, service.TickInput{Quantity: 1000, ClientUUID: "a", UserID: ana}) // a 1 l pack: 200 over
+	needsMilk(e, 1550)                                                              // 550 more than the 1000 in Stock
+	if l, _ := milkLine(t, e); math.Abs(l.More-550) > 1e-6 {
+		t.Fatalf("More = %v, want 550", l.More)
+	}
+	tickMilk(t, e, service.TickInput{Quantity: 500, ClientUUID: "b", UserID: ana})
+	if l, v := milkLine(t, e); l.More != 0 || !v.Complete {
+		t.Errorf("Line %+v complete %v; want no More after the More row's tick", l, v.Complete)
+	}
+	// The need grows again by 300: that much reappears.
+	needsMilk(e, 1850)
+	if l, _ := milkLine(t, e); math.Abs(l.More-300) > 1e-6 {
+		t.Errorf("More after a second growth = %v, want 300", l.More)
+	}
+}
+
+func TestASecondShoppersTickOfACoveredLineKeepsItsCovers(t *testing.T) {
+	// RES 2: the Line has no More when Sam's queued tick of the same need syncs; it covers what Sam saw, not more.
+	e := newEnv(t)
+	needsMilk(e, 800)
+	tickMilk(t, e, service.TickInput{Quantity: 800, ClientUUID: "a", UserID: ana})
+	tickMilk(t, e, service.TickInput{Quantity: 800, ClientUUID: "b", UserID: sam, Covers: 800})
+	l, _ := milkLine(t, e)
+	if b := additionOf(t, l, "b"); b.Covers != 800 || tickOf(t, l).Needed != 800 || tickOf(t, l).Added != 1600 {
+		t.Errorf("addition %+v Tick %+v; want covers 800, needed 800, 1600 added", b, l.Tick)
+	}
+	// Both bought it: a need grown by 500 is already in Stock.
+	needsMilk(e, 1300)
+	if l, _ := milkLine(t, e); l.More != 0 {
+		t.Errorf("More = %v, want 0: the second purchase covers the growth", l.More)
 	}
 }
 

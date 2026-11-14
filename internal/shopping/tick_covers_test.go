@@ -185,3 +185,23 @@ func TestAnAdditionOfUnknownQuantityIsNeverSummedIntoAdded(t *testing.T) {
 		t.Errorf("More = %v, want 300", c.More)
 	}
 }
+
+func TestCoversOfMoreStacksTheMoreOnWhatTheTickCovered(t *testing.T) {
+	cases := []struct {
+		name       string
+		tick       shopping.Tick
+		more, want float64
+	}{
+		{"bought what it covered", shopping.Tick{Needed: 800, Added: 800}, 750, 1550},
+		{"bought more than it covered", shopping.Tick{Needed: 600, Added: 1000}, 800, 1800},
+		{"ticked without adding", shopping.Tick{Needed: 600}, 750, 1350},
+		{"no More", shopping.Tick{Needed: 600, Added: 600}, 0, 600},
+		{"unknown quantity counts what it covered", shopping.Tick{Needed: 800, AddedUnknown: true,
+			Additions: []shopping.Addition{{Quantity: math.Inf(1), Covers: 800}}}, 300, 1100},
+	}
+	for _, c := range cases {
+		if got := shopping.CoversOfMore(c.tick, c.more); !near(got, c.want) {
+			t.Errorf("%s: CoversOfMore = %v, want %v", c.name, got, c.want)
+		}
+	}
+}

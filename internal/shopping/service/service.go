@@ -407,6 +407,10 @@ func (s *Service) Tick(ctx context.Context, in TickInput) (TickResult, error) {
 			a.Covers = line.More
 		}
 	}
+	if on && line.Ticked && line.More > 0 && line.Tick != nil {
+		// A tick of the More row covers the More on top of the tick (SSP-02): with or without Stock, the More goes.
+		a.Covers = shopping.CoversOfMore(*line.Tick, a.Covers)
+	}
 	if !in.TickedAt.IsZero() {
 		a.SyncedAt = s.clk.Now()
 	}
