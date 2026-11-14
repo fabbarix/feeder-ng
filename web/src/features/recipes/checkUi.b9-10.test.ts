@@ -1,8 +1,8 @@
 // B9-10: this package flips its five folders to fail for the check-ui rules that now find nothing there, in its own file
 // scripts/check-ui.rules.d/b9-10.rules (plan section 6: "each package flips its folders ... in its own .rules.d file").
-// scripts/check-ui.sh reads check-ui.rules and then every rules.d file in name order, and a later `<rule>.fail_paths=` line REPLACES the
-// earlier one for that rule. So b9-10.rules must restate the paths that were already failing, plus the five folders: the test computes
-// the effective list the way the script does.
+// scripts/check-ui.sh reads check-ui.rules and then every rules.d file in name order, and `<rule>.fail_paths=` lines ADD UP (B9-07).
+// So b9-10.rules lists only the five folders; the test computes the effective list the way the script does and checks that the paths
+// that were already failing still are.
 import { describe, expect, it } from 'vitest'
 
 const nodeFs = 'node:fs'
@@ -28,7 +28,11 @@ function effective(upTo?: string) {
       const i = line.indexOf('=')
       const key = line.slice(0, i).trim()
       const val = line.slice(i + 1).trim()
-      if (key.endsWith('.fail_paths')) paths[key.slice(0, -'.fail_paths'.length)] = val.split(/\s+/).map((p) => p.replace(/\/$/, '')).filter(Boolean)
+      if (key.endsWith('.fail_paths')) {
+        const rule = key.slice(0, -'.fail_paths'.length)
+        const list = (paths[rule] ??= [])
+        for (const p of val.split(/\s+/).map((v) => v.replace(/\/$/, '')).filter(Boolean)) if (!list.includes(p)) list.push(p)
+      }
       else modes[key] = val
     }
   }
