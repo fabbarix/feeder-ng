@@ -84,7 +84,7 @@ function DialogSurface({
           <div className="dialog__actions">
             <ActionSurface>
               {onCancel ? (
-                <Button variant="secondary" className="dialog__cancel" onClick={onCancel} {...cancelProps}>
+                <Button variant="secondary" onClick={onCancel} {...cancelProps}>
                   {cancelLabel}
                 </Button>
               ) : null}

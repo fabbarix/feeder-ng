@@ -240,7 +240,7 @@ function UseRow({ use, ingredients, errors, index, onPick, onChange, onRemove }:
         createLabel={recipeStrings.lines.useUnit}
       />
       {asks ? <p className="use-row__hint">{recipeStrings.lines.unitNeedsConversion(use.unit)}</p> : null}
-      <IconButton icon="close" label={recipeStrings.steps.removeUse} onClick={onRemove} />
+      <IconButton icon="remove" label={recipeStrings.steps.removeUse} onClick={onRemove} />
     </li>
   )
 }

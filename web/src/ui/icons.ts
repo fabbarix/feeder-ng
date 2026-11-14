@@ -166,6 +166,8 @@ export const icons = {
   tick: CheckIcon,
   confirm: CheckIcon,
   close: XIcon,
+  /** DS-12 R-B: remove or clear one item (an X beside it). Closing a sheet, dialog or notice is CloseButton. */
+  remove: XIcon,
   back: ArrowLeftIcon,
   next: ArrowRightIcon,
   backspace: BackspaceIcon, // beta.7 SR2: the PriceKeypad's backspace key (shop-scan-proposals.md 13.4)
