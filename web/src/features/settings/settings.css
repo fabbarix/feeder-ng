@@ -88,7 +88,7 @@
   flex-wrap: nowrap;
   flex: none;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2); /* A11Y-02: the Admin switch's ring and the remove button's never touch. */
 }
 @media (width < 37.5em) {
   .allowlist__field {
