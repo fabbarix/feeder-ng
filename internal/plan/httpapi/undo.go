@@ -208,10 +208,12 @@ func resolutionFor(res *runner.Resolution) *resolutionOut {
 // and "undoToken" (left out when it issued none). Embed it in the answer's struct.
 type Replan = replanOut
 
-// replanners holds the Replanner of each app by its *sql.DB, and the undo participants registered for an app whose
-// planning module has not mounted yet (RegisterUndoFor): modules mount in name order, so "away" mounts before
-// "planning". Store (called once, at the planning module's mount) hands those participants to the Replanner.
-var replanners = &replannerMap{byDB: map[*sql.DB]*Replanner{}, pending: map[*sql.DB][]namedUndo{}}
+// replanners holds the Replanner of each app by its *sql.DB, and every undo participant registered for that database
+// (RegisterUndoFor). Modules mount in name order, so "away" mounts before "planning": Store (called at the planning
+// module's mount) registers every participant known for the database with the new Replanner. The participants are kept
+// when the planning module mounts again on the same database (testkit Restart builds the new app before closing the old
+// one, so the old Replanner is still there when "away" registers), and both are forgotten when the app closes.
+var replanners = &replannerMap{byDB: map[*sql.DB]*Replanner{}, parts: map[*sql.DB][]namedUndo{}}
 
 type namedUndo struct {
 	name string
@@ -219,20 +221,19 @@ type namedUndo struct {
 }
 
 type replannerMap struct {
-	mu      sync.Mutex
-	byDB    map[*sql.DB]*Replanner
-	pending map[*sql.DB][]namedUndo
+	mu    sync.Mutex
+	byDB  map[*sql.DB]*Replanner
+	parts map[*sql.DB][]namedUndo
 }
 
-// Store keeps p as the Replanner of db and registers with it every participant that was waiting for it.
+// Store keeps p as the Replanner of db and registers with it every participant registered for db.
 func (m *replannerMap) Store(db *sql.DB, p *Replanner) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.byDB[db] = p
-	for _, u := range m.pending[db] {
+	for _, u := range m.parts[db] {
 		p.RegisterUndo(u.name, u.part)
 	}
-	delete(m.pending, db)
 }
 
 // Load returns the Replanner of db.
@@ -243,15 +244,35 @@ func (m *replannerMap) Load(db *sql.DB) (*Replanner, bool) {
 	return p, ok
 }
 
-// register registers the participant with db's Replanner, or keeps it until the planning module mounts on db.
+// register keeps the participant for db (a second registration under the same name replaces the first) and registers it
+// with db's Replanner when there is one.
 func (m *replannerMap) register(db *sql.DB, name string, part runner.UndoParticipant) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	list := m.parts[db]
+	replaced := false
+	for i := range list {
+		if list[i].name == name {
+			list[i].part, replaced = part, true
+		}
+	}
+	if !replaced {
+		list = append(list, namedUndo{name, part})
+	}
+	m.parts[db] = list
 	if p, ok := m.byDB[db]; ok {
 		p.RegisterUndo(name, part)
-		return
 	}
-	m.pending[db] = append(m.pending[db], namedUndo{name, part})
+}
+
+// forget drops db's Replanner and participants when p is still its Replanner (the app that mounted p is closed).
+func (m *replannerMap) forget(db *sql.DB, p *Replanner) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.byDB[db] == p {
+		delete(m.byDB, db)
+		delete(m.parts, db)
+	}
 }
 
 // RegisterUndoFor registers an undo participant for the app that uses db, whatever the module mount order: at once

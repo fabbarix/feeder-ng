@@ -56,7 +56,11 @@ func mount(r *app.Router, d app.Deps) {
 	d.Scheduler.Daily("plan.nightly", "03:00", run.Nightly)
 
 	a := &api{run: run, st: st, names: newNames(d), cook: timers, tagExists: tagstore.New(d.DB).Exists}
-	replanners.Store(d.DB, &Replanner{run: run, names: a.names}) // B9-11: other modules' replanning writes (undo.go)
+	rp := &Replanner{run: run, names: a.names}
+	replanners.Store(d.DB, rp) // B9-11: other modules' replanning writes (undo.go)
+	if d.Context != nil {
+		d.Go(func() { <-d.Context.Done(); replanners.forget(d.DB, rp) }) // B9-24: no Replanner outlives its app
+	}
 	r.User("GET /api/plan", a.view)
 	r.User("GET /api/plan/to-confirm", a.toConfirm)
 	r.User("GET /api/plan/couldnt-plan", a.couldntPlan)
