@@ -4,11 +4,14 @@
 //                            evaluateDark?(darkMetrics, ctx) -> [...] }: evaluateDark reads the `dark` probes re-run in the dark scheme
 //                            The file's number is the id's. P1..P43 only; P24..P43 are RESERVED (owner, mode) until their package adds
 //                            the module. `always: true` puts the rule in ALWAYS_FAIL (it fails on warn routes too).
-//   probes/<slug>.mjs        default { name, key, source, order?, minWidth?, soft?, dark? }: `source` is page code the driver evaluates, `key` the
+//   probes/<slug>.mjs        default { name, key, source, order?, minWidth?, soft?, dark?, scenarios? }: `source` is page code the driver evaluates, `key` the
 //                            metrics field it fills (null: the base layout metrics). The driver runs them by `order` (then name), from
 //                            `minWidth` px; a `soft` probe that throws gives null instead of losing the page. A `dark` probe runs again
-//                            in the dark pass, into the darkMetrics the rules' evaluateDark read.
-//   scenarios/<slug>.mjs     default { order?, scenarios: [...], setups: { <name>: async (h) => void } }: the scenarios run by `order`
+//                            in the dark pass, into the darkMetrics the rules' evaluateDark read. A probe with `scenarios` (names) runs
+//                            only on those scenarios' pages.
+//   scenarios/<slug>.mjs     default { order?, scenarios: [...], setups: { <name>: async (h) => void } }; a scenario is { name, route,
+//                            open? } (every profile viewport) or { name, route, start, widths, setup?, emulate?: [CDP calls before the
+//                            first navigation], rules?: [ids: only these findings are reported] }; ctx.scenario names it for the rules: the scenarios run by `order`
 //                            (then file name; setups change server state, so the order is kept), each setup in the page opened at the
 //                            scenario's start (h: helpers.mjs).
 // Modules load SYNCHRONOUSLY (readdirSync + createRequire): the facade is loaded by vitest through require(esm), which cannot await.
@@ -137,11 +140,20 @@ for (const { file, mod } of scenarioModules) {
   for (const s of mod.scenarios) {
     if (!s || typeof s.name !== 'string' || typeof s.route !== 'string') throw new Error(`page-layout: scenarios/${file}: a scenario needs { name, route }`)
     if (scenarioList.some((x) => x.name === s.name)) throw new Error(`page-layout: scenarios/${file}: scenario ${s.name} is defined twice`)
-    // The driver runs a setup only for a scenario with its own widths, and a scenario with widths only through its setup.
-    if (Boolean(s.setup) !== Boolean(s.widths)) throw new Error(`page-layout: scenarios/${file}: scenario ${s.name} needs both a setup and widths, or neither`)
+    // The driver runs a setup only for a scenario with its own widths, and opens such a scenario at its `start`.
+    if (s.setup && !s.widths) throw new Error(`page-layout: scenarios/${file}: scenario ${s.name} has a setup but no widths (the driver runs setups only at a scenario's own widths)`)
+    if (s.widths && (!Array.isArray(s.widths) || !s.widths.length || typeof s.start !== 'string')) throw new Error(`page-layout: scenarios/${file}: scenario ${s.name} with widths needs a non-empty widths list and a start route`)
+    if (s.emulate !== undefined && !(Array.isArray(s.emulate) && s.emulate.every((c) => c && typeof c.method === 'string'))) throw new Error(`page-layout: scenarios/${file}: scenario ${s.name}: emulate is a list of CDP calls { method, params }`)
+    if (s.rules !== undefined && !(Array.isArray(s.rules) && s.rules.length && s.rules.every((r) => /^P([1-9]|[1-3]\d|4[0-3])$/.test(r)))) throw new Error(`page-layout: scenarios/${file}: scenario ${s.name}: rules is a list of rule ids P1..P43`)
     if (s.setup && typeof mod.setups[s.setup] !== 'function') throw new Error(`page-layout: scenarios/${file}: scenario ${s.name} names setup ${s.setup}, which the module does not define`)
     scenarioList.push(s)
   }
+}
+for (const p of PROBES) {
+  if (p.scenarios === undefined) continue
+  if (!Array.isArray(p.scenarios) || !p.scenarios.length) throw new Error(`page-layout: probe ${p.name}: scenarios is a non-empty list of scenario names`)
+  const unknown = p.scenarios.filter((n) => !scenarioList.some((s) => s.name === n))
+  if (unknown.length) throw new Error(`page-layout: probe ${p.name} names scenario ${unknown.join(', ')}, which no scenarios/ module defines`)
 }
 /** Every scenario, in run order. */
 export const SCENARIOS = scenarioList

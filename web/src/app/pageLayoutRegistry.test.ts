@@ -228,8 +228,12 @@ describe('a package adds its own files and edits no shared one', () => {
     const cases: [string, string, RegExp][] = [
       ['page-layout/rules/P32-demo.mjs', demoRule('P32'), /P32 is planned as by the route mode/],
       ['page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'cutMeta', source: '[]' }\n", /metrics key "cutMeta"/],
-      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', setup: 's', widths: ['568x320'] }], setups: { s: async () => {} } }\n", /no viewport "568x320"/],
-      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', setup: 's' }], setups: { s: async () => {} } }\n", /both a setup and widths/],
+      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', start: '/shop', setup: 's', widths: ['568x320'] }], setups: { s: async () => {} } }\n", /no viewport "568x320"/],
+      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', setup: 's' }], setups: { s: async () => {} } }\n", /setup but no widths/],
+      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', widths: [390] }], setups: {} }\n", /start route/],
+      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', start: '/shop', widths: [390], emulate: ['Page.setFontSizes'] }], setups: {} }\n", /emulate is a list/],
+      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', start: '/shop', widths: [390], rules: ['P99'] }], setups: {} }\n", /rules is a list/],
+      ['page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'zzDemo', scenarios: ['no-such'], source: '[]' }\n", /no-such/],
       ['page-layout/rules/P33-demo.js', demoRule('P33'), /only \.mjs modules/],
     ]
     for (const [file, text, why] of cases) {
@@ -252,6 +256,19 @@ describe('a package adds its own files and edits no shared one', () => {
       const api = load(s.dir)
       expect(api.DARK_PROBES.map((p) => p.name)).toEqual(['buttons', 'zz-demo'])
       expect(api.evaluateDarkMetrics({ zzDemo: ['weak'] }, ctx).map((f) => f.message)).toEqual(['P29 weak (dark scheme)'])
+    } finally {
+      s.done()
+    }
+  })
+  it('a scenario with its own text size (B9-02 font-24): no setup, CDP calls before navigation, its own rules, a probe of its own', () => {
+    const s = scratchLib()
+    try {
+      put(s.dir, 'page-layout/scenarios/zz-font.mjs', "export default { order: 900, scenarios: [{ name: 'zz-font', route: '/shop', start: '/shop', widths: [390, 1440], emulate: [{ method: 'Page.setFontSizes', params: { fontSizes: { standard: 24 } } }], rules: ['P1', 'P27'] }], setups: {} }\n")
+      put(s.dir, 'page-layout/probes/zz-census.mjs', "export default { name: 'zz-census', key: 'zzCensus', scenarios: ['zz-font'], source: '[]' }\n")
+      const api = load(s.dir)
+      const sc = api.SCENARIOS.find((x) => x.name === 'zz-font') as Scenario & { emulate?: unknown[]; rules?: string[] }
+      expect(sc.rules).toEqual(['P1', 'P27'])
+      expect(api.PROBES.find((p) => p.name === 'zz-census')).toBeTruthy()
     } finally {
       s.done()
     }

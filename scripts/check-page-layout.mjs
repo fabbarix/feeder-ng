@@ -293,16 +293,19 @@ const cutSelectProbe = probeSource('cut-selects')
 // The scenario setups are scripts/lib/page-layout/scenarios/*.mjs (SETUPS); they reach this tab through helpers.mjs.
 const helpers = installHelpers({ evaluate, sleep, ids })
 /** Puts the current tab in a viewport (device metrics, and the safe-area insets of an inset viewport: viewport.mjs). */
-const emulate = async (vp) => {
-  for (const c of emulationCalls(vp)) await cdp(c.method, c.params)
+const emulate = async (vp, extra = []) => {
+  // B9-03: then a scenario's own CDP calls (scenario.emulate: a text size, say), before the first navigation.
+  for (const c of [...emulationCalls(vp), ...extra]) await cdp(c.method, c.params)
 }
+/** Whether a probe runs on this page: a probe with `scenarios` runs only on those scenarios' pages. */
+const probeRuns = (p, vp, scenario) => vp.width >= (p.minWidth ?? 0) && (!p.scenarios || (scenario !== null && p.scenarios.includes(scenario.name)))
 
 // Probes that did not run, one entry per route x viewport: {width, route, pattern, reason}.
 const notInspected = []
 let probes = 0
 const started = Date.now()
 /** One page at one width: navigate, settle, run every probe and report its findings; open = the Filters panel is opened first (hf-recipes-filter SCENARIOS). */
-async function probePage(vp, route, pattern, kind, open, setup = null, label = route) {
+async function probePage(vp, route, pattern, kind, open, setup = null, label = route, scenario = null) {
   probes++
   const tag = `${vp.width}px ${label}`
   const t0 = Date.now()
@@ -316,7 +319,7 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
   try {
     await closeTab()
     await openTab()
-    await emulate(vp)
+    await emulate(vp, scenario?.emulate)
     // beta.7: a setup starts from a clean device (no last Shop, no stored Scan session), whatever the probes before it left.
     if (setup) await cdp('Storage.clearDataForOrigin', { origin: base, storageTypes: 'local_storage,indexeddb' })
     await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
@@ -339,7 +342,7 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
     // Every other probe fills its metrics field, in PROBES order (the nav probe scrolls to the end, the ring probe focuses chips), from
     // its minWidth; a soft probe (the dialog) that throws reads as nothing there.
     for (const p of PROBES) {
-      if (p.key === null || vp.width < (p.minWidth ?? 0)) continue
+      if (p.key === null || !probeRuns(p, vp, scenario)) continue
       // B9-03: a probe module whose key the layout probe already fills would overwrite a metric in silence. A field the layout probe
       // leaves null is a placeholder for its probe (dialog: null, filled by the dialog probe from 768 px).
       if (Object.hasOwn(m, p.key) && m[p.key] !== null) throw new Error(`probe ${p.name}: metrics key "${p.key}" is already filled by the layout probe`)
@@ -352,7 +355,10 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
       writeFileSync(join(process.env.PAGE_LAYOUT_SHOTS, `${vp.width}-${label.replace(/[^\w.-]+/g, '_')}.png`), Buffer.from(data, 'base64'))
     }
     // The light findings are reported first, on the light page.
-    for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
+    // ctx.scenario: the scenario's name (null on the route table); a scenario with `rules` reports only those rules' findings.
+    const ctx = { width: vp.width, route, kind, scenario: scenario?.name ?? null }
+    const reported = (f) => !scenario?.rules || scenario.rules.includes(f.rule)
+    for (const f of evaluateMetrics(m, ctx).filter(reported)) fail(`${tag}: ${f.message}`)
     // FU-4: the dark P10 pass runs after the light findings; only its P10 findings are reported, and a dark pass that did not run is not inspected.
     // The scheme is put back to light in the finally, whatever happens.
     try {
@@ -363,7 +369,7 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
         // The setup's state is in memory (the photos, the read): it is replayed in a fresh page opened in the dark scheme.
         await closeTab()
         await openTab()
-        await emulate(vp)
+        await emulate(vp, scenario?.emulate)
         await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
         await cdp('Storage.clearDataForOrigin', { origin: base, storageTypes: 'local_storage,indexeddb' })
         await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
@@ -380,8 +386,8 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
       // The probes marked `dark` (P10's Button probe) run again here; only the rules' evaluateDark findings are reported, never the
       // light ones again.
       const darkMetrics = {}
-      for (const p of DARK_PROBES) if (vp.width >= (p.minWidth ?? 0)) darkMetrics[p.key] = p.soft ? await evaluate(p.source).catch(() => null) : await evaluate(p.source)
-      for (const f of evaluateDarkMetrics(darkMetrics, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
+      for (const p of DARK_PROBES) if (probeRuns(p, vp, scenario)) darkMetrics[p.key] = p.soft ? await evaluate(p.source).catch(() => null) : await evaluate(p.source)
+      for (const f of evaluateDarkMetrics(darkMetrics, ctx).filter(reported)) fail(`${tag}: ${f.message}`)
     } catch (e) {
       miss(`dark scheme: ${e.message}`, `${label} (dark)`)
     } finally {
@@ -405,7 +411,7 @@ for (const vp of VIEWPORTS) {
   for (const scenario of RUN_SCENARIOS.filter((x) => !x.widths)) {
     if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
     const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
-    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open)
+    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open, null, undefined, scenario)
   }
 }
 // beta.7 (H8, SR6, RR5): the scenarios with their own widths and a setup, at those widths in every profile. A finding or a missed probe
@@ -413,14 +419,12 @@ for (const vp of VIEWPORTS) {
 for (const scenario of RUN_SCENARIOS.filter((x) => x.widths)) {
   if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
   const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
-  const setup = SETUPS[scenario.setup]
+  // B9-03: a scenario's setup is optional (the registry has checked that a named one exists); without one the page is probed as it
+  // loads, under the scenario's viewport and its own emulation.
+  const setup = scenario.setup ? SETUPS[scenario.setup] : null
   for (const vp of scenarioViewports(scenario, VIEWPORTS)) {
-    if (!setup) {
-      notInspected.push({ width: vp.width, route: scenario.name, pattern: scenario.route, reason: `no setup "${scenario.setup}" in scripts/lib/page-layout/scenarios` })
-      continue
-    }
     // "<route>#<scenario>": one token, so the modes file reads the route (the part before #) and the line names the state.
-    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, false, setup, `${scenario.route}#${scenario.name}`)
+    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, false, setup, `${scenario.route}#${scenario.name}`, scenario)
   }
 }
 
