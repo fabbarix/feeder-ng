@@ -15,6 +15,7 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   ALWAYS_FAIL: string[]
   SCENARIOS: Scenario[]
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
+  PROBES: { name: string; key: string | null; source: string }[]
 }
 const driver = driverSource()
 
@@ -61,7 +62,10 @@ describe('P23: the Shop hint is cut by its ellipsis', () => {
   it('the driver measures it (cutMetaProbe, with a Range like P22) and reports it as m.cutMeta', () => {
     expect(driver).toMatch(/const cutMetaProbe\s*=/)
     expect(driver).toMatch(/\.shop-lines \.list-row__meta\[data-status="info"\]/)
-    expect(driver).toMatch(/cutMeta:\s*await evaluate\(cutMetaProbe\)/)
+    // B9-03: the probe is a registry module (probes/cut-meta.mjs) under the key P23 reads; the driver's probe loop fills m.cutMeta.
+    const probe = rules.PROBES.find((p) => p.name === 'cut-meta')
+    expect(probe?.key).toBe('cutMeta')
+    expect(probe?.source).toMatch(/\.shop-lines \.list-row__meta\[data-status="info"\]/)
     // b8-polish: the Supplies group's Restock reason is read again (docs/dev/design/b8-polish.md 2)
     expect(driver).not.toMatch(/closest\('\.shop-supplies'\)/)
   })

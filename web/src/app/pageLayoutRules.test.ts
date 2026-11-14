@@ -129,10 +129,10 @@ describe('route table contract', () => {
 })
 
 describe('profiles', () => {
-  it('quick (the check.sh default) is 390, the two iPad portraits (834, 1024; DS-A), 1440 and 1920; full is the six viewports of the review', () => {
-    expect(rules.PROFILES.quick.map((v) => v.width)).toEqual([390, 834, 1024, 1440, 1920])
-    expect(rules.PROFILES.full.map((v) => v.width)).toEqual([390, 820, 1180, 1440, 1920, 2560])
-    expect(rules.PROFILES.full.filter((v) => v.mobile).map((v) => v.width)).toEqual([390])
+  it('quick (the check.sh default) is 320, 390, the two iPad portraits (834, 1024; DS-A), 1440 and 1920; full is the nine viewports of the review (B9-03)', () => {
+    expect(rules.PROFILES.quick.map((v) => v.width)).toEqual([320, 390, 834, 1024, 1440, 1920])
+    expect(rules.PROFILES.full.map((v) => v.width)).toEqual([320, 390, 430, 844, 820, 1180, 1440, 1920, 2560])
+    expect(rules.PROFILES.full.filter((v) => v.mobile).map((v) => v.width)).toEqual([320, 390, 430, 844])
   })
 })
 

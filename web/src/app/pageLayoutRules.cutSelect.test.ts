@@ -16,6 +16,7 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   ALWAYS_FAIL: string[]
   evaluateMetrics: (m: Record<string, unknown>, ctx: { width: number; route: string; kind: string }) => Finding[]
   resizeWalkFindings: (errors: unknown[], ctx: { width: number; route: string }, cutSelects?: unknown[]) => Finding[]
+  PROBES: { name: string; key: string | null; source: string }[]
 }
 const driver = driverSource()
 
@@ -72,7 +73,11 @@ describe('the driver', () => {
     expect(driver).toMatch(/createRange\(\)/)
   })
   it('collects it on every probe and on each width of the walk', () => {
-    expect(driver).toMatch(/cutSelects: await evaluate\(cutSelectProbe\)/)
+    // B9-03: the probe is a registry module (probes/cut-selects.mjs) under the metrics key the rule reads, run by the driver's probe loop.
+    const probe = rules.PROBES.find((p) => p.name === 'cut-selects')
+    expect(probe?.key).toBe('cutSelects')
+    expect(probe?.source).toMatch(/\.select__trigger\[data-appearance="chip"\] \.select__value/)
+    expect(driver).toMatch(/const cutSelectProbe = probeSource\('cut-selects'\)/)
     expect(driver).toMatch(/resizeWalkFindings\(runtimeErrors, \{ width: w, route \}, cutSelects\)/)
   })
 })
