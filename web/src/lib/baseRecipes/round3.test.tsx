@@ -64,7 +64,8 @@ describe('code contracts from the review', () => {
     const lines = readSource('features/recipes/components/IngredientLinesList.tsx')
     expect(lines).not.toContain('No Ingredients yet')
     expect(lines).not.toMatch(/, archived\)/)
-    const strings = readSource('features/recipes/strings.ts')
+    // WP-RX-0 (B9-10): the words live in the area modules features/recipes/strings/*.ts, re-exported by strings.ts.
+    const strings = ['list', 'detail', 'editor', 'courses'].map((m) => readSource(`features/recipes/strings/${m}.ts`)).join('\n')
     expect(strings).toContain('No Ingredients yet')
     expect(strings).toContain('Recipes with an Ingredient named')
   })
