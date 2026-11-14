@@ -71,6 +71,7 @@ func (s *DBSources) zone(ctx context.Context) (plan.Settings, *time.Location, er
 		DefaultCooldownDays: hs.DefaultCooldownDays,
 		DefaultUseByDays:    hs.DefaultLeftoverUseByDays,
 		Style:               hs.PlannerStyle,
+		EarliestStart:       hs.EarliestStart,
 	}, loc, nil
 }
 
@@ -222,7 +223,8 @@ func (s *DBSources) Recipes(ctx context.Context) ([]planner.Recipe, error) {
 			continue
 		}
 		pr := planner.Recipe{ID: planner.RecipeID(sum.ID), Name: sum.Name, Yield: sum.Yield, Archived: sum.Archived,
-			CooldownDays: sum.CooldownDays, UseByDays: sum.LeftoverUseByDays, CourseIDs: sum.CourseIDs, WholeMeal: sum.WholeMeal}
+			CooldownDays: sum.CooldownDays, UseByDays: sum.LeftoverUseByDays, CourseIDs: sum.CourseIDs, WholeMeal: sum.WholeMeal,
+			TotalMinutes: sum.TotalMinutes}
 		for _, t := range sum.Tags {
 			pr.Tags = append(pr.Tags, planner.Tag(t))
 		}

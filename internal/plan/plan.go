@@ -122,6 +122,7 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 	}
 	in.Config.DefaultCooldownDays = s.Settings.DefaultCooldownDays
 	in.Config.DefaultUseByDays = s.Settings.DefaultUseByDays
+	in.EarliestStart = s.Settings.EarliestStart
 
 	for _, si := range s.Slots {
 		at, err := SlotInstant(si.Key.Date, si.Time, s.Zone)
@@ -479,7 +480,8 @@ func Reconcile(s Snapshot, res planner.Result) Changes {
 		ch.Unfilled = append(ch.Unfilled, Unfilled{
 			Key: k, Reason: string(u.Reason), SlotRuleClaimed: u.SlotRuleClaimed,
 			Eliminated: Eliminations{Considered: u.Eliminated.Considered, Exclusion: u.Eliminated.Exclusion,
-				CoolDown: u.Eliminated.CoolDown, VarietyRule: u.Eliminated.VarietyRule, AdvanceStep: u.Eliminated.AdvanceStep},
+				CoolDown: u.Eliminated.CoolDown, VarietyRule: u.Eliminated.VarietyRule, AdvanceStep: u.Eliminated.AdvanceStep,
+				TooEarly: u.Eliminated.TooEarly},
 			Exclusions: exclusionRecords(u.Exclusions), MoreExclusions: u.MoreExclusions,
 		})
 	}

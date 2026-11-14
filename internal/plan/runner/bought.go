@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"sort"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/planner"
@@ -64,9 +65,11 @@ func (r *Runner) RegeneratePreview(ctx context.Context) (RegeneratePreview, erro
 	return out, nil
 }
 
-// warnCells sets the hard-rule Warning of every Pinned or Bought Planned Meal in cells (plan.HardRuleWarning). The
+// warnCells sets the hard-rule Warning of every Pinned or Bought Planned Meal in cells (plan.HardRuleWarning), and its
+// EarlyStart when its cooking starts before the Household's Earliest start (PC-14, planner.EarlyStarts: the Plan holds
+// such a meal and only flags it). at is the slot occurrence's instant (the date's own time when it has one). The
 // Recipes and Preferences are read only when a cell can carry a warning.
-func (r *Runner) warnCells(ctx context.Context, cells []CourseView) error {
+func (r *Runner) warnCells(ctx context.Context, in info, at time.Time, cells []CourseView) error {
 	var recipes map[int64]planner.Recipe
 	var prefs map[int64]planner.Preferences
 	for i := range cells {
@@ -89,6 +92,25 @@ func (r *Runner) warnCells(ctx context.Context, cells []CourseView) error {
 		}
 		rc, found := recipes[m.RecipeID]
 		cells[i].Warning = plan.HardRuleWarning(*m, rc, found, cells[i].Attendance, prefs)
+		if found {
+			cells[i].EarlyStart = earlyStart(in, at, *m, rc)
+		}
 	}
 	return nil
+}
+
+// earlyStart is the "HH:MM" (household zone) the Pinned or Bought meal m at the instant at would have to start cooking,
+// when that is before the Earliest start; "" otherwise. It asks planner.EarlyStarts, so the flag and the planner's
+// too-early filter are one rule.
+func earlyStart(in info, at time.Time, m plan.Meal, rc planner.Recipe) string {
+	em := planner.ExistingMeal{State: planner.MealPlanned, RecipeID: planner.RecipeID(m.RecipeID), Held: true}
+	if m.Pinned {
+		em.State, em.Held = planner.MealPinned, false
+	}
+	es := planner.EarlyStarts(planner.Input{EarliestStart: in.settings.EarliestStart, Recipes: []planner.Recipe{rc},
+		Slots: []planner.Slot{{At: at, Existing: &em}}})
+	if len(es) == 0 {
+		return ""
+	}
+	return es[0].StartAt.In(in.zone).Format("15:04")
 }

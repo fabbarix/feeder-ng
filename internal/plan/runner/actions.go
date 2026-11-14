@@ -109,7 +109,8 @@ func (r *Runner) View(ctx context.Context, from, to string) (PlanView, error) {
 		if len(si.Courses) > 0 {
 			cells = courseViews(si, day, uByKey, whole)
 		}
-		if err := r.warnCells(ctx, cells); err != nil {
+		at, _ := plan.SlotInstant(si.Key.Date, si.Time, in.zone)
+		if err := r.warnCells(ctx, in, at, cells); err != nil {
 			return PlanView{}, err
 		}
 		if err := r.resolve(ctx, in, si.Key, cells); err != nil {
