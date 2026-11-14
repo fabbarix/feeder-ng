@@ -11,7 +11,7 @@ export default {
     { name: 'shop-hints', route: '/shop', start: '/shop', setup: 'shopHints', widths: [375, 390, 834, 1440] },
   ],
   setups: {
-    // b8-polish (P23): a Restock reason in the Supplies group ("400/1000 ml" on a phone), so the probe reads the Supplies group too.
+    // b8-polish (P23): a Restock reason in the Supplies group ("400 ml/1 l" on a phone), so the probe reads the Supplies group too.
     async shopSuppliesGroup() {
       await until(`!!document.querySelector('.shop-supplies .list-row__meta[data-status="info"]')`, 'a Restock reason in the Supplies group of the Shop list (a Supply below its Restock level)')
     },

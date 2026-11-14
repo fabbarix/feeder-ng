@@ -1,4 +1,4 @@
-// b8-polish (docs/dev/design/b8-polish.md 2): P23 covers the Shop's Supplies group again. The Restock reason ("400/1000 ml" on a
+// b8-polish (docs/dev/design/b8-polish.md 2): P23 covers the Shop's Supplies group again. The Restock reason ("400 ml/1 l" on a
 // phone) is read by the same probe as the Meal Slot hint, and the scenarios that run it include the smallest phone (360 px then, where it was cut by 3 px; 375 px since the user's ruling of 2026-11-14).
 import { describe, expect, it } from 'vitest'
 import { driverSource } from './pageLayoutSources'

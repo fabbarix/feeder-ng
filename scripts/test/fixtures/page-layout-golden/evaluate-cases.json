@@ -447,7 +447,7 @@
    },
    {
     "rule": "P23",
-    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400/1000 ml\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
+    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400 ml/1 l\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
    },
    {
     "rule": "P15",
@@ -757,7 +757,7 @@
    },
    {
     "rule": "P23",
-    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400/1000 ml\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
+    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400 ml/1 l\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
    },
    {
     "rule": "P15",
@@ -1083,7 +1083,7 @@
    },
    {
     "rule": "P23",
-    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400/1000 ml\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
+    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400 ml/1 l\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
    },
    {
     "rule": "P15",
@@ -1413,7 +1413,7 @@
    },
    {
     "rule": "P23",
-    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400/1000 ml\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
+    "message": "P23 .meta \"Fri Dinner +2\" shows 90 px and cuts 12 px of its hint with an ellipsis; the Shop's hint names the first Meal Slot and counts the rest, and a Restock reason is compact (\"400 ml/1 l\") below 420 px, so each fits its row: give the row room (--row-value-min) or shorten the hint"
    },
    {
     "rule": "P15",
