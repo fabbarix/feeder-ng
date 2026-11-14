@@ -112,6 +112,9 @@ func (r *Runner) View(ctx context.Context, from, to string) (PlanView, error) {
 		if err := r.warnCells(ctx, cells); err != nil {
 			return PlanView{}, err
 		}
+		if err := r.resolve(ctx, in, si.Key, cells); err != nil {
+			return PlanView{}, err
+		}
 		sv := occurrenceView(in, si, cells)
 		for _, rule := range rules {
 			if rule.MealSlotID == si.Key.MealSlotID {
@@ -295,7 +298,16 @@ func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64
 // Leftover served from it (UseLeftover: no batches, the Leftover's Use-by and portions checked).
 func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batches *float64, leftoverID int64) (SetResult, error) {
 	var covered []int64
-	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	// The target and the Courses a Whole meal covers are the write's own cells: they are not "other meals changed".
+	targets := func() []plan.Key {
+		out := []plan.Key{key}
+		for _, c := range covered {
+			out = append(out, plan.Key{Date: key.Date, MealSlotID: key.MealSlotID, CourseID: c})
+		}
+		return out
+	}
+	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key, undoable: true, targets: targets}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+		covered = nil
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -467,7 +479,7 @@ func (r *Runner) resolved(ctx context.Context, key plan.Key) {
 
 // Confirm Pins the Planned Meal as it is and replans the unpinned slots after it. ErrNotFound, ErrAlreadyResolved.
 func (r *Runner) Confirm(ctx context.Context, key plan.Key) (plan.Meal, error) {
-	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonPinned, runOpts{after: &key, undoable: true, targets: keyOnly(key)}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		m, err := st.Meal(ctx, key)
 		if err != nil {
 			return nil, mapStoreErr(err)
@@ -486,7 +498,7 @@ func (r *Runner) Confirm(ctx context.Context, key plan.Key) (plan.Meal, error) {
 // Unpin clears the Pinned flag and runs Plan(ReasonUnpinned) (the meal stays as it is while it is valid; Regenerate may
 // now replace it). ErrNotFound, ErrAlreadyResolved.
 func (r *Runner) Unpin(ctx context.Context, key plan.Key) (plan.Meal, error) {
-	_, err := r.write(ctx, plan.ReasonUnpinned, runOpts{}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonUnpinned, runOpts{undoable: true, targets: keyOnly(key)}, func(tx *sql.Tx, st *store.Store) (func(), error) {
 		m, err := st.Meal(ctx, key)
 		if err != nil {
 			return nil, mapStoreErr(err)
@@ -501,6 +513,9 @@ func (r *Runner) Unpin(ctx context.Context, key plan.Key) (plan.Meal, error) {
 	}
 	return r.meal(ctx, key)
 }
+
+// keyOnly names one cell as a write's target.
+func keyOnly(key plan.Key) func() []plan.Key { return func() []plan.Key { return []plan.Key{key} } }
 
 // Alternative is one Swap candidate.
 type Alternative struct {
@@ -748,6 +763,7 @@ func (r *Runner) CookedUsing(ctx context.Context, key plan.Key, leftoverPortions
 	var publish func()
 	var cooked plan.Meal
 	var plannedFor []PlannedForMeal
+	mk := &marking{} // B9-11: what Reopen gives back
 	// After the replan, inside the transaction: a Leftover that shrank may have lost its dependants, so the result is
 	// read here, where a failure rolls the Cooked back instead of turning a success into an error.
 	afterReplan := func(ctx context.Context, st *store.Store) error {
@@ -770,7 +786,8 @@ func (r *Runner) CookedUsing(ctx context.Context, key plan.Key, leftoverPortions
 		plannedFor = plannedForMeals(in, recipes, later, key)
 		return nil
 	}
-	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{afterPlan: afterReplan}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{afterPlan: afterReplan, onDiff: mk.record(r)}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+		*mk = marking{}
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -815,11 +832,13 @@ func (r *Runner) CookedUsing(ctx context.Context, key plan.Key, leftoverPortions
 			if err := st.MarkResolved(ctx, key, plan.StateCooked); err != nil {
 				return nil, mapStoreErr(err)
 			}
+			mk.marks = []mark{{key: key, kind: store.MarkCooked}}
 			if src != nil {
 				left := src.Portions - need
 				if left < 0 {
 					left = 0
 				}
+				mk.marks[0].sourceID, mk.marks[0].sourceTaken = src.ID, src.Portions-left
 				if err := st.SetLeftoverPortions(ctx, src.ID, left); err != nil {
 					return nil, err
 				}
@@ -865,6 +884,7 @@ func (r *Runner) CookedUsing(ctx context.Context, key plan.Key, leftoverPortions
 		if err := st.MarkResolved(ctx, key, plan.StateCooked); err != nil {
 			return nil, mapStoreErr(err)
 		}
+		mk.marks, mk.takes = []mark{{key: key, kind: store.MarkCooked}}, d.Takes
 		if portions > eps {
 			l, err := st.AddLeftover(ctx, plan.Leftover{RecipeID: m.RecipeID, From: key, Portions: portions,
 				CookedOn: key.Date, UseBy: plan.LeftoverUseBy(key.Date, rc.UseByDays, in.settings.DefaultUseByDays)})
@@ -875,6 +895,7 @@ func (r *Runner) CookedUsing(ctx context.Context, key plan.Key, leftoverPortions
 				return nil, err
 			}
 			leftover = &l
+			mk.marks[0].leftoverID, mk.marks[0].leftoverPortions = l.ID, l.Portions
 		}
 		if err := r.unpinMisfits(ctx, st, key, portions, in); err != nil {
 			return nil, err
@@ -940,7 +961,9 @@ func (r *Runner) leftoverSource(ctx context.Context, st *store.Store, m plan.Mea
 // NotCooked marks the meal skipped ("we had takeaway"): no Stock change, no Leftover; Pinned dependants are unpinned and
 // the dependants replanned. ErrNotFound, ErrAlreadyResolved.
 func (r *Runner) NotCooked(ctx context.Context, key plan.Key) (plan.Meal, error) {
-	_, err := r.write(ctx, plan.ReasonNotCooked, runOpts{}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	mk := &marking{} // B9-11: what Reopen gives back
+	_, err := r.write(ctx, plan.ReasonNotCooked, runOpts{onDiff: mk.record(r)}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+		*mk = marking{}
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -958,6 +981,7 @@ func (r *Runner) NotCooked(ctx context.Context, key plan.Key) (plan.Meal, error)
 		if err := st.MarkResolved(ctx, key, plan.StateSkipped); err != nil {
 			return nil, mapStoreErr(err)
 		}
+		mk.marks = []mark{{key: key, kind: store.MarkNotCooked}}
 		return nil, r.unpinMisfits(ctx, st, key, 0, in)
 	})
 	if err != nil {

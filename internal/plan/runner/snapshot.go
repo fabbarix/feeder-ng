@@ -156,27 +156,13 @@ func (r *Runner) snapshot(ctx context.Context, st *store.Store, o runOpts) (plan
 			clear = append(clear, plan.CellKeys(s)...)
 		}
 	case o.after != nil:
-		target, ok, err := r.slotAt(ctx, in, *o.after)
-		if err != nil {
+		// Swap, Choose and confirm keep every later meal that is still valid (PC-01, B9-11): nothing is cleared here.
+		// What the change breaks is replanned all the same: a meal served from the Leftover of the meal that was
+		// replaced loses its source (the planner replans it), and invalidOnRead below drops what no longer fits.
+		if _, ok, err := r.slotAt(ctx, in, *o.after); err != nil {
 			return plan.Snapshot{}, err
-		}
-		if !ok {
+		} else if !ok {
 			return plan.Snapshot{}, ErrUnknownSlot
-		}
-		after := *o.after
-		for _, s := range slots {
-			at, err := plan.SlotInstant(s.Key.Date, s.Time, in.zone)
-			if err != nil {
-				continue
-			}
-			for _, k := range plan.CellKeys(s) {
-				later := at.After(target) || (at.Equal(target) && s.Key.MealSlotID > o.after.MealSlotID)
-				// Within the same occurrence the Courses the walk visits after the target are later too.
-				sameSlot := at.Equal(target) && s.Key.MealSlotID == o.after.MealSlotID
-				if later || (sameSlot && walkRank(s, k.CourseID) > walkRank(s, after.CourseID)) {
-					clear = append(clear, k)
-				}
-			}
 		}
 	}
 

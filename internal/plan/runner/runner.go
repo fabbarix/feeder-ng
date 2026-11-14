@@ -11,6 +11,7 @@ package runner
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"sync"
@@ -75,6 +76,8 @@ type Runner struct {
 	running bool
 	reason  plan.Reason
 	wake    chan struct{}
+
+	undo undoRegistry // B9-11: state outside the plan rows that an undo token puts back (RegisterUndo)
 }
 
 // New returns a Runner.
@@ -93,10 +96,17 @@ func New(d Deps) *Runner {
 // runOpts selects what one planning run clears before it plans.
 type runOpts struct {
 	clearAll   bool      // Slot or Variety Rules changed: unpinned meals are treated as empty
-	after      *plan.Key // Swap, set, confirm: unpinned meals after this slot are treated as empty
+	after      *plan.Key // Swap, set, confirm: the target, which must be a Meal Slot of its date (later valid meals are kept, B9-11)
 	regenerate bool      // bump the generation and redo every unpinned meal (planner.Regenerate)
 	// afterPlan runs inside the transaction once the replan is written (not after the commit).
 	afterPlan func(ctx context.Context, st *store.Store) error
+	// B9-11. undoable: a replanning write by a User (Swap, Choose, Pin, Unpin, Regenerate, Apply), which issues an undo
+	// token when it changes a plan row (always, with always). targets are its own cells, never listed in its changes.
+	// onDiff runs inside the transaction at the end with the plan rows the write changed (the records of Cooked).
+	undoable bool
+	always   bool
+	targets  func() []plan.Key
+	onDiff   func(ctx context.Context, st *store.Store, d store.RowDiff) error
 }
 
 // txKey carries the transaction of a write through the context, so the Stock
@@ -115,14 +125,28 @@ func txFrom(ctx context.Context) *sql.Tx {
 // write runs mutate (if any) and one planning run in ONE transaction, then, after
 // the commit, runs the mutation's after func and publishes "plan". Writes are
 // serialised by writeMu. A failure anywhere rolls everything back and publishes nothing.
+// A write that changes a plan row bumps the revision (B9-11); its changes beyond its targets go into the event and into
+// the context's Outcome, with the undo token of an undoable write.
 func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 	mutate func(tx *sql.Tx, st *store.Store) (after func(), err error)) (Summary, error) {
 	r.writeMu.Lock()
 	defer r.writeMu.Unlock()
 	var sum Summary
 	var after func()
+	var changes []plan.CellChange
+	var targets []plan.Key
+	token := ""
 	err := r.d.Store.InTx(ctx, func(tx *sql.Tx, st *store.Store) error {
-		var err error
+		before, err := captureChanges(ctx, st)
+		if err != nil {
+			return err
+		}
+		var captured map[string]json.RawMessage
+		if o.undoable {
+			if captured, err = r.undo.capture(withTx(ctx, tx), tx); err != nil {
+				return err
+			}
+		}
 		if mutate != nil {
 			if after, err = mutate(tx, st); err != nil {
 				return err
@@ -139,8 +163,36 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 		if err := r.pruneStaleChips(ctx, st); err != nil {
 			return err
 		}
+		if o.targets != nil {
+			targets = o.targets()
+		}
+		diff, ch, err := r.since(ctx, st, before, targets)
+		if err != nil {
+			return err
+		}
+		changes = ch
+		changed := !diff.Empty() || o.always
+		rev, err := st.Revision(ctx)
+		if err != nil {
+			return err
+		}
+		if changed {
+			if rev, err = st.BumpRevision(ctx); err != nil {
+				return err
+			}
+		}
+		if o.onDiff != nil {
+			if err := o.onDiff(withTx(ctx, tx), st, diff); err != nil {
+				return err
+			}
+		}
 		if isDry(ctx) {
 			return ErrDryRun // rolls the whole write back: a preview (?dryRun=1) writes nothing
+		}
+		if o.undoable && changed {
+			if token, err = r.saveUndo(ctx, st, rev, diff, captured); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -150,8 +202,9 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 	if after != nil {
 		after()
 	}
-	if r.d.Events != nil {
-		r.d.Events.Publish("plan", map[string]any{"changed": "plan", "reason": reason})
+	r.publishPlan(ctx, reason, targets, changes)
+	if out := outcomeOf(ctx); out != nil {
+		out.Changes, out.UndoToken = changes, token
 	}
 	return sum, nil
 }
@@ -216,7 +269,7 @@ func (r *Runner) Plan(ctx context.Context, reason plan.Reason) (Summary, error) 
 // Regenerate bumps the plan generation (a new seed, so a genuinely different plan)
 // and redoes every unpinned, uncooked Planned Meal in the horizon (spec §7.1).
 func (r *Runner) Regenerate(ctx context.Context) (Summary, error) {
-	return r.write(ctx, plan.ReasonRegenerate, runOpts{regenerate: true}, nil)
+	return r.write(ctx, plan.ReasonRegenerate, runOpts{regenerate: true, undoable: true}, nil)
 }
 
 // ChangeRules applies a Slot Rule or Variety Rule change and replans, in ONE
