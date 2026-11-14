@@ -48,9 +48,17 @@ func beta8BaseSteps(sc *godog.ScenarioContext, w *World) {
 		if err := w.Ensure().DB.QueryRow(`SELECT id FROM ingredients WHERE name = ?`, name).Scan(&iid); err != nil {
 			return fmt.Errorf("no Ingredient %q: %v", name, err)
 		}
-		body := map[string]any{"ingredientId": iid, "quantity": g, "purchased": "2026-11-01", "goesOff": goesOff}
-		if r := admin().Post("/api/stock/lots", body); r.Status != 201 {
+		// The add-lot body takes no go-off date: add the Lot (bought before any go-off date the scenarios use), then set it as the
+		// Pantry does (PATCH goesOff).
+		var lot struct {
+			ID int64 `json:"id"`
+		}
+		r := admin().Post("/api/stock/lots", map[string]any{"ingredientId": iid, "quantity": g, "purchased": "2026-11-01"})
+		if err := r.JSON(&lot); err != nil || r.Status != 201 {
 			return fmt.Errorf("add a Stock Lot of %s: %d %s", name, r.Status, r.Body)
+		}
+		if r := admin().Do("PATCH", fmt.Sprintf("/api/stock/lots/%d", lot.ID), map[string]any{"goesOff": goesOff}); r.Status != 200 {
+			return fmt.Errorf("set the go-off date of Lot %d: %d %s", lot.ID, r.Status, r.Body)
 		}
 		return nil
 	})
