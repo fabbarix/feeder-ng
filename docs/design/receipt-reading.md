@@ -92,7 +92,8 @@ Full-screen route `/scan/receipt` (the Scan session stays mounted behind it; the
 - **Where it shows.** The Scanned list's **Read the receipt** row is the read's place, for the Shop it was started for:
   - **reading**: "Reading the receipt…" with "You can leave. Feeder keeps reading."; pressing it opens the progress;
   - **ready**: "Receipt read: review 9 changes" with "Nothing changes until you apply."; pressing it opens the Receipt review
-    (1 change: "review 1 change"; none: "Receipt read: nothing to change");
+    (1 change: "review 1 change"; none: "Receipt read: nothing to change"); a Dismiss button forgets the read, so a new one can
+    start (else the ready row would hold the photos screen for the 10 minutes);
   - **failed**: "The receipt could not be read" with the failure's words (§9) and a Dismiss button; pressing the row clears it and
     opens the photos to read again (the photos were not kept, so a retry means taking them again).
   These states win over offline, waiting scans and the assistant being off: the read exists already.

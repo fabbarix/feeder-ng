@@ -1,7 +1,7 @@
 // b8-rxweb: the "Read the receipt" row on the Scan screen tells where the background read is (design 3.3; docs/dev/design/b8-rxweb.md).
 // The row reads the store itself (hooks/useBackgroundRead(shopId)); ReadReceiptFooter keeps its props. For THIS Shop's read it shows:
 //   reading  a button-row: "Reading the receipt…" / "You can leave. Feeder keeps reading." (live region role=status); pressing opens /scan/receipt (the progress)
-//   ready    "Receipt read: review 9 changes" / "Nothing changes until you apply."; pressing opens /scan/receipt/review
+//   ready    "Receipt read: review 9 changes" / "Nothing changes until you apply."; pressing opens /scan/receipt/review; a Dismiss IconButton forgets it (reviewer)
 //   failed   "The receipt could not be read" / the failure's words; pressing clears the failure and opens /scan/receipt; a Dismiss IconButton only clears it
 // These states win over offline, waiting scans and the assistant being off (the read exists already); no scans -> still nothing.
 // A read of another Shop shows the normal row. When nothing is going on the row is as before.
@@ -99,6 +99,15 @@ describe('ready', () => {
     await userEvent.click(screen.getByRole('button', { name: /Receipt read: review 9 changes/ }))
     expect(screen.getByTestId('where')).toHaveTextContent('/scan/receipt/review')
     expect(getReceiptSession()).toEqual({ shopId: SHOP_ID, clientUuids: UUIDS })
+  })
+  it('Dismiss forgets the read and the plain row is back, so a new read can start (reviewer: else a read with nothing to apply holds the row 10 minutes)', async () => {
+    await begin()
+    await finish(readDone())
+    show()
+    await userEvent.click(within(screen.getByRole('list')).getByRole('button', { name: 'Dismiss' }))
+    expect(getBackgroundRead()).toBeUndefined()
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/scan$/)
+    expect(screen.getByRole('button', { name: 'Read the receipt' })).toBeInTheDocument()
   })
   it('wins over the assistant being off (the read exists already)', async () => {
     await begin()

@@ -30,7 +30,18 @@ export function BackgroundReadRow({ state, isAdmin, onOpen, onDismiss }: Backgro
     )
   }
   if (view.kind === 'ready') {
-    return <ListRow title={view.title} meta={view.meta} icon="receipt" chevron onActivate={() => onOpen(to)} />
+    // Dismiss forgets the read (the server still keeps it its 10 minutes): without it a read the User does not want, or one with
+    // nothing to change, would hold the row, and so the photos, for 10 minutes.
+    return (
+      <ListRow
+        title={view.title}
+        meta={view.meta}
+        icon="receipt"
+        chevron
+        onActivate={() => onOpen(to)}
+        trailing={<IconButton icon="close" label={t.dismiss} onClick={onDismiss} />}
+      />
+    )
   }
   return (
     <ListRow

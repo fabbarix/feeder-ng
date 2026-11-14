@@ -51,7 +51,7 @@ Behaviour (ported from the old hook, all timing constants stay in `lib/readPolli
 | State | Title | Meta | Press |
 |---|---|---|---|
 | reading | Reading the receipt… | You can leave. Feeder keeps reading. (lost connection: Lost the connection. The read continues; come back to see it.) | opens `/scan/receipt` (the progress); the row is a polite `role="status"` |
-| ready | Receipt read: review 9 changes (1 change; 0: Receipt read: nothing to change) | Nothing changes until you apply. | opens `/scan/receipt/review` |
+| ready | Receipt read: review 9 changes (1 change; 0: Receipt read: nothing to change) | Nothing changes until you apply. | opens `/scan/receipt/review`; a trailing **Dismiss** IconButton forgets the read (reviewer: otherwise a read the User does not want, or one with nothing to change, holds the row and the photos 10 minutes) |
 | failed | The receipt could not be read | the failure's words (`describeReceiptError`) | dismisses and opens `/scan/receipt`; a trailing **Dismiss** IconButton only dismisses |
 
 The session is published before navigating (`publishReceiptSession`), as for the plain row. Domain words only: Receipt review, Scanned list, Read; no word under `_Avoid_`.
