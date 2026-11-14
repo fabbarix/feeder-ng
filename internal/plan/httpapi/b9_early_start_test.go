@@ -3,6 +3,7 @@ package httpapi_test
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/testkit/crsc2"
 )
@@ -143,4 +144,58 @@ func TestACourseLeftEmptyByTheEarliestStartCountsTooEarly(t *testing.T) {
 		return
 	}
 	t.Fatalf("no Main Course: %s", r.Body)
+}
+
+func TestTurningEarliestStartOnReplansAKeptMealThatNowStartsTooEarly(t *testing.T) {
+	// PC-14: the settings save publishes household "settings", which replans; the kept unpinned 13 h Roast chicken at
+	// 19:00 (starting 06:00) is dropped, and the plan event's changes name the cell (was Roast chicken, now empty).
+	w := newEarlyWorld(t, 13*60)
+	w.Exec(`UPDATE household_settings SET earliest_start = NULL`)
+	w.Meal(crsc2.Today, w.Slot, w.Main, w.roast, "planned", false)
+	var body map[string]any
+	if g := w.Admin.Get("/api/household/settings"); g.Status != 200 || g.JSON(&body) != nil {
+		t.Fatalf("GET settings = %d %s", g.Status, g.Body)
+	}
+	body["earliestStart"] = "06:30"
+	ch, cancel := w.Env.App.Deps.Events.Subscribe("plan")
+	defer cancel()
+	if r := w.Admin.Put("/api/household/settings", body); r.Status != 200 {
+		t.Fatalf("PUT settings = %d %s", r.Status, r.Body)
+	}
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case ev := <-ch:
+			var p struct {
+				Changes []struct {
+					Date       string `json:"date"`
+					MealSlotID int64  `json:"mealSlotId"`
+					CourseID   int64  `json:"courseId"`
+					Before     *struct {
+						RecipeID int64 `json:"recipeId"`
+					} `json:"before"`
+					After *struct {
+						RecipeID int64 `json:"recipeId"`
+					} `json:"after"`
+					Why []json.RawMessage `json:"why"`
+				} `json:"changes"`
+			}
+			if err := json.Unmarshal(ev.Data, &p); err != nil {
+				t.Fatalf("plan event %s: %v", ev.Data, err)
+			}
+			for _, c := range p.Changes {
+				if c.Date == crsc2.Today && c.MealSlotID == w.Slot && c.CourseID == w.Main {
+					if c.Before == nil || c.Before.RecipeID != w.roast || c.After != nil || c.Why == nil {
+						t.Fatalf("change = %s, want before Roast chicken, after null, why []", ev.Data)
+					}
+					if w.MealState(crsc2.Today, w.Slot, w.Main) != "" {
+						t.Errorf("the too-early meal is still planned")
+					}
+					return
+				}
+			}
+		case <-deadline:
+			t.Fatal("no plan event named the too-early meal: the settings save did not replan it")
+		}
+	}
 }
