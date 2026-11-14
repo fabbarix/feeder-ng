@@ -27,6 +27,10 @@ function modulesIn(dir) {
   } catch {
     return []
   }
+  // Only .mjs modules are loaded; any other file (a .js, a .ts, a backup) is a mistake that would be skipped in silence, so it throws.
+  // Dotfiles (.gitkeep) are allowed.
+  const strays = names.filter((n) => !n.startsWith('.') && !n.endsWith('.mjs'))
+  if (strays.length) throw new Error(`page-layout: ${dir}/${strays.join(`, ${dir}/`)}: only .mjs modules go in ${dir}/`)
   return names
     .filter((n) => n.endsWith('.mjs'))
     .sort()
@@ -74,6 +78,11 @@ for (const { file, mod } of modulesIn('rules')) {
   if (typeof mod.evaluate !== 'function' || typeof mod.always !== 'boolean' || typeof mod.title !== 'string') {
     throw new Error(`page-layout: rules/${file} needs { id, title, always, evaluate }`)
   }
+  // A reserved number's module must have the mode the plan gives it (section 9): 'always' -> always: true, 'mode' -> always: false.
+  const planned = PLANNED.find(([id]) => id === mod.id)
+  if (planned && (planned[2] === 'always') !== mod.always) {
+    throw new Error(`page-layout: rules/${file}: ${mod.id} is planned as ${planned[2] === 'always' ? 'always fail (always: true)' : 'by the route mode (always: false)'} (${planned[1]}); change PLANNED with the plan if that changed`)
+  }
   const twin = ruleModules.find((r) => r.id === mod.id)
   if (twin) throw new Error(`page-layout: two modules for ${mod.id} (rules/${twin.file} and rules/${file})`)
   ruleModules.push({ ...mod, file })
@@ -98,6 +107,7 @@ for (const { file, mod } of modulesIn('probes')) {
   }
   if (probeList.some((p) => p.name === mod.name)) throw new Error(`page-layout: two probes named "${mod.name}" (probes/${file})`)
   if (mod.key === null && probeList.some((p) => p.key === null)) throw new Error(`page-layout: probes/${file}: only the layout probe has key null`)
+  if (mod.key !== null && probeList.some((p) => p.key === mod.key)) throw new Error(`page-layout: probes/${file}: another probe already fills metrics key "${mod.key}"`)
   probeList.push(mod)
 }
 const ord = (x) => (typeof x.order === 'number' ? x.order : 1000)
@@ -120,6 +130,8 @@ for (const { file, mod } of scenarioModules) {
   for (const s of mod.scenarios) {
     if (!s || typeof s.name !== 'string' || typeof s.route !== 'string') throw new Error(`page-layout: scenarios/${file}: a scenario needs { name, route }`)
     if (scenarioList.some((x) => x.name === s.name)) throw new Error(`page-layout: scenarios/${file}: scenario ${s.name} is defined twice`)
+    // The driver runs a setup only for a scenario with its own widths, and a scenario with widths only through its setup.
+    if (Boolean(s.setup) !== Boolean(s.widths)) throw new Error(`page-layout: scenarios/${file}: scenario ${s.name} needs both a setup and widths, or neither`)
     if (s.setup && typeof mod.setups[s.setup] !== 'function') throw new Error(`page-layout: scenarios/${file}: scenario ${s.name} names setup ${s.setup}, which the module does not define`)
     scenarioList.push(s)
   }

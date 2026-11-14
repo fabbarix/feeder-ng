@@ -39,6 +39,13 @@ export const SCENARIO_VIEWPORTS = {
   '844x390-inset': { width: 844, height: 390, mobile: true, safeArea: { top: 0, right: 47, bottom: 21, left: 47 } },
 }
 
+// B9-03: a scenario module that names a viewport this table lacks fails on load, not halfway through a run.
+for (const s of SCENARIOS) {
+  for (const w of s.widths ?? []) {
+    if (!SCENARIO_VIEWPORTS[w]) throw new Error(`page-layout: scenario ${s.name}: no viewport ${JSON.stringify(w)} in SCENARIO_VIEWPORTS (${Object.keys(SCENARIO_VIEWPORTS).join(', ')})`)
+  }
+}
+
 /**
  * The viewports a scenario runs at: its own `widths`, or every viewport of the profile (the filtered /recipes and /pantry). A width is a
  * number (the old phone, tablet and desktop widths) or a SCENARIO_VIEWPORTS key ('667x375', '320x256', '844x390-inset').

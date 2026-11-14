@@ -221,6 +221,25 @@ describe('a package adds its own files and edits no shared one', () => {
       }
     }
   })
+  // Review of B9-03: the mistakes a later package can make with its own files all fail on load, naming the file.
+  it('a reserved rule with the wrong mode, a second probe for a metrics key, a viewport that does not exist, a setup without widths, and a stray non-.mjs file all throw on load', () => {
+    const cases: [string, string, RegExp][] = [
+      ['page-layout/rules/P32-demo.mjs', demoRule('P32'), /P32 is planned as by the route mode/],
+      ['page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'cutMeta', source: '[]' }\n", /metrics key "cutMeta"/],
+      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', setup: 's', widths: ['568x320'] }], setups: { s: async () => {} } }\n", /no viewport "568x320"/],
+      ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', setup: 's' }], setups: { s: async () => {} } }\n", /both a setup and widths/],
+      ['page-layout/rules/P33-demo.js', demoRule('P33'), /only \.mjs modules/],
+    ]
+    for (const [file, text, why] of cases) {
+      const s = scratchLib()
+      try {
+        put(s.dir, file, text)
+        expect(() => load(s.dir), file).toThrow(why)
+      } finally {
+        s.done()
+      }
+    }
+  })
   it('a probes/*.mjs file adds a probe', () => {
     const s = scratchLib()
     try {
