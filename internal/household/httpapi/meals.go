@@ -12,12 +12,15 @@ import (
 type attendeeBody struct {
 	MemberID              int64    `json:"memberId"`
 	PortionFactorOverride *float64 `json:"portionFactorOverride"`
+	// DespiteAway (B9-24): on a date's Who's eating, "Eats here anyway" for a Member who is away. Dropped for a Member
+	// who is not away at that Meal Slot on that date; ignored on a usual Attendance.
+	DespiteAway bool `json:"despiteAway,omitempty"`
 }
 
 func attendeesOut(att []household.Attendee) []attendeeBody {
 	out := make([]attendeeBody, 0, len(att))
 	for _, a := range att {
-		out = append(out, attendeeBody{MemberID: a.MemberID, PortionFactorOverride: a.PortionFactorOverride})
+		out = append(out, attendeeBody{MemberID: a.MemberID, PortionFactorOverride: a.PortionFactorOverride, DespiteAway: a.DespiteAway})
 	}
 	return out
 }
@@ -29,7 +32,7 @@ func attendeesIn(in []attendeeBody) []household.Attendee {
 	}
 	out := make([]household.Attendee, 0, len(in))
 	for _, a := range in {
-		out = append(out, household.Attendee{MemberID: a.MemberID, PortionFactorOverride: a.PortionFactorOverride})
+		out = append(out, household.Attendee{MemberID: a.MemberID, PortionFactorOverride: a.PortionFactorOverride, DespiteAway: a.DespiteAway})
 	}
 	return out
 }
@@ -306,6 +309,9 @@ type dateAttendanceBody struct {
 	PortionsNeeded float64        `json:"portionsNeeded"` // Guests included (ADR 0014)
 	Guests         int            `json:"guests"`
 	Courses        []courseDayOut `json:"courses"`
+	// Away (B9-24) lists the Members an Away covers at the Meal Slot on the date ([] when none), "Eats here anyway" or
+	// not. PortionsNeeded leaves out those it takes out.
+	Away []dateAwayOut `json:"away"`
 }
 
 // dateOnSlot reads ?date= and checks it falls on the slot's weekday.
@@ -334,7 +340,11 @@ func (a *api) dateBody(r *http.Request, slot household.MealSlot, date string) (d
 	if err != nil {
 		return dateAttendanceBody{}, err
 	}
-	portions, err := a.portionsWithGuests(r, att, row.Guests)
+	here, err := a.awayHere(r, slot, date) // B9-24 (away.go)
+	if err != nil {
+		return dateAttendanceBody{}, err
+	}
+	portions, err := a.portionsWithGuests(r, here.eaters(att), row.Guests)
 	if err != nil {
 		return dateAttendanceBody{}, err
 	}
@@ -342,8 +352,15 @@ func (a *api) dateBody(r *http.Request, slot household.MealSlot, date string) (d
 	if err != nil {
 		return dateAttendanceBody{}, err
 	}
+	if len(here.list) > 0 {
+		for i := range courses {
+			if courses[i].PortionsNeeded, err = a.portionsWithGuests(r, here.eaters(attendeesIn(courses[i].Attendance)), row.Guests); err != nil {
+				return dateAttendanceBody{}, err
+			}
+		}
+	}
 	return dateAttendanceBody{SlotID: slot.ID, Date: date, IsOverride: isOverride,
-		Attendance: attendeesOut(att), PortionsNeeded: portions, Guests: row.Guests, Courses: courses}, nil
+		Attendance: attendeesOut(att), PortionsNeeded: portions, Guests: row.Guests, Courses: courses, Away: here.list}, nil
 }
 
 func (a *api) getAttendance(w http.ResponseWriter, r *http.Request) {
@@ -403,6 +420,12 @@ func (a *api) putAttendance(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, err)
 			return
 		}
+		here, err := a.awayHere(r, slot, date) // B9-24: "Eats here anyway" only for a Member who is away here
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		att = here.keepDespite(att)
 	}
 	// Check every Course before the first write, so a bad entry leaves the date as it was.
 	var dayCourses []household.DateCourse

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/fabbarix/feeder-ng/internal/app"
+	awaystore "github.com/fabbarix/feeder-ng/internal/away/store"
 	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/images"
@@ -23,6 +24,7 @@ type names struct {
 	ing    *ingredientstore.Store
 	plan   *planstore.Store
 	course *coursestore.Store
+	aways  *awaystore.Store // B9-24: the plan's "away" (plan.go)
 }
 
 func newNames(d app.Deps) *names {
@@ -33,6 +35,7 @@ func newNames(d app.Deps) *names {
 		ing:    ing,
 		plan:   planstore.New(d.DB, d.Clock),
 		course: coursestore.New(d.DB, d.Clock),
+		aways:  awaystore.New(d.DB, d.Clock),
 	}
 }
 
