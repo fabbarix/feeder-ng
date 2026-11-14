@@ -125,6 +125,15 @@
   list-style: none;
 }
 
+/* b8-recipes: a chip row's items may shrink to the row. A flex item defaults to min-inline-size: auto, so an <li> holding a long Tag
+   or Course name kept its natural width and spilled past the card (1180 px, P11/P13); with min-inline-size: 0 and a 100% cap the
+   Chip's own ellipsis does the cutting. */
+.recipe-tags > li,
+.course-chips > li {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
 /* The Course group of the Filters panel is one line; it scrolls sideways, so it is padded by a token on both axes (the focus ring of
    its chips is 5 px) with the matching negative margin, and its chips keep their width. */
 .course-filter {
