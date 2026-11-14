@@ -162,6 +162,9 @@
 
 :root,
 [data-scheme='light'] {
+  /* A11Y-02: a custom property resolves where it is declared, so a subtree that sets its own scheme (and accent) declares the
+     ring colour again, or it would inherit the root's accent (the Gallery's light and dark panels side by side). */
+  --focus-ring-color: var(--color-accent);
   --color-bg: #e7f4eb;
   --color-surface: #fafffc;
   --color-surface-2: #daecdf;
@@ -364,6 +367,7 @@
 
 :root[data-scheme='dark'],
 [data-scheme='dark'] {
+  --focus-ring-color: var(--color-accent);
   --color-bg: #090f0b;
   --color-surface: #131c16;
   --color-surface-2: #1e2a22;
