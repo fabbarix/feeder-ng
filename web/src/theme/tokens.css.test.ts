@@ -182,11 +182,14 @@ describe('DS-09 grid minimums and the 1024 px rail handover', () => {
     const gutter = 24
     const rail = 88
     const handover = 1024 - rail - 2 * gutter
+    // The metric strip never has more than three tracks (BentoGrid.css, system.md 4; MetricStrip has 3 tiles), so DS-09's
+    // arithmetic is 3 x 152 + 2 x 12; every other minimum takes as many columns as fit.
+    const maxColumns: Record<string, number> = { '--tile-min-metric': 3 }
     for (const [k, v] of mins) {
       const min = rem(v)
       // every n that fits in the content box just below the rail (1023 px, no rail, gutter 24) must still fit with the rail
       const below = 1023 - 2 * gutter
-      for (let n = 1; n * min + (n - 1) * gap <= below; n++) {
+      for (let n = 1; n <= (maxColumns[k] ?? Infinity) && n * min + (n - 1) * gap <= below; n++) {
         expect(n * min + (n - 1) * gap, `${k}: ${n} columns at 1024 px`).toBeLessThanOrEqual(handover)
       }
     }
