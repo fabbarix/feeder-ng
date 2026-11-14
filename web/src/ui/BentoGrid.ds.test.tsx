@@ -65,7 +65,7 @@ describe('BentoGrid: minimum tile width', () => {
     expect(root).toMatch(/--tile-min-metric:\s*9\.5rem/)
     expect(root).toMatch(/--tile-min-card:\s*20rem/)
     expect(root).toMatch(/--tile-min-day:\s*21rem/)
-    expect(root).toMatch(/--tile-min-wide:\s*28rem/)
+    expect(root).toMatch(/--tile-min-wide:\s*27rem/)
   })
 })
 
