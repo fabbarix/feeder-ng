@@ -506,7 +506,9 @@ const buttonProbe = `
   }
   return low
 })()`
-const dialogProbe = `(() => { const d = document.querySelector('dialog[open]'); if (!d) return null; const b = d.getBoundingClientRect(); return { x: Math.round(b.x), w: Math.round(b.width), vw: innerWidth } })()`
+// P8 is about a modal dialog (centred from 768 px). A non-modal sheet (dialog.show(): the Scan screen's Price keypad, docked under the
+// camera from 768 px by design, shop-scan-proposals.md 13.4) is not :modal and places itself.
+const dialogProbe = `(() => { const d = document.querySelector('dialog[open]:modal'); if (!d) return null; const b = d.getBoundingClientRect(); return { x: Math.round(b.x), w: Math.round(b.width), vw: innerWidth } })()`
 
 
 // hf-recipes-filter round 2 (P17 to P20, docs/design/recipes-filter.md 13.6). Each probe is empty on a page without the header.
