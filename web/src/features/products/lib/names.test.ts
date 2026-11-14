@@ -4,7 +4,11 @@ import { defaultProductName, formatPackSize } from './names'
 describe('formatPackSize', () => {
   it.each([
     [700, 'g', '700 g'],
-    [1000, 'g', '1000 g'],
+    [1000, 'g', '1 kg'],
+    [1500, 'g', '1.5 kg'],
+    [999.995, 'g', '1 kg'],
+    [1250, 'ml', '1.25 l'],
+    [1500, 'piece', '1,500 pieces'],
     [500, 'ml', '500 ml'],
     [1, 'piece', '1 piece'],
     [6, 'piece', '6 pieces'],
@@ -39,7 +43,7 @@ describe('formatPackSize imperial (B9: pack sizes use the shared formatter)', ()
 describe('defaultProductName', () => {
   it('is the Ingredient and the pack size', () => {
     expect(defaultProductName('tomato passata', 700, 'g')).toBe('Tomato passata 700 g')
-    expect(defaultProductName('Milk', 1000, 'ml')).toBe('Milk 1000 ml')
+    expect(defaultProductName('Milk', 1000, 'ml')).toBe('Milk 1 l')
     expect(defaultProductName('eggs', 6, 'piece')).toBe('Eggs 6 pieces')
   })
   it('keeps the rest of the name as typed', () => {

@@ -49,8 +49,8 @@ describe('unitOptions and packSizeInBase', () => {
 describe('suggestedName', () => {
   it('is the Ingredient with its pack size, as the spec prefills it', () => {
     expect(suggestedName(form())).toBe('Tinned tomatoes 400 g')
-    expect(suggestedName(form({ packSize: '1', packUnit: 'kg' }))).toBe('Tinned tomatoes 1000 g')
-    expect(suggestedName(form({ ingredient: { id: 3, name: 'milk', baseUnit: 'ml' }, packSize: '1', packUnit: 'l' }))).toBe('Milk 1000 ml')
+    expect(suggestedName(form({ packSize: '1', packUnit: 'kg' }))).toBe('Tinned tomatoes 1 kg')
+    expect(suggestedName(form({ ingredient: { id: 3, name: 'milk', baseUnit: 'ml' }, packSize: '1', packUnit: 'l' }))).toBe('Milk 1 l')
   })
 
   it('stays empty until it can be built', () => {

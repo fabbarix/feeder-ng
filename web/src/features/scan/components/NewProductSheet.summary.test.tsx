@@ -15,7 +15,7 @@ const note = () => within(dialog()).getByRole('note')
 describe('NewProductSheet: the summary line', () => {
   it('says what the Product will be called and that it works in any Shop', async () => {
     await ready()
-    expect(note()).toHaveTextContent(/Saved as .Milk 1000 ml., Any Shop\./)
+    expect(note()).toHaveTextContent(/Saved as .Milk 1 l., Any Shop\./)
   })
 
   it('is absent until there is something to name (no Ingredient or no pack size yet)', async () => {
@@ -35,7 +35,7 @@ describe('NewProductSheet: the summary line', () => {
     await ready()
     await userEvent.click(within(note()).getByRole('button', { name: 'Rename' }))
     const field = within(dialog()).getByRole('textbox', { name: 'Product name' })
-    expect(field).toHaveValue('Milk 1000 ml')
+    expect(field).toHaveValue('Milk 1 l')
     expect(field).toHaveFocus()
   })
 
@@ -74,7 +74,7 @@ describe('NewProductSheet: the summary line', () => {
   it('"More: This Shop only" limits the barcode to this Shop and the note says so', async () => {
     await ready()
     await userEvent.click(within(note()).getByRole('button', { name: 'More: This Shop only' }))
-    expect(note()).toHaveTextContent(/Saved as .Milk 1000 ml., Coop only\./)
+    expect(note()).toHaveTextContent(/Saved as .Milk 1 l., Coop only\./)
     expect(within(note()).queryByRole('button', { name: 'More: This Shop only' })).toBeNull()
   })
 
