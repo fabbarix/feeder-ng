@@ -26,6 +26,11 @@ describe('scroll lock behind a modal', () => {
 })
 
 describe('BottomSheet.css', () => {
+  it('leaves room in the scrolling body for a focused field\'s ring at its side edges (beta.7 H9 follow-up)', () => {
+    const body = /\.sheet__body\s*{([^}]*)}/.exec(bottomSheet)?.[1] ?? ''
+    expect(body).toMatch(/margin-inline:\s*calc\(-1 \* var\(--space-2\)\)/)
+    expect(body).toMatch(/padding-inline:\s*var\(--space-2\)/)
+  })
   it('caps the height at 85dvh, scrolls the body, and becomes a centred dialog from 768px', () => {
     expect(bottomSheet).toMatch(/max-height:\s*85dvh/)
     expect(bottomSheet).toMatch(/overflow-y:\s*auto/)
