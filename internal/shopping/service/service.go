@@ -55,13 +55,20 @@ type Stock interface {
 	TakeBack(ctx context.Context, lotID int64, added float64) (TakenBack, error)
 }
 
+// PricedPack is the priced Product of an Ingredient never bought (SSP-13) and the pack Price that chose it. The
+// estimate uses that Price, so a newer per-kg-only Price of the same Product never leaves the Line unestimated.
+type PricedPack struct {
+	Pack       shopping.Pack
+	PriceCents int
+}
+
 // Products answers "the Product last bought" (at the Shop if one was bought there), the priced Product of an
 // Ingredient never bought, and pack prices.
 type Products interface {
 	LastBought(ctx context.Context, ingredientIDs []int64, shopID *int64) (map[int64]shopping.Pack, error)
 	// PricedPacks (SSP-13, decision SSP 5): per Ingredient, the active Product with a pack Price at the Shop, else at
 	// any Shop; the most recent Price, ties broken by the lowest price per Base Unit. An Ingredient with none is absent.
-	PricedPacks(ctx context.Context, ingredientIDs []int64, shopID *int64) (map[int64]shopping.Pack, error)
+	PricedPacks(ctx context.Context, ingredientIDs []int64, shopID *int64) (map[int64]PricedPack, error)
 	// PackPrices: cents per pack, from the latest Price at the Shop, else at any Shop; a Product with no pack Price is absent.
 	PackPrices(ctx context.Context, productIDs []int64, shopID *int64) (map[int64]int, error)
 	ShopExists(ctx context.Context, id int64) (bool, error)
@@ -265,22 +272,28 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 			neverBought = append(neverBought, id)
 		}
 	}
-	priced := map[int64]shopping.Pack{}
+	pricedPacks := map[int64]PricedPack{}
 	if len(neverBought) > 0 {
-		if priced, err = s.ports.Products.PricedPacks(ctx, neverBought, shopID); err != nil {
+		if pricedPacks, err = s.ports.Products.PricedPacks(ctx, neverBought, shopID); err != nil {
 			return shopping.Input{}, err
 		}
 	}
-	productIDs := make([]int64, 0, len(packs)+len(priced))
+	productIDs := make([]int64, 0, len(packs))
 	for _, p := range packs {
-		productIDs = append(productIDs, p.ProductID)
-	}
-	for _, p := range priced {
 		productIDs = append(productIDs, p.ProductID)
 	}
 	prices, err := s.ports.Products.PackPrices(ctx, productIDs, shopID)
 	if err != nil {
 		return shopping.Input{}, err
+	}
+	// A priced Product is estimated from the pack Price that chose it.
+	priced := make(map[int64]shopping.Pack, len(pricedPacks))
+	for ing, pp := range pricedPacks {
+		priced[ing] = pp.Pack
+		if prices == nil {
+			prices = map[int64]int{}
+		}
+		prices[pp.Pack.ProductID] = pp.PriceCents
 	}
 	return shopping.Input{
 		Now: s.clk.Now(), From: from, To: to, Meals: meals, Lots: lots, Ingredients: info,

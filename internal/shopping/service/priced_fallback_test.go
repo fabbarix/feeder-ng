@@ -59,6 +59,24 @@ func TestALineIsEstimatedFromAPriceBeforeTheFirstPurchase(t *testing.T) {
 	}
 }
 
+func TestAPricedProductIsEstimatedFromThePackPriceThatChoseIt(t *testing.T) {
+	// The Product's newest Price at the Shop is per kg only (PackPrices has no pack Price for it), and an older pack
+	// Price chose it: the Line is still estimated, from that pack Price.
+	e := newEnv(t)
+	pass := e.ids[passata]
+	e.plan.meals = []shopping.Meal{dinner("2026-11-09", 2, shopping.Need{IngredientID: pass, Quantity: 700})}
+	e.products.priced = map[int64]shopping.Pack{pass: {ProductID: 7, Name: "Mutti 700 g", Size: 700}}
+	e.products.pricedPrices = map[int64]int{7: 299}
+	v, err := e.svc.List(context.Background(), service.Query{ShopID: ptr(int64(2))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := v.Lines[0]
+	if l.EstimatedCostCents == nil || *l.EstimatedCostCents != 598 || v.UnpricedLines != 0 {
+		t.Fatalf("estimate = %v, unpriced = %d; want 598 (2 x 299) and no unpriced Line", l.EstimatedCostCents, v.UnpricedLines)
+	}
+}
+
 func TestAPackLastBoughtBeatsThePricedFallback(t *testing.T) {
 	e := newEnv(t)
 	pass := e.ids[passata]

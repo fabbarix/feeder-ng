@@ -99,16 +99,22 @@ type fakeProducts struct {
 	priced           map[int64]shopping.Pack
 	pricedShop       []*int64
 	pricedAskedAbout [][]int64
+	pricedPrices     map[int64]int // by Product: the pack Price PricedPacks chose, when it differs from prices
 }
 
 // PricedPacks is the fallback port the service must call for Ingredients with no purchase (SSP 5).
-func (f *fakeProducts) PricedPacks(_ context.Context, ids []int64, shop *int64) (map[int64]shopping.Pack, error) {
+// Each priced Pack carries the pack Price from prices (by Product), as the real store's PricedPacks does.
+func (f *fakeProducts) PricedPacks(_ context.Context, ids []int64, shop *int64) (map[int64]service.PricedPack, error) {
 	f.pricedShop = append(f.pricedShop, shop)
 	f.pricedAskedAbout = append(f.pricedAskedAbout, ids)
-	out := map[int64]shopping.Pack{}
+	out := map[int64]service.PricedPack{}
 	for _, id := range ids {
 		if p, ok := f.priced[id]; ok {
-			out[id] = p
+			c, ok := f.pricedPrices[p.ProductID]
+			if !ok {
+				c = f.prices[p.ProductID]
+			}
+			out[id] = service.PricedPack{Pack: p, PriceCents: c}
 		}
 	}
 	return out, nil

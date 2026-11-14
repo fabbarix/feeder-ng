@@ -107,3 +107,23 @@ func TestPricedPacksAnswerForManyIngredientsAtOnce(t *testing.T) {
 		t.Fatalf("got %+v, %v; want Passata and Milk, and no Rice", got, err)
 	}
 }
+
+func TestPricedPacksKeepAnOlderPackPriceWhenTheNewestIsPerKgOnly(t *testing.T) {
+	// The Product's newest Price at Coop is per kg only; its older pack Price still prices it, and PricedPack carries
+	// that pack Price so the Shopping List can estimate from it.
+	f := newFx(t)
+	coop := f.shop(t, "Coop")
+	p := f.prod(t, "Passata", f.tomato, 700)
+	f.price(t, p.ID, coop.ID, "2026-10-01", 299)
+	if _, err := f.s.RecordPrice(ctx, p.ID, product.PriceInput{ShopID: coop.ID, Date: "2026-11-14", PricePerKgCents: ip(450)}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.s.PricedPacks(ctx, []int64{f.tomato}, &coop.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pp, ok := got[f.tomato]
+	if !ok || pp.Product.ID != p.ID || pp.Price.PriceCents == nil || *pp.Price.PriceCents != 299 || pp.Price.Date != "2026-10-01" {
+		t.Fatalf("got %+v, want Passata with its 1 Oct pack Price of 299", got)
+	}
+}
