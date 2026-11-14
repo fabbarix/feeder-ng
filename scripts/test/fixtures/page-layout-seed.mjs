@@ -3,8 +3,9 @@
 // the data set of docs/design/ui-review-2.md "How this was reviewed" (4 Members including a very long name, Meal Slots with
 // attendance, 25 Ingredients, 10 Recipes incl. one very long name and a Ready Meal, 3 Shops, 8 Products with Prices, Stock Lots,
 // a 7-day plan, a Shopping List with extras, 2 allowlisted Users), plus (DS-A) long realistic names, a Side Course and Planned
-// Meals not marked Cooked yet. Writes build/page-layout-ids.json (recipeId, ingredientId,
-// productId, shopId) for the guard's ":id" routes.
+// Meals not marked Cooked yet, and (beta.7) Supplies, the Scan session's barcodes and the Recipe Assistant on the fake Anthropic
+// API. Writes build/page-layout-ids.json (recipeId, ingredientId, productId, shopId, supplyId, ...) for the guard's ":id" routes
+// and its scenarios.
 //   node scripts/test/fixtures/page-layout-seed.mjs http://127.0.0.1:<port> [--out build/page-layout-ids.json] [--email admin@example.test]
 // Best effort: a step that the API refuses is reported on stderr and skipped (the guard then probes emptier screens, which is still
 // a layout). Exit 0 whenever login worked; exit 1 when it did not, or when the Side Recipe with LONG_TAG was not created (the guard's
@@ -268,10 +269,50 @@ if (tomorrowDinner && sideCourse && longSide.json?.id) {
 }
 const toConfirm = ((await api('GET', '/api/plan/to-confirm')).json?.slots ?? []).length
 
+// beta.7 (H8): Supplies (docs/dev/design/household-items.md). A g or ml one below its Restock level with Stock to use (the guard
+// opens its quick-Use sheet on /supplies, and its Line shows in the Shop list's Supplies group), a piece one below its level and
+// one with a long name above it. Each has a Product with a Price at the first Shop, so its Line shows packs and a cost.
+const SUPPLIES = [
+  { name: 'Washing-up liquid', baseUnit: 'ml', restockLevel: 1000, stock: 400, pack: 750, price: 249 },
+  { name: 'Kitchen roll', baseUnit: 'piece', restockLevel: 4, stock: 2, pack: 4, price: 349 },
+  { name: 'Dishwasher tablets, lemon fresh, all-in-one with salt and rinse aid', baseUnit: 'piece', restockLevel: 20, stock: 60, pack: 40, price: 899 },
+]
+let supplyId = null
+for (const [i, sup] of SUPPLIES.entries()) {
+  const r = await step('supply', 'POST', '/api/ingredients', { name: sup.name, baseUnit: sup.baseUnit, kind: 'supply', restockLevel: sup.restockLevel, conversions: [] })
+  if (!r.ok || !r.json?.id) continue
+  if (supplyId === null) supplyId = r.json.id
+  const p = await step('supply product', 'POST', '/api/products', { name: `${sup.name} ${sup.pack} ${sup.baseUnit === 'piece' ? 'pack' : sup.baseUnit}`, ingredientId: r.json.id, packSize: sup.pack, barcodes: [ean13(`80000000030${i}`)] })
+  if (p.ok && p.json?.id && shops[0]) await step('supply price', 'PUT', `/api/products/${p.json.id}/prices`, { shopId: shops[0].id, date: today, priceCents: sup.price })
+  await step('supply lot', 'POST', '/api/stock/lots', { ingredientId: r.json.id, quantity: sup.stock, purchased: today, source: 'manual', clientUuid: `layout-seed-supply-${i}` })
+}
+
+// beta.7 (SR6, RR5): the Scan screen's shop session. The guard types these barcodes (the camera is missing in a headless run): two
+// seeded Products, then one whose name carries the fake Anthropic API's receipt marker, so "Read the receipt" gets a readable
+// receipt built from the Scanned rows (internal/recipeassistant/fakeanthropic receipt.go). unknownBarcode is a valid EAN-13 of no
+// Product: it opens the new-Product sheet. With the fake's URL (PAGE_LAYOUT_FAKE_ANTHROPIC_URL, set by check-page-layout.sh) the
+// Recipe Assistant is turned on against it.
+const scanBarcodes = [0, 1].map((i) => ean13(`800000000${100 + i}`.slice(0, 12)))
+const receiptBarcode = ean13('800000000400')
+if (ing[3]) {
+  const r = await step('receipt product', 'POST', '/api/products', { name: 'Passata #fake:receipt', ingredientId: ing[3].id, packSize: 700, barcodes: [receiptBarcode] })
+  if (r.ok && r.json?.id && shops[0]) await step('receipt price', 'PUT', `/api/products/${r.json.id}/prices`, { shopId: shops[0].id, date: today, priceCents: 129 })
+}
+scanBarcodes.push(receiptBarcode)
+const unknownBarcode = ean13('800000000999')
+const fakeAnthropic = process.env.PAGE_LAYOUT_FAKE_ANTHROPIC_URL ?? ''
+let assistant = false
+if (fakeAnthropic) {
+  const r = await step('recipe assistant', 'PUT', '/api/recipe-assistant/settings', { enabled: true, baseUrl: fakeAnthropic, model: 'claude-haiku-5-5', apiKey: 'sk-page-layout-fake' })
+  assistant = r.ok
+}
+
 mkdirSync(dirname(out), { recursive: true })
 // hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.
 const sideCourseId = sideCourse?.id ?? null
-writeFileSync(out, JSON.stringify({ recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, longPlaceId }, null, 2) + '\n')
+// beta.7: the Supply page, the Scan session's Shop and codes, and whether the assistant is on (the guard's beta.7 scenarios).
+const beta7 = { supplyId, shopName: shops[0]?.name ?? null, scanBarcodes, unknownBarcode, assistant }
+writeFileSync(out, JSON.stringify({ ...beta7, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, longPlaceId }, null, 2) + '\n')
 if (longTagRecipe === null || sideCourseId === null) {
   console.error(`page-layout-seed: the Side Recipe tagged "${LONG_TAG}" was not created; the filtered /recipes scenarios would show no Recipe`)
   process.exit(1)
@@ -279,6 +320,11 @@ if (longTagRecipe === null || sideCourseId === null) {
 // pantry-filter: the filtered /pantry scenarios need the long-named Storage Place (and the ten places that make the list overflow).
 if (longPlaceId === null || placeIds.length < PLACES.length) {
   console.error(`page-layout-seed: the Storage Places were not all created (${placeIds.length} of ${PLACES.length}); the filtered /pantry scenarios need them`)
+  process.exit(1)
+}
+// beta.7 (H8): the Supply page and the quick-Use scenario need the first Supply.
+if (supplyId === null) {
+  console.error('page-layout-seed: the Supplies were not created; /supplies/:id and the quick-Use scenario need them')
   process.exit(1)
 }
 console.log(`page-layout-seed: ok (${members.length} members, ${ing.length} ingredients, ${shops.length} shops, ${placeIds.length} Storage Places, toConfirm ${toConfirm}) -> ${out}`)
