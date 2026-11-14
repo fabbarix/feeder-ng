@@ -40,12 +40,36 @@
   padding-inline: var(--gutter);
 }
 
-/* The brand word is dropped on phones (the bar is narrow); the avatar stays top right. */
+/* The brand: the mark and the word "Feeder" at every width (b8-shop). The word is text in the title type, so it is selectable and
+   scales; it never wraps and the row shrinks before it crowds the avatar, which stays top right. */
 .top-bar__brand {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  color: var(--color-text);
   font-size: var(--text-title-3-size);
   line-height: var(--text-title-3-line);
   font-weight: var(--text-title-3-weight);
+}
+
+.top-bar__brand-word {
+  white-space: nowrap;
+}
+
+.brand-mark {
+  flex: none;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+}
+
+.brand-mark__body {
+  fill: var(--color-accent);
+}
+
+.brand-mark__heart {
+  fill: var(--brand-heart);
 }
 
 .app-status {
@@ -164,10 +188,6 @@
     grid-column: 1 / -1;
   }
 
-  .top-bar__brand {
-    display: block;
-  }
-
   .side-rail {
     display: flex;
     flex-direction: column;
@@ -279,7 +299,7 @@
 /* Avatar menu (5.17): trigger, scrim and popover */
 .your-menu-anchor {
   position: relative;
-  /* Phones: one item in the top bar, pushed to the right edge (the brand word is hidden there). */
+  /* Phones: one item in the top bar, pushed to the right edge, after the brand. */
   margin-left: auto;
 }
 

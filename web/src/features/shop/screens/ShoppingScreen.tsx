@@ -20,6 +20,7 @@ import { TickSheet } from '../components/TickSheet'
 import { ANY_SHOP_ID, shopPickerChoices } from '../lib/anyShop'
 import type { ListEntry } from '../lib/lines'
 import { useLineSheet } from '../hooks/useLineSheet'
+import { useNarrowChips } from '../hooks/useNarrowChips'
 import { useShopChoice } from '../hooks/useShopChoice'
 import { useShopHere } from '../hooks/useShopHere'
 import { AddShopSheet } from '../../shops/components/AddShopSheet'
@@ -48,7 +49,9 @@ export function ShoppingScreen() {
   const ingredients = useIngredientChoices()
   const data = list.data
   const shopName = choice.shops.find((s) => s.id === choice.shopId)?.name ?? null
-  const shopOptions = useMemo(() => shopPickerChoices(choice.shops, shopStrings.anyShop), [choice.shops])
+  // b8-shop: below 420 px the Shop chip shows "Any"; the list keeps "Any Shop".
+  const narrow = useNarrowChips()
+  const shopOptions = useMemo(() => shopPickerChoices(choice.shops, shopStrings.anyShop, narrow ? shopStrings.anyShopShort : undefined), [choice.shops, narrow])
 
   const run = (fn: () => Promise<unknown>) => {
     setActionError(null)

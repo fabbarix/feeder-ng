@@ -76,7 +76,7 @@ describe('LineRow: the info marker', () => {
     const { container } = row(hinted)
     const meta = container.querySelector('.list-row__meta')!
     expect(meta).toHaveAttribute('data-status', 'info')
-    expect(meta).toHaveTextContent('Includes Tue Dinner')
+    expect(meta).toHaveTextContent(/^Tue Dinner$/)
     expect(meta.querySelector('svg')).toBeInTheDocument()
     expect(container).not.toHaveTextContent('not marked Cooked yet')
   })

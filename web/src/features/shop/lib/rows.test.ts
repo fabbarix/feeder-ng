@@ -25,15 +25,16 @@ describe('slotsLabel', () => {
 describe('lineEntry: the short hint', () => {
   it('carries the full sentence (the Line sheet) and a short marker without the "not marked Cooked yet" part', () => {
     expect(hinted.hint).toBe('Includes Tue Dinner, not marked Cooked yet')
-    expect(hinted.hintShort).toBe('Includes Tue Dinner')
+    expect(hinted.hintShort).toBe('Tue Dinner')
   })
   it('the short marker never lists Courses: it has to fit one line', () => {
     const e = lineEntry(makeLine({ pastPlannedMeals: [makePast({ courseName: 'Main' }), makePast({ courseName: 'Side' })] }), 'USD', 'metric')
-    expect(e.hintShort).toBe('Includes Tue Dinner')
+    expect(e.hintShort).toBe('Tue Dinner')
   })
-  it('several slots: "Includes Tue Dinner and Wed Lunch"', () => {
+  // b8-shop (docs/dev/design/b8-shop.md 2): the one-line hint names the oldest slot and counts the rest, so it fits its row.
+  it('several slots: "Tue Dinner +1"', () => {
     const e = lineEntry(makeLine({ pastPlannedMeals: [makePast(), makePast({ date: '2026-11-04', mealSlotId: 1, mealSlotName: 'Lunch' })] }), 'USD', 'metric')
-    expect(e.hintShort).toBe('Includes Tue Dinner and Wed Lunch')
+    expect(e.hintShort).toBe('Tue Dinner +1')
   })
   it('has no key without unconfirmed past meals', () => {
     expect('hintShort' in plain).toBe(false)
@@ -46,7 +47,7 @@ describe('rowMeta: one line, tone-able', () => {
     expect(rowMeta(plain)).toEqual({ text: '2 × Mutti 700 g' })
   })
   it('a Line with unconfirmed past meals shows the short info marker instead (info tone)', () => {
-    expect(rowMeta(hinted)).toEqual({ text: 'Includes Tue Dinner', status: 'info' })
+    expect(rowMeta(hinted)).toEqual({ text: 'Tue Dinner', status: 'info' })
   })
   it('a Line with neither, an extra and a ticked Line show no meta', () => {
     expect(rowMeta(lineEntry(makeLine({ pack: null }), 'USD', 'metric')).text).toBe('')

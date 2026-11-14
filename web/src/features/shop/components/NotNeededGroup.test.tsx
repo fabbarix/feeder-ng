@@ -64,7 +64,7 @@ describe('NotNeededGroup', () => {
     const hinted = lineEntry(makeLine({ pastPlannedMeals: [makePast()] }), 'USD', 'metric')
     render(<NotNeededGroup entries={[hinted]} onOpen={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: 'Not needed (1)' }))
-    expect(screen.getByText('Includes Tue Dinner')).toBeInTheDocument()
+    expect(screen.getByText('Tue Dinner')).toBeInTheDocument()
   })
 
   it('is plain buttons and a list: no native select, checkbox or details element', async () => {

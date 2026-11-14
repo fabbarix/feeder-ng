@@ -6,7 +6,10 @@ import type { ShopChoice } from '../../../ui/Select/options'
 /** The sentinel id of the "Any Shop" option; no Shop has id 0. */
 export const ANY_SHOP_ID = 0
 
-/** The Shops with "Any Shop" first, in the order the picker lists them. */
-export function shopPickerChoices(shops: ShopChoice[], anyShopName: string): ShopChoice[] {
-  return [{ id: ANY_SHOP_ID, name: anyShopName }, ...shops]
+/**
+ * The Shops with "Any Shop" first, in the order the picker lists them. b8-shop: `anyShopShort` ("Any") is the value a narrow chip
+ * shows for the sentinel; the list keeps `anyShopName`.
+ */
+export function shopPickerChoices(shops: ShopChoice[], anyShopName: string, anyShopShort?: string): ShopChoice[] {
+  return [{ id: ANY_SHOP_ID, name: anyShopName, ...(anyShopShort ? { shortName: anyShopShort } : {}) }, ...shops]
 }

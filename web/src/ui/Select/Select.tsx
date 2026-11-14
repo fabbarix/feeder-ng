@@ -292,6 +292,8 @@ function SelectCore<V extends string | number>({
   useFloatingPopover(open && !phone, trigger, popover, 'flex')
 
   const selectedOption = options.find((o) => selected.includes(o.value))
+  // b8-shop: a chip that shows a shorter value than its label keeps the full label as its title (the name stays the label).
+  const chipTitle = appearance === 'chip' && !multi && selectedOption?.triggerLabel && selectedOption.triggerLabel !== selectedOption.label ? selectedOption.label : undefined
   const triggerText = multi
     ? options
         .filter((o) => selected.includes(o.value))
@@ -348,6 +350,7 @@ function SelectCore<V extends string | number>({
           disabled={disabled}
           data-appearance={appearance}
           data-placeholder={triggerText === '' ? '' : undefined}
+          title={chipTitle}
           onClick={(e) => {
             // A click that follows a key the keydown handler already acted on (Space fires click on keyup) is ignored.
             if (e.detail === 0 && Date.now() - keyHandledAt.current < KEY_CLICK_WINDOW_MS) return

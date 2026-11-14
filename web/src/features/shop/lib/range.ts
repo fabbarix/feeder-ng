@@ -53,14 +53,25 @@ export function describeRange(to: string, today: string): string {
   return `Until ${label}`
 }
 
+/** b8-shop: below 420 px the chip shows the short value: "Today", "Tomorrow" or "Fri 20" (no "Until"). */
+export function shortRangeLabel(to: string, today: string): string {
+  return dayLabel(to, today)
+}
+
 export interface RangeOption {
   /** YYYY-MM-DD, the last day of the range */
   value: string
-  /** describeRange: "Today", "Until tomorrow", "Until Thu 12" (the Select shows it) */
+  /** describeRange: "Today", "Until tomorrow", "Until Thu 12" (the list shows it) */
   label: string
+  /** shortRangeLabel: "Today", "Tomorrow", "Thu 12" (the narrow chip shows it) */
+  short: string
 }
 
-/** The options of the "Shop for" Select: rangeChoices(today, maxTo), each labelled by describeRange. */
+/** The options of the "Shop for" Select: rangeChoices(today, maxTo), each labelled by describeRange and shortened by shortRangeLabel. */
 export function rangeOptions(today: string, maxTo: string): RangeOption[] {
-  return rangeChoices(today, maxTo).map((choice) => ({ value: choice.to, label: describeRange(choice.to, today) }))
+  return rangeChoices(today, maxTo).map((choice) => ({
+    value: choice.to,
+    label: describeRange(choice.to, today),
+    short: shortRangeLabel(choice.to, today),
+  }))
 }
