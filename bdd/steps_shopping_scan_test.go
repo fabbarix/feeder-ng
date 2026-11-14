@@ -426,6 +426,35 @@ func shoppingScanSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	// beta.8 undo: an Ingredient extra's tick with a quantity adds a Stock Lot; its untick takes it back (ADR 0019).
+	sc.Step(`^I tick the Shopping List extra "([^"]*)" with (\d+) (?:g|ml|piece)$`, func(name string, qty int) error {
+		if err := view("", ""); err != nil {
+			return err
+		}
+		x := extraNamed(name)
+		if x == nil {
+			return fmt.Errorf("no extra %q in %s", name, w.Last.Body)
+		}
+		w.Last = me().Post(fmt.Sprintf("/api/shopping/extras/%d/tick", int64(ssNum(x["id"]))), map[string]any{"quantity": qty})
+		if w.Last.Status != 200 {
+			return fmt.Errorf("tick extra: %d %s", w.Last.Status, w.Last.Body)
+		}
+		return nil
+	})
+	sc.Step(`^I untick the Shopping List extra "([^"]*)"$`, func(name string) error {
+		if err := view("", ""); err != nil {
+			return err
+		}
+		x := extraNamed(name)
+		if x == nil {
+			return fmt.Errorf("no extra %q in %s", name, w.Last.Body)
+		}
+		w.Last = me().Delete(fmt.Sprintf("/api/shopping/extras/%d/tick", int64(ssNum(x["id"]))))
+		if w.Last.Status != 200 && w.Last.Status != 204 {
+			return fmt.Errorf("untick extra: %d %s", w.Last.Status, w.Last.Body)
+		}
+		return nil
+	})
 	sc.Step(`^I tick the Shopping List extra "([^"]*)"$`, func(name string) error {
 		if err := view("", ""); err != nil {
 			return err
