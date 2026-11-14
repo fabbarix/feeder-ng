@@ -42,7 +42,9 @@ type Actor struct {
 type actorKey struct{}
 
 // WithActor says which User makes the writes made with the returned context.
-func WithActor(ctx context.Context, a Actor) context.Context { return context.WithValue(ctx, actorKey{}, a) }
+func WithActor(ctx context.Context, a Actor) context.Context {
+	return context.WithValue(ctx, actorKey{}, a)
+}
 
 func actorOf(ctx context.Context) (Actor, bool) {
 	a, ok := ctx.Value(actorKey{}).(Actor)

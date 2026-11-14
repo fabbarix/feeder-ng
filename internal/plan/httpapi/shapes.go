@@ -66,6 +66,8 @@ type mealOut struct {
 	PhotoURL    string `json:"photoUrl,omitempty"`
 	// R12: the Recipe's reheat time in minutes, sent only for a meal served from a Leftover and only when set.
 	ReheatMinutes int `json:"reheatMinutes,omitempty"`
+	// B9-11 (SAFE-03): how a Cooked or Not cooked meal was marked and whether it can be undone; slot views only.
+	Resolution *resolutionOut `json:"resolution,omitempty"`
 }
 
 // boughtOut lists the Ingredients a purchase was bought for the meal, by name.
@@ -189,6 +191,7 @@ func listEntryFor(e runner.ListEntry, t table) listEntryOut {
 type putOut struct {
 	*mealOut
 	Covered []int64 `json:"covered"`
+	replanOut
 }
 
 type leftoverOut struct {
@@ -361,6 +364,7 @@ func courseFor(c runner.CourseView, at time.Time, t table) courseOut {
 		out.Meal = mealFor(*c.Meal, t)
 		out.Meal.StartBy = plan.StartBy(at, out.Meal.CookMinutes)
 		out.Meal.Warning = warningFor(c.Warning)
+		out.Meal.Resolution = resolutionFor(c.Resolution)
 	}
 	if c.Unfilled != nil {
 		out.Unfilled = unfilledFor(*c.Unfilled)
