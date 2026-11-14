@@ -78,8 +78,8 @@
   width: 50%;
   display: flex;
   align-items: center;
-  color: var(--color-muted);
-  opacity: 0.45;
+  /* the tap-zone arrows are a hint: the muted colour at 45 %, as the opacity fade drew them (no opacity muting, DS-11) */
+  color: color-mix(in srgb, var(--color-muted) 45%, transparent);
   pointer-events: none;
 }
 

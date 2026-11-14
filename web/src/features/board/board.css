@@ -25,7 +25,7 @@
 
 @media (min-width: 37.5em) {
   .board-screen .board-grid {
-    height: calc(100vh - 48px); /* the screen less its padding (2 x --space-6) */
+    height: calc(100vh - 2 * var(--space-6)); /* the screen less its padding */
     grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
   }
@@ -38,7 +38,7 @@
 .board-cell > .tile {
   box-sizing: border-box;
   height: 100%;
-  --board-tile-pad-x: 20px; /* the clock sizes subtract 2 of these */
+  --board-tile-pad-x: var(--space-5); /* 20 px; the clock sizes subtract 2 of these */
   padding: var(--space-4) var(--board-tile-pad-x);
   border-radius: var(--radius-board);
   font-size: 1.5rem;
@@ -221,9 +221,10 @@
   gap: var(--space-1);
 }
 
-/* Compact rows: at most 2 fit under the heading with the "+n more" line (208 px of content at 1280 x 800). */
+/* Compact rows: at most 2 fit under the heading with the "+n more" line (208 px of content at 1280 x 800). The 6 px block padding is
+   two scale steps (4 + 2), kept so the rows do not move. */
 .board-timers .timer-tile {
-  padding: 6px var(--space-3);
+  padding: calc(var(--space-1) + var(--space-half)) var(--space-3);
   gap: var(--space-half);
 }
 
