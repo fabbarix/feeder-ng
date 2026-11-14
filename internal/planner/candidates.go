@@ -1,8 +1,10 @@
 package planner
 
 import (
+	"fmt"
 	"math"
 	"sort"
+	"time"
 )
 
 // evalOpts adjusts candidate evaluation: Swap ignores Slot Rules and drops the
@@ -125,7 +127,7 @@ func (st *state) evaluate(i int, portions float64, opts evalOpts) (strict []brea
 
 // tally applies the hard filters to Recipe r for cell i, in order, and counts the
 // first that removes it. One Recipe per slot and the Whole meal hold-back count in
-// Considered only; Exclusion and Advance Step are counted. It reports whether r
+// Considered only; Exclusion, Advance Step and Too early (PC-14) are counted. It reports whether r
 // passes every hard filter. Cool-down and Variety Rules are soft and never counted.
 func (st *state) tally(i int, r Recipe, e *Eliminations) (hardPass bool) {
 	slot := st.slots[i]
@@ -139,6 +141,9 @@ func (st *state) tally(i int, r Recipe, e *Eliminations) (hardPass bool) {
 		return false
 	case st.advanceBlocked(i, r):
 		e.AdvanceStep++
+		return false
+	case st.tooEarly(i, r):
+		e.TooEarly++
 		return false
 	}
 	return true
@@ -271,6 +276,29 @@ func (st *state) advanceBlocked(i int, r Recipe) bool {
 		}
 	}
 	return false
+}
+
+// tooEarly reports whether cooking Recipe r for cell i would have to start before the Household's Earliest start
+// (PC-14). Off ("") and a Recipe of unknown length (TotalMinutes 0) are never too early.
+func (st *state) tooEarly(i int, r Recipe) bool {
+	_, early := startsTooEarly(st.slots[i].At, r.TotalMinutes, st.in.EarliestStart)
+	return early
+}
+
+// startsTooEarly returns when cooking of the given length starts for a slot at `at`, and whether that is before the
+// earliest "HH:MM" on the slot's own date, in the slot's zone. Starting exactly at the earliest start is allowed.
+func startsTooEarly(at time.Time, totalMinutes int, earliest string) (time.Time, bool) {
+	start := at.Add(-time.Duration(totalMinutes) * time.Minute)
+	if earliest == "" || totalMinutes <= 0 {
+		return start, false
+	}
+	var h, m int
+	if _, err := fmt.Sscanf(earliest, "%d:%d", &h, &m); err != nil {
+		return start, false
+	}
+	y, mo, d := at.Date()
+	limit := time.Date(y, mo, d, h, m, 0, 0, at.Location())
+	return start, start.Before(limit)
 }
 
 // relaxedBefore is the relaxed order (spec 7.2 step 2b), keys 1 to 6: not reserved

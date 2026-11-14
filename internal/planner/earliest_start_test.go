@@ -101,17 +101,22 @@ func TestAPinnedMealIsNeverRefusedByTheEarliestStart(t *testing.T) {
 	}
 }
 
-func TestEarlyStartsFlagsOnlyPinnedMealsThatStartBeforeTheEarliestStart(t *testing.T) {
+// Ruling 2 (main session, B9-12 developer): a Bought (Held) meal is held where it is like a Pinned one, so it is
+// flagged too. Planned (unpinned) and Cooked meals are not.
+func TestEarlyStartsFlagsOnlyPinnedAndBoughtMealsThatStartBeforeTheEarliestStart(t *testing.T) {
 	pinnedLong := withExisting(tue(8, 30), pinnedMeal(1))
 	pinnedFine := withExisting(slotAt(1, lunchSlot, 13, 0, nil), pinnedMeal(1))
 	planned := withExisting(slotAt(2, breakfastSlot, 8, 30, nil), plannedMeal(1))
 	cooked := withExisting(slotAt(3, breakfastSlot, 8, 30, nil), cookedMeal(1))
+	bought := withExisting(slotAt(4, breakfastSlot, 8, 30, nil), heldMeal(1))
 	recipes := []Recipe{rcp(1, 2, total(360))}
-	in := withEarliest(baseInput([]Slot{pinnedLong, pinnedFine, planned, cooked}, recipes...), "06:30")
+	in := withEarliest(baseInput([]Slot{pinnedLong, pinnedFine, planned, cooked, bought}, recipes...), "06:30")
 
 	got := EarlyStarts(in)
-	if len(got) != 1 || got[0].Key != tueKey() || !got[0].StartAt.Equal(baseDay.AddDate(0, 0, 1).Add(2*time.Hour+30*time.Minute)) {
-		t.Fatalf("EarlyStarts = %+v, want only the Pinned 08:30 meal, starting 02:30", got)
+	boughtKey := SlotKey{Date: day(4), MealSlotID: breakfastSlot}
+	if len(got) != 2 || got[0].Key != tueKey() || !got[0].StartAt.Equal(baseDay.AddDate(0, 0, 1).Add(2*time.Hour+30*time.Minute)) ||
+		got[1].Key != boughtKey {
+		t.Fatalf("EarlyStarts = %+v, want the Pinned 08:30 meal (starting 02:30) and the Bought one", got)
 	}
 	if got := EarlyStarts(withEarliest(in, "")); len(got) != 0 {
 		t.Errorf("Off: EarlyStarts = %+v, want none", got)
