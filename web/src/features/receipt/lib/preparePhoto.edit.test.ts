@@ -16,10 +16,11 @@ const file = new Blob([new Uint8Array(100)], { type: 'image/jpeg' })
 
 describe('prepareReceiptPhoto with an edit', () => {
   it('turns the picture: the output has the turned shape', async () => {
-    const { e, encode } = engine()
-    const out = await prepareReceiptPhoto(file, e, { turns: 1, crop: { x: 0, y: 0, width: 2000, height: 3000 } })
-    expect(encode.mock.calls[0]?.[1]).toMatchObject({ turns: 1, type: 'image/jpeg', width: 2000, height: 3000 })
-    expect([out.width, out.height]).toEqual([2000, 3000])
+    // Within the 2576 long-edge cap, so the turned shape is the whole output (the cap has its own test below).
+    const { e, encode } = engine({ width: 2400, height: 1600 })
+    const out = await prepareReceiptPhoto(file, e, { turns: 1, crop: { x: 0, y: 0, width: 1600, height: 2400 } })
+    expect(encode.mock.calls[0]?.[1]).toMatchObject({ turns: 1, type: 'image/jpeg', width: 1600, height: 2400 })
+    expect([out.width, out.height]).toEqual([1600, 2400])
   })
   it('crops: only that area is encoded, at its own size', async () => {
     const { e, encode } = engine()
