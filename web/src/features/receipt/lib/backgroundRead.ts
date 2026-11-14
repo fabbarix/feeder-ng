@@ -33,6 +33,8 @@ interface Run {
   startedAt: number
   readId?: string
   resumed: boolean
+  /** A read that was ready before a reload: when it was ready, so the 10 minutes still count from then. */
+  finishedAt?: number
   inFlight: boolean
   poll?: ReturnType<typeof setInterval>
   timeout?: ReturnType<typeof setTimeout>
@@ -152,11 +154,14 @@ function endWithFailure(r: Run, error: ReceiptErrorInput, cancelOnServer: boolea
 
 function endReady(r: Run, readId: string, view: ReadDone): void {
   stopRun(r)
-  const finishedAt = Date.now()
+  // A read that was ready before a reload keeps its first finish: the server's 10 minutes run from then, and it was announced then.
+  const finishedAt = r.finishedAt ?? Date.now()
   rememberRead({ readId, shopId: r.shopId, clientUuids: r.clientUuids, read: view }, finishedAt)
   writeEntry({ shopId: r.shopId, readId, clientUuids: r.clientUuids, startedAt: r.startedAt, finishedAt })
-  scheduleExpiry(READ_KEPT_MS)
-  finish({ status: 'ready', shopId: r.shopId, readId, changes: view.proposals.length })
+  scheduleExpiry(Math.max(0, finishedAt + READ_KEPT_MS - Date.now()))
+  const ready: FinishedRead = { status: 'ready', shopId: r.shopId, readId, changes: view.proposals.length }
+  if (r.finishedAt !== undefined) setState(ready)
+  else finish(ready)
 }
 
 function giveUp(r: Run): void {
@@ -283,7 +288,15 @@ export async function resumeBackgroundRead(now: number = Date.now()): Promise<vo
     clearEntry()
     return
   }
-  const r: Run = { shopId: entry.shopId, clientUuids: entry.clientUuids, startedAt: entry.startedAt, readId: entry.readId, resumed: true, inFlight: false }
+  const r: Run = {
+    shopId: entry.shopId,
+    clientUuids: entry.clientUuids,
+    startedAt: entry.startedAt,
+    readId: entry.readId,
+    resumed: true,
+    ...(entry.finishedAt !== undefined ? { finishedAt: entry.finishedAt } : {}),
+    inFlight: false,
+  }
   run = r
   owner = { shopId: r.shopId, clientUuids: [...r.clientUuids] }
   setState(readingOf(r, false))
