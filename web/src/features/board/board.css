@@ -2,14 +2,14 @@
    grid of 12 cells (lib/layout). Tokens only. */
 .board-screen {
   min-height: 100vh;
-  padding: 24px;
+  padding: var(--space-6);
   box-sizing: border-box;
   background: var(--color-bg);
   color: var(--color-text);
 }
 
-/* L-10: below 600 px the board is 2 columns of content-height rows (the hero and Use soon full width); the 4 x 3 wall grid
-   starts at 600 px (see the end of this block). */
+/* L-10: below 37.5 em (600 px) the board is 2 columns of content-height rows (the hero and Use soon full width); the 4 x 3 wall
+   grid starts at 37.5 em (see the end of this block). */
 .board-screen .board-grid {
   display: grid;
   gap: var(--bento-gap);
@@ -23,9 +23,9 @@
   container-type: inline-size;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 37.5em) {
   .board-screen .board-grid {
-    height: calc(100vh - 48px);
+    height: calc(100vh - 48px); /* the screen less its padding (2 x --space-6) */
     grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
   }
@@ -39,9 +39,10 @@
   box-sizing: border-box;
   height: 100%;
   --board-tile-pad-x: 20px; /* the clock sizes subtract 2 of these */
-  padding: 16px var(--board-tile-pad-x);
+  padding: var(--space-4) var(--board-tile-pad-x);
   border-radius: var(--radius-board);
   font-size: 1.5rem;
+  line-height: 1.2;
   overflow: hidden;
 }
 
@@ -70,7 +71,7 @@
    (1 line, 28), the due line (28) and Done (36) with 4 px gaps come to about 200 px. Only the due line and the button hold
    their height. */
 .board-next {
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .board-next .board-tile__heading,
@@ -89,17 +90,17 @@
 }
 
 .board-clock__date {
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
   font-size: 12cqi; /* phone: "Wednesday" and "November" fit 123 px; the wall grid restores 2rem */
   line-height: 1.15;
   overflow-wrap: break-word; /* a word splits only when it cannot fit at all; at phone sizes every word fits */
   min-width: 0;
 }
 
-/* From 600 px the sizes come from the content box (the cell less the tile padding on both sides, 2 * --board-tile-pad-x), not the bare
+/* From 37.5 em (600 px) the sizes come from the content box (the cell less the tile padding on both sides, 2 * --board-tile-pad-x), not the bare
    cell: "00:00" is 3em wide and "Wednesday" 5.24em ("September" 4.99em), so the time is capped at 32cqi and the date at 2rem. Each size is
    declared twice: the first is the fallback for a browser without min(), the second the content-box size. */
-@media (min-width: 600px) {
+@media (min-width: 37.5em) {
   .board-clock__time {
     font-size: 32cqi;
     font-size: min(32cqi, calc((100cqi - 2 * var(--board-tile-pad-x)) / 3));
@@ -154,8 +155,9 @@
 }
 
 .board-tonight__slot {
-  margin: 8px 0 0;
+  margin: var(--space-2) 0 0;
   font-size: 1.75rem;
+  line-height: 1.2;
 }
 
 /* Meta lines at board scale (about 23 px). */
@@ -170,12 +172,14 @@
   min-height: 76px;
   margin-block-start: auto;
   font-size: 1.75rem;
+  line-height: 1.25;
   font-weight: 800;
 }
 
 .board-streak__days {
   margin: 0;
   font-size: 3.5rem;
+  line-height: 1.2;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -186,7 +190,7 @@
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .board-chips {
@@ -197,26 +201,28 @@
 /* Use soon: 40 px chips at board scale, readable from 2 m (a board-level override of the 28 px phone chip). */
 .board-screen .board-use-soon .chip {
   block-size: 40px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   font-size: 1.25rem;
+  line-height: 1;
 }
 
 .board-screen .board-tomorrow .chip {
   block-size: 40px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   font-size: 1.25rem;
+  line-height: 1;
   white-space: nowrap;
 }
 
 .board-timers .board-list {
   overflow: hidden;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 /* Compact rows: at most 2 fit under the heading with the "+n more" line (208 px of content at 1280 x 800). */
 .board-timers .timer-tile {
-  padding: 6px 12px;
-  gap: 2px;
+  padding: 6px var(--space-3);
+  gap: var(--space-half);
 }
 
 /* Timer labels at board scale (the overline of the TimerTile, about 21 px); they stay on one line, a long one ends in an ellipsis. */
@@ -260,24 +266,21 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 /* Legible from across the kitchen: the main row sits near the hero Recipe scale (3.25rem), the others below it but not
    below the slot line (1.75rem). A Cooked row stays on the list, muted. */
 .board-tonight__course {
   font-size: 2rem;
+  line-height: 1.2;
 }
 .board-tonight__course[data-main='true'] {
   font-size: 2.75rem;
   font-weight: 600;
   line-height: 1.1;
 }
-/* The Tonight tile is an accent (hero) tile: its muted text is the on-accent colour, dimmed, so a Cooked row reads as
-   done and stays legible on the accent in both themes. */
-.board-tonight {
-  --color-muted: var(--color-on-accent);
-}
+/* The Tonight tile is a hero tile: a Cooked row is the hero's own text colour at 70 % (TB-05: no redefined --color-muted and no
+   opacity fade), so it reads as done and stays legible on the hero in both schemes. */
 .board-tonight__course[data-state='cooked'] {
-  color: var(--color-muted);
-  opacity: 0.7;
+  color: color-mix(in srgb, currentColor 70%, transparent);
 }

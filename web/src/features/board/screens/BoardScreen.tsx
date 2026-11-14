@@ -52,7 +52,7 @@ export function BoardScreen(): ReactNode {
   const navigate = useNavigate()
   const clock = useNow(10_000)
   // L-10: the 4 x 3 wall grid from 600 px, 2 columns below.
-  const wall = useMediaQuery('(min-width: 600px)')
+  const wall = useMediaQuery('(min-width: 37.5em)')
 
   if (board.error) return <EmptyState title={boardStrings.loadError} />
   const data = board.data
