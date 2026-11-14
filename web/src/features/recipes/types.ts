@@ -174,7 +174,8 @@ export interface TagCount {
 
 export interface RecipeFilter {
   q?: string
-  tag?: string
+  /** b8-recipes: every Tag in force (`?tag=` once per Tag); the Recipes carry all of them. Absent or [] = no Tag filter. */
+  tags?: string[]
   /** CRS E2: only Recipes marked with this Course (`?course=`). */
   course?: number
   archived?: 'no' | 'yes' | 'all'

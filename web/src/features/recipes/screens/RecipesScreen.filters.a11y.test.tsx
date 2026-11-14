@@ -102,7 +102,7 @@ describe('keyboard', () => {
     await userEvent.keyboard('{Enter}')
     screen.getByRole('combobox', { name: 'Search Tags' }).focus()
     await userEvent.keyboard('swe{ArrowDown}{Enter}')
-    expect(lastFilter().tag).toBe('sweet')
+    expect(lastFilter().tags).toEqual(['sweet'])
     expect(screen.getByRole('option', { name: 'sweet' })).toHaveAttribute('aria-selected', 'true')
   })
   it('Show Recipes closes the panel and returns focus to the button', async () => {
@@ -129,5 +129,33 @@ describe('keyboard', () => {
     await userEvent.click(filtersButton())
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(screen.getByRole('button', { name: 'Show Recipes' })).toHaveFocus()
+  })
+})
+
+describe('several Tags (b8-recipes)', () => {
+  it('the Tag list says several can be chosen (aria-multiselectable) and every chosen Tag is aria-selected', async () => {
+    view('/recipes?tag=fish&tag=sweet')
+    await userEvent.click(filtersButton())
+    const list = screen.getByRole('listbox', { name: 'Filter by Tag' })
+    expect(list).toHaveAttribute('aria-multiselectable', 'true')
+    expect(within(list).getByRole('option', { name: 'fish' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(list).getByRole('option', { name: 'sweet' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(list).getByRole('option', { name: 'roast' })).toHaveAttribute('aria-selected', 'false')
+  })
+  it('two Tags can be chosen from the keyboard one after the other', async () => {
+    view()
+    filtersButton().focus()
+    await userEvent.keyboard('{Enter}')
+    screen.getByRole('combobox', { name: 'Search Tags' }).focus()
+    await userEvent.keyboard('swe{ArrowDown}{Enter}')
+    await userEvent.clear(screen.getByRole('combobox', { name: 'Search Tags' }))
+    await userEvent.keyboard('fis{ArrowDown}{Enter}')
+    expect(lastFilter().tags).toEqual(['sweet', 'fish'])
+  })
+  it('each Tag chip is a button named "Remove Tag: <name>" and the Filters button counts them', () => {
+    view('/recipes?tag=fish&tag=sweet')
+    expect(screen.getByRole('button', { name: 'Remove Tag: fish' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove Tag: sweet' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Filters, 2 active' })).toBeInTheDocument()
   })
 })

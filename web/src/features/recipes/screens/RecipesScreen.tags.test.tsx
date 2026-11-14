@@ -65,21 +65,21 @@ describe('RecipesScreen Tag colours', () => {
   })
   it('opens already filtered by the Tag in ?tag= (the Recipe detail\'s Tag chips link here)', async () => {
     view('/recipes?tag=roast')
-    expect(lastFilter().tag).toBe('roast')
+    expect(lastFilter().tags).toEqual(['roast'])
     expect(screen.getByRole('button', { name: 'Remove Tag: roast' })).toHaveAttribute('data-tag-colour', 'tomato')
     await openFilters()
     expect(within(tagList()).getByRole('option', { name: 'roast' })).toHaveAttribute('aria-selected', 'true')
   })
   it('has no Tag filter without ?tag=', () => {
     view()
-    expect(lastFilter().tag).toBeUndefined()
+    expect(lastFilter().tags).toBeUndefined()
     expect(screen.queryByRole('group', { name: 'Active filters' })).toBeNull()
   })
   it('choosing a Tag in the panel still filters', async () => {
     view()
     await openFilters()
     await userEvent.click(within(tagList()).getByRole('option', { name: 'sweet' }))
-    expect(lastFilter().tag).toBe('sweet')
+    expect(lastFilter().tags).toEqual(['sweet'])
   })
 })
 
@@ -102,7 +102,7 @@ describe('RecipesScreen Tag filter order and URL', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('?tag=sweet')
     await userEvent.click(within(tagList()).getByRole('option', { name: 'sweet' }))
     expect(screen.getByTestId('where').textContent).toBe('')
-    expect(lastFilter().tag).toBeUndefined()
+    expect(lastFilter().tags).toBeUndefined()
   })
   it('a name that needs escaping round-trips', async () => {
     state.known = [{ name: 'fish & chips', recipes: 1 }]
@@ -110,6 +110,6 @@ describe('RecipesScreen Tag filter order and URL', () => {
     await openFilters()
     await userEvent.click(within(tagList()).getByRole('option', { name: 'fish & chips' }))
     expect(screen.getByTestId('where').textContent).toBe('?tag=fish+%26+chips')
-    expect(lastFilter().tag).toBe('fish & chips')
+    expect(lastFilter().tags).toEqual(['fish & chips'])
   })
 })

@@ -97,7 +97,7 @@ describe('RecipesScreen Sort', () => {
     const params = new URLSearchParams(screen.getByTestId('where').textContent ?? '')
     expect(params.get('tag')).toBe('roast')
     expect(params.get('sort')).toBe('last_cooked_asc')
-    expect(lastFilter().tag).toBe('roast')
+    expect(lastFilter().tags).toEqual(['roast'])
   })
   it('puts the Sort select beside the search, not in a native select', () => {
     const { container } = view()

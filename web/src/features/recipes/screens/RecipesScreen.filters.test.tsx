@@ -121,7 +121,7 @@ describe('finding and choosing a Tag', () => {
     const options = within(panel()).getAllByRole('option')
     expect(options).toHaveLength(1)
     await userEvent.click(options[0]!)
-    expect(lastFilter().tag).toBe('slow cooker')
+    expect(lastFilter().tags).toEqual(['slow cooker'])
     expect(params().get('tag')).toBe('slow cooker')
     expect(screen.getByRole('button', { name: 'Filters, 1 active' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Remove Tag: slow cooker' })).toBeInTheDocument()
@@ -163,7 +163,7 @@ describe('the Course filter in the URL', () => {
   it('on Base recipes the Course is neither sent nor shown', () => {
     view('/recipes?kind=base&course=2&tag=fish')
     expect(lastFilter().course).toBeUndefined()
-    expect(lastFilter().tag).toBe('fish')
+    expect(lastFilter().tags).toEqual(['fish'])
     expect(screen.queryByRole('button', { name: /Remove Course/ })).toBeNull()
     expect(screen.getByRole('button', { name: 'Filters, 1 active' })).toBeInTheDocument()
   })
@@ -173,7 +173,7 @@ describe('the active filter chips', () => {
   it('a chip removes its filter; the other stays', async () => {
     view('/recipes?course=1&tag=fish')
     await userEvent.click(screen.getByRole('button', { name: 'Remove Tag: fish' }))
-    expect(lastFilter().tag).toBeUndefined()
+    expect(lastFilter().tags).toBeUndefined()
     expect(lastFilter().course).toBe(1)
     expect(params().has('tag')).toBe(false)
     expect(screen.getByRole('button', { name: 'Filters, 1 active' })).toBeInTheDocument()
@@ -199,7 +199,7 @@ describe('Clear filters', () => {
     expect(params().get('sort')).toBe('last_cooked_asc')
     expect(params().has('course')).toBe(false)
     expect(params().has('tag')).toBe(false)
-    expect(lastFilter()).toMatchObject({ course: undefined, tag: undefined, sort: 'last_cooked_asc' })
+    expect(lastFilter()).toMatchObject({ course: undefined, tags: undefined, sort: 'last_cooked_asc' })
     expect(panel()).toBeInTheDocument()
     expect(within(panel()).getByRole('button', { name: 'Clear filters' })).toBeDisabled()
     expect(screen.queryByRole('group', { name: 'Active filters' })).toBeNull()
@@ -209,7 +209,7 @@ describe('Clear filters', () => {
 describe('the URL round trip', () => {
   it('a link with every parameter opens the list exactly so', () => {
     view('/recipes?kind=plannable&sort=last_cooked_desc&course=2&tag=roast')
-    expect(lastFilter()).toMatchObject({ course: 2, tag: 'roast', sort: 'last_cooked_desc' })
+    expect(lastFilter()).toMatchObject({ course: 2, tags: ['roast'], sort: 'last_cooked_desc' })
     expect(screen.getByRole('radio', { name: 'Recipes' })).toBeChecked()
     expect(screen.getByRole('combobox', { name: 'Sort' })).toHaveTextContent('Most recent')
   })
@@ -223,7 +223,7 @@ describe('the URL round trip', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(params().get('course')).toBe('1')
     expect(params().get('tag')).toBe('fish')
-    expect(lastFilter()).toMatchObject({ course: 1, tag: 'fish' })
+    expect(lastFilter()).toMatchObject({ course: 1, tags: ['fish'] })
     expect(screen.getByRole('button', { name: 'Remove Tag: fish' })).toBeInTheDocument()
   })
   it('changing a filter replaces the history entry (Back leaves the list, as before)', async () => {

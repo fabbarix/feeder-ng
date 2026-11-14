@@ -73,7 +73,7 @@ describe('RecipesScreen', () => {
     expect(screen.queryByRole('group', { name: 'All Tags' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
     await userEvent.click(screen.getByRole('option', { name: 'roast' }))
-    expect(lastFilter().tag).toBe('roast')
+    expect(lastFilter().tags).toEqual(['roast'])
   })
 
   it('opens the overflow: Import, Export, Copy Agent Prompt and Show archived', async () => {

@@ -18,23 +18,26 @@ function normalise(text: string): string {
 }
 
 /**
- * The rows of the Tag list: the Tags whose name holds every word of `query` (accents and case ignored), the selected Tag
- * first (matched by key, and listed even when it is not a known Tag), then the others by name.
+ * The rows of the Tag list: the Tags whose name holds every word of `query` (accents and case ignored). The selected Tags
+ * (matched by key, listed even when not known) come first, in the order chosen, then the others by name.
  */
-export function tagFilterRows(known: readonly TagCount[], selected: string, query: string, colourOf?: (name: string) => string | undefined): TagFilterRow[] {
+export function tagFilterRows(known: readonly TagCount[], selected: readonly string[], query: string, colourOf?: (name: string) => string | undefined): TagFilterRow[] {
   const words = normalise(query).split(' ').filter(Boolean)
   const matches = (name: string) => {
     const haystack = normalise(name)
     return words.every((w) => haystack.includes(w))
   }
-  const selectedKey = selected.trim() === '' ? '' : tagKey(selected)
+  const selectedKeys: string[] = []
   const rows: TagFilterRow[] = []
-  if (selectedKey !== '') {
-    const found = known.find((t) => tagKey(t.name) === selectedKey)
-    const name = found?.name ?? selected.trim()
+  for (const s of selected) {
+    const key = tagKey(s)
+    if (key === '' || selectedKeys.includes(key)) continue
+    selectedKeys.push(key)
+    const found = known.find((t) => tagKey(t.name) === key)
+    const name = found?.name ?? s.trim()
     if (matches(name)) rows.push({ name, recipes: found?.recipes ?? 0, colour: colourOf?.(name), selected: true })
   }
-  const others = known.filter((t) => selectedKey === '' || tagKey(t.name) !== selectedKey)
+  const others = known.filter((t) => !selectedKeys.includes(tagKey(t.name)))
   for (const t of [...others].sort((a, b) => collator.compare(a.name, b.name))) {
     if (matches(t.name)) rows.push({ name: t.name, recipes: t.recipes, colour: colourOf?.(t.name), selected: false })
   }

@@ -19,15 +19,17 @@ export interface RecipeFiltersPanelProps {
   course: number | null
   onCourse: (id: number | null) => void
   known: TagCount[]
-  tag: string
+  /** The Tags in force, in the order chosen. */
+  tags: string[]
   colourOf?: (name: string) => string | undefined
-  onTag: (name: string) => void
+  /** Adds the Tag, or removes it when it is in force. */
+  onToggleTag: (name: string) => void
   /** Filters in force: Clear filters is off while there are none. */
   count: number
   onClear: () => void
 }
 
-export function RecipeFiltersPanel({ id, open, onClose, anchorRef, bases, courses, course, onCourse, known, tag, colourOf, onTag, count, onClear }: RecipeFiltersPanelProps): ReactNode {
+export function RecipeFiltersPanel({ id, open, onClose, anchorRef, bases, courses, course, onCourse, known, tags, colourOf, onToggleTag, count, onClear }: RecipeFiltersPanelProps): ReactNode {
   return (
     <FiltersPanel id={id} open={open} onClose={onClose} anchorRef={anchorRef} count={count} onClear={onClear} showLabel={recipeStrings.filters.showRecipes}>
       {bases || courses.length < 2 ? null : (
@@ -36,7 +38,7 @@ export function RecipeFiltersPanel({ id, open, onClose, anchorRef, bases, course
         </FilterSection>
       )}
       <FilterSection heading={recipeStrings.filters.tagHeading} list>
-        <TagFilterList known={known} selected={tag} colourOf={colourOf} onSelect={onTag} />
+        <TagFilterList known={known} selected={tags} colourOf={colourOf} onToggle={onToggleTag} />
       </FilterSection>
     </FiltersPanel>
   )
