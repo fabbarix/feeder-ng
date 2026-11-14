@@ -29,7 +29,8 @@ describe('board.css phone grid', () => {
     const r = rule(wall, '  .board-screen .board-grid')
     expect(r).toMatch(/grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/)
     expect(r).toMatch(/grid-template-rows:\s*repeat\(3, minmax\(0, 1fr\)\)/)
-    expect(r).toMatch(/height:\s*calc\(100vh - 48px\)/)
+    // B9-08 (DS-11): the screen less its padding, 2 x --space-6 (48 px), in the token.
+    expect(r).toMatch(/height:\s*calc\(100vh - 2 \* var\(--space-6\)\)/)
   })
   it('a phone tile has a readable minimum height (the clock does not clip)', () => {
     expect(rule(base, '.board-cell')).toMatch(/min-height:\s*\d+(\.\d+)?rem/)

@@ -40,7 +40,10 @@ describe('board.css: the Tonight tile\'s Course rows', () => {
     expect(others).toBeGreaterThanOrEqual(slotLine)
   })
 
-  it('a Cooked row is muted, with the muted colour token', () => {
-    expect(rule(".board-tonight__course[data-state='cooked']")).toMatch(/color:\s*var\(--color-muted\)/)
+  // B9-08 (TB-05): the hero no longer redefines --color-muted, so a Cooked row is the hero text colour at 70 %, never an opacity fade.
+  it('a Cooked row is muted: the hero text colour at 70 %, no opacity', () => {
+    const r = rule(".board-tonight__course[data-state='cooked']")
+    expect(r).toMatch(/color:\s*color-mix\(in srgb, currentColor 70%, transparent\)/)
+    expect(r).not.toMatch(/opacity/)
   })
 })

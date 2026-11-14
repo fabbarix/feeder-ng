@@ -231,7 +231,8 @@ describe('board text truncation contract', () => {
     expect(body).toMatch(/white-space:\s*nowrap/)
   })
   it('timer rows in the Timers tile are compact and clamp their label to 1 line', () => {
-    expect(rule('.board-timers .board-list')).toMatch(/gap:\s*(4|8)px/)
+    // B9-08 (DS-11): the gap is the spacing token for 4 or 8 px.
+    expect(rule('.board-timers .board-list')).toMatch(/gap:\s*var\(--space-(1|2)\)/)
     expect(rule('.board-timers .timer-tile__label')).toMatch(/-webkit-line-clamp:\s*1|text-overflow:\s*ellipsis/)
     expect(rule('.board-timers__more')).toMatch(/font-size:\s*1\.\d+rem/)
   })

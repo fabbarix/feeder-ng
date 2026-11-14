@@ -55,7 +55,9 @@ describe('TonightHero.css: tokens only, no raw breakpoint', () => {
   it('the hero title steps up with a container query on the hero, not a raw @media (min-width: 520px)', () => {
     expect(css).not.toMatch(/@media[^{]*\b520px/)
     expect(css).toMatch(/@container[^{]*min-width/)
-    expect(declarations(css, '.plan-hero')['container-type']).toBe('inline-size')
+    // B9-08: the hero names its container (`container: plan-hero / inline-size`), the shorthand of name and type.
+    const d = declarations(css, '.plan-hero')
+    expect(d['container-type'] ?? /\/\s*(\S+)\s*$/.exec(d.container ?? '')?.[1]).toBe('inline-size')
   })
 })
 
