@@ -900,3 +900,24 @@ func TestAQueuedTickOfAnExtraKeepsThePhonesTimeAndItsUser(t *testing.T) {
 		t.Fatalf("additions = %+v, %v; want the phone's time and the sync time", adds, err)
 	}
 }
+
+func TestThePriceOnAPricedFallbackPackIsThePriceItsEstimateUses(t *testing.T) {
+	// The per-kg edge fixed in B9-06: the newest Price at the Shop is per kg only (PackPrices has a different, per-pack
+	// figure for it here), and an older pack Price chose the Product. The pack's Price and the estimate agree on it.
+	e := newEnv(t)
+	needsMilk(e, 1500)
+	e.products.priced = map[int64]shopping.Pack{e.ids[milk]: {ProductID: 7, Name: "Milk 1 l", Size: 1000}}
+	e.products.prices = map[int64]int{7: 410}
+	e.products.pricedPrices = map[int64]int{7: 299}
+	e.products.pricedWhen = map[int64]struct {
+		Date   stock.Date
+		ShopID int64
+	}{7: {Date: "2026-11-02", ShopID: 2}}
+	l, _ := milkLine(t, e)
+	if l.Pack == nil || l.Pack.Price == nil || l.EstimatedCostCents == nil {
+		t.Fatalf("Line %+v pack %+v; want a priced fallback with a Price and an estimate", l, l.Pack)
+	}
+	if l.Pack.Price.Cents != 299 || *l.EstimatedCostCents != l.Pack.Count*l.Pack.Price.Cents {
+		t.Errorf("pack Price %+v count %d estimate %d; want the estimate = count x the pack's Price (299)", l.Pack.Price, l.Pack.Count, *l.EstimatedCostCents)
+	}
+}
