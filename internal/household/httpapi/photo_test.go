@@ -102,8 +102,8 @@ func TestOnlyAnAdminSetsAMemberPhoto(t *testing.T) {
 	}
 }
 
-// B9-04: Undo puts the Member back with their photo, so the file stays for ten minutes (the nightly sweep is the safety
-// net). A later removal releases the photos of the snapshots that have expired.
+// B9-04: Undo puts the Member back with their photo, so the file stays for ten minutes (the nightly sweep keeps it too,
+// through member_removals). A later removal releases the photos of the snapshots that have expired.
 func TestRemovingAMemberKeepsTheirPhotoFileUntilTheUndoWindowEnds(t *testing.T) {
 	env := testkit.Start(t)
 	admin := env.LoginAdmin(t)
