@@ -116,6 +116,16 @@
   font-weight: var(--text-label-weight);
 }
 
+/* b8 G1: a body taller than the popover's cap (the Pantry with its Food or Supplies section, at 768 to 900 px high) scrolls inside it,
+   so the footer stays visible. From 768 px only: below it the panel is a bottom sheet, which scrolls as a whole. */
+@media (min-width: 768px) {
+  .filter-panel .popover__body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-block-size: 0;
+  }
+}
+
 /* A long list (Tags, Storage Places) scrolls inside a capped height, under its search. */
 .filter-panel__list [role='listbox'] {
   max-block-size: min(20rem, 50dvh);
