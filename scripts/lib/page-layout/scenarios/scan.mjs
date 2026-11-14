@@ -6,10 +6,10 @@ import { byText, ids, press, scanSession, scannedList, until } from '../helpers.
 export default {
   order: 40,
   scenarios: [
-    { name: 'scan-scanned-list', route: '/scan', start: '/scan', setup: 'scanScannedList', widths: [360, 390, 834] },
-    { name: 'scan-row-active', route: '/scan', start: '/scan', setup: 'scanRowActive', widths: [360, 390, 834] },
-    { name: 'scan-price-keypad', route: '/scan', start: '/scan', setup: 'scanPriceKeypad', widths: [360, 390, 834] },
-    { name: 'scan-new-product', route: '/scan', start: '/scan', setup: 'scanNewProduct', widths: [360, 390, 834] },
+    { name: 'scan-scanned-list', route: '/scan', start: '/scan', setup: 'scanScannedList', widths: [375, 390, 834] },
+    { name: 'scan-row-active', route: '/scan', start: '/scan', setup: 'scanRowActive', widths: [375, 390, 834] },
+    { name: 'scan-price-keypad', route: '/scan', start: '/scan', setup: 'scanPriceKeypad', widths: [375, 390, 834] },
+    { name: 'scan-new-product', route: '/scan', start: '/scan', setup: 'scanNewProduct', widths: [375, 390, 834] },
   ],
   setups: {
     async scanScannedList() {

@@ -5,8 +5,8 @@ import { press, until } from '../helpers.mjs'
 export default {
   order: 20,
   scenarios: [
-    { name: 'supplies-use-sheet', route: '/supplies', start: '/supplies', setup: 'supplyUseSheet', widths: [360, 390, 834, 1440] },
-    { name: 'supply-page', route: '/supplies/:id', start: '/supplies/:id', setup: 'supplyPage', widths: [360, 390, 834, 1440] },
+    { name: 'supplies-use-sheet', route: '/supplies', start: '/supplies', setup: 'supplyUseSheet', widths: [375, 390, 834, 1440] },
+    { name: 'supply-page', route: '/supplies/:id', start: '/supplies/:id', setup: 'supplyPage', widths: [375, 390, 834, 1440] },
   ],
   setups: {
     async supplyUseSheet() {

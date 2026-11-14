@@ -1,5 +1,5 @@
 // b8-polish (docs/dev/design/b8-polish.md 2): P23 covers the Shop's Supplies group again. The Restock reason ("400/1000 ml" on a
-// phone) is read by the same probe as the Meal Slot hint, and the scenarios that run it include 360 px, where it was cut by 3 px.
+// phone) is read by the same probe as the Meal Slot hint, and the scenarios that run it include the smallest phone (360 px then, where it was cut by 3 px; 375 px since the user's ruling of 2026-11-14).
 import { describe, expect, it } from 'vitest'
 import { driverSource } from './pageLayoutSources'
 
@@ -22,11 +22,11 @@ describe('P23 reads the Supplies group again', () => {
   it('the probe still reads the .shop-lines info metas, which include the Supplies group', () => {
     expect(driver).toMatch(/\.shop-lines \.list-row__meta\[data-status="info"\] \.list-row__meta-text/)
   })
-  it('shop-supplies-group runs at 360 px and its setup waits for a Restock reason (an info meta in the group)', () => {
-    expect(byName('shop-supplies-group')?.widths).toEqual(expect.arrayContaining([360, 390, 834, 1440]))
+  it('shop-supplies-group runs at 375 px and its setup waits for a Restock reason (an info meta in the group)', () => {
+    expect(byName('shop-supplies-group')?.widths).toEqual(expect.arrayContaining([375, 390, 834, 1440]))
     expect(driver).toMatch(/\.shop-supplies \.list-row__meta\[data-status="info"\]/)
   })
-  it('shop-hints also runs at 360 px', () => {
-    expect(byName('shop-hints')?.widths).toEqual(expect.arrayContaining([360, 390, 834, 1440]))
+  it('shop-hints also runs at 375 px', () => {
+    expect(byName('shop-hints')?.widths).toEqual(expect.arrayContaining([375, 390, 834, 1440]))
   })
 })

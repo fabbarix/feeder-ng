@@ -56,12 +56,12 @@ describe('P22: a chip Select cuts its value', () => {
 
 describe('the walk reads P22 as well as P21', () => {
   it('a cut Sort at a walked width is a P22 finding', () => {
-    expect(rules.resizeWalkFindings([], { width: 360, route: '/pantry' }, [goodUntilCut]).map((f) => f.rule)).toEqual(['P22'])
+    expect(rules.resizeWalkFindings([], { width: 375, route: '/pantry' }, [goodUntilCut]).map((f) => f.rule)).toEqual(['P22'])
   })
   it('runtime errors stay P21, and a walk without the probe is read as before', () => {
     const errors = [{ why: 'console', text: 'boom' }]
-    expect(rules.resizeWalkFindings(errors, { width: 360, route: '/pantry' }).map((f) => f.rule)).toEqual(['P21'])
-    expect(rules.resizeWalkFindings([], { width: 360, route: '/pantry' })).toEqual([])
+    expect(rules.resizeWalkFindings(errors, { width: 375, route: '/pantry' }).map((f) => f.rule)).toEqual(['P21'])
+    expect(rules.resizeWalkFindings([], { width: 375, route: '/pantry' })).toEqual([])
   })
 })
 

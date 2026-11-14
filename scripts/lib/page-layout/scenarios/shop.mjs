@@ -6,9 +6,9 @@ import { pinWorstHint, until } from '../helpers.mjs'
 export default {
   order: 30,
   scenarios: [
-    { name: 'shop-supplies-group', route: '/shop', start: '/shop', setup: 'shopSuppliesGroup', widths: [360, 390, 834, 1440] },
-    { name: 'shop-header', route: '/shop', start: '/shop', setup: 'shopHeader', widths: [360, 390] },
-    { name: 'shop-hints', route: '/shop', start: '/shop', setup: 'shopHints', widths: [360, 390, 834, 1440] },
+    { name: 'shop-supplies-group', route: '/shop', start: '/shop', setup: 'shopSuppliesGroup', widths: [375, 390, 834, 1440] },
+    { name: 'shop-header', route: '/shop', start: '/shop', setup: 'shopHeader', widths: [375, 390] },
+    { name: 'shop-hints', route: '/shop', start: '/shop', setup: 'shopHints', widths: [375, 390, 834, 1440] },
   ],
   setups: {
     // b8-polish (P23): a Restock reason in the Supplies group ("400/1000 ml" on a phone), so the probe reads the Supplies group too.

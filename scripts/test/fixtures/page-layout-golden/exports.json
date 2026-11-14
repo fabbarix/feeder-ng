@@ -207,7 +207,7 @@
    "start": "/supplies",
    "setup": "supplyUseSheet",
    "widths": [
-    360,
+    375,
     390,
     834,
     1440
@@ -219,7 +219,7 @@
    "start": "/supplies/:id",
    "setup": "supplyPage",
    "widths": [
-    360,
+    375,
     390,
     834,
     1440
@@ -231,7 +231,7 @@
    "start": "/shop",
    "setup": "shopSuppliesGroup",
    "widths": [
-    360,
+    375,
     390,
     834,
     1440
@@ -243,7 +243,7 @@
    "start": "/shop",
    "setup": "shopHeader",
    "widths": [
-    360,
+    375,
     390
    ]
   },
@@ -253,7 +253,7 @@
    "start": "/shop",
    "setup": "shopHints",
    "widths": [
-    360,
+    375,
     390,
     834,
     1440
@@ -265,7 +265,7 @@
    "start": "/scan",
    "setup": "scanScannedList",
    "widths": [
-    360,
+    375,
     390,
     834
    ]
@@ -276,7 +276,7 @@
    "start": "/scan",
    "setup": "scanRowActive",
    "widths": [
-    360,
+    375,
     390,
     834
    ]
@@ -287,7 +287,7 @@
    "start": "/scan",
    "setup": "scanPriceKeypad",
    "widths": [
-    360,
+    375,
     390,
     834
    ]
@@ -298,7 +298,7 @@
    "start": "/scan",
    "setup": "scanNewProduct",
    "widths": [
-    360,
+    375,
     390,
     834
    ]
@@ -309,7 +309,7 @@
    "start": "/scan",
    "setup": "receiptPhotosEmpty",
    "widths": [
-    360,
+    375,
     390,
     834,
     1440
@@ -321,7 +321,7 @@
    "start": "/scan",
    "setup": "receiptPhotosOne",
    "widths": [
-    360,
+    375,
     390,
     834,
     1440
@@ -333,7 +333,7 @@
    "start": "/scan",
    "setup": "receiptPhotoEdit",
    "widths": [
-    360,
+    375,
     390,
     834,
     1440
@@ -345,7 +345,7 @@
    "start": "/scan",
    "setup": "receiptReview",
    "widths": [
-    360,
+    375,
     390,
     834,
     1440
@@ -353,9 +353,9 @@
   }
  ],
  "SCENARIO_VIEWPORTS": {
-  "360": {
-   "width": 360,
-   "height": 780,
+  "375": {
+   "width": 375,
+   "height": 667,
    "mobile": true
   },
   "390": {
@@ -376,20 +376,20 @@
  },
  "RESIZE_WALK": {
   "scenario": "recipes-filtered",
-  "from": 360,
+  "from": 375,
   "to": 480,
   "step": 10
  },
  "RESIZE_WALKS": [
   {
    "scenario": "recipes-filtered",
-   "from": 360,
+   "from": 375,
    "to": 480,
    "step": 10
   },
   {
    "scenario": "pantry-filtered",
-   "from": 360,
+   "from": 375,
    "to": 480,
    "step": 10
   }

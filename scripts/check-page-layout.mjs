@@ -428,7 +428,7 @@ for (const scenario of RUN_SCENARIOS.filter((x) => x.widths)) {
   }
 }
 
-// hf-recipes-filter round 3 (P21, RESIZE_WALK): the closed filtered page is loaded fresh at each phone width from 360 to 480 px, and the
+// hf-recipes-filter round 3 (P21, RESIZE_WALK): the closed filtered page is loaded fresh at each phone width from 375 to 480 px, and the
 // page must not break at any of them: an uncaught exception, a console error, or the error page ("Something went wrong").
 // pantry-filter: one walk per filtered header (RESIZE_WALKS: /recipes and /pantry). With --scenario, only the walk of a named scenario.
 for (const walk of RESIZE_WALKS) {

@@ -419,6 +419,13 @@ describe('profiles and viewports (plan section 9)', () => {
   it('no profile viewport is narrower than 375 px', () => {
     for (const vp of [...facade.PROFILES.quick, ...facade.PROFILES.full]) expect(vp.width).toBeGreaterThanOrEqual(375)
   })
+  // The user's instruction for w0b: no guard viewport OF ANY KIND narrower than 375 px: scenario viewports and the resize walks too.
+  it('no scenario viewport, scenario width or resize-walk width is narrower than 375 px', () => {
+    for (const [k, vp] of Object.entries(facade.SCENARIO_VIEWPORTS)) expect(vp.width, k).toBeGreaterThanOrEqual(375)
+    const f = facade as unknown as { RESIZE_WALKS: { from: number }[]; resizeWalkWidths: () => number[]; resizeSweepWidths: () => number[] }
+    for (const w of f.RESIZE_WALKS) expect(w.from).toBeGreaterThanOrEqual(375)
+    expect(Math.min(...f.resizeWalkWidths(), ...f.resizeSweepWidths())).toBe(375)
+  })
   it('scenario-only viewports: 667x375 (the smallest phone in landscape), 375x256 (400 % zoom of a 1500 px window), 844x390 with a safe-area inset', () => {
     expect(facade.SCENARIO_VIEWPORTS['667x375']).toEqual(v(667, 375, true))
     expect(facade.SCENARIO_VIEWPORTS['375x256']).toEqual(v(375, 256, false))

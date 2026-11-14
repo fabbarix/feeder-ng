@@ -15,8 +15,8 @@ const driver = driverSource()
 const setup = driver.slice(driver.indexOf('async shopHints()'), driver.indexOf('scanScannedList:'))
 
 describe('shop-hints pins the hint to the worst case', () => {
-  it('still runs at 360 px and P23 still always fails', () => {
-    expect(rules.SCENARIOS.find((s) => s.name === 'shop-hints')?.widths).toEqual(expect.arrayContaining([360, 390]))
+  it('still runs at 375 px (was 360; no guard viewport is narrower than 375) and P23 still always fails', () => {
+    expect(rules.SCENARIOS.find((s) => s.name === 'shop-hints')?.widths).toEqual(expect.arrayContaining([375, 390]))
     expect(rules.ALWAYS_FAIL).toContain('P23')
   })
   it('the setup pins the hint (pinWorstHint) after waiting for a real one', () => {

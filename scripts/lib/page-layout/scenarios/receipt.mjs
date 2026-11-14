@@ -5,10 +5,10 @@ import { byText, press, receiptPhotos, until } from '../helpers.mjs'
 export default {
   order: 50,
   scenarios: [
-    { name: 'receipt-photos-empty', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotosEmpty', widths: [360, 390, 834, 1440] },
-    { name: 'receipt-photos-one', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotosOne', widths: [360, 390, 834, 1440] },
-    { name: 'receipt-photo-edit', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotoEdit', widths: [360, 390, 834, 1440] },
-    { name: 'receipt-review', route: '/scan/receipt/review', start: '/scan', setup: 'receiptReview', widths: [360, 390, 834, 1440] },
+    { name: 'receipt-photos-empty', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotosEmpty', widths: [375, 390, 834, 1440] },
+    { name: 'receipt-photos-one', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotosOne', widths: [375, 390, 834, 1440] },
+    { name: 'receipt-photo-edit', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotoEdit', widths: [375, 390, 834, 1440] },
+    { name: 'receipt-review', route: '/scan/receipt/review', start: '/scan', setup: 'receiptReview', widths: [375, 390, 834, 1440] },
   ],
   setups: {
     receiptPhotosEmpty: () => receiptPhotos(0),

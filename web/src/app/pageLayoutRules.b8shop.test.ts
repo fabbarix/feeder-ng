@@ -1,6 +1,6 @@
-// b8-shop: the page-layout guard learns two things. (1) The Shop header chips are probed at 360 and 390 px (scenario shop-header; P16/P22
+// b8-shop: the page-layout guard learns two things. (1) The Shop header chips are probed at 375 and 390 px (scenario shop-header; P16/P22
 // already read crushed and cut chips). (2) P23, always fails: a food Line's Meal Slot hint ("Tue Dinner +1") is cut by its ellipsis, at every
-// width (b8-polish: the Supplies group's Restock reason is read again, pageLayoutRules.polish.test.ts); scenario shop-hints at 360, 390, 834 and 1440 px. Design: docs/dev/design/b8-shop.md. In a browser: scripts/check-page-layout.sh.
+// width (b8-polish: the Supplies group's Restock reason is read again, pageLayoutRules.polish.test.ts); scenario shop-hints at 375, 390, 834 and 1440 px. Design: docs/dev/design/b8-shop.md. In a browser: scripts/check-page-layout.sh.
 import { describe, expect, it } from 'vitest'
 import { driverSource } from './pageLayoutSources'
 
@@ -26,10 +26,10 @@ const base = (vw: number) => ({
 const run = (extra: Record<string, unknown>, width = 834) => rules.evaluateMetrics({ ...base(width), ...extra }, { width, route: '/shop', kind: 'wide' })
 
 describe('scenarios', () => {
-  it('shop-header: /shop at 360 and 390 px, with a setup the driver has', () => {
+  it('shop-header: /shop at 375 and 390 px, with a setup the driver has', () => {
     const s = rules.SCENARIOS.find((x) => x.name === 'shop-header')
     expect(s).toMatchObject({ route: '/shop', start: '/shop', setup: 'shopHeader' })
-    expect(s?.widths).toEqual(expect.arrayContaining([360, 390]))
+    expect(s?.widths).toEqual(expect.arrayContaining([375, 390]))
     expect(driver).toMatch(/async shopHeader\(\)/)
   })
   it('shop-hints: /shop at 390, 834 and 1440 px, with a setup that waits for an info hint', () => {

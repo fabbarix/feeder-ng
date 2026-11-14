@@ -62,8 +62,8 @@ describe('ROUTES: the beta.7 pages', () => {
 })
 
 describe('SCENARIOS: the beta.7 states, at the widths of their design rows', () => {
-  const PHONE_TABLET = [360, 390, 834]
-  const WITH_DESKTOP = [360, 390, 834, 1440]
+  const PHONE_TABLET = [375, 390, 834]
+  const WITH_DESKTOP = [375, 390, 834, 1440]
   it.each([
     ['supplies-use-sheet', '/supplies', WITH_DESKTOP],
     ['supply-page', '/supplies/:id', WITH_DESKTOP],
@@ -97,7 +97,7 @@ describe('SCENARIOS: the beta.7 states, at the widths of their design rows', () 
   it('a scenario with widths runs at exactly those, phones emulated as phones; one without runs at every viewport of the profile', () => {
     const vps = rules.scenarioViewports(byName('receipt-review')!, rules.PROFILES.quick!)
     expect(vps.map((v) => [v.width, v.mobile])).toEqual([
-      [360, true],
+      [375, true],
       [390, true],
       [834, false],
       [1440, false],

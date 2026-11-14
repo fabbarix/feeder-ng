@@ -7,7 +7,7 @@
 #                            "Side" (P17 at 390), hit areas and the ring of the first Course chip "Main" clipped (P18), the popover start-aligned
 #                            past the page (P19 at 834 and 1440), row 3 flush under row 2 and the panel sections unspaced (P20);
 #                            Round 3: between 420 and 440 px it logs a console error, throws and shows the error page (P21, found
-#                            by the RESIZE_WALK of the filtered scenario, 360 to 480 px); and on a live resize through 453 to 455 px
+#                            by the RESIZE_WALK of the filtered scenario, 375 to 480 px); and on a live resize through 453 to 455 px
 #                            it shows the error page and logs an error (P21 "(live resize)", found only by the 1 px RESIZE_SWEEP);
 #   /settings  fixed.html    the same state laid out as round 2 says: clean of P1, P13, P14, P16 to P20 and P22 at every width.
 #   /pantry    sort-cut.html pantry-filter review: row 2 of the Pantry as first built ("By Storage Place | By Ingredient"), its Sort
@@ -81,11 +81,11 @@ done
 COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /recipes[^:]*: P(17|18|19|20) ' <<<"$OUT" | node scripts/lib/page-layout-modes.mjs count-fail scripts/check-page-layout.modes 2>/dev/null)"
 [ "${COUNT:-0}" -gt 0 ] && ok || bad "the P17-P20 findings must count as failures (count-fail said '${COUNT:-}')"
 
-# round 3: the RESIZE_WALK of the filtered /recipes (360 to 480 px) finds the page broken between 420 and 440 px, and only there
+# round 3: the RESIZE_WALK of the filtered /recipes (375 to 480 px) finds the page broken between 420 and 440 px, and only there
 for w in 420 430 440; do
   grep -Eq "^\s+- ${w}px /recipes[^:]*: P21 " <<<"$OUT" && ok || bad "${w}px /recipes: the broken page must be a P21 finding (got: $OUT)"
 done
-for w in 360 400 410 450 480; do
+for w in 375 400 410 450 480; do
   grep -Eq "^\s+- ${w}px /recipes[^:]*: P21 " <<<"$OUT" && bad "${w}px /recipes: no P21 expected where the page works (got: $OUT)" || ok
 done
 # review of round 3: the live 1 px RESIZE_SWEEP finds the break that only a resize triggers, in 453 to 455 px (between the walk's steps)
@@ -95,8 +95,8 @@ COUNT="$(cd "$ROOT" && grep -E '^\s+- [0-9]+px /recipes[^:]*: P21 ' <<<"$OUT" | 
 
 # pantry-filter review (P22): the Sort chip's value cut to "G…" beside "By Storage Place | By Ingredient" (/pantry, sort-cut.html)
 grep -Eq "^\s+- 390px /pantry: P22 .*\"Good until\".*cuts [0-9]+ px" <<<"$OUT" && ok || bad "390px /pantry: the cut Sort value must be a P22 finding naming it (got: $OUT)"
-# the walk reads P22 at each phone width: cut at 360 and 390 px, in full at 480 px
-for w in 360 390; do
+# the walk reads P22 at each phone width: cut at 375 and 390 px, in full at 480 px
+for w in 375 390; do
   grep -Eq "^\s+- ${w}px /pantry\?[^:]*: P22 " <<<"$OUT" && ok || bad "${w}px /pantry (walk): the cut Sort value must be a P22 finding (got: $OUT)"
 done
 grep -Eq "^\s+- 480px /pantry\?[^:]*: P22 " <<<"$OUT" && bad "480px /pantry (walk): no P22 expected where the Sort value fits (got: $OUT)" || ok

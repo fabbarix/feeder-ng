@@ -1,6 +1,6 @@
 // hf-recipes-filter round 3: rule P21 of the page-layout guard. The round-2 chip line looped at 430 px on the guard's own filtered
 // /recipes scenario (React #185, the "Something went wrong" page), between the guard's widths 390 and 834. So the guard walks
-// that scenario through phone widths, 360 to 480 px in 10 px steps, loading it fresh at each, and a console error, an uncaught
+// that scenario through phone widths, 375 to 480 px on the 10 px grid, loading it fresh at each, and a console error, an uncaught
 // exception or the error page there is a finding that fails in every mode (docs/design/recipes-filter.md 14).
 // In a browser: scripts/test/page-layout-recipes-header_test.sh (round1.html breaks between 420 and 440 px).
 import { describe, expect, it } from 'vitest'
@@ -31,25 +31,26 @@ const run = (extra: Record<string, unknown>, width = 430) =>
   rules.evaluateMetrics({ ...base(width), ...extra }, { width, route: '/recipes?course=2&tag=x', kind: 'wide' })
 
 describe('RESIZE_WALK', () => {
-  it('walks the closed filtered /recipes scenario from 360 to 480 px in 10 px steps', () => {
-    expect(rules.RESIZE_WALK).toEqual({ scenario: 'recipes-filtered', from: 360, to: 480, step: 10 })
+  it('walks the closed filtered /recipes scenario from 375 to 480 px on the 10 px grid', () => {
+    expect(rules.RESIZE_WALK).toEqual({ scenario: 'recipes-filtered', from: 375, to: 480, step: 10 })
     expect(rules.SCENARIOS.map((s) => s.name)).toContain(rules.RESIZE_WALK?.scenario)
   })
-  it('resizeWalkWidths lists the 13 widths', () => {
-    expect(rules.resizeWalkWidths?.()).toEqual([360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480])
+  it('resizeWalkWidths lists the 12 widths: 375, then the 10 px grid', () => {
+    expect(rules.resizeWalkWidths?.()).toEqual([375, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480])
   })
 })
 
 // Review of round 3: round 2's loop lived in an 8 px window, which 10 px steps can step over, and a fresh load never takes the resize
 // path. So the same scenario is also resized live, 1 px at a time, through the walk's range and back.
 describe('RESIZE_SWEEP', () => {
-  it('resizes 1 px at a time, from 480 down to 360 px and back up to 480', () => {
+  it('resizes 1 px at a time, from 480 down to 375 px and back up to 480', () => {
     expect(rules.RESIZE_SWEEP?.step).toBe(1)
     const w = rules.resizeSweepWidths?.() ?? []
     expect(w[0]).toBe(480)
-    expect(w).toContain(360)
+    expect(w).toContain(375)
+    expect(Math.min(...w)).toBe(375)
     expect(w.at(-1)).toBe(480)
-    expect(w).toHaveLength(121 + 120)
+    expect(w).toHaveLength(106 + 105)
     for (let i = 1; i < w.length; i++) expect(Math.abs(w[i]! - w[i - 1]!)).toBe(1)
   })
   it('the driver runs it in one page with phone emulation, and labels its findings "(live resize)"', () => {

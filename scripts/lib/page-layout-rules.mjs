@@ -28,7 +28,9 @@ export const ROUTES = [
  * emulated as phones, as the profiles' 390 px is; 834 is the iPad portrait of the quick profile.
  */
 export const SCENARIO_VIEWPORTS = {
-  360: { width: 360, height: 780, mobile: true },
+  // The user's ruling of 2026-11-14 (no guard viewport narrower than 375 px): the beta.7/beta.8 scenarios' smallest phone moved from
+  // 360x780 to 375x667, the profiles' smallest viewport.
+  375: { width: 375, height: 667, mobile: true },
   390: { width: 390, height: 844, mobile: true },
   834: { width: 834, height: 1194, mobile: false },
   1440: { width: 1440, height: 900, mobile: false },
@@ -61,9 +63,10 @@ export function scenarioViewports(scenario, profileViewports) {
 
 /**
  * hf-recipes-filter round 3 (docs/design/recipes-filter.md 14): the closed filtered /recipes is loaded fresh at each of these phone
- * widths, and the page must not break at any (P21: an uncaught exception, a console error, or the error page).
+ * widths, and the page must not break at any (P21: an uncaught exception, a console error, or the error page). The walk starts at
+ * 375 px (the user's ruling of 2026-11-14: no guard viewport narrower than 375; it started at 360), then keeps the 10 px grid.
  */
-export const RESIZE_WALK = { scenario: 'recipes-filtered', from: 360, to: 480, step: 10 }
+export const RESIZE_WALK = { scenario: 'recipes-filtered', from: 375, to: 480, step: 10 }
 
 /** pantry-filter: every walk the guard runs (fresh loads, then the live 1 px sweep): the filtered /recipes and the filtered /pantry. */
 export const RESIZE_WALKS = [RESIZE_WALK, { ...RESIZE_WALK, scenario: 'pantry-filtered' }]
@@ -94,10 +97,10 @@ export function resizeSweepWidths() {
   return [...down, ...down.slice(0, -1).reverse()]
 }
 
-/** The widths of the RESIZE_WALK, in order. */
+/** The widths of the RESIZE_WALK, in order: `from`, then every multiple of `step` above it up to `to` (375, 380, 390, …, 480). */
 export function resizeWalkWidths() {
-  const out = []
-  for (let w = RESIZE_WALK.from; w <= RESIZE_WALK.to; w += RESIZE_WALK.step) out.push(w)
+  const out = [RESIZE_WALK.from]
+  for (let w = (Math.floor(RESIZE_WALK.from / RESIZE_WALK.step) + 1) * RESIZE_WALK.step; w <= RESIZE_WALK.to; w += RESIZE_WALK.step) out.push(w)
   return out
 }
 
