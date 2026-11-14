@@ -80,7 +80,7 @@ export function collectP27Metrics() {
   const seen = new Set()
   const texts = []
   for (const el of main.querySelectorAll('*')) {
-    if (el.closest('svg, .board, .cook')) continue
+    if (el.closest('svg, .board-screen, .cook-screen')) continue
     const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim() !== '')
     if (!hasText || !visible(el)) continue
     const px = parseFloat(getComputedStyle(el).fontSize)
