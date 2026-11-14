@@ -290,9 +290,18 @@ func (st *state) tooEarly(i int, r Recipe) bool {
 // before Now: a fresh candidate that can no longer be started in time (A2). A start on the meal's own day is not
 // checked against Now.
 func (st *state) startPassed(i int, r Recipe) bool {
-	at := st.slots[i].At
-	start, _ := outsideStartWindow(at, r.TotalMinutes, "", "")
-	return startsOnEarlierDay(at, start) && start.Before(st.in.Now)
+	start, earlier := CookingStart(st.slots[i].At, r.TotalMinutes)
+	return earlier && start.Before(st.in.Now)
+}
+
+// CookingStart is the one rule for when cooking of a Recipe of totalMinutes starts for a meal at `at`: at less
+// totalMinutes of real elapsed time (so DST changes count), read in at's zone, and whether that start falls on an
+// earlier date than the meal (A2). The planner's start window, the Plan's meal.startsAt and earlyStart all use it; a
+// slot with one fresh Course gets its Start cooking notification at the same instant (cook.Timeline of the same Steps).
+func CookingStart(at time.Time, totalMinutes int) (start time.Time, earlierDay bool) {
+	start = at.Add(-time.Duration(totalMinutes) * time.Minute)
+	y, mo, d := at.Date()
+	return start, start.Before(time.Date(y, mo, d, 0, 0, 0, 0, at.Location()))
 }
 
 // outsideStartWindow returns when cooking of the given length starts for a slot at `at` (real elapsed minutes), and
@@ -302,7 +311,7 @@ func (st *state) startPassed(i int, r Recipe) bool {
 //   - both set: the start's time of day must be from the Earliest start to the Latest start, both ends allowed, on
 //     whatever day it falls.
 func outsideStartWindow(at time.Time, totalMinutes int, earliest, latest string) (time.Time, bool) {
-	start := at.Add(-time.Duration(totalMinutes) * time.Minute)
+	start, _ := CookingStart(at, totalMinutes)
 	from, ok := clockMinutes(earliest)
 	if !ok || totalMinutes <= 0 {
 		return start, false
@@ -316,12 +325,6 @@ func outsideStartWindow(at time.Time, totalMinutes int, earliest, latest string)
 	h, m, sec := start.Clock()
 	of := h*60 + m
 	return start, of < from || of > to || (of == to && sec > 0)
-}
-
-// startsOnEarlierDay reports whether start falls on an earlier date than at, both read in at's zone.
-func startsOnEarlierDay(at, start time.Time) bool {
-	y, mo, d := at.Date()
-	return start.Before(time.Date(y, mo, d, 0, 0, 0, 0, at.Location()))
 }
 
 // clockMinutes parses "HH:MM" into minutes after midnight; "" or a malformed value is not ok (Off).

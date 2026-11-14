@@ -7,6 +7,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/household"
 	"github.com/fabbarix/feeder-ng/internal/notify"
+	"github.com/fabbarix/feeder-ng/internal/planner"
 	"github.com/fabbarix/feeder-ng/internal/recipe/schedule"
 )
 
@@ -130,5 +131,45 @@ func TestStartCookingTwoOrMoreDaysAheadNamesTheWeekday(t *testing.T) {
 	side.Steps = []schedule.Step{{Kind: schedule.Active, DurationMinutes: 20}}
 	if got := only(t, compute(rome, long, side), notify.StartCooking).Body; got != "Start cooking now for Tuesday at 07:00: Rice first" {
 		t.Errorf("several Courses Body = %q", got)
+	}
+}
+
+// One source of truth for "when does cooking start" (B9-58 review): the planner's start window and the Plan's
+// meal.startsAt read the Recipe's total time (schedule.Compute of its Steps, stored as total_minutes) through
+// planner.CookingStart; Start cooking reads cook.Timeline of the same Steps. For a slot with one fresh Course the two
+// are the same instant, so the notification fires at the start the chip shows, whatever the day, zone or DST change.
+// (With several Courses the timeline may start earlier than any one Course: the notification is per slot.)
+func TestStartCookingOfOneCourseFiresAtThePlannersCookingStart(t *testing.T) {
+	steps := map[string][]schedule.Step{
+		"one Active Step, same day":          {{Kind: schedule.Active, DurationMinutes: 30}},
+		"slow cooker: long Passive Step":     {{Kind: schedule.Active, DurationMinutes: 20}, {Kind: schedule.Passive, DurationMinutes: 600}, {Kind: schedule.Active, DurationMinutes: 10}},
+		"Passive Step shorter than the next": {{Kind: schedule.Passive, DurationMinutes: 900}, {Kind: schedule.Active, DurationMinutes: 960}},
+		"over two days":                      {{Kind: schedule.Passive, DurationMinutes: 48 * 60}},
+	}
+	slots := map[string]func(*time.Location) time.Time{
+		"Tuesday 07:00":                 func(l *time.Location) time.Time { return time.Date(2026, 11, 10, 7, 0, 0, 0, l) },
+		"end of DST, Sunday 07:00":      func(l *time.Location) time.Time { return time.Date(2026, 10, 25, 7, 0, 0, 0, l) },
+		"start of DST, Sunday 08:00":    func(l *time.Location) time.Time { return time.Date(2026, 3, 29, 8, 0, 0, 0, l) },
+		"US end of DST, Sunday 12:30":   func(l *time.Location) time.Time { return time.Date(2026, 11, 1, 12, 30, 0, 0, l) },
+		"US start of DST, Sunday 12:30": func(l *time.Location) time.Time { return time.Date(2026, 3, 8, 12, 30, 0, 0, l) },
+	}
+	for _, zn := range []string{"Europe/Rome", "America/Los_Angeles", "Asia/Tokyo"} {
+		loc := zone(t, zn)
+		for sn, slot := range slots {
+			for name, st := range steps {
+				sc, err := schedule.Compute(st)
+				if err != nil {
+					t.Fatal(err)
+				}
+				m := stew(loc)
+				m.SlotAt, m.Steps = slot(loc), st
+				m.Date = m.SlotAt.Format("2006-01-02")
+				c := only(t, compute(loc, m), notify.StartCooking)
+				want, _ := planner.CookingStart(m.SlotAt, sc.TotalMinutes)
+				if !c.At.Equal(want) {
+					t.Errorf("%s, %s, %s: Start cooking at %s, the planner's start %s", zn, sn, name, c.At.In(loc), want.In(loc))
+				}
+			}
+		}
 	}
 }

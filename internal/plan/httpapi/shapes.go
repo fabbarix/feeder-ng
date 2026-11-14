@@ -6,6 +6,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
+	"github.com/fabbarix/feeder-ng/internal/planner"
 )
 
 // JSON shapes (camelCase), as in docs/dev/design/t11-planning.md.
@@ -83,14 +84,14 @@ type startsAtOut struct {
 }
 
 // startsAtFor is the start of meal m at the instant at (household zone) when it falls on an earlier day than the meal
-// and the meal is still to cook; nil otherwise. CookMinutes is 0 for a Leftover meal and a Recipe of unknown length.
+// and the meal is still to cook; nil otherwise. CookMinutes is the Recipe's total time (0 for a Leftover meal and a
+// Recipe of unknown length), the same minutes the planner's start window reads, through the same planner.CookingStart.
 func startsAtFor(at time.Time, m *mealOut) *startsAtOut {
 	if m.State != string(plan.StatePlanned) || m.CookMinutes <= 0 {
 		return nil
 	}
-	start := at.Add(-time.Duration(m.CookMinutes) * time.Minute)
-	y, mo, d := at.Date()
-	if !start.Before(time.Date(y, mo, d, 0, 0, 0, 0, at.Location())) {
+	start, earlier := planner.CookingStart(at, m.CookMinutes)
+	if !earlier {
 		return nil
 	}
 	return &startsAtOut{Date: start.Format("2006-01-02"), Time: start.Format("15:04")}
