@@ -134,6 +134,15 @@ console.log(bad.join('; ') || 'ok')
 " 2>&1)
   [ "$out" = ok ] && ok || bad "page-layout-seed/index.mjs: $out"
 fi
+# a package's own seed area is found without editing index.mjs: after the base areas, by its order; a module without order fails loudly
+cp -r "$SEEDDIR" "$TMP/seed" && cp "$ROOT/scripts/test/fixtures/page-layout-seed-zones.mjs" "$TMP/" 2>/dev/null
+printf 'export const order = 200\nexport async function seed() {}\n' >"$TMP/seed/zz-late.mjs"
+printf 'export const order = 100\nexport async function seed() {}\n' >"$TMP/seed/zz-early.mjs"
+out=$(node --input-type=module -e "import('$TMP/seed/index.mjs').then((m) => console.log(m.AREAS.join(',')), (e) => console.log('THROWS ' + e.message))" 2>&1)
+[ "$out" = household,recipes,shops,stock,plan,supplies,scan,zz-early,zz-late ] && ok || bad "seed drop-ins run after the base areas, by order (got $out)"
+printf 'export async function seed() {}\n' >"$TMP/seed/zz-noorder.mjs"
+out=$(node --input-type=module -e "import('$TMP/seed/index.mjs').then((m) => console.log(m.AREAS.join(',')), (e) => console.log('THROWS ' + e.message))" 2>&1)
+grep -q 'THROWS.*zz-noorder.mjs' <<<"$out" && ok || bad "a seed area without order must throw and be named (got $out)"
 # the entry keeps what check-page-layout_test.sh pins (login, the ids file, a timeout on every fetch) and no longer holds the whole seed
 grep -q '/api/dev/login' "$SEED" && grep -q 'page-layout-ids' "$SEED" && grep -q 'AbortSignal.timeout' "$SEED" && ok || bad "the seed entry keeps dev login, the ids file and AbortSignal.timeout"
 grep -q 'page-layout-seed/index.mjs' "$SEED" && ok || bad "the seed entry must import page-layout-seed/index.mjs"
