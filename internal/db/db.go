@@ -312,3 +312,12 @@ var Pre1560Prefixes = []string{"1560_"}
 func NeedsPre1560Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
 	return NeedsSnapshotFor(ctx, d, Migrations(), Pre1560Prefixes)
 }
+
+// Pre1570Prefixes are the file-name prefixes of the beta.9 migrations 1570 to 1577 (docs/dev/design/b9-snap.md).
+// STUB (B9-04 test author): the developer fills it with "1570_" to "1577_".
+var Pre1570Prefixes = []string{}
+
+// NeedsPre1570Snapshot is NeedsSnapshotFor over the embedded migrations and Pre1570Prefixes.
+func NeedsPre1570Snapshot(ctx context.Context, d *sql.DB) (bool, error) {
+	return NeedsSnapshotFor(ctx, d, Migrations(), Pre1570Prefixes)
+}

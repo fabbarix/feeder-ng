@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/testkit"
 )
@@ -101,7 +102,9 @@ func TestOnlyAnAdminSetsAMemberPhoto(t *testing.T) {
 	}
 }
 
-func TestRemovingAMemberRemovesTheirPhotoFile(t *testing.T) {
+// B9-04: Undo puts the Member back with their photo, so the file stays for ten minutes (the nightly sweep is the safety
+// net). A later removal releases the photos of the snapshots that have expired.
+func TestRemovingAMemberKeepsTheirPhotoFileUntilTheUndoWindowEnds(t *testing.T) {
 	env := testkit.Start(t)
 	admin := env.LoginAdmin(t)
 	id := uploadPNG(t, admin)
@@ -110,8 +113,19 @@ func TestRemovingAMemberRemovesTheirPhotoFile(t *testing.T) {
 	if r := admin.Delete(path("/api/members/%d", sam.ID)); r.Status != 204 {
 		t.Fatalf("delete = %d", r.Status)
 	}
+	if g := admin.Get("/api/images/" + id); g.Status != 200 {
+		t.Errorf("the photo of a Member removed a moment ago must still be served (Undo needs it): %d", g.Status)
+	}
+	env.Clock.Advance(11 * time.Minute)
+	pia := mustMember(t, admin, "Pia", 1)
+	if r := admin.Delete(path("/api/members/%d", pia.ID)); r.Status != 204 {
+		t.Fatalf("delete Pia = %d", r.Status)
+	}
 	if g := admin.Get("/api/images/" + id); g.Status != 404 {
-		t.Errorf("the photo of a removed Member is still served: %d (delete the file with the Member; the sweep is the safety net)", g.Status)
+		t.Errorf("the photo of a Member whose Undo window has ended is still served: %d (the next removal releases it)", g.Status)
+	}
+	if r := admin.Post(path("/api/members/%d/restore", sam.ID), nil); r.Status != 404 {
+		t.Errorf("restore after the window = %d, want 404", r.Status)
 	}
 }
 

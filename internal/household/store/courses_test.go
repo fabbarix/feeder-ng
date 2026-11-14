@@ -517,7 +517,7 @@ func TestSetDateCourseOptOutsErrors(t *testing.T) {
 	}
 }
 
-func TestDeletingAMemberOrASlotRemovesTheirOptOuts(t *testing.T) {
+func TestRemovingAMemberRemovesTheirOptOutsAndRemovingASlotKeepsItsOwn(t *testing.T) {
 	c := newCfx(t)
 	a := c.slot(t, 1, "Dinner", []household.SlotCourseInput{{CourseID: c.main}, {CourseID: c.side, OptOutMemberIDs: ids64(c.sam.ID, c.anna.ID)}})
 	b := c.slot(t, 2, "Dinner", []household.SlotCourseInput{{CourseID: c.main}, {CourseID: c.side, OptOutMemberIDs: ids64(c.sam.ID)}})
@@ -526,7 +526,7 @@ func TestDeletingAMemberOrASlotRemovesTheirOptOuts(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := c.st.DeleteMember(c.ctx, c.sam.ID); err != nil {
+	if err := c.st.RemoveMember(c.ctx, c.sam.ID); err != nil {
 		t.Fatal(err)
 	}
 	if n := c.count(t, `SELECT count(*) FROM meal_slot_course_opt_outs`); n != 1 {
@@ -535,14 +535,18 @@ func TestDeletingAMemberOrASlotRemovesTheirOptOuts(t *testing.T) {
 	if n := c.count(t, `SELECT count(*) FROM course_attendance_override_opt_outs`); n != 2 {
 		t.Errorf("date opt-outs after deleting Sam = %d, want the two of Nonna", n)
 	}
-	if err := c.st.DeleteSlot(c.ctx, a.ID); err != nil {
+	if err := c.st.RemoveSlot(c.ctx, a.ID); err != nil {
 		t.Fatal(err)
 	}
-	if c.count(t, `SELECT count(*) FROM meal_slot_course_opt_outs`) != 0 || c.count(t, `SELECT count(*) FROM course_attendance_overrides WHERE slot_id = ?`, a.ID) != 0 {
-		t.Error("deleting a Meal Slot must remove its usual and date opt-outs")
+	// B9-04: a removed Meal Slot keeps its Courses, Attendance and date changes (Undo and the history need them).
+	if n := c.count(t, `SELECT count(*) FROM meal_slot_course_opt_outs WHERE meal_slot_id = ?`, a.ID); n != 1 {
+		t.Errorf("a removed Meal Slot's usual opt-outs: %d rows, want the 1 kept", n)
 	}
-	if n := c.count(t, `SELECT count(*) FROM course_attendance_override_opt_outs`); n != 1 {
-		t.Errorf("the other slot's date opt-out: %d rows, want 1", n)
+	if n := c.count(t, `SELECT count(*) FROM course_attendance_overrides WHERE slot_id = ?`, a.ID); n != 1 {
+		t.Errorf("a removed Meal Slot's date overrides: %d rows, want the 1 kept", n)
+	}
+	if n := c.count(t, `SELECT count(*) FROM course_attendance_override_opt_outs`); n != 2 {
+		t.Errorf("the date opt-outs of both slots: %d rows, want 2", n)
 	}
 }
 

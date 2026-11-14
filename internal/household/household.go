@@ -21,7 +21,8 @@ var (
 	ErrDuplicateAttendee = errors.New("household: member listed twice in an Attendance")
 	ErrEmailTaken        = errors.New("household: that e-mail address is already in use")
 	ErrWeekdayMismatch   = errors.New("household: date is not on the Meal Slot's weekday")
-	ErrCourseNotInSlot   = errors.New("household: the Course is not served by that Meal Slot") // 422 course_not_in_slot
+	ErrSlotNameTaken     = errors.New("household: a Meal Slot with that name now exists on that weekday") // 409 meal_slot_name_taken
+	ErrCourseNotInSlot   = errors.New("household: the Course is not served by that Meal Slot")            // 422 course_not_in_slot
 )
 
 // ValidationError names the offending JSON field. Reason is the machine-readable cause when the API
