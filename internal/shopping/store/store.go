@@ -88,7 +88,22 @@ func (s *Store) Extras(ctx context.Context, today stock.Date) ([]shopping.Extra,
 		e.Ticked = tickedOn.Valid
 		out = append(out, e)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	adds, err := s.additions(ctx, `extra_id IN (SELECT id FROM shopping_extras WHERE ticked_on = ?)`, string(today))
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		for _, a := range adds {
+			if a.ExtraID == out[i].ID {
+				out[i].Additions = append(out[i].Additions, a.Addition)
+			}
+		}
+	}
+	return out, nil
 }
 
 func (s *Store) exec(ctx context.Context, query string, args ...any) error {
@@ -107,48 +122,42 @@ func (s *Store) DeleteExtra(ctx context.Context, id int64) error {
 	return s.exec(ctx, `DELETE FROM shopping_extras WHERE id = ?`, id)
 }
 
-// TickExtra marks an extra ticked on today (ErrNotFound) and records no Stock Lot.
+// TickExtra marks an extra ticked on today (ErrNotFound). Its additions, if any, are written with AddExtraAddition.
 func (s *Store) TickExtra(ctx context.Context, id int64, today stock.Date) error {
-	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = ?, tick_lot_id = NULL, tick_lot_quantity = NULL WHERE id = ?`,
-		string(today), id)
+	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = ? WHERE id = ?`, string(today), id)
 }
 
-// TickExtraLot marks an extra ticked on today (ErrNotFound) and records the Stock Lot its tick added and the quantity
-// it added (beta.8, undo).
-func (s *Store) TickExtraLot(ctx context.Context, id int64, today stock.Date, lotID int64, quantity float64) error {
-	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = ?, tick_lot_id = ?, tick_lot_quantity = ? WHERE id = ?`,
-		string(today), lotID, quantity, id)
-}
-
-// UntickExtra clears the tick and the Stock Lot it recorded (ErrNotFound).
+// UntickExtra clears the tick and its additions (ErrNotFound).
 func (s *Store) UntickExtra(ctx context.Context, id int64) error {
-	return s.exec(ctx, `UPDATE shopping_extras SET ticked_on = NULL, tick_lot_id = NULL, tick_lot_quantity = NULL WHERE id = ?`, id)
+	return s.UntickExtraTakenBack(ctx, id, 0)
 }
 
-// UntickExtraTakenBack clears an Ingredient extra's tick and the Stock Lot it recorded, and takes taken (what Stock took
-// back) off its got (floor 0), in one statement, so a retried Undo never takes it off twice (beta.8, undo; ErrNotFound).
+// UntickExtraTakenBack clears an extra's tick and its additions, and takes taken (what Stock took back) off its got
+// (floor 0), in one transaction, so a retried Undo never takes it off twice (ErrNotFound).
 func (s *Store) UntickExtraTakenBack(ctx context.Context, id int64, taken float64) error {
-	return s.exec(ctx, `UPDATE shopping_extras SET got = MAX(0, got - ?), ticked_on = NULL, tick_lot_id = NULL,
-		tick_lot_quantity = NULL WHERE id = ?`, taken, id)
+	return s.tx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, `UPDATE shopping_extras SET got = MAX(0, got - ?), ticked_on = NULL WHERE id = ?`, taken, id)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return ErrNotFound
+		}
+		_, err = tx.ExecContext(ctx, `DELETE FROM shopping_tick_additions WHERE extra_id = ?`, id)
+		return err
+	})
 }
 
-// ExtraTickLot returns the Stock Lot an Ingredient extra's tick added and the quantity it added (beta.8, undo). ok is
-// false when the tick added no Lot (a text extra, a tick of 0, or a tick from before migration 1560). ErrNotFound for
-// an unknown extra.
-func (s *Store) ExtraTickLot(ctx context.Context, id int64) (lotID int64, quantity float64, ok bool, err error) {
-	var lot sql.NullInt64
-	var qty sql.NullFloat64
-	err = s.db.QueryRowContext(ctx, `SELECT tick_lot_id, tick_lot_quantity FROM shopping_extras WHERE id = ?`, id).Scan(&lot, &qty)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, 0, false, ErrNotFound
-	}
+func (s *Store) tx(ctx context.Context, fn func(*sql.Tx) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, 0, false, err
+		return err
 	}
-	if !lot.Valid {
-		return 0, 0, false, nil
+	defer func() { _ = tx.Rollback() }()
+	if err := fn(tx); err != nil {
+		return err
 	}
-	return lot.Int64, lotQuantity(qty), true, nil
+	return tx.Commit()
 }
 
 // AddGot adds delta (may be negative, floor 0) to an Ingredient extra's `got` and returns the extra.
@@ -175,56 +184,323 @@ func (s *Store) AddGot(ctx context.Context, id int64, delta float64) (shopping.E
 	return e, nil
 }
 
-// SetTick ticks an Ingredient for a range (upsert) and records no quantity. lotID is the Stock Lot a tick by hand
-// added, if any: with no quantity recorded, Undo takes that Lot back whole. The service uses SetTickLot for a tick by
-// hand; a Scan's tick passes nil.
+// SetTick sets the ticked state of an Ingredient for a range (upsert: needed and by are replaced). lotID is a Stock Lot the
+// tick added, recorded as an addition with no quantity (Take back then takes what is left of it). The service ticks
+// through AddLineAddition; SetTick is the bare state, for tests and tools.
 func (s *Store) SetTick(ctx context.Context, rangeTo stock.Date, t shopping.Tick, lotID *int64) error {
-	var lot sql.NullInt64
-	if lotID != nil {
-		lot = sql.NullInt64{Int64: *lotID, Valid: true}
-	}
-	return s.setTick(ctx, rangeTo, t, lot, sql.NullFloat64{})
+	return s.tx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO shopping_ticks (range_to, ingredient_id, needed, by, ticked_at)
+			VALUES (?, ?, ?, ?, ?)
+			ON CONFLICT(range_to, ingredient_id) DO UPDATE SET needed = excluded.needed, by = excluded.by, ticked_at = excluded.ticked_at`,
+			string(rangeTo), t.IngredientID, t.Needed, t.By, s.now()); err != nil {
+			return err
+		}
+		if lotID == nil {
+			return nil
+		}
+		_, err := tx.ExecContext(ctx, `INSERT INTO shopping_tick_additions (range_to, ingredient_id, by, lot_id, quantity, covers, ticked_at)
+			VALUES (?, ?, ?, ?, NULL, ?, ?)`, string(rangeTo), t.IngredientID, t.By, *lotID, t.Needed, s.now())
+		return err
+	})
 }
 
-// SetTickLot ticks an Ingredient by hand for a range and records the Stock Lot it added and the quantity it added
-// (beta.8, undo).
-func (s *Store) SetTickLot(ctx context.Context, rangeTo stock.Date, t shopping.Tick, lotID int64, quantity float64) error {
-	return s.setTick(ctx, rangeTo, t, sql.NullInt64{Int64: lotID, Valid: true}, sql.NullFloat64{Float64: quantity, Valid: true})
-}
-
-func (s *Store) setTick(ctx context.Context, rangeTo stock.Date, t shopping.Tick, lot sql.NullInt64, qty sql.NullFloat64) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO shopping_ticks (range_to, ingredient_id, needed, by, lot_id, lot_quantity, ticked_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(range_to, ingredient_id) DO UPDATE SET needed = excluded.needed, by = excluded.by,
-			lot_id = excluded.lot_id, lot_quantity = excluded.lot_quantity, ticked_at = excluded.ticked_at`,
-		string(rangeTo), t.IngredientID, t.Needed, t.By, lot, qty, s.now())
-	return err
-}
-
-// DeleteTick unticks an Ingredient for a range (no error when it was not ticked).
+// DeleteTick unticks an Ingredient for a range and removes its additions (no error when it was not ticked).
 func (s *Store) DeleteTick(ctx context.Context, rangeTo stock.Date, ingredientID int64) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM shopping_ticks WHERE range_to = ? AND ingredient_id = ?`, string(rangeTo), ingredientID)
-	return err
+	return s.tx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM shopping_tick_additions WHERE range_to = ? AND ingredient_id = ?`,
+			string(rangeTo), ingredientID); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `DELETE FROM shopping_ticks WHERE range_to = ? AND ingredient_id = ?`, string(rangeTo), ingredientID)
+		return err
+	})
 }
 
-// TickLot returns the Stock Lot a tick by hand added for the range and the quantity it added (beta.8, undo; its records
-// go when the Lot is gone). ok is false when there is no tick, or the tick added no Lot (a scan's tick, or a tick with
-// 0). A tick from before migration 1560 has no quantity: it reports the Lot's whole quantity as +Inf.
-func (s *Store) TickLot(ctx context.Context, rangeTo stock.Date, ingredientID int64) (lotID int64, quantity float64, ok bool, err error) {
-	var lot sql.NullInt64
-	var qty sql.NullFloat64
-	err = s.db.QueryRowContext(ctx, `SELECT lot_id, lot_quantity FROM shopping_ticks WHERE range_to = ? AND ingredient_id = ?`,
-		string(rangeTo), ingredientID).Scan(&lot, &qty)
+// Ticks returns the ticks of one range by Ingredient, each with its additions (oldest first) and what they added.
+func (s *Store) Ticks(ctx context.Context, rangeTo stock.Date) (map[int64]shopping.Tick, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT ingredient_id, needed, by FROM shopping_ticks WHERE range_to = ?`, string(rangeTo))
+	if err != nil {
+		return nil, err
+	}
+	out := map[int64]shopping.Tick{}
+	for rows.Next() {
+		var t shopping.Tick
+		if err := rows.Scan(&t.IngredientID, &t.Needed, &t.By); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		out[t.IngredientID] = t
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	adds, err := s.additions(ctx, `range_to = ? AND ingredient_id IS NOT NULL`, string(rangeTo))
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range adds {
+		t, ok := out[a.IngredientID]
+		if !ok {
+			continue
+		}
+		t.Additions = append(t.Additions, a.Addition)
+		out[a.IngredientID] = t
+	}
+	for ing, t := range out {
+		t.Added, t.AddedUnknown = shopping.AddedOf(t.Additions)
+		out[ing] = t
+	}
+	return out, nil
+}
+
+// Addition is a stored tick addition: one of a Line (RangeTo and IngredientID) or of an extra (ExtraID).
+// Used is, for an addition with no Stock Lot, how much of what it put into Stock a Cooked Planned Meal had used before
+// its Lot went (taken back, or changed down to nothing): a later Change adds a fresh Lot for the rest only.
+type Addition struct {
+	ID           int64
+	RangeTo      stock.Date
+	IngredientID int64
+	ExtraID      int64
+	Used         float64
+	shopping.Addition
+}
+
+const additionColumns = `id, range_to, ingredient_id, extra_id, by, lot_id, quantity, covers, user_id, client_uuid, ticked_at, synced_at, used`
+
+func (s *Store) additions(ctx context.Context, where string, args ...any) ([]Addition, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+additionColumns+` FROM shopping_tick_additions WHERE `+where+` ORDER BY id`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Addition
+	for rows.Next() {
+		a, err := scanAddition(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+type scanner interface{ Scan(dest ...any) error }
+
+func scanAddition(r scanner) (Addition, error) {
+	var (
+		a                   Addition
+		rangeTo, uuid, sync sql.NullString
+		ing, extra, lot     sql.NullInt64
+		user                sql.NullInt64
+		qty                 sql.NullFloat64
+		at                  string
+	)
+	if err := r.Scan(&a.ID, &rangeTo, &ing, &extra, &a.By, &lot, &qty, &a.Covers, &user, &uuid, &at, &sync, &a.Used); err != nil {
+		return Addition{}, err
+	}
+	a.RangeTo, a.IngredientID, a.ExtraID = stock.Date(rangeTo.String), ing.Int64, extra.Int64
+	a.LotID, a.UserID, a.ClientUUID = lot.Int64, user.Int64, uuid.String
+	a.Quantity = qty.Float64
+	if !qty.Valid {
+		a.Quantity = lotQuantity(qty)
+	}
+	a.TickedAt, _ = time.Parse(time.RFC3339, at)
+	if sync.Valid {
+		a.SyncedAt, _ = time.Parse(time.RFC3339, sync.String)
+	}
+	return a, nil
+}
+
+// LineAdditions returns the additions of a Line for a range, oldest first.
+func (s *Store) LineAdditions(ctx context.Context, rangeTo stock.Date, ingredientID int64) ([]Addition, error) {
+	return s.additions(ctx, `range_to = ? AND ingredient_id = ?`, string(rangeTo), ingredientID)
+}
+
+// ExtraAdditions returns the additions of an extra, oldest first.
+func (s *Store) ExtraAdditions(ctx context.Context, extraID int64) ([]Addition, error) {
+	return s.additions(ctx, `extra_id = ?`, extraID)
+}
+
+// AdditionByUUID finds the addition with that client UUID (ok false for none, or for "").
+func (s *Store) AdditionByUUID(ctx context.Context, clientUUID string) (Addition, bool, error) {
+	if clientUUID == "" {
+		return Addition{}, false, nil
+	}
+	a, err := scanAddition(s.db.QueryRowContext(ctx, `SELECT `+additionColumns+` FROM shopping_tick_additions WHERE client_uuid = ?`, clientUUID))
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, 0, false, nil
+		return Addition{}, false, nil
 	}
 	if err != nil {
-		return 0, 0, false, err
+		return Addition{}, false, err
 	}
-	if !lot.Valid {
-		return 0, 0, false, nil
+	return a, true, nil
+}
+
+// insertAddition writes one addition. ok is false when its client UUID is already taken (nothing is written).
+func (s *Store) insertAddition(ctx context.Context, tx *sql.Tx, rangeTo *stock.Date, ingredientID, extraID int64, a shopping.Addition) (int64, bool, error) {
+	var (
+		rt         sql.NullString
+		ing, extra sql.NullInt64
+		lot, user  sql.NullInt64
+		uuid, sync sql.NullString
+	)
+	if rangeTo != nil {
+		rt = sql.NullString{String: string(*rangeTo), Valid: true}
 	}
-	return lot.Int64, lotQuantity(qty), true, nil
+	if ingredientID != 0 {
+		ing = sql.NullInt64{Int64: ingredientID, Valid: true}
+	}
+	if extraID != 0 {
+		extra = sql.NullInt64{Int64: extraID, Valid: true}
+	}
+	if a.LotID != 0 {
+		lot = sql.NullInt64{Int64: a.LotID, Valid: true}
+	}
+	if a.UserID != 0 {
+		user = sql.NullInt64{Int64: a.UserID, Valid: true}
+	}
+	if a.ClientUUID != "" {
+		uuid = sql.NullString{String: a.ClientUUID, Valid: true}
+	}
+	if !a.SyncedAt.IsZero() {
+		sync = sql.NullString{String: a.SyncedAt.UTC().Format(time.RFC3339), Valid: true}
+	}
+	at := a.TickedAt
+	if at.IsZero() {
+		at = s.clk.Now()
+	}
+	by := a.By
+	if by == "" {
+		by = "hand"
+	}
+	if math.IsInf(a.Quantity, 0) || math.IsNaN(a.Quantity) { // the unknown quantity is read from NULL, never written
+		return 0, false, ErrInvalid
+	}
+	res, err := tx.ExecContext(ctx, `INSERT INTO shopping_tick_additions (range_to, ingredient_id, extra_id, by, lot_id, quantity,
+		covers, user_id, client_uuid, ticked_at, synced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(client_uuid) DO NOTHING`,
+		rt, ing, extra, by, lot, a.Quantity, math.Max(0, a.Covers), user, uuid, at.UTC().Format(time.RFC3339), sync)
+	if err != nil {
+		return 0, false, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return 0, false, nil
+	}
+	id, err := res.LastInsertId()
+	return id, true, err
+}
+
+// AddLineAddition ticks a Line for a range with one more addition: the first one sets the tick (needed = its covers,
+// by = its by); a later one raises needed to its covers when they are larger. ok is false when the client UUID is
+// already taken: nothing is written and the caller answers with that addition.
+func (s *Store) AddLineAddition(ctx context.Context, rangeTo stock.Date, ingredientID int64, a shopping.Addition) (id int64, ok bool, err error) {
+	err = s.tx(ctx, func(tx *sql.Tx) error {
+		by := a.By
+		if by == "" {
+			by = "hand"
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO shopping_ticks (range_to, ingredient_id, needed, by, ticked_at)
+			VALUES (?, ?, ?, ?, ?)
+			ON CONFLICT(range_to, ingredient_id) DO UPDATE SET needed = MAX(needed, excluded.needed)`,
+			string(rangeTo), ingredientID, math.Max(0, a.Covers), by, s.now()); err != nil {
+			return err
+		}
+		id, ok, err = s.insertAddition(ctx, tx, &rangeTo, ingredientID, 0, a)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errDuplicate
+		}
+		return nil
+	})
+	if errors.Is(err, errDuplicate) {
+		return 0, false, nil
+	}
+	return id, ok, err
+}
+
+var errDuplicate = errors.New("shopping store: client UUID taken")
+
+// AddExtraAddition ticks an extra on today with one more addition (ErrNotFound for an unknown extra). ok is false when
+// the client UUID is already taken: nothing is written.
+func (s *Store) AddExtraAddition(ctx context.Context, extraID int64, today stock.Date, a shopping.Addition) (id int64, ok bool, err error) {
+	err = s.tx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, `UPDATE shopping_extras SET ticked_on = ? WHERE id = ?`, string(today), extraID)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return ErrNotFound
+		}
+		id, ok, err = s.insertAddition(ctx, tx, nil, 0, extraID, a)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errDuplicate
+		}
+		return nil
+	})
+	if errors.Is(err, errDuplicate) {
+		return 0, false, nil
+	}
+	return id, ok, err
+}
+
+// SetAdditionLot records the Stock Lot an addition now has (0 = none), the quantity it put into Stock and, with no Lot,
+// how much of it was used before its Lot went (ErrNotFound). quantity must be finite.
+func (s *Store) SetAdditionLot(ctx context.Context, id, lotID int64, quantity, used float64) error {
+	var lot sql.NullInt64
+	if lotID != 0 {
+		lot = sql.NullInt64{Int64: lotID, Valid: true}
+		used = 0
+	}
+	if math.IsInf(quantity, 0) || math.IsNaN(quantity) || math.IsInf(used, 0) || math.IsNaN(used) {
+		return ErrInvalid
+	}
+	return s.exec(ctx, `UPDATE shopping_tick_additions SET lot_id = ?, quantity = ?, used = ? WHERE id = ?`, lot, quantity,
+		math.Max(0, used), id)
+}
+
+// DeleteAddition removes one addition. For a Line, the tick goes with its last addition; otherwise its needed becomes the
+// largest covers left. gone says the Line or extra has no addition left. An unknown id is not an error (gone false).
+func (s *Store) DeleteAddition(ctx context.Context, id int64) (gone bool, err error) {
+	err = s.tx(ctx, func(tx *sql.Tx) error {
+		a, err := scanAddition(tx.QueryRowContext(ctx, `SELECT `+additionColumns+` FROM shopping_tick_additions WHERE id = ?`, id))
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM shopping_tick_additions WHERE id = ?`, id); err != nil {
+			return err
+		}
+		var left int
+		var maxCovers sql.NullFloat64
+		if a.ExtraID != 0 {
+			err = tx.QueryRowContext(ctx, `SELECT COUNT(*), MAX(covers) FROM shopping_tick_additions WHERE extra_id = ?`, a.ExtraID).Scan(&left, &maxCovers)
+		} else {
+			err = tx.QueryRowContext(ctx, `SELECT COUNT(*), MAX(covers) FROM shopping_tick_additions WHERE range_to = ? AND ingredient_id = ?`,
+				string(a.RangeTo), a.IngredientID).Scan(&left, &maxCovers)
+		}
+		if err != nil {
+			return err
+		}
+		gone = left == 0
+		if a.ExtraID != 0 {
+			return nil
+		}
+		if gone {
+			_, err = tx.ExecContext(ctx, `DELETE FROM shopping_ticks WHERE range_to = ? AND ingredient_id = ?`, string(a.RangeTo), a.IngredientID)
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `UPDATE shopping_ticks SET needed = ? WHERE range_to = ? AND ingredient_id = ?`,
+			maxCovers.Float64, string(a.RangeTo), a.IngredientID)
+		return err
+	})
+	return gone, err
 }
 
 // lotQuantity is the quantity a tick added to its Lot; NULL (a tick from before migration 1560) means the Lot's whole
@@ -236,26 +512,11 @@ func lotQuantity(q sql.NullFloat64) float64 {
 	return q.Float64
 }
 
-// Ticks returns the ticks of one range by Ingredient.
-func (s *Store) Ticks(ctx context.Context, rangeTo stock.Date) (map[int64]shopping.Tick, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT ingredient_id, needed, by FROM shopping_ticks WHERE range_to = ?`, string(rangeTo))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := map[int64]shopping.Tick{}
-	for rows.Next() {
-		var t shopping.Tick
-		if err := rows.Scan(&t.IngredientID, &t.Needed, &t.By); err != nil {
-			return nil, err
-		}
-		out[t.IngredientID] = t
-	}
-	return out, rows.Err()
-}
-
-// PurgeBefore deletes ticks and Not needed marks whose range ended before today.
+// PurgeBefore deletes ticks, their additions and Not needed marks whose range ended before today.
 func (s *Store) PurgeBefore(ctx context.Context, today stock.Date) error {
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM shopping_tick_additions WHERE range_to < ?`, string(today)); err != nil {
+		return err
+	}
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM shopping_ticks WHERE range_to < ?`, string(today)); err != nil {
 		return err
 	}
@@ -263,10 +524,10 @@ func (s *Store) PurgeBefore(ctx context.Context, today stock.Date) error {
 	return err
 }
 
-// LotsAdded counts the ticks of a range that added a Stock Lot.
+// LotsAdded counts the Stock Lots ticks by hand put into Stock for a range (a Scan's are in the Scan ledger).
 func (s *Store) LotsAdded(ctx context.Context, rangeTo stock.Date) (int, error) {
 	var n int
-	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM shopping_ticks WHERE range_to = ? AND lot_id IS NOT NULL`,
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM shopping_tick_additions WHERE range_to = ? AND by = 'hand' AND lot_id IS NOT NULL`,
 		string(rangeTo)).Scan(&n)
 	return n, err
 }

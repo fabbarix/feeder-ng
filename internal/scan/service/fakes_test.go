@@ -454,6 +454,81 @@ type fakeList struct {
 	ticked    map[int64]bool
 	after     []shopservice.AfterLotInput
 	undo      []shopservice.UndoLotInput
+	// B9-23: the queued Tick and untick. tickErr / extraErr answer the next call of Tick / TickExtra once; tickSeen makes a
+	// repeated client UUID answer Created false with the first Lot, as the real service does.
+	calls    []string // every Tick, TickExtra, Untick, UntickAddition and AfterLot call, in order
+	ticks    []shopservice.TickInput
+	extras   []extraTickCall
+	extraAt  []time.Time // the phone's time each extra's tick was given
+	unticks  []string    // "ing:<id>:<to>" or "uuid:<uuid>"
+	tickErr  error
+	extraErr error
+	tickAlso []shopservice.AlsoTicked
+	tickSeen map[string]int64
+	nextTick int64
+}
+
+type extraTickCall struct {
+	ID         int64
+	Quantity   float64
+	ShopID     *int64
+	ClientUUID string
+}
+
+func (f *fakeList) Tick(_ context.Context, in shopservice.TickInput) (shopservice.TickResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, "tick:"+in.ClientUUID)
+	f.ticks = append(f.ticks, in)
+	if err := f.tickErr; err != nil {
+		f.tickErr = nil
+		return shopservice.TickResult{}, err
+	}
+	if f.tickSeen == nil {
+		f.tickSeen = map[string]int64{}
+	}
+	if lot, ok := f.tickSeen[in.ClientUUID]; ok {
+		return shopservice.TickResult{LotID: &lot, Created: false, Added: in.Quantity, AlsoTickedBy: f.tickAlso}, nil
+	}
+	res := shopservice.TickResult{Created: true, Added: in.Quantity, AlsoTickedBy: f.tickAlso}
+	if in.Quantity > 0 {
+		f.nextTick++
+		lot := 500 + f.nextTick
+		f.tickSeen[in.ClientUUID] = lot
+		res.LotID = &lot
+	}
+	return res, nil
+}
+
+func (f *fakeList) TickExtraAt(_ context.Context, in shopservice.ExtraTickInput) (shopservice.TickResult, error) {
+	id, quantity, shopID, clientUUID := in.ID, in.Quantity, in.ShopID, in.ClientUUID
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.extraAt = append(f.extraAt, in.TickedAt)
+	f.calls = append(f.calls, "extra:"+clientUUID)
+	f.extras = append(f.extras, extraTickCall{id, quantity, shopID, clientUUID})
+	if err := f.extraErr; err != nil {
+		f.extraErr = nil
+		return shopservice.TickResult{}, err
+	}
+	lot := int64(700 + id)
+	return shopservice.TickResult{LotID: &lot, Created: true, Added: quantity}, nil
+}
+
+func (f *fakeList) Untick(_ context.Context, ing int64, to stock.Date) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, "untick")
+	f.unticks = append(f.unticks, "ing:"+itoa(ing)+":"+string(to))
+	return nil
+}
+
+func (f *fakeList) UntickAddition(_ context.Context, uuid string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, "untick")
+	f.unticks = append(f.unticks, "uuid:"+uuid)
+	return nil
 }
 
 func (f *fakeList) AfterLot(_ context.Context, in shopservice.AfterLotInput) (shopservice.Effect, error) {
@@ -461,6 +536,7 @@ func (f *fakeList) AfterLot(_ context.Context, in shopservice.AfterLotInput) (sh
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.after = append(f.after, in)
+	f.calls = append(f.calls, "after")
 	rem, on := f.remaining[in.IngredientID]
 	if !on {
 		return shopservice.Effect{}, nil

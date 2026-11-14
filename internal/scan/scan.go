@@ -21,6 +21,11 @@ const (
 	KindShopScan    Kind = "shop_scan"    // the phone resolved the barcode to a Product
 	KindShopUnknown Kind = "shop_unknown" // unknown barcode: create the Product, then as shop_scan
 	KindStockTake   Kind = "stock_take"   // at home, no Shop
+	// KindShopTick (B9-23, RES-03) is a Tick by hand, queued like a Scan: an Ingredient Line or an Ingredient extra, the
+	// quantity it adds to Stock (0 = Tick without adding) and the Line quantity it covers. ScannedAt is the Tick's time.
+	KindShopTick Kind = "shop_tick"
+	// KindShopUntick undoes a queued or synced Tick: one addition by its client UUID, or a Line by Ingredient and range.
+	KindShopUntick Kind = "shop_untick"
 )
 
 // Action is a Stock-take sheet action.
@@ -86,6 +91,13 @@ type Op struct {
 	// stock_take
 	Action Action   `json:"action,omitempty"`
 	Total  *float64 `json:"total,omitempty"`
+
+	// shop_tick: IngredientID or ExtraID (exactly one), Quantity (the amount added, 0 = none), Covers (the Line quantity
+	// the phone showed, SSP-02's Q0), RangeTo and ShopID. shop_untick: TickClientUUID, or IngredientID with RangeTo.
+	IngredientID   int64   `json:"ingredientId,omitempty"`
+	ExtraID        int64   `json:"extraId,omitempty"`
+	Covers         float64 `json:"covers,omitempty"`
+	TickClientUUID string  `json:"tickClientUuid,omitempty"`
 }
 
 // ErrInvalid is matched (errors.Is) by every *ValidationError.
@@ -151,8 +163,47 @@ func (o Op) Validate() error {
 		return o.validateShopUnknown()
 	case KindStockTake:
 		return o.validateStockTake()
+	case KindShopTick:
+		return o.validateShopTick()
+	case KindShopUntick:
+		return o.validateShopUntick()
 	}
-	return &ValidationError{Field: "kind", Message: "kind must be shop_scan, shop_unknown or stock_take"}
+	return &ValidationError{Field: "kind", Message: "kind must be shop_scan, shop_unknown, stock_take, shop_tick or shop_untick"}
+}
+
+// validateShopTick: exactly one of an Ingredient Line or an Ingredient extra, an amount (0 or more) and a covered amount.
+func (o Op) validateShopTick() error {
+	if (o.IngredientID > 0) == (o.ExtraID > 0) || o.IngredientID < 0 || o.ExtraID < 0 {
+		return &ValidationError{Field: "ingredientId", Message: "a tick names an Ingredient or an extra, not both"}
+	}
+	if !amount(o.Quantity) {
+		return &ValidationError{Field: "quantity", Message: "the quantity must be 0 or more"}
+	}
+	if !amount(o.Covers) {
+		return &ValidationError{Field: "covers", Message: "the quantity covered must be 0 or more"}
+	}
+	if o.ShopID != nil && *o.ShopID <= 0 {
+		return &ValidationError{Field: "shopId", Message: "the Shop is not valid"}
+	}
+	if o.RangeTo != "" && !validDate(o.RangeTo) {
+		return &ValidationError{Field: "rangeTo", Message: "rangeTo must be a date as YYYY-MM-DD"}
+	}
+	return nil
+}
+
+// validateShopUntick: the tick's client UUID, or an Ingredient Line with its range, not both.
+func (o Op) validateShopUntick() error {
+	byUUID := strings.TrimSpace(o.TickClientUUID) != ""
+	if byUUID == (o.IngredientID > 0) {
+		return &ValidationError{Field: "tickClientUuid", Message: "an untick names a tick's client UUID or an Ingredient, not both"}
+	}
+	if byUUID {
+		return nil
+	}
+	if !validDate(o.RangeTo) {
+		return &ValidationError{Field: "rangeTo", Message: "an untick of a Line needs its range as YYYY-MM-DD"}
+	}
+	return nil
 }
 
 func (o Op) validateShopScan() error {
@@ -283,6 +334,8 @@ func (o Op) validateStockTake() error {
 
 func positive(v float64) bool { return v > 0 && !math.IsInf(v, 0) }
 
+func amount(v float64) bool { return v >= 0 && !math.IsInf(v, 0) && !math.IsNaN(v) }
+
 func digits(s string) bool {
 	for _, r := range s {
 		if r < '0' || r > '9' {
@@ -344,10 +397,25 @@ type Applied struct {
 	Total              *float64 `json:"total,omitempty"` // stock_take: the Ingredient's Stock after
 }
 
-// Result is the outcome of one operation.
+// AlsoTickedBy is an earlier addition by another User to a Line a queued Tick synced onto (RES 2: ticked twice).
+type AlsoTickedBy struct {
+	Name     string  `json:"name"`
+	Quantity float64 `json:"quantity"`
+	By       string  `json:"by"` // "hand" | "scan"
+}
+
+// AppliedTick is what a shop_tick did: the Stock Lot it added (nil = none), the quantity, and who had ticked before it.
+type AppliedTick struct {
+	LotID        *int64         `json:"lotId"`
+	Added        float64        `json:"added"`
+	AlsoTickedBy []AlsoTickedBy `json:"alsoTickedBy"`
+}
+
+// Result is the outcome of one operation. Tick is set for an applied or duplicate shop_tick only.
 type Result struct {
-	ClientUUID string   `json:"clientUuid"`
-	Status     Status   `json:"status"`
-	Error      *ErrInfo `json:"error,omitempty"`
-	Scan       *Applied `json:"scan,omitempty"`
+	ClientUUID string       `json:"clientUuid"`
+	Status     Status       `json:"status"`
+	Error      *ErrInfo     `json:"error,omitempty"`
+	Scan       *Applied     `json:"scan,omitempty"`
+	Tick       *AppliedTick `json:"tick,omitempty"`
 }

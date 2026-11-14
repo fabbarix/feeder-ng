@@ -34,7 +34,43 @@ type fakeStock struct {
 	nextLot int64
 	takes   [][2]float64 // TakeBack calls: Lot id, amount the tick added
 	takeErr error
+	adjusts [][2]float64 // AdjustLot calls (B9-23): Lot id, the Lot's new quantity
 }
+
+// AdjustLot mirrors the stock service: set the quantity, 0 removes the Lot, an unknown Lot is an error.
+func (f *fakeStock) AdjustLot(_ context.Context, lotID int64, quantity float64) error {
+	f.adjusts = append(f.adjusts, [2]float64{float64(lotID), quantity})
+	for i, l := range f.lots {
+		if l.ID != lotID {
+			continue
+		}
+		if quantity <= 1e-9 {
+			f.lots = append(f.lots[:i], f.lots[i+1:]...)
+		} else {
+			f.lots[i].Quantity = quantity
+		}
+		return nil
+	}
+	return store.ErrNotFound
+}
+
+// fakeUsers names Users by id (B9-23).
+type fakeUsers map[int64]string
+
+func (f fakeUsers) Names(_ context.Context, ids []int64) (map[int64]string, error) {
+	out := map[int64]string{}
+	for _, id := range ids {
+		if n, ok := f[id]; ok {
+			out[id] = n
+		}
+	}
+	return out, nil
+}
+
+const (
+	ana = int64(11)
+	sam = int64(12)
+)
 
 // TakeBack mirrors Stock's contract (beta.8 undo): take what is left of the Lot, up to what the tick added; an unknown
 // Lot is a no-op.
@@ -100,6 +136,11 @@ type fakeProducts struct {
 	pricedShop       []*int64
 	pricedAskedAbout [][]int64
 	pricedPrices     map[int64]int // by Product: the pack Price PricedPacks chose, when it differs from prices
+	// B9-23: the date and Shop of the pack Price PricedPacks chose, by Product.
+	pricedWhen map[int64]struct {
+		Date   stock.Date
+		ShopID int64
+	}
 }
 
 // PricedPacks is the fallback port the service must call for Ingredients with no purchase (SSP 5).
@@ -114,7 +155,8 @@ func (f *fakeProducts) PricedPacks(_ context.Context, ids []int64, shop *int64) 
 			if !ok {
 				c = f.prices[p.ProductID]
 			}
-			out[id] = service.PricedPack{Pack: p, PriceCents: c}
+			w := f.pricedWhen[p.ProductID]
+			out[id] = service.PricedPack{Pack: p, PriceCents: c, Date: w.Date, ShopID: w.ShopID}
 		}
 	}
 	return out, nil
@@ -209,6 +251,7 @@ type env struct {
 	ledger   *fakeLedger
 	bus      *bus
 	ids      map[string]int64
+	users    fakeUsers
 }
 
 func newEnv(t *testing.T) *env { return newEnvWith(t, nil) }
@@ -225,6 +268,7 @@ func newEnvWith(t *testing.T, more map[string]shopping.IngredientInfo) *env {
 		products: &fakeProducts{shops: map[int64]bool{1: true, 2: true}},
 		ledger:   &fakeLedger{},
 		bus:      &bus{},
+		users:    fakeUsers{ana: "Ana", sam: "Sam"},
 		ids: map[string]int64{
 			milk:    stocktest.SeedIngredient(t, db, "milk", "ml", nil),
 			passata: stocktest.SeedIngredient(t, db, "Passata", "g", nil),
@@ -242,6 +286,7 @@ func newEnvWith(t *testing.T, more map[string]shopping.IngredientInfo) *env {
 	e.svc = service.New(e.st, service.Ports{
 		Plan: e.plan, Stock: e.stock, Products: e.products, Ingredients: ing,
 		Household: fakeHousehold{today: "2026-11-09", horizon: 7, currency: "USD"}, Ledger: e.ledger,
+		Adjust: e.stock, Users: e.users,
 	}, clk, e.bus)
 	return e
 }

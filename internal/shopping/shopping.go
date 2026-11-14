@@ -75,6 +75,9 @@ type Pack struct {
 	ProductID int64
 	Name      string
 	Size      float64
+	// Price is the pack Price that chose a priced Product (Input.Priced only): what the Line sheet says ("$2.99 a pack,
+	// 14 Nov, not bought here yet"). nil for a Product last bought.
+	Price *PackPrice
 }
 
 // Extra is a manual extra: free text, or an Ingredient with a quantity (Got = scanned or ticked so far).
@@ -85,13 +88,23 @@ type Extra struct {
 	Quantity     float64
 	Got          float64
 	Ticked       bool
+	// Additions are the Stock Lots the extra's tick added (B9-23, RES-03), oldest first. Empty for a text extra.
+	Additions []Addition
 }
 
 // Tick is the ticked state of one Ingredient for the current range; Needed is the Line quantity when it was ticked.
+//
+// B9-23 (SSP-02, RES-03): a Line can be ticked more than once, so a Tick is its additions. Needed is the covered amount Q0:
+// the largest `covers` of the additions. Added is the sum of the additions' quantities (0 = no Stock added). By is the
+// first addition's. Additions are oldest first; the store fills them from shopping_tick_additions. Added is always
+// finite: AddedUnknown says an addition from before migration 1560 is left out of it (the API then shows added null).
 type Tick struct {
 	IngredientID int64
 	Needed       float64
 	By           string // "scan" | "hand"
+	Added        float64
+	AddedUnknown bool
+	Additions    []Addition
 }
 
 // NotNeeded is the Not needed mark of one Ingredient for the current range (B5-SH, docs/dev/design/beta5-plan.md 2.5);
@@ -145,6 +158,8 @@ type PackSuggestion struct {
 	Count     int
 	Remainder float64
 	Bought    bool
+	// Price is the Price behind a priced fallback (Bought false); nil when the Product was bought.
+	Price *PackPrice
 }
 
 // RestockInfo says why a Restock Line is on the list: the Restock level and the Stock it was compared with.
@@ -155,13 +170,18 @@ type RestockInfo struct {
 // Line is one Ingredient line of the Shopping List. Quantity is what is still to buy (0 for a tick-only line).
 // A Restock Line (Restock set, Supply true) is a Supply below its Restock level (ADR 0017, decision D2).
 type Line struct {
-	IngredientID       int64
-	Name, BaseUnit     string
-	ImageURL           string
-	Supply             bool
-	Need, Available    float64
-	Quantity           float64
-	Ticked             bool
+	IngredientID    int64
+	Name, BaseUnit  string
+	ImageURL        string
+	Supply          bool
+	Need, Available float64
+	Quantity        float64
+	Ticked          bool
+	// More (SSP-02) is the part of a ticked Line's need that its tick does not cover: the Line reappears in To get with it.
+	// 0 for an open Line and for a ticked Line the tick still covers. For a Line with More, Pack and EstimatedCostCents are for More.
+	More float64
+	// Tick is the Line's tick (a copy of Input.Ticks); nil for an open Line.
+	Tick               *Tick
 	Restock            *RestockInfo
 	Pack               *PackSuggestion
 	EstimatedCostCents *int
@@ -182,6 +202,8 @@ type ExtraLine struct {
 	Supply         bool
 	Quantity       float64
 	Ticked         bool
+	// Tick is a ticked Ingredient extra's tick (Additions from Extra.Additions); nil when open or for a text extra.
+	Tick *Tick
 }
 
 // Progress is ticked over total (Ingredient Lines plus extras).
@@ -218,7 +240,8 @@ func Derive(in Input) List {
 		lines[ing] = Line{IngredientID: ing, Name: info.Name, BaseUnit: info.BaseUnit, ImageURL: info.ImageURL, Supply: info.Supply,
 			Need: t.Needed, Available: t.Needed}
 	}
-	// Not needed: an open Line the User took off the list for this range. A ticked Line stays where it is.
+	// Not needed: an open Line the User took off the list for this range. A ticked Line stays where it is: a mark on it is
+	// on its More (SSP-02) and takes only that amount off.
 	for ing := range in.NotNeeded {
 		l, ok := lines[ing]
 		if !ok || ticked[ing] {
@@ -229,17 +252,17 @@ func Derive(in Input) List {
 	}
 	sortLines(out.NotNeeded)
 	for ing, l := range lines {
-		if ticked[ing] {
-			l.Ticked = true
-			l.Pack = nil
-			l.EstimatedCostCents = nil
+		if t, ok := in.Ticks[ing]; ok {
+			l = tickedLine(in, l, t)
 			lines[ing] = l
 		}
-		if !l.Ticked && l.EstimatedCostCents == nil {
-			out.UnpricedLines++
-		}
-		if !l.Ticked && l.EstimatedCostCents != nil {
-			out.EstimatedCostCents += *l.EstimatedCostCents
+		// An open Line, or the More of a ticked one, is still to buy.
+		if open := !l.Ticked || l.More > 0; open {
+			if l.EstimatedCostCents == nil {
+				out.UnpricedLines++
+			} else {
+				out.EstimatedCostCents += *l.EstimatedCostCents
+			}
 		}
 	}
 	for _, l := range lines {
@@ -252,6 +275,10 @@ func Derive(in Input) List {
 		if l.Ticked {
 			out.Progress.Ticked++
 		}
+		// The More row is an open row of its own (SSP-02): the list is not complete until it is ticked too.
+		if l.More > 0 {
+			out.Progress.Total++
+		}
 	}
 	for _, e := range out.Extras {
 		if e.Ticked {
@@ -260,6 +287,25 @@ func Derive(in Input) List {
 	}
 	out.Complete = out.Progress.Total > 0 && out.Progress.Ticked == out.Progress.Total
 	return out
+}
+
+// tickedLine marks a Line ticked and works out its More (SSP-02): what of its quantity now the tick does not cover, less
+// a Not needed mark on that More. A Line with More has the pack suggestion and estimate of the More; one without has none.
+func tickedLine(in Input, l Line, t Tick) Line {
+	tick := t
+	l.Ticked, l.Tick = true, &tick
+	l.Pack, l.EstimatedCostCents = nil, nil
+	more := moreSinceTick(t.Needed, t.addedForCover(), l.Quantity)
+	if nn, ok := in.NotNeeded[l.IngredientID]; ok {
+		if more -= nn.Needed; more <= eps {
+			more = 0
+		}
+	}
+	l.More = more
+	if more > 0 {
+		priceLine(&l, in, l.IngredientID, more)
+	}
+	return l
 }
 
 // mealDraw is one Planned Meal of a derivation: what it needs per required Ingredient, and how much of that its own draw
@@ -396,6 +442,9 @@ func priceLine(line *Line, in Input, ing int64, quantity float64) {
 	}
 	s := SuggestPack(quantity, p)
 	s.Bought = bought
+	if !bought {
+		s.Price = p.Price
+	}
 	line.Pack = &s
 	if price, ok := in.PackPrices[p.ProductID]; ok {
 		c := s.Count * price
@@ -485,7 +534,7 @@ func extraLines(extras []Extra, ings map[int64]IngredientInfo) []ExtraLine {
 	})
 	out := make([]ExtraLine, 0, len(sorted))
 	for _, e := range sorted {
-		l := ExtraLine{ID: e.ID, Text: e.Text, IngredientID: e.IngredientID, Ticked: e.Ticked}
+		l := ExtraLine{ID: e.ID, Text: e.Text, IngredientID: e.IngredientID, Ticked: e.Ticked, Tick: ExtraTick(e)}
 		if e.IngredientID != 0 {
 			info := ings[e.IngredientID]
 			l.Name, l.BaseUnit, l.ImageURL, l.Supply = info.Name, info.BaseUnit, info.ImageURL, info.Supply
