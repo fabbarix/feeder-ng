@@ -17,3 +17,10 @@ export const shellStrings = {
   errorText: 'Feeder could not show this page. Your data is safe.',
   reloadPage: 'Reload page',
 }
+
+// B9-21 (RES-10): the update prompt.
+export const updateStrings = {
+  updateReady: 'A new version of Feeder is ready',
+  reload: 'Reload',
+  later: 'Later',
+}
