@@ -137,10 +137,12 @@ for (const name of ['Coop', 'Market Hall', 'Corner Shop']) {
 }
 const shopId = shops[0]?.id ?? 1
 let productId = 1
+// A pack in the Ingredient's own Base Unit: 500 g or 500 ml, but a few pieces (the Onion pack was "500 pieces").
+const PACK = { g: 500, ml: 500, piece: 6 }
 for (let i = 0; i < 8; i++) {
   const item = ing[i]
   if (!item) break
-  const r = await step('product', 'POST', '/api/products', { name: `${item.name} ${i % 2 ? 'organic ' : ''}pack`, ingredientId: item.id, packSize: 500, barcodes: [ean13(`800000000${100 + i}`.slice(0, 12))] })
+  const r = await step('product', 'POST', '/api/products', { name: `${item.name} ${i % 2 ? 'organic ' : ''}pack`, ingredientId: item.id, packSize: PACK[item.baseUnit] ?? 500, barcodes: [ean13(`800000000${100 + i}`.slice(0, 12))] })
   if (!r.ok || !r.json?.id) continue
   if (i === 0) productId = r.json.id
   if (shops[0]) await step('price', 'PUT', `/api/products/${r.json.id}/prices`, { shopId: shops[0].id, date: new Date().toISOString().slice(0, 10), priceCents: 199 + i * 25 })
