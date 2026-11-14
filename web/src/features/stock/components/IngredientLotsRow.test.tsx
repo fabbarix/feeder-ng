@@ -34,7 +34,7 @@ describe('IngredientLotsRow', () => {
     setup()
     expect(disclosure()).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByText('Chicken thighs')).toBeInTheDocument()
-    expect(screen.getByText('1300 g')).toBeInTheDocument()
+    expect(screen.getByText('1.3 kg')).toBeInTheDocument()
     expect(screen.queryByText('Bought today · Good until Fri · Garage Fridge')).not.toBeVisible()
   })
 

@@ -25,7 +25,7 @@ describe('LineRow: anatomy', () => {
     const { container } = row()
     expect(container.querySelector('.list-row__title')).toHaveTextContent('Passata')
     expect(container.querySelector('.list-row__meta')).toHaveTextContent('2 × Mutti 700 g')
-    expect(container.querySelector('.list-row__value')).toHaveTextContent('1400 g')
+    expect(container.querySelector('.list-row__value')).toHaveTextContent('1.4 kg')
     expect(container.querySelector('.list-row__sub-value')).toHaveTextContent('$3.18')
   })
 
@@ -132,7 +132,7 @@ describe('LineRow: targets', () => {
   it('round 2: a ticked row keeps its quantity and cost, so the column still lines up (the stylesheet mutes them)', () => {
     const withPrice = lineEntry(makeLine({ ticked: true, quantity: 0, pack: null }), 'USD', 'metric')
     const { container } = row(withPrice, 'ticked')
-    expect(container.querySelector('.list-row__value')).toHaveTextContent('1400 g')
+    expect(container.querySelector('.list-row__value')).toHaveTextContent('1.4 kg')
     expect(container.querySelector('.list-row__sub-value')).toHaveTextContent('$3.18')
   })
 

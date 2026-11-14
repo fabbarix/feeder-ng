@@ -62,8 +62,8 @@ describe('ScannedRow: what it shows', () => {
   it('line 2 is the size, then the Line it covers, from rowMeta; the amounts come from rowAmounts', () => {
     const { item } = setup(muttiTicked)
     const meta = rowMeta(muttiTicked, 'metric')
-    expect(meta).toEqual({ size: '700 g', cover: { text: '1400 of 1400 g', done: true }, waiting: false })
-    expect(item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·1400 of 1400 g$/)
+    expect(meta).toEqual({ size: '700 g', cover: { text: '1.4 of 1.4 kg', done: true }, waiting: false })
+    expect(item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·1.4 of 1.4 kg$/)
     const amounts = rowAmounts(muttiTicked, money)
     expect(within(item).getByText(amounts.value!)).toBeInTheDocument()
     expect(within(item).getByText(amounts.sub)).toBeInTheDocument()
@@ -71,7 +71,7 @@ describe('ScannedRow: what it shows', () => {
   })
 
   it('a Line still partly to get, a row not on the list (the size only), and a row waiting to sync', () => {
-    expect(setup(muttiToGet).item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·700 of 1400 g$/)
+    expect(setup(muttiToGet).item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·700 g of 1.4 kg$/)
     document.body.innerHTML = ''
     expect(setup(notOnList).item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g$/)
     document.body.innerHTML = ''
@@ -201,7 +201,7 @@ describe('ScannedRow: the active row', () => {
     const { item } = setup(muttiTicked, { active: true })
     expect(item).toHaveAttribute('data-active', 'true')
     expect(item.querySelector('.list-row__title')).toHaveTextContent(/^Mutti passata$/)
-    expect(item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·1400 of 1400 g$/)
+    expect(item.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·1.4 of 1.4 kg$/)
     expect(item.querySelector('.list-row__value')).toHaveTextContent('$2.58×2 · $1.29')
     const strip = item.querySelector<HTMLElement>('.list-row__footer')!
     const stepper = within(strip).getByRole('group', { name: 'Quantity of Mutti passata 700 g' })

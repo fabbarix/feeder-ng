@@ -99,7 +99,7 @@ describe('ScanScreen with the real controller', () => {
     await read()
     const row = (await within(await screen.findByRole('list', { name: 'Scanned list' })).findByRole('button', { name: 'Mutti passata 700 g' })).closest('li')!
     // the server answers 700 g still to get after a 700 g pack: the Line asked for 1400 g
-    expect(row.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·700 of 1400 g$/)
+    expect(row.querySelector('.list-row__meta')).toHaveTextContent(/^700 g·700 g of 1.4 kg$/)
     expect(within(row).getByRole('button', { name: /^Add price/ })).toBeInTheDocument()
     expect(row).toHaveAttribute('data-fresh', 'a')
     expect(screen.getByRole('radio', { name: 'Scanned 1' })).toBeChecked()

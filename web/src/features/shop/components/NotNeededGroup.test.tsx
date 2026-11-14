@@ -31,7 +31,7 @@ describe('NotNeededGroup', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     const list = screen.getByRole('list', { name: 'Not needed' })
     expect(within(list).getByText('Passata')).toBeInTheDocument()
-    expect(within(list).getByText('1400 g')).toBeInTheDocument()
+    expect(within(list).getByText('1.4 kg')).toBeInTheDocument()
     expect(within(list).getByText('Rice')).toBeInTheDocument()
     expect(within(list).getAllByRole('listitem')[0]).toHaveAttribute('data-state', 'not-needed')
     await userEvent.click(toggle)

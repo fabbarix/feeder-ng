@@ -90,7 +90,7 @@ describe('StockScreen layout', () => {
     expect(rows.map((r) => r.querySelector('.list-row__title')?.textContent)).toEqual(['Chicken thighs', 'Feta', 'Milk'])
     expect(rows[0]).toHaveTextContent('800 g')
     expect(rows[0]).toHaveTextContent('2 Stock Lots · good until Thu')
-    expect(rows[2]).toHaveTextContent('1000 ml')
+    expect(rows[2]).toHaveTextContent('1 l')
     expect(document.querySelector('.bento-grid, .tile')).toBeNull()
   })
 

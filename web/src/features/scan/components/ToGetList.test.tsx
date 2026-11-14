@@ -66,7 +66,7 @@ describe('ToGetList: tick by hand', () => {
     const { list } = setup()
     const row = within(list).getAllByRole('listitem')[0]!
     expect(row.querySelector('.list-row__leading')).not.toBeNull()
-    expect(row).toHaveTextContent('1400 g')
+    expect(row).toHaveTextContent('1.4 kg')
     expect(row).toHaveTextContent('2 × Mutti 700 g')
   })
 
@@ -77,7 +77,7 @@ describe('ToGetList: tick by hand', () => {
     expect(ticks).toHaveLength(1)
     expect(ticks[0]).toHaveClass('scanned-row__tick')
     expect(ticks[0]!.innerHTML).toBe(tickSvg('bold', 'successOpen'))
-    expect(meta).toHaveTextContent('0 of 1400 g')
+    expect(meta).toHaveTextContent('0 of 1.4 kg')
   })
 
   it('shows what the scans already cover: "700 of 1400 g"', () => {

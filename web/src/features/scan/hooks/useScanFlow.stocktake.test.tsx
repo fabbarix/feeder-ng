@@ -51,10 +51,10 @@ describe('useScanFlow Stock-take toasts', () => {
   it('+1 pack and Set total too', async () => {
     const { hook, notify } = await setup(vi.fn(async (op: Op) => applied(op.clientUuid, 1500)))
     await act(() => hook.result.current.stockTakeAction('plus_pack'))
-    expect(notify).toHaveBeenLastCalledWith('+1 pack: Passata, 1500 g in Stock', 'success')
+    expect(notify).toHaveBeenLastCalledWith('+1 pack: Passata, 1.5 kg in Stock', 'success')
     await act(async () => hook.result.current.onScan(parse('8000500310427', 'ean_13')))
     await act(() => hook.result.current.stockTakeAction('set_total', 1500))
-    expect(notify).toHaveBeenLastCalledWith('Passata: 1500 g in Stock', 'success')
+    expect(notify).toHaveBeenLastCalledWith('Passata: 1.5 kg in Stock', 'success')
   })
 
   it('offline: a neutral "Waiting to sync" toast', async () => {
