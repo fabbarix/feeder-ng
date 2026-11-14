@@ -42,7 +42,9 @@
   padding: var(--space-4) var(--board-tile-pad-x);
   border-radius: var(--radius-board);
   font-size: 1.5rem;
-  line-height: 1.2;
+  /* the tile's running text keeps the 22 px line it has had since DS-07 (a 1.2 line overflows the wall Tomorrow tile at 1440 x 900);
+     the display classes below set their own lines. TB-07 owns the board type. */
+  line-height: var(--text-body-line);
   overflow: hidden;
 }
 
@@ -109,7 +111,7 @@
   .board-clock__date {
     font-size: 2rem;
     font-size: min(2rem, calc((100cqi - 2 * var(--board-tile-pad-x)) / 5.5));
-    line-height: inherit;
+    line-height: 1.2; /* was inherit: the tile's line is 22 px since DS-07, which fused a two-line date */
     overflow-wrap: normal;
   }
 }
