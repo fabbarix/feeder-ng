@@ -233,10 +233,12 @@
 
 /* The Price entry is a non-modal half sheet fixed at the bottom on a phone: the page gets room under the list, so even the
    last row can scroll up to sit just above it (hooks/useScrollAboveSheet). From 768 px the sheet is docked in the camera
-   column and needs no room. */
+   column and needs no room. The room is the half sheet's own height (ui/BottomSheet.css, .sheet[data-size='half']), named
+   once here as a size, not a spacing step. */
 @media (width < 48em) {
   .scan-screen[data-price-entry='open'] {
-    padding-block-end: max(50dvh, min(480px, 85dvh));
+    --scan-sheet-room: max(50dvh, min(480px, 85dvh));
+    padding-block-end: var(--scan-sheet-room);
   }
 }
 
