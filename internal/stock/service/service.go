@@ -7,6 +7,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -211,44 +212,14 @@ func (s *Service) AddLot(ctx context.Context, in AddInput) (LotView, bool, error
 	return view(saved, ing, today, kind), created, nil
 }
 
-// SetTotal is a Stock-take: it makes the Ingredient's Stock equal total (Base Units).
+// SetTotal is a Stock-take: it makes the Ingredient's Stock equal total (Base Units). SetTotalRecorded does it and
+// also says what it took or added.
 func (s *Service) SetTotal(ctx context.Context, ingredientID int64, total float64) (IngredientStock, error) {
-	if math.IsNaN(total) || math.IsInf(total, 0) || total < 0 {
-		return IngredientStock{}, invalid("total cannot be negative")
-	}
-	ing, err := s.ingredient(ctx, ingredientID)
+	ch, err := s.SetTotalRecorded(ctx, ingredientID, total)
 	if err != nil {
 		return IngredientStock{}, err
 	}
-	today, err := s.today(ctx)
-	if err != nil {
-		return IngredientStock{}, err
-	}
-	// An increase is a new Lot in the remembered Storage Place, so a Freezer's Shelf Life applies to it.
-	place, err := s.st.RememberedPlace(ctx, ing.ID)
-	if err != nil {
-		return IngredientStock{}, err
-	}
-	shelfLife := shelfLifeOf(ing, stock.KindNone)
-	if place != nil {
-		shelfLife = shelfLifeOf(ing, place.Kind)
-	}
-	changed := false
-	saved, err := s.st.Update(ctx, ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
-		res, err := stock.SetTotal(lots, ing.ID, total, today, shelfLife)
-		if err != nil {
-			return store.Mutation{}, invalid("total cannot be negative")
-		}
-		changed = len(res.Removed) > 0 || res.Added != nil
-		return store.Mutation{Lots: res.Lots, NewSource: store.SourceStockTake, Today: today}, nil
-	})
-	if err != nil {
-		return IngredientStock{}, err
-	}
-	if changed {
-		s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{ing.ID}})
-	}
-	return summarise(ing, saved, today), nil
+	return ch.Stock, nil
 }
 
 // RemoveLot deletes one Stock Lot whole: the Undo of a scan (store.ErrNotFound for an unknown lot).
@@ -431,6 +402,12 @@ func (s *Service) ThrowOut(ctx context.Context, lotID int64) (store.WasteRecord,
 		Reason:       store.ReasonSpoiled,
 		LotID:        &lotID,
 	}
+	// The Lot as it was, so a same-day Undo puts it back with its id, dates and Storage Place (B9-05, migration 1572).
+	lotJSON, err := json.Marshal(lot)
+	if err != nil {
+		return store.WasteRecord{}, err
+	}
+	rec.LotJSON = string(lotJSON)
 	if lot.GoesOff.AddDays(1) > lot.KeptOn { // the go-off was not forgiven by a Keep
 		rec.LotGoesOff = lot.GoesOff
 	}
@@ -456,7 +433,8 @@ func (s *Service) ThrowOut(ctx context.Context, lotID int64) (store.WasteRecord,
 	return s.wasteFor(ctx, lotID, today)
 }
 
-// Keep pushes a spoiled lot's go-off date out by 1 day from its existing go-off date.
+// Keep pushes a spoiled lot's go-off date out by 1 day from its existing go-off date. The API's Keep is KeepUntil
+// (SSP-17, B9-05): one Keep makes the Lot good until today or a later day.
 func (s *Service) Keep(ctx context.Context, lotID int64) (LotView, error) {
 	today, err := s.today(ctx)
 	if err != nil {
