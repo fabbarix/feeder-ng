@@ -52,7 +52,7 @@ cat >"$TMP/fake-guard.sh" <<'FS'
 echo "$@" >"$FAKE_GUARD_OUT"
 if [ -n "${FAKE_FINDING:-}" ]; then
   echo "check-page-layout: 1 failure(s)"
-  echo "  - 1440px ${FAKE_FINDING}: P3 content is 1036px wide"
+  echo "  - ${FAKE_WIDTH:-1440}px ${FAKE_FINDING}: ${FAKE_RULE:-P3} content is 1036px wide"
   exit 1
 fi
 exit 0
@@ -64,7 +64,7 @@ run_wrapper() { # FINDING_ROUTE MODES_DIR_FILES... -> RC, OUT, RUN  (extra wrapp
   if [ -n "${MODES_D_LINE:-}" ]; then mkdir -p "$d/modes.d"; printf '%s\n' "$MODES_D_LINE" >"$d/modes.d/team.modes"; fi
   OUT=$(CHROME=/bin/true PAGE_LAYOUT_BUILD_DIR="$d" PAGE_LAYOUT_PORT="$PORT" PAGE_LAYOUT_MODES="$d/modes" \
     PAGE_LAYOUT_SERVER_CMD="bash $TMP/fake-server.sh" PAGE_LAYOUT_SEED_CMD="true" PAGE_LAYOUT_GUARD_CMD="bash $TMP/fake-guard.sh" \
-    FAKE_PID_OUT="$d/pid" FAKE_GUARD_OUT="$d/guard" FAKE_FINDING="$1" "$W" ${WARGS:-} 2>&1)
+    FAKE_PID_OUT="$d/pid" FAKE_GUARD_OUT="$d/guard" FAKE_FINDING="$1" FAKE_WIDTH="${FAKE_WIDTH:-1440}" FAKE_RULE="${FAKE_RULE:-P3}" "$W" ${WARGS:-} 2>&1)
   RC=$?; RUN="$d"
 }
 MODES_D_LINE="" WARGS="" run_wrapper "/shop"
@@ -81,6 +81,28 @@ MODES_D_LINE="" WARGS="--scenario shop-hints,shop-header" run_wrapper ""
 grep -q -- '--scenario shop-hints,shop-header' "$RUN/guard" 2>/dev/null && ok || bad "a comma list of scenarios is passed as it is"
 OUT=$(CHROME=/bin/true PAGE_LAYOUT_BUILD_DIR="$TMP/noname" PAGE_LAYOUT_SERVER_CMD="true" PAGE_LAYOUT_SEED_CMD="true" PAGE_LAYOUT_GUARD_CMD="true" "$W" --scenario 2>&1); RC=$?
 [ "$RC" -eq 2 ] && grep -qi 'usage' <<<"$OUT" && ok || bad "--scenario without a name must exit 2 with a usage message (rc $RC): $OUT"
+
+# --- the warn bridge: a "width<=N = warn" line (a modes.d drop-in) makes every finding at a profile viewport of N px or less a warning,
+# fail routes and always-fail rules included, and the run prints the count. Without it the same finding fails; wider ones fail either way.
+BRIDGE=$'fail_routes=/shop\nwidth<=375 = warn until B9-55'
+FAKE_WIDTH=375 MODES_D_LINE="$BRIDGE" WARGS="" run_wrapper "/shop"
+[ "$RC" -eq 0 ] && ok || bad "with the bridge a 375 px finding on a fail route must not fail the run (rc $RC): $OUT"
+grep -q '375px /shop: P3' <<<"$OUT" && ok || bad "the bridged finding is still printed: $OUT"
+grep -q '^375 px: 1 finding, warn until B9-55$' <<<"$OUT" && ok || bad "the run prints '375 px: 1 finding, warn until B9-55': $OUT"
+FAKE_WIDTH=375 FAKE_RULE=P1 MODES_D_LINE='width<=375 = warn' WARGS="" run_wrapper "/pantry"
+[ "$RC" -eq 0 ] && ok || bad "the bridge covers an always-fail rule (P1) too (rc $RC): $OUT"
+FAKE_WIDTH=375 MODES_D_LINE='fail_routes=/shop' WARGS="" run_wrapper "/shop"
+[ "$RC" -ne 0 ] && grep -q 'FAILED' <<<"$OUT" && ok || bad "without the bridge the same 375 px finding fails (rc $RC)"
+FAKE_WIDTH=390 MODES_D_LINE="$BRIDGE" WARGS="" run_wrapper "/shop"
+[ "$RC" -ne 0 ] && ok || bad "a 390 px finding on a fail route fails with the bridge (rc $RC)"
+grep -q '^375 px: 0 findings, warn until B9-55$' <<<"$OUT" && ok || bad "a bridge that covered nothing says 0: $OUT"
+FAKE_WIDTH=320 MODES_D_LINE="$BRIDGE" WARGS="" run_wrapper "/shop#zoom-reflow"
+[ "$RC" -ne 0 ] && ok || bad "a scenario finding (<route>#<name>, its own viewport, e.g. 320x256) is not bridged (rc $RC)"
+for line in 'width<=375 = fail' 'width<375 = warn' 'fail_route=/shop' 'default=maybe' 'just words'; do
+  MODES_D_LINE="$line" WARGS="" run_wrapper ""
+  [ "$RC" -ne 0 ] && grep -q 'does not know' <<<"$OUT" && grep -qF "$line" <<<"$OUT" && ok || bad "a modes.d line the guard does not know ('$line') must fail the run and be named (rc $RC): $OUT"
+done
+[ ! -e "$ROOT/scripts/check-page-layout.modes.d/10-width-375-warn" ] || grep -q 'Removed by B9-55' "$ROOT/scripts/check-page-layout.modes.d/10-width-375-warn" && ok || bad "a 10-width-375-warn drop-in says it is removed by B9-55"
 
 # --- the driver: an unknown scenario is a usage error, before Chrome starts (no Chrome is needed for this)
 OUT=$(cd "$ROOT" && CHROME=/nonexistent/chrome timeout 30 node "$DRV" --url http://127.0.0.1:1 --ids "$TMP/ids.json" --scenario no-such-scenario 2>&1); RC=$?

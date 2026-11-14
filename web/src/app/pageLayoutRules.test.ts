@@ -16,6 +16,8 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   contrastRatio: (fg: string, bg: string) => number
   evaluateMetrics: (m: Metrics, ctx: { width: number; route: string; kind: string }) => { rule: string; message: string }[]
   modeFor: (text: string, route: string) => 'warn' | 'fail'
+  parseModes: (text: string) => { errors: { line: number; text: string; why: string }[]; widthWarn: { max: number; until: string | null }[] }
+  countFindings: (text: string, output: string) => { fail: number; bridged: { max: number; until: string | null; n: number }[] }
   resolveRoute: (pattern: string, ids: Record<string, number>) => string
 }
 
@@ -133,6 +135,25 @@ describe('profiles', () => {
     expect(rules.PROFILES.quick.map((v) => v.width)).toEqual([375, 390, 834, 1024, 1440, 1920])
     expect(rules.PROFILES.full.map((v) => v.width)).toEqual([375, 390, 430, 844, 820, 1180, 1440, 1920, 2560])
     expect(rules.PROFILES.full.filter((v) => v.mobile).map((v) => v.width)).toEqual([375, 390, 430, 844])
+  })
+})
+
+describe('the warn bridge and strict modes lines (B9-03)', () => {
+  const modes = 'default=warn\nfail_routes=/shop\nwidth<=375 = warn until B9-55\n'
+  const line = (w: number, route: string, rule = 'P3') => `  - ${w}px ${route}: ${rule} content is 1036px wide`
+  it('a finding at 375 px on a fail route, or of an always-fail rule, is bridged and counted', () => {
+    expect(rules.countFindings(modes, [line(375, '/shop'), line(375, '/pantry', 'P1')].join('\n'))).toEqual({ fail: 0, bridged: [{ max: 375, until: 'B9-55', n: 2 }] })
+  })
+  it('without the line the same finding fails; a 390 px one fails either way; a scenario label is never bridged', () => {
+    expect(rules.countFindings('fail_routes=/shop', line(375, '/shop')).fail).toBe(1)
+    expect(rules.countFindings(modes, line(390, '/shop')).fail).toBe(1)
+    expect(rules.countFindings(modes, line(320, '/shop#zoom')).fail).toBe(1)
+  })
+  it('a line the parser does not know is an error, never dropped', () => {
+    for (const bad of ['fail_route=/shop', 'default=maybe', 'width<=375 = fail', 'width<375 = warn', 'words']) {
+      expect(rules.parseModes(bad).errors).toHaveLength(1)
+    }
+    expect(rules.parseModes(modes).errors).toEqual([])
   })
 })
 

@@ -158,26 +158,85 @@ function patternMatches(pattern, route) {
   return fixed.every((s, i) => s.startsWith(':') || s === r[i])
 }
 
+/**
+ * The text of scripts/check-page-layout.modes (and its .d files), parsed. Every line that is not blank or a comment is one of:
+ *   default=warn|fail                    the mode of a route in no list
+ *   fail_routes=PATTERN ...              these routes fail (several lines of a key are unioned, so every team can add its own line)
+ *   warn_routes=PATTERN ...              these routes warn, and win over fail_routes
+ *   width<=N = warn [until B9-NN]        B9-03, the warn bridge: every finding at a profile viewport N px wide or less is a warning,
+ *                                        always-fail rules included; scenario findings ("<route>#<name>") are not affected
+ * Anything else is an error ({ line, text, why }): a mistyped key must never be dropped in silence.
+ */
+export function parseModes(modesText) {
+  const out = { dflt: 'warn', failRoutes: [], warnRoutes: [], widthWarn: [], errors: [] }
+  String(modesText)
+    .split('\n')
+    .forEach((raw, i) => {
+      const line = raw.trim()
+      if (!line || line.startsWith('#')) return
+      const err = (why) => out.errors.push({ line: i + 1, text: line, why })
+      const bridge = /^width\s*<=/.exec(line)
+      if (bridge) {
+        const m = /^width\s*<=\s*(\d+)\s*=\s*warn(?:\s+until\s+(\S+))?$/.exec(line)
+        if (!m) return err('a width line reads "width<=N = warn" or "width<=N = warn until B9-NN"')
+        out.widthWarn.push({ max: Number(m[1]), until: m[2] ?? null })
+        return
+      }
+      const eq = line.indexOf('=')
+      if (eq < 0) return err('not a key=value line')
+      const key = line.slice(0, eq).trim()
+      const value = line.slice(eq + 1).trim()
+      if (key === 'default') {
+        if (value !== 'warn' && value !== 'fail') return err('default is warn or fail')
+        out.dflt = value
+      } else if (key === 'fail_routes') out.failRoutes.push(...value.split(/\s+/).filter(Boolean))
+      else if (key === 'warn_routes') out.warnRoutes.push(...value.split(/\s+/).filter(Boolean))
+      else err(`unknown key "${key}" (default, fail_routes, warn_routes or width<=N)`)
+    })
+  return out
+}
+
 /** 'warn' | 'fail' for a (resolved) route from the text of scripts/check-page-layout.modes. `warn_routes` win over `fail_routes`; repeated lines of a key are unioned. */
 export function modeFor(modesText, route) {
-  let dflt = 'warn'
-  let failRoutes = []
-  let warnRoutes = []
-  for (const raw of String(modesText).split('\n')) {
-    const line = raw.trim()
-    if (!line || line.startsWith('#')) continue
-    const i = line.indexOf('=')
-    if (i < 0) continue
-    const key = line.slice(0, i).trim()
-    const value = line.slice(i + 1).trim()
-    if (key === 'default') dflt = value === 'fail' ? 'fail' : 'warn'
-    // Several lines of the same key are unioned, so every team can add its own line.
-    if (key === 'fail_routes') failRoutes = failRoutes.concat(value.split(/\s+/).filter(Boolean))
-    if (key === 'warn_routes') warnRoutes = warnRoutes.concat(value.split(/\s+/).filter(Boolean))
-  }
+  const { dflt, failRoutes, warnRoutes } = parseModes(modesText)
   if (warnRoutes.some((pat) => patternMatches(pat, route))) return 'warn'
   if (failRoutes.some((pat) => patternMatches(pat, route))) return 'fail'
   return dflt
+}
+
+/**
+ * B9-03, the warn bridge: the `width<=N = warn` line that covers a finding at `width` on `label` (the finding line's route token), or
+ * null. The widest N applies. A scenario label ("<route>#<name>") is never covered: its viewport is the scenario's own.
+ */
+export function widthBridgeFor(modesText, width, label) {
+  if (String(label).includes('#')) return null
+  const hits = parseModes(modesText).widthWarn.filter((b) => width <= b.max)
+  return hits.length ? hits.reduce((a, b) => (b.max > a.max ? b : a)) : null
+}
+
+/**
+ * The guard's output read against the modes: { fail, bridged: [{ max, until, n }] }. A finding line fails when its rule is in
+ * ALWAYS_FAIL or its route is in fail mode, unless a width<=N line covers it (then it is counted in `bridged`).
+ */
+export function countFindings(modesText, output) {
+  let fail = 0
+  const bridged = new Map()
+  for (const line of String(output).split('\n')) {
+    const m = /^\s+- (\d+)px (\S+): (P\d+) /.exec(line)
+    if (!m) continue
+    const b = widthBridgeFor(modesText, Number(m[1]), m[2])
+    if (b) {
+      const k = `${b.max}\t${b.until ?? ''}`
+      bridged.set(k, (bridged.get(k) ?? 0) + 1)
+      continue
+    }
+    if (ALWAYS_FAIL.includes(m[3]) || modeFor(modesText, m[2]) === 'fail') fail++
+  }
+  for (const b of parseModes(modesText).widthWarn) {
+    const k = `${b.max}\t${b.until ?? ''}`
+    if (!bridged.has(k)) bridged.set(k, 0)
+  }
+  return { fail, bridged: [...bridged].map(([k, n]) => ({ max: Number(k.split('\t')[0]), until: k.split('\t')[1] || null, n })) }
 }
 
 const ID_KEYS = { recipes: 'recipeId', ingredients: 'ingredientId', products: 'productId', shops: 'shopId', supplies: 'supplyId' }

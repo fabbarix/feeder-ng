@@ -15,6 +15,8 @@
 #   scripts/check-page-layout.sh --print-port [--root DIR]    the port this worktree uses (20000 + cksum(DIR) % 20000)
 #   scripts/check-page-layout.sh --mode-of ROUTE              warn|fail for a route
 # Modes: scripts/check-page-layout.modes, then every file of scripts/check-page-layout.modes.d/ (a package's own lines; B9-03).
+# A "width<=N = warn [until B9-NN]" line (the warn bridge) makes every finding at a profile viewport N px wide or less a warning,
+# always-fail rules included, and the run prints how many ("375 px: 4 findings, warn until B9-55"). An unknown line FAILS the run.
 # Overrides (tests): PAGE_LAYOUT_BUILD_DIR, PAGE_LAYOUT_PORT, PAGE_LAYOUT_MODES, PAGE_LAYOUT_SERVER_CMD, PAGE_LAYOUT_SEED_CMD,
 # PAGE_LAYOUT_GUARD_CMD, PAGE_LAYOUT_GUARD_TIMEOUT (600 s), PAGE_LAYOUT_SEED_TIMEOUT (90 s), CHROME, PAGE_LAYOUT_FAKE_CMD.
 # beta.7 (RR5): the real run also starts the fake Anthropic API (cmd/fakeanthropic, loopback, detached, stopped by its PID) and
@@ -65,6 +67,12 @@ if [ "$MODE" = skip ]; then
 fi
 PROFILE=quick
 [ "$MODE" = full ] && PROFILE=full
+
+# B9-03: a modes line the parser does not know (a mistyped key in a modes.d file) stops the run before anything starts.
+if ! node "$ROOT/scripts/lib/page-layout-modes.mjs" check "$MODES"; then
+  echo "page layout guard FAILED: the modes files ($MODES and $MODES.d/) have a line the guard does not know (above); not run"
+  exit 1
+fi
 
 CHROME="${CHROME:-google-chrome}"
 export CHROME
@@ -312,6 +320,8 @@ if ! FAILN="$(node "$ROOT/scripts/lib/page-layout-modes.mjs" count-fail "$MODES"
   echo "page layout guard FAILED: the modes file $MODES could not be read, so the fail count is unknown (${ELAPSED}s)"
   exit 1
 fi
+# The warn bridge (a width<=N = warn line): how many findings it turned into warnings, one line per bridge.
+node "$ROOT/scripts/lib/page-layout-modes.mjs" bridge-notes "$MODES" <"$OUT"
 if [ "$NI" -gt 0 ]; then
   echo "page layout guard FAILED: $NI route(s) not inspected (the ! lines above; a route that cannot be probed needs a reason in scripts/check-page-layout.exempt), ${ELAPSED}s"
 fi
