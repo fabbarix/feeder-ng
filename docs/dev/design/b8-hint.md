@@ -19,13 +19,16 @@ Below 420 px (the breakpoint of `useNarrowChips`, which already makes the Restoc
 | What | Before | After | Gain |
 |---|---|---|---|
 | `.shop-lines .list-row` gap | `--space-3` (12) | `--space-2` (8) | 12 px |
+| `.shop-lines .list-row` padding-inline | `--space-4` (16) | `--space-3` (12) | 8 px |
 | `.shop-lines .list-row__control` start margin | 0 | `calc(-1 * var(--space-2))` (-8) | 8 px |
 | `.shop-lines .list-row` `--row-value-min` | `--row-value-narrow` (68) | `calc(var(--row-value-narrow) - var(--space-2))` (60) | 8 px |
 
-The tick keeps its 44 px hit area; it reaches 8 px into the row's start padding, so its visible 24 px circle sits 18 px from the
-row's edge (2 px inside the 16 px padding line where a Not needed row's Thumb starts). shop.css keeps `44px` on the tick itself and
+The tick keeps its 44 px hit area; it reaches 8 px into the row's start padding, so its visible 24 px circle sits 14 px from the
+row's edge (a Not needed row's Thumb starts at 12 px). shop.css keeps `44px` on the tick itself and
 no `max-width` (shop.css.test.ts), so the block is `@media (width < 420px)` and the margin is a token. The value column stays end-aligned (quantities still line up). The meta text gets
-118 px at 360 px: the worst case (109.4 px) fits with about 8 px to spare, and the compact Restock reason fits too. Nothing changes
+126 px at 360 px beside a short quantity. *Review:* the first cut (16 px padding, 118 px) failed the pinned guard on the seeded
+Cauliflower, whose "12000 g" makes the value column 75 px (the minimum is only a minimum): 111 px for 113 px of text. With 12 px
+padding that row gets 119 px. The compact Restock reason fits too. Nothing changes
 from 420 px (the text column is at least 138 px there). No shared file (`web/src/ui/**`, `styles.css`) changes.
 
 ## Guard: the worst case every day

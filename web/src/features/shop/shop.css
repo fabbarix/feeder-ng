@@ -211,11 +211,13 @@
 }
 
 /* b8-hint: below 420 px (useNarrowChips, where the Restock reason is compact) the text column gets room for the widest Shop hint
-   ("Wed Breakfast +12", about 110 px): 8 px gaps, a value column 8 px under the phone minimum, and the tick's hit area (its
-   size unchanged) reaching 8 px into the start padding, its 24 px circle 2 px inside the padding line. The meta text gets 118 px at 360 px. */
+   ("Wed Breakfast +12", about 110 px), even beside a wide quantity ("12000 g"): 12 px row padding, 8 px gaps, a value column 8 px
+   under the phone minimum, and the tick's hit area (its size unchanged) reaching 8 px into the start padding, so its 24 px circle
+   sits 14 px from the row's edge. The meta text gets 126 px at 360 px beside a short quantity, 119 px beside "12000 g". */
 @media (width < 420px) {
   .shop-lines .list-row {
     gap: var(--space-2);
+    padding-inline: var(--space-3);
     --row-value-min: calc(var(--row-value-narrow) - var(--space-2));
   }
 

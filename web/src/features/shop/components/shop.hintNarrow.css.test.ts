@@ -1,5 +1,5 @@
 // b8-hint (docs/dev/design/b8-hint.md): below 420 px the Shop hint ("Wed Breakfast +12", the widest real one) fits a 360 px row.
-// The row gives its text column room through tokens: 8 px gaps, the tick's hit area reaching into the start padding, a value
+// The row gives its text column room through tokens: 12 px padding, 8 px gaps, the tick's hit area reaching into the start padding, a value
 // column 8 px under the phone minimum. No raw rem and no copy change.
 import { describe, expect, it } from 'vitest'
 
@@ -14,8 +14,9 @@ describe('Shop rows below 420 px: the hint has room', () => {
   it('has a below-420 px block (the useNarrowChips breakpoint)', () => {
     expect(start).toBeGreaterThan(-1)
   })
-  it('the row gap is --space-2 and the value column is the phone minimum less --space-2', () => {
+  it('the row gap is --space-2, its padding --space-3, and the value column is the phone minimum less --space-2', () => {
     expect(narrow).toMatch(/\.shop-lines \.list-row\s*\{[^}]*gap\s*:\s*var\(--space-2\)/)
+    expect(narrow).toMatch(/\.shop-lines \.list-row\s*\{[^}]*padding-inline\s*:\s*var\(--space-3\)/)
     expect(narrow).toMatch(/\.shop-lines \.list-row\s*\{[^}]*--row-value-min\s*:\s*calc\(var\(--row-value-narrow\)\s*-\s*var\(--space-2\)\)/)
   })
   it('the tick keeps its 44 px hit area and reaches into the start padding, by --space-2 (shop.css keeps 44px for the tick itself)', () => {
