@@ -60,7 +60,14 @@ export class MemoryCache {
   entries = new Map<string, Response>()
   private key = (r: Request | string) => (typeof r === 'string' ? r : r.url)
   async put(r: Request | string, res: Response) { this.entries.set(this.key(r), res) }
-  async match(r: Request | string) { return this.entries.get(this.key(r))?.clone() }
+  async match(r: Request | string) {
+    const res = this.entries.get(this.key(r))
+    if (!res) return undefined
+    const copy = res.clone()
+    // Response.clone() drops a `redirected` set by redirected() below; a real Cache keeps the flag of what it stored.
+    if (res.redirected) Object.defineProperty(copy, 'redirected', { value: true })
+    return copy
+  }
   async keys() { return [...this.entries.keys()].map((u) => new Request(u)) }
   async delete(r: Request | string) { return this.entries.delete(this.key(r)) }
 }
