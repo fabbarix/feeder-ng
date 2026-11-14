@@ -55,6 +55,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['tick', 'Check'],
   ['confirm', 'Check'],
   ['close', 'X'],
+  ['remove', 'X'], // B9-01 DS-12 R-B: remove or clear one item; Close is CloseButton
   ['back', 'ArrowLeft'],
   ['next', 'ArrowRight'],
   ['backspace', 'Backspace'], // beta.7 SR2: the PriceKeypad's backspace key

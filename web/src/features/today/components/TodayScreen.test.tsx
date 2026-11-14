@@ -4,6 +4,7 @@ import { createElement } from 'react'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import { todayStrings } from '../strings'
 import { TodayScreen } from './TodayScreen'
+import { findToast } from '../../../test/notices'
 
 const h = vi.hoisted(() => ({
   scan: false,
@@ -73,7 +74,7 @@ describe('TodayScreen', () => {
     h.throwOut.mockRejectedValue(new Error('server said no'))
     setup()
     fireEvent.click(await screen.findByRole('button', { name: 'Throw out' }))
-    expect(await screen.findByText(todayStrings.actionFailed)).toBeTruthy()
+    expect(await findToast(todayStrings.actionFailed)).toBeTruthy()
     expect(h.throwOut).toHaveBeenCalledWith(7)
   })
 

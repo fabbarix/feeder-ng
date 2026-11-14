@@ -9,6 +9,7 @@ import { OPEN_INGREDIENTS_KEY } from '../hooks/useOpenIngredients'
 import { PANTRY_MODE_KEY } from '../hooks/usePantryFilters'
 import { makeIngredientJson, makeLot, makeSupplyJson, makeSupplyLot, makeSupplyTotal, makeTotal } from '../testData'
 import { StockScreen } from './StockScreen'
+import { findToast } from '../../../test/notices'
 
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 
@@ -218,7 +219,7 @@ describe('the Lot sheet of a Supply: Used up', () => {
     await groupNamed(/^Utility cupboard/)
     await userEvent.click(screen.getByRole('button', { name: /Toilet paper/ }))
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Toilet paper' })).getByRole('button', { name: 'Used up' }))
-    expect(await screen.findByText('That did not save. Try again.')).toBeInTheDocument()
+    expect(await findToast('That did not save. Try again.')).toBeInTheDocument()
     expect(api.callsTo('DELETE', '/api/stock/lots/31')).toHaveLength(1)
   })
   it('a food Lot has no Used up', async () => {

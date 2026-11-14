@@ -6,6 +6,7 @@ import { mockApi } from '../../features/settings/test-utils'
 import { ToastProvider } from '../../ui'
 import { friDinner, friLunch, leftover, TODAY } from './fixtures'
 import { useLeftoverActions, useLeftovers, useReplanPreview } from './useLeftoverActions'
+import { findToast } from '../../test/notices'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -57,7 +58,7 @@ describe('useLeftoverActions', () => {
     })
     expect(ok).toBe(true)
     expect(api.callsTo('POST', '/api/plan/leftovers/1/had-it')[0]!.body).toEqual({ portions: 2 })
-    expect(await screen.findByText('Noted: 2 portions of Chilli. 1 left.')).toBeInTheDocument()
+    expect(await findToast('Noted: 2 portions of Chilli. 1 left.')).toBeInTheDocument()
     expect(screen.queryByText(/undefined/)).toBeNull()
     await waitFor(() => expect(both.result.current.s.leftovers[0]?.portions).toBe(1))
   })
@@ -68,7 +69,7 @@ describe('useLeftoverActions', () => {
     await act(async () => {
       await result.current.run(chilli, { kind: 'had-it', portions: 3 })
     })
-    expect(await screen.findByText('Noted: 3 portions of Chilli. None left.')).toBeInTheDocument()
+    expect(await findToast('Noted: 3 portions of Chilli. None left.')).toBeInTheDocument()
   })
 
   const invalidated = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey)
@@ -127,7 +128,7 @@ describe('useLeftoverActions', () => {
       await result.current.run(chilli, { kind: 'freeze', storagePlaceId: 2, portions: 3 })
     })
     expect(api.calls[0]!.body).toEqual({ storagePlaceId: 2, portions: 3 })
-    expect(await screen.findByText('Chilli is in Garage Freezer. Use by 10 Feb.')).toBeInTheDocument()
+    expect(await findToast('Chilli is in Garage Freezer. Use by 10 Feb.')).toBeInTheDocument()
   })
 
   it('Take out POSTs the Storage Place (null = Not sorted)', async () => {
@@ -137,7 +138,7 @@ describe('useLeftoverActions', () => {
       await result.current.run(chilli, { kind: 'take-out', storagePlaceId: null })
     })
     expect(api.calls[0]!.body).toEqual({ storagePlaceId: null })
-    expect(await screen.findByText('Chilli is out of the freezer. Use by Sun.')).toBeInTheDocument()
+    expect(await findToast('Chilli is out of the freezer. Use by Sun.')).toBeInTheDocument()
   })
 
   it('answer POSTs the answer and toasts', async () => {

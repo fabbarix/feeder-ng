@@ -8,6 +8,7 @@ import { friDinner, friLunch, frozenChilli, leftover } from '../../../lib/leftov
 import type { Leftover } from '../../../lib/leftovers'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import { TodayScreen } from './TodayScreen'
+import { findToast } from '../../../test/notices'
 
 const h = vi.hoisted(() => ({ leftovers: [] as unknown[] }))
 
@@ -180,7 +181,7 @@ describe('Today: the row menu', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Freeze it' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/leftovers/4/freeze')).toHaveLength(1))
     expect(api.callsTo('POST', '/api/plan/leftovers/4/freeze')[0]?.body).toEqual({ storagePlaceId: 2, portions: 2 })
-    expect(await screen.findByText('Soup is in Garage Freezer. Use by 10 Feb.')).toBeInTheDocument()
+    expect(await findToast('Soup is in Garage Freezer. Use by 10 Feb.')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Freeze Soup' })).toBeNull())
   })
 

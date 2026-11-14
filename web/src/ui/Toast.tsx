@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import { ActionSurface } from './lib/actionSurface'
+import { splitToastText } from './lib/toastText'
 import { uiStrings } from './strings'
 import './Toast.css'
 
@@ -80,11 +81,13 @@ function timeoutFor(item: ToastItem, durationMs: number | undefined): number | n
   return item.actions.length > 0 ? ACTION_DURATION_MS : DEFAULT_DURATION_MS
 }
 
-/** Both call forms as one item (without its id) and the explicit duration. */
+/** Both call forms as one item (without its id) and the explicit duration. The string form splits off a body (lib/toastText). */
 function normalise(arg: string | ToastContent, options: ToastOptions = {}): { item: Omit<ToastItem, 'id'>; durationMs?: number } {
   if (typeof arg === 'string') {
     const actions = options.actionLabel ? [{ label: options.actionLabel, onClick: () => options.onAction?.() }] : []
-    return { item: { status: options.status ?? 'neutral', title: arg, actions }, durationMs: options.durationMs }
+    // A message of several sentences is a headline and a body (R-D); one sentence stays one line.
+    const { title, body } = splitToastText(arg)
+    return { item: { status: options.status ?? 'neutral', title, body, actions }, durationMs: options.durationMs }
   }
   return {
     item: { status: arg.status ?? 'neutral', title: arg.title, subline: arg.subline, body: arg.body, actions: arg.actions ?? [] },
@@ -191,8 +194,9 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
             {icon ? <Icon name={icon} size={16} /> : null}
             <span className="toast__title-text">{toast.title}</span>
           </p>
-          {toast.subline ? <p className="toast__subline">{toast.subline}</p> : null}
-          {toast.body ? <p className="toast__body">{toast.body}</p> : null}
+          {/* the spaces keep the announced text one readable run: "headline. subline. body" */}
+          {toast.subline ? <> <p className="toast__subline">{toast.subline}</p></> : null}
+          {toast.body ? <> <p className="toast__body">{toast.body}</p></> : null}
           {toast.actions.length > 0 ? (
             <div className="toast__actions">
               {toast.actions.map((action) => (

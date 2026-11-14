@@ -9,6 +9,7 @@ import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import { makeLot, makeTotal } from '../testData'
 import { PANTRY_MODE_KEY } from '../hooks/usePantryFilters'
 import { StockScreen } from './StockScreen'
+import { findToast } from '../../../test/notices'
 
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
@@ -180,7 +181,7 @@ describe('Pantry: the Leftover row menu', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Take out' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/leftovers/5/take-out')).toHaveLength(1))
     expect(api.callsTo('POST', '/api/plan/leftovers/5/take-out')[0]?.body).toEqual({ storagePlaceId: 1 })
-    expect(await screen.findByText('Chilli is out of the freezer. Use by Sat.')).toBeInTheDocument()
+    expect(await findToast('Chilli is out of the freezer. Use by Sat.')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('Chilli')).toBeNull())
     expect(screen.getByText('Stew')).toBeInTheDocument()
   })

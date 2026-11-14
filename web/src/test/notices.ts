@@ -9,3 +9,12 @@ export const findNotice = (role: 'status' | 'alert', text: string) =>
     if (!el) throw new Error(`no ${role} with "${text}"`)
     return el
   })
+
+// A toast whose words include `text`. A message of several sentences is set as a headline and a body (DS-12 R-D), so its
+// words span two elements and findByText cannot match the whole message; the toast's own text still reads as one run.
+export const findToast = (text: string) =>
+  waitFor(() => {
+    const el = [...document.querySelectorAll<HTMLElement>('.toast')].find((t) => (t.textContent ?? '').replace(/\s+/g, ' ').includes(text))
+    if (!el) throw new Error(`no toast with "${text}"`)
+    return el
+  })
