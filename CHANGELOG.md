@@ -4,6 +4,46 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.7] - 2026-11-13
+
+Supplies (toilet paper, batteries, laundry pods), a new Scan screen whose Scanned list you price and correct as you go, and reading the Receipt from photos to fill in its Prices and weighed amounts.
+
+### Added
+
+- **Supplies.** An Ingredient can be made a Supply: a thing the Household buys and keeps in Stock but does not cook with. A Supply has Products, Prices and Stock Lots as an Ingredient has, but no Shelf Life, and its Lots do not go off. A Recipe, a Step, an Exclusion and Import Review cannot use a Supply, and one name cannot be both an Ingredient and a Supply. Supplies have their own list and pages under Settings › Catalogue › Supplies, and the Ingredients list shows the rest. The New Ingredient sheet offers **Ingredient · Supply**, and an Ingredient's page can turn it into a Supply and back.
+- **Restock levels.** Give a Supply a Restock level, and when its Stock falls below it the Shopping List asks for the difference, as whole packs of the Product last bought, whatever the plan or the range. These Lines sit in their own Supplies group in Shop, each with its Stock against the level ("2 of 6"). Tick, Not needed and Scan work on them as on any other Line.
+- **The Supplies list shows the stock level, with a Use button.** Each row says its Stock and its Restock level ("9 pieces · restocks below 6"), and says when it is below the level. **Use** takes one out with a tap (a Supply counted in g or ml asks how much), from the oldest Lot first, and **Undo** in the toast puts back exactly what was taken. A Use is Used up, not waste: no waste is recorded and the Zero-waste streak does not move. It needs a connection.
+- **Supplies in the Pantry.** Supply Lots show in the Pantry with no Good until, the Filters panel can narrow it to Supplies or leave them out, and a Supply's Lot offers **Used up** for part or all of it.
+- **The new Scan screen.** The camera sits on top and under it the **Scanned list**: what this phone scanned at this Shop today, one row per Product, newest first, with the total and "+2 without a Price". **Scanned** and **To get** switch between it and the Lines still to get.
+  - A row says the Product's name over its pack size. When the Product is on the Shopping List it adds a tick and how much of the Line your scans cover ("250 of 375 g", "2 of 6"); the tick is full once the Line is covered. A row just scanned moves to the top and flashes.
+  - Tap a row for its quantity with − and +, **Price** and **Remove**. Remove takes a single scan back at once, with **Put back** in the toast, and asks first when there are more.
+  - Every scan says "Added Mutti passata" with **Undo**.
+  - **Change Shop** starts a new list. The list comes back after a reload and starts empty the next day.
+  - Offline, scans and Prices are kept on the phone and their rows say "Waiting to sync"; sending them again adds nothing.
+- **Prices from the Scanned list.** Tap **Add price** or a row's Price for a keypad in a half sheet beside the list. The keypad opens on the row's current Price, and the first key you press replaces it. One Price covers every scan of the row. A Product counted in g or ml can be priced per pack or per kg (or per l), and a weighed row opens on per kg. The keypad shows what the Price comes to, the last Price at this Shop ("Last time here €1.29 · 3 Nov") and **Next without a Price**, which saves the row and moves on to the next row that has none.
+- **A short new-Product sheet.** An unknown barcode asks "What is this?": tap one of the Lines still to get, Restock Lines of Supplies included, or **Something else** to pick or name an Ingredient or a Supply. Then pick the pack size from chips (**Other** for any other size), and take its Picture if you want. The name, the Shop and the Price can wait: the sheet saves "Eggs 6 pieces" for any Shop and opens the Price keypad on the new row.
+- **Reading the Receipt.** At the end of a shop, tap **Read the receipt** at the foot of the Scanned list and take up to 4 photos of the Receipt. Each photo can be cropped and rotated before it is read. Feeder sends the photos, with today's Scanned list, to the Recipe Assistant the Admin set up, and the Receipt review lists what it proposes as rows you check: the Shop and date, Prices, the weight or quantity of a row, corrections to a Product, lines not scanned and rows not on the Receipt. Nothing changes until you apply. The apply is refused, with nothing changed, when a Scan, an Undo or a Price changed after the read, or once the read is more than 10 minutes old; read the Receipt again then. If a step of the apply fails, every step before it is put back.
+  - The photos go to the provider, as recipe photos do, and are not kept: not on disk, not in the database, not in the offline queue and not in the logs. Reading needs a connection and counts toward the Recipe Assistant's limit of 30 reads an hour for the Household. Leaving the photos screen while the Receipt is being read stops the read.
+
+### Changed
+
+- **The unknown-barcode form is the new-Product sheet.** The long form is gone: what it is and its pack size are all you must give.
+- **The line under the camera that showed the last scan is gone.** The Scanned list and its "Added … · Undo" toast take its place, and a Price is set from the row.
+
+### Upgrading
+
+No new settings. The database is migrated on start: 1550 adds the kind and the Restock level to Ingredients. It only adds two columns: every Ingredient you have stays an ordinary Ingredient with no Restock level, and its Products, Prices and Stock stay as they were. Migrations cannot be undone.
+
+If the database already has applied migrations, Feeder first saves a checked copy of it as `feeder-pre-1550.db` in the `backups` folder of the data volume (`/data/backups`), before migration 1550 is applied. It is not listed in Settings, the nightly clean-up does not remove it, an existing copy is kept, and a fresh install takes none. If the copy cannot be written, Feeder stops with a log line naming the file and migrates nothing.
+
+A new flow of data: when you read a Receipt, its photos and today's Scanned list go to the provider the Admin set up for the Recipe Assistant, the same one recipe photos go to. They are not stored, and they share the Recipe Assistant's limit of 30 an hour. There is nothing to set up: the Admin's key and model for the Recipe Assistant serve both, and switching the Recipe Assistant off switches off reading Receipts.
+
+Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.7 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart.
+
+To go back to 1.0.0-beta.6.5, stop Feeder (on Kubernetes, set the deployment to zero replicas), copy `feeder-pre-1550.db` over `feeder.db` (and delete `feeder.db-wal` and `feeder.db-shm`), then start the older image. Everything you changed after the upgrade is lost. On Kubernetes, `helm history feeder -n feeder` lists the revisions and `helm rollback feeder <revision> -n feeder` returns to the one that ran 1.0.0-beta.6.5, but only after the database is restored.
+
+If you skip releases, each snapshot goes back to one image: `feeder-pre-1550.db` to 1.0.0-beta.6.5, `feeder-pre-1540.db` to 1.0.0-beta.5.1, `feeder-pre-1500.db` to 1.0.0-beta.4.2 and `feeder-pre-1400.db` to 1.0.0-beta.3. The steps are in the deploy guide, "Upgrading to 1.0.0-beta.7".
+
 ## [1.0.0-beta.6.5] - 2026-11-13
 
 The bottom action bar now floats, as the rest of Feeder does.
