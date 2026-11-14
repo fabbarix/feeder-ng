@@ -257,24 +257,3 @@ func Spoiled(lots []Lot, today Date) []Lot {
 	})
 	return out
 }
-
-// Keep returns the lot with its go-off date pushed out by 1 day ("Keep" on a
-// spoiled lot). A lot without a go-off date is returned unchanged.
-func Keep(lot Lot) Lot {
-	if lot.GoesOff.IsNone() {
-		return lot
-	}
-	lot.GoesOff = lot.GoesOff.AddDays(1)
-	return lot
-}
-
-// KeepOn is Keep that also records the household date the user chose Keep, so
-// the zero-waste streak forgives every go-off up to that day (R11c).
-func KeepOn(lot Lot, today Date) Lot {
-	if lot.GoesOff.IsNone() {
-		return lot
-	}
-	lot = Keep(lot)
-	lot.KeptOn = today
-	return lot
-}

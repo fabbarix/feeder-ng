@@ -43,6 +43,26 @@ func (f fixture) addIn(t *testing.T, ing int64, qty float64, purchased stock.Dat
 	return v
 }
 
+// keptStillPast makes a Lot kept today but still past its go-off date (one day after its old one), the state a beta.8
+// Keep left; since SSP-17 a Keep makes the Lot good until today or later, so only old data looks like this.
+func (f fixture) keptStillPast(t *testing.T, id int64) {
+	t.Helper()
+	l, err := f.st.Lot(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.st.Update(ctx, l.IngredientID, func(lots []stock.Lot) (store.Mutation, error) {
+		for i := range lots {
+			if lots[i].ID == id {
+				lots[i] = stock.KeepUntil(lots[i], lots[i].GoesOff.AddDays(1), today)
+			}
+		}
+		return store.Mutation{Lots: lots, Today: today}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func qty(f float64) *float64       { return &f }
 func day(d stock.Date) *stock.Date { return &d }
 
@@ -222,7 +242,7 @@ func TestEditLotRecordsNoWasteNoGoOffAndNoKeep(t *testing.T) {
 func TestEditLotChangingGoodUntilClearsAnEarlierKeep(t *testing.T) {
 	f := setup(t)
 	l := f.add(t, f.thighs, 800, "2026-11-01")
-	if _, err := f.svc.Keep(ctx, l.ID); err != nil {
+	if _, err := f.svc.KeepUntil(ctx, l.ID, ""); err != nil {
 		t.Fatal(err)
 	}
 	if lot, _ := f.st.Lot(ctx, l.ID); lot.KeptOn.IsNone() {

@@ -74,7 +74,7 @@ func GiveBack(lots []Lot, takes []Take) GiveBackResult {
 }
 
 // KeepUntil is Keep with the date the Lot is good until (SSP-17): GoesOff becomes goodUntil and KeptOn becomes today,
-// so the zero-waste streak forgives the go-offs so far, exactly as Keep does. Nothing else changes. A Lot with no go-off
+// so the zero-waste streak forgives the go-offs so far (R11c). Nothing else changes. A Lot with no go-off
 // date is returned unchanged. The caller checks that goodUntil is a date and not before today.
 func KeepUntil(lot Lot, goodUntil, today Date) Lot {
 	if lot.GoesOff.IsNone() {

@@ -412,36 +412,15 @@ func TestThrowOutAndKeepRefuseLotsThatHaveNotGoneOff(t *testing.T) {
 		if _, err := f.svc.ThrowOut(ctx, id); !errors.Is(err, service.ErrNotSpoiled) {
 			t.Errorf("ThrowOut(%d) = %v", id, err)
 		}
-		if _, err := f.svc.Keep(ctx, id); !errors.Is(err, service.ErrNotSpoiled) {
-			t.Errorf("Keep(%d) = %v", id, err)
+		if _, err := f.svc.KeepUntil(ctx, id, ""); !errors.Is(err, service.ErrNotSpoiled) {
+			t.Errorf("KeepUntil(%d) = %v", id, err)
 		}
 	}
 	if _, err := f.svc.ThrowOut(ctx, 999); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("unknown lot: %v", err)
 	}
-	if _, err := f.svc.Keep(ctx, 999); !errors.Is(err, store.ErrNotFound) {
+	if _, err := f.svc.KeepUntil(ctx, 999, ""); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("unknown lot: %v", err)
-	}
-}
-
-func TestKeepPushesGoOffOneDayFromExistingDate(t *testing.T) {
-	f := setup(t)
-	l := f.add(t, f.thighs, 200, "2026-11-01") // goes off 11-05, 4 days overdue
-	kept, err := f.svc.Keep(ctx, l.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if kept.GoesOff != "2026-11-06" || !kept.Spoiled {
-		t.Fatalf("kept = %+v (from the existing go-off date, not from today)", kept)
-	}
-	if sp, _ := f.svc.Spoiled(ctx); len(sp) != 1 {
-		t.Fatalf("still overdue, so listed again: %+v", sp)
-	}
-	// A lot that went off yesterday becomes fine on the go-off date after Keep.
-	y := f.add(t, f.thighs, 100, "2026-11-04") // off 11-08
-	k, _ := f.svc.Keep(ctx, y.ID)
-	if k.GoesOff != "2026-11-09" || k.Spoiled {
-		t.Fatalf("kept = %+v", k)
 	}
 }
 
@@ -660,7 +639,7 @@ func TestTodayIsTheHouseholdDate(t *testing.T) {
 func TestKeepRecordsTheKeepDate(t *testing.T) {
 	f := setup(t)
 	l := f.add(t, f.thighs, 200, "2026-11-01") // off 11-05
-	if _, err := f.svc.Keep(ctx, l.ID); err != nil {
+	if _, err := f.svc.KeepUntil(ctx, l.ID, ""); err != nil {
 		t.Fatal(err)
 	}
 	got, err := f.st.Lot(ctx, l.ID)
@@ -686,10 +665,9 @@ func TestThrowOutOfAGoneOffLotRecordsItsGoOffDate(t *testing.T) {
 // R11c: a Lot whose go-off was forgiven by Keep and is then thrown out counts on the throw-out day.
 func TestThrowOutAfterKeepCountsOnTheThrowOutDay(t *testing.T) {
 	f := setup(t)
-	l := f.add(t, f.thighs, 200, "2026-11-01") // off 11-05; Keep -> 11-06, still past
-	if _, err := f.svc.Keep(ctx, l.ID); err != nil {
-		t.Fatal(err)
-	}
+	l := f.add(t, f.thighs, 200, "2026-11-01") // off 11-05
+	// A Lot kept today and still past its go-off date, as a beta.8 Keep (one day further) left it: off 11-06, kept 11-09.
+	f.keptStillPast(t, l.ID)
 	rec, err := f.svc.ThrowOut(ctx, l.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -755,10 +733,10 @@ func TestLeavingStockRecordsNothingForLotsThatHaveNotGoneOffOrWereKept(t *testin
 	f.add(t, f.thighs, 100, "2026-11-08")       // future
 	f.add(t, f.milk, 100, "2026-11-01")         // no Shelf Life
 	kept := f.add(t, f.eggs, 100, "2026-10-01") // eggs off 10-22, long gone
-	if _, err := f.svc.Keep(ctx, kept.ID); err != nil {
+	if _, err := f.svc.KeepUntil(ctx, kept.ID, ""); err != nil {
 		t.Fatal(err)
 	}
-	// The Kept eggs now go off 10-23: still past, but forgiven up to today.
+	// The Kept eggs are good until today: their go-off is forgiven.
 	for _, ing := range []int64{f.thighs, f.milk, f.eggs} {
 		if _, err := f.svc.SetTotal(ctx, ing, 0); err != nil {
 			t.Fatal(err)

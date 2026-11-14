@@ -433,52 +433,6 @@ func (s *Service) ThrowOut(ctx context.Context, lotID int64) (store.WasteRecord,
 	return s.wasteFor(ctx, lotID, today)
 }
 
-// Keep pushes a spoiled lot's go-off date out by 1 day from its existing go-off date. The API's Keep is KeepUntil
-// (SSP-17, B9-05): one Keep makes the Lot good until today or a later day.
-func (s *Service) Keep(ctx context.Context, lotID int64) (LotView, error) {
-	today, err := s.today(ctx)
-	if err != nil {
-		return LotView{}, err
-	}
-	lot, err := s.spoiledLot(ctx, lotID, today)
-	if err != nil {
-		return LotView{}, err
-	}
-	ing, err := s.ingredient(ctx, lot.IngredientID)
-	if err != nil {
-		return LotView{}, err
-	}
-	saved, err := s.st.Update(ctx, ing.ID, func(lots []stock.Lot) (store.Mutation, error) {
-		out := make([]stock.Lot, 0, len(lots))
-		found := false
-		for _, l := range lots {
-			if l.ID == lotID {
-				found = true
-				l = stock.KeepOn(l, today)
-			}
-			out = append(out, l)
-		}
-		if !found {
-			return store.Mutation{}, store.ErrNotFound
-		}
-		return store.Mutation{Lots: out, Today: today}, nil
-	})
-	if err != nil {
-		return LotView{}, err
-	}
-	s.publish(map[string]any{"changed": "lots", "ingredientIds": []int64{ing.ID}})
-	kind, err := s.kindOf(ctx, lot.StoragePlaceID)
-	if err != nil {
-		return LotView{}, err
-	}
-	for _, l := range saved {
-		if l.ID == lotID {
-			return view(l, ing, today, kind), nil
-		}
-	}
-	return LotView{}, store.ErrNotFound
-}
-
 // DeductForCooked takes needs (Base Units) out of Stock when a Planned Meal is
 // Cooked. It never blocks: Stock floors at 0, unknown Ingredients and
 // non-positive needs are skipped, and each uncovered need yields a Warning.

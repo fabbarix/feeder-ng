@@ -193,9 +193,7 @@ func TestUndoThrowOutPutsTheLotBackAsItWasAndRemovesTheWaste(t *testing.T) {
 	f := setup(t)
 	fridge := f.place(t, "Fridge", stock.KindFridge)
 	lot := f.addIn(t, f.thighs, 200, "2026-11-01", fridge)
-	if _, err := f.svc.Keep(ctx, lot.ID); err != nil { // kept once: off 11-06, still past, KeptOn today
-		t.Fatal(err)
-	}
+	f.keptStillPast(t, lot.ID) // kept: off 11-06, still past, KeptOn today
 	before := f.storedLot(t, lot.ID)
 	rec, err := f.svc.ThrowOut(ctx, lot.ID)
 	if err != nil {
