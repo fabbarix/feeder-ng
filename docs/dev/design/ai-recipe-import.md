@@ -331,7 +331,7 @@ Logic placement (CLAUDE.md): `lib/` pure (form <-> API body incl. "omit empty ke
 
 ### 6.4 Contract tests
 - `fakeanthropic` responses are built from JSON fixtures of the API reference shapes; a test decodes each fixture with the SDK's own types.
-- A **live smoke test** `internal/recipeassistant/claude/live_test.go`, skipped unless `FEEDER_LIVE_ANTHROPIC_KEY` is set (never in `check.sh`/CI): lists models, runs Test connection, reads the spec example's recipe text, one fixture page and **one photo fixture each of a printed page and a handwritten card** with Haiku 5.5 (default) and Sonnet 5.5, and asserts each passes `Parse` + `CheckFile`; it prints the repair count and usage so the catalogue copy can be checked. Costs well under $1.
+- A **live smoke test** `internal/recipeassistant/claude/live_test.go`, skipped unless a live key is set (`FEEDER_ANTHROPIC_KEY`, alias `FEEDER_LIVE_ANTHROPIC_KEY`, or `ANTHROPIC_KEY`; see docs/dev/live-tests.md) (never in `check.sh`/CI): lists models, runs Test connection, reads the spec example's recipe text, one fixture page and **one photo fixture each of a printed page and a handwritten card** with Haiku 5.5 (default) and Sonnet 5.5, and asserts each passes `Parse` + `CheckFile`; it prints the repair count and usage so the catalogue copy can be checked. Costs well under $1.
 
 ### 6.5 What cannot be verified offline
 - That the API accepts the projected schema (complexity limits) for each offered model.

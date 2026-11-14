@@ -516,6 +516,31 @@ func TestAPackSizeCorrectionUpdatesTheProductAndScansAgain(t *testing.T) {
 
 // ---- compensation, end to end ---------------------------------------------------------------------------------------------
 
+// b8-rxgo: the Supply an Add made is not left in the Ingredients list when a later Add fails (real app, real SQLite).
+func TestAFailedApplyLeavesNoNewIngredientInTheList(t *testing.T) {
+	f := newReceiptFixture(t)
+	uuids := f.session(t)
+	read := f.read(t, uuids, addLine("Fairy soap", 299), addLine("Pasta", 100))
+	ids := f.addIDs(read)
+	b := body(uuids, ids[0], ids[1])
+	b["adds"] = []any{
+		map[string]any{"id": ids[0], "ingredient": map[string]any{"name": "dish soap", "baseUnit": "piece", "kind": "supply"}, "productName": "Fairy soap", "packSize": 1},
+		map[string]any{"id": ids[1], "ingredient": map[string]any{"id": 999999}, "productName": "Pasta", "packSize": 500}, // no such Ingredient
+	}
+	if r := f.apply(b); r.Status != 500 {
+		t.Fatalf("apply = %d %s", r.Status, r.Body)
+	}
+	var list []struct {
+		Name string `json:"name"`
+	}
+	f.user.Get("/api/ingredients").MustJSON(t, &list)
+	for _, i := range list {
+		if i.Name == "dish soap" {
+			t.Errorf("the failed apply left the Supply %q in the Ingredients list", i.Name)
+		}
+	}
+}
+
 func TestAFailureHalfWayPutsBackThePricesAndTheProductAndAnswers500(t *testing.T) {
 	f := newReceiptFixture(t)
 	uuids := f.session(t)

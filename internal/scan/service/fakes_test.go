@@ -350,16 +350,28 @@ type fakeIngredients struct {
 	// kinds is the kind each lookup of a name asked for (H4): Ensure(ctx, name, baseUnit, kind).
 	kinds map[string]ingredient.Kind
 	next  int64
+	// inUse says whether a Product (or anything else) references the Ingredient, as the real store's ErrInUse does.
+	inUse func(id int64) bool
+	// extraRefs are Ingredients something else references (a Recipe made meanwhile), by id.
+	extraRefs map[int64]bool
+	// deleted are the ids DeleteUnused removed.
+	deleted []int64
 }
 
-func (f *fakeIngredients) Ensure(_ context.Context, name, _ string, kind ingredient.Kind) (int64, error) {
+func (f *fakeIngredients) Ensure(ctx context.Context, name, baseUnit string, kind ingredient.Kind) (int64, error) {
+	id, _, err := f.EnsureNew(ctx, name, baseUnit, kind)
+	return id, err
+}
+
+// EnsureNew is the port of b8-rxgo: Ensure that also says whether it created the Ingredient (false for a found one).
+func (f *fakeIngredients) EnsureNew(_ context.Context, name, _ string, kind ingredient.Kind) (int64, bool, error) {
 	f.calls = append(f.calls, name)
 	if f.kinds == nil {
 		f.kinds = map[string]ingredient.Kind{}
 	}
 	f.kinds[name] = kind
 	if id, ok := f.byName[name]; ok {
-		return id, nil
+		return id, false, nil
 	}
 	f.next++
 	id := 900 + f.next
@@ -367,7 +379,23 @@ func (f *fakeIngredients) Ensure(_ context.Context, name, _ string, kind ingredi
 		f.byName = map[string]int64{}
 	}
 	f.byName[name] = id
-	return id, nil
+	return id, true, nil
+}
+
+// DeleteUnused is the port of b8-rxgo: it removes the Ingredient only when nothing references it (deleted true); a
+// referenced one is left alone (false, nil), as the real store's ErrInUse is.
+func (f *fakeIngredients) DeleteUnused(_ context.Context, id int64) (bool, error) {
+	if f.extraRefs[id] || (f.inUse != nil && f.inUse(id)) {
+		return false, nil
+	}
+	for n, i := range f.byName {
+		if i == id {
+			delete(f.byName, n)
+			f.deleted = append(f.deleted, id)
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // fakeList keeps "remaining to buy" per Ingredient like the real Shopping List does.
@@ -483,6 +511,16 @@ func newEnv(t *testing.T) *env {
 		ing:    &fakeIngredients{},
 		list:   &fakeList{remaining: map[int64]float64{passataIng: 1400}, ticked: map[int64]bool{}},
 		bus:    &bus{},
+	}
+	e.ing.inUse = func(id int64) bool {
+		e.cat.mu.Lock()
+		defer e.cat.mu.Unlock()
+		for _, p := range e.cat.products {
+			if p.IngredientID == id {
+				return true
+			}
+		}
+		return false
 	}
 	e.cat.addProduct(mutti, "Mutti passata 700 g", passataIng, "Passata", 700)
 	e.cat.addProduct(milkProd, "Milk 1 l", milkIng, "milk", 1000)
