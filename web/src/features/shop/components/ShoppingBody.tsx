@@ -28,9 +28,11 @@ export interface ShoppingBodyProps {
   onScan: () => void
   /** "Mark it" on the notice: opens the oldest unconfirmed slot */
   onMarkIt?: (slot: { date: string; mealSlotId: number }) => void
+  /** b8-polish: a narrow screen shows the short Restock reason on Supply rows */
+  compact?: boolean
 }
 
-export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenLine, onScan, onMarkIt }: ShoppingBodyProps) {
+export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenLine, onScan, onMarkIt, compact }: ShoppingBodyProps) {
   const { summary, notice } = useShopSummary(list, shopName)
   const suppliesTitleId = useId()
   const { open, ticked } = listEntries(list, system)
@@ -50,7 +52,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
           <div className="shop-lines">
             <ListGroup label={shopStrings.toGet}>
               {food.map((entry) => (
-                <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} />
+                <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} compact={compact} />
               ))}
             </ListGroup>
           </div>
@@ -64,7 +66,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
           <div className="shop-lines">
             <ListGroup label={shopStrings.supplies}>
               {supplies.map((entry) => (
-                <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} />
+                <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} compact={compact} />
               ))}
             </ListGroup>
           </div>
@@ -78,7 +80,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
           <div className="shop-lines">
             <ListGroup label={shopStrings.ticked}>
               {ticked.map((entry) => (
-                <LineRow key={entry.key} entry={entry} group="ticked" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} />
+                <LineRow key={entry.key} entry={entry} group="ticked" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} compact={compact} />
               ))}
             </ListGroup>
           </div>

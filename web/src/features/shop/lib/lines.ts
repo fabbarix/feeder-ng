@@ -33,12 +33,14 @@ export interface ListEntry {
   supply: boolean
   /** H7′: "2 of 6" for a Supply Line with a Restock reason; '' otherwise (extras, food, no reason). */
   restockText: string
+  /** b8-polish: the compact "2/6" of the same reason, for a narrow row; '' when there is no reason or the Line is ticked. */
+  restockCompact: string
   /**
    * B5-SH: "Includes Tue Dinner, not marked Cooked yet" (see pastMealsHint). The key is left out of entries with
    * nothing to say (an extra, a Line without unconfirmed past meals).
    */
   hint?: string
-  /** DS-SHOP: "Includes Tue Dinner" for the row's one meta line (no Courses, no "not marked Cooked yet"). Left out with no hint. */
+  /** b8-shop: "Tue Dinner +1" for the row's one meta line (no Courses, no "not marked Cooked yet"). Left out with no hint. */
   hintShort?: string
   /**
    * B5-F1: the slot "Mark it" opens (the Plan address /plan?mark=<date>:<mealSlotId>, plan lib/markSlot): the oldest of the Line's unconfirmed past meals.
@@ -80,6 +82,8 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     imageUrl: line.imageUrl,
     supply: line.kind === 'supply',
     restockText: line.kind === 'supply' && line.restock && !line.ticked ? restockText(line.restock, line.baseUnit, system) : '',
+    restockCompact:
+      line.kind === 'supply' && line.restock && !line.ticked ? restockText(line.restock, line.baseUnit, system, { compact: true }) : '',
   }
 }
 
@@ -101,6 +105,7 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     imageUrl: extra.imageUrl,
     supply: extra.kind === 'supply',
     restockText: '',
+    restockCompact: '',
   }
 }
 

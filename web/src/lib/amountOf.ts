@@ -32,3 +32,12 @@ export function amountOf(x: number, y: number, base: BaseUnit, system: UnitSyste
   }
   return [a, b]
 }
+
+/**
+ * The "x of y" text of two amounts (b8-polish): "400 of 1000 ml"; with `compact` the "x/y" form, "400/1000 ml", "2/6". The unit
+ * rules are amountOf's: one unit on y when both amounts share it, and a 0 for float dust.
+ */
+export function amountOfText(x: number, y: number, base: BaseUnit, system: UnitSystem, opts: { compact?: boolean } = {}): string {
+  const [a, b] = amountOf(x, y, base, system)
+  return opts.compact ? `${a}/${b}` : `${a} of ${b}`
+}

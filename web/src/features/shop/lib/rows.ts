@@ -14,6 +14,8 @@ export interface RowMeta {
   text: string
   /** the tone of the meta line; an info marker for unconfirmed past meals */
   status?: 'info'
+  /** b8-polish: the full text when `text` is the compact form; the row gives it as its accessible name */
+  fullText?: string
 }
 
 export interface RowValue {
@@ -53,9 +55,13 @@ export function slotsLabel(meals: PastPlannedMeal[] | undefined, withCourses = t
 
 /**
  * The one meta line: the Restock reason of a Supply Line (info tone), else the pack suggestion, or the info marker that names
- * the slots (never the Courses: it has to fit one line).
+ * the slots (never the Courses: it has to fit one line). `compact` shows the short reason ("400/1000 ml") with the full one as
+ * `fullText` (b8-polish); the other metas do not change.
  */
-export function rowMeta(entry: ListEntry): RowMeta {
+export function rowMeta(entry: ListEntry, opts: { compact?: boolean } = {}): RowMeta {
+  if (entry.restockText && opts.compact && entry.restockCompact) {
+    return { text: entry.restockCompact, status: 'info', fullText: entry.restockText }
+  }
   if (entry.restockText) return { text: entry.restockText, status: 'info' }
   if (entry.hintShort) return { text: entry.hintShort, status: 'info' }
   return { text: entry.packLine }
