@@ -46,6 +46,8 @@ export const stockStrings = {
   view: { label: 'List', places: 'Storage Place', ingredients: 'Ingredient' } as const,
   kinds: { pantry: 'Pantry', fridge: 'Fridge', freezer: 'Freezer' } as const,
   unsorted: 'Not sorted',
+  /** b8-polish: the Lot sheet's "Move to" hint until a Storage Place is chosen (whatever place the Lot is in now). */
+  chooseStoragePlace: 'Choose a Storage Place',
   sortLabel: 'Sort',
   sorts: { goodUntil: 'Good until', name: 'Name', quantity: 'Quantity', purchased: 'Bought (newest)', place: 'Storage Place' } as const,
   /** pantry-filter: the short value the Sort chip shows (the list keeps the long label). */
