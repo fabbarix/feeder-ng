@@ -152,11 +152,6 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
   )
 }
 
-/** Like useToast, but outside a ToastProvider it is null instead of an error (b8-rxweb: the app shell's watcher may mount before one). */
-export function useOptionalToast(): ToastApi | null {
-  return useContext(ToastContext)
-}
-
 /** Shows transient messages. Must be used inside a ToastProvider. */
 export function useToast(): ToastApi {
   const api = useContext(ToastContext)

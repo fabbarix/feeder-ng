@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { readCachedMe } from '../../../app/meCache'
-import { useOptionalToast } from '../../../ui'
+import { useToast } from '../../../ui'
 import { finishedToast } from '../lib/backgroundCopy'
 import { backgroundReadSession, dismissBackgroundRead, onBackgroundReadFinished, resumeBackgroundRead } from '../lib/backgroundRead'
 import { publishReceiptSession } from '../lib/receiptSession'
@@ -11,7 +11,7 @@ import { publishReceiptSession } from '../lib/receiptSession'
 export function ReceiptReadWatcher(): null {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const toast = useOptionalToast()
+  const toast = useToast()
   // The listener reads where the User is when the read ends, not when it was set up. The remembered User (no query, so the shell's
   // tests and an offline start need no QueryClient) says whether they are an Admin.
   const where = useRef(pathname)
@@ -28,7 +28,7 @@ export function ReceiptReadWatcher(): null {
       onBackgroundReadFinished((state) => {
         const plan = finishedToast(state, where.current, { isAdmin: readCachedMe()?.isAdmin === true })
         if (plan === undefined) return
-        toast?.show(plan.message, {
+        toast.show(plan.message, {
           status: plan.status,
           actionLabel: plan.actionLabel,
           onAction: () => {
