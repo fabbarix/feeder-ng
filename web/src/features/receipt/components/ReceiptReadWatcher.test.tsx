@@ -6,13 +6,12 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { clearCachedMe, writeCachedMe } from '../../../app/meCache'
 import { ToastProvider } from '../../../ui'
 import { readDone, SHOP_ID, UUIDS } from '../fixtures.test-helper'
 
 const api = vi.hoisted(() => ({ startRead: vi.fn(), getRead: vi.fn(), cancelRead: vi.fn(), apply: vi.fn() }))
 vi.mock('../api', () => ({ receiptApi: api }))
-const me = vi.hoisted(() => ({ isAdmin: false }))
-vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { id: 1, email: 'a@b.c', displayName: 'A', isAdmin: me.isAdmin } }) }))
 
 import { BACKGROUND_READ_KEY, getBackgroundRead, resetBackgroundRead, startBackgroundRead } from '../lib/backgroundRead'
 import { POLL_INTERVAL_MS } from '../lib/readPolling'
@@ -40,12 +39,13 @@ beforeEach(() => {
   vi.clearAllMocks()
   resetBackgroundRead()
   forgetRead()
-  me.isAdmin = false
+  clearCachedMe()
   api.startRead.mockResolvedValue({ id: 'rd-1' })
   api.getRead.mockResolvedValue({ status: 'running' })
 })
 afterEach(() => {
   resetBackgroundRead()
+  clearCachedMe()
   vi.useRealTimers()
 })
 
@@ -67,6 +67,18 @@ describe('the toast', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Read it again' }))
     expect(getBackgroundRead()).toBeUndefined()
     expect(screen.getByTestId('where')).toHaveTextContent('/scan/receipt')
+  })
+
+  // The watcher reads the Admin flag from the remembered User (app/meCache, written by every /api/me), at the moment the read ends.
+  it.each([
+    [false, "The Recipe Assistant isn't working. An Admin can check it in Settings."],
+    [true, "The Recipe Assistant's API key was refused. Replace the key in Settings."],
+  ])('a settings problem is told in the words for the User (Admin: %s)', async (isAdmin, words) => {
+    mount('/plan')
+    await begin()
+    writeCachedMe({ id: 1, email: 'a@b.c', displayName: 'A', isAdmin })
+    await finish({ status: 'failed', error: { code: 'assistant_bad_key', message: 'm' } })
+    expect(await screen.findByRole('alert')).toHaveTextContent(words)
   })
 
   it.each(['/scan', '/scan/receipt', '/scan/receipt/review'])('no toast on %s: the User sees it there already', async (path) => {
