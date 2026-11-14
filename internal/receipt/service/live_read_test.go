@@ -12,6 +12,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/claude"
 	rasvc "github.com/fabbarix/feeder-ng/internal/recipeassistant/service"
+	"github.com/fabbarix/feeder-ng/internal/testkit/anthropickey"
 )
 
 type liveAssistant struct{ c rasvc.Claude }
@@ -51,9 +52,9 @@ func TestLiveReceiptReadCompletes(t *testing.T) {
 	if os.Getenv("FEEDER_LIVE_SCHEMA_CHECK") != "1" {
 		t.Skip("FEEDER_LIVE_SCHEMA_CHECK=1 is not set")
 	}
-	key := os.Getenv("FEEDER_ANTHROPIC_KEY")
+	key, _ := anthropickey.Lookup()
 	if key == "" {
-		t.Skip("FEEDER_ANTHROPIC_KEY is not set")
+		t.Skip(anthropickey.SkipReason())
 	}
 	img := receipttest.ReceiptPNGDataURL([]string{
 		"ESSELUNGA",

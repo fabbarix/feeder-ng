@@ -11,6 +11,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/claude"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/service"
 	"github.com/fabbarix/feeder-ng/internal/recipefile"
+	"github.com/fabbarix/feeder-ng/internal/testkit/anthropickey"
 )
 
 // liveText is a pasted recipe of the size that timed out non-streamed on 2026-11-11 (beta.2).
@@ -35,9 +36,9 @@ To finish: 400 g fresh egg lasagne sheets, 120 g grated Parmigiano Reggiano, 20 
 // Anthropic API and checks the answer is a valid Recipe File. It runs only with FEEDER_LIVE_ANTHROPIC_KEY set
 // (FEEDER_LIVE_ANTHROPIC_BASE_URL and FEEDER_LIVE_ANTHROPIC_MODEL are optional); it is billed.
 func TestLiveReadStreamsARecipe(t *testing.T) {
-	key := os.Getenv("FEEDER_LIVE_ANTHROPIC_KEY")
+	key, _ := anthropickey.Lookup()
 	if key == "" {
-		t.Skip("FEEDER_LIVE_ANTHROPIC_KEY is not set")
+		t.Skip(anthropickey.SkipReason())
 	}
 	base := os.Getenv("FEEDER_LIVE_ANTHROPIC_BASE_URL")
 	if base == "" {
