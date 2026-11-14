@@ -859,3 +859,28 @@ func TestAnUntickOfAnAdditionWithUnknownQuantityNeverWritesInfinity(t *testing.T
 		t.Errorf("Stock = %v, want 400", got)
 	}
 }
+
+func TestTheUndoOfAScanTickFromBeforeBeta9KeepsALaterTickByHand(t *testing.T) {
+	// A Scan ticked the Line before beta.9 (no addition); Sam's tick by hand was added since. Undo of the Scan leaves
+	// Sam's tick and its Stock Lot, so a later untick can still take that Lot back.
+	e := newEnv(t)
+	needsMilk(e, 800)
+	scanLot, _, _ := e.stock.AddLot(ctx, service.StockAdd{IngredientID: e.ids[milk], Quantity: 500, ClientUUID: "scan-1"})
+	if err := e.st.SetTick(ctx, rng, shopping.Tick{IngredientID: e.ids[milk], Needed: 800, By: "scan"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	sam1 := tickMilk(t, e, service.TickInput{Quantity: 300, ClientUUID: "b", UserID: sam})
+	if err := e.svc.UndoLot(ctx, service.UndoLotInput{IngredientID: e.ids[milk], To: rng, Quantity: 500, Unmark: true, LotID: scanLot}); err != nil {
+		t.Fatal(err)
+	}
+	ticks, _ := e.st.Ticks(ctx, rng)
+	if tk, ok := ticks[e.ids[milk]]; !ok || len(tk.Additions) != 1 || tk.Additions[0].ClientUUID != "b" {
+		t.Fatalf("ticks after the Scan's Undo = %+v; want Sam's tick by hand kept", ticks)
+	}
+	if err := e.svc.Untick(ctx, e.ids[milk], rng); err != nil {
+		t.Fatal(err)
+	}
+	if len(e.stock.takes) != 1 || e.stock.takes[0][0] != float64(*sam1.LotID) {
+		t.Errorf("TakeBack calls = %v, want Sam's Lot taken back on untick", e.stock.takes)
+	}
+}

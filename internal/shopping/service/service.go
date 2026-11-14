@@ -916,18 +916,24 @@ func (s *Service) UndoLot(ctx context.Context, in UndoLotInput) error {
 }
 
 // unmarkScan removes the tick a Scan's Stock Lot set: its addition by scan, and the tick with it when no other addition
-// is left. A tick from before beta.9, or with no Lot known, goes whole.
+// is left. A Scan's tick from before beta.9 (no addition) goes whole, unless a tick by hand was added to it since: that
+// tick, with its Stock Lot, stays (it is unticked from the Shop, which takes its Lot back).
 func (s *Service) unmarkScan(ctx context.Context, to stock.Date, ingredientID, lotID int64) error {
+	adds, err := s.st.LineAdditions(ctx, to, ingredientID)
+	if err != nil {
+		return err
+	}
 	if lotID != 0 {
-		adds, err := s.st.LineAdditions(ctx, to, ingredientID)
-		if err != nil {
-			return err
-		}
 		for _, a := range adds {
 			if a.By == "scan" && a.LotID == lotID {
 				_, err := s.st.DeleteAddition(ctx, a.ID)
 				return err
 			}
+		}
+	}
+	for _, a := range adds {
+		if a.By == "hand" {
+			return nil
 		}
 	}
 	return s.st.DeleteTick(ctx, to, ingredientID)
