@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 // UseSoonDays is how many days ahead a lot counts as "use soon": a lot that
@@ -34,8 +36,19 @@ func useSoonWithin(lot Lot, today Date, days int) bool {
 }
 
 // FormatQuantity writes a Base Unit quantity as text: "300 g", "1.5 ml",
-// "1 piece", "2 pieces". At most 2 decimals, trailing zeros trimmed.
+// "1 piece", "2 pieces". At most 2 decimals, trailing zeros trimmed. From
+// 1000 g / 1000 ml (after that rounding) it reads in kg and l, as the web app's
+// lib/units does (SSP-16, decision SSP 7): "1.5 kg", "12 kg", "1.25 l". Digits
+// are grouped with "," ("1,250 pieces", "1,250 kg"). The Base Unit stays the
+// stored unit; only the text promotes.
 func FormatQuantity(q float64, base string) string {
+	if (base == "g" || base == "ml") && centi(math.Abs(q)) >= 1000*100 {
+		unit := "kg"
+		if base == "ml" {
+			unit = "l"
+		}
+		return formatNumber(q/1000) + " " + unit
+	}
 	num := formatNumber(q)
 	if base == "piece" && num != "1" {
 		return num + " pieces"
@@ -46,8 +59,19 @@ func FormatQuantity(q float64, base string) string {
 	return num + " " + base
 }
 
+// centi rounds a non-negative q half up to hundredths (on the decimal value,
+// millionths first to absorb float noise) and returns them as an integer.
+func centi(q float64) int64 {
+	micro := math.Round(q * 1e6)
+	return int64(micro+5000) / 10000
+}
+
+// maxCenti is the largest quantity centi handles without overflowing int64;
+// beyond it the number is written whole.
+const maxCenti = 1e12
+
 // formatNumber rounds half up to 2 decimals (on the decimal value, so 2.345
-// reads as 2.35) and trims trailing zeros.
+// reads as 2.35), trims trailing zeros and groups the whole part with ",".
 func formatNumber(q float64) string {
 	if math.IsNaN(q) || math.IsInf(q, 0) {
 		return "0"
@@ -56,23 +80,45 @@ func formatNumber(q float64) string {
 	if neg {
 		q = -q
 	}
-	// Millionths first to absorb float noise, then half-up to hundredths.
-	micro := math.Round(q * 1e6)
-	centi := int64(micro+5000) / 10000
-	whole, frac := centi/100, centi%100
 	var s string
-	switch {
-	case frac == 0:
-		s = fmt.Sprintf("%d", whole)
-	case frac%10 == 0:
-		s = fmt.Sprintf("%d.%d", whole, frac/10)
-	default:
-		s = fmt.Sprintf("%d.%02d", whole, frac)
+	if q >= maxCenti {
+		s = groupDigits(strconv.FormatFloat(math.Round(q), 'f', 0, 64))
+	} else {
+		c := centi(q)
+		whole, frac := c/100, c%100
+		w := groupDigits(strconv.FormatInt(whole, 10))
+		switch {
+		case frac == 0:
+			s = w
+		case frac%10 == 0:
+			s = fmt.Sprintf("%s.%d", w, frac/10)
+		default:
+			s = fmt.Sprintf("%s.%02d", w, frac)
+		}
 	}
 	if neg && s != "0" {
 		s = "-" + s
 	}
 	return s
+}
+
+// groupDigits puts a "," between each group of three digits: "1250" -> "1,250".
+func groupDigits(digits string) string {
+	if len(digits) <= 3 {
+		return digits
+	}
+	var b strings.Builder
+	head := len(digits) % 3
+	if head > 0 {
+		b.WriteString(digits[:head])
+	}
+	for i := head; i < len(digits); i += 3 {
+		if b.Len() > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(digits[i : i+3])
+	}
+	return b.String()
 }
 
 // ShortfallMessage is the warning shown when Stock cannot cover a Cooked meal:
