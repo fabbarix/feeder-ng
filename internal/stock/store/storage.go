@@ -240,6 +240,53 @@ func (s *Store) MoveLot(ctx context.Context, m Move) (StoredLot, error) {
 		return StoredLot{}, err
 	}
 	defer tx.Rollback()
+	moved, err := s.moveLotTx(ctx, tx, m)
+	if err != nil {
+		return StoredLot{}, err
+	}
+	return moved, tx.Commit()
+}
+
+// MoveLots puts Not sorted Lots, whole, into Storage Places in one transaction (SSP-10 Put away): all of them or none.
+// A Lot that is already in a Storage Place (another device put it away meanwhile) is left where it is and its id is
+// returned in skipped. Each move remembers the place for its Ingredient, as MoveLot does. ErrNotFound for an unknown
+// Lot and ErrPlaceNotFound for an unknown Storage Place, and then nothing moves. Move.Quantity is ignored.
+func (s *Store) MoveLots(ctx context.Context, moves []Move) (moved []StoredLot, skipped []int64, err error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer tx.Rollback()
+	for _, m := range moves {
+		cur, err := scanLot(tx.QueryRowContext(ctx, `SELECT `+lotColumns+` FROM stock_lots WHERE id = ?`, m.LotID))
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, ErrNotFound
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		if _, err := placeByID(ctx, tx, m.PlaceID); err != nil {
+			return nil, nil, err
+		}
+		if cur.StoragePlaceID != nil {
+			skipped = append(skipped, cur.ID)
+			continue
+		}
+		m.Quantity = 0
+		l, err := s.moveLotTx(ctx, tx, m)
+		if err != nil {
+			return nil, nil, err
+		}
+		moved = append(moved, l)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, nil, err
+	}
+	return moved, skipped, nil
+}
+
+// moveLotTx is MoveLot inside tx.
+func (s *Store) moveLotTx(ctx context.Context, tx *sql.Tx, m Move) (StoredLot, error) {
 	cur, err := scanLot(tx.QueryRowContext(ctx, `SELECT `+lotColumns+` FROM stock_lots WHERE id = ?`, m.LotID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return StoredLot{}, ErrNotFound
@@ -273,11 +320,7 @@ func (s *Store) MoveLot(ctx context.Context, m Move) (StoredLot, error) {
 	if err := rememberPlace(ctx, tx, cur.IngredientID, m.PlaceID); err != nil {
 		return StoredLot{}, err
 	}
-	moved, err := scanLot(tx.QueryRowContext(ctx, `SELECT `+lotColumns+` FROM stock_lots WHERE id = ?`, movedID))
-	if err != nil {
-		return StoredLot{}, err
-	}
-	return moved, tx.Commit()
+	return scanLot(tx.QueryRowContext(ctx, `SELECT `+lotColumns+` FROM stock_lots WHERE id = ?`, movedID))
 }
 
 // querier is *sql.DB or *sql.Tx.
