@@ -83,8 +83,11 @@ describe('the toast', () => {
     const { cancelBackgroundRead } = await import('../lib/backgroundRead')
     await act(async () => { await cancelBackgroundRead() })
     await act(async () => { await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3) })
-    expect(screen.queryByRole('alert')).toBeNull()
+    // ToastProvider always mounts its empty status and alert live regions, so look for a toast itself, not for the roles.
+    expect(document.querySelector('.toast')).toBeNull()
     expect(screen.queryByText(/Receipt read/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Review' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Read it again' })).toBeNull()
   })
 
   it('follows the User: the toast is decided where they are when the read ends', async () => {
