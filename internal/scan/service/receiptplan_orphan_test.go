@@ -25,7 +25,7 @@ import (
 )
 
 func addOf(kind, name string) receipt.Plan {
-	add := receipt.Op{Kind: receipt.OpCreateProduct, Ref: "add:0", Name: "Item", PackSize: 450, BaseUnit: "g",
+	add := receipt.Op{Kind: receipt.OpCreateProduct, Ref: "add:0", Name: "Receipt line 450 g", PackSize: 450, BaseUnit: "g",
 		Ingredient: &receipt.IngredientChoice{New: &receipt.NewIngredient{Name: name, BaseUnit: "g", Kind: kind}}}
 	sc := newScanOp(uAdd, 0, 450, 225)
 	sc.Ref = "add:0"
