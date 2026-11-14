@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/barcode"
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/ingredient"
@@ -299,6 +300,13 @@ func (s *Service) apply(ctx context.Context, op scan.Op) (scan.Result, error) {
 	if err := op.Validate(); err != nil {
 		return rejected(op.ClientUUID, CodeValidation, err.Error()), nil
 	}
+	// A Tick is not a Scan: it is idempotent on the Shopping List's own client UUID and never in the Scan ledger.
+	switch op.Kind {
+	case scan.KindShopTick:
+		return s.shopTick(ctx, op)
+	case scan.KindShopUntick:
+		return s.shopUntick(ctx, op)
+	}
 	ev, ok, err := s.d.Ledger.Get(ctx, op.ClientUUID)
 	if err != nil {
 		return scan.Result{}, err
@@ -332,6 +340,65 @@ func domainRejection(uuid string, err error) (scan.Result, error) {
 		return rejected(uuid, CodeUnknownProduct, "unknown Product"), nil
 	}
 	return scan.Result{}, err
+}
+
+// shopTick applies a queued Tick by hand (B9-23, RES-03) through the Shopping List: a Line's tick must still be on the list
+// for its range (CodeNotOnList), and a Line someone else ticked meanwhile gets one more addition (RES 2). A client UUID
+// the Shopping List already recorded answers status duplicate with the first answer.
+func (s *Service) shopTick(ctx context.Context, op scan.Op) (scan.Result, error) {
+	var (
+		res shopservice.TickResult
+		err error
+	)
+	if op.ExtraID != 0 {
+		res, err = s.d.List.TickExtra(ctx, op.ExtraID, op.Quantity, op.ShopID, op.ClientUUID)
+	} else {
+		today, horizon, herr := s.household(ctx)
+		if herr != nil {
+			return scan.Result{}, herr
+		}
+		at, _ := time.Parse(time.RFC3339, op.ScannedAt) // Validate checked it
+		user, _ := auth.UserFrom(ctx)
+		res, err = s.d.List.Tick(ctx, shopservice.TickInput{IngredientID: op.IngredientID, To: shopping.ClampTo(today, horizon, stock.Date(op.RangeTo)),
+			ShopID: op.ShopID, Quantity: op.Quantity, ClientUUID: op.ClientUUID, UserID: user.ID, Covers: op.Covers,
+			TickedAt: at.UTC(), RequireOnList: true})
+	}
+	switch {
+	case errors.Is(err, shopservice.ErrNotOnList), errors.Is(err, shopservice.ErrNotFound):
+		return rejected(op.ClientUUID, CodeNotOnList, "not on the Shopping List any more"), nil
+	case errors.Is(err, shopservice.ErrUnknownIngredient):
+		return rejected(op.ClientUUID, CodeUnknownIngr, "unknown Ingredient"), nil
+	case errors.Is(err, shopservice.ErrUnknownShop):
+		return rejected(op.ClientUUID, CodeUnknownShop, "unknown Shop"), nil
+	case errors.Is(err, shopservice.ErrInvalid):
+		return rejected(op.ClientUUID, CodeValidation, "the tick is not valid"), nil
+	case err != nil:
+		return scan.Result{}, err
+	}
+	status := scan.StatusApplied
+	if !res.Created {
+		status = scan.StatusDuplicate
+	}
+	tick := &scan.AppliedTick{LotID: res.LotID, Added: res.Added, AlsoTickedBy: []scan.AlsoTickedBy{}}
+	for _, a := range res.AlsoTickedBy {
+		tick.AlsoTickedBy = append(tick.AlsoTickedBy, scan.AlsoTickedBy{Name: a.Name, Quantity: a.Quantity, By: a.By})
+	}
+	return scan.Result{ClientUUID: op.ClientUUID, Status: status, Tick: tick}, nil
+}
+
+// shopUntick undoes a queued or synced Tick: one addition by its client UUID, or a whole Line for its range. Doing it
+// again finds nothing to do and is still applied.
+func (s *Service) shopUntick(ctx context.Context, op scan.Op) (scan.Result, error) {
+	var err error
+	if op.TickClientUUID != "" {
+		err = s.d.List.UntickAddition(ctx, op.TickClientUUID)
+	} else {
+		err = s.d.List.Untick(ctx, op.IngredientID, stock.Date(op.RangeTo))
+	}
+	if err != nil {
+		return scan.Result{}, err
+	}
+	return scan.Result{ClientUUID: op.ClientUUID, Status: scan.StatusApplied}, nil
 }
 
 // Sync applies the operations in the order given; results are in the same order.
@@ -586,8 +653,9 @@ func (s *Service) purchase(ctx context.Context, op scan.Op, p ProductInfo, creat
 		}
 	}
 
+	user, _ := auth.UserFrom(ctx)
 	eff, err := s.d.List.AfterLot(ctx, shopservice.AfterLotInput{IngredientID: p.IngredientID, To: rangeTo, ShopID: &shop,
-		LotID: lotID, Quantity: op.Quantity})
+		LotID: lotID, Quantity: op.Quantity, ClientUUID: op.ClientUUID, UserID: user.ID})
 	if err != nil {
 		return fail(err)
 	}

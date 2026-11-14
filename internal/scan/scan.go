@@ -163,8 +163,47 @@ func (o Op) Validate() error {
 		return o.validateShopUnknown()
 	case KindStockTake:
 		return o.validateStockTake()
+	case KindShopTick:
+		return o.validateShopTick()
+	case KindShopUntick:
+		return o.validateShopUntick()
 	}
-	return &ValidationError{Field: "kind", Message: "kind must be shop_scan, shop_unknown or stock_take"}
+	return &ValidationError{Field: "kind", Message: "kind must be shop_scan, shop_unknown, stock_take, shop_tick or shop_untick"}
+}
+
+// validateShopTick: exactly one of an Ingredient Line or an Ingredient extra, an amount (0 or more) and a covered amount.
+func (o Op) validateShopTick() error {
+	if (o.IngredientID > 0) == (o.ExtraID > 0) || o.IngredientID < 0 || o.ExtraID < 0 {
+		return &ValidationError{Field: "ingredientId", Message: "a tick names an Ingredient or an extra, not both"}
+	}
+	if !amount(o.Quantity) {
+		return &ValidationError{Field: "quantity", Message: "the quantity must be 0 or more"}
+	}
+	if !amount(o.Covers) {
+		return &ValidationError{Field: "covers", Message: "the quantity covered must be 0 or more"}
+	}
+	if o.ShopID != nil && *o.ShopID <= 0 {
+		return &ValidationError{Field: "shopId", Message: "the Shop is not valid"}
+	}
+	if o.RangeTo != "" && !validDate(o.RangeTo) {
+		return &ValidationError{Field: "rangeTo", Message: "rangeTo must be a date as YYYY-MM-DD"}
+	}
+	return nil
+}
+
+// validateShopUntick: the tick's client UUID, or an Ingredient Line with its range, not both.
+func (o Op) validateShopUntick() error {
+	byUUID := strings.TrimSpace(o.TickClientUUID) != ""
+	if byUUID == (o.IngredientID > 0) {
+		return &ValidationError{Field: "tickClientUuid", Message: "an untick names a tick's client UUID or an Ingredient, not both"}
+	}
+	if byUUID {
+		return nil
+	}
+	if !validDate(o.RangeTo) {
+		return &ValidationError{Field: "rangeTo", Message: "an untick of a Line needs its range as YYYY-MM-DD"}
+	}
+	return nil
 }
 
 func (o Op) validateShopScan() error {
@@ -294,6 +333,8 @@ func (o Op) validateStockTake() error {
 }
 
 func positive(v float64) bool { return v > 0 && !math.IsInf(v, 0) }
+
+func amount(v float64) bool { return v >= 0 && !math.IsInf(v, 0) && !math.IsNaN(v) }
 
 func digits(s string) bool {
 	for _, r := range s {
