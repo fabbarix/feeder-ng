@@ -741,6 +741,40 @@ async function receiptPhotos(n) {
   }
 }
 
+// b8-hint (P23): the Shop hint is "<weekday> <Meal Slot> +N", so its width depends on the day the guard runs ("Fri Dinner +2"
+// passed, "Sat Breakfast +2" was cut the next day). Every food Line's hint is pinned to the worst case: the widest of the seven
+// weekdays x the household's Meal Slots, measured in the meta's own font, then " +12". The text node React owns is rewritten in
+// place, so the layout is the real one and only the words are pinned. The Supplies group's Restock reason keeps its text.
+const PIN_WORST_HINT = `(async () => {
+  const sel = '.shop-open .shop-lines .list-row__meta[data-status="info"] .list-row__meta-text'
+  const metas = [...document.querySelectorAll(sel)] // the To get section only: the Supplies group is its own section
+  if (metas.length === 0) return 'no food Line hint'
+  const r = await fetch('/api/meal-slots', { credentials: 'same-origin' })
+  if (!r.ok) return 'GET /api/meal-slots ' + r.status
+  const body = await r.json()
+  const list = Array.isArray(body) ? body : (Object.values(body ?? {}).find(Array.isArray) ?? [])
+  const names = [...new Set(list.map((s) => s.name).filter(Boolean))]
+  if (names.length === 0) return 'no Meal Slots'
+  const g = document.createElement('canvas').getContext('2d')
+  g.font = getComputedStyle(metas[0]).font
+  let worst = '', widest = -1
+  for (const day of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) for (const name of names) {
+    const w = g.measureText(day + ' ' + name).width
+    if (w > widest) { widest = w; worst = day + ' ' + name }
+  }
+  worst += ' +12'
+  for (const t of metas) {
+    const n = [...t.childNodes].find((c) => c.nodeType === Node.TEXT_NODE)
+    if (!n) return 'a hint without its own text node'
+    n.data = worst
+  }
+  return 'ok'
+})()`
+async function pinWorstHint() {
+  const res = await evaluate(PIN_WORST_HINT)
+  if (res !== 'ok') throw new Error(`setup: the Shop hint could not be pinned to the worst case (${res})`)
+}
+
 const SETUPS = {
   async supplyUseSheet() {
     await until(`!!document.querySelector('ul[aria-label="Supplies"] .list-row')`, 'the Supplies list')
@@ -764,6 +798,7 @@ const SETUPS = {
   // probe measures a real Shop hint (the Supplies group's Restock reason alone would leave P23 nothing to read).
   async shopHints() {
     await until(`!!document.querySelector('.shop-open .shop-lines .list-row__meta[data-status="info"]')`, 'a Meal Slot hint on a food Line of the Shop list')
+    await pinWorstHint()
   },
   scanScannedList: scannedList,
   async scanRowActive() {

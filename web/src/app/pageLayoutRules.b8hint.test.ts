@@ -30,7 +30,7 @@ describe('shop-hints pins the hint to the worst case', () => {
     expect(pin).toMatch(/measureText/)
     expect(pin).toMatch(/getComputedStyle\([^)]*\)\.font/)
     expect(pin).toMatch(/' \+12'/)
-    // only food Lines: the Supplies group's Restock reason keeps its own text
-    expect(pin).toMatch(/closest\('\.shop-supplies'\)/)
+    // only food Lines (the To get section): the Supplies group's Restock reason keeps its own text
+    expect(pin).toMatch(/'\.shop-open \.shop-lines \.list-row__meta\[data-status="info"\] \.list-row__meta-text'/)
   })
 })

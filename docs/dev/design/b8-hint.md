@@ -19,19 +19,20 @@ Below 420 px (the breakpoint of `useNarrowChips`, which already makes the Restoc
 | What | Before | After | Gain |
 |---|---|---|---|
 | `.shop-lines .list-row` gap | `--space-3` (12) | `--space-2` (8) | 12 px |
-| `.shop-lines .list-row__control` start margin | 0 | `calc((var(--space-6) - 44px) / 2)` (-10) | 10 px |
+| `.shop-lines .list-row__control` start margin | 0 | `calc(-1 * var(--space-2))` (-8) | 8 px |
 | `.shop-lines .list-row` `--row-value-min` | `--row-value-narrow` (68) | `calc(var(--row-value-narrow) - var(--space-2))` (60) | 8 px |
 
-The tick keeps its 44 px hit area; it reaches into the row's start padding so its visible 24 px circle sits on the 16 px padding
-line, where a Not needed row's Thumb starts. The value column stays end-aligned (quantities still line up). The meta text gets
-120 px at 360 px: the worst case (109.4 px) fits with about 10 px to spare, and the compact Restock reason fits too. Nothing changes
+The tick keeps its 44 px hit area; it reaches 8 px into the row's start padding, so its visible 24 px circle sits 18 px from the
+row's edge (2 px inside the 16 px padding line where a Not needed row's Thumb starts). shop.css keeps `44px` on the tick itself and
+no `max-width` (shop.css.test.ts), so the block is `@media (width < 420px)` and the margin is a token. The value column stays end-aligned (quantities still line up). The meta text gets
+118 px at 360 px: the worst case (109.4 px) fits with about 8 px to spare, and the compact Restock reason fits too. Nothing changes
 from 420 px (the text column is at least 138 px there). No shared file (`web/src/ui/**`, `styles.css`) changes.
 
 ## Guard: the worst case every day
 
 The `shopHints` setup (`scripts/check-page-layout.mjs`, shared guard file, a small change) pins every food Line's hint to the worst
 case before P23 measures it: the widest "<weekday> <Meal Slot>" of the household (the seven short weekdays x the Meal Slot names of
-`/api/meal-slots`, measured with a canvas in the meta's own computed font) followed by " +12". It writes the text node's data (the
+`/api/meal-slots`, measured with a canvas in the meta's own computed font) followed by " +12". Only the To get section (`.shop-open`) is pinned; the Supplies group is its own section. It writes the text node's data (the
 node React owns), so the layout is the real one and only the text is pinned. P23 and the probe are unchanged. The scenario now fails on
 every day the layout is too narrow, not only on the days with a long weekday.
 

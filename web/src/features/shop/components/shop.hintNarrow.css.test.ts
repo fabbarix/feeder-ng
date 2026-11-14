@@ -7,7 +7,7 @@ const nodeFs = 'node:fs'
 const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const css = readFileSync(`${cwd}/src/features/shop/shop.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
-const start = css.indexOf('@media (max-width: 419px)')
+const start = css.indexOf('@media (width < 420px)')
 const narrow = start < 0 ? '' : css.slice(start, css.indexOf('\n}', start) + 2)
 
 describe('Shop rows below 420 px: the hint has room', () => {
@@ -18,8 +18,8 @@ describe('Shop rows below 420 px: the hint has room', () => {
     expect(narrow).toMatch(/\.shop-lines \.list-row\s*\{[^}]*gap\s*:\s*var\(--space-2\)/)
     expect(narrow).toMatch(/\.shop-lines \.list-row\s*\{[^}]*--row-value-min\s*:\s*calc\(var\(--row-value-narrow\)\s*-\s*var\(--space-2\)\)/)
   })
-  it('the tick keeps its 44 px hit area and reaches into the start padding, its circle on the padding line', () => {
-    expect(narrow).toMatch(/\.shop-lines \.list-row__control\s*\{[^}]*margin-inline-start\s*:\s*calc\(\(var\(--space-6\)\s*-\s*44px\)\s*\/\s*2\)/)
+  it('the tick keeps its 44 px hit area and reaches into the start padding, by --space-2 (shop.css keeps 44px for the tick itself)', () => {
+    expect(narrow).toMatch(/\.shop-lines \.list-row__control\s*\{[^}]*margin-inline-start\s*:\s*calc\(-1\s*\*\s*var\(--space-2\)\)/)
     const control = narrow.match(/\.shop-lines \.list-row__control\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(control).not.toMatch(/size\s*:|width\s*:|height\s*:/)
   })

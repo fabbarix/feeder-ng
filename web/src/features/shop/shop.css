@@ -210,6 +210,20 @@
   }
 }
 
+/* b8-hint: below 420 px (useNarrowChips, where the Restock reason is compact) the text column gets room for the widest Shop hint
+   ("Wed Breakfast +12", about 110 px): 8 px gaps, a value column 8 px under the phone minimum, and the tick's hit area (its
+   size unchanged) reaching 8 px into the start padding, its 24 px circle 2 px inside the padding line. The meta text gets 118 px at 360 px. */
+@media (width < 420px) {
+  .shop-lines .list-row {
+    gap: var(--space-2);
+    --row-value-min: calc(var(--row-value-narrow) - var(--space-2));
+  }
+
+  .shop-lines .list-row__control {
+    margin-inline-start: calc(-1 * var(--space-2));
+  }
+}
+
 /* The tick: a 44 px hit area with no border of its own. The visible ring is a 24 px circle drawn inside it (::before), its
    colour the muted text token in both schemes. Ticked: a filled success circle with a plain check (--status-success-on-solid). */
 .line-row__tick {
