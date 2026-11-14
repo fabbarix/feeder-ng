@@ -82,6 +82,9 @@ type RestoreResult struct {
 type undoState struct {
 	Rows         json.RawMessage            `json:"rows"`
 	Participants map[string]json.RawMessage `json:"participants,omitempty"`
+	// After is the digest of every plan row right after the write (store.Rows.Digest). Restore refuses when the plan
+	// is not that any more, also after a write outside the runner that bumped no revision.
+	After string `json:"after,omitempty"`
 }
 
 // newToken is 128 random bits as hex.
@@ -108,21 +111,22 @@ func captureChanges(ctx context.Context, st *store.Store) (changeSet, error) {
 	return changeSet{rows: rows, meals: meals}, err
 }
 
-// since compares the plan now with the capture: the row diff and the cells that changed beyond except.
-func (r *Runner) since(ctx context.Context, st *store.Store, before changeSet, except []plan.Key) (store.RowDiff, []plan.CellChange, error) {
+// since compares the plan now with the capture: the row diff, the cells that changed beyond except, and the digest of
+// the plan rows now.
+func (r *Runner) since(ctx context.Context, st *store.Store, before changeSet, except []plan.Key) (store.RowDiff, []plan.CellChange, string, error) {
 	rows, err := st.CaptureRows(ctx)
 	if err != nil {
-		return store.RowDiff{}, nil, err
+		return store.RowDiff{}, nil, "", err
 	}
 	meals, err := st.Meals(ctx, "", "")
 	if err != nil {
-		return store.RowDiff{}, nil, err
+		return store.RowDiff{}, nil, "", err
 	}
 	names, err := r.recipeNames(ctx)
 	if err != nil {
-		return store.RowDiff{}, nil, err
+		return store.RowDiff{}, nil, "", err
 	}
-	return store.DiffRows(before.rows, rows), plan.CellChanges(before.meals, meals, names, except...), nil
+	return store.DiffRows(before.rows, rows), plan.CellChanges(before.meals, meals, names, except...), rows.Digest(), nil
 }
 
 // recipeNames names Recipes for the changes list.
@@ -139,12 +143,12 @@ func (r *Runner) recipeNames(ctx context.Context) (func(int64) string, error) {
 }
 
 // saveUndo stores the token of an undoable write.
-func (r *Runner) saveUndo(ctx context.Context, st *store.Store, revision int64, d store.RowDiff, captured map[string]json.RawMessage) (string, error) {
+func (r *Runner) saveUndo(ctx context.Context, st *store.Store, revision int64, d store.RowDiff, after string, captured map[string]json.RawMessage) (string, error) {
 	rows, err := json.Marshal(d)
 	if err != nil {
 		return "", err
 	}
-	state, err := json.Marshal(undoState{Rows: rows, Participants: captured})
+	state, err := json.Marshal(undoState{Rows: rows, Participants: captured, After: after})
 	if err != nil {
 		return "", err
 	}
@@ -206,6 +210,12 @@ func (r *Runner) Restore(ctx context.Context, token string) (RestoreResult, erro
 		if err != nil {
 			return err
 		}
+		// The revision proves no runner write came since; the digest proves no other module changed a plan row either
+		// (Shopping's Bought records, a Meal Slot removed or moved, a Lot deleted), so nothing is un-Bought or put back
+		// on a place that is gone.
+		if state.After != "" && before.rows.Digest() != state.After {
+			return ErrPlanChanged
+		}
 		if err := st.Revert(ctx, diff, false); err != nil {
 			return err
 		}
@@ -219,7 +229,7 @@ func (r *Runner) Restore(ctx context.Context, token string) (RestoreResult, erro
 		if _, err := st.BumpRevision(ctx); err != nil {
 			return err
 		}
-		_, changes, err = r.since(ctx, st, before, nil)
+		_, changes, _, err = r.since(ctx, st, before, nil)
 		return err
 	})
 	if err != nil {

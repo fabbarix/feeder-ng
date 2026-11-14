@@ -169,7 +169,7 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 		if o.targets != nil {
 			targets = o.targets()
 		}
-		diff, ch, err := r.since(ctx, st, before, targets)
+		diff, ch, digest, err := r.since(ctx, st, before, targets)
 		if err != nil {
 			return err
 		}
@@ -193,7 +193,7 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 			return ErrDryRun // rolls the whole write back: a preview (?dryRun=1) writes nothing
 		}
 		if o.undoable && changed {
-			if token, err = r.saveUndo(ctx, st, rev, diff, captured); err != nil {
+			if token, err = r.saveUndo(ctx, st, rev, diff, digest, captured); err != nil {
 				return err
 			}
 		}

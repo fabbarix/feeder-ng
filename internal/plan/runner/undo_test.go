@@ -791,3 +791,75 @@ func TestAFailedWritePublishesNothingAndLeavesTheOutcomeEmpty(t *testing.T) {
 		t.Errorf("a refused write left token %q and %d events", out.UndoToken, e.bus.count("plan")-n)
 	}
 }
+
+// Writes outside the runner change plan rows without bumping the revision: Shopping's Bought records, a Meal Slot
+// removed or moved (household), a Lot deleted (Stock). Undo after one of them must not overwrite or resurrect a row: the
+// token keeps a digest of the plan right after its write, and Restore refuses when the plan is not that any more.
+
+func TestRestoreIsRefusedAfterShoppingBoughtForAMealTheWriteChanged(t *testing.T) {
+	e := chickenWeek(t)
+	c, out := runner.WithOutcome(ctx)
+	if _, err := e.r.SetCourseMeal(c, e.key(9), e.rec["pasta"], nil); err != nil {
+		t.Fatal(err)
+	}
+	bought := e.buy(10, "rice") // Tuesday's new meal, bought for from the Shopping List: no plan write, no revision
+	now := e.planState()
+	if _, err := e.r.Restore(ctx, out.UndoToken); !errors.Is(err, runner.ErrPlanChanged) {
+		t.Fatalf("Restore after a Bought record = %v, want ErrPlanChanged: Undo would hang the purchase on the old meal", err)
+	}
+	if !reflect.DeepEqual(e.planState(), now) {
+		t.Error("a refused Restore changed the plan")
+	}
+	e.wantUntouched("a refused Restore", bought)
+}
+
+func TestRestoreIsRefusedAfterAMealSlotWasRemoved(t *testing.T) {
+	e := chickenWeek(t)
+	c, out := runner.WithOutcome(ctx)
+	if _, err := e.r.SetCourseMeal(c, e.key(9), e.rec["pasta"], nil); err != nil {
+		t.Fatal(err)
+	}
+	tue := e.key(10).MealSlotID
+	// What the household removal does (B9-04): the slot's planned rows go and the slot is marked removed, with no plan
+	// write of the runner.
+	for _, q := range []string{`DELETE FROM planned_meals WHERE meal_slot_id = ? AND state = 'planned'`,
+		`DELETE FROM plan_unfilled WHERE meal_slot_id = ?`, `UPDATE meal_slots SET removed_at = '2026-11-09T12:05:00Z' WHERE id = ?`} {
+		if _, err := e.db.Exec(q, tue); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := e.r.Restore(ctx, out.UndoToken); !errors.Is(err, runner.ErrPlanChanged) {
+		t.Fatalf("Restore after a Meal Slot was removed = %v, want ErrPlanChanged", err)
+	}
+	if n := e.rowsOf(`SELECT count(*) AS n FROM planned_meals WHERE meal_slot_id = ` + fmt.Sprint(tue)); n[0] != "n=0" {
+		t.Errorf("planned rows on the removed Meal Slot: %v, want none", n)
+	}
+}
+
+func TestRevertNeverPutsAMealBackOnARemovedMealSlot(t *testing.T) {
+	e := chickenWeek(t)
+	before, err := e.st.CaptureRows(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tue := e.key(10)
+	if err := e.st.DeleteMeal(ctx, tue); err != nil {
+		t.Fatal(err)
+	}
+	after, err := e.st.CaptureRows(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := store.DiffRows(before, after) // Tuesday's row removed, as a mark's replan can remove one
+	if _, err := e.db.Exec(`UPDATE meal_slots SET removed_at = '2026-11-09T12:05:00Z' WHERE id = ?`, tue.MealSlotID); err != nil {
+		t.Fatal(err)
+	}
+	for _, guard := range []bool{true, false} {
+		if err := e.st.Revert(ctx, d, guard); err != nil {
+			t.Fatalf("Revert(guard=%v): %v", guard, err)
+		}
+		if _, err := e.st.Meal(ctx, tue); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("Revert(guard=%v) put Tuesday's meal back on its removed Meal Slot (%v)", guard, err)
+		}
+	}
+}

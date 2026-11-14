@@ -3,11 +3,14 @@ package store
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -58,6 +61,27 @@ func (s *Store) CaptureRows(ctx context.Context) (Rows, error) {
 	}
 	out.generation = g
 	return out, nil
+}
+
+// Digest is a fingerprint of every plan row and the generation. A token keeps the digest of the plan right after its
+// write, and Restore refuses when the plan is not that any more: a write outside the runner (a Shopping Bought record,
+// a Meal Slot removed or moved, a Lot deleted) changes plan rows without bumping the revision.
+func (r Rows) Digest() string {
+	h := sha256.New()
+	for _, t := range planTables {
+		tr := r.tables[t.name]
+		fmt.Fprintf(h, "%s\x1e%s\x1e", t.name, strings.Join(tr.cols, "\x1f"))
+		keys := append([]string(nil), tr.keys...)
+		sort.Strings(keys)
+		for _, k := range keys {
+			for _, v := range tr.rows[k] {
+				fmt.Fprintf(h, "%s\x1f", valueKey(v))
+			}
+			h.Write([]byte{0x1e})
+		}
+	}
+	fmt.Fprintf(h, "gen=%d", r.generation)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // readTable reads the rows of t matching where (all rows when where is "").
@@ -347,6 +371,17 @@ func (s *Store) Revert(ctx context.Context, d RowDiff, guard bool) error {
 	}
 	for _, sp := range parts {
 		for _, r := range sp.removed {
+			if sp.t.name == "planned_meals" {
+				// A meal is never put back on a Meal Slot removed since (B9-04): its place is gone.
+				var active int
+				if err := s.q.QueryRowContext(ctx, `SELECT COUNT(*) FROM meal_slots WHERE id = ? AND removed_at IS NULL`,
+					r[colIndex(sp.td.Cols, "meal_slot_id")]).Scan(&active); err != nil {
+					return err
+				}
+				if active == 0 {
+					continue
+				}
+			}
 			if sp.t.name == "planned_meal_bought" {
 				// The record goes with its Planned Meal: none to attach it to, nothing to put back.
 				var n int
@@ -379,6 +414,16 @@ func (s *Store) Revert(ctx context.Context, d RowDiff, guard bool) error {
 		}
 	}
 	return nil
+}
+
+// colIndex is the place of the column named c in cols (0 when it is not there, which the tables above never are).
+func colIndex(cols []string, c string) int {
+	for i, n := range cols {
+		if n == c {
+			return i
+		}
+	}
+	return 0
 }
 
 func keyWhere(cols []string, idx []int, r []any) (string, []any) {
