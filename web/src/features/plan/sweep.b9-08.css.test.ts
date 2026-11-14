@@ -6,7 +6,7 @@
 // even where the shell rule files are not yet read.
 //
 // Relies on (written by B9-07, not imported here): web/src/ui/lib/breakpoints.ts exporting `useBreakpoint(name)` with the
-// DS-09 table { tablet: 37.5, md: 48, desktop: 64, desktopWide: 80, wide: 90 } (em) and `NARROW = 22.5`.
+// DS-09 table { tablet: 37.5, md: 48, desktop: 64, desktopWide: 80, wide: 90 } (em) and `NARROW = 23.5` (below 376 px, amendment A1).
 import { describe, expect, it } from 'vitest'
 import { readSource } from './test-css'
 
@@ -98,7 +98,7 @@ describe('A11Y-02: no feature-local focus ring (the global ring and the --focus-
 })
 
 // ---- DS-09: em breakpoints, rem container queries ----------------------------------------------------------------------------
-const TABLE_EM = [22.5, 37.5, 48, 64, 80, 90]
+const TABLE_EM = [23.5, 37.5, 48, 64, 80, 90]
 describe('DS-09: media queries on width are (min-width: Xem) or (width < Xem) with X from the table', () => {
   it('no @media in the seven folders uses a px width, a max-width or a value outside the table', () => {
     for (const r of RULES) {
