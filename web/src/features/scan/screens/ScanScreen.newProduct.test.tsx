@@ -39,7 +39,7 @@ const controller = (over: Partial<ScanController> = {}): ScanController => ({
   status: 'ready', error: null,
   camera: { status: 'ready', videoRef: { current: null }, torchSupported: true, torchOn: false, toggleTorch: vi.fn() },
   recovery: { failure: null, manualOpen: false, openManual: vi.fn(), closeManual: vi.fn(), text: '', setText: vi.fn(), error: null, submit: vi.fn(() => true), retry: vi.fn() },
-  muted: false, toggleMute: vi.fn(), canVibrate: true, scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), update: vi.fn(), clear: vi.fn() }, endSession: vi.fn(), flow: flow(),
+  muted: false, toggleMute: vi.fn(), canVibrate: true, scanned: { loaded: false, entries: [], rows: [], totals: { spentCents: 0, unpricedCount: 0 }, toGet: [], toGetCount: 0, nextUnpriced: () => null, record: vi.fn(), settle: vi.fn(), drop: vi.fn(), reprice: vi.fn(), update: vi.fn(), clear: vi.fn() }, endSession: vi.fn(), toGetTick: { tick: vi.fn(async () => {}), pendingKeys: new Set<string>() }, flow: flow(),
   list: makeList({ lines }),
   online: true, pendingCount: 0, rejectedCount: 0, dismissRejected: vi.fn(), notices: [], dismissNotice: vi.fn(),
   ingredients: [{ id: 1, name: 'passata', baseUnit: 'g' }], currency: 'USD', system: 'imperial', products, setPicturePicking: vi.fn(), ...over,
