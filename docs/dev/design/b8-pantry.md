@@ -33,8 +33,11 @@ sticky and opaque in the Add Stock Lot select at both widths (a sticky header is
 as it scrolls); By Ingredient with the Supplies filter; the New Supply sheet (Name, Base Unit `Segmented`, Restock level, Picture) at
 both widths.
 
-Not done, left for the user: the Storage Place `Select` of the Lot sheet shows an empty value for a Not sorted Lot (no placeholder, such as
-"Choose a Storage Place"); not an H8 item. Supply rows say "restocks below 20" when stocked and "below Restock level 4" when low: the
+Review additions: the Storage Place `Select` of the Lot sheet showed an empty value; until a new place is chosen it now shows where the Lot
+is, its Storage Place or "Not sorted" (`LotSheet.placeholder.test.tsx`). G1 also needed `useFloatingPopover` (shared): its capture scroll
+listener placed the popover again on the body's own scroll, and `place()` un-caps the panel to measure it, which clamped the body back to the
+top, so the body never scrolled in a browser. A scroll inside the popover no longer re-places it, and `place()` restores scrolled positions
+(`ui/lib/useFloatingPopover.scroll.test.tsx`); the body also gets `overscroll-behavior: contain`. Supply rows say "restocks below 20" when stocked and "below Restock level 4" when low: the
 split is deliberate (H6 copy).
 
 ## Not behaviour: no BDD
