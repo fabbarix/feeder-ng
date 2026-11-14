@@ -28,7 +28,8 @@ function rule(selector: string, source = base): Record<string, string> {
 }
 
 const phoneBlock = (): string => {
-  const m = css.match(/@media[^{]*max-width:\s*(?:599(?:\.98)?px|37\.4(?:rem|em))[^{]*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/)
+  // DS-09 (B9-10): the phone block is `(width < 37.5em)`; max-width 599px is the old spelling (the sweep test bans it).
+  const m = css.match(/@media[^{]*(?:max-width:\s*(?:599(?:\.98)?px|37\.4(?:rem|em))|width\s*<\s*37\.5em)[^{]*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/)
   return m?.[1] ?? ''
 }
 
@@ -56,7 +57,7 @@ describe('settings.css: the Allowlist add form', () => {
 
   it('at phone width the field is the full row (no cap, 100 % basis)', () => {
     const block = phoneBlock()
-    expect(block, 'a max-width 599px media block').not.toBe('')
+    expect(block, 'a (width < 37.5em) media block').not.toBe('')
     const r = rule('.allowlist__field', block)
     expect(`${r.flex ?? ''} ${r['flex-basis'] ?? ''} ${r['inline-size'] ?? ''}`).toMatch(/100%/)
     expect(r['max-inline-size']).toBe('none')

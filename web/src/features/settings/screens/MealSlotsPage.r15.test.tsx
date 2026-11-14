@@ -20,7 +20,7 @@ function routes(me: typeof ADMIN_ME, extra: Record<string, unknown> = {}) {
   })
 }
 function viewport(desktop: boolean) {
-  vi.stubGlobal('matchMedia', (q: string) => ({ matches: desktop && q.includes('1024'), media: q, addEventListener() {}, removeEventListener() {} }))
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: desktop && /1024|64em/.test(q), media: q, addEventListener() {}, removeEventListener() {} }))
 }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 10, 9, 12, 0) })

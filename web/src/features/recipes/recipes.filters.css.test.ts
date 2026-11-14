@@ -4,9 +4,10 @@
 import { describe, expect, it } from 'vitest'
 import { readSource } from '../plan/test-css'
 import { cssRules, recipeRules } from './rules.test-helper'
+import { recipesCssPaths } from './recipesCss.test-helper'
 
 // The Recipes header is styled by recipes.css and the shared filter header (ui/FilterBar/FilterBar.css, docs/design/pantry-filter.md 5).
-const header = cssRules(['features/recipes/recipes.css', 'ui/FilterBar/FilterBar.css'])
+const header = cssRules([...recipesCssPaths(), 'ui/FilterBar/FilterBar.css'])
 const { rulesFor, valueFor } = header
 
 const WIDTHS = [0, 390, 600, 768, 834, 1024, 1440, 1920]

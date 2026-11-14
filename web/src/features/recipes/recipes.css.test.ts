@@ -1,8 +1,8 @@
 // CSS contract of the Recipes screens (jsdom does not lay out): ui-fix-plan 5.8 (2/3/4 columns, Tag row fade); the hero is 16:9 since R2-1 (D-02). The R2-1 layout contract is recipes.layout.css.test.ts.
 import { describe, expect, it } from 'vitest'
-import { readSource } from '../plan/test-css'
+import { readRecipesCss } from './recipesCss.test-helper'
 
-const css = readSource('features/recipes/recipes.css').replace(/\/\*[\s\S]*?\*\//g, '')
+const css = readRecipesCss().replace(/\/\*[\s\S]*?\*\//g, '')
 
 interface Rule {
   selector: string
@@ -28,8 +28,8 @@ function parse(text: string, minWidth = 0): Rule[] {
     }
     const inner = text.slice(open + 1, j - 1)
     if (head.startsWith('@media')) {
-      const m = /min-width:\s*(\d+)px/.exec(head)
-      rules.push(...parse(inner, m ? Number(m[1]) : minWidth))
+      const m = /min-width:\s*(\d+(?:\.\d+)?)(px|em)/.exec(head) // DS-09: em (1em = 16 px)
+      rules.push(...parse(inner, m ? Number(m[1]) * (m[2] === 'em' ? 16 : 1) : minWidth))
     } else if (!head.startsWith('@')) {
       rules.push({ selector: head, body: inner, minWidth })
     }

@@ -1,10 +1,10 @@
 // PT phone contract (rx-pt.md section 5.5): at 360 px the Member column takes what three 48 px state columns leave, a long name
 // truncates, nothing scrolls sideways. jsdom does not lay out, so the class names and rules are the contract.
 import { describe, expect, it } from 'vitest'
-import { readSource } from '../plan/test-css'
+import { readRecipesCss } from './recipesCss.test-helper'
 import { recipeRules, rulesFor, valueFor } from './rules.test-helper'
 
-const css = readSource('features/recipes/recipes.css').replace(/\/\*[\s\S]*?\*\//g, '')
+const css = readRecipesCss().replace(/\/\*[\s\S]*?\*\//g, '')
 
 describe('.preference-table on a phone', () => {
   it('fills its Tile and fixes the column widths so the table cannot outgrow it', () => {
