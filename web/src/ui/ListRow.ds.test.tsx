@@ -115,10 +115,12 @@ describe('ListRow anatomy: stylesheet', () => {
     expect(declarations(css, '.list-row__control')['pointer-events']).toBeUndefined() // round 2: the dead duplicate goes
   })
 
-  it('styles.css defines --row-min (64px) and --row-value-min (5.5rem; 4.25rem below 600 px)', () => {
+  it('styles.css defines --row-min (64px) and --row-value-min (5.5rem; --row-value-narrow, 4.25rem, below 600 px)', () => {
     const styles = code(readStylesCss())
     expect(styles).toMatch(/--row-min:\s*64px/)
     expect(styles).toMatch(/--row-value-min:\s*5\.5rem/)
-    expect(styles).toMatch(/@media\s*\(max-width:\s*599px\)\s*\{[^@]*--row-value-min:\s*4\.25rem/)
+    // b8-shop: the phone minimum is a named token, which the Shop's card grid reuses (docs/dev/design/b8-shop.md 2)
+    expect(styles).toMatch(/--row-value-narrow:\s*4\.25rem/)
+    expect(styles).toMatch(/@media\s*\(max-width:\s*599px\)\s*\{[^@]*--row-value-min:\s*var\(--row-value-narrow\)/)
   })
 })
