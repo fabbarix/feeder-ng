@@ -80,12 +80,13 @@ func tickStateToJSON(t *shopping.Tick, me int64) *tickStateJSON {
 	if t == nil {
 		return nil
 	}
-	out := &tickStateJSON{By: t.By, Added: amount(t.Added), Additions: []additionJSON{}}
+	out := &tickStateJSON{By: t.By, Additions: []additionJSON{}}
 	if out.By == "" {
 		out.By = "hand"
 	}
-	if out.Added != nil && *out.Added == 0 {
-		out.Added = nil
+	if !t.AddedUnknown && t.Added != 0 {
+		added := t.Added
+		out.Added = &added
 	}
 	for _, a := range t.Additions {
 		j := additionJSON{Who: a.Who, Mine: a.UserID != 0 && a.UserID == me, By: a.By, Quantity: amount(a.Quantity),

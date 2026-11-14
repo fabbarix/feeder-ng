@@ -1,6 +1,7 @@
 package shopping_test
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -162,5 +163,25 @@ func TestDeriveAnIngredientExtraCarriesItsTick(t *testing.T) {
 	}
 	if e := byID[3]; e.Tick != nil {
 		t.Errorf("open extra Tick = %+v, want nil", e.Tick)
+	}
+}
+
+func TestAnAdditionOfUnknownQuantityIsNeverSummedIntoAdded(t *testing.T) {
+	// A tick from before migration 1560 (quantity +Inf in the store's convention) and a later addition of 200 g.
+	as := []shopping.Addition{{By: "hand", LotID: 1, Quantity: math.Inf(1), Covers: 800}, {By: "hand", LotID: 2, Quantity: 200, Covers: 800}}
+	sum, unknown := shopping.AddedOf(as)
+	if sum != 200 || !unknown {
+		t.Fatalf("AddedOf = %v, %v; want 200 (finite) and unknown", sum, unknown)
+	}
+	// The Line needs 800 g and the legacy tick's Lot covered it: nothing more, whatever its unknown quantity.
+	l := shopping.Derive(tickedChicken(800, shopping.Tick{Needed: 800, Added: sum, AddedUnknown: true, Additions: as}, 1000))
+	c := line(t, l, chicken)
+	if !c.Ticked || c.More != 0 || math.IsInf(c.Tick.Added, 0) {
+		t.Fatalf("Chicken Ticked %v More %v Added %v; want ticked, no More, a finite Added", c.Ticked, c.More, c.Tick.Added)
+	}
+	// The need grows by 300 g: that much reappears, as for any tick.
+	l = shopping.Derive(tickedChicken(1100, shopping.Tick{Needed: 800, Added: sum, AddedUnknown: true, Additions: as}, 800))
+	if c := line(t, l, chicken); !near(c.More, 300) {
+		t.Errorf("More = %v, want 300", c.More)
 	}
 }

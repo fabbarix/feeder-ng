@@ -96,12 +96,14 @@ type Extra struct {
 //
 // B9-23 (SSP-02, RES-03): a Line can be ticked more than once, so a Tick is its additions. Needed is the covered amount Q0:
 // the largest `covers` of the additions. Added is the sum of the additions' quantities (0 = no Stock added). By is the
-// first addition's. Additions are oldest first; the store fills all four from shopping_tick_additions.
+// first addition's. Additions are oldest first; the store fills them from shopping_tick_additions. Added is always
+// finite: AddedUnknown says an addition from before migration 1560 is left out of it (the API then shows added null).
 type Tick struct {
 	IngredientID int64
 	Needed       float64
 	By           string // "scan" | "hand"
 	Added        float64
+	AddedUnknown bool
 	Additions    []Addition
 }
 
@@ -293,7 +295,7 @@ func tickedLine(in Input, l Line, t Tick) Line {
 	tick := t
 	l.Ticked, l.Tick = true, &tick
 	l.Pack, l.EstimatedCostCents = nil, nil
-	more := moreSinceTick(t.Needed, t.Added, l.Quantity)
+	more := moreSinceTick(t.Needed, t.addedForCover(), l.Quantity)
 	if nn, ok := in.NotNeeded[l.IngredientID]; ok {
 		if more -= nn.Needed; more <= eps {
 			more = 0

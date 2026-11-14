@@ -100,13 +100,29 @@ func moreSinceTick(q0, added, q2 float64) float64 {
 	return more
 }
 
-// AddedOf is the sum of what the additions put into Stock: +Inf when one of them does not know (before migration 1560).
-func AddedOf(as []Addition) float64 {
-	sum := 0.0
+// AddedOf is the sum of what the additions put into Stock, always finite: an addition that does not know its quantity
+// (+Inf, a tick from before migration 1560) is left out of the sum and reported by unknown instead.
+func AddedOf(as []Addition) (sum float64, unknown bool) {
 	for _, a := range as {
+		if math.IsInf(a.Quantity, 0) || math.IsNaN(a.Quantity) {
+			unknown = true
+			continue
+		}
 		sum += a.Quantity
 	}
-	return sum
+	return sum, unknown
+}
+
+// addedForCover is what the tick counts as added when it works out its More: Added, and for an addition that does not
+// know its quantity, what it covered (a tick from before migration 1560 put the Line's need into Stock).
+func (t Tick) addedForCover() float64 {
+	added := t.Added
+	for _, a := range t.Additions {
+		if math.IsInf(a.Quantity, 0) || math.IsNaN(a.Quantity) {
+			added += a.Covers
+		}
+	}
+	return added
 }
 
 // ExtraTick is the tick of a ticked extra: its additions (none for a text extra), the first one's By ("hand" without one).
@@ -114,7 +130,8 @@ func ExtraTick(e Extra) *Tick {
 	if !e.Ticked {
 		return nil
 	}
-	t := &Tick{IngredientID: e.IngredientID, Needed: e.Quantity, By: "hand", Added: AddedOf(e.Additions), Additions: e.Additions}
+	t := &Tick{IngredientID: e.IngredientID, Needed: e.Quantity, By: "hand", Additions: e.Additions}
+	t.Added, t.AddedUnknown = AddedOf(e.Additions)
 	if len(e.Additions) > 0 {
 		t.By = e.Additions[0].By
 	}

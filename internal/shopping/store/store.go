@@ -247,7 +247,7 @@ func (s *Store) Ticks(ctx context.Context, rangeTo stock.Date) (map[int64]shoppi
 		out[a.IngredientID] = t
 	}
 	for ing, t := range out {
-		t.Added = shopping.AddedOf(t.Additions)
+		t.Added, t.AddedUnknown = shopping.AddedOf(t.Additions)
 		out[ing] = t
 	}
 	return out, nil
