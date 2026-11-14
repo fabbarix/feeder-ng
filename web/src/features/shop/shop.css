@@ -201,7 +201,7 @@
     border-radius: var(--radius-tile-sm);
     background: var(--color-surface);
     overflow: hidden;
-    /* b8-shop: the card's text column gets room for the Shop hint ("Includes Tue Dinner +1") */
+    /* b8-shop: the card's text column gets room for the Shop hint ("Tue Dinner +1") */
     --row-value-min: var(--row-value-narrow);
   }
 
