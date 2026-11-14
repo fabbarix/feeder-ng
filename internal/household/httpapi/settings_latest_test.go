@@ -159,3 +159,50 @@ func TestAUserCannotChangeLatestStart(t *testing.T) {
 		t.Errorf("settings changed: %+v", got)
 	}
 }
+
+// Every combination of the two tri-state fields (left out, null, a time) from the stored 06:30 and 22:00, each in a
+// fresh Household: the stored result is the merged one, and every combination here is valid.
+func TestEveryCombinationOfTheTwoStartFieldsSavesTheMergedValues(t *testing.T) {
+	type field struct {
+		name string
+		set  bool
+		val  any    // nil with set: null
+		want string // "" Off
+	}
+	earliest := []field{{"left out", false, nil, "06:30"}, {"null", true, nil, ""}, {"07:15", true, "07:15", "07:15"}}
+	latest := []field{{"left out", false, nil, "22:00"}, {"null", true, nil, ""}, {"21:00", true, "21:00", "21:00"}}
+	env := testkit.Start(t)
+	admin := env.LoginAdmin(t)
+	for _, e := range earliest {
+		for _, l := range latest {
+			reset := fullSettings()
+			reset["earliestStart"], reset["latestStart"] = "06:30", "22:00"
+			if r := admin.Put("/api/household/settings", reset); r.Status != 200 {
+				t.Fatalf("reset: %d %s", r.Status, r.Body)
+			}
+			body := fullSettings()
+			if e.set {
+				body["earliestStart"] = e.val
+			}
+			if l.set {
+				body["latestStart"] = l.val
+			}
+			r := admin.Put("/api/household/settings", body)
+			if r.Status != 200 {
+				t.Errorf("earliest %s, latest %s: %d %s", e.name, l.name, r.Status, r.Body)
+				continue
+			}
+			got, _ := readLatest(t, admin)
+			str := func(p *string) string {
+				if p == nil {
+					return ""
+				}
+				return *p
+			}
+			if str(got.EarliestStart) != e.want || str(got.LatestStart) != l.want {
+				t.Errorf("earliest %s, latest %s: stored %q and %q, want %q and %q", e.name, l.name,
+					str(got.EarliestStart), str(got.LatestStart), e.want, l.want)
+			}
+		}
+	}
+}
