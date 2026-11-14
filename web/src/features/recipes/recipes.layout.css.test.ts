@@ -200,13 +200,15 @@ describe('E-01: the remove cell is centred in the line row', () => {
 })
 
 describe('E-01: Tags as a chip input', () => {
-  it('chips and the text field share one flex-wrap control capped at the md size (320 px)', () => {
+  it('chips and the text field share one flex-wrap control capped at 24rem and the column (DS-04: it was 320 px)', () => {
     expect(valueFor('.tag-input__control', 'display', 0)).toBe('flex')
     expect(valueFor('.tag-input__control', 'flex-wrap', 0)).toBe('wrap')
-    expect(valueFor('.tag-input', 'max-inline-size', 0)).toBe('320px')
+    expect(valueFor('.tag-input', 'max-inline-size', 0)).toBe('min(24rem, 100%)')
   })
   it('two realistic Tags and the field fit one line inside the cap: 2 chips (78 px each) + 2 gaps + the field minimum <= the cap', () => {
-    const cap = parseFloat(valueFor('.tag-input', 'max-inline-size', 1280) ?? '9999')
+    // DS-04: min(24rem, 100%) is 384 px at 16 px text in a column wider than that
+    const capValue = valueFor('.tag-input', 'max-inline-size', 1280) ?? ''
+    const cap = /^min\(([0-9.]+)rem, 100%\)$/.test(capValue) ? Number(/^min\(([0-9.]+)rem/.exec(capValue)![1]) * 16 : parseFloat(capValue || '9999')
     const gap = valueFor('.tag-input__control', 'gap', 1280)
     expect(gap).toBe('var(--space-2)') // 8 px
     const fieldMin = parseFloat(valueFor('.tag-input__control > .ui-field', 'min-inline-size', 1280) ?? '0')

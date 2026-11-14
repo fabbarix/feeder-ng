@@ -46,7 +46,7 @@ describe('DS-07: a class that sets a font size sets the whole role (the body rol
   const sized = [...bySelector.entries()].filter(([, e]) => e.sizes.length > 0)
 
   it('sets a line height with every font size', () => {
-    expect(sized.length).toBeGreaterThan(100)
+    expect(sized.length).toBeGreaterThan(50) // 59 selectors set a font size at the start of B9-10
     expect(sized.filter(([, e]) => !e.line).map(([s, e]) => `${e.where}: ${s}`)).toEqual([])
   })
   it('sets a weight with every font size', () => {
