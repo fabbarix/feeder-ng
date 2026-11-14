@@ -2,7 +2,7 @@
 // condition, for the contract tests of R2-1 (jsdom does not lay out).
 //
 // DS-09 (B9-10): a width condition may be a px or em media query, `(width < Nem)`, or a container query in rem. This helper reads them all
-// as a width in px at 16 px text (1em = 1rem = 16 px), so a test says "from 832" whatever the stylesheet writes; a container query
+// as a width in px at 16 px text (1em = 1rem = 16 px), so a test says "from 784" whatever the stylesheet writes; a container query
 // stands for the viewport width at which its container is that wide (the tests are about the rule, not the container).
 import { type Rule } from '../../test/cssRules'
 import { readSource } from '../plan/test-css'

@@ -76,7 +76,7 @@ describe('DS-07: a class that sets a font size sets the whole role (the body rol
 
   describe('muted lines and overlines are the DS-07 primitives, not feature classes', () => {
     const removed = ['.settings__overline', '.settings__muted', '.ra__muted']
-    it.each(removed)('%s has no rule left (Overline / Muted from ui replace it)', (sel) => {
+    it.each(removed)('%s has no rule left (the overline class of ui on the Settings h2, Muted from ui)', (sel) => {
       expect(rules.filter((r) => selectorsOf(r).includes(sel)).map(label)).toEqual([])
     })
     it('no component of the five folders uses .pg__*, .settings__overline, .settings__muted or .ra__muted', () => {
@@ -179,12 +179,12 @@ describe('A11Y-02: one focus ring (the global :where(:focus-visible)), none of t
 })
 
 describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery', () => {
-  const TABLE = [22.5, 37.5, 48, 64, 80, 90]
+  const TABLE = [23.5, 37.5, 48, 64, 80, 90]
   const widthQueries = rules.flatMap((r) => r.at.filter((a) => a.startsWith('@media') && /width/.test(a)).map((a) => ({ r, a })))
   it('has width media queries to check', () => {
     expect(widthQueries.length).toBeGreaterThan(0)
   })
-  it('every width @media is (min-width: Xem) or (width < Xem), X from the table 22.5, 37.5, 48, 64, 80, 90', () => {
+  it('every width @media is (min-width: Xem) or (width < Xem), X from the table 23.5, 37.5, 48, 64, 80, 90', () => {
     const bad = widthQueries.filter(({ a }) => {
       const m = /^@media (?:\(min-width: ([0-9.]+)em\)|\(width < ([0-9.]+)em\))$/.exec(a)
       return !m || !TABLE.includes(Number(m[1] ?? m[2]))
@@ -211,8 +211,8 @@ describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery'
     const declared = rules.filter((r) => /mealSlotCards\.css$/.test(r.file) && declarations(r.body).some(([k, v]) => (k === 'container' && /^ms-card\s*\/\s*inline-size$/.test(v)) || (k === 'container-name' && v === 'ms-card')))
     expect(declared.length, 'a rule declares the ms-card container (container: ms-card / inline-size)').toBeGreaterThan(0)
   })
-  it('the editor ingredient lines switch to one row at @container ... (min-width: 52rem), not (min-width: 900px)', () => {
-    const q = rules.filter((r) => /recipes\/recipe-editor\.css$/.test(r.file) && selectorsOf(r).includes('.line-row') && r.at.some((a) => /^@container [a-z-]+ \(min-width: 52rem\)$/.test(a)))
+  it('the editor ingredient lines switch to one row at @container ... (min-width: 49rem), not (min-width: 900px)', () => {
+    const q = rules.filter((r) => /recipes\/recipe-editor\.css$/.test(r.file) && selectorsOf(r).includes('.line-row') && r.at.some((a) => /^@container [a-z-]+ \(min-width: 49rem\)$/.test(a)))
     expect(q.length).toBeGreaterThan(0)
     const name = /^@container ([a-z-]+) /.exec(q[0]!.at.find((a) => a.startsWith('@container'))!)![1]!
     // the container the query names must be declared, in the editor sheet, on an element that holds the .line-row and its header
