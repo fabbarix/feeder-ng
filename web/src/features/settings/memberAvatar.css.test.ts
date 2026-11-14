@@ -10,8 +10,15 @@ const cwd = (globalThis as unknown as { process: { cwd: () => string } }).proces
 const css = readFileSync(`${cwd}/src/features/settings/settings.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 
 describe('settings.css: Member colour never repaints the Avatar fill', () => {
-  it('no rule targets .avatar (the primitive owns its fill and initials colour)', () => {
-    expect(css).not.toMatch(/\.avatar\b/)
+  it('no rule targets .avatar (the primitive owns its fill and initials colour), except the neutral not-eating pill of DS-11', () => {
+    // DS-11 (B9-10): a Member who does not eat the Course is an outlined pill whose avatar is surface-2 with a muted letter: neutral
+    // tokens, never a tint of the Member colour, so the initials keep their contrast (the reason for this test).
+    const rest = css.replace(/\.course-eaters__pill\[aria-pressed='false'\] \.avatar\s*\{([^}]*)\}/g, (_m, body: string) => {
+      expect(body).not.toMatch(/--member-colour/)
+      expect(body).toMatch(/background:\s*var\(--color-surface-2\)/)
+      return ''
+    })
+    expect(rest).not.toMatch(/\.avatar\b/)
   })
 
   it('no colour tint of a Member colour is used as a background (color-mix with --member-colour)', () => {

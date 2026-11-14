@@ -5,6 +5,7 @@ import type { LinkChoice } from '../../../lib/baseRecipes/useLineLink'
 import { flatPickerRows, moveActive } from '../../../lib/baseRecipes/pickerKeys'
 import type { PickerRow } from '../../../lib/baseRecipes/types'
 import { recipeStrings } from '../strings'
+import '../recipe-detail.css'
 
 export interface BaseRecipePickerProps {
   open: boolean

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Chip } from '../../../ui'
 import { courseStrings } from '../strings'
+import '../recipes-list.css'
 
 export interface CourseChipsProps {
   /** The Recipe's Course names, household order. */

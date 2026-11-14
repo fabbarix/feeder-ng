@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BottomSheet, Button, DateField, StepperField } from '../../../ui'
+import { BottomSheet, Button, DateField, Muted, StepperField } from '../../../ui'
 import { clampGuests, emptiesDate, MAX_GUESTS, MIN_GUESTS, portionsPreview, portionsPreviewText } from '../lib/dateAttendance'
 import { dateProblem } from '../lib/attendanceDate'
 import { dateCourseChanges, dateCourseDrafts, hasDateOverride, resetDateCourse, sameAttendance, withDateEater, type DateCourseDraft } from '../lib/dateCourses'
@@ -80,11 +80,11 @@ function DateForm({ slot, date, attendance, members, saving, dateReadOnly = fals
           {problem}
         </p>
       ) : null}
-      <p className="settings__muted">{text.thisDateOnly}</p>
+      <Muted>{text.thisDateOnly}</Muted>
       <AttendanceEditor members={members} value={draft} onChange={setDraft} />
       <StepperField label={text.guests} helper={text.guestsHelper} value={guests} min={MIN_GUESTS} max={MAX_GUESTS} onChange={(n) => setGuests(clampGuests(n))} />
-      <p className="settings__muted">{portionsPreviewText(portionsPreview(members, draft, guests))}</p>
-      {empty ? <p className="settings__muted">{text.emptiedNote}</p> : null}
+      <Muted>{portionsPreviewText(portionsPreview(members, draft, guests))}</Muted>
+      {empty ? <Muted>{text.emptiedNote}</Muted> : null}
       {showCourses ? (
         <DateCoursesSection
           drafts={courseDrafts}

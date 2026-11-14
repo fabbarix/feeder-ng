@@ -29,7 +29,8 @@ import { pickCourseIds } from '../lib/recipeCourses'
 import { codeMessage, recipeStrings } from '../strings'
 import { parseNumber } from '../lib/draft'
 import type { IngredientRef } from '../types'
-import '../recipes.css'
+import '../recipe-detail.css'
+import '../recipe-editor.css'
 
 const SECTIONS = [
   { id: 'recipe-section-details', label: recipeStrings.fields.details },
@@ -205,53 +206,55 @@ export function RecipeEditorScreen(): ReactNode {
             <h2 id="recipe-section-ingredients-title">{recipeStrings.ingredients}</h2>
             {editor.errors.lines ? <p role="alert">{codeMessage(editor.errors.lines)}</p> : null}
             {draft.lines.length === 0 ? <p>{recipeStrings.lines.none}</p> : null}
-            {draft.lines.length > 0 ? (
-              <div className="recipe-editor__lines-head" aria-hidden="true">
-                <span>{recipeStrings.lines.ingredient}</span>
-                <span>{recipeStrings.lines.quantity}</span>
-                <span>{recipeStrings.lines.unit}</span>
-                <span>{recipeStrings.lines.note}</span>
-                <span />
-              </div>
-            ) : null}
-            <Sortable
-              as="ul"
-              className="recipe-editor__lines"
-              items={draft.lines}
-              getKey={(line) => line.key}
-              getLabel={(line, i) =>
-                (line.ingredientName || (line.ingredientId === null ? '' : byId.get(line.ingredientId)?.name) || '').trim() ||
-                recipeStrings.lines.lineLabel(i + 1)
-              }
-              onReorder={editor.moveLine}
-              renderItem={(line, { index: i, handle, itemProps }) => (
-                <IngredientLineRow
-                  line={line}
-                  index={i}
-                  handle={handle}
-                  itemProps={itemProps}
-                  count={draft.lines.length}
-                  onMove={(delta) => editor.moveLine(i, i + delta)}
-                  errors={editor.errors}
-                  ingredient={line.ingredientId === null ? undefined : byId.get(line.ingredientId)}
-                  ingredients={ingredients}
-                  onPick={(ing) => editor.pickIngredient(line.key, ing)}
-                  onChange={(patch) => editor.updateLine(line.key, patch)}
-                  steps={draft.steps}
-                  neededAtDefault={(line.baseRecipeId ?? null) !== null ? (line.neededAtDefault ?? null) : null}
-                  onNeededAt={(step) => editor.updateLine(line.key, { neededAtStep: neededAtOverride(step, line.neededAtDefault ?? null) })}
-                  onLinkToBase={line.ingredientId !== null && (line.baseRecipeId ?? null) === null ? () => setSession({ kind: 'picker', key: line.key }) : undefined}
-                  onUseAsPlain={() => setSession({ kind: 'plain', key: line.key })}
-                  onRemove={() => editor.removeLine(line.key)}
-                  onQuickCreate={(query) => quick.open({ lineKey: line.key, query, unit: line.unit })}
-                  quickCreateDisabledReason={quick.disabledReason}
-                  focusAmount={quick.focusLineKey === line.key}
-                  onAmountFocused={quick.amountFocused}
-                  focusIngredient={addedLine && i === draft.lines.length - 1}
-                  onIngredientFocused={clearAddedLine}
-                />
-              )}
-            />
+            <div className="recipe-editor__lines-box">
+              {draft.lines.length > 0 ? (
+                <div className="recipe-editor__lines-head" aria-hidden="true">
+                  <span>{recipeStrings.lines.ingredient}</span>
+                  <span>{recipeStrings.lines.quantity}</span>
+                  <span>{recipeStrings.lines.unit}</span>
+                  <span>{recipeStrings.lines.note}</span>
+                  <span />
+                </div>
+              ) : null}
+              <Sortable
+                as="ul"
+                className="recipe-editor__lines"
+                items={draft.lines}
+                getKey={(line) => line.key}
+                getLabel={(line, i) =>
+                  (line.ingredientName || (line.ingredientId === null ? '' : byId.get(line.ingredientId)?.name) || '').trim() ||
+                  recipeStrings.lines.lineLabel(i + 1)
+                }
+                onReorder={editor.moveLine}
+                renderItem={(line, { index: i, handle, itemProps }) => (
+                  <IngredientLineRow
+                    line={line}
+                    index={i}
+                    handle={handle}
+                    itemProps={itemProps}
+                    count={draft.lines.length}
+                    onMove={(delta) => editor.moveLine(i, i + delta)}
+                    errors={editor.errors}
+                    ingredient={line.ingredientId === null ? undefined : byId.get(line.ingredientId)}
+                    ingredients={ingredients}
+                    onPick={(ing) => editor.pickIngredient(line.key, ing)}
+                    onChange={(patch) => editor.updateLine(line.key, patch)}
+                    steps={draft.steps}
+                    neededAtDefault={(line.baseRecipeId ?? null) !== null ? (line.neededAtDefault ?? null) : null}
+                    onNeededAt={(step) => editor.updateLine(line.key, { neededAtStep: neededAtOverride(step, line.neededAtDefault ?? null) })}
+                    onLinkToBase={line.ingredientId !== null && (line.baseRecipeId ?? null) === null ? () => setSession({ kind: 'picker', key: line.key }) : undefined}
+                    onUseAsPlain={() => setSession({ kind: 'plain', key: line.key })}
+                    onRemove={() => editor.removeLine(line.key)}
+                    onQuickCreate={(query) => quick.open({ lineKey: line.key, query, unit: line.unit })}
+                    quickCreateDisabledReason={quick.disabledReason}
+                    focusAmount={quick.focusLineKey === line.key}
+                    onAmountFocused={quick.amountFocused}
+                    focusIngredient={addedLine && i === draft.lines.length - 1}
+                    onIngredientFocused={clearAddedLine}
+                  />
+                )}
+              />
+            </div>
             <Button
               variant="secondary"
               icon="add"

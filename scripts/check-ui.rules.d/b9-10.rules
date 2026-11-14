@@ -1,0 +1,8 @@
+# B9-10 (plan section 6, DS-07, DS-09, DS-11, A11Y-02): the recipes-and-settings sweep fails these rules in its own folders.
+# fail_paths lines add up across rules files (scripts/check-ui.sh, B9-07), so this file lists only the sweep's folders.
+focus-ring.fail_paths=web/src/features/recipes web/src/features/import web/src/features/recipe-assistant web/src/features/settings web/src/features/tags
+raw-radius.fail_paths=web/src/features/recipes web/src/features/import web/src/features/recipe-assistant web/src/features/settings web/src/features/tags
+raw-spacing.fail_paths=web/src/features/recipes web/src/features/import web/src/features/recipe-assistant web/src/features/settings web/src/features/tags
+media-width.fail_paths=web/src/features/recipes web/src/features/import web/src/features/recipe-assistant web/src/features/settings web/src/features/tags
+type-scale.fail_paths=web/src/features/recipes web/src/features/import web/src/features/recipe-assistant web/src/features/settings web/src/features/tags
+opacity-muting.fail_paths=web/src/features/recipes web/src/features/import web/src/features/recipe-assistant web/src/features/settings web/src/features/tags

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { CourseChoice } from '../../../lib/courses'
 import { Chip } from '../../../ui'
 import { courseStrings } from '../strings'
+import '../recipes-list.css'
 
 export interface CourseFilterProps {
   /** Active Courses, household order. */

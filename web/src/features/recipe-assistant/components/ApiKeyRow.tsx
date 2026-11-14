@@ -50,14 +50,14 @@ export function ApiKeyRow({ state, last4, value, error, disabled, focusRequest =
             title={raStrings.keySaved}
             meta={`••••${last4}`}
             trailing={
-              <>
+              <span className="ra__key-actions">
                 <Button variant="secondary" size="sm" disabled={disabled} onClick={onReplace}>
                   {raStrings.replace}
                 </Button>
                 <Button variant="danger-secondary" size="sm" disabled={disabled} onClick={onRemove}>
                   {raStrings.remove}
                 </Button>
-              </>
+              </span>
             }
           />
         </ListGroup>

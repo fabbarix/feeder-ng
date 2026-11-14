@@ -1,34 +1,26 @@
 /* Settings screens: layout only; colours come from the theme tokens. */
 .settings {
   display: grid;
-  gap: 16px;
-  padding-top: 16px;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
 }
 .settings__group {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
-.settings__overline {
-  margin: 8px 0 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.75;
+/* The group title: an h2 with the Overline look of ui (DS-07), a little air above it as before. */
+.settings__group > .overline {
+  margin-block-start: var(--space-2);
 }
 .settings__stack {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .settings__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-}
-.settings__muted {
-  margin: 0;
-  opacity: 0.75;
+  gap: var(--space-2);
 }
 .settings__error {
   margin: 0;
@@ -50,7 +42,8 @@
 .settings__preview-label {
   color: var(--color-muted);
   font-size: var(--text-meta-size);
-  font-weight: 700;
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-label-weight);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -61,16 +54,16 @@
 }
 .attendance {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .attendance__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   /* the stepper icon buttons' 6 px hit area sticks out of the row; leave room so the sheet never scrolls sideways */
-  padding-inline-end: 6px;
+  padding-inline-end: var(--space-2);
 }
 
 /* F-02: the Allowlist add form. The field keeps a real width beside its button; on a phone it takes the row. */
@@ -78,7 +71,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .allowlist__field {
   flex: 1 1 16rem;
@@ -88,16 +81,16 @@
 .allowlist__button {
   flex: none;
   /* line up with the input, below the label */
-  margin-block-start: 24px;
+  margin-block-start: var(--space-6);
 }
 .allowlist__actions {
   display: flex;
   flex-wrap: nowrap;
   flex: none;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-2); /* A11Y-02: the Admin switch's ring and the remove button's never touch. */
 }
-@media (max-width: 599px) {
+@media (width < 37.5em) {
   .allowlist__field {
     flex: 1 1 100%;
     max-inline-size: none;
@@ -127,6 +120,7 @@
   gap: var(--space-1);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
 }
 .meal-slot-summary__skipped {
   color: var(--status-spoil-fg);
@@ -173,6 +167,8 @@
 }
 .course-row__meta {
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
 .course-row__rename-actions {
@@ -197,16 +193,24 @@
   color: inherit;
   border-radius: var(--radius-pill);
 }
-.course-eaters__pill[aria-pressed="false"] {
-  opacity: 0.45;
+/* DS-11: a Member who does not eat the Course is an outlined pill, its name muted and struck through (never a faded pill). */
+.course-eaters__pill[aria-pressed='false'] .member-pill {
+  background: transparent;
+  border-inline-start-color: var(--color-line);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  color: var(--color-muted);
+  text-decoration: line-through;
 }
-.course-eaters__pill:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+.course-eaters__pill[aria-pressed='false'] .avatar {
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+  box-shadow: none;
 }
 .course-eaters__summary {
   margin: 0;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
 .courses-add {
@@ -219,8 +223,9 @@
   display: grid;
   gap: var(--space-2);
 }
+/* The archived Courses: the Muted colour, not a faded list. */
 .courses-list--archived {
-  opacity: 0.85;
+  color: var(--color-muted);
 }
 .slot-courses__eaters {
   display: grid;
@@ -244,6 +249,7 @@
 .date-courses__heading {
   margin: 0;
   font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
   font-weight: var(--text-label-weight);
 }
 .date-courses__name {
@@ -253,6 +259,7 @@
 .course-remove__heading {
   margin: var(--space-2) 0 var(--space-1);
   font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
   font-weight: var(--text-label-weight);
 }
 .course-remove__list {
@@ -267,4 +274,12 @@
 }
 .meal-slot-summary__pinned {
   font-weight: var(--text-label-weight);
+}
+
+/* DS-07: a Member's Portion Factor ("×1") is a value read as data: body size in the muted colour, not the 13 px Muted hint line. */
+.settings__portion-factor {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: var(--text-body-weight);
+  color: var(--color-muted);
 }

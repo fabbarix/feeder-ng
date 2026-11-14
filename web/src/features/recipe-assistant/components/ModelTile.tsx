@@ -1,4 +1,4 @@
-import { Chip, IconButton, Select, Tile } from '../../../ui'
+import { Chip, IconButton, Muted, Select, Tile } from '../../../ui'
 import { raIcons } from '../icons'
 import type { ModelOption } from '../lib/modelOptions'
 import { raStrings } from '../strings'
@@ -43,8 +43,8 @@ export function ModelTile({ value, options, error, notice, failedMessage, disabl
         </div>
         <IconButton icon={raIcons.refresh} label={raStrings.refreshModels} disabled={!canRefresh} onClick={onRefresh} />
       </div>
-      {notice ? <p className="ra__muted">{notice}</p> : null}
-      {failedMessage ? <p className="ra__muted">{failedMessage}</p> : null}
+      {notice ? <Muted>{notice}</Muted> : null}
+      {failedMessage ? <Muted>{failedMessage}</Muted> : null}
     </Tile>
   )
 }

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, IconButton, ListGroup, ListRow, Switch, TextField, useConfirm } from '../../../ui'
+import { Button, IconButton, ListGroup, ListRow, Muted, Switch, TextField, useConfirm } from '../../../ui'
 import { isEmail, isLastAdmin } from '../lib/allowlist'
 import { settingsStrings } from '../strings'
 import type { AllowedUser } from '../types'
@@ -66,9 +66,9 @@ export function AllowlistPanel({ users, currentUserId, error, addError, onEmailE
           {text.add}
         </Button>
       </form>
-      <p className="settings__muted">
+      <Muted>
         {text.askToJoinHint} <Link to="/settings/access-requests">{text.signInRequests}</Link>.
-      </p>
+      </Muted>
       {error ? (
         <p role="alert" className="settings__error">
           {error}

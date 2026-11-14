@@ -1,0 +1,36 @@
+// English copy for Settings, the Members page and the Member sheet. Glossary terms only. Re-exported as part of settingsStrings by ../strings.ts.
+export const settingsMembersStrings = {
+  /** One wording for a mistyped email, in the Member sheet and on the Allowlist. */
+  invalidEmail: 'Enter a valid email address, such as name@example.com.',
+
+  member: {
+    add: 'Add Member',
+    edit: (name: string) => `Edit ${name}`,
+    editButton: 'Edit',
+    empty: 'No Members yet',
+    emptyHint: 'Add the people who eat from the plan. They do not need to sign in.',
+    portionFactor: (n: number) => `×${n}`,
+    addTitle: 'Add Member',
+    editTitle: 'Edit Member',
+    name: 'Name',
+    colour: 'Colour',
+    avatar: 'Avatar',
+    avatarHelper: "Optional. Shown next to the Member's name: an emoji or a photo; without one the initials are used.",
+    // IM2: the Avatar choice is Initials, Emoji or Photo (a Segmented named `avatar`).
+    avatarInitials: 'Initials',
+    avatarEmoji: 'Emoji',
+    avatarPhoto: 'Photo',
+    photoLabel: 'Member photo',
+    photoHelper: 'Shown next to the name instead of the initials. A square photo works best.',
+    portionFactorLabel: 'Portion Factor',
+    email: 'Email',
+    emailHelper: 'Lets them sign in with Google without asking',
+    portionFactorHelper: 'How much of a standard portion this Member eats. An adult is 1.',
+    thisIsMe: 'This is me',
+    you: (name: string) => `${name} (you)`,
+    linkedUser: 'Linked User',
+    noLinkedUser: 'No linked User',
+    save: 'Save Member',
+    remove: 'Remove Member',
+  },
+}

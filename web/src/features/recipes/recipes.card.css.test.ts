@@ -2,9 +2,13 @@
 // Tag and Course chip rows wider than its card: a flex item is min-inline-size: auto, so a long Tag name kept its natural width.
 // jsdom does not lay out, so the contract is pinned in the source; the guard's full run (PAGE_LAYOUT=full, /recipes) is the proof.
 import { describe, expect, it } from 'vitest'
-import { rule, stylesheet } from '../../test/cssRules'
+import { rule } from '../../test/cssRules'
+import { readRecipesCss } from './recipesCss.test-helper'
 
-const { base } = stylesheet('src/features/recipes/recipes.css')
+// The base rules (no @media or @container blocks) of the Recipes stylesheets (recipes.css was split in B9-10).
+const base = readRecipesCss()
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/@(media|container)[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '')
 
 describe.each(['.recipe-tags > li', '.course-chips > li'])('Recipe card chip row item %s', (selector) => {
   const decls = rule(base, selector)

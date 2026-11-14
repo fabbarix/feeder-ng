@@ -8,8 +8,10 @@ describe('Dialog body shrinks (SF1)', () => {
     expect(declarations(readUiCss('Dialog.css'), '.dialog__body')['min-inline-size']).toBe('0')
   })
 
-  it('recipes.css no longer carries the scoped .dialog__body:has(> .ingredient-exclusions) workaround', () => {
-    const recipes = readSource('features/recipes/recipes.css').replace(/\/\*[\s\S]*?\*\//g, '')
-    expect(recipes).not.toContain('.dialog__body')
+  it('recipe-detail.css (which holds .ingredient-exclusions since the WP-RX-0 split) carries no scoped .dialog__body:has(> .ingredient-exclusions) workaround', () => {
+    const raw = readSource('features/recipes/recipe-detail.css')
+    expect(raw).toContain('.ingredient-exclusions') // the sheet exists and holds the rule, so the next line tests something
+    const sheet = raw.replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(sheet).not.toContain('.dialog__body')
   })
 })

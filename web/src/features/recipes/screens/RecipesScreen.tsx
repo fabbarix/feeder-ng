@@ -15,7 +15,7 @@ import { lastCookedLabel, localToday } from '../lib/lastCooked'
 import { courseNamesOf, showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
 import type { RecipeFilter } from '../types'
-import '../recipes.css'
+import '../recipes-list.css'
 
 /**
  * Route /recipes: the header ("New Recipe" and the More overflow with Import, Export, Copy Agent Prompt and Show

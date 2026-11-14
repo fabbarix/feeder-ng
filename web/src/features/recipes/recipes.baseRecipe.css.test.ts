@@ -2,9 +2,10 @@
 // (docs/design/ux-brief.md: tonal surfaces, 20-32 px corners, spacing and colour tokens only, 44 px tap targets).
 import { describe, expect, it } from 'vitest'
 import { readSource } from '../plan/test-css'
+import { readRecipesCss } from './recipesCss.test-helper'
 
 const strip = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, '')
-const recipesCss = strip(readSource('features/recipes/recipes.css'))
+const recipesCss = strip(readRecipesCss())
 const ingredientsCss = strip(readSource('features/ingredients/ingredients.css'))
 const selectCss = strip(readSource('ui/Select/Select.css'))
 

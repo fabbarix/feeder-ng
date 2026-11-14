@@ -3,6 +3,7 @@ import { Avatar, EmptyState, ErrorState, IconButton, ListGroup, ListRow, Skeleto
 import { useHouseholdPreferences } from '../hooks/useHouseholdPreferences'
 import { isExcluded } from '../lib/preference'
 import { recipeStrings } from '../strings'
+import '../recipe-detail.css'
 
 export interface IngredientExclusionListProps {
   ingredientId: number

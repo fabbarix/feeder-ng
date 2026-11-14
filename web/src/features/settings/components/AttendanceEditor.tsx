@@ -1,4 +1,4 @@
-import { Checkbox, Stepper } from '../../../ui'
+import { Checkbox, Muted, Stepper } from '../../../ui'
 import { MemberAvatar } from './MemberAvatar'
 import { effectiveFactor, formatPortionsNeeded, MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP, portionsNeeded, withFactor } from '../lib/portions'
 import { settingsStrings } from '../strings'
@@ -16,7 +16,7 @@ const text = settingsStrings.attendance
 /** One checkbox per Member; attending Members get a "Portion Factor for <name>" stepper (override); a status line
  *  "Portions needed: 2.5". */
 export function AttendanceEditor({ members, value, onChange }: AttendanceEditorProps) {
-  if (members.length === 0) return <p className="settings__muted">{text.noMembers}</p>
+  if (members.length === 0) return <Muted>{text.noMembers}</Muted>
 
   const toggle = (member: Member, attending: boolean) =>
     onChange(attending ? [...value, { memberId: member.id, portionFactorOverride: null }] : value.filter((e) => e.memberId !== member.id))
@@ -46,9 +46,11 @@ export function AttendanceEditor({ members, value, onChange }: AttendanceEditorP
           </div>
         )
       })}
-      <p role="status" className="settings__muted">
-        {text.portionsNeeded(formatPortionsNeeded(portionsNeeded(members, value)))}
-      </p>
+      <div role="status">
+        <Muted>
+          {text.portionsNeeded(formatPortionsNeeded(portionsNeeded(members, value)))}
+        </Muted>
+      </div>
     </div>
   )
 }

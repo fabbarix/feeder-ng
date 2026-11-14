@@ -4,7 +4,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
-import { Button, Chip, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, TextLink, useMediaQuery } from '../../../ui'
+import { Button, Chip, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, TextLink, useBreakpoint } from '../../../ui'
 import { BaseRecipeBadge } from '../components/BaseRecipeBadge'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
 import { useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
@@ -30,13 +30,14 @@ import { recipesTagPath } from '../lib/tags'
 import { showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
 import type { Recipe } from '../types'
-import '../recipes.css'
+import '../recipes-list.css'
+import '../recipe-detail.css'
 
 /**
  * Route /recipes/:id: the photo, the metrics (Yield, time and the Advance Step lead), the ingredient lines, the Steps,
  * the preferences of the whole Household as a table, and
  * "Start Cook Mode" with the Batch count. Edit is in the header; Archive and Delete are in the More actions Menu
- * (Delete asks in a ConfirmDialog). From 1280 px the left column holds the photo, metrics, Ingredients and the Cook
+ * (Delete asks in a ConfirmDialog). From the desktopWide band (80 em, 1280 px at the default text size) the left column holds the photo, metrics, Ingredients and the Cook
  * entry; below, the Cook entry is a StickyActionBar.
  */
 export function RecipeDetailScreen(): ReactNode {
@@ -49,7 +50,7 @@ export function RecipeDetailScreen(): ReactNode {
   const refs = useIngredientRefs()
   const system = useDisplayUnitSystem()
   const [batches, setBatches] = useState(1)
-  const wide = useMediaQuery('(min-width: 1280px)')
+  const wide = useBreakpoint('desktopWide')
   const { choices } = useCourses()
   const r = recipe.recipe
   const crumbs = useBreadcrumbs(r?.name)

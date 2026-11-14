@@ -28,7 +28,8 @@ function rule(selector: string, source = base): Record<string, string> {
 }
 
 const phoneBlock = (): string => {
-  const m = css.match(/@media[^{]*max-width:\s*(?:599(?:\.98)?px|37\.4(?:rem|em))[^{]*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/)
+  // DS-09 (B9-10): the phone block is `(width < 37.5em)`; max-width 599px is the old spelling (the sweep test bans it).
+  const m = css.match(/@media[^{]*(?:max-width:\s*(?:599(?:\.98)?px|37\.4(?:rem|em))|width\s*<\s*37\.5em)[^{]*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/)
   return m?.[1] ?? ''
 }
 
@@ -56,7 +57,7 @@ describe('settings.css: the Allowlist add form', () => {
 
   it('at phone width the field is the full row (no cap, 100 % basis)', () => {
     const block = phoneBlock()
-    expect(block, 'a max-width 599px media block').not.toBe('')
+    expect(block, 'a (width < 37.5em) media block').not.toBe('')
     const r = rule('.allowlist__field', block)
     expect(`${r.flex ?? ''} ${r['flex-basis'] ?? ''} ${r['inline-size'] ?? ''}`).toMatch(/100%/)
     expect(r['max-inline-size']).toBe('none')
@@ -89,6 +90,7 @@ describe('settings.css: Allowlist rows', () => {
 // Review send-back (390 px): the button floated ~33 px below the field because a more specific base selector
 // (`.allowlist__add > .allowlist__button`) beat the phone override, and emails truncated in a ~129 px title.
 describe('settings.css: Allowlist at phone width', () => {
+  // the phone block as this file reads it (the shared stylesheet() helper still looks for max-width: 599px; DS-09 wrote it in em)
   const sheet = stylesheet('src/features/settings/settings.css')
 
   it('the button margin comes from ONE selector, so the phone override cannot lose on specificity', () => {
@@ -97,14 +99,14 @@ describe('settings.css: Allowlist at phone width', () => {
   })
 
   it('on a phone the button sits directly under the field (margin-block-start 0)', () => {
-    expect(ruleIn(sheet.phone, '.allowlist__button')['margin-block-start']).toMatch(/^0(px)?$/)
-    expect(ruleIn(sheet.phone, '.allowlist__add > .allowlist__button')).toEqual({})
+    expect(ruleIn(phoneBlock(), '.allowlist__button')['margin-block-start']).toMatch(/^0(px)?$/)
+    expect(ruleIn(phoneBlock(), '.allowlist__add > .allowlist__button')).toEqual({})
   })
 
   it('on a phone the row title wraps (the email stays readable) and the row grows with it', () => {
-    expect(ruleIn(sheet.phone, '.allowlist__list .list-row__title')['white-space']).toBe('normal')
-    expect(ruleIn(sheet.phone, '.allowlist__list .list-row__title')['overflow-wrap']).toBe('anywhere')
-    const row = ruleIn(sheet.phone, '.allowlist__list .list-row[data-height]')
+    expect(ruleIn(phoneBlock(), '.allowlist__list .list-row__title')['white-space']).toBe('normal')
+    expect(ruleIn(phoneBlock(), '.allowlist__list .list-row__title')['overflow-wrap']).toBe('anywhere')
+    const row = ruleIn(phoneBlock(), '.allowlist__list .list-row[data-height]')
     expect(row['block-size']).toBe('auto')
     expect(row['min-block-size']).toBeTruthy()
   })
