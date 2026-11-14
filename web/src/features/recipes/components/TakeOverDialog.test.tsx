@@ -45,4 +45,12 @@ describe('TakeOverDialog (ADR 0015 point 1)', () => {
     expect(p.onCancel).toHaveBeenCalledOnce()
     expect(p.onAnswer).not.toHaveBeenCalled()
   })
+  it('shows the keptLines note when the import has other lines that stay Ingredient lines (beta.8)', () => {
+    show({ ...ask, keptLines: 1 })
+    expect(screen.getByText('1 other line in this import stays an Ingredient. With Yes it uses Béchamel too; with No it keeps the Ingredient.')).toBeInTheDocument()
+  })
+  it('shows no note without keptLines (the editor) or with 0', () => {
+    show()
+    expect(screen.queryByText(/stays? an Ingredient/)).toBeNull()
+  })
 })

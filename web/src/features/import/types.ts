@@ -145,6 +145,8 @@ export interface ImportTakeOverAsk {
   recipes: Array<{ id: number; name: string }>
   stockLots: number
   convertible: boolean
+  /** beta.8: how many other lines of the file stay Ingredient lines (a kept line, or a line no tile asks about) and use the Base recipe too after a Yes; 0 when none. */
+  keptLines: number
   answer?: boolean
   resolved: boolean
 }

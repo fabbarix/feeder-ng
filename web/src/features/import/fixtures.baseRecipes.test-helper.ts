@@ -19,6 +19,7 @@ export function takeOver(over: Partial<ImportTakeOverAsk> = {}): ImportTakeOverA
     recipes: [{ id: 11, name: 'Moussaka' }, { id: 12, name: 'Lasagne' }],
     stockLots: 1,
     convertible: true,
+    keptLines: 0,
     resolved: false,
     ...over,
   }
