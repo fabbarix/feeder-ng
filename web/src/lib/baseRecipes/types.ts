@@ -76,6 +76,8 @@ export interface TakeOverAsk {
   recipes: Array<{ id: number; name: string }>
   stockLots: number
   convertible: boolean
+  /** beta.8: the import's lines that stay Ingredient lines and would use the Base recipe too after a Yes; absent or 0 when none (an older answer, or the editor). */
+  keptLines?: number
 }
 
 /** `POST /api/recipes/{id}/to-base?dryRun=1` result: what the conversion takes away. */

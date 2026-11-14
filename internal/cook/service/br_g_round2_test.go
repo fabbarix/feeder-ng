@@ -20,7 +20,7 @@ import (
 //
 // Pinned API in package service (ports.go), an optional interface preferred over MealRecipes when the port has it:
 //
-//	type SlotMeal struct { RecipeID int64; Batches float64 }
+//	type SlotMeal struct { RecipeID int64; Batches float64; Date string }  // Date: the meal's (beta.8)
 //	type SlotRecipes interface {
 //	    // SlotSteps gives the Steps of each meal, in the order given; meal i sees the Stock that meals 0..i-1 leave.
 //	    SlotSteps(ctx context.Context, meals []SlotMeal) ([]cook.RecipeSteps, error)
@@ -69,7 +69,7 @@ func TestTimelineGivesEachCourseOnlyWhatTheEarlierCoursesLeave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sr.calls) != 1 || len(sr.calls[0]) != 2 || sr.calls[0][0] != (service.SlotMeal{RecipeID: 3, Batches: 1}) || sr.calls[0][1] != (service.SlotMeal{RecipeID: 3, Batches: 1}) {
+	if len(sr.calls) != 1 || len(sr.calls[0]) != 2 || sr.calls[0][0] != (service.SlotMeal{RecipeID: 3, Batches: 1, Date: "2026-11-09"}) || sr.calls[0][1] != (service.SlotMeal{RecipeID: 3, Batches: 1, Date: "2026-11-09"}) {
 		t.Fatalf("SlotSteps calls = %+v, want one call with the two planned Courses in order (the cooked one is not in it)", sr.calls)
 	}
 	per := map[int64][]string{}

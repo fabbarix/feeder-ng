@@ -177,12 +177,14 @@ var ErrTakeOver = errors.New("a plain Ingredient has that name: ask whether to t
 
 // TakeOverError is the ask of §3.2: a plain Ingredient has the Base recipe's name, and Input.TakeOver is nil.
 // Recipes are the Recipes it is on (archived included), StockLots its Stock; Convertible is false when the Yield's
-// unit does not convert to its Base Unit (only "keep it apart" is then offered). 409 base_recipe_take_over.
+// unit does not convert to its Base Unit (only "keep it apart" is then offered). KeptLines (beta.8) is how many other
+// lines of an import stay the plain Ingredient; the Recipe editor leaves it 0. 409 base_recipe_take_over.
 type TakeOverError struct {
 	Ingredient  IngredientRef
 	Recipes     []Ref
 	StockLots   int
 	Convertible bool
+	KeptLines   int
 }
 
 func (e *TakeOverError) Error() string {

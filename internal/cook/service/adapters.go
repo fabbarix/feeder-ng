@@ -73,10 +73,10 @@ func (r dbRecipes) Steps(ctx context.Context, recipeID int64) (cook.RecipeSteps,
 }
 
 // MealSteps implements MealRecipes: the Steps of a Planned Meal's Recipe with its Batches, the Base recipe Ingredients
-// Stock holds taken first (baserecipe.MadeFractions over the Stock on hand): a block that Stock covers is left out of
-// the view, not out of the indexes (BR-G, design section 9). A Recipe whose tree cannot be built (a cycle written before the
-// check) is composed as if nothing were in Stock.
-func (r dbRecipes) MealSteps(ctx context.Context, recipeID int64, batches float64) (cook.RecipeSteps, error) {
+// Stock holds taken first (baserecipe.MadeFractions over the Stock that has not gone off by the meal's date): a block that
+// Stock covers is left out of the view, not out of the indexes (BR-G, design section 9). A Recipe whose tree cannot be built
+// (a cycle written before the check) is composed as if nothing were in Stock.
+func (r dbRecipes) MealSteps(ctx context.Context, recipeID int64, batches float64, date string) (cook.RecipeSteps, error) {
 	tree, err := r.a.rc.NeedTree(ctx, recipeID)
 	if errors.Is(err, baserecipe.ErrCycle) {
 		return r.compose(ctx, recipeID, nil)
@@ -87,7 +87,7 @@ func (r dbRecipes) MealSteps(ctx context.Context, recipeID int64, batches float6
 	if err != nil {
 		return cook.RecipeSteps{}, err
 	}
-	have, err := r.a.stockOnHand(ctx)
+	have, err := r.a.stockUsable(ctx, date)
 	if err != nil {
 		return cook.RecipeSteps{}, err
 	}
@@ -97,9 +97,14 @@ func (r dbRecipes) MealSteps(ctx context.Context, recipeID int64, batches float6
 }
 
 // SlotSteps implements SlotRecipes: the Steps of the slot's meals in order, sharing one Stock on hand: meal i sees what
-// meals 0..i-1 leave (baserecipe.Resolve takes from the availability, as Cooked does; BR-G round 2).
+// meals 0..i-1 leave (baserecipe.Resolve takes from the availability, as Cooked does; BR-G round 2). The meals of a slot share
+// a date, so the first meal's date judges the Stock.
 func (r dbRecipes) SlotSteps(ctx context.Context, meals []SlotMeal) ([]cook.RecipeSteps, error) {
-	have, err := r.a.stockOnHand(ctx)
+	date := ""
+	if len(meals) > 0 {
+		date = meals[0].Date
+	}
+	have, err := r.a.stockUsable(ctx, date)
 	if err != nil {
 		return nil, err
 	}
@@ -203,23 +208,39 @@ func ownComposed(steps []recipe.Step) baserecipe.Composed {
 	return out
 }
 
-// stockOnHand is the quantity of Stock held per Ingredient (the Lots' quantities).
-func (a *DB) stockOnHand(ctx context.Context) (map[int64]float64, error) {
-	rows, err := a.db.QueryContext(ctx, `SELECT ingredient_id, SUM(quantity) FROM stock_lots GROUP BY ingredient_id`)
+// stockUsable is the quantity of Stock per Ingredient that can cover a meal on mealDate (beta.8): stock.UsableOn over the Lots
+// at the later of the meal's date and the household's today, as the Shopping List judges Stock. A meal of an earlier date is
+// judged by today: nothing that has gone off since covers it.
+func (a *DB) stockUsable(ctx context.Context, mealDate string) (map[int64]float64, error) {
+	zone, err := a.zone(ctx)
+	if err != nil {
+		return nil, err
+	}
+	date := stock.Date(a.clk.Now().In(zone).Format("2006-01-02"))
+	if md := stock.Date(mealDate); md > date {
+		date = md
+	}
+	rows, err := a.db.QueryContext(ctx, `SELECT ingredient_id, quantity, goes_off FROM stock_lots`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	have := map[int64]float64{}
+	var lots []stock.Lot
 	for rows.Next() {
-		var id int64
-		var q float64
-		if err := rows.Scan(&id, &q); err != nil {
+		var l stock.Lot
+		var off sql.NullString
+		if err := rows.Scan(&l.IngredientID, &l.Quantity, &off); err != nil {
 			return nil, err
 		}
-		have[id] = q
+		if off.Valid {
+			l.GoesOff = stock.Date(off.String)
+		}
+		lots = append(lots, l)
 	}
-	return have, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return stock.UsableOn(lots, date), nil
 }
 
 type dbMeals struct{ a *DB }

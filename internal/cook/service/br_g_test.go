@@ -21,7 +21,7 @@ import (
 // Pinned API in package service (ports.go): an optional interface on the Recipes port,
 //
 //	type MealRecipes interface {
-//	    MealSteps(ctx context.Context, recipeID int64, batches float64) (cook.RecipeSteps, error)
+//	    MealSteps(ctx context.Context, recipeID int64, batches float64, date string) (cook.RecipeSteps, error)  // date: the meal's (beta.8)
 //	}
 //
 // The service calls MealSteps wherever it holds a Planned Meal (CourseView, SlotTimeline, a timer or mark on a meal scope,
@@ -37,6 +37,7 @@ type mealRecipes struct {
 	jar      float64          // Batches at or below which the jar covers the Base recipe
 	calls    []string
 	lastMeal float64
+	lastDate string // the meal date MealSteps got (beta.8)
 }
 
 func (m *mealRecipes) Steps(_ context.Context, id int64) (cook.RecipeSteps, error) {
@@ -44,9 +45,9 @@ func (m *mealRecipes) Steps(_ context.Context, id int64) (cook.RecipeSteps, erro
 	return m.plain, nil
 }
 
-func (m *mealRecipes) MealSteps(_ context.Context, id int64, batches float64) (cook.RecipeSteps, error) {
+func (m *mealRecipes) MealSteps(_ context.Context, id int64, batches float64, date string) (cook.RecipeSteps, error) {
 	m.calls = append(m.calls, "MealSteps")
-	m.lastMeal = batches
+	m.lastMeal, m.lastDate = batches, date
 	if batches <= m.jar {
 		return m.covered, nil
 	}

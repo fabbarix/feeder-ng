@@ -783,7 +783,7 @@ func WriteTakeOver(w http.ResponseWriter, ask *recipe.TakeOverError) {
 	httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
 		"code": "base_recipe_take_over", "message": ask.Error(),
 		"ingredient": refJSON{ID: ask.Ingredient.ID, Name: ask.Ingredient.Name}, "recipes": recs,
-		"stockLots": ask.StockLots, "convertible": ask.Convertible,
+		"stockLots": ask.StockLots, "convertible": ask.Convertible, "keptLines": ask.KeptLines,
 	}})
 }
 

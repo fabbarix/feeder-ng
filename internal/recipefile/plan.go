@@ -199,8 +199,21 @@ type TakeOverAsk struct {
 	Recipes     []NamedRef  `json:"recipes"`
 	StockLots   int         `json:"stockLots"`
 	Convertible bool        `json:"convertible"`
-	Answer      *bool       `json:"answer,omitempty"`
-	Resolved    bool        `json:"resolved"`
+	// KeptLines (beta.8) counts the other lines of the file that stay the plain Ingredient: after a Yes they use the Base
+	// recipe too, after a No they keep the Ingredient. Always present; 0 when there is none.
+	KeptLines int   `json:"keptLines"`
+	Answer    *bool `json:"answer,omitempty"`
+	Resolved  bool  `json:"resolved"`
+}
+
+// KeptLinesOf is the KeptLines of the take-over ask of the plain Ingredient ingredientID in p, or 0 when there is none.
+func KeptLinesOf(p Plan, ingredientID int64) int {
+	for _, a := range p.TakeOvers {
+		if a.Ingredient.ID == ingredientID {
+			return a.KeptLines
+		}
+	}
+	return 0
 }
 
 // BaseRecipeSuggestion is one Recipe a line may be.

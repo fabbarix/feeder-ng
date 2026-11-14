@@ -109,7 +109,7 @@ func (s *Service) SlotTimeline(ctx context.Context, date string, mealSlotID int6
 	for _, m := range metas {
 		if m.State == "planned" && m.Batches > 0 {
 			freshAt[m.CourseID] = len(fresh)
-			fresh = append(fresh, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches})
+			fresh = append(fresh, SlotMeal{RecipeID: m.RecipeID, Batches: m.Batches, Date: m.Date})
 		}
 	}
 	var shared []cook.RecipeSteps
@@ -125,7 +125,7 @@ func (s *Service) SlotTimeline(ctx context.Context, date string, mealSlotID int6
 		var rs cook.RecipeSteps
 		if i, ok := freshAt[m.CourseID]; ok && shared != nil {
 			rs = shared[i]
-		} else if rs, err = s.mealSteps(ctx, m.RecipeID, m.Batches); err != nil {
+		} else if rs, err = s.mealSteps(ctx, m.RecipeID, m.Batches, m.Date); err != nil {
 			return Timeline{}, err
 		}
 		tc := TimelineCourse{CourseID: m.CourseID, Name: m.CourseName, RecipeID: m.RecipeID, RecipeName: rs.Name,
