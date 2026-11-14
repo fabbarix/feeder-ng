@@ -156,6 +156,13 @@ describe('Pantry tab (PN)', () => {
       expect(current.map((a) => a.textContent?.trim())).toEqual(['Settings'])
     }
   })
+  it.each(['/supplies', '/ingredients/3', '/products'])('Settings, not Scan, is the current tab on the Catalogue page %s (beta.7)', (path) => {
+    setup({ path })
+    for (const nav of [bottomBar(), sideRail()]) {
+      const current = within(nav).getAllByRole('link').filter((a) => a.hasAttribute('aria-current'))
+      expect(current.map((a) => a.textContent?.trim())).toEqual(['Settings'])
+    }
+  })
   it('no tab is active on a page that is not a destination (an unknown route)', () => {
     setup({ path: '/this-route-does-not-exist' })
     for (const nav of [bottomBar(), sideRail()]) {
