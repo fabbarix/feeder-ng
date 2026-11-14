@@ -1,0 +1,10 @@
+/* DS-07: the Tile overline's look (12/16, 800, caps, 0.04em) in the muted colour, never an opacity. */
+.overline {
+  margin: 0;
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}

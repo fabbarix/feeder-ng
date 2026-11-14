@@ -1,14 +1,22 @@
 import type { ReactNode } from 'react'
+import './Muted.css'
 
-// STUB (B9-02 test author): the developer replaces this with the real primitive (DS-07). It exists only so the tests compile.
 export interface MutedProps {
-  /** Default p. */
+  /** A line of its own (p, the default) or a run inside a sentence or a row (span). */
   as?: 'p' | 'span'
   className?: string
   id?: string
   children: ReactNode
 }
 
-export function Muted(_props: MutedProps): ReactNode {
-  return null
+/**
+ * The one muted line (DS-07): the meta role in --color-muted, never an opacity. Replaces `.pg__muted`, `.settings__muted`,
+ * `.access__muted`, `.ra__muted`, `.plan__muted`, `.notifications__muted` and `.read-step__muted`.
+ */
+export function Muted({ as: Tag = 'p', className, id, children }: MutedProps) {
+  return (
+    <Tag id={id} className={className ? `muted ${className}` : 'muted'}>
+      {children}
+    </Tag>
+  )
 }

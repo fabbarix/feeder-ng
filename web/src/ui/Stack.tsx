@@ -1,10 +1,10 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import { createElement, type HTMLAttributes } from 'react'
+import './Stack.css'
 
-// STUB (B9-02 test author): the developer replaces this with the real primitives (DS-07). It exists only so the tests compile.
 export interface StackProps extends HTMLAttributes<HTMLElement> {
   /** Spacing token step: --space-2, --space-3 or --space-4. Default 3. */
   gap?: '2' | '3' | '4'
-  /** Default div. */
+  /** Default div; a list keeps its semantics. */
   as?: 'div' | 'section' | 'ul' | 'ol'
 }
 export interface ClusterProps extends HTMLAttributes<HTMLElement> {
@@ -13,9 +13,14 @@ export interface ClusterProps extends HTMLAttributes<HTMLElement> {
   as?: 'div' | 'ul' | 'ol'
 }
 
-export function Stack(_props: StackProps): ReactNode {
-  return null
+const withClass = (base: string, className?: string) => (className ? `${base} ${className}` : base)
+
+/** A vertical grid on the spacing tokens (DS-07). Replaces `.pg`, `.pg__stack` and `.pg__group`. */
+export function Stack({ gap = '3', as = 'div', className, ...rest }: StackProps) {
+  return createElement(as, { ...rest, className: withClass('stack', className), 'data-gap': gap })
 }
-export function Cluster(_props: ClusterProps): ReactNode {
-  return null
+
+/** A wrapping row on --space-2 (DS-07). Replaces `.pg__row`; a child may set its own `align-self`. */
+export function Cluster({ gap = '2', as = 'div', className, ...rest }: ClusterProps) {
+  return createElement(as, { ...rest, className: withClass('cluster', className), 'data-gap': gap })
 }

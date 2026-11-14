@@ -1,0 +1,28 @@
+/* DS-07: layout containers on the spacing tokens. A list rendered as a Stack or a Cluster loses its bullets and indent. */
+.stack {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+.stack[data-gap='2'] {
+  gap: var(--space-2);
+}
+.stack[data-gap='3'] {
+  gap: var(--space-3);
+}
+.stack[data-gap='4'] {
+  gap: var(--space-4);
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+:is(ul, ol):is(.stack, .cluster) {
+  list-style: none;
+  padding: 0;
+}

@@ -1,0 +1,9 @@
+/* DS-07: the section heading inside a tile is title-3, with --space-3 below it. */
+.section-title {
+  margin-block-start: 0;
+  margin-block-end: var(--space-3);
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+  color: inherit;
+}
