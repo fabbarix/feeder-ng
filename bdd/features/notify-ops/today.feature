@@ -119,17 +119,26 @@ Feature: Today screen data
     When I ask for the zero-waste streak
     Then the streak is 0 days
 
+  # B9-12 (TB-02): Today reads the real Planned Meals (one marks-aware source with the board and the push). Chicken
+  # curry's Step is due at 15:30, Pizza's at 14:00; it is 12:00.
   Scenario: Advance Steps due today are listed soonest first
-    Given the Today facts have dinner "Chicken curry" at 19:30 with the Advance Step "Marinate the chicken" 4 hours ahead
-    And the Today facts have dinner "Pizza" at 20:00 with the Advance Step "Prove the dough" 6 hours ahead
+    Given the Household has the Member "Anna" with Portion Factor 1
+    And the Admin adds the Meal Slot "Dinner" on Monday at 19:30 without naming who attends
+    And the Admin adds the Meal Slot "Late dinner" on Monday at 20:00 without naming who attends
+    And the Recipe "Chicken curry" has an Advance Step "Marinate the chicken" 4 hours ahead and is planned on 2026-11-09 in the Meal Slot "Dinner" on Monday
+    And the Recipe "Pizza" has an Advance Step "Prove the dough" 6 hours ahead and is planned on 2026-11-09 in the Meal Slot "Late dinner" on Monday
     When I ask for today's Advance Steps
     Then the Advance Steps listed are "Prove the dough, Marinate the chicken"
 
   Scenario: Advance Steps of cooked meals are not listed
-    Given the Today facts have dinner "Chicken curry" at 19:30 with the Advance Step "Marinate the chicken" 4 hours ahead
-    And the Today facts say "Chicken curry" is cooked
+    Given the Household has the Member "Anna" with Portion Factor 1
+    And the Admin adds the Meal Slot "Dinner" on Monday at 19:30 without naming who attends
+    And the Admin adds the Meal Slot "Late dinner" on Monday at 20:00 without naming who attends
+    And the Recipe "Chicken curry" has an Advance Step "Marinate the chicken" 4 hours ahead and is planned on 2026-11-09 in the Meal Slot "Dinner" on Monday
+    And the Recipe "Pizza" has an Advance Step "Prove the dough" 6 hours ahead and is planned on 2026-11-09 in the Meal Slot "Late dinner" on Monday
+    And I mark the Planned Meal of "Chicken curry" on 2026-11-09 Cooked
     When I ask for today's Advance Steps
-    Then no Advance Steps are listed
+    Then the Advance Steps listed are "Prove the dough"
 
   Scenario: Today endpoints need a signed-in User
     Given I am not signed in

@@ -1,8 +1,10 @@
 package bdd
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 
@@ -22,6 +24,20 @@ func b9HouseholdTodaySteps(sc *godog.ScenarioContext, w *World) {
 			w.Clients["b9-ht-admin"] = c
 		}
 		return c
+	}
+	// settle waits for the background planner to finish the replans the set-up caused, so a Planned Meal written
+	// afterwards is not replaced by a run still pending.
+	settle := func() error {
+		for i := 0; i < 2; i++ {
+			time.Sleep(150 * time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			err := w.Ensure().App.WaitIdle(ctx)
+			cancel()
+			if err != nil {
+				return fmt.Errorf("the planner did not settle: %v", err)
+			}
+		}
+		return nil
 	}
 
 	// ---- PC-14 ----
@@ -124,10 +140,29 @@ func b9HouseholdTodaySteps(sc *godog.ScenarioContext, w *World) {
 			if err := w.Ensure().DB.QueryRow(`SELECT id FROM meal_slots WHERE name = ? AND weekday = ? AND removed_at IS NULL`, slot, weekdays[day]).Scan(&slotID); err != nil {
 				return fmt.Errorf("no Meal Slot %q on %s: %v", slot, day, err)
 			}
+			// The background planner has already planned this slot (any Recipe): replace what it planned there.
+			if err := settle(); err != nil {
+				return err
+			}
+			if _, err := w.Ensure().DB.Exec(`DELETE FROM planned_meals WHERE date = ? AND meal_slot_id = ?`, date, slotID); err != nil {
+				return err
+			}
 			_, err := w.Ensure().DB.Exec(`INSERT INTO planned_meals (date, meal_slot_id, course_id, recipe_id, batches, portions, state, pinned, created_at, updated_at)
 				VALUES (?, ?, (SELECT id FROM courses WHERE is_main = 1), ?, 1, 2, 'planned', 0, '2026-11-08T12:00:00Z', '2026-11-08T12:00:00Z')`, date, slotID, rec.ID)
 			return err
 		})
+	sc.Step(`^I mark the Planned Meal of "([^"]*)" on (\d{4}-\d{2}-\d{2}) Cooked$`, func(name, date string) error {
+		var slotID, courseID int64
+		if err := w.Ensure().DB.QueryRow(`SELECT pm.meal_slot_id, pm.course_id FROM planned_meals pm JOIN recipes r ON r.id = pm.recipe_id
+			WHERE r.name = ? AND pm.date = ? AND pm.from_date IS NULL`, name, date).Scan(&slotID, &courseID); err != nil {
+			return fmt.Errorf("no fresh Planned Meal of %q on %s: %v", name, date, err)
+		}
+		r := w.Client.Post(fmt.Sprintf("/api/plan/%s/%d/%d/cooked", date, slotID, courseID), map[string]any{})
+		if r.Status != 200 {
+			return fmt.Errorf("Cooked = %d %s", r.Status, r.Body)
+		}
+		return nil
+	})
 	sc.Step(`^the Advance Steps due list has (\d+) steps?$`, func(want int) error {
 		var out struct {
 			Steps []struct {
