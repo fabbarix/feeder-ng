@@ -31,8 +31,8 @@ export function ToGetList({ rows, pendingKeys, onTick }: ToGetListProps) {
             key={entry.key}
             title={entry.title}
             aria-label={scanStrings.tickLine(entry.title)}
-            aria-busy={busy ? 'true' : undefined}
-            onActivate={busy ? undefined : () => onTick(entry)}
+            busy={busy}
+            onActivate={() => onTick(entry)}
             leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={48} />}
             meta={<CoverMeta size={entry.packLine} cover={busy ? { ...cover, done: true } : cover} />}
             value={value.value}

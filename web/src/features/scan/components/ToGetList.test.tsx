@@ -91,10 +91,10 @@ describe('ToGetList: tick by hand', () => {
     const busy = within(list).getAllByRole('listitem')[0]!
     expect(busy).toHaveAttribute('aria-busy', 'true')
     expect(busy.querySelector('.list-row__meta svg')!.innerHTML).toBe(tickSvg('fill', 'success'))
-    // ListRow has no disabled target: a pending row is a static row (no button), or a disabled one
-    const target = within(busy).queryByRole('button', { name: 'Tick Passata' })
-    if (target) expect(target).toBeDisabled()
-    await userEvent.click(target ?? busy.querySelector('.list-row__title')!)
+    // ListRow's `busy`: the target stays in place (focus and tab order kept) but is disabled
+    const target = within(busy).getByRole('button', { name: 'Tick Passata' })
+    expect(target).toBeDisabled()
+    await userEvent.click(target)
     expect(props.onTick).not.toHaveBeenCalled()
     // the other row is untouched
     expect(within(list).getAllByRole('listitem')[1]).not.toHaveAttribute('aria-busy')

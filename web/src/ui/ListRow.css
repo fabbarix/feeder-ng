@@ -61,6 +61,12 @@
   background: var(--color-soft);
 }
 
+/* Busy (an action in flight): the disabled target shows progress and no hover or press. */
+.list-row__target:disabled {
+  cursor: progress;
+  background: transparent;
+}
+
 /* The whole row is the target: content is click-through, only interactive trailing content catches the pointer.
    The lift is mandatory: the absolute target has opaque hover, press and selected backgrounds, so content must paint above it. */
 .list-row > :not(.list-row__target) {

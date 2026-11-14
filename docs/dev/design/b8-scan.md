@@ -31,10 +31,10 @@ Specs: `docs/design/shop-scan-proposals.md` 13.2, 13.5, 13.8 and 13.11 (updated 
   Uses `useShoppingActions` and `useToast`. Does nothing with no `to` or no Ingredient.
 - `hooks/useScanController.ts`: calls it, returns `toGetTick` on `ScanController` (`to: shopList.data?.to`, `shopId` of the Shop).
 - `components/ToGetList.tsx`: props become `{ rows: ToGetRow[]; pendingKeys: ReadonlySet<string>; onTick(entry: ListEntry): void }`;
-  a `ListRow` per Line with `onActivate = tick` (disabled while pending, via the row's `aria-busy` + no target), `aria-label`
+  a `ListRow` per Line with `onActivate = tick` (disabled while pending, via ListRow's new `busy` prop), `aria-label`
   `scanStrings.tickLine(title)`, Thumb 48, shop `rowValue` column, `meta` = pack line + cover. Empty state as above.
-  `ListRow` has no `disabled` prop: a pending row is rendered without `onActivate` (a static row, `aria-busy="true"`, filled tick),
-  which the test accepts (no button, or a disabled one).
+  Review: `ListRow` gains `busy?: boolean` (like `Button`'s `loading`): the `li` is `aria-busy` and the target stays, disabled,
+  so focus and tab order are kept while the tick is in flight; the row shows the filled tick.
 - `components/ScannedRow.tsx`: only to move MetaLine's cover part into the shared `CoverMeta`.
 - `screens/ScanScreen.tsx`: only the `ToGetList` line: `rows={toGetRows(scanned.toGet, scanned.rows, c.currency, c.system)}`,
   `pendingKeys={c.toGetTick.pendingKeys}`, `onTick={(e) => void c.toGetTick.tick(e)}`; drop `navigate('/shop')` if nothing else
