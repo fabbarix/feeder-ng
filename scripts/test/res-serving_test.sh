@@ -100,6 +100,10 @@ if (cd "$WEB" && pnpm exec vite build --outDir "$SCRATCH/dist" --emptyOutDir >"$
   ' "$D" "$entry" "$css" && ok || bad "build: the siblings of the entry JS and CSS must decode to the originals and be smaller"
   # the worker must not precache the siblings, nor an image or small file that gets none
   if grep -oE '"?url"?:"[^"]+"' "$D/sw.js" | grep -qE '\.(br|gz)"'; then bad "build: sw.js precaches a .br or .gz file"; else ok; fi
+  # the worker precaches the entry JS and CSS (the plugin drops a file over its size limit with only a warning)
+  for f in "$entry" "$css"; do
+    grep -qF "\"$f\"" "$D/sw.js" && ok || bad "build: sw.js does not precache $f"
+  done
   # a sibling exists only for a text file over 1 KB (a png, ico or woff2 is already compressed)
   badsib=""
   while IFS= read -r sib; do

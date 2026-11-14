@@ -90,6 +90,9 @@ export default defineConfig({
       injectManifest: {
         // not webmanifest: the PWA plugin adds the manifest to the precache itself; listing it twice breaks Cache.addAll
         globPatterns: ['**/*.{js,css,html,svg,woff2,png,ico}'],
+        // The entry chunk is about 1.6 MB raw; the plugin's 2 MiB default would drop it from the precache with only a
+        // warning once it grows, and Feeder would no longer open offline. The bundle budget (400 KB brotli) fails first.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
     precompress(),
