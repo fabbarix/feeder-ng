@@ -42,10 +42,14 @@ export function isOnReceiptPaths(pathname: string): boolean {
   return pathname === '/scan' || pathname === PHOTOS_PATH || pathname.startsWith(`${PHOTOS_PATH}/`)
 }
 
-/** The toast when a read finishes elsewhere in the app; undefined while reading or on the Scan or receipt screens. */
+/**
+ * The toast when a read finishes elsewhere in the app; undefined while reading, on the Scan or receipt screens, and for a ready read
+ * with nothing to change (b8-polish: the Scanned row still says so).
+ */
 export function finishedToast(state: BackgroundRead, pathname: string, o: { isAdmin: boolean }): ToastPlan | undefined {
   if (state.status === 'reading' || isOnReceiptPaths(pathname)) return undefined
   if (state.status === 'ready') {
+    if (state.changes === 0) return undefined
     return { message: readyTitle(state.changes), status: 'success', actionLabel: t.reviewAction, to: REVIEW_PATH }
   }
   return { message: describeReceiptError(state.error, o).message, status: 'error', actionLabel: t.readAgain, to: PHOTOS_PATH }
