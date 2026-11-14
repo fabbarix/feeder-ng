@@ -189,6 +189,12 @@ type Catalogue interface {
 type Ingredients interface {
 	// Ensure finds the Ingredient by name or creates it with kind (H4); an existing row keeps its own kind.
 	Ensure(ctx context.Context, name, baseUnit string, kind ingredient.Kind) (int64, error)
+	// EnsureNew is Ensure that also says whether it created the row (false for a found one). b8-rxgo: a receipt apply
+	// removes only the Ingredients it created (docs/dev/design/b8-rxgo.md).
+	EnsureNew(ctx context.Context, name, baseUnit string, kind ingredient.Kind) (id int64, created bool, err error)
+	// DeleteUnused removes the Ingredient only when nothing references it (deleted true). A referenced one, or a missing
+	// one, is left alone: (false, nil).
+	DeleteUnused(ctx context.Context, id int64) (deleted bool, err error)
 }
 
 // List is the Shopping List port (implemented by shopping/service.Service).

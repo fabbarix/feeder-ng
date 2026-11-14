@@ -19,6 +19,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/store"
 	"github.com/fabbarix/feeder-ng/internal/recipefile"
 	"github.com/fabbarix/feeder-ng/internal/secretbox"
+	"github.com/fabbarix/feeder-ng/internal/testkit/anthropickey"
 )
 
 // fileSink keeps the Recipe File the service hands to Import Review.
@@ -46,9 +47,9 @@ func TestLiveReadWithABaseRecipe(t *testing.T) {
 	if os.Getenv("FEEDER_LIVE_SCHEMA_CHECK") != "1" {
 		t.Skip("FEEDER_LIVE_SCHEMA_CHECK=1 is not set")
 	}
-	key := os.Getenv("FEEDER_ANTHROPIC_KEY")
+	key, _ := anthropickey.Lookup()
 	if key == "" {
-		t.Skip("FEEDER_ANTHROPIC_KEY is not set")
+		t.Skip(anthropickey.SkipReason())
 	}
 	d, err := db.Open(filepath.Join(t.TempDir(), "feeder.db"))
 	if err != nil {

@@ -161,6 +161,24 @@ func (s *Store) MarkUndone(ctx context.Context, clientUUID string) (bool, error)
 	return false, nil
 }
 
+// ReleaseIngredient clears ingredient_id on the undone events among clientUUIDs that reference ingredientID, and returns
+// how many it cleared. A live (or half undone) event is never touched: its Undo still needs the Ingredient. It serves the
+// put-back of a failed receipt apply (b8-rxgo): the scans the run wrote and put back stay in the ledger as undone (their
+// uuids stay taken, receipt-reading §7.2), but no longer hold on to the Ingredient the run created, so it can be removed.
+func (s *Store) ReleaseIngredient(ctx context.Context, clientUUIDs []string, ingredientID int64) (int, error) {
+	n := 0
+	for _, u := range clientUUIDs {
+		res, err := s.db.ExecContext(ctx, `UPDATE scan_events SET ingredient_id = NULL
+			WHERE client_uuid = ? AND ingredient_id = ? AND undone_at IS NOT NULL`, u, ingredientID)
+		if err != nil {
+			return n, err
+		}
+		k, _ := res.RowsAffected()
+		n += int(k)
+	}
+	return n, nil
+}
+
 // MarkUndoStep records that an Undo step ran. Idempotent: a step already recorded keeps its one entry, so a
 // retried Undo never repeats it. ErrNotFound for an unknown client UUID.
 func (s *Store) MarkUndoStep(ctx context.Context, clientUUID, step string) error {

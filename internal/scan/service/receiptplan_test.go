@@ -158,6 +158,19 @@ func (c faultCat) DeleteProduct(ctx context.Context, id int64) error {
 	return c.Catalogue.DeleteProduct(ctx, id)
 }
 
+// faultIng wraps the concrete fake, so the extra port methods (EnsureNew, DeleteUnused) are the fake's own.
+type faultIng struct {
+	*fakeIngredients
+	f *faultPlan
+}
+
+func (i faultIng) DeleteUnused(ctx context.Context, id int64) (bool, error) {
+	if err := i.f.hit("DeleteUnused", id); err != nil {
+		return false, err
+	}
+	return i.fakeIngredients.DeleteUnused(ctx, id)
+}
+
 type faultList struct {
 	service.List
 	f *faultPlan
@@ -203,7 +216,7 @@ func newRR3Env(t *testing.T) *rr3Env {
 	t.Helper()
 	e := newEnv(t)
 	f := &faultPlan{}
-	svc := service.New(service.Deps{Ledger: e.ledger, Stock: faultStock{e.stock, f}, Catalogue: faultCat{e.cat, f}, Ingredients: e.ing,
+	svc := service.New(service.Deps{Ledger: e.ledger, Stock: faultStock{e.stock, f}, Catalogue: faultCat{e.cat, f}, Ingredients: faultIng{e.ing, f},
 		List: faultList{e.list, f}, Household: household{}, Dates: utcDates{}, Clock: clock.NewFake(startTime), Publisher: e.bus})
 	r := &rr3Env{env: e, svc: svc, f: f}
 	r.scan(t, "u1", mutti, 700, 129)
@@ -308,6 +321,9 @@ func (r *rr3Env) snapshot(t *testing.T) string {
 	}
 	for id, p := range r.cat.products {
 		out = append(out, fmt.Sprintf("product %d %q %v", id, p.Name, p.PackSize))
+	}
+	for name := range r.ing.byName {
+		out = append(out, "ingredient "+name)
 	}
 	sort.Strings(out)
 	return strings.Join(out, "\n")
@@ -599,12 +615,13 @@ func TestAFailureWhilePuttingBackStillRunsTheOtherInverses(t *testing.T) {
 	if e.bus.count(shopservice.Topic)-published != 1 {
 		t.Error("a plan left half put back must publish, so the phones reload")
 	}
-	// everything else was put back: only the Product that could not be deleted is left over
+	// everything else was put back: only the Product that could not be deleted is left over, with the Ingredient it
+	// references (b8-rxgo: an Ingredient something references is never removed)
 	got := strings.Split(e.snapshot(t), "\n")
 	want := strings.Split(before, "\n")
 	extra := 0
 	for _, l := range got {
-		if strings.HasPrefix(l, "product ") && !strings.Contains(before, l) {
+		if (strings.HasPrefix(l, "product ") || strings.HasPrefix(l, "ingredient ")) && !strings.Contains(before, l) {
 			extra++
 			continue
 		}
@@ -612,7 +629,7 @@ func TestAFailureWhilePuttingBackStillRunsTheOtherInverses(t *testing.T) {
 			t.Errorf("unexpected state left: %s", l)
 		}
 	}
-	if extra != 1 || len(got)-extra != len(want) {
+	if extra != 2 || len(got)-extra != len(want) {
 		t.Errorf("state after: %v\nbefore: %v", got, want)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/claude"
 	"github.com/fabbarix/feeder-ng/internal/recipeassistant/service"
+	"github.com/fabbarix/feeder-ng/internal/testkit/anthropickey"
 )
 
 // TestLiveOutputSchemaCompiles sends the exact recipeassistant.OutputSchema with a one-line message and max_tokens 16
@@ -21,9 +22,9 @@ func TestLiveOutputSchemaCompiles(t *testing.T) {
 	if os.Getenv("FEEDER_LIVE_SCHEMA_CHECK") != "1" {
 		t.Skip("FEEDER_LIVE_SCHEMA_CHECK=1 is not set")
 	}
-	key := os.Getenv("FEEDER_ANTHROPIC_KEY")
+	key, _ := anthropickey.Lookup()
 	if key == "" {
-		t.Skip("FEEDER_ANTHROPIC_KEY is not set")
+		t.Skip(anthropickey.SkipReason())
 	}
 	schema, err := recipeassistant.OutputSchema(spec.Schema)
 	if err != nil {

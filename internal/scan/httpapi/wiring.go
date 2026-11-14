@@ -311,22 +311,38 @@ func (c catalogue) OfflineData(ctx context.Context, shopID *int64) (service.Offl
 	return out, nil
 }
 
-// ingredientsPort finds an Ingredient by name or creates it (T2).
+// ingredientsPort finds an Ingredient by name or creates it (T2), and removes one a put-back made (b8-rxgo).
 type ingredientsPort struct{ st *ingredientstore.Store }
 
 func (i ingredientsPort) Ensure(ctx context.Context, name, baseUnit string, kind ingredient.Kind) (int64, error) {
+	id, _, err := i.EnsureNew(ctx, name, baseUnit, kind)
+	return id, err
+}
+
+func (i ingredientsPort) EnsureNew(ctx context.Context, name, baseUnit string, kind ingredient.Kind) (int64, bool, error) {
 	ing, err := i.st.ByName(ctx, name)
 	if err == nil {
-		return ing.ID, nil
+		return ing.ID, false, nil
 	}
 	if !errors.Is(err, ingredientstore.ErrNotFound) {
-		return 0, err
+		return 0, false, err
 	}
 	created, err := i.st.Create(ctx, ingredient.Input{Name: name, Base: units.Base(baseUnit), Kind: kind})
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
-	return created.ID, nil
+	return created.ID, true, nil
+}
+
+func (i ingredientsPort) DeleteUnused(ctx context.Context, id int64) (bool, error) {
+	err := i.st.Delete(ctx, id)
+	if errors.Is(err, ingredientstore.ErrInUse) || errors.Is(err, ingredientstore.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // Compile-time checks.

@@ -1,5 +1,5 @@
 Feature: Applying a receipt (receipt reading, RR3)
-  After the assistant has read a receipt, the Member checks the proposals and applies them. The server recomputes the
+  After the assistant has read a receipt, the User checks the proposals and applies them. The server recomputes the
   fingerprint of the Scanned list from the scans the phone holds now, and writes nothing when it is not the one the
   receipt was read against. The accepted proposals run as one plan under the scan lock; when a step fails, every step
   already done is put back.

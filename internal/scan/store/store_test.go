@@ -75,6 +75,44 @@ func TestMarkUndoneIsIdempotent(t *testing.T) {
 	}
 }
 
+// b8-rxgo: a failed receipt apply's put-back lets its own undone scans go of the Ingredient it created; a live scan, a
+// scan outside the list and a scan of another Ingredient keep theirs.
+func TestReleaseIngredientClearsOnlyTheListedUndoneScansOfThatIngredient(t *testing.T) {
+	db := stocktest.NewDB(t)
+	st := store.New(db, clock.NewFake(time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC)))
+	ctx := context.Background()
+	for _, e := range []struct {
+		uuid string
+		ing  int64
+		undo bool
+	}{{"put-back", 42, true}, {"live", 42, false}, {"other-run", 42, true}, {"other-ing", 43, true}} {
+		ev := event(e.uuid, 159, 1)
+		ev.IngredientID = i64(e.ing)
+		if _, err := st.Insert(ctx, ev); err != nil {
+			t.Fatal(err)
+		}
+		if e.undo {
+			if _, err := st.MarkUndone(ctx, e.uuid); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	n, err := st.ReleaseIngredient(ctx, []string{"put-back", "live", "other-ing", "ghost"}, 42)
+	if err != nil || n != 1 {
+		t.Fatalf("ReleaseIngredient = %d, %v; want 1", n, err)
+	}
+	want := map[string]*int64{"put-back": nil, "live": i64(42), "other-run": i64(42), "other-ing": i64(43)}
+	for u, w := range want {
+		got, _, _ := st.Get(ctx, u)
+		if (got.IngredientID == nil) != (w == nil) || (w != nil && *got.IngredientID != *w) {
+			t.Errorf("%s: IngredientID = %v, want %v", u, got.IngredientID, w)
+		}
+	}
+	if c, err := (store.Mover{}).Count(ctx, db, 42); err != nil || c != 2 {
+		t.Errorf("Mover.Count(42) = %d, %v; want 2 (the live scan and the other run's undone scan)", c, err)
+	}
+}
+
 func TestTotalsCountTheRangesAppliedScansOnly(t *testing.T) {
 	st, _ := setup(t)
 	ctx := context.Background()
