@@ -89,6 +89,15 @@ describe('the toast', () => {
     expect(screen.queryByRole('button', { name: 'Review' })).toBeNull()
   })
 
+  it('b8-polish: a read with nothing to change shows no toast; the read stays ready for the Scanned list row', async () => {
+    mount('/plan')
+    await begin()
+    await finish(readDone({ proposals: [] }))
+    expect(getBackgroundRead()).toMatchObject({ status: 'ready', changes: 0 })
+    expect(screen.queryByText(/Receipt read/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Review' })).toBeNull()
+  })
+
   it('a cancelled read says nothing', async () => {
     mount('/plan')
     await begin()

@@ -12,9 +12,11 @@ export interface NotNeededGroupProps {
   entries: ListEntry[]
   /** a row was tapped: its sheet offers "Needed after all" */
   onOpen: (entry: ListEntry, group: RowGroup) => void
+  /** b8-polish: a narrow screen shows the short Restock reason, as in the other groups (the screen decides, useNarrowChips) */
+  compact?: boolean
 }
 
-export function NotNeededGroup({ entries, onOpen }: NotNeededGroupProps) {
+export function NotNeededGroup({ entries, onOpen, compact }: NotNeededGroupProps) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
   if (entries.length === 0) return null
@@ -28,7 +30,7 @@ export function NotNeededGroup({ entries, onOpen }: NotNeededGroupProps) {
         <div id={panelId} className="shop-lines">
           <ListGroup label={shopStrings.notNeeded}>
             {entries.map((entry) => (
-              <LineRow key={entry.key} entry={entry} group="not-needed" onOpen={onOpen} />
+              <LineRow key={entry.key} entry={entry} group="not-needed" onOpen={onOpen} compact={compact} />
             ))}
           </ListGroup>
         </div>

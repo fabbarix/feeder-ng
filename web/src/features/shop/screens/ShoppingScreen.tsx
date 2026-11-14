@@ -163,6 +163,7 @@ export function ShoppingScreen() {
           onOpenLine={lineSheet.open}
           onScan={() => navigate('/scan')}
           onMarkIt={(slot) => navigate(markSlotPath(slot))}
+          compact={narrow}
         />
       ) : null}
       <LineSheet entry={lineSheet.entry} actions={lineSheet.actions} onAction={lineSheet.run} onClose={lineSheet.close} />

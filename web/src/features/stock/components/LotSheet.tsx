@@ -145,14 +145,14 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
             onMove(lot, placeId, check.quantity)
           }}
         >
-          {/* Until a new place is chosen, the field shows where the Lot is now: its Storage Place, or Not sorted. */}
+          {/* b8-polish: until a new place is chosen the field shows the hint; the sheet already says where the Lot is. */}
           <Select<number>
             label={strings.moveTo}
             entityName="Storage Place"
             options={options}
             value={placeId}
             onChange={setPlaceId}
-            placeholder={from ? from.name : strings.unsorted}
+            placeholder={strings.chooseStoragePlace}
           />
           <TextField
             label={strings.moveSome}

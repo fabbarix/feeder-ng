@@ -50,6 +50,20 @@ describe('rowView', () => {
   })
 })
 
+describe('finishedToast: a read with nothing to change (b8-polish)', () => {
+  const none: BackgroundRead = { status: 'ready', shopId: SHOP_ID, readId: 'rd-1', changes: 0 }
+  it.each(['/plan', '/recipes', '/shop'])('has no toast on %s, where 1 or more changes would have one', (path) => {
+    expect(finishedToast(none, path, { isAdmin: false })).toBeUndefined()
+    expect(finishedToast({ ...none, changes: 1 }, path, { isAdmin: false })).toMatchObject({ message: 'Receipt read: review 1 change', to: '/scan/receipt/review' })
+  })
+  it('the Scanned list row still says so, and still opens the review', () => {
+    expect(rowView(none, { isAdmin: false })).toMatchObject({ kind: 'ready', title: 'Receipt read: nothing to change', goes: 'review' })
+  })
+  it('readyTitle(0) is unchanged: the row uses it', () => {
+    expect(readyTitle(0)).toBe('Receipt read: nothing to change')
+  })
+})
+
 describe('finishedToast', () => {
   it('ready, elsewhere in the app: a success toast with Review', () => {
     expect(finishedToast(ready, '/plan', { isAdmin: false })).toEqual({ message: 'Receipt read: review 9 changes', status: 'success', actionLabel: 'Review', to: '/scan/receipt/review' })

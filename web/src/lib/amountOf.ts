@@ -1,5 +1,5 @@
 // "x of y" amounts in one Base Unit, shared by the Shop screen's Restock reason ("2 of 6") and the Scanned row's Line cover
-// ("250 of 375 g"). Each feature joins the two texts with its own copy. Plain TypeScript, no React.
+// ("250 of 375 g"). amountOfText joins them, "x of y" or the compact "x/y" (b8-polish). Plain TypeScript, no React.
 import { formatQuantity, type BaseUnit, type UnitSystem } from './units'
 
 /** Float dust: an amount this close to 0 reads 0 (the server's own tolerance). */
@@ -31,4 +31,13 @@ export function amountOf(x: number, y: number, base: BaseUnit, system: UnitSyste
     if (pa && pb && pa[1] === pb[1]) a = pa[0]
   }
   return [a, b]
+}
+
+/**
+ * The "x of y" text of two amounts (b8-polish): "400 of 1000 ml"; with `compact` the "x/y" form, "400/1000 ml", "2/6". The unit
+ * rules are amountOf's: one unit on y when both amounts share it, and a 0 for float dust.
+ */
+export function amountOfText(x: number, y: number, base: BaseUnit, system: UnitSystem, opts: { compact?: boolean } = {}): string {
+  const [a, b] = amountOf(x, y, base, system)
+  return opts.compact ? `${a}/${b}` : `${a} of ${b}`
 }

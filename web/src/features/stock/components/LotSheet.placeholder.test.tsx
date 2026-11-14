@@ -1,5 +1,5 @@
-// b8-pantry review: until a new Storage Place is chosen, the Storage Place field of the Lot sheet shows where the Lot is now,
-// "Not sorted" for a Lot in no Storage Place (GLOSSARY: Storage Place), instead of an empty value.
+// b8-polish (user decision, replaces the b8-pantry review): until a new Storage Place is chosen, the "Move to" Storage Place field
+// of the Lot sheet shows the hint "Choose a Storage Place", whatever place the Lot is in now (the Lot's place is already on the sheet).
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ConfirmProvider } from '../../../ui'
@@ -22,12 +22,16 @@ function field(storagePlaceId: number | null) {
 }
 
 describe('LotSheet: the Storage Place field before a choice', () => {
-  it('shows "Not sorted" for a Lot in no Storage Place', () => {
+  it('shows the hint "Choose a Storage Place" for a Lot in no Storage Place', () => {
     const trigger = field(null)
-    expect(trigger).toHaveTextContent('Not sorted')
+    expect(trigger).toHaveTextContent('Choose a Storage Place')
+    expect(trigger).not.toHaveTextContent('Not sorted')
     expect(trigger).toHaveAttribute('data-placeholder')
   })
-  it('shows the Storage Place the Lot is in now', () => {
-    expect(field(1)).toHaveTextContent('Utility cupboard')
+  it('shows the same hint for a Lot that is in a Storage Place, not that place', () => {
+    const trigger = field(1)
+    expect(trigger).toHaveTextContent('Choose a Storage Place')
+    expect(trigger).not.toHaveTextContent('Utility cupboard')
+    expect(trigger).toHaveAttribute('data-placeholder')
   })
 })

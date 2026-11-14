@@ -66,7 +66,7 @@ Every list uses one anatomy: Shop Lines, Pantry Stock Lots, Plan Courses, To con
 - **Height.** A row is at least **64 px** high (`--row-min`); a row with a picture is at least 72 px. No row has a fixed height: a two-line title makes the row grow.
 - **Vertical alignment.** Content is centred within the row's own height, never within a neighbour's stretched height. Rows in a grid start at the top.
 - **The title** wraps **at word boundaries**, at most **2 lines**, then ends in an ellipsis. It never uses `overflow-wrap: anywhere/break-word`, `word-break` or `hyphens: auto`. The full text stays in the accessible name.
-- **The meta line** is **one line** with an ellipsis. That is where a hint goes, coloured by its tone (`metaStatus`) and led by a 14 px icon, e.g. "ⓘ Includes Thu Dinner". A row never grows a third line.
+- **The meta line** is **one line** with an ellipsis. That is where a hint goes, coloured by its tone (`metaStatus`) and led by a 14 px icon, e.g. "ⓘ Fri Dinner +2" (the first Meal Slot, then how many more; never the word "Includes"). A row never grows a third line.
 - **A sentence that applies to many rows** is said **once**, in a notice above the list, with one action ("Review"). It is never repeated on each row.
 - **The value column** (`value`, `subValue`) has a minimum width, `--row-value-min`: 5.5 rem, or 4.25 rem below 600 px. It is end-aligned, tabular and never wraps, so quantities line up down a list.
 - **The whole row is the tap target.** It opens the row's sheet ("Not needed", "Mark it", Price). Only the leading control (a tick) and at most one trailing IconButton catch the pointer on their own, so lists need no ⋮ column.

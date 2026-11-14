@@ -92,14 +92,14 @@ Full-screen route `/scan/receipt` (the Scan session stays mounted behind it; the
 - **Where it shows.** The Scanned list's **Read the receipt** row is the read's place, for the Shop it was started for:
   - **reading**: "Reading the receipt…" with "You can leave. Feeder keeps reading."; pressing it opens the progress;
   - **ready**: "Receipt read: review 9 changes" with "Nothing changes until you apply."; pressing it opens the Receipt review
-    (1 change: "review 1 change"; none: "Receipt read: nothing to change"); a Dismiss button forgets the read, so a new one can
+    (1 change: "review 1 change"; none: "Receipt read: nothing to change", which keeps the Dismiss button); a Dismiss button forgets the read, so a new one can
     start (else the ready row would hold the photos screen for the 10 minutes);
   - **failed**: "The receipt could not be read" with the failure's words (§9) and a Dismiss button; pressing the row clears it and
     opens the photos to read again (the photos were not kept, so a retry means taking them again).
   These states win over offline, waiting scans and the assistant being off: the read exists already.
 - **A toast elsewhere.** When a read finishes while the User is anywhere but the Scan screen or the receipt routes, a toast says
   so: "Receipt read: review 9 changes" with **Review** (opens the Receipt review), or the failure's words with **Read it again**
-  (error toast, stays until dismissed). On the Scan screen and the receipt routes the User sees it already, so there is no toast.
+  (error toast, stays until dismissed). A read with nothing to change gets **no toast**: there is nothing to review, and the Scanned list row still says "Receipt read: nothing to change" with its Dismiss button. On the Scan screen and the receipt routes the User sees it already, so there is no toast.
 - **A stale read.** The row goes back to the plain **Read the receipt** when the 10 minutes have passed, when the review applies
   the read, when **Read it again** forgets it, when an apply fails and is put back (`receipt_apply_failed`: the Scanned list was
   re-keyed, so the read no longer matches it), and when an apply answers `410 receipt_read_gone` (the review says so; the read is
