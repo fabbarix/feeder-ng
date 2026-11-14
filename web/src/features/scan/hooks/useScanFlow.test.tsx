@@ -155,6 +155,22 @@ describe('useScanFlow in a Shop', () => {
     expect(deps.submit).not.toHaveBeenCalled()
   })
 
+  // b8-scanflake: a barcode typed (or read) while the Shop's offline data is still loading is held, not lost: it is handled, once and
+  // in order, as soon as the data is in.
+  it('handles a read made while the offline data was loading once it has loaded', async () => {
+    const { deps, hook } = setup({ offline: null })
+    await read(hook, '8000500310427')
+    await read(hook, '5012345678900')
+    expect(deps.submit).not.toHaveBeenCalled()
+    deps.offline = offline
+    await act(async () => hook.rerender())
+    expect(deps.submit).toHaveBeenCalledTimes(1)
+    expect(deps.submit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'shop_scan', productId: 7 }))
+    expect(hook.result.current.sheet).toMatchObject({ kind: 'unknown', target: { code: '05012345678900' } })
+    await act(async () => hook.rerender())
+    expect(deps.submit).toHaveBeenCalledTimes(1)
+  })
+
   it('closing a sheet resumes scanning', async () => {
     const { hook } = setup()
     await read(hook, '5012345678900')

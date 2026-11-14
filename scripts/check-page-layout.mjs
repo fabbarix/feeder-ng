@@ -702,7 +702,12 @@ async function scanSession(codes) {
     await until(`!!document.querySelector('.camera-failure input')`, 'the barcode field')
     if (!(await evaluate(typeInto('.camera-failure input', code)))) throw new Error('setup: the barcode field went away')
     await press(`document.querySelector('.camera-failure button[type=submit]')`, '"Use this barcode"')
-    await until(`${SCANNED_ROWS} > ${before} || !!document.querySelector('dialog.sheet[open]')`, `the scan of ${code}`)
+    const t0 = Date.now()
+    await until(`${SCANNED_ROWS} > ${before} || !!document.querySelector('dialog.sheet[open]')`, `the scan of ${code}`).catch(async (e) => {
+      const seen = await evaluate(`JSON.stringify({ rows: ${SCANNED_ROWS}, before: ${before}, input: document.querySelector('.camera-failure input')?.value, main: (document.querySelector('main')?.innerText || '').replace(/\\s+/g, ' ').slice(0, 400), toasts: [...document.querySelectorAll('.toast')].map((t) => t.innerText) })`).catch(() => '?')
+      throw new Error(`${e.message} [${seen}]`)
+    })
+    if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   scan ${code}: ${Date.now() - t0}ms`)
   }
   // The "Added …" toasts are transient: dismissed, so the probes and a screenshot see the screen under them.
   await evaluate(`document.querySelectorAll('.toast > button:last-child').forEach((b) => b.click())`)
