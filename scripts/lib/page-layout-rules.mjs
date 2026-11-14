@@ -10,6 +10,7 @@ export const ROUTES = [
   ['/', 'wide'], ['/plan', 'wide'], ['/plan/couldnt-plan/excluded', 'default'], ['/shop', 'wide'], ['/scan', 'narrow'], ['/pantry', 'default'],
   ['/recipes', 'wide'], ['/recipes/:id', 'default'], ['/recipes/:id/edit', 'default'], ['/recipes/new', 'default'],
   ['/recipes/import', 'narrow'], ['/recipes/export', 'narrow'], ['/ingredients', 'narrow'], ['/ingredients/:id', 'narrow'],
+  ['/supplies', 'narrow'], ['/supplies/:id', 'narrow'], ['/scan/receipt', 'narrow'], ['/scan/receipt/review', 'narrow'],
   ['/products', 'narrow'], ['/products/:id', 'narrow'], ['/settings', 'narrow'], ['/settings/household', 'narrow'],
   ['/settings/members', 'narrow'], ['/settings/meal-slots', 'default'], ['/settings/courses', 'narrow'], ['/settings/planning', 'narrow'], ['/settings/tags', 'narrow'],
   ['/settings/shops', 'narrow'], ['/settings/shops/:id', 'narrow'], ['/settings/notifications', 'narrow'],
@@ -34,7 +35,46 @@ export const SCENARIOS = [
   { name: 'recipes-filtered-open', route: '/recipes', open: true },
   { name: 'pantry-filtered', route: '/pantry', open: false },
   { name: 'pantry-filtered-open', route: '/pantry', open: true },
+  // beta.7 (H8, docs/dev/design/household-items.md 8): the Supplies list with the quick-Use sheet of a g or ml Supply open, the Supply
+  // page, and the Shop list with its Supplies group (the seeded Supply below its Restock level).
+  { name: 'supplies-use-sheet', route: '/supplies', start: '/supplies', setup: 'supplyUseSheet', widths: [360, 390, 834, 1440] },
+  { name: 'supply-page', route: '/supplies/:id', start: '/supplies/:id', setup: 'supplyPage', widths: [360, 390, 834, 1440] },
+  { name: 'shop-supplies-group', route: '/shop', start: '/shop', setup: 'shopSuppliesGroup', widths: [360, 390, 834, 1440] },
+  // beta.7 (SR6, docs/design/shop-scan-proposals.md 13): the Scan screen in shop mode. A headless Chrome has no camera, so the
+  // no-camera block shows and the guard types the seeded codes by hand. The Scanned list with its rows and the "Read the receipt" footer
+  // row; a row active with its strip; the Price keypad (a non-modal half sheet on a phone, docked from 768 px); the new-Product sheet.
+  { name: 'scan-scanned-list', route: '/scan', start: '/scan', setup: 'scanScannedList', widths: [360, 390, 834] },
+  { name: 'scan-row-active', route: '/scan', start: '/scan', setup: 'scanRowActive', widths: [360, 390, 834] },
+  { name: 'scan-price-keypad', route: '/scan', start: '/scan', setup: 'scanPriceKeypad', widths: [360, 390, 834] },
+  { name: 'scan-new-product', route: '/scan', start: '/scan', setup: 'scanNewProduct', widths: [360, 390, 834] },
+  // beta.7 (RR5, docs/design/receipt-reading.md 9): the photos screen with no photo, with one, its photo edit sheet, and the review
+  // of a done read (the fake Anthropic API answers the read; internal/recipeassistant/fakeanthropic receipt.go).
+  { name: 'receipt-photos-empty', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotosEmpty', widths: [360, 390, 834, 1440] },
+  { name: 'receipt-photos-one', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotosOne', widths: [360, 390, 834, 1440] },
+  { name: 'receipt-photo-edit', route: '/scan/receipt', start: '/scan', setup: 'receiptPhotoEdit', widths: [360, 390, 834, 1440] },
+  { name: 'receipt-review', route: '/scan/receipt/review', start: '/scan', setup: 'receiptReview', widths: [360, 390, 834, 1440] },
 ]
+
+/**
+ * beta.7: the viewport of a scenario width (a scenario with `widths` runs at exactly those, in both profiles). The phone widths are
+ * emulated as phones, as the profiles' 390 px is; 834 is the iPad portrait of the quick profile.
+ */
+export const SCENARIO_VIEWPORTS = {
+  360: { width: 360, height: 780, mobile: true },
+  390: { width: 390, height: 844, mobile: true },
+  834: { width: 834, height: 1194, mobile: false },
+  1440: { width: 1440, height: 900, mobile: false },
+}
+
+/** The viewports a scenario runs at: its own `widths`, or every viewport of the profile (the filtered /recipes and /pantry). */
+export function scenarioViewports(scenario, profileViewports) {
+  if (!scenario.widths) return profileViewports
+  return scenario.widths.map((w) => {
+    const vp = SCENARIO_VIEWPORTS[w]
+    if (!vp) throw new Error(`scenario ${scenario.name}: no viewport for ${w} px in SCENARIO_VIEWPORTS`)
+    return vp
+  })
+}
 
 /**
  * hf-recipes-filter round 3 (docs/design/recipes-filter.md 14): the closed filtered /recipes is loaded fresh at each of these phone
@@ -78,8 +118,10 @@ export function resizeWalkWidths() {
   return out
 }
 
-/** The URL of a scenario: /recipes with the Side Course and the long Tag, /pantry with Use soon and the long Storage Place (ids file). */
+/** The URL of a scenario: its `start`, or /recipes with the Side Course and the long Tag, /pantry with Use soon and the long Storage Place (ids file). */
 export function resolveScenario(scenario, ids) {
+  // beta.7: a scenario with a `start` opens that route (":id" from the ids file) and its setup takes it from there.
+  if (scenario.start) return resolveRoute(scenario.start, ids)
   const params =
     scenario.route === '/pantry'
       ? new URLSearchParams({ status: 'useSoon', place: String(ids.longPlaceId) })
@@ -248,7 +290,7 @@ export function modeFor(modesText, route) {
   return dflt
 }
 
-const ID_KEYS = { recipes: 'recipeId', ingredients: 'ingredientId', products: 'productId', shops: 'shopId' }
+const ID_KEYS = { recipes: 'recipeId', ingredients: 'ingredientId', products: 'productId', shops: 'shopId', supplies: 'supplyId' }
 /** Replaces ":id" with the seeded id of the entity named by the preceding path segment. */
 export function resolveRoute(pattern, ids) {
   const parts = pattern.split('/')

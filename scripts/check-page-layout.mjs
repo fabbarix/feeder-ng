@@ -10,10 +10,10 @@
 // (scripts/check-page-layout.exempt, or --exempt FILE). Exit 1 on any finding or failing not-inspected entry, never OK then;
 // exit 2 = usage or environment trouble (the wrapper treats that as not run). Design: docs/dev/design/b5-pl.md.
 import { spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario } from './lib/page-layout-rules.mjs'
+import { PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, darkButtonFindings, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario, scenarioViewports } from './lib/page-layout-rules.mjs'
 import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
 
 const arg = (name, fallback) => {
@@ -633,28 +633,154 @@ const cutSelectProbe = `
   return out
 })()`
 
+// beta.7 (H8, SR6, RR5): the setups of the scenarios with a `setup` (page-layout-rules.mjs SCENARIOS). Each one runs in the page
+// opened at the scenario's `start` and brings it to the state the probes measure: a sheet open, a Scan session with rows, a receipt
+// photo, a done read. A step whose state does not show throws, so the probe is not inspected (and fails) instead of measuring the
+// wrong page. The dark pass replays the setup in a fresh page (the photos and the read are in memory only).
+const js = JSON.stringify
+/** Polls the page until `expr` is truthy, or throws after `ms`. */
+const until = async (expr, what, ms = 10000) => {
+  const end = Date.now() + ms
+  while (Date.now() < end) {
+    if (await evaluate(expr).catch(() => false)) return
+    await sleep(150)
+  }
+  throw new Error(`setup: ${what} did not show within ${ms / 1000} s`)
+}
+/** Clicks the element `expr` evaluates to, or throws. */
+const press = async (expr, what) => {
+  if (!(await evaluate(`(() => { const e = ${expr}; if (!e || e.disabled) return false; e.click(); return true })()`))) throw new Error(`setup: no ${what} to press`)
+}
+/** The element of `sel` whose trimmed text (or aria-label) is `text`, as page code. */
+const byText = (sel, text) => `[...document.querySelectorAll(${js(sel)})].find((e) => e.textContent.trim() === ${js(text)} || e.getAttribute('aria-label') === ${js(text)})`
+/** Sets a React-controlled input's value as typing does. */
+const typeInto = (sel, value) =>
+  `(() => { const e = document.querySelector(${js(sel)}); if (!e) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(e, ${js(value)}); e.dispatchEvent(new Event('input', { bubbles: true })); return true })()`
+const SCANNED_ROWS = `document.querySelectorAll('ul[aria-label="Scanned list"] > .list-row').length`
+const READ_ROW = `[...document.querySelectorAll('.scan-screen__list .list-row')].find((r) => r.querySelector('.list-row__title')?.textContent.trim() === 'Read the receipt')`
+
+/** A Shop session of the seeded Shop on /scan, the barcodes typed through the no-camera block (the storage was cleared first). */
+async function scanSession(codes) {
+  await until(`!!document.querySelector('.shop-picker, .scan-screen__split')`, 'the Scan screen')
+  if (await evaluate(`!!document.querySelector('.shop-picker')`)) {
+    await press(`document.querySelector('.shop-picker .list-row__target[aria-label=' + ${js(js(ids.shopName ?? ''))} + ']')`, `Shop "${ids.shopName}" in the picker`)
+  }
+  await until(`!!document.querySelector('.scan-screen__split')`, 'the shop session')
+  await until(`!!document.querySelector('.camera-failure')`, 'the no-camera block (a headless Chrome has no camera)', 15000)
+  for (const code of codes) {
+    const before = await evaluate(SCANNED_ROWS)
+    if (!(await evaluate(`!!document.querySelector('.camera-failure input')`))) await press(byText('.camera-failure button', 'Type the barcode instead'), '"Type the barcode instead"')
+    await until(`!!document.querySelector('.camera-failure input')`, 'the barcode field')
+    if (!(await evaluate(typeInto('.camera-failure input', code)))) throw new Error('setup: the barcode field went away')
+    await press(`document.querySelector('.camera-failure button[type=submit]')`, '"Use this barcode"')
+    await until(`${SCANNED_ROWS} > ${before} || !!document.querySelector('dialog.sheet[open]')`, `the scan of ${code}`)
+  }
+  // The "Added …" toasts are transient: dismissed, so the probes and a screenshot see the screen under them.
+  await evaluate(`document.querySelectorAll('.toast > button:last-child').forEach((b) => b.click())`)
+}
+/** The seeded barcodes scanned, and the "Read the receipt" footer row ready (its scans synced, the assistant on). */
+async function scannedList() {
+  if (!ids.assistant) throw new Error('setup: the seeder did not turn the Recipe Assistant on (no fake Anthropic API), so "Read the receipt" cannot be read')
+  await scanSession(ids.scanBarcodes ?? [])
+  await until(`(() => { const r = ${READ_ROW}; return !!r && !!r.querySelector('.list-row__target') })()`, 'the "Read the receipt" footer row, ready', 15000)
+}
+/** A 640 x 1100 JPEG of a printed receipt, put in the photos screen's file input as the camera would. */
+const ADD_PHOTO = `(async () => {
+  const c = document.createElement('canvas'); c.width = 640; c.height = 1100
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#111'; g.font = '28px monospace'
+  ;['COOP', 'PASSATA         1.29', 'FLOUR PACK      1.99', 'KITCHEN ROLL    3.49', 'TOTAL          13.03'].forEach((t, i) => g.fillText(t, 40, 80 + i * 60))
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85))
+  const input = document.querySelector('.receipt-add input[type=file]')
+  if (!input) return false
+  const dt = new DataTransfer(); dt.items.add(new File([blob], 'receipt.jpg', { type: 'image/jpeg' }))
+  input.files = dt.files
+  input.dispatchEvent(new Event('change', { bubbles: true }))
+  return true
+})()`
+async function receiptPhotos(n) {
+  await scannedList()
+  await press(`(${READ_ROW})?.querySelector('.list-row__target')`, '"Read the receipt" row')
+  await until(`location.pathname === '/scan/receipt' && !!document.querySelector('.receipt-add')`, 'the receipt photos screen')
+  for (let i = 1; i <= n; i++) {
+    if (!(await evaluate(ADD_PHOTO))) throw new Error('setup: the photos screen has no file input')
+    await until(`document.querySelectorAll('.receipt-photos > li').length >= ${i}`, `receipt photo ${i}`)
+  }
+}
+
+const SETUPS = {
+  async supplyUseSheet() {
+    await until(`!!document.querySelector('ul[aria-label="Supplies"] .list-row')`, 'the Supplies list')
+    // The first seeded Supply is the ml one below its Restock level: its Use opens the "how much" sheet.
+    await until(`!![...document.querySelectorAll('.list-row')].find((r) => r.querySelector('.list-row__title')?.textContent.trim() === 'Washing-up liquid')?.querySelector('.list-row__trailing button:not(:disabled)')`, 'an enabled Use on Washing-up liquid')
+    await press(`[...document.querySelectorAll('.list-row')].find((r) => r.querySelector('.list-row__title')?.textContent.trim() === 'Washing-up liquid')?.querySelector('.list-row__trailing button')`, 'Use on Washing-up liquid')
+    await until(`!!document.querySelector('dialog.sheet[open]')`, 'the quick-Use sheet')
+  },
+  async supplyPage() {
+    await until(`!!document.querySelector('main h1') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Supply page')
+  },
+  async shopSuppliesGroup() {
+    await until(`!!document.querySelector('.shop-supplies .list-row')`, 'the Supplies group of the Shop list (a Supply below its Restock level)')
+  },
+  scanScannedList: scannedList,
+  async scanRowActive() {
+    await scannedList()
+    await press(`document.querySelector('ul[aria-label="Scanned list"] > .list-row .list-row__target')`, 'the first Scanned row')
+    await until(`!!document.querySelector('.scanned-row__strip')`, 'the active row strip')
+  },
+  async scanPriceKeypad() {
+    await scannedList()
+    await press(`document.querySelector('ul[aria-label="Scanned list"] > .list-row .list-row__target')`, 'the first Scanned row')
+    await until(`!!document.querySelector('.scanned-row__strip')`, 'the active row strip')
+    await press(byText('.scanned-row__strip button', 'Price'), 'Price on the active row')
+    await until(`document.querySelector('.scan-screen')?.dataset.priceEntry === 'open' && !!document.querySelector('dialog.sheet[open]')`, 'the Price keypad')
+  },
+  async scanNewProduct() {
+    await scanSession([ids.unknownBarcode])
+    await until(`!!document.querySelector('dialog.sheet[open]')`, 'the new-Product sheet')
+  },
+  receiptPhotosEmpty: () => receiptPhotos(0),
+  receiptPhotosOne: () => receiptPhotos(1),
+  async receiptPhotoEdit() {
+    await receiptPhotos(1)
+    await press(`document.querySelector('.receipt-photos button[aria-label="Edit photo 1"]')`, '"Edit photo 1"')
+    await until(`!!document.querySelector('dialog[open]')`, 'the photo edit sheet')
+  },
+  async receiptReview() {
+    await receiptPhotos(1)
+    await press(byText('.sticky-action-bar button', 'Read the receipt'), '"Read the receipt" in the action bar')
+    await until(`location.pathname === '/scan/receipt/review'`, 'the review (a done read)', 30000)
+    await until(`!!document.querySelector('main h1') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the review content')
+  },
+}
+
 // Probes that did not run, one entry per route x viewport: {width, route, pattern, reason}.
 const notInspected = []
 let probes = 0
 const started = Date.now()
 /** One page at one width: navigate, settle, run every probe and report its findings; open = the Filters panel is opened first (hf-recipes-filter SCENARIOS). */
-async function probePage(vp, route, pattern, kind, open) {
+async function probePage(vp, route, pattern, kind, open, setup = null, label = route) {
   probes++
-  const tag = `${vp.width}px ${route}`
+  const tag = `${vp.width}px ${label}`
   const t0 = Date.now()
   // One entry per probe, whichever step failed first.
   let missed = false
-  const miss = (reason, label = route) => {
+  const miss = (reason, missLabel = label) => {
     if (missed) return
     missed = true
-    notInspected.push({ width: vp.width, route: label, pattern, reason })
+    notInspected.push({ width: vp.width, route: missLabel, pattern, reason })
   }
   try {
     await closeTab()
     await openTab()
     await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
+    // beta.7: a setup starts from a clean device (no last Shop, no stored Scan session), whatever the probes before it left.
+    if (setup) await cdp('Storage.clearDataForOrigin', { origin: base, storageTypes: 'local_storage,indexeddb' })
     await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
     await settle()
+    if (setup) {
+      await setup()
+      await settle()
+    }
     if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   at ${await evaluate('location.pathname + " " + document.readyState')}`)
     if (open) {
       // The Filters button of the header (the Recipes and the Pantry scenarios): opened before the probes, so the panel is measured.
@@ -680,6 +806,12 @@ async function probePage(vp, route, pattern, kind, open) {
       filterSpacing: await evaluate(filterSpacingProbe),
       cutSelects: await evaluate(cutSelectProbe),
     })
+    // PAGE_LAYOUT_SHOTS=<dir>: a screenshot of every light probe, to see the state a scenario's setup reached (debugging only).
+    if (process.env.PAGE_LAYOUT_SHOTS) {
+      const { data } = await cdp('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
+      mkdirSync(process.env.PAGE_LAYOUT_SHOTS, { recursive: true })
+      writeFileSync(join(process.env.PAGE_LAYOUT_SHOTS, `${vp.width}-${label.replace(/[^\w.-]+/g, '_')}.png`), Buffer.from(data, 'base64'))
+    }
     // The light findings are reported first, on the light page.
     for (const f of evaluateMetrics(m, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
     // FU-4: the dark P10 pass runs after the light findings; only its P10 findings are reported, and a dark pass that did not run is not inspected.
@@ -688,8 +820,20 @@ async function probePage(vp, route, pattern, kind, open) {
       // ThemeProvider reads the system scheme once at render, so the page is reloaded under the emulation and settled first. The
       // board takes its scheme from the server's phase, which is pinned to dark for this pass (pinBoardPhase).
       BOARD_PHASE.dark = true
-      await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
-      await Promise.race([cdp('Page.reload', {}), sleep(4000)])
+      if (setup) {
+        // The setup's state is in memory (the photos, the read): it is replayed in a fresh page opened in the dark scheme.
+        await closeTab()
+        await openTab()
+        await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
+        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
+        await cdp('Storage.clearDataForOrigin', { origin: base, storageTypes: 'local_storage,indexeddb' })
+        await Promise.race([cdp('Page.navigate', { url: base + route }), sleep(4000)])
+        await settle()
+        await setup()
+      } else {
+        await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
+        await Promise.race([cdp('Page.reload', {}), sleep(4000)])
+      }
       await settle()
       if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
         throw new Error('data-scheme is not dark; the scheme emulation did not apply')
@@ -697,7 +841,7 @@ async function probePage(vp, route, pattern, kind, open) {
       const lowContrastButtonsDark = await evaluate(buttonProbe)
       for (const f of darkButtonFindings(lowContrastButtonsDark)) fail(`${tag}: ${f.message}`)
     } catch (e) {
-      miss(`dark scheme: ${e.message}`, `${route} (dark)`)
+      miss(`dark scheme: ${e.message}`, `${label} (dark)`)
     } finally {
       BOARD_PHASE.dark = false
       await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] }).catch(() => {})
@@ -715,10 +859,25 @@ for (const vp of VIEWPORTS) {
     await probePage(vp, resolveRoute(pattern, ids), pattern, kind, false)
   }
   // hf-recipes-filter round 2: the filtered /recipes, closed and with the Filters panel open (SCENARIOS).
-  for (const scenario of SCENARIOS) {
+  for (const scenario of SCENARIOS.filter((x) => !x.widths)) {
     if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
     const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
     await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open)
+  }
+}
+// beta.7 (H8, SR6, RR5): the scenarios with their own widths and a setup, at those widths in every profile. A finding or a missed probe
+// is reported on "<route>#<scenario name>", so it says which state broke; the modes file reads the scenario's route.
+for (const scenario of SCENARIOS.filter((x) => x.widths)) {
+  if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
+  const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
+  const setup = SETUPS[scenario.setup]
+  for (const vp of scenarioViewports(scenario, VIEWPORTS)) {
+    if (!setup) {
+      notInspected.push({ width: vp.width, route: scenario.name, pattern: scenario.route, reason: `no setup "${scenario.setup}" in the driver` })
+      continue
+    }
+    // "<route>#<scenario>": one token, so the modes file reads the route (the part before #) and the line names the state.
+    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, false, setup, `${scenario.route}#${scenario.name}`)
   }
 }
 
