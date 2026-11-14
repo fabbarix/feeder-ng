@@ -31,8 +31,18 @@ Feature: What changed, and Undo of a Swap, of Cooked, of Not cooked and of Regen
 
   Scenario: Meals that still fit stay where they are after a Swap
     Given I remember the Recipe planned on 2026-11-11
-    When I pin the plan slot on 2026-11-09 as "pasta"
+    When I pin the plan slot on 2026-11-09 as a Recipe other than the remembered one
     Then the plan slot on 2026-11-11 has the remembered Recipe
+    And the answer does not list the meal of 2026-11-11 as changed
+
+  # Why: the later meal is one the Swap breaks. Its Recipe is now Pinned two days earlier, inside its Cool-down, and its
+  # cell has other Recipes that keep every rule, so the keep check replans it (spec 7.2 step 2b, decision PC 1).
+  Scenario: A Swap to the Recipe planned later replans that later meal
+    Given I remember the Recipe planned on 2026-11-11
+    When I pin the plan slot on 2026-11-09 as the remembered Recipe
+    Then the response status is 200
+    And the answer lists the meal of 2026-11-11 as changed from the remembered Recipe
+    And the plan slot on 2026-11-11 does not have the remembered Recipe
 
   Scenario: Undo after a Swap puts every changed meal back
     Given I remember the plan
@@ -54,7 +64,8 @@ Feature: What changed, and Undo of a Swap, of Cooked, of Not cooked and of Regen
     Given I am signed in as the Admin
     And a live-update stream is open
     And I am signed in as the User
-    When I pin the plan slot on 2026-11-09 as "pasta"
+    And I remember the Recipe planned on 2026-11-11
+    When I pin the plan slot on 2026-11-09 as a Recipe other than the remembered one
     Then the live-update stream receives a plan event by "User" listing 1 changed meal
 
   # --- SAFE-07: Regenerate can be undone ---

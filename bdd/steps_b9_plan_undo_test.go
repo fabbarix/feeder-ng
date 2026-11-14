@@ -3,6 +3,7 @@ package bdd
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -154,6 +155,87 @@ func b9PlanUndoSteps(sc *godog.ScenarioContext, w *World) {
 			return fmt.Errorf("the answer lists %d changed meals, want %d: %s", len(a.Changes), n, w.Last.Body)
 		}
 		return nil
+	})
+
+	// ---- Swaps chosen by what is planned (the plan's jitter decides what each day holds) ----
+	pinAs := func(d string, recipeID int64) error {
+		p, err := cell(d, "")
+		if err != nil {
+			return err
+		}
+		w.Last = w.Client.Put(p, map[string]any{"recipeId": recipeID})
+		if w.Last.Status != 200 {
+			return fmt.Errorf("pin %s as Recipe %d: %d %s", d, recipeID, w.Last.Status, w.Last.Body)
+		}
+		return nil
+	}
+	recipeByName := func(name string) (int64, error) {
+		id, _ := w.Vars["plan:recipe:"+name].(int64)
+		if id == 0 {
+			return 0, fmt.Errorf("no planning Recipe %q was set up", name)
+		}
+		return id, nil
+	}
+	sc.Step(`^I pin the plan slot on `+date+` as the remembered Recipe$`, func(d string) error {
+		name, _ := w.Vars["plan:remembered"].(string)
+		id, err := recipeByName(name)
+		if err != nil {
+			return err
+		}
+		return pinAs(d, id)
+	})
+	// A Recipe that is neither the remembered one nor the one the day holds, so the Swap changes the day and puts no later
+	// meal inside its Cool-down: the first such Recipe by name.
+	sc.Step(`^I pin the plan slot on `+date+` as a Recipe other than the remembered one$`, func(d string) error {
+		remembered, _ := w.Vars["plan:remembered"].(string)
+		r := w.Client.Get("/api/plan?from=" + d + "&to=" + d)
+		var doc struct {
+			Slots []struct {
+				Courses []struct {
+					Meal *struct {
+						RecipeName string `json:"recipeName"`
+					} `json:"meal"`
+				} `json:"courses"`
+			} `json:"slots"`
+		}
+		if err := json.Unmarshal(r.Body, &doc); err != nil {
+			return fmt.Errorf("the plan of %s: %v %s", d, err, r.Body)
+		}
+		current := ""
+		if len(doc.Slots) == 1 && len(doc.Slots[0].Courses) > 0 && doc.Slots[0].Courses[0].Meal != nil {
+			current = doc.Slots[0].Courses[0].Meal.RecipeName
+		}
+		var names []string
+		for k := range w.Vars {
+			if n, ok := strings.CutPrefix(k, "plan:recipe:"); ok && n != remembered && n != current {
+				names = append(names, n)
+			}
+		}
+		if len(names) == 0 {
+			return fmt.Errorf("no planning Recipe other than %q and %q", remembered, current)
+		}
+		sort.Strings(names)
+		id, err := recipeByName(names[0])
+		if err != nil {
+			return err
+		}
+		return pinAs(d, id)
+	})
+	sc.Step(`^the answer lists the meal of `+date+` as changed from the remembered Recipe$`, func(d string) error {
+		name, _ := w.Vars["plan:remembered"].(string)
+		a, err := answer()
+		if err != nil {
+			return err
+		}
+		for _, c := range a.Changes {
+			if c.Date == d {
+				if c.Before == nil || c.Before.RecipeName != name {
+					return fmt.Errorf("the change on %s says it was %+v, want %q", d, c.Before, name)
+				}
+				return nil
+			}
+		}
+		return fmt.Errorf("the answer lists no change on %s: %s", d, w.Last.Body)
 	})
 
 	// ---- Undo ----
