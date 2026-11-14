@@ -63,7 +63,7 @@ describe('StoragePlacesScreen', () => {
     const slot = list.closest('.list-page__list')!
     expect(slot).not.toBeNull()
     const kids = Array.from(slot.children)
-    const intro = slot.querySelector('p.pg__muted')!
+    const intro = slot.querySelector('p.muted')! // B9-09 (DS-07): the Muted primitive, was p.pg__muted
     const add = screen.getByRole('button', { name: 'Add Storage Place' })
     expect(kids).toContain(intro)
     expect(kids.some((k) => k.contains(list))).toBe(true)
