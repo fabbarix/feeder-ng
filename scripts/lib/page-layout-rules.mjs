@@ -4,11 +4,11 @@
 // B9-03: this file is the one import of the driver and of the tests, and a facade. The rules, the in-page probes and the scenarios live
 // in scripts/lib/page-layout/ (registry.mjs, rules/, probes/, scenarios/), one module each; it re-exports the registry and keeps only
 // its own pure helpers here.
-import { RULES, RESERVED, ALWAYS_FAIL, PROBES, SCENARIOS, SETUPS, evaluateMetrics, selectScenarios } from './page-layout/registry.mjs'
+import { RULES, RESERVED, ALWAYS_FAIL, PROBES, DARK_PROBES, SCENARIOS, SETUPS, evaluateMetrics, evaluateDarkMetrics, selectScenarios } from './page-layout/registry.mjs'
 import { darkButtonFindings } from './page-layout/rules/P10-button-contrast.mjs'
 import { PAGE_WIDTH_PX } from './page-layout/constants.mjs'
 
-export { RULES, RESERVED, ALWAYS_FAIL, PROBES, SCENARIOS, SETUPS, evaluateMetrics, selectScenarios, darkButtonFindings, PAGE_WIDTH_PX }
+export { RULES, RESERVED, ALWAYS_FAIL, PROBES, DARK_PROBES, SCENARIOS, SETUPS, evaluateMetrics, evaluateDarkMetrics, selectScenarios, darkButtonFindings, PAGE_WIDTH_PX }
 
 /** [route pattern, width kind]; ":id" is resolved with resolveRoute(). Must equal web/src/app/pageWidths.ts (contract test). */
 export const ROUTES = [

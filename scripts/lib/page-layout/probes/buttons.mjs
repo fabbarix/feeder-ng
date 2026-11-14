@@ -18,4 +18,4 @@ const buttonProbe = `
   return low
 })()`
 
-export default { name: 'buttons', key: 'lowContrastButtons', order: 10, source: buttonProbe }
+export default { name: 'buttons', key: 'lowContrastButtons', order: 10, dark: true, source: buttonProbe }

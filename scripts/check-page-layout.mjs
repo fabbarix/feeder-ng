@@ -16,7 +16,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PROBES, PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, SETUPS, darkButtonFindings, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario, scenarioViewports, selectScenarios } from './lib/page-layout-rules.mjs'
+import { DARK_PROBES, PROBES, PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, SETUPS, evaluateDarkMetrics, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario, scenarioViewports, selectScenarios } from './lib/page-layout-rules.mjs'
 import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
 import { installHelpers } from './lib/page-layout/helpers.mjs'
 import { emulationCalls } from './lib/page-layout/viewport.mjs'
@@ -289,7 +289,6 @@ const settle = async () => {
 // runs again in the dark scheme, and the chip Select probe in the resize walk.
 const probeSource = (name) => PROBES.find((p) => p.name === name).source
 const layoutProbe = PROBES.find((p) => p.key === null).source
-const buttonProbe = probeSource('buttons')
 const cutSelectProbe = probeSource('cut-selects')
 // The scenario setups are scripts/lib/page-layout/scenarios/*.mjs (SETUPS); they reach this tab through helpers.mjs.
 const helpers = installHelpers({ evaluate, sleep, ids })
@@ -378,8 +377,11 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
       if (!(await evaluate("document.documentElement.dataset.scheme === 'dark'"))) {
         throw new Error('data-scheme is not dark; the scheme emulation did not apply')
       }
-      const lowContrastButtonsDark = await evaluate(buttonProbe)
-      for (const f of darkButtonFindings(lowContrastButtonsDark)) fail(`${tag}: ${f.message}`)
+      // The probes marked `dark` (P10's Button probe) run again here; only the rules' evaluateDark findings are reported, never the
+      // light ones again.
+      const darkMetrics = {}
+      for (const p of DARK_PROBES) if (vp.width >= (p.minWidth ?? 0)) darkMetrics[p.key] = p.soft ? await evaluate(p.source).catch(() => null) : await evaluate(p.source)
+      for (const f of evaluateDarkMetrics(darkMetrics, { width: vp.width, route, kind })) fail(`${tag}: ${f.message}`)
     } catch (e) {
       miss(`dark scheme: ${e.message}`, `${label} (dark)`)
     } finally {

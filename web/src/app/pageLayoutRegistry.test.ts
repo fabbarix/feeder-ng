@@ -48,6 +48,8 @@ interface Scenario { name: string; route: string; open?: boolean; start?: string
 interface Viewport { width: number; height: number; mobile: boolean; safeArea?: { top: number; right: number; bottom: number; left: number } }
 interface Api {
   evaluateMetrics: (m: unknown, ctx: Ctx) => Finding[]
+  evaluateDarkMetrics: (m: unknown, ctx: Ctx) => Finding[]
+  DARK_PROBES: Probe[]
   ALWAYS_FAIL: string[]
   SCENARIOS: Scenario[]
   PROFILES: Record<'quick' | 'full', Viewport[]>
@@ -238,6 +240,20 @@ describe('a package adds its own files and edits no shared one', () => {
       } finally {
         s.done()
       }
+    }
+  })
+  it('a dark probe and a rule with evaluateDark add a dark-scheme check (P29 of B9-01 needs one); P10 is the first', () => {
+    expect(facade.DARK_PROBES.map((p) => p.name)).toEqual(['buttons'])
+    expect(facade.evaluateDarkMetrics({ lowContrastButtons: [{ label: 'Save', ratio: 2 }] }, ctx).map((f) => f.message)).toEqual(['P10 Button "Save" contrast 2:1 (dark scheme)'])
+    const s = scratchLib()
+    try {
+      put(s.dir, 'page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'zzDemo', dark: true, source: '[]' }\n")
+      put(s.dir, 'page-layout/rules/P29-demo.mjs', "export default { id: 'P29', title: 'demo', always: true, evaluate: () => [], evaluateDark: (dm) => (dm.zzDemo ?? []).map((x) => ({ rule: 'P29', message: `P29 ${x} (dark scheme)` })) }\n")
+      const api = load(s.dir)
+      expect(api.DARK_PROBES.map((p) => p.name)).toEqual(['buttons', 'zz-demo'])
+      expect(api.evaluateDarkMetrics({ zzDemo: ['weak'] }, ctx).map((f) => f.message)).toEqual(['P29 weak (dark scheme)'])
+    } finally {
+      s.done()
     }
   })
   it('a probes/*.mjs file adds a probe', () => {

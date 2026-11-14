@@ -1,11 +1,13 @@
 // B9-03 (guard-split, docs/design/ui-remediation-plan-3.md sections 5, 6 and 9): the page-layout guard's registry. Every rule, in-page
 // probe and scenario is its own module, and a package adds ITS OWN files here instead of editing a shared one:
-//   rules/Pnn-<slug>.mjs     default { id: 'Pnn', title, always, evaluate(metrics, { width, route, kind }) -> [{ rule, message }] }
+//   rules/Pnn-<slug>.mjs     default { id: 'Pnn', title, always, evaluate(metrics, { width, route, kind }) -> [{ rule, message }],
+//                            evaluateDark?(darkMetrics, ctx) -> [...] }: evaluateDark reads the `dark` probes re-run in the dark scheme
 //                            The file's number is the id's. P1..P43 only; P24..P43 are RESERVED (owner, mode) until their package adds
 //                            the module. `always: true` puts the rule in ALWAYS_FAIL (it fails on warn routes too).
-//   probes/<slug>.mjs        default { name, key, source, order?, minWidth?, soft? }: `source` is page code the driver evaluates, `key` the
+//   probes/<slug>.mjs        default { name, key, source, order?, minWidth?, soft?, dark? }: `source` is page code the driver evaluates, `key` the
 //                            metrics field it fills (null: the base layout metrics). The driver runs them by `order` (then name), from
-//                            `minWidth` px; a `soft` probe that throws gives null instead of losing the page.
+//                            `minWidth` px; a `soft` probe that throws gives null instead of losing the page. A `dark` probe runs again
+//                            in the dark pass, into the darkMetrics the rules' evaluateDark read.
 //   scenarios/<slug>.mjs     default { order?, scenarios: [...], setups: { <name>: async (h) => void } }: the scenarios run by `order`
 //                            (then file name; setups change server state, so the order is kept), each setup in the page opened at the
 //                            scenario's start (h: helpers.mjs).
@@ -75,7 +77,7 @@ for (const { file, mod } of modulesIn('rules')) {
   const n = Number(m[1])
   if (n < 1 || n > MAX_RULE) throw new Error(`page-layout: rules/${file}: P${n} is outside P1..P${MAX_RULE}`)
   if (mod.id !== `P${n}`) throw new Error(`page-layout: rules/${file} says id ${mod.id}; the file is P${n}`)
-  if (typeof mod.evaluate !== 'function' || typeof mod.always !== 'boolean' || typeof mod.title !== 'string') {
+  if (typeof mod.evaluate !== 'function' || typeof mod.always !== 'boolean' || typeof mod.title !== 'string' || (mod.evaluateDark !== undefined && typeof mod.evaluateDark !== 'function')) {
     throw new Error(`page-layout: rules/${file} needs { id, title, always, evaluate }`)
   }
   // A reserved number's module must have the mode the plan gives it (section 9): 'always' -> always: true, 'mode' -> always: false.
@@ -98,6 +100,8 @@ export const RESERVED = PLANNED.filter(([id]) => !RULES.some((r) => r.id === id)
 
 /** Findings for one probe of a page: [{ rule, message }], each message starting with its rule id. ctx = { width (viewport), route, kind }. */
 export const evaluateMetrics = (m, ctx) => RULES.flatMap((r) => r.evaluate(m, ctx))
+/** Findings of the dark pass: the rules with evaluateDark, by number, on the metrics of the `dark` probes. */
+export const evaluateDarkMetrics = (dm, ctx) => RULES.flatMap((r) => (r.evaluateDark ? r.evaluateDark(dm, ctx) : []))
 
 // ----------------------------------------------------------------------------------------------------------------------------- probes
 const probeList = []
@@ -106,6 +110,7 @@ for (const { file, mod } of modulesIn('probes')) {
     throw new Error(`page-layout: probes/${file} needs { name, key (string or null), source (page code) }`)
   }
   if (probeList.some((p) => p.name === mod.name)) throw new Error(`page-layout: two probes named "${mod.name}" (probes/${file})`)
+  if (mod.dark !== undefined && (typeof mod.dark !== 'boolean' || mod.key === null)) throw new Error(`page-layout: probes/${file}: dark is true or false, and not on the layout probe`)
   if (mod.key === null && probeList.some((p) => p.key === null)) throw new Error(`page-layout: probes/${file}: only the layout probe has key null`)
   if (mod.key !== null && probeList.some((p) => p.key === mod.key)) throw new Error(`page-layout: probes/${file}: another probe already fills metrics key "${mod.key}"`)
   probeList.push(mod)
@@ -113,6 +118,8 @@ for (const { file, mod } of modulesIn('probes')) {
 const ord = (x) => (typeof x.order === 'number' ? x.order : 1000)
 /** The in-page probes, in the order the driver runs them. */
 export const PROBES = probeList.sort((a, b) => ord(a) - ord(b) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+/** The probes the dark pass runs again, in the same order. */
+export const DARK_PROBES = PROBES.filter((p) => p.dark)
 
 // -------------------------------------------------------------------------------------------------------------------------- scenarios
 const scenarioModules = modulesIn('scenarios').sort((a, b) => ord(a.mod) - ord(b.mod) || (a.file < b.file ? -1 : 1))

@@ -19,4 +19,8 @@ export default {
     out.push(...darkButtonFindings(m.lowContrastButtonsDark))
     return out
   },
+  // B9-03: the dark pass. The driver re-runs the probes marked `dark` (buttons) in the dark scheme and hands their metrics here.
+  evaluateDark(dm, _ctx) {
+    return darkButtonFindings(dm.lowContrastButtons)
+  },
 }

@@ -63,14 +63,14 @@ describe('the dark pass really renders dark', () => {
     expect(src).toContain("value: 'dark'")
     const reload = after.search(/Page\.(reload|navigate)/)
     const settle = after.search(/await settle\(\)/)
-    const probe = after.search(/lowContrastButtonsDark\s*=\s*await evaluate\(buttonProbe\)/)
+    const probe = after.search(/darkMetrics\[p\.key\]\s*=/)
     expect(reload, 'Page.reload or Page.navigate after the emulation').toBeGreaterThanOrEqual(0)
     expect(settle, 'settle() after the reload').toBeGreaterThan(reload)
     expect(probe, 'the dark probe after settle()').toBeGreaterThan(settle)
   })
   it('checks document.documentElement.dataset.scheme === "dark" before the probe and reports an environment problem otherwise', () => {
     const check = after.search(/documentElement\.dataset\.scheme\s*===\s*['"]dark['"]/)
-    const probe = after.search(/lowContrastButtonsDark\s*=\s*await evaluate\(buttonProbe\)/)
+    const probe = after.search(/darkMetrics\[p\.key\]\s*=/)
     expect(check, 'the scheme check').toBeGreaterThanOrEqual(0)
     expect(check).toBeLessThan(probe)
     // an environment problem is reported like the other probe failures ("could not inspect"), never as a clean result
@@ -112,13 +112,14 @@ describe('the dark pass is isolated from the light findings', () => {
     expect(loop).toMatch(/Promise\.race\(\[\s*cdp\('Page\.reload'[\s\S]*?sleep\(/)
   })
   it('after the dark probe only the dark P10 findings are reported, never the light ones again', () => {
-    const probe = loop.search(/lowContrastButtonsDark\s*=\s*await evaluate\(buttonProbe\)/)
+    const probe = loop.search(/darkMetrics\[p\.key\]\s*=/)
     const after = loop.slice(probe)
     expect(probe).toBeGreaterThan(0)
     // one evaluateMetrics for the light pass only; the dark pass must not call it again with the full metrics
     expect(loop.match(/evaluateMetrics\(/g)).toHaveLength(1)
-    expect(after).toContain('darkButtonFindings(')
-    expect(after.indexOf('darkButtonFindings(')).toBeLessThan(after.indexOf('finally'))
+    // B9-03: the dark findings come from the rules' evaluateDark (P10's is darkButtonFindings) on the re-run `dark` probes.
+    expect(after).toContain('evaluateDarkMetrics(')
+    expect(after.indexOf('evaluateDarkMetrics(')).toBeLessThan(after.indexOf('finally'))
   })
 })
 
