@@ -775,6 +775,11 @@ func TestMemberImpactCountsWhatGoesWithTheMember(t *testing.T) {
 	if err != nil || got.Preferences != 0 || got.MealSlots != 2 || got.SignInEmail != "" {
 		t.Errorf("MemberImpact(Anna) = %+v, %v; want 0, 2 and no sign-in", got, err)
 	}
+	// An address on the Allowlist keeps signing in after the Member goes: no Sign-in row (SAFE-02 "only when true").
+	r.exec(`INSERT INTO users (email, display_name, created_at) VALUES ('SAM@example.test', 'Sam', '2026-11-09T12:00:00Z')`)
+	if got, err := r.st.MemberImpact(r.ctx, sam.ID); err != nil || got.SignInEmail != "" {
+		t.Errorf("MemberImpact(Sam on the Allowlist) = %+v, %v; want no sign-in that ends", got, err)
+	}
 	if _, err := r.st.MemberImpact(r.ctx, 9999); !errors.Is(err, household.ErrNotFound) {
 		t.Errorf("unknown Member = %v, want ErrNotFound", err)
 	}

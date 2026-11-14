@@ -97,7 +97,8 @@ func (a *api) listRemovedSlots(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-// memberImpactJSON is what removing a Member does. signIn is null when the Member has no sign-in address.
+// memberImpactJSON is what removing a Member does. signIn is the address whose sign-in ends ("not on the Allowlist");
+// null when the Member has no address or it is on the Allowlist (that User keeps signing in).
 type memberImpactJSON struct {
 	Preferences int         `json:"preferences"`
 	MealSlots   int         `json:"mealSlots"`

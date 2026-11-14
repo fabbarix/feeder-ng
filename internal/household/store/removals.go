@@ -498,13 +498,23 @@ func restoreMemberRows(ctx context.Context, tx *sql.Tx, id int64, snap memberSna
 }
 
 // MemberImpact is what RemoveMember would do: the Member's Favourites, Dislikes and Exclusions, the active Meal Slots
-// they usually attend, and their sign-in address. household.ErrNotFound for an unknown Member.
+// they usually attend, and the sign-in address that stops working: the Member's address when it is not on the
+// Allowlist (a User's address keeps signing in after the Member goes). household.ErrNotFound for an unknown Member.
 func (s *Store) MemberImpact(ctx context.Context, id int64) (household.MemberImpact, error) {
 	m, err := s.Member(ctx, id)
 	if err != nil {
 		return household.MemberImpact{}, err
 	}
-	im := household.MemberImpact{SignInEmail: m.Email}
+	im := household.MemberImpact{}
+	if m.Email != "" {
+		var onAllowlist bool
+		if err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE email = ?)`, m.Email).Scan(&onAllowlist); err != nil {
+			return household.MemberImpact{}, err
+		}
+		if !onAllowlist {
+			im.SignInEmail = m.Email
+		}
+	}
 	err = s.db.QueryRowContext(ctx, `SELECT
 			(SELECT count(*) FROM member_recipe_preferences WHERE member_id = ?) +
 			(SELECT count(*) FROM member_ingredient_exclusions WHERE member_id = ?),

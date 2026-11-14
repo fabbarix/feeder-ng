@@ -21,7 +21,7 @@ type SlotImpact struct {
 type MemberImpact struct {
 	Preferences int    // Favourites, Dislikes and Exclusions (Recipes and Ingredients)
 	MealSlots   int    // active Meal Slots the Member usually attends
-	SignInEmail string // the Member's sign-in address, "" when none: the sign-in ends
+	SignInEmail string // the Member's address when it is not on the Allowlist, so their sign-in ends; "" otherwise
 }
 
 // RemovedSlot is one row of the Removed Meal Slots read: the removed Meal Slots with the same name and the same
