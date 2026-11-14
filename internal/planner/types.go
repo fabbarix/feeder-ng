@@ -267,9 +267,13 @@ type Input struct {
 	// LastPlanned is the last planned or cooked (fresh) date per Recipe before the horizon.
 	LastPlanned  map[RecipeID]Date
 	VarietyRules []VarietyRule
-	// EarliestStart is the Household's Earliest start as "HH:MM" in the household zone; "" is Off (PC-14, B9-12). A
-	// fresh Recipe whose cooking would have to start before it, on the date of its cell, is not a candidate.
+	// EarliestStart is the Household's Earliest start as "HH:MM" in the household zone; "" is Off (PC-14, B9-12).
+	// With LatestStart and EarliestStart, it bounds the start window: a fresh Recipe whose cooking would have to start
+	// outside the window is not a candidate (see outsideStartWindow).
 	EarliestStart string
+	// LatestStart is the Household's Latest start as "HH:MM" in the household zone; "" is Off (A2, B9-58). While it is
+	// set, cooking may start on an earlier day than the meal, at a time of day from EarliestStart to LatestStart.
+	LatestStart string
 }
 
 // SourceKind says where a placement's food comes from.
@@ -385,7 +389,8 @@ type Eliminations struct {
 	CoolDown    int
 	VarietyRule int
 	AdvanceStep int
-	// TooEarly counts the Recipes removed because cooking would start before Input.EarliestStart (PC-14). It comes
+	// TooEarly counts the Recipes removed because cooking would start outside the start window (before
+	// Input.EarliestStart, after Input.LatestStart, PC-14 and A2) or on an earlier day and already in the past. It comes
 	// after Exclusion and Advance Step in the order of the filters, so a Recipe counted here passed both.
 	TooEarly int
 }

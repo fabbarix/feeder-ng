@@ -23,7 +23,7 @@ func TestDefaultSettingsStartAtHalfPastSixAndShowTheChecklist(t *testing.T) {
 func TestEarliestStartIsATimeOfDayOrOff(t *testing.T) {
 	for at, ok := range map[string]bool{"06:30": true, "00:00": true, "23:59": true, "": true, "6:30": false, "24:00": false, "06:60": false, "soon": false, "06:30:00": false} {
 		s := household.DefaultSettings("Europe/Rome")
-		s.EarliestStart = at
+		s.EarliestStart, s.LatestStart = at, "" // Latest start Off: any Earliest start is allowed (A2, B9-58)
 		err := s.Normalized().Validate()
 		var ve *household.ValidationError
 		switch {

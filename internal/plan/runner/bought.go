@@ -66,7 +66,7 @@ func (r *Runner) RegeneratePreview(ctx context.Context) (RegeneratePreview, erro
 }
 
 // warnCells sets the hard-rule Warning of every Pinned or Bought Planned Meal in cells (plan.HardRuleWarning), and its
-// EarlyStart when its cooking starts before the Household's Earliest start (PC-14, planner.EarlyStarts: the Plan holds
+// EarlyStart when its cooking starts outside the Household's start window (PC-14, A2, planner.EarlyStarts: the Plan holds
 // such a meal and only flags it). at is the slot occurrence's instant (the date's own time when it has one). The
 // Recipes and Preferences are read only when a cell can carry a warning.
 func (r *Runner) warnCells(ctx context.Context, in info, at time.Time, cells []CourseView) error {
@@ -100,14 +100,14 @@ func (r *Runner) warnCells(ctx context.Context, in info, at time.Time, cells []C
 }
 
 // earlyStart is the "HH:MM" (household zone) the Pinned or Bought meal m at the instant at would have to start cooking,
-// when that is before the Earliest start; "" otherwise. It asks planner.EarlyStarts, so the flag and the planner's
-// too-early filter are one rule.
+// when that is outside the start window (before the Earliest start, after the Latest start); "" otherwise. It asks
+// planner.EarlyStarts, so the flag and the planner's too-early filter are one rule.
 func earlyStart(in info, at time.Time, m plan.Meal, rc planner.Recipe) string {
 	em := planner.ExistingMeal{State: planner.MealPlanned, RecipeID: planner.RecipeID(m.RecipeID), Held: true}
 	if m.Pinned {
 		em.State, em.Held = planner.MealPinned, false
 	}
-	es := planner.EarlyStarts(planner.Input{EarliestStart: in.settings.EarliestStart, Recipes: []planner.Recipe{rc},
+	es := planner.EarlyStarts(planner.Input{EarliestStart: in.settings.EarliestStart, LatestStart: in.settings.LatestStart, Recipes: []planner.Recipe{rc},
 		Slots: []planner.Slot{{At: at, Existing: &em}}})
 	if len(es) == 0 {
 		return ""

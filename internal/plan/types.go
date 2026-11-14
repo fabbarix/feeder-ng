@@ -184,6 +184,8 @@ type Settings struct {
 	Style               float64 // Planner Style 0..1
 	// EarliestStart is the Household's Earliest start, "HH:MM" in the household zone; "" is Off (PC-14, B9-12).
 	EarliestStart string
+	// LatestStart is the Household's Latest start, "HH:MM" in the household zone; "" is Off (A2, B9-58).
+	LatestStart string
 }
 
 // Attendee is one Member at a slot with the effective Portion Factor already resolved.

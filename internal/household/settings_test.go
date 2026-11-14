@@ -13,6 +13,7 @@ func TestDefaultSettingsMatchSpec(t *testing.T) {
 	want := household.Settings{
 		TimeZone: "Europe/Rome", PlanningHorizonDays: 7, DefaultCooldownDays: 7, DefaultLeftoverUseByDays: 3, FrozenUseByDays: 90,
 		QuietHours: household.QuietHours{Start: "22:00", End: "07:00"}, PlannerStyle: 0.5, Currency: "USD", EarliestStart: "06:30",
+		LatestStart: "22:00",
 	}
 	if s != want {
 		t.Fatalf("defaults = %+v, want %+v", s, want)

@@ -55,9 +55,9 @@ func TestPrepareDatabaseSnapshotsBeforeBeta9Migrations(t *testing.T) {
 	}
 }
 
-// Every one of 1570 to 1577 triggers the snapshot, so a package adding 1572 needs no change here or in db.go.
-func TestPrepareDatabaseTakesThePre1570SnapshotForAnyOf1570To1577(t *testing.T) {
-	for _, n := range []string{"1570_a.sql", "1571_a.sql", "1572_a.sql", "1573_a.sql", "1574_a.sql", "1575_a.sql", "1576_a.sql", "1577_a.sql"} {
+// Every one of 1570 to 1578 triggers the snapshot, so a package adding 1572 needs no change here or in db.go.
+func TestPrepareDatabaseTakesThePre1570SnapshotForAnyOf1570To1578(t *testing.T) {
+	for _, n := range []string{"1570_a.sql", "1571_a.sql", "1572_a.sql", "1573_a.sql", "1574_a.sql", "1575_a.sql", "1576_a.sql", "1577_a.sql", "1578_a.sql"} {
 		dir := t.TempDir()
 		d := openIn(t, dir)
 		migrateFS(t, d, plus(t))

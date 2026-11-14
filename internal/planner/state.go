@@ -485,8 +485,9 @@ func (st *state) keepCheck() {
 		s := st.slots[i]
 		r := st.recipes[s.Existing.RecipeID]
 		st.dropHistory(i)
-		// A kept unpinned meal that now starts before the Earliest start is replanned (PC-14). Pinned (rolePinned)
-		// and Bought (roleHeld) meals never reach here: they stay where they are and EarlyStarts flags them.
+		// A kept unpinned meal that now starts outside the start window is replanned (PC-14, A2); one whose start is
+		// already past is not (its cooking may have begun). Pinned (rolePinned) and Bought (roleHeld) meals never
+		// reach here: they stay where they are and EarlyStarts flags them.
 		if st.tooEarly(i, r) {
 			st.drop(i)
 			continue

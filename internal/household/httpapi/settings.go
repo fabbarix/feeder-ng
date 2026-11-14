@@ -33,7 +33,9 @@ type settingsBody struct {
 	Currency                 string         `json:"currency"`
 	// EarliestStart is "HH:MM", or null when Off (PC-14).
 	EarliestStart *string `json:"earliestStart"`
-	SetupHidden   bool    `json:"setupHidden"`
+	// LatestStart is "HH:MM", or null when Off (A2).
+	LatestStart *string `json:"latestStart"`
+	SetupHidden bool    `json:"setupHidden"`
 }
 
 func settingsOut(s household.Settings) settingsBody {
@@ -49,14 +51,20 @@ func settingsOut(s household.Settings) settingsBody {
 		Currency:                 s.Currency,
 		SetupHidden:              s.SetupHidden,
 	}
-	if s.EarliestStart != "" {
-		at := s.EarliestStart
-		out.EarliestStart = &at
-	}
+	out.EarliestStart = timeOrNull(s.EarliestStart)
+	out.LatestStart = timeOrNull(s.LatestStart)
 	if loc := s.Location; loc != nil {
 		out.Location = &locationBody{City: loc.City, Latitude: loc.Latitude, Longitude: loc.Longitude}
 	}
 	return out
+}
+
+// timeOrNull is nil (JSON null, Off) for "" and the time otherwise.
+func timeOrNull(hhmm string) *string {
+	if hhmm == "" {
+		return nil
+	}
+	return &hhmm
 }
 
 // optionalTime is a tri-state JSON field: left out (Set false), null (Set, Value nil: Off) or an "HH:MM" string.
@@ -79,9 +87,20 @@ func (o *optionalTime) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// or is the value the save leaves: current when the field was left out, "" (Off) for null, else the sent time.
+func (o optionalTime) or(current string) string {
+	switch {
+	case !o.Set:
+		return current
+	case o.Value == nil:
+		return ""
+	}
+	return *o.Value
+}
+
 // settingsIn is what an Admin sends. timeZoneConfigured is not accepted: saving marks it. FrozenUseByDays is a pointer:
 // a save without it (a client older than beta.5) keeps the stored value. EarliestStart and SetupHidden work the same
-// way for a client older than beta.9; an explicit null EarliestStart turns it Off.
+// way for a client older than beta.9, and LatestStart too; an explicit null EarliestStart or LatestStart turns it Off.
 type settingsIn struct {
 	TimeZone                 string         `json:"timeZone"`
 	PlanningHorizonDays      int            `json:"planningHorizonDays"`
@@ -93,6 +112,7 @@ type settingsIn struct {
 	Location                 *locationBody  `json:"location"`
 	Currency                 string         `json:"currency"`
 	EarliestStart            optionalTime   `json:"earliestStart"`
+	LatestStart              optionalTime   `json:"latestStart"`
 	SetupHidden              *bool          `json:"setupHidden"`
 }
 
@@ -138,13 +158,8 @@ func (a *api) putSettings(w http.ResponseWriter, r *http.Request) {
 	if in.FrozenUseByDays != nil {
 		s.FrozenUseByDays = *in.FrozenUseByDays
 	}
-	s.EarliestStart = current.EarliestStart
-	if in.EarliestStart.Set {
-		s.EarliestStart = ""
-		if in.EarliestStart.Value != nil {
-			s.EarliestStart = *in.EarliestStart.Value
-		}
-	}
+	s.EarliestStart = in.EarliestStart.or(current.EarliestStart)
+	s.LatestStart = in.LatestStart.or(current.LatestStart)
 	s.SetupHidden = current.SetupHidden
 	if in.SetupHidden != nil {
 		s.SetupHidden = *in.SetupHidden

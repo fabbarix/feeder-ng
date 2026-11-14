@@ -6,6 +6,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
+	"github.com/fabbarix/feeder-ng/internal/planner"
 )
 
 // JSON shapes (camelCase), as in docs/dev/design/t11-planning.md.
@@ -71,6 +72,30 @@ type mealOut struct {
 	// B9-12 (PC-14): a Pinned or Bought meal whose cooking would start before the Earliest start carries that start as
 	// "HH:MM" (household zone); omitted otherwise. Slot views only.
 	EarlyStart string `json:"earlyStart,omitempty"`
+	// B9-58 (A2): a Planned Meal still to cook whose cooking starts on an earlier day than the meal carries that start
+	// (household zone); omitted otherwise, and on Cooked, Not cooked and Leftover meals. Slot views only, like
+	// earlyStart: the lists (To confirm) hold meals whose slot time is past.
+	StartsAt *startsAtOut `json:"startsAt,omitempty"`
+}
+
+// startsAtOut is when cooking of a meal starts, on an earlier day than the meal (A2).
+type startsAtOut struct {
+	Date string `json:"date"`
+	Time string `json:"time"`
+}
+
+// startsAtFor is the start of meal m at the instant at (household zone) when it falls on an earlier day than the meal
+// and the meal is still to cook; nil otherwise. CookMinutes is the Recipe's total time (0 for a Leftover meal and a
+// Recipe of unknown length), the same minutes the planner's start window reads, through the same planner.CookingStart.
+func startsAtFor(at time.Time, m *mealOut) *startsAtOut {
+	if m.State != string(plan.StatePlanned) || m.CookMinutes <= 0 {
+		return nil
+	}
+	start, earlier := planner.CookingStart(at, m.CookMinutes)
+	if !earlier {
+		return nil
+	}
+	return &startsAtOut{Date: start.Format("2006-01-02"), Time: start.Format("15:04")}
 }
 
 // boughtOut lists the Ingredients a purchase was bought for the meal, by name.
@@ -375,6 +400,7 @@ func courseFor(c runner.CourseView, at time.Time, t table) courseOut {
 		out.Meal.StartBy = plan.StartBy(at, out.Meal.CookMinutes)
 		out.Meal.Warning = warningFor(c.Warning)
 		out.Meal.EarlyStart = c.EarlyStart
+		out.Meal.StartsAt = startsAtFor(at, out.Meal)
 		out.Meal.Resolution = resolutionFor(c.Resolution)
 	}
 	if c.Unfilled != nil {

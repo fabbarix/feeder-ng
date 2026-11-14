@@ -74,6 +74,7 @@ func (s *DBSources) zone(ctx context.Context) (plan.Settings, *time.Location, er
 		DefaultUseByDays:    hs.DefaultLeftoverUseByDays,
 		Style:               hs.PlannerStyle,
 		EarliestStart:       hs.EarliestStart,
+		LatestStart:         hs.LatestStart,
 	}, loc, nil
 }
 

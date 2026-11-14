@@ -182,8 +182,16 @@ func startCooking(ms []MealFact, date string, mealSlotID int64, slotAt time.Time
 	}
 	at := slotAt.Add(-time.Duration(r.TotalSeconds) * time.Second)
 	slot := slotAt.In(loc).Format("15:04")
-	body := fmt.Sprintf("Start cooking %s now to eat at %s", names[courses[0].ID], slot)
+	day := mealDay(at, slotAt, loc)
+	when := "at " + slot
+	if day != "" {
+		when = day + " at " + slot
+	}
+	body := fmt.Sprintf("Start cooking %s now to eat %s", names[courses[0].ID], when)
 	if len(courses) > 1 {
+		if day != "" {
+			slot = strings.TrimPrefix(day, "on ") + " at " + slot
+		}
 		body = fmt.Sprintf("Start cooking now for %s: %s first", slot, names[r.Items[0].CourseID])
 	}
 	return Candidate{
@@ -194,6 +202,21 @@ func startCooking(ms []MealFact, date string, mealSlotID int64, slotAt time.Time
 		Body:  body,
 		URL:   startCookingURL(date, mealSlotID),
 	}, true
+}
+
+// mealDay names the meal's day as seen at the start of cooking (A2): "" on the same household date, "tomorrow" the
+// next date, and "on Thursday" further ahead.
+func mealDay(start, slotAt time.Time, loc *time.Location) string {
+	s, m := start.In(loc), slotAt.In(loc)
+	sd := time.Date(s.Year(), s.Month(), s.Day(), 0, 0, 0, 0, time.UTC)
+	md := time.Date(m.Year(), m.Month(), m.Day(), 0, 0, 0, 0, time.UTC)
+	switch days := int(md.Sub(sd).Hours() / 24); {
+	case days <= 0:
+		return ""
+	case days == 1:
+		return "tomorrow"
+	}
+	return "on " + m.Weekday().String()
 }
 
 // joinNames lists Recipe names as "A", "A and B", or "A, B and C".
@@ -244,13 +267,15 @@ func DeferQuiet(at time.Time, q household.QuietHours, loc *time.Location) time.T
 }
 
 // DueNow returns the candidates to send at now: their send time (deferred by
-// quiet hours, except TimerFinished) has arrived and is less than Grace old.
+// quiet hours, except TimerFinished and StartCooking) has arrived and is less than Grace old.
+// Start cooking is never deferred (A2): the Household allowed that start through its Latest start, and a later
+// reminder would be useless.
 // Sorted by SendAt, then Key.
 func DueNow(cands []Candidate, now time.Time, q household.QuietHours, loc *time.Location) []Due {
 	var out []Due
 	for _, c := range cands {
 		sendAt := c.At
-		if c.Type != TimerFinished {
+		if c.Type != TimerFinished && c.Type != StartCooking {
 			sendAt = DeferQuiet(c.At, q, loc)
 		}
 		if sendAt.After(now) || now.Sub(sendAt) >= Grace {

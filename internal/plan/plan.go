@@ -123,6 +123,7 @@ func BuildInput(s Snapshot) (planner.Input, error) {
 	in.Config.DefaultCooldownDays = s.Settings.DefaultCooldownDays
 	in.Config.DefaultUseByDays = s.Settings.DefaultUseByDays
 	in.EarliestStart = s.Settings.EarliestStart
+	in.LatestStart = s.Settings.LatestStart
 
 	for _, si := range s.Slots {
 		at, err := SlotInstant(si.Key.Date, si.Time, s.Zone)

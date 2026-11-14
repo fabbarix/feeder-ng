@@ -11,12 +11,12 @@ import (
 )
 
 // db.Pre1570Prefixes and db.NeedsPre1570Snapshot decide whether start-up takes feeder-pre-1570.db before the beta.9
-// migrations 1570 to 1577 (docs/dev/design/b9-snap.md, plan section 7). They reuse withBeta6 (pending1550_test.go).
-// One snapshot covers all eight files, so no later beta.9 package ever touches db.go.
+// migrations 1570 to 1578 (docs/dev/design/b9-snap.md, plan section 7). They reuse withBeta6 (pending1550_test.go).
+// One snapshot covers all nine files (1578 is B9-58, added by the user after the plan), so no later beta.9 package ever touches db.go.
 
-var beta9Prefixes = []string{"1570_", "1571_", "1572_", "1573_", "1574_", "1575_", "1576_", "1577_"}
+var beta9Prefixes = []string{"1570_", "1571_", "1572_", "1573_", "1574_", "1575_", "1576_", "1577_", "1578_"}
 
-func TestPre1570PrefixesListAllEightBeta9Migrations(t *testing.T) {
+func TestPre1570PrefixesListAllNineBeta9Migrations(t *testing.T) {
 	if !reflect.DeepEqual(db.Pre1570Prefixes, beta9Prefixes) {
 		t.Fatalf("Pre1570Prefixes = %v, want %v", db.Pre1570Prefixes, beta9Prefixes)
 	}
@@ -46,18 +46,18 @@ func TestPre1570DoesNotOverlapThePreviousSets(t *testing.T) {
 func TestNeedsSnapshotForPre1570Prefixes(t *testing.T) {
 	ctx := context.Background()
 	beta8 := []string{"1500_a.sql", "1540_b.sql", "1550_c.sql", "1560_d.sql"}
-	set := withBeta6(t, append(append([]string{}, beta8...), "1570_x.sql", "1571_y.sql", "1577_z.sql")...)
+	set := withBeta6(t, append(append([]string{}, beta8...), "1570_x.sql", "1571_y.sql", "1578_z.sql")...)
 	cases := []struct {
 		name  string
 		want  bool
 		apply []string // nil = a brand-new file
 	}{
 		{"a brand-new file takes none", false, nil},
-		{"an upgrade from beta.8 (1570 to 1577 pending) takes one", true, beta8},
+		{"an upgrade from beta.8 (1570 to 1578 pending) takes one", true, beta8},
 		{"an upgrade from beta.7 (1560 and 1570 pending) takes one", true, beta8[:3]},
 		{"an upgrade from beta.4.2 (everything pending) takes one", true, []string{}},
 		{"1571 alone pending takes one", true, append(append([]string{}, beta8...), "1570_x.sql")},
-		{"everything applied takes none", false, append(append([]string{}, beta8...), "1570_x.sql", "1571_y.sql", "1577_z.sql")},
+		{"everything applied takes none", false, append(append([]string{}, beta8...), "1570_x.sql", "1571_y.sql", "1578_z.sql")},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -76,10 +76,10 @@ func TestNeedsSnapshotForPre1570Prefixes(t *testing.T) {
 }
 
 // A later 157x file (here 1573) is covered by the same snapshot with no change to db.go.
-func TestPre1570CoversEveryFileOf1570To1577(t *testing.T) {
+func TestPre1570CoversEveryFileOf1570To1578(t *testing.T) {
 	ctx := context.Background()
 	beta8 := []string{"1500_a.sql", "1540_b.sql", "1550_c.sql", "1560_d.sql"}
-	for _, n := range []string{"1570_a.sql", "1571_a.sql", "1572_a.sql", "1573_a.sql", "1574_a.sql", "1575_a.sql", "1576_a.sql", "1577_a.sql"} {
+	for _, n := range []string{"1570_a.sql", "1571_a.sql", "1572_a.sql", "1573_a.sql", "1574_a.sql", "1575_a.sql", "1576_a.sql", "1577_a.sql", "1578_a.sql"} {
 		d, _ := openTemp(t)
 		if err := db.Migrate(ctx, d, withBeta6(t, beta8...)); err != nil {
 			t.Fatal(err)
@@ -92,8 +92,8 @@ func TestPre1570CoversEveryFileOf1570To1577(t *testing.T) {
 	if err := db.Migrate(ctx, d, withBeta6(t, beta8...)); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := db.NeedsSnapshotFor(ctx, d, withBeta6(t, append(append([]string{}, beta8...), "1578_a.sql")...), db.Pre1570Prefixes); err != nil || got {
-		t.Errorf("1578 is outside the beta.9 table: NeedsSnapshotFor = %v, %v; want false (the main session extends the table, not a package)", got, err)
+	if got, err := db.NeedsSnapshotFor(ctx, d, withBeta6(t, append(append([]string{}, beta8...), "1579_a.sql")...), db.Pre1570Prefixes); err != nil || got {
+		t.Errorf("1579 is outside the beta.9 table: NeedsSnapshotFor = %v, %v; want false (the main session extends the table, not a package)", got, err)
 	}
 }
 
