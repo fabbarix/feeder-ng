@@ -673,9 +673,44 @@ func (s *Service) Board(ctx context.Context) (Board, error) {
 	return b, nil
 }
 
-// nextAdvance is the Advance Step due first over the Planned Meals from today on that
-// are cooked from a Batch (a Leftover serves nothing to prepare).
+// nextAdvance is the Advance Step due first over the Planned Meals from today on that are cooked from a Batch (a
+// Leftover serves nothing to prepare) and not served yet. It is the first of the same marks-aware source Today and the
+// push read (AdvanceDue, TB-02), with no end to the window.
 func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) (*cook.AdvanceDue, error) {
+	cands, err := s.advanceCandidates(ctx, today)
+	if err != nil {
+		return nil, err
+	}
+	all := cook.AdvanceDueWithin(cands, now, noWindowEnd)
+	if len(all) == 0 {
+		return nil, nil
+	}
+	return &all[0], nil
+}
+
+// noWindowEnd is a window longer than any Planning Horizon: the board's Next Advance Step has no end.
+const noWindowEnd = 100 * 365 * 24 * time.Hour
+
+// AdvanceDue lists the Advance Steps not marked done that are due within window of now, overdue ones of a meal still
+// ahead first, in Next Advance order (TB-02): the one source of Today's list and the board's Next Advance Step.
+func (s *Service) AdvanceDue(ctx context.Context, window time.Duration) ([]cook.AdvanceDue, error) {
+	now := s.now()
+	zone, err := s.cfg.Household.Zone(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if zone == nil {
+		zone = time.UTC
+	}
+	cands, err := s.advanceCandidates(ctx, now.In(zone).Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
+	return cook.AdvanceDueWithin(cands, now, window), nil
+}
+
+// advanceCandidates are the Advance Steps of the planned fresh meals from today on, each with its mark.
+func (s *Service) advanceCandidates(ctx context.Context, today string) ([]cook.AdvanceCandidate, error) {
 	meals, err := s.cfg.Meals.Upcoming(ctx, today)
 	if err != nil {
 		return nil, err
@@ -707,7 +742,7 @@ func (s *Service) nextAdvance(ctx context.Context, today string, now time.Time) 
 			})
 		}
 	}
-	return cook.NextAdvance(cands, now), nil
+	return cands, nil
 }
 
 // FinishedEvent is a timer that has just finished.
