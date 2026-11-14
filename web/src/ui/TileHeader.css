@@ -67,3 +67,7 @@
 .tile[data-variant='status'] .tile-header__badge {
   background: var(--color-surface);
 }
+/* TB-09, R-A: on a status tile the count pill is a surface fill too, never surface-2 over the tint. */
+.tile[data-variant='status'] .tile-header > .chip[data-kind='count'] {
+  background: var(--color-surface);
+}

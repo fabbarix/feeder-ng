@@ -98,6 +98,11 @@ describe('TileHeader.css: the To confirm row', () => {
     }
   })
 
+  it('on a status tile the badge and the count are surface fills over the tint (TB-09, R-A)', () => {
+    expect(declarations(css, ".tile[data-variant='status'] .tile-header__badge")['background']).toBe('var(--color-surface)')
+    expect(declarations(css, ".tile[data-variant='status'] .tile-header > .chip[data-kind='count']")['background']).toBe('var(--color-surface)')
+  })
+
   it('no px (the badge is in rem), no hex and no opacity', () => {
     expect(code).not.toMatch(/\d+px/)
     expect(code).not.toMatch(/#[0-9a-f]{3,8}\b/i)
