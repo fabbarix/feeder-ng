@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/fabbarix/feeder-ng/internal/testkit/crsc2"
 )
 
 // B9-24 review: what the developer's tests left out.
@@ -114,5 +116,77 @@ func TestEatsHereAnywayIsNotShownOnceTheAwayIsDeleted(t *testing.T) {
 	}
 	if p := f.portions(tue, f.tueDinner); p != 2 {
 		t.Errorf("Tuesday Dinner = %v portions, want 2", p)
+	}
+}
+
+func TestMovingTheFirstDayToTodayAppliesFromTheChangeAndUndoPutsTheOldStartBack(t *testing.T) {
+	f := newFixture(t)
+	a := f.add(f.Anna, map[string]any{"from": wed, "through": wed}) // written Monday 12:00
+	var since string
+	if err := f.Env.DB.QueryRow(`SELECT applies_from FROM member_away WHERE id = ?`, a.ID).Scan(&since); err != nil || since == "" {
+		t.Fatalf("applies_from = %q, %v", since, err)
+	}
+	f.Env.Clock.Set(time.Date(2026, 11, 10, 10, 0, 0, 0, time.UTC)) // Tuesday 10:00: Tuesday Breakfast has started
+	f.settle()
+	r := f.User.Patch(fmt.Sprintf("/api/away/%d", a.ID), map[string]any{"from": tue})
+	if r.Status != 200 {
+		t.Fatalf("PATCH from Tuesday = %d %s", r.Status, r.Body)
+	}
+	var out awayBody
+	r.MustJSON(t, &out)
+	f.settle()
+	if s := f.slot(tue, f.tueBreakfast); len(s.Away) != 0 || s.Portions != 2 {
+		t.Errorf("Tuesday Breakfast (started before the change) = away %v, %v portions; want nobody away, 2", s.Away, s.Portions)
+	}
+	if s := f.slot(tue, f.tueDinner); len(s.Away) != 1 || s.Portions != 1 {
+		t.Errorf("Tuesday Dinner = away %v, %v portions; want Anna away, 1", s.Away, s.Portions)
+	}
+	if r := f.restore(out.UndoToken); r.Status != 200 {
+		t.Fatalf("restore = %d %s", r.Status, r.Body)
+	}
+	var from, back string
+	if err := f.Env.DB.QueryRow(`SELECT from_date, applies_from FROM member_away WHERE id = ?`, a.ID).Scan(&from, &back); err != nil {
+		t.Fatal(err)
+	}
+	if from != wed || back != since {
+		t.Errorf("after Undo: from %s, applies_from %q; want %s and %q exactly", from, back, wed, since)
+	}
+	f.settle()
+	if s := f.slot(tue, f.tueDinner); len(s.Away) != 0 || s.Portions != 2 {
+		t.Errorf("Tuesday Dinner after Undo = away %v, %v portions; want nobody away, 2", s.Away, s.Portions)
+	}
+}
+
+func TestAnAwayKeepsAPinnedMealAndDoesNotListItAsChanged(t *testing.T) {
+	f := newFixture(t)
+	pasta := f.Recipe("Pasta", crsc2.RecipeSpec{})
+	f.Recipe("Soup", crsc2.RecipeSpec{})
+	f.Settle()
+	f.Meal(tue, f.tueDinner, f.Main, pasta, "planned", true)
+	r := f.post(f.Anna, map[string]any{"from": tue, "through": tue})
+	if r.Status != 201 {
+		t.Fatalf("POST = %d %s", r.Status, r.Body)
+	}
+	var out struct {
+		Changes []struct {
+			Date       string `json:"date"`
+			MealSlotID int64  `json:"mealSlotId"`
+		} `json:"changes"`
+	}
+	r.MustJSON(t, &out)
+	for _, c := range out.Changes {
+		if c.Date == tue && c.MealSlotID == f.tueDinner {
+			t.Errorf("changes = %s, list the Pinned Tuesday Dinner, which did not change", r.Body)
+		}
+	}
+	f.settle()
+	if s := f.MealState(tue, f.tueDinner, f.Main); s != "planned" {
+		t.Errorf("the Pinned meal is %q", s)
+	}
+	if n := f.Count(`SELECT COUNT(*) FROM planned_meals WHERE date = ? AND meal_slot_id = ? AND recipe_id = ? AND pinned = 1`, tue, f.tueDinner, pasta); n != 1 {
+		t.Error("the Pinned Pasta was replaced or unpinned")
+	}
+	if p := f.portions(tue, f.tueDinner); p != 1 {
+		t.Errorf("Tuesday Dinner = %v portions, want 1: the Pinned meal is for Sam only now", p)
 	}
 }
