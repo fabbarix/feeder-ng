@@ -1,9 +1,11 @@
 package store_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
+	"github.com/fabbarix/feeder-ng/internal/recipe"
 	"github.com/fabbarix/feeder-ng/internal/recipe/store"
 )
 
@@ -61,6 +63,35 @@ func TestListFilterBySeveralTagsNeedsEveryOne(t *testing.T) {
 	} {
 		if got := names(tc.f); !reflect.DeepEqual(got, tc.want) {
 			t.Errorf("%s: %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// Review fix: no Recipe carries more than recipe.MaxTags Tags, so a filter with more keys matches none, and a long ?tag= list
+// never reaches SQLite (1 000 ANDed EXISTS passed its maximum expression depth: "Expression tree is too large").
+func TestListFilterMoreTagsThanARecipeCanCarryMatchesNone(t *testing.T) {
+	f := newFixture(t)
+	i := f.basics(t)
+	in := pancakes(i)
+	in.Tags = []string{}
+	for n := 0; n < recipe.MaxTags; n++ {
+		in.Tags = append(in.Tags, fmt.Sprintf("tag %d", n))
+	}
+	if _, err := f.s.Create(ctx, in); err != nil {
+		t.Fatal(err)
+	}
+	all, err := f.s.List(ctx, store.ListFilter{Tags: in.Tags})
+	if err != nil || len(all) != 1 {
+		t.Fatalf("every one of its %d Tags: %d Recipes, %v; want 1", recipe.MaxTags, len(all), err)
+	}
+	for _, n := range []int{recipe.MaxTags + 1, 1500} {
+		tags := append([]string{}, in.Tags...)
+		for k := recipe.MaxTags; k < n; k++ {
+			tags = append(tags, fmt.Sprintf("tag %d", k))
+		}
+		list, err := f.s.List(ctx, store.ListFilter{Tags: tags})
+		if err != nil || len(list) != 0 {
+			t.Errorf("%d Tags: %d Recipes, %v; want none and no error", n, len(list), err)
 		}
 	}
 }

@@ -768,7 +768,13 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	default: // "" and "plannable": a Base recipe is never planned, so it is hidden by default
 		where = append(where, "r.base_ingredient_id IS NULL")
 	}
-	for _, key := range recipe.TagKeys(f.Tags) {
+	tagKeys := recipe.TagKeys(f.Tags)
+	if len(tagKeys) > recipe.MaxTags {
+		// A Recipe carries at most MaxTags Tags, so it cannot carry every one of more keys than that. Answering here also keeps
+		// a long ?tag= list from building an SQL expression deeper than SQLite allows (one EXISTS per key, ANDed).
+		return []recipe.Summary{}, nil
+	}
+	for _, key := range tagKeys {
 		where = append(where, `EXISTS (SELECT 1 FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id
 		        WHERE rt.recipe_id = r.id AND t.key = ?)`)
 		args = append(args, key)
