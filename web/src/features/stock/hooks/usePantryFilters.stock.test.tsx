@@ -32,7 +32,7 @@ describe('usePantryFilters: Food or Supplies', () => {
     const { result } = setup('/pantry?stock=supply')
     expect(result.current.filters.stock).toBe('supply')
     expect(result.current.filters.applied.stock).toBe('supply')
-    expect(result.current.filters.chips).toEqual([{ key: 'stock', label: 'Supplies', removeLabel: 'Remove Supplies' }])
+    expect(result.current.filters.chips).toEqual([{ key: 'stock', label: 'Supplies', removeLabel: 'Remove Supplies', icon: 'supply' }])
     expect(result.current.filters.count).toBe(1)
   })
   it('the count includes it beside the other filters', () => {

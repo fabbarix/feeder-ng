@@ -70,10 +70,10 @@ describe('appliedFilters: Food or Supplies applies in both lists', () => {
 
 describe('pantryFilterChips: one removable chip per value', () => {
   it('Food', () => {
-    expect(pantryFilterChips(pantryFiltersFromParams(p('stock=food')), 'places', places)).toEqual([{ key: 'stock', label: 'Food', removeLabel: 'Remove Food' }])
+    expect(pantryFilterChips(pantryFiltersFromParams(p('stock=food')), 'places', places)).toEqual([{ key: 'stock', label: 'Food', removeLabel: 'Remove Food', icon: 'ingredients' }])
   })
   it('Supplies (the label is plural, the URL value singular)', () => {
-    expect(pantryFilterChips(pantryFiltersFromParams(p('stock=supply')), 'places', places)).toEqual([{ key: 'stock', label: 'Supplies', removeLabel: 'Remove Supplies' }])
+    expect(pantryFilterChips(pantryFiltersFromParams(p('stock=supply')), 'places', places)).toEqual([{ key: 'stock', label: 'Supplies', removeLabel: 'Remove Supplies', icon: 'supply' }])
   })
   it('sits after the status and Leftovers and before the kinds and the Storage Places, the order of the panel', () => {
     const state = pantryFiltersFromParams(p('place=2&kind=freezer&stock=supply&leftovers=1&status=useSoon'))
