@@ -118,6 +118,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
               inputMode="decimal"
               value={usedAmount}
               placeholder={String(lot.quantity)}
+              suffix={lot.baseUnit}
               onChange={(v) => {
                 setUsedAmount(v)
                 setUsedError(null)
