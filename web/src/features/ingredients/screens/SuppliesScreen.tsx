@@ -40,7 +40,7 @@ export function SuppliesScreen() {
         stock={stock.totals}
         system={system}
         label={words.title}
-        busyId={use.busyId}
+        busyIds={use.busyIds}
         onOpen={(id) => navigate(`${kindBasePath('supply')}/${id}`)}
         onUse={(supply) => use.request(supply, stock.totals?.get(supply.id) ?? 0)}
       />
@@ -63,7 +63,7 @@ export function SuppliesScreen() {
           stock={use.sheet.stock}
           packSize={use.sheet.packSize}
           system={system}
-          busy={use.busyId !== null}
+          busy={use.busyIds.has(use.sheet.supply.id)}
           onConfirm={use.confirm}
           onClose={use.closeSheet}
         />

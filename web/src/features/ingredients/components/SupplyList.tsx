@@ -16,13 +16,16 @@ export interface SupplyListProps {
   /** The Use button of a row: the Supply, never the row's own target. */
   onUse: (supply: Ingredient) => void
   /** The Supply whose Use is in flight: its button is disabled. */
-  busyId?: number | null
+  /** the Supplies whose Use (or Undo) is in flight */
+  busyIds?: ReadonlySet<number>
   /** The list's name; the Supplies title by default. */
   label?: string
 }
 
 /** The Supplies as a ListGroup of ListRows: the stock level in the meta (info tone below the Restock level), and a Use button beside the chevron. */
-export function SupplyList({ supplies, stock, system, onOpen, onUse, busyId = null, label = strings.supply.title }: SupplyListProps) {
+const NONE_BUSY: ReadonlySet<number> = new Set()
+
+export function SupplyList({ supplies, stock, system, onOpen, onUse, busyIds = NONE_BUSY, label = strings.supply.title }: SupplyListProps) {
   return (
     <ListGroup label={label}>
       {supplies.map((supply) => {
@@ -40,7 +43,7 @@ export function SupplyList({ supplies, stock, system, onOpen, onUse, busyId = nu
               <IconButton
                 icon="use"
                 label={useLabel(supply.name, supply.baseUnit)}
-                disabled={total === null || !canUse(total) || busyId === supply.id}
+                disabled={total === null || !canUse(total) || busyIds.has(supply.id)}
                 onClick={() => onUse(supply)}
               />
             }

@@ -1,7 +1,7 @@
 // H9 (household-items.md section 4.11): the quick Use of a Supply: one tap for a piece, a "how much" sheet for g and ml, the
 // toast with Undo, the refetch of Stock and the offline refusal. The rules are in lib/supplyUse; the calls in supplyUseApi.
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { useToast } from '../../../ui'
 import { productsApi } from '../../products/api'
@@ -29,7 +29,18 @@ export function useSupplyUse() {
   const toast = useToast()
   const system = useDisplayUnitSystem()
   const [sheet, setSheet] = useState<SupplySheetState | null>(null)
-  const [busyId, setBusyId] = useState<number | null>(null)
+  // How many requests are in flight per Supply: two quick Uses on different rows (or a Use and its Undo) never clear each other.
+  const [inFlight, setInFlight] = useState<ReadonlyMap<number, number>>(new Map())
+  const busyIds = useMemo<ReadonlySet<number>>(() => new Set(inFlight.keys()), [inFlight])
+  const startBusy = (id: number) => setInFlight((m) => new Map(m).set(id, (m.get(id) ?? 0) + 1))
+  const endBusy = (id: number) =>
+    setInFlight((m) => {
+      const next = new Map(m)
+      const n = (next.get(id) ?? 0) - 1
+      if (n > 0) next.set(id, n)
+      else next.delete(id)
+      return next
+    })
 
   const refetchStock = () => {
     void client.invalidateQueries({ queryKey: ['stock'] })
@@ -45,14 +56,14 @@ export function useSupplyUse() {
         toast.show(S.needsConnection, { status: 'error' })
         return
       }
-      setBusyId(result.ingredientId)
+      startBusy(result.ingredientId)
       try {
         const back = await supplyUseApi.undo(result.ingredientId, result.taken)
         toast.show(S.putBack(usedAmount(back.name, back.quantity, back.baseUnit, system)), { status: 'success' })
       } catch {
         toast.show(S.undoFailed, { status: 'error' })
       } finally {
-        setBusyId(null)
+        endBusy(result.ingredientId)
         refetchStock()
       }
     }
@@ -63,7 +74,7 @@ export function useSupplyUse() {
       toast.show(S.needsConnection, { status: 'error' })
       return
     }
-    setBusyId(supply.id)
+    startBusy(supply.id)
     try {
       const result = await supplyUseApi.use(supply.id, quantity)
       toast.show(S.used(usedAmount(supply.name, result.quantity, supply.baseUnit, system)), { actionLabel: S.undo, onAction: putBack(result) })
@@ -71,7 +82,7 @@ export function useSupplyUse() {
       const code = err instanceof ApiError ? err.code : ''
       toast.show(code === 'use_exceeds_stock' ? S.lessInStock : S.failed, { status: 'error' })
     } finally {
-      setBusyId(null)
+      endBusy(supply.id)
       refetchStock()
     }
   }
@@ -104,5 +115,5 @@ export function useSupplyUse() {
 
   const closeSheet = () => setSheet(null)
 
-  return { request, sheet, confirm, closeSheet, busyId }
+  return { request, sheet, confirm, closeSheet, busyIds }
 }
