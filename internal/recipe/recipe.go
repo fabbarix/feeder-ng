@@ -540,6 +540,22 @@ func baseOnlyEmpty(in Input) error {
 // TagKey is the matching key of a Tag: lower case, trimmed, whitespace collapsed.
 func TagKey(name string) string { return tag.NameKey(name) }
 
+// TagKeys turns the Tag names of a list filter into the keys to match: in the order given, blanks dropped, a
+// repeat by key dropped (the first keeps its place). Never nil.
+func TagKeys(names []string) []string {
+	out := []string{}
+	seen := map[string]bool{}
+	for _, name := range names {
+		k := TagKey(name)
+		if k == "" || seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, k)
+	}
+	return out
+}
+
 // Timing is the schedule summary shown on Recipe tiles and detail.
 type Timing struct {
 	TotalMinutes   int              // critical path; 0 without timeline Steps

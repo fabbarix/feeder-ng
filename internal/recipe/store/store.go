@@ -739,8 +739,8 @@ type ListFilter struct {
 	// Kind: "" or "plannable" = plannable Recipes only (the default), "base" = Base recipes only, "all" = both.
 	Kind     string
 	Archived string
-	Tag      string // TagKey match; "" = any
-	Query    string // case-insensitive substring of the name; "" = any
+	Tags     []string // TagKey matches, every one needed (AND); none = any; see recipe.TagKeys
+	Query    string   // case-insensitive substring of the name; "" = any
 	// CourseID keeps Recipes marked with the Course, NotCourseID those not marked with it (0 = any); the
 	// Couldn't plan fix uses the second.
 	CourseID    int64
@@ -768,10 +768,10 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	default: // "" and "plannable": a Base recipe is never planned, so it is hidden by default
 		where = append(where, "r.base_ingredient_id IS NULL")
 	}
-	if f.Tag != "" {
+	for _, key := range recipe.TagKeys(f.Tags) {
 		where = append(where, `EXISTS (SELECT 1 FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id
 		        WHERE rt.recipe_id = r.id AND t.key = ?)`)
-		args = append(args, recipe.TagKey(f.Tag))
+		args = append(args, key)
 	}
 	if f.CourseID != 0 {
 		where = append(where, `EXISTS (SELECT 1 FROM recipe_courses rc WHERE rc.recipe_id = r.id AND rc.course_id = ?)`)

@@ -408,7 +408,7 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		writeFieldError(w, "for", "for_invalid", "for must be a Recipe id")
 		return
 	}
-	f := store.ListFilter{Archived: archived, Tag: q.Get("tag"), Query: q.Get("q"), Kind: kind}
+	f := store.ListFilter{Archived: archived, Tags: q["tag"], Query: q.Get("q"), Kind: kind}
 	if forID != nil {
 		f.For = *forID
 	}
