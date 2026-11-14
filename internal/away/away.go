@@ -253,16 +253,41 @@ func Validate(a Away, today string, before *Away, others []Away, slots []Slot) e
 	return nil
 }
 
-// CheckStart refuses an edit that moves the first day or the first Meal Slot missed of an Away that has started at now.
+// CheckStart refuses an edit that changes a Meal Slot that has started at now: one that moves the first day or the first
+// Meal Slot missed of an Away that has started, and one that moves the last day so that a Meal Slot that has started is
+// covered when it was not, or no longer covered when it was (a running Away brought to an end before now; to bring the
+// Member back now, End it).
 func CheckStart(a, before Away, now time.Time, slots []Slot) error {
-	if !Started(before, now, slots) {
+	if Started(before, now, slots) {
+		switch {
+		case a.From != before.From:
+			return &Error{Field: "from", Reason: "away_started"}
+		case a.FromSlot != before.FromSlot:
+			return &Error{Field: "fromMealSlotId", Reason: "away_started"}
+		}
+	}
+	if a.Through == before.Through && a.ThroughSlot == before.ThroughSlot {
 		return nil
 	}
-	switch {
-	case a.From != before.From:
-		return &Error{Field: "from", Reason: "away_started"}
-	case a.FromSlot != before.FromSlot:
-		return &Error{Field: "fromMealSlotId", Reason: "away_started"}
+	// Only the Meal Slots between the two last days can be covered by one and not the other.
+	first := a.Through
+	if first == "" || (before.Through != "" && before.Through < first) {
+		first = before.Through
+	}
+	today, nowWall := now.Format(dateLayout), wall(now)
+	for d := first; d != "" && d <= today; d = addDays(d, 1) {
+		for _, s := range DaySlots(d, slots) {
+			if d+" "+s.Time > nowWall {
+				break
+			}
+			if Covers(a, d, s, slots) != Covers(before, d, s, slots) {
+				field := "through"
+				if a.Through == before.Through {
+					field = "throughMealSlotId"
+				}
+				return &Error{Field: field, Reason: "slot_started"}
+			}
+		}
 	}
 	return nil
 }
@@ -531,6 +556,8 @@ func Message(e *Error, memberName string) string {
 		return "The first day is today or later."
 	case "last_before_first":
 		return "The last day is not before the first."
+	case "slot_started":
+		return fmt.Sprintf("A Meal Slot that has started cannot change. To bring %s back now, end the Away.", memberName)
 	case "date_invalid":
 		return "Choose a date."
 	case "slot_not_on_day":
