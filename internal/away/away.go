@@ -178,11 +178,22 @@ func Covers(a Away, date string, slot Slot, slots []Slot) bool {
 	if weekday(date) == 0 {
 		return false
 	}
-	if !a.Since.IsZero() && date+" "+slot.Time < wall(a.Since) {
+	if !a.Since.IsZero() && startedBefore(date, slot.Time, a.Since) {
 		return false
 	}
 	p := point{date, occPos(date, slot, slots)}
 	return !p.before(start(a, slots)) && !end(a, slots).before(p)
+}
+
+// startedBefore says whether the Meal Slot occurrence at date and hhmm started before since, compared as instants in
+// since's zone (the household zone), as the planner decides a Meal Slot has started: one that starts in the minute of
+// the write but before it has started, and on the night the clocks go back the two 01:30s are told apart.
+func startedBefore(date, hhmm string, since time.Time) bool {
+	at, err := time.ParseInLocation(wallLayout, date+" "+hhmm, since.Location())
+	if err != nil {
+		return date+" "+hhmm < wall(since)
+	}
+	return at.Before(since)
 }
 
 // overlaps says whether two Aways share a Meal Slot.
