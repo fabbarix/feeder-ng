@@ -36,7 +36,7 @@ export function TakeOverDialog({ ask, baseName, onAnswer, onCancel }: TakeOverDi
         <p key={i}>{paragraph}</p>
       ))}
       {m.note ? <p>{m.note}</p> : null}
-      {m.yesDisabledReason ?  <p className="line-row__hint">{m.yesDisabledReason}</p> : null}
+      {m.yesDisabledReason ? <p className="line-row__hint">{m.yesDisabledReason}</p> : null}
     </Dialog>
   )
 }
