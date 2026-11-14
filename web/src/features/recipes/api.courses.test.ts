@@ -13,7 +13,7 @@ describe('recipesApi list with a Course', () => {
   })
   it('combines it with the other filters', async () => {
     const api = mockApi({ 'GET /api/recipes?q=rice&tag=quick&archived=all&course=2': [] })
-    await recipesApi.list({ q: 'rice', tag: 'quick', archived: 'all', course: 2 })
+    await recipesApi.list({ q: 'rice', tags: ['quick'], archived: 'all', course: 2 })
     expect(api.calls).toHaveLength(1)
   })
   it('sends nothing for no Course', async () => {

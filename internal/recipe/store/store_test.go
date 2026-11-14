@@ -351,9 +351,9 @@ func TestListFilterAndOrder(t *testing.T) {
 		{"default = active only, by name ignoring case", store.ListFilter{}, []string{"banana bread", "Chilli"}},
 		{"archived only", store.ListFilter{Archived: "yes"}, []string{"Apple pie"}},
 		{"all", store.ListFilter{Archived: "all"}, []string{"Apple pie", "banana bread", "Chilli"}},
-		{"tag by key", store.ListFilter{Archived: "all", Tag: "BAKING"}, []string{"Apple pie", "banana bread"}},
+		{"tag by key", store.ListFilter{Archived: "all", Tags: []string{"BAKING"}}, []string{"Apple pie", "banana bread"}},
 		{"query substring", store.ListFilter{Query: "CHIL"}, []string{"Chilli"}},
-		{"nothing matches", store.ListFilter{Tag: "nope"}, nil},
+		{"nothing matches", store.ListFilter{Tags: []string{"nope"}}, nil},
 	} {
 		if got := names(tc.f); !reflect.DeepEqual(got, tc.want) {
 			t.Errorf("%s: %q, want %q", tc.name, got, tc.want)

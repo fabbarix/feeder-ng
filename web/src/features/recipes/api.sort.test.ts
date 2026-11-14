@@ -20,7 +20,7 @@ describe('recipesApi list with a sort', () => {
   })
   it('combines it with the other filters', async () => {
     const api = mockApi({ 'GET /api/recipes?q=rice&tag=quick&archived=all&course=2&sort=last_cooked_desc': [] })
-    await recipesApi.list({ q: 'rice', tag: 'quick', archived: 'all', course: 2, sort: 'last_cooked_desc' })
+    await recipesApi.list({ q: 'rice', tags: ['quick'], archived: 'all', course: 2, sort: 'last_cooked_desc' })
     expect(api.calls).toHaveLength(1)
   })
 })

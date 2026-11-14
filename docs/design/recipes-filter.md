@@ -1,6 +1,6 @@
 # Recipes list: the filter header (hotfix hf-recipes-filter)
 
-Status: **round 3, tests red** (2026-11-13; round 1 built in bb354d3c, round 2 in f0d5a84c, both sent back by review, see
+Status (beta.8): **several Tags at once, tests red** ([§16](#16-beta8-several-tags-at-once)); the hotfix itself is **round 3** (2026-11-13; round 1 built in bb354d3c, round 2 in f0d5a84c, both sent back by review, see
 [§13](#13-round-2-after-the-review-of-bb354d3c) and [§14](#14-round-3-the-chip-line-must-settle)). Release: a hotfix on 1.0.0-beta.6. Domain words come from
 [GLOSSARY.md](../../GLOSSARY.md); the rules from [system.md](system.md) and [ADR 0016](../adr/0016-design-system-rules-enforced.md).
 
@@ -30,10 +30,10 @@ every Tag as a filter chip; a row of Course chips with no label; a visible "Sort
    same breakpoint as `Select`). The list behind it stays as it is.
 3. **The Tag filter is a searchable list**, one row per Tag with its name, its Tag colour dot and its Recipe count. The selected
    Tag comes first, then the others by name.
-4. **The Tag filter stays single-choice.** Today the Recipes list filters by **one** Tag (`?tag=<name>`, `RecipeFilter.tag:
-   string`, and the server's `ListFilter.Tag string`). Several Tags at once would need a server change (repeated `tag`, AND or OR)
-   and is out of scope for a hotfix: see [§12](#12-not-in-this-hotfix). The list is a single-select listbox; choosing the
-   selected Tag again clears it.
+4. **The Tag filter takes several Tags (beta.8, [§16](#16-beta8-several-tags-at-once)).** It was single-choice in the hotfix
+   (`?tag=<name>`, `RecipeFilter.tag: string`, `ListFilter.Tag string`). Since beta.8 the Tags are **ANDed** (a Recipe must carry
+   every selected Tag): `?tag=a&tag=b`, `RecipeFilter.tags`, `ListFilter.Tags`. The list is a multi-select listbox; choosing a
+   selected Tag again removes it. A single `?tag=x` URL works as before.
 5. **The Course filter moves into the URL** (`?course=<id>`), beside `tag`, `kind` and `sort`, so a link and the back button
    bring it back. It used to be component state and was lost on the way back from a Recipe.
 6. **Active filters are chips you can remove**, one line under row 2, each naming its Course or Tag.
@@ -84,7 +84,7 @@ Components only render and wire events (CLAUDE.md). Logic lives in `lib/recipeFi
 | `RecipeFiltersButton` | features/recipes/components | **New.** `Button variant="secondary" size="sm" icon="filter"`, text "Filters", and a count Chip while filters are on. `aria-haspopup="dialog"`, `aria-expanded`, `aria-label` from the summary. |
 | `RecipeFiltersPanel` | features/recipes/components | **New.** The shared `Popover` titled "Filters": a "Course" section (`CourseFilter`, one line) unless `bases`; a "Tag" section (`TagFilterList`); footer "Clear filters" and "Show Recipes". |
 | `CourseFilter` | features/recipes/components | Unchanged API; group name "Filter by Course"; no "All Courses" chip since beta.6.2 (§15). Its group is **one line**: it scrolls sideways inside the panel, chips keep their natural width (never crushed). |
-| `TagFilterList` | features/recipes/components | **New.** The shared `OptionList` (single) fed by `useTagFilterSearch`: search, rows, empty text. |
+| `TagFilterList` | features/recipes/components | **New.** The shared `OptionList` (`multiple` since beta.8) fed by `useTagFilterSearch`: search, rows, empty text. |
 | `ActiveFilterChips` | features/recipes/components | **New.** The chip line of row 3: removable chips (`Chip onRemove`) and the "+N" chip, fitted by `useFittingChips`. |
 | `TagChips` | features/recipes/components | **Removed** (and its tests): its only caller was this header. |
 
@@ -221,12 +221,13 @@ No other ui file changes.
   trapped; the backdrop and the header's ✕ IconButton ("Close") dismiss it). The footer "Show Recipes" button closes it the same
   way, on every width; its name differs from the ✕ so a phone sheet never has two buttons named "Close".
 - **Course group**: "Filter by Course", toggle buttons (`aria-pressed`), as today.
-- **Tag list**: a search combobox "Search Tags" over a listbox "Filter by Tag"; each option is named by the Tag's name and
-  described by its count ("3 Recipes"); `aria-selected` on the chosen Tag. The colour dot is decorative.
+- **Tag list**: a search combobox "Search Tags" over a listbox "Filter by Tag" (`aria-multiselectable="true"` since beta.8); each
+  option is named by the Tag's name and described by its count ("3 Recipes"); `aria-selected` on every chosen Tag. The colour
+  dot is decorative.
 - **Chips**: buttons named "Remove Course: Main" and "Remove Tag: fish"; activating one removes the filter and moves focus to the
   next chip, or to the Filters button when it was the last. "+N" is a button named "Show 1 more filter" / "Show 2 more filters"
   that opens the panel.
-- **Clear filters**: removes the Course and the Tag, keeps the panel open, focus stays on it (it becomes disabled, so focus
+- **Clear filters**: removes the Course and every Tag, keeps the panel open, focus stays on it (it becomes disabled, so focus
   moves to "Show Recipes").
 - Kind: radiogroup "Kind" (label visually hidden). Sort: combobox "Sort" (label visually hidden), its value the short label.
 
@@ -279,9 +280,7 @@ line is full; P14 only sees chips cut while their line has room.
 
 ## 12. Not in this hotfix
 
-- **Several Tags at once.** It needs `?tag=` repeated on `/api/recipes` and the store (`ListFilter.Tag` → `Tags`), and a decision:
-  all of them (AND, narrows) or any (OR). The panel's list and chip line are already built for several (`OptionList` takes
-  `selected: V[]`, the chip line fits N chips), so it is a server change, a lib change and a `multi` flag.
+- **Several Tags at once.** Done in beta.8, as AND: see [§16](#16-beta8-several-tags-at-once).
 - Search in the URL (it stays component state, as today).
 
 ## 13. Round 2 (after the review of bb354d3c)
@@ -377,3 +376,21 @@ The one visible change to Recipes (the user's decision in the Pantry review): **
 on both headers (`.filter-bar__sort .select__leading`), so the Pantry's "Good until" fits at 360 px. It also mends a beta.6.1 cut that
 no rule saw: "Longest ago" and "Most recent" showed 58 of their 85 px at 360 px and were cut up to about 388 px; they now fit at 360 px.
 The combobox is still named "Sort" and keeps its chevron.
+
+## 16. beta.8: several Tags at once
+
+**Decision (main session): AND.** A Recipe must carry **every** selected Tag. Each Tag narrows the list, as combining the Course
+and a Tag does. (OR would widen with every Tag; it is not offered.) Full design: [b8-recipes](../dev/design/b8-recipes.md).
+
+- **URL**: one `tag` parameter per Tag, in the order chosen: `/recipes?tag=fish&tag=oven`. A single `?tag=fish` (the Recipe
+  detail's Tag links, old bookmarks) works as before. Blank values are ignored and a repeat (matched by key: case, spaces) counts once, the
+  first spelling stays.
+- **Server**: `GET /api/recipes?tag=a&tag=b` keeps the Recipes that carry both; the Tag match is by key as ever; `ListFilter.Tag`
+  becomes `ListFilter.Tags []string`.
+- **Panel**: the Tag list is multi-select. Choosing a Tag adds it and the panel stays open; choosing a selected Tag removes just it.
+  Selected Tags come first, in the order chosen, then the others by name.
+- **Chip line**: one removable chip per Tag, after the Course chip, each in its Tag colour ("Remove Tag: fish"). The chips that do
+  not fit still collapse into "+N" (§5.4; only the first chip may be cut).
+- **Count**: the Filters button counts the Course plus every Tag ("Filters, 3 active").
+- **Clear filters** removes the Course and every Tag.
+- **Base recipes** take the same Tags.

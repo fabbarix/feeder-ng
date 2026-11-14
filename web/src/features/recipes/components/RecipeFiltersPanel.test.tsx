@@ -20,9 +20,9 @@ function panel(over: Partial<RecipeFiltersPanelProps> = {}) {
     course: null,
     onCourse: vi.fn(),
     known,
-    tag: '',
+    tags: [],
     colourOf: () => undefined,
-    onTag: vi.fn(),
+    onToggleTag: vi.fn(),
     count: 0,
     onClear: vi.fn(),
     ...over,
@@ -72,14 +72,14 @@ describe('RecipeFiltersPanel', () => {
     expect(screen.getAllByRole('option')).toHaveLength(27)
     await userEvent.type(screen.getByRole('combobox', { name: 'Search Tags' }), 'fis')
     await userEvent.click(screen.getByRole('option', { name: 'fish' }))
-    expect(props.onTag).toHaveBeenCalledWith('fish')
+    expect(props.onToggleTag).toHaveBeenCalledWith('fish')
   })
   it('Clear filters is disabled while no filter is on', () => {
     panel()
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDisabled()
   })
   it('Clear filters calls onClear', async () => {
-    const props = panel({ count: 2, course: 1, tag: 'fish' })
+    const props = panel({ count: 2, course: 1, tags: ['fish'] })
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(props.onClear).toHaveBeenCalledTimes(1)
     expect(props.onClose).not.toHaveBeenCalled()
@@ -90,7 +90,7 @@ describe('RecipeFiltersPanel', () => {
     expect(props.onClose).toHaveBeenCalledTimes(1)
   })
   it('has no accent button (New Recipe stays the one primary action)', () => {
-    panel({ count: 1, tag: 'fish' })
+    panel({ count: 1, tags: ['fish'] })
     const dialog = screen.getByRole('dialog', { name: 'Filters' })
     expect(dialog.querySelector('button[data-variant="primary"]')).toBeNull()
   })
