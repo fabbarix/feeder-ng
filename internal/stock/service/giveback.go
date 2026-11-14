@@ -16,7 +16,7 @@ import (
 // KeepUntil and the Stock-take that says what it took.
 
 var (
-	// ErrNotUndoable is returned by UndoThrowOut for a waste record with no Lot to put back (a discarded Leftover, or
+	// ErrNotUndoable is returned by UndoThrowOut for a waste record with no Lot to put back (a Leftover thrown out, or
 	// waste recorded before migration 1572). The API answers 409 not_undoable.
 	ErrNotUndoable = errors.New("stock: this waste cannot be undone")
 	// ErrUndoWindowOver is returned by UndoThrowOut for waste recorded on an earlier household day (409 undo_window_over).
@@ -38,7 +38,7 @@ type GiveBackOutcome struct {
 }
 
 // GiveBackTx puts back what takes took, inside the caller's transaction (stock.GiveBack per Ingredient): a Lot that
-// still exists gets the quantity back, an emptied Lot is put back whole with its id, dates and Storage Place, and a Lot
+// still exists gets the quantity back, a Lot it took whole is put back whole with its id, dates and Storage Place, and a Lot
 // deleted since is reported Gone. The Lots of an Ingredient that no longer exists are Gone too. It publishes nothing
 // (PublishGiveBack does, after the caller commits).
 func (s *Service) GiveBackTx(ctx context.Context, tx *sql.Tx, takes []LotTake) (GiveBackOutcome, error) {

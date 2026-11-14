@@ -60,7 +60,7 @@ func TestGiveBackPutsBackWhatCookedTookFromALotThatStillExists(t *testing.T) {
 	}
 }
 
-func TestGiveBackPutsAnEmptiedLotBackWithItsIdDatesAndStoragePlace(t *testing.T) {
+func TestGiveBackPutsALotTakenWholeBackWithItsIdDatesAndStoragePlace(t *testing.T) {
 	f := setup(t)
 	fridge := f.place(t, "Fridge", stock.KindFridge)
 	lot := f.addIn(t, f.thighs, 300, "2026-11-08", fridge)
@@ -265,7 +265,7 @@ func TestUndoThrowOutRefusesWasteThatIsNotAThrownOutLot(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := f.svc.UndoThrowOut(ctx, leftover.ID); !errors.Is(err, service.ErrNotUndoable) {
-		t.Errorf("a discarded Leftover: %v, want ErrNotUndoable", err)
+		t.Errorf("a Leftover thrown out: %v, want ErrNotUndoable", err)
 	}
 	ing := f.thighs
 	old, err := f.svc.RecordWaste(ctx, store.WasteRecord{IngredientID: &ing, Quantity: 100, Reason: store.ReasonSpoiled}) // no lot_json

@@ -12,7 +12,7 @@ import (
 //
 // Three cases per take, by what the Lot is now:
 //   - it exists: the Taken quantity is added back to its current quantity (it may have changed since);
-//   - it is gone and the action emptied it (Taken >= Before.Quantity): it is put back whole, with its id, dates, KeptOn,
+//   - it is gone and the action took all of it (Taken >= Before.Quantity): it is put back whole, with its id, dates, KeptOn,
 //     and quantity Taken;
 //   - it is gone and the action left some of it (Taken < Before.Quantity): somebody deleted it since. Its Stock is not
 //     invented: the id goes to Gone.
@@ -39,7 +39,7 @@ func TestGiveBackAddsToTheQuantityTheLotHasNowNotTheOneItHadBefore(t *testing.T)
 	}
 }
 
-func TestGiveBackPutsAnEmptiedLotBackWithItsIdAndDates(t *testing.T) {
+func TestGiveBackPutsALotTakenWholeBackWithItsIdAndDates(t *testing.T) {
 	before := Lot{ID: 7, IngredientID: 3, Quantity: 300, Purchased: "2026-11-02", GoesOff: "2026-11-06", KeptOn: "2026-11-07"}
 	other := lot(2, 50, "2026-11-08", "2026-11-12")
 	res := GiveBack([]Lot{other}, []Take{{Before: before, Taken: 300}})
@@ -73,10 +73,10 @@ func TestGiveBackDoesNotInventALotDeletedSince(t *testing.T) {
 
 func TestGiveBackHandlesSeveralLotsAndReportsEachOutcome(t *testing.T) {
 	exists := lot(1, 100, "2026-11-01", "2026-11-05")
-	emptied := lot(2, 80, "2026-11-01", "2026-11-05")
+	takenWhole := lot(2, 80, "2026-11-01", "2026-11-05")
 	deleted := lot(3, 90, "2026-11-01", "2026-11-05")
 	res := GiveBack([]Lot{lot(1, 40, "2026-11-01", "2026-11-05")}, []Take{
-		{Before: exists, Taken: 60}, {Before: emptied, Taken: 80}, {Before: deleted, Taken: 30},
+		{Before: exists, Taken: 60}, {Before: takenWhole, Taken: 80}, {Before: deleted, Taken: 30},
 	})
 	if got := Total(res.Lots); got != 100+80 {
 		t.Errorf("Total = %v, want 180 (Lot 1 back to 100, Lot 2 put back, Lot 3 not invented)", got)
@@ -122,8 +122,8 @@ func TestGiveBackDoesNotModifyItsInput(t *testing.T) {
 //
 //	func KeepUntil(lot Lot, goodUntil, today Date) Lot
 //
-// GoesOff becomes goodUntil and KeptOn becomes today, so the zero-waste streak forgives the go-offs so far, exactly as
-// Keep does. Nothing else changes. A Lot with no go-off date is returned unchanged. The input is not modified.
+// GoesOff becomes goodUntil and KeptOn becomes today, so the zero-waste streak forgives the go-offs so far (R11c).
+// Nothing else changes. A Lot with no go-off date is returned unchanged. The input is not modified.
 func TestKeepUntilSetsTheGoOffDateAndRecordsTheKeepDate(t *testing.T) {
 	l := lot(1, 100, "2026-11-01", "2026-11-05")
 	kept := KeepUntil(l, "2026-11-12", "2026-11-09")

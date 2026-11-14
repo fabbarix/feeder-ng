@@ -1,6 +1,6 @@
 -- Stock Undo (beta.9, B9-05; SAFE-09). Additive only.
 -- stock_waste.lot_json: the thrown-out Stock Lot as it was (id, dates, Kept on, Storage Place, Product, Shop), written by
--- Throw out so a same-day Undo puts it back with the same id. NULL for a discarded Leftover and for waste recorded
+-- Throw out so a same-day Undo puts it back with the same id. NULL for a Leftover that was thrown out and for waste recorded
 -- before this migration: that waste cannot be undone.
 ALTER TABLE stock_waste ADD COLUMN lot_json TEXT;
 -- scan_events.takes_json: what a Stock-take (-1 pack, Set total) took from each Stock Lot, as a JSON array of

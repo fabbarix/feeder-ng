@@ -18,7 +18,7 @@ type GiveBackResult struct {
 
 // GiveBack puts back what takes took from lots (SAFE-03, SAFE-09). Per Lot, by what it is now:
 //   - it exists: the quantity taken is added to the quantity it has now (it may have changed since);
-//   - it is gone and the action emptied it (taken >= Before.Quantity): it is put back whole, with its id, dates and
+//   - it is gone and the action took all of it (taken >= Before.Quantity): it is put back whole, with its id, dates and
 //     KeptOn, and the quantity taken;
 //   - it is gone and the action left some of it: somebody deleted it since, so its Stock is not invented (Gone).
 //
