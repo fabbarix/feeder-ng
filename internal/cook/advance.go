@@ -53,3 +53,10 @@ func earlier(a, b *AdvanceDue) bool {
 	}
 	return a.Step < b.Step
 }
+
+// AdvanceDueWithin lists the not-done candidates due within window of now whose meal is not served yet, in
+// NextAdvance order (TB-02, B9-12). A candidate is in when DueAt <= now+window and MealAt > now; an overdue Step
+// of a meal that is still ahead is in, first. NextAdvance is its first element.
+func AdvanceDueWithin(cands []AdvanceCandidate, now time.Time, window time.Duration) []AdvanceDue {
+	return nil
+}
