@@ -296,12 +296,12 @@ type memberSnapshot struct {
 	UserID        *int64             `json:"userId"`
 	Email         string             `json:"email"`
 	CreatedAt     string             `json:"createdAt"`
-	Attendance    []snapAttendee     `json:"attendance"`     // meal_slot_attendees
-	DateAttend    []snapDateAttendee `json:"dateAttendance"` // attendance_override_attendees
-	SlotOptOuts   []snapSlotOptOut   `json:"slotOptOuts"`    // meal_slot_course_opt_outs
-	DateOptOuts   []snapDateOptOut   `json:"dateOptOuts"`    // course_attendance_override_opt_outs
-	Preferences   []snapRecipePref   `json:"preferences"`    // member_recipe_preferences
-	Exclusions    []int64            `json:"exclusions"`     // member_ingredient_exclusions (Ingredient ids)
+	Attendance    []snapAttendee     `json:"attendance"`      // meal_slot_attendees
+	DateAttend    []snapDateAttendee `json:"dateAttendance"`  // attendance_override_attendees
+	SlotOptOuts   []snapSlotOptOut   `json:"slotOptOuts"`     // meal_slot_course_opt_outs
+	DateOptOuts   []snapDateOptOut   `json:"dateOptOuts"`     // course_attendance_override_opt_outs
+	Preferences   []snapRecipePref   `json:"preferences"`     // member_recipe_preferences
+	Exclusions    []int64            `json:"exclusions"`      // member_ingredient_exclusions (Ingredient ids)
 	Aways         []snapAway         `json:"aways,omitempty"` // member_away (B9-24): back with the same ids
 }
 
