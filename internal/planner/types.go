@@ -270,6 +270,8 @@ type Input struct {
 	// EarliestStart is the Household's Earliest start as "HH:MM" in the household zone; "" is Off (PC-14, B9-12). A
 	// fresh Recipe whose cooking would have to start before it, on the date of its cell, is not a candidate.
 	EarliestStart string
+	// LatestStart is the Household's Latest start as "HH:MM"; "" is Off (A2, B9-58). Test stub.
+	LatestStart string
 }
 
 // SourceKind says where a placement's food comes from.

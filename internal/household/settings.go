@@ -38,6 +38,9 @@ type Settings struct {
 	Currency        string
 	// EarliestStart is the earliest "HH:MM" the planner may ask someone to start cooking; "" is Off (PC-14, B9-12).
 	EarliestStart string
+	// LatestStart is the latest "HH:MM" a Recipe may be started; "" is Off (A2, B9-58). Test stub: the developer
+	// gives it the default "22:00", normalises it and validates it (must be after Earliest start when both are set).
+	LatestStart string
 	// SetupHidden hides the first-run checklist on Today until it is shown again (TB-06, B9-12).
 	SetupHidden bool
 }
