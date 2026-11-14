@@ -264,3 +264,27 @@
 .receipt-row__sub {
   color: var(--color-muted);
 }
+
+/* The receipt pages (b8-rxweb, docs/dev/design/b8-rxweb.md 3): the header sits a section gap above the first section, and on a short
+   page the sticky bar goes to the foot of the screen. Tokens only. */
+.receipt-page-header {
+  margin-block-end: var(--section-gap);
+}
+
+.page:has(.receipt-page-header) {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  box-sizing: border-box;
+}
+
+.page:has(.receipt-page-header) > .page__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: var(--section-gap);
+}
+
+.page:has(.receipt-page-header) .sticky-action-bar {
+  margin-block-start: auto;
+}
