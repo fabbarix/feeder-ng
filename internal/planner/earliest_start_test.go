@@ -144,3 +144,18 @@ func TestAKeptUnpinnedMealThatNowStartsTooEarlyIsReplanned(t *testing.T) {
 		t.Errorf("Off: Kept = %v, want the meal kept", r.Kept)
 	}
 }
+
+// B9-11's rule: a Bought meal never moves. The keep check's too-early drop applies to unpinned Planned meals only, so a
+// Bought (Held) or Pinned meal that now starts too early stays where it is; the same meal unheld is replanned.
+func TestABoughtOrPinnedMealThatNowStartsTooEarlyIsNotMoved(t *testing.T) {
+	slot := withExisting(tue(8, 30), heldMeal(1))
+	in := withEarliest(baseInput([]Slot{slot}, rcp(1, 2, total(360)), rcp(2, 2, total(20))), "06:30")
+	wantHeld(t, mustPlan(t, in), tueKey())
+	if r := mustPlan(t, asPinned(in)); len(r.Placements) != 0 || len(r.Unfilled) != 0 {
+		t.Errorf("Pinned: replanned or removed: %+v %+v", r.Placements, r.Unfilled)
+	}
+	wantReplaced(t, mustPlan(t, asUnheld(in)), tueKey())
+	if got := EarlyStarts(in); len(got) != 1 || got[0].Key != tueKey() {
+		t.Errorf("EarlyStarts = %+v, want the Bought meal flagged", got)
+	}
+}
