@@ -735,6 +735,7 @@ func (r *review) buildTakeOvers() {
 			Path: it.path, Name: it.name,
 			Ingredient: ExistingRef{ID: plain.ID, Name: plain.Name, BaseUnit: string(plain.Base)},
 			Recipes:    recipes, StockLots: uses.StockLots, Convertible: convertible,
+			KeptLines: r.keptLinesOf(key),
 		}
 		answer, answered := r.d.TakeOvers[it.path]
 		switch {
@@ -750,6 +751,23 @@ func (r *review) buildTakeOvers() {
 		}
 		r.takeOvers = append(r.takeOvers, ask)
 	}
+}
+
+// keptLinesOf counts the lines of the kept Recipes named key (units.NormalizeName) that stay a plain Ingredient line: those
+// not answered with a Base recipe. A line with no tile counts. Lines of stored Recipes are not counted.
+func (r *review) keptLinesOf(key string) int {
+	n := 0
+	for i, rec := range r.f.Recipes {
+		if !r.kept[i] {
+			continue
+		}
+		for j, l := range rec.Ingredients {
+			if units.NormalizeName(l.Ingredient) == key && r.baseAt[linePath(i, j)] == nil {
+				n++
+			}
+		}
+	}
+	return n
 }
 
 // takeOverFor is the answer of the take-over ask at path, or nil when there is none.

@@ -244,6 +244,8 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
+	// The take-over ask says how many other lines the plan keeps as the plain Ingredient (beta.8, keptLines).
+	planOf := func() recipefile.Plan { return recipefile.BuildPlan(file, existing, d, images) }
 	commit, err := recipefile.BuildCommit(file, existing, d, images)
 	if errors.Is(err, recipefile.ErrStale) {
 		httpx.WriteError(w, http.StatusConflict, "import_stale", "The data changed since the review; review again")
@@ -257,7 +259,7 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeApplyError(w, err)
+		confirmError(w, err, planOf)
 		return
 	}
 	// Only an Admin adds or unarchives a Course (spec 13). The Review stays open for the User to answer again.
@@ -271,12 +273,21 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeApplyError(w, err)
+		confirmError(w, err, planOf)
 		return
 	}
 	done = true // imported: the Review stays closed
 	a.published(res)
 	httpx.WriteJSON(w, http.StatusOK, confirmAnswer(res))
+}
+
+// confirmError answers a failed Confirm: a take-over ask gets the plan's keptLines first (beta.8), then writeApplyError.
+func confirmError(w http.ResponseWriter, err error, planOf func() recipefile.Plan) {
+	var ask *recipe.TakeOverError
+	if errors.As(err, &ask) {
+		ask.KeptLines = recipefile.KeptLinesOf(planOf(), ask.Ingredient.ID)
+	}
+	writeApplyError(w, err)
 }
 
 // writeApplyError answers an error of BuildCommit or Apply. A cycle among the Base recipes is 422 base_recipe_cycle with

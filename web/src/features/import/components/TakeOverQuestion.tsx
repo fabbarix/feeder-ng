@@ -3,6 +3,7 @@ import { useId } from 'react'
 import { RadioCards, type RadioCard } from '../../../ui/fields/RadioCards'
 import { Tile } from '../../../ui'
 import { takeOverFacts } from '../lib/baseRecipeLines'
+import { keptLinesNote } from '../../../lib/baseRecipes/takeOver'
 import { importStrings as s } from '../strings'
 import type { ImportTakeOverAsk } from '../types'
 
@@ -23,12 +24,14 @@ export function TakeOverQuestion({ ask, onTakeOver }: TakeOverQuestionProps): Re
     { value: 'no' as const, title: s.baseRecipes.takeOverNo },
   ]
   const value = ask.answer === undefined ? null : ask.answer ? 'yes' : 'no'
+  const note = keptLinesNote(ask.keptLines, ask.name)
   return (
     <Tile variant="status" status="info">
       <p className="base-take-over__text">{takeOverFacts(ask)}</p>
       <p id={questionId} className="base-take-over__text">
         {s.baseRecipes.takeOverQuestion(ask.name)}
       </p>
+      {note ? <p className="base-take-over__text">{note}</p> : null}
       <RadioCards bare labelledBy={questionId} activation="manual" options={options} value={value} onChange={(v) => onTakeOver(v === 'yes')} />
     </Tile>
   )
