@@ -1,5 +1,7 @@
-/* IconButton (docs/design/ui-fix-plan.md 4.2): 40 visual / 44 hit, radius 12; compact 32 / 44 hit. Tokens only. */
+/* IconButton (docs/design/ui-fix-plan.md 4.2): 40 visual / 44 hit, radius 12; compact 32 / 44 hit. Tokens only.
+   DS-12 R-A: the same 1 px boundary as a secondary Button. Its fill is surface-2 on a surface and --color-surface on a tint. */
 .icon-button {
+  --icon-button-boundary: var(--color-outline);
   position: relative;
   display: inline-grid;
   place-items: center;
@@ -10,6 +12,7 @@
   border-radius: var(--radius-thumb);
   background: var(--color-surface-2);
   color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
   cursor: pointer;
   transition: background-color var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out);
 }
@@ -17,6 +20,29 @@
 .icon-button[data-size='compact'] {
   inline-size: 32px;
   block-size: 32px;
+}
+
+.icon-button[data-shape='circle'] {
+  border-radius: 50%;
+}
+
+/* On a tinted tile the fill is the surface; on an accent container (soft, the dark hero) the boundary is accent-text,
+   because the outline is under 3:1 on soft-strong. On the light accent hero the surface fill itself is the boundary. */
+.tile[data-variant='soft'] .icon-button,
+.tile[data-variant='status'] .icon-button,
+.tile[data-variant='hero'] .icon-button {
+  background: var(--color-surface);
+}
+
+.tile[data-variant='soft'] .icon-button,
+[data-scheme='dark'] .tile[data-variant='hero'] .icon-button {
+  --icon-button-boundary: var(--color-accent-text);
+  box-shadow: inset 0 0 0 1px var(--color-accent-text);
+}
+
+[data-scheme='light'] .tile[data-variant='hero'] .icon-button {
+  --icon-button-boundary: var(--color-surface);
+  box-shadow: none;
 }
 
 /* Hit area: 44 px, without changing the visual size. */
@@ -32,11 +58,11 @@
 }
 
 .icon-button:hover:not(:disabled) {
-  box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
+  box-shadow: inset 0 0 0 1px var(--icon-button-boundary), inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
 }
 
 .icon-button:active:not(:disabled) {
-  box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 12%, transparent);
+  box-shadow: inset 0 0 0 1px var(--icon-button-boundary), inset 0 0 0 999px color-mix(in oklab, currentColor 12%, transparent);
   transform: scale(0.97);
 }
 

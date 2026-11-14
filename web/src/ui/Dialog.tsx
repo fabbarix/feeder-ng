@@ -1,8 +1,10 @@
 import { useId, useRef, type ReactNode, type RefObject } from 'react'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
+import { ActionSurface } from './lib/actionSurface'
 import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
-import { PRIMARY_SCOPE_ATTR } from './Button'
+import { Button, PRIMARY_SCOPE_ATTR } from './Button'
+import { overlayStrings } from './overlayStrings'
 import './Dialog.css'
 
 export interface DialogProps {
@@ -16,8 +18,17 @@ export interface DialogProps {
   /** `danger` colours the icon circle with the danger status tokens. */
   tone?: 'default' | 'danger'
   children?: ReactNode
-  /** Right-aligned action row (tertiary Cancel, then primary or danger). */
+  /** Right-aligned action row: the decision (primary or danger). Cancel comes from `onCancel`. */
   actions?: ReactNode
+  /**
+   * DS-12 R-B: renders a secondary Cancel first in the action row (the row renders even without `actions`). A Dialog never has
+   * a Close; Escape and (unless `dismissOnBackdrop` is false) the scrim still call `onClose`.
+   */
+  onCancel?: () => void
+  /** The Cancel button's label. Default "Cancel". */
+  cancelLabel?: string
+  /** Extra attributes for the Cancel button (ConfirmDialog sets `data-autofocus` on a danger confirm). */
+  cancelProps?: { 'data-autofocus'?: boolean }
   /** Default true. Destructive confirms pass false. */
   dismissOnBackdrop?: boolean
   /** Element to focus on open. Default: the first [data-autofocus], else the first focusable, else the title. */
@@ -29,7 +40,19 @@ export function Dialog(props: DialogProps): ReactNode {
   return props.open ? <DialogSurface {...props} /> : null
 }
 
-function DialogSurface({ onClose, title, icon, tone = 'default', children, actions, dismissOnBackdrop = true, initialFocusRef }: Omit<DialogProps, 'open'>) {
+function DialogSurface({
+  onClose,
+  title,
+  icon,
+  tone = 'default',
+  children,
+  actions,
+  onCancel,
+  cancelLabel = overlayStrings.cancel,
+  cancelProps,
+  dismissOnBackdrop = true,
+  initialFocusRef,
+}: Omit<DialogProps, 'open'>) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const { onBackdropClick } = useModalDialog(ref, {
@@ -57,7 +80,18 @@ function DialogSurface({ onClose, title, icon, tone = 'default', children, actio
           {title}
         </h2>
         {children ? <div className="dialog__body">{children}</div> : null}
-        {actions ? <div className="dialog__actions">{actions}</div> : null}
+        {actions || onCancel ? (
+          <div className="dialog__actions">
+            <ActionSurface>
+              {onCancel ? (
+                <Button variant="secondary" className="dialog__cancel" onClick={onCancel} {...cancelProps}>
+                  {cancelLabel}
+                </Button>
+              ) : null}
+              {actions}
+            </ActionSurface>
+          </div>
+        ) : null}
       </div>
     </dialog>
   )

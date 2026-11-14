@@ -38,9 +38,10 @@
   background: var(--color-surface-3);
 }
 
+/* R-B: top-aligned, so the 40 px CloseButton sits level with the title's first line and never stretches. */
 .sheet__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
   margin-block-end: var(--space-3);
@@ -66,6 +67,14 @@
      body reaches 8px into the panel's side padding and pads it back, so the content does not move. */
   margin-inline: calc(-1 * var(--space-2));
   padding-inline: var(--space-2);
+  /* R-C: 5 px of block room too (3 px ring + 2 px offset), and a focused control scrolled into view keeps it. */
+  padding-block: 5px;
+  scroll-padding-block: 5px;
+}
+
+/* A sticky bar inside the scrolling body: a control scrolled into view stops above it, never under it. */
+.sheet__body:has(.sticky-action-bar) {
+  scroll-padding-block-end: calc(var(--sticky-bar-clearance) + 5px);
 }
 
 .sheet__footer {
@@ -77,6 +86,25 @@
   gap: var(--space-2);
   padding-block-start: var(--space-3);
   background: var(--color-surface);
+}
+
+/* R-B: with onCancel, Cancel is the footer's first control (secondary) and the decision takes the rest of the row:
+   Cancel one part, each other action two. */
+.sheet__footer[data-cancel] {
+  flex-wrap: nowrap;
+}
+
+.sheet__footer[data-cancel] > * {
+  flex: 2 1 0;
+  min-inline-size: 0;
+}
+
+.sheet__footer[data-cancel] > .sheet__cancel {
+  flex: 1 1 0;
+}
+
+.sheet__footer[data-cancel] > .form-actions {
+  flex-direction: row;
 }
 
 @keyframes sheet-in {

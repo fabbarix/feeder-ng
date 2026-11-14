@@ -1,0 +1,110 @@
+/* DetailList (DS-12 R-E): key | state rows with the detail under them. Read-only and dense; not a ListRow. Tokens only. */
+.detail-list {
+  --detail-tone-fg: var(--color-text);
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: none;
+}
+
+/* Inside a disclosure the list is a surface panel. */
+.detail-list[data-fill='surface'] {
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-thumb);
+  background: var(--color-surface);
+}
+
+.detail-list[data-tone='info'] {
+  --detail-tone-fg: var(--status-info-fg);
+}
+
+.detail-list[data-tone='warn'] {
+  --detail-tone-fg: var(--status-warn-fg);
+}
+
+.detail-list[data-tone='spoil'] {
+  --detail-tone-fg: var(--status-spoil-fg);
+}
+
+.detail-list[data-tone='danger'] {
+  --detail-tone-fg: var(--status-danger-fg);
+}
+
+.detail-list[data-tone='leftover'] {
+  --detail-tone-fg: var(--status-leftover-fg);
+}
+
+.detail-list[data-tone='success'] {
+  --detail-tone-fg: var(--status-success-fg);
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  row-gap: 2px;
+  padding-block: var(--space-2);
+  /* the row's own colour is the tone's foreground, so the hairline below is drawn in it; each part sets its own colour */
+  color: var(--detail-tone-fg);
+}
+
+/* A decorative 1 px hairline between rows, 18 % of the tone's foreground (1.3-1.6:1). */
+.detail-row + .detail-row {
+  border-block-start: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.detail-row__label {
+  min-inline-size: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  color: var(--color-text);
+}
+
+.detail-row__state {
+  grid-column: 2;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.detail-list[data-tone='info'] .detail-row__state {
+  color: var(--status-info-fg);
+}
+
+.detail-list[data-tone='warn'] .detail-row__state {
+  color: var(--status-warn-fg);
+}
+
+.detail-list[data-tone='spoil'] .detail-row__state {
+  color: var(--status-spoil-fg);
+}
+
+.detail-list[data-tone='danger'] .detail-row__state {
+  color: var(--status-danger-fg);
+}
+
+.detail-list[data-tone='leftover'] .detail-row__state {
+  color: var(--status-leftover-fg);
+}
+
+.detail-list[data-tone='success'] .detail-row__state {
+  color: var(--status-success-fg);
+}
+
+.detail-list[data-tone='neutral'] .detail-row__state {
+  color: var(--color-text);
+}
+
+.detail-row__detail {
+  grid-column: 1 / -1;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  line-height: var(--text-meta-line);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}

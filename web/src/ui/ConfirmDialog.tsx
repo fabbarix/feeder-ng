@@ -43,11 +43,11 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel = o
       tone={tone}
       icon={danger ? 'delete' : undefined}
       dismissOnBackdrop={!danger}
+      onCancel={onCancel}
+      cancelLabel={cancelLabel}
+      cancelProps={{ 'data-autofocus': danger || undefined }}
       actions={
         <>
-          <Button variant="tertiary" onClick={onCancel} data-autofocus={danger || undefined}>
-            {cancelLabel}
-          </Button>
           {alternateLabel ? (
             <Button variant="secondary" onClick={onAlternate}>
               {alternateLabel}

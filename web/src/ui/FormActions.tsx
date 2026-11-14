@@ -6,9 +6,9 @@ export interface FormActionsProps {
   primary: ReactNode
   /** Optional secondary Button, before the primary. */
   secondary?: ReactNode
-  /** Optional tertiary Button (Cancel), before the secondary. */
+  /** Optional Cancel (a secondary Button; DS-12 has no tertiary action), before the secondary. The slot keeps its name until B9-14. */
   tertiary?: ReactNode
-  /** Optional destructive Button (danger-tertiary), first in the DOM and at the far left from 600 px. */
+  /** Optional destructive Button (danger-secondary), first in the DOM and at the far left from 600 px. */
   destructive?: ReactNode
 }
 

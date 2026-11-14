@@ -9,10 +9,10 @@ export type LegacyChipTone = 'neutral' | 'accent' | 'spoil' | 'leftover'
 export type LegacyTileSize = 'sm' | 'md' | 'lg' | 'wide' | 'full'
 export type LegacyTileTone = 'neutral' | 'accent' | 'spoil' | 'leftover'
 
-/** tonal -> secondary, ghost -> tertiary; new variants pass through. */
+/** tonal and ghost -> secondary (DS-12: there is no tertiary action); new variants pass through. */
 export function resolveButtonVariant(variant: ButtonVariant | LegacyButtonVariant | undefined): ButtonVariant {
   if (variant === 'tonal') return 'secondary'
-  if (variant === 'ghost') return 'tertiary'
+  if (variant === 'ghost') return 'secondary'
   return variant ?? 'primary'
 }
 
