@@ -1,6 +1,6 @@
 // b8-shop: the page-layout guard learns two things. (1) The Shop header chips are probed at 360 and 390 px (scenario shop-header; P16/P22
 // already read crushed and cut chips). (2) P23, always fails: a food Line's Meal Slot hint ("Tue Dinner +1") is cut by its ellipsis, at every
-// width (review: the Supplies group's Restock reason is left out, see check-page-layout.mjs); scenario shop-hints at 390, 834 and 1440 px. Design: docs/dev/design/b8-shop.md. In a browser: scripts/check-page-layout.sh.
+// width (b8-polish: the Supplies group's Restock reason is read again, pageLayoutRules.polish.test.ts); scenario shop-hints at 390, 834 and 1440 px. Design: docs/dev/design/b8-shop.md. In a browser: scripts/check-page-layout.sh.
 import { describe, expect, it } from 'vitest'
 
 const nodeModule = 'node:module'
@@ -63,6 +63,7 @@ describe('P23: the Shop hint is cut by its ellipsis', () => {
     expect(driver).toMatch(/const cutMetaProbe\s*=/)
     expect(driver).toMatch(/\.shop-lines \.list-row__meta\[data-status="info"\]/)
     expect(driver).toMatch(/cutMeta:\s*await evaluate\(cutMetaProbe\)/)
-    expect(driver).toMatch(/closest\('\.shop-supplies'\)/)
+    // b8-polish: the Supplies group's Restock reason is read again (docs/dev/design/b8-polish.md 2)
+    expect(driver).not.toMatch(/closest\('\.shop-supplies'\)/)
   })
 })

@@ -45,14 +45,14 @@ Cause: copy that grows with the number of slots, in a column that has the least 
 1. Copy: the one-line hint (`hintShort`) names the first slot and counts the rest: "Tue Dinner", "Tue Dinner +1", "Tue Dinner +2",
    led by the info icon. The sheet and the full `hint` keep every slot, and the notice above the list says the sentence once. New
    string `slotMore(slot, n)`. *Review:* the first copy kept "Includes" ("Includes Fri Dinner +2"); P23 on the seeded hints found it
-   cut at 360, 390, 1440 and 1920 px (127 px of text in a 90 to 125 px column), so the word goes.
+   cut at 360, 390, 1440 and 1920 px (127 px of text in a 90 to 125 px column), so the word goes. **Decided (user, b8-polish): the copy stays "Fri Dinner +2", with no "Includes";** the row hint example in system.md §3 says so too.
 2. Layout: in the card grid (from 768 px) the row's value column takes the phone minimum (20 px more for the text): `styles.css` gets `--row-value-narrow: 4.25rem` (the phone media
    block now sets `--row-value-min: var(--row-value-narrow)`), and `.shop-lines .list-row { --row-value-min: var(--row-value-narrow) }` in shop.css. No raw size in shop.css.
 3. Guard: new rule **P23** (always fails): a food Line's Meal Slot hint (`.list-row__meta[data-status='info'] .list-row__meta-text`
    outside `.shop-supplies`) is cut by its ellipsis, on every /shop probe. Probe `cutMetaProbe` in `scripts/check-page-layout.mjs`
    (`m.cutMeta`), scenario `shop-hints` at 360, 390, 834 and 1440 px waiting for `.shop-open .shop-lines .list-row__meta[data-status="info"]`
    (a seeded Meal Slot hint). *Review:* the Supplies group's Restock reason ("400 of 1000 ml") is cut by 3 px at 360 px, as in beta.7;
-   it is left out of P23 until a design decision (see the review handback).
+   it was left out of P23 until a design decision. **Decided in b8-polish:** a compact "400/1000 ml" below 420 px, and P23 reads the Supplies group again (docs/dev/design/b8-polish.md 2).
 
 ## 3. Phone "Feeder" wordmark
 

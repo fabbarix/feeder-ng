@@ -59,7 +59,8 @@ The session is published before navigating (`publishReceiptSession`), as for the
 ### Toast copy (`lib/backgroundCopy.finishedToast`)
 
 Only when the path is not `/scan` and not under `/scan/receipt`:
-- ready: "Receipt read: review 9 changes", success, action **Review** to `/scan/receipt/review`.
+- ready with 1 or more changes: "Receipt read: review 9 changes", success, action **Review** to `/scan/receipt/review`.
+- ready with 0 changes: **no toast** (`finishedToast` returns `undefined`; b8-polish, user decision). The Scanned list row still says "Receipt read: nothing to change" and keeps its Dismiss button; `readyTitle(0)` stays for the row.
 - failed: the failure's words, error status (stays until dismissed), action **Read it again** to `/scan/receipt`.
 
 ### Stale reads
