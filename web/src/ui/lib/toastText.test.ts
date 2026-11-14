@@ -31,3 +31,53 @@ describe('splitToastText', () => {
     })
   })
 })
+
+// Main-session ruling 5: the split is a bridge, so it must never split wrongly. A case it cannot split safely stays one line.
+describe('splitToastText: never a wrong split', () => {
+  it('does not split after an abbreviation; a later real boundary still splits', () => {
+    expect(splitToastText('Saved Dr. Oetker Pizza')).toEqual({ title: 'Saved Dr. Oetker Pizza' })
+    expect(splitToastText('Use the Pantry, e.g. The Freezer')).toEqual({ title: 'Use the Pantry, e.g. The Freezer' })
+    expect(splitToastText('Bought at St. Albans Market')).toEqual({ title: 'Bought at St. Albans Market' })
+    expect(splitToastText('Added 1 tbsp. Salt to the Recipe')).toEqual({ title: 'Added 1 tbsp. Salt to the Recipe' })
+    expect(splitToastText('Saved Dr. Oetker Pizza. Undo it from the Recipe.')).toEqual({
+      title: 'Saved Dr. Oetker Pizza.',
+      body: 'Undo it from the Recipe.',
+    })
+  })
+
+  it('does not split after an initial', () => {
+    expect(splitToastText('Linked J. Smith to Tue Dinner')).toEqual({ title: 'Linked J. Smith to Tue Dinner' })
+  })
+
+  it('keeps decimals inside their sentence: "1.5 kg"', () => {
+    expect(splitToastText('Used 1.5 kg of Flour. 0.5 kg left in Stock.')).toEqual({
+      title: 'Used 1.5 kg of Flour.',
+      body: '0.5 kg left in Stock.',
+    })
+    expect(splitToastText('Moved 1.5 kg to the Freezer')).toEqual({ title: 'Moved 1.5 kg to the Freezer' })
+  })
+
+  it('keeps times inside their sentence: "18.30", "7 p.m."', () => {
+    expect(splitToastText('Lunch starts at 12.30. Tue Dinner moved.')).toEqual({ title: 'Lunch starts at 12.30.', body: 'Tue Dinner moved.' })
+    expect(splitToastText('Dinner starts at 7 p.m. Tue')).toEqual({ title: 'Dinner starts at 7 p.m. Tue' })
+  })
+
+  it('a name ending in a full stop followed by lower-case words stays one line; a quoted name never splits', () => {
+    expect(splitToastText('Added Yum Inc. to the Plan')).toEqual({ title: 'Added Yum Inc. to the Plan' })
+    expect(splitToastText('Saved “Mum’s Pie.” Tue Dinner')).toEqual({ title: 'Saved “Mum’s Pie.” Tue Dinner' })
+  })
+
+  it('a single sentence, with or without its full stop, stays one line', () => {
+    expect(splitToastText('Swapped Tue Breakfast')).toEqual({ title: 'Swapped Tue Breakfast' })
+    expect(splitToastText('  Swapped Tue Breakfast.  ')).toEqual({ title: 'Swapped Tue Breakfast.' })
+  })
+
+  it('a trailing ellipsis is one line; an ellipsis before a new sentence ends the headline', () => {
+    expect(splitToastText('Reading the photo…')).toEqual({ title: 'Reading the photo…' })
+    expect(splitToastText('Reading the photo...')).toEqual({ title: 'Reading the photo...' })
+    expect(splitToastText('Reading the photo... This can take a minute.')).toEqual({
+      title: 'Reading the photo...',
+      body: 'This can take a minute.',
+    })
+  })
+})

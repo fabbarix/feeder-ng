@@ -194,26 +194,29 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
             {icon ? <Icon name={icon} size={16} /> : null}
             <span className="toast__title-text">{toast.title}</span>
           </p>
-          {/* the spaces keep the announced text one readable run: "headline. subline. body" */}
+          {/* the spaces keep the announced text one readable run: "headline subline body actions", never "headlinesubline" */}
           {toast.subline ? <> <p className="toast__subline">{toast.subline}</p></> : null}
           {toast.body ? <> <p className="toast__body">{toast.body}</p></> : null}
           {toast.actions.length > 0 ? (
-            <div className="toast__actions">
-              {toast.actions.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  className="toast__action"
-                  aria-label={action.ariaLabel}
-                  onClick={() => {
-                    action.onClick()
-                    onDismiss()
-                  }}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
+            <>
+              {' '}
+              <div className="toast__actions">
+                {toast.actions.map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    className="toast__action"
+                    aria-label={action.ariaLabel}
+                    onClick={() => {
+                      action.onClick()
+                      onDismiss()
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            </>
           ) : null}
         </div>
         <button type="button" className="toast__dismiss" aria-label={uiStrings.dismiss} onClick={onDismiss}>

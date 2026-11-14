@@ -117,3 +117,24 @@ describe('Toast status icon (R-D+)', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Could not save')
   })
 })
+
+// Main-session ruling 5: the split of a multi-sentence string is visual only; the live region announces one readable run.
+describe('Toast announcement (R-D)', () => {
+  it('a split string toast is announced as the original message, one run', async () => {
+    await fire(<Fire message="That did not save. Try again." />)
+    const region = screen.getByRole('status')
+    expect(region.querySelector('.toast__body')).toHaveTextContent('Try again.')
+    expect(region.textContent).toBe('That did not save. Try again.')
+  })
+
+  it('a rich toast is announced headline, subline, body, actions with a space between each', async () => {
+    await fire(<Fire arg={{ title: 'Swapped Tue Breakfast', subline: '2 other meals changed', body: 'Wed Lunch moved.', actions: [{ label: 'Review', onClick: () => {} }] }} />)
+    expect(screen.getByRole('status').textContent).toBe('Swapped Tue Breakfast 2 other meals changed Wed Lunch moved. Review')
+  })
+
+  it('a string with no safe boundary stays one line', async () => {
+    const { toast } = await fire(<Fire message="Saved Dr. Oetker Pizza" />)
+    expect(toast).toHaveAttribute('data-layout', 'line')
+    expect(toast.querySelector('.toast__body')).toBeNull()
+  })
+})
