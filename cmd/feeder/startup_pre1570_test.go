@@ -9,8 +9,8 @@ import (
 	"testing/fstest"
 )
 
-// prepareDatabase takes feeder-pre-1570.db before the beta.9 migrations 1570 to 1577 (docs/dev/design/b9-snap.md,
-// plan section 7), after the 1400, 1500, 1540, 1550 and 1560 ones in the ordered table. One snapshot covers all eight
+// prepareDatabase takes feeder-pre-1570.db before the beta.9 migrations 1570 to 1578 (docs/dev/design/b9-snap.md,
+// plan section 7), after the 1400, 1500, 1540, 1550 and 1560 ones in the ordered table. One snapshot covers all nine
 // files. Like startup_pre1560_test.go the tests call prepareDatabaseWith with the real migrations below 1500
 // (realPlus) plus synthetic 15NN files, so they keep passing whatever is embedded.
 
