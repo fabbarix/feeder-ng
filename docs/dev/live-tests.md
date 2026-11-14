@@ -25,8 +25,8 @@ set -a; . ./.env.local; set +a
 FEEDER_LIVE_SCHEMA_CHECK=1 go test ./internal/receipt/service/ ./internal/recipeassistant/claude/ ./internal/recipeassistant/service/ -run Live -v
 ```
 
-- `FEEDER_LIVE_SCHEMA_CHECK=1` switches on the schema checks and the receipt read (`TestLiveReceiptReadCompletes`,
-  `TestLiveOutputSchemaCompiles`, `TestLiveReceiptReadsAFixture`).
+- `FEEDER_LIVE_SCHEMA_CHECK=1` switches on the schema checks and the live reads (`TestLiveOutputSchemaCompiles`,
+  `TestLiveReceiptSchemaCompiles`, `TestLiveReceiptReadCompletes`, `TestLiveReadWithABaseRecipe`).
 - The Recipe Assistant's smoke test (`TestLiveReadStreamsARecipe`) needs only a key; `FEEDER_LIVE_ANTHROPIC_BASE_URL` and
   `FEEDER_LIVE_ANTHROPIC_MODEL` are optional.
 - Print nothing from the file: do not `cat` or `env` it in a shared log.

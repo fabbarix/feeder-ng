@@ -33,8 +33,8 @@ To finish: 400 g fresh egg lasagne sheets, 120 g grated Parmigiano Reggiano, 20 
 8. Dot with butter and bake for 35 minutes until golden. Rest 10 minutes before cutting.`
 
 // TestLiveReadStreamsARecipe sends one real read (the service's prompt, schema, model, effort and max_tokens) to the
-// Anthropic API and checks the answer is a valid Recipe File. It runs only with FEEDER_LIVE_ANTHROPIC_KEY set
-// (FEEDER_LIVE_ANTHROPIC_BASE_URL and FEEDER_LIVE_ANTHROPIC_MODEL are optional); it is billed.
+// Anthropic API and checks the answer is a valid Recipe File. It runs only with a live key set (anthropickey.Lookup,
+// docs/dev/live-tests.md; FEEDER_LIVE_ANTHROPIC_BASE_URL and FEEDER_LIVE_ANTHROPIC_MODEL are optional); it is billed.
 func TestLiveReadStreamsARecipe(t *testing.T) {
 	key, _ := anthropickey.Lookup()
 	if key == "" {
