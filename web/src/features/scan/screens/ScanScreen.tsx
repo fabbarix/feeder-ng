@@ -7,13 +7,12 @@
 // Shop Location: useNearestShop finds the Shop the User is in (at once only where that shows no prompt); the picker
 // lists it first, and a session started with another Shop offers to switch. Any User adds a Shop (AddShopSheet).
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { ingredientsApi } from '../../ingredients/api'
 import { useShops } from '../../shops/hooks/useShops'
 import { useNearestShop } from '../../shops/hooks/useNearestShop'
 import { AddShopSheet } from '../../shops/components/AddShopSheet'
 import { formatDistance } from '../../shops/lib/nearest'
-import { lineEntry } from '../../shop/lib/lines'
 import { ViewfinderStrip } from '../../../ui/ViewfinderStrip'
 import { Button } from '../../../ui/Button'
 import { ConfirmDialog } from '../../../ui/ConfirmDialog'
@@ -32,6 +31,7 @@ import { ScannedList } from '../components/ScannedList'
 import { ShopPicker } from '../components/ShopPicker'
 import { StockTakeSheet } from '../components/StockTakeSheet'
 import { ToGetList } from '../components/ToGetList'
+import { toGetRows } from '../lib/toGet'
 import { UnarchiveProductSheet } from '../components/UnarchiveProductSheet'
 import { NewProductSheet } from '../components/NewProductSheet'
 import { useJustScanned } from '../hooks/useJustScanned'
@@ -164,7 +164,6 @@ interface PriceFailure {
 function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) {
   useScanSession(mode === 'shop')
   const c = useScanController({ mode, shop })
-  const navigate = useNavigate()
   const flow = c.flow
   const sheet = flow.sheet
   const isShop = mode === 'shop'
@@ -285,7 +284,11 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           }
         />
       ) : (
-        <ToGetList entries={scanned.toGet.map((line) => lineEntry(line, c.currency, c.system))} onOpen={() => navigate('/shop')} />
+        <ToGetList
+          rows={toGetRows(scanned.toGet, scanned.rows, c.currency, c.system)}
+          pendingKeys={c.toGetTick.pendingKeys}
+          onTick={(entry) => void c.toGetTick.tick(entry)}
+        />
       )}
     </div>
   )

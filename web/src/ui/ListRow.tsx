@@ -38,6 +38,8 @@ interface ListRowBase {
    * on its own, like `panel`; the rest of the row stays the target.
    */
   footer?: ReactNode
+  /** Beta.8 (scan, To get): the row is busy (a tick in flight); set on the `li` as aria-busy. */
+  'aria-busy'?: 'true'
 }
 
 /**
@@ -149,6 +151,7 @@ export function ListRow(props: ListRowProps) {
   return (
     <li
       {...passthroughData(props as unknown as Record<string, unknown>)}
+      aria-busy={props['aria-busy']}
       className="list-row"
       data-height={height}
       data-selected={selected ? 'true' : undefined}

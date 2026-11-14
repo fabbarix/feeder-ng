@@ -4,13 +4,13 @@
 // keeps that top part and adds one strip under it: the Stepper (not for a weighed row), then Price and Remove. Render only:
 // the states come from lib/scannedList.
 import { Button } from '../../../ui/Button'
-import { Icon } from '../../../ui/Icon'
 import { ListRow, type ListRowProps } from '../../../ui/ListRow'
 import { Stepper } from '../../../ui/Stepper'
 import { Thumb } from '../../../ui/Thumb'
 import type { UnitSystem } from '../../../lib/units'
 import { formatMinor } from '../../products/lib/money'
-import { rowAmounts, rowMeta, rowTitle, type RowMeta, type ScannedRow as Row } from '../lib/scannedList'
+import { CoverMeta } from './CoverMeta'
+import { rowAmounts, rowMeta, rowTitle, type ScannedRow as Row } from '../lib/scannedList'
 import { scanStrings } from '../strings'
 
 export interface ScannedRowProps {
@@ -28,29 +28,6 @@ export interface ScannedRowProps {
   onIncrement: () => void
   onDecrement: () => void
   onRemove: () => void
-}
-
-/** The second line: the size, then one tick (filled once the Line is covered, hollow before) and "x of y", or the clock. */
-function MetaLine({ meta }: { meta: RowMeta }) {
-  // The tick and its "x of y" (or the clock and its words) stay together when the line wraps.
-  const after = meta.cover ? (
-    <span className="scanned-row__cover">
-      <Icon name={meta.cover.done ? 'success' : 'successOpen'} size={14} weight={meta.cover.done ? 'fill' : 'bold'} className="scanned-row__tick" />
-      <span>{meta.cover.text}</span>
-    </span>
-  ) : meta.waiting ? (
-    <span className="scanned-row__cover">
-      <Icon name="duration" size={14} />
-      <span>{scanStrings.waitingToSync}</span>
-    </span>
-  ) : null
-  return (
-    <span className="scanned-row__meta">
-      {meta.size ? <span>{meta.size}</span> : null}
-      {meta.size && after ? <span aria-hidden="true">·</span> : null}
-      {after}
-    </span>
-  )
 }
 
 type StripProps = Pick<ScannedRowProps, 'row' | 'onPrice' | 'onIncrement' | 'onDecrement' | 'onRemove'>
@@ -84,7 +61,7 @@ export function ScannedRow({ row, currency, system, active, pricing, fresh, onAc
     'aria-label': row.name,
     onActivate,
     leading: <Thumb name={row.name} imageUrl={row.imageUrl} size={48} />,
-    meta: <MetaLine meta={meta} />,
+    meta: <CoverMeta size={meta.size} cover={meta.cover} waiting={meta.waiting} />,
     value:
       amounts.value === null ? (
         <Button variant="secondary" size="sm" icon="add" className="scanned-row__add" onClick={onPrice}>
