@@ -110,6 +110,9 @@ type NewProduct struct {
 	product.Input
 	Barcodes     []string // raw, canonicalised by the store
 	ShopBarcodes []NewShopBarcode
+	// Scanned says the Barcodes were read by a scanner, not typed: the typed-code check (digits only: a GTIN length and
+	// check digit, decision SET 1) is skipped and they are only canonicalised. The zero value checks them.
+	Scanned bool
 }
 
 // NewShopBarcode: plain when Code is set, weighed when RuleID and ItemCode are.
@@ -640,7 +643,11 @@ func (s *Store) CreateProduct(ctx context.Context, in NewProduct) (Detail, error
 	if err := in.Input.Validate(); err != nil {
 		return Detail{}, err
 	}
-	codes, err := canonicalList(in.Barcodes)
+	normalize := product.NormalizeTypedBarcode
+	if in.Scanned {
+		normalize = product.NormalizeBarcode
+	}
+	codes, err := canonicalList(in.Barcodes, normalize)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -682,12 +689,12 @@ func (s *Store) CreateProduct(ctx context.Context, in NewProduct) (Detail, error
 	return s.Product(ctx, id)
 }
 
-// canonicalList canonicalises raw barcodes and drops duplicates, keeping order.
-func canonicalList(raw []string) ([]string, error) {
+// canonicalList canonicalises raw barcodes with normalize and drops duplicates, keeping order.
+func canonicalList(raw []string, normalize func(string) (string, error)) ([]string, error) {
 	seen := map[string]bool{}
 	var out []string
 	for _, r := range raw {
-		code, err := product.NormalizeBarcode(r)
+		code, err := normalize(r)
 		if err != nil {
 			return nil, err
 		}
@@ -998,10 +1005,10 @@ func (s *Store) DeleteProduct(ctx context.Context, id int64) error {
 	return err
 }
 
-// AddBarcode adds a global barcode (raw, canonicalised). *BarcodeTakenError when
-// another Product owns it; adding one the Product already has is a no-op.
+// AddBarcode adds a typed global barcode (raw, checked as typed and canonicalised: product.NormalizeTypedBarcode).
+// *BarcodeTakenError when another Product owns it; adding one the Product already has is a no-op.
 func (s *Store) AddBarcode(ctx context.Context, productID int64, raw string) error {
-	code, err := product.NormalizeBarcode(raw)
+	code, err := product.NormalizeTypedBarcode(raw)
 	if err != nil {
 		return err
 	}

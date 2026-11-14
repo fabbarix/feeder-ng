@@ -121,3 +121,27 @@ func TestPriceForWeight(t *testing.T) {
 		})
 	}
 }
+
+func TestBestPackOfferIsTheMostRecentThenTheCheapestPerBaseUnit(t *testing.T) {
+	older := product.PackOffer{Price: product.Price{ID: 1, Date: "2026-10-01", PriceCents: ip(100)}, PackSize: 1000}
+	small := product.PackOffer{Price: product.Price{ID: 2, Date: "2026-11-14", PriceCents: ip(200)}, PackSize: 500}
+	large := product.PackOffer{Price: product.Price{ID: 3, Date: "2026-11-14", PriceCents: ip(300)}, PackSize: 1000}
+	perKgOnly := product.PackOffer{Price: product.Price{ID: 4, Date: "2026-12-01", PricePerKgCents: ip(250)}, PackSize: 1000}
+	noSize := product.PackOffer{Price: product.Price{ID: 5, Date: "2026-12-01", PriceCents: ip(10)}}
+
+	got, ok := product.BestPackOffer([]product.PackOffer{older, small, perKgOnly, large, noSize})
+	if !ok || got.Price.ID != 3 {
+		t.Fatalf("got %+v, %v; want Large: the most recent pack Price, cheaper per Base Unit than Small", got, ok)
+	}
+	if got, ok := product.BestPackOffer([]product.PackOffer{older}); !ok || got.Price.ID != 1 {
+		t.Errorf("one offer: got %+v, %v", got, ok)
+	}
+	if _, ok := product.BestPackOffer([]product.PackOffer{perKgOnly, noSize}); ok {
+		t.Errorf("no pack Price with a pack size: want none")
+	}
+	// A full tie keeps the newest Price row.
+	twin := product.PackOffer{Price: product.Price{ID: 9, Date: "2026-11-14", PriceCents: ip(300)}, PackSize: 1000}
+	if got, _ := product.BestPackOffer([]product.PackOffer{twin, large}); got.Price.ID != 9 {
+		t.Errorf("full tie: got id %d, want 9", got.Price.ID)
+	}
+}
