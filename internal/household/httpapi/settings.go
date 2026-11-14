@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/fabbarix/feeder-ng/internal/household"
@@ -30,6 +31,9 @@ type settingsBody struct {
 	PlannerStyle             float64        `json:"plannerStyle"`
 	Location                 *locationBody  `json:"location"`
 	Currency                 string         `json:"currency"`
+	// EarliestStart is "HH:MM", or null when Off (PC-14).
+	EarliestStart *string `json:"earliestStart"`
+	SetupHidden   bool    `json:"setupHidden"`
 }
 
 func settingsOut(s household.Settings) settingsBody {
@@ -43,6 +47,11 @@ func settingsOut(s household.Settings) settingsBody {
 		QuietHours:               quietHoursBody{Start: s.QuietHours.Start, End: s.QuietHours.End},
 		PlannerStyle:             s.PlannerStyle,
 		Currency:                 s.Currency,
+		SetupHidden:              s.SetupHidden,
+	}
+	if s.EarliestStart != "" {
+		at := s.EarliestStart
+		out.EarliestStart = &at
 	}
 	if loc := s.Location; loc != nil {
 		out.Location = &locationBody{City: loc.City, Latitude: loc.Latitude, Longitude: loc.Longitude}
@@ -50,8 +59,29 @@ func settingsOut(s household.Settings) settingsBody {
 	return out
 }
 
+// optionalTime is a tri-state JSON field: left out (Set false), null (Set, Value nil: Off) or an "HH:MM" string.
+type optionalTime struct {
+	Set   bool
+	Value *string
+}
+
+func (o *optionalTime) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	o.Value = nil
+	if string(b) == "null" {
+		return nil
+	}
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	o.Value = &v
+	return nil
+}
+
 // settingsIn is what an Admin sends. timeZoneConfigured is not accepted: saving marks it. FrozenUseByDays is a pointer:
-// a save without it (a client older than beta.5) keeps the stored value.
+// a save without it (a client older than beta.5) keeps the stored value. EarliestStart and SetupHidden work the same
+// way for a client older than beta.9; an explicit null EarliestStart turns it Off.
 type settingsIn struct {
 	TimeZone                 string         `json:"timeZone"`
 	PlanningHorizonDays      int            `json:"planningHorizonDays"`
@@ -62,6 +92,8 @@ type settingsIn struct {
 	PlannerStyle             float64        `json:"plannerStyle"`
 	Location                 *locationBody  `json:"location"`
 	Currency                 string         `json:"currency"`
+	EarliestStart            optionalTime   `json:"earliestStart"`
+	SetupHidden              *bool          `json:"setupHidden"`
 }
 
 func (in settingsIn) toDomain() household.Settings {
@@ -105,6 +137,17 @@ func (a *api) putSettings(w http.ResponseWriter, r *http.Request) {
 	s.FrozenUseByDays = current.FrozenUseByDays
 	if in.FrozenUseByDays != nil {
 		s.FrozenUseByDays = *in.FrozenUseByDays
+	}
+	s.EarliestStart = current.EarliestStart
+	if in.EarliestStart.Set {
+		s.EarliestStart = ""
+		if in.EarliestStart.Value != nil {
+			s.EarliestStart = *in.EarliestStart.Value
+		}
+	}
+	s.SetupHidden = current.SetupHidden
+	if in.SetupHidden != nil {
+		s.SetupHidden = *in.SetupHidden
 	}
 	s = s.Normalized()
 	if err := s.Validate(); err != nil {

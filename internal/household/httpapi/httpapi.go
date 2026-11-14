@@ -52,6 +52,7 @@ func mount(r *app.Router, d app.Deps) {
 
 	r.User("GET /api/meal-slots", a.listSlots)
 	r.Admin("POST /api/meal-slots", a.createSlot)
+	r.Admin("POST /api/meal-slots/batch", a.createSlotsBatch)
 	r.Admin("PATCH /api/meal-slots/batch", a.updateSlotsBatch)
 	r.Admin("PATCH /api/meal-slots/{id}", a.updateSlot)
 	r.Admin("DELETE /api/meal-slots/{id}", a.deleteSlot)
