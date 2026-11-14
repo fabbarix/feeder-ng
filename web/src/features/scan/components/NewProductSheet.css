@@ -125,3 +125,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* Beta.8: the "What it is" picture chips are checked by aria-checked (a radio), not aria-pressed. */
+.new-product__kind-chip[aria-checked='true'] {
+  background: var(--color-primary-container);
+  border-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+}

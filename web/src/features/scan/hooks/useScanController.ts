@@ -31,6 +31,7 @@ import { useScanFlow, type ScanFlow } from './useScanFlow'
 import { useScanner } from './useScanner'
 import { useScannedList, type ScannedList } from './useScannedList'
 import { useSyncQueue } from './useSyncQueue'
+import { useToGetTick, type ToGetTick } from './useToGetTick'
 
 export interface ScanControllerOptions {
   mode: 'shop' | 'stocktake'
@@ -58,6 +59,8 @@ export interface ScanController {
   flow: ScanFlow
   /** SR3: the Scanned list of the Shop and household day (empty in Stock-take) */
   scanned: ScannedList
+  /** Beta.8: ticks a To get Line by hand (the Shop screen's tick, with Undo); pending keys for the busy rows */
+  toGetTick: ToGetTick
   /** SR3: Change Shop: empties the Scanned list and its stored session */
   endSession: () => void
   /** the live Shopping List of the Shop (shop mode); undefined in Stock-take */
@@ -98,6 +101,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const ingredientChoices = useIngredientChoices()
   const totals = useStockTotals()
   const shopList = useShoppingList({ shopId })
+  const toGetTick = useToGetTick({ to: shopList.data?.to, shopId })
   const [picturePicking, setPicturePicking] = useState(false)
   const camera = useCamera({ enabled: !picturePicking })
   const sessionStore = useMemo(() => appSessionStore(), [])
@@ -248,6 +252,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     canVibrate: feedback.canVibrate,
     flow,
     scanned,
+    toGetTick,
     endSession: () => scanned.clear(),
     list: mode === 'shop' ? shopList.data : undefined,
     refreshLive,

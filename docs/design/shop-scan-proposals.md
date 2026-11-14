@@ -110,7 +110,7 @@ Every proposal reduces "What is this?" to **at most four decisions**, with these
 | Field | Default | Can it wait? |
 |---|---|---|
 | Picture | none; one tap opens the camera | **yes** (add later on the Product page) |
-| What it is: Ingredient or Supply | a `Segmented` "Ingredient · Supply" (beta.7); the `Select` lists both under subheaders, matches as you type, creates new ("New Supply 'Toilet paper'") | no: the server needs it (`products.ingredient_id NOT NULL`) |
+| What it is: Ingredient or Supply | a labelled pair of picture chips "Ingredient · Supply" (beta.8; a `Segmented` in beta.7); the `Select` lists both under subheaders, matches as you type, creates new ("New Supply 'Toilet paper'") | no: the server needs it (`products.ingredient_id NOT NULL`) |
 | Pack size | chips from the chosen Ingredient's existing Products and common sizes (500 g · 1 kg · 1 l · 6 pieces), then a `StepperField`; a new Supply defaults to **piece** | no (it is the Stock Lot's quantity) |
 | Product name | "<Ingredient> <size>" (`suggestedName`), editable | **yes** (rename later) |
 | Barcode scope | **Any Shop**; "This Shop only" behind "More" | **yes** |
@@ -503,8 +503,17 @@ otherwise. Mockup frames A1 to A3 show the shape; the Price entry follows B3 wit
 - **Total**: the sum of the rows' Prices (Price × count, or the weighed Price), `formatMinor`. Rows without a Price are left out
   and counted in "+k without a Price"; tapping that line starts the Price entry on the first such row (13.4).
 - **Empty Scanned**: an `EmptyState` "Nothing scanned yet" with "Point the camera at a barcode. Lines to get are under To get."
-- **To get** shows the Shop screen's `LineRow` list unchanged (Tick by hand, Not needed, the Ticked group collapsed). Supplies'
-  Restock Lines appear there under their "Supplies" subheader (household-items §4.4).
+- **To get** lists the Shopping List's open Lines. *Beta.8 (replaces "the Shop screen's `LineRow` list unchanged", which sent a
+  tap to /shop):* **a row ticks by hand.** The whole row is one button, "Tick Passata"; a tap marks the Line bought, with the
+  Shop screen's own tick (`useShoppingActions.tick`: the Line's remaining quantity, which adds it to Stock, and a fresh client
+  id), and goes nowhere. The second line reads like a Scanned row's: the pack, then one tick and "x of y" (what this session's
+  scans cover of the Line, "0 of 1400 g" before any scan, "700 of 1400 g" after one pack). The tick is hollow while the Line is
+  open and filled while the tick is on its way (the row is busy and cannot be tapped twice). A Toast "Passata ticked · Undo"
+  follows (Undo is the Shop screen's untick); the Line leaves To get at once and the Scanned list is untouched. A failed tick
+  (offline included) says "Couldn't tick Passata. Try again." and changes nothing; a tick is not queued, as on the Shop screen.
+  With every Line ticked the tab shows an `EmptyState` "Nothing left to get". Not needed, the Ticked group and the "How much?"
+  sheet stay on the Shop screen (/shop), reached from the app's navigation. Supplies' Restock Lines are rows like the others
+  (household-items §4.4); their "Supplies" subheader is not drawn here.
 
 ### 13.3 A Scanned row
 
@@ -571,7 +580,8 @@ An unknown barcode pauses the camera and opens **"What is this?"** (`NewProductS
 1. **Which Line is it?** Chips of the open Lines, partially covered ones included, Restock Lines of Supplies included, in list
    order, at most 8 then "More Lines"; and **Something else** (outlined, search icon). Picking a Line sets the Ingredient (or
    Supply), its Base Unit and the "ticks" promise. With no open Lines the step is skipped.
-2. **Something else** reveals the `Segmented` **Ingredient · Supply** and the `Select` (typeahead, "Ingredients" and "Supplies"
+2. **Something else** reveals the choice **What it is** (a group label above two picture chips, **Ingredient** and
+   **Supply**; decided 2026-11-13, beta.8: the label stays, the chips stay instead of the mockup's radio) and the `Select` (typeahead, "Ingredients" and "Supplies"
    subheaders, "New Ingredient 'X'" / "New Supply 'X'"; the near-duplicate guard as today). A new Supply defaults to piece.
 3. **Pack size**: chips from the chosen Ingredient's existing Products and common sizes for its Base Unit (g: 250 g, 500 g, 1 kg;
    ml: 500 ml, 1 l; piece: 1, 4, 6, 10), then **Other** (a `StepperField` with the unit `Select`). The first chip is preselected
@@ -620,6 +630,9 @@ here {price} · {date}", "No Price at {shop} yet", "= {perKg}/kg for {size}", "�
 "Undo", "Removed {product}", "Put back", "Remove {n} {product}?", "Their Stock Lots and Price go too.", "Keep them", "More for
 {product}", "Remove", "Open the Product", "Pick a Shop to keep that Scan".
 
+Beta.8 adds: "Tick {line}", "{line} ticked" (with "Undo"), "Couldn't tick {line}. Try again.", "Couldn't undo that tick. Try again.",
+"Nothing left to get", "Every Line on the Shopping List is ticked."
+
 ### 13.9 Data and API (final)
 
 | Change | Where |
@@ -657,3 +670,13 @@ beside them. SR6 last, folded into H8 for the release.
 offline kind, and nothing else in Scan. The form is rewritten by **SR5**, which takes those requirements (Ingredient · Supply,
 subheaders, a new Supply on piece, `kind` in the Op); the offline kind (`ingredientKind` on `OfflineProduct`, from H4) is read by
 **SR3**. H7 shrinks to **H7′**, the Shop screen only. No file is owned twice.
+
+### 13.11 Beta.8 decisions (the user, 2026-11-13)
+
+- **To get ticks by hand** (13.2). The row is the tick: a tap marks the Line bought and does not open /shop. The Line leaves To
+  get with a Toast "{line} ticked · Undo". The tick adds the Line's remaining quantity to Stock, like "Tick and add to Stock" on the
+  Shop screen's "How much?" sheet, whose prefilled answer it is; a different amount, "Tick without adding" and Not needed stay on
+  the Shop screen.
+- **New-Product sheet, "What it is"** (13.5 step 2). The group label "What it is" sits above the choice (the mockup had it); the
+  choice stays picture chips (Ingredient, Supply) instead of the mockup's radio. The chips are a `radiogroup` named by the label
+  (`aria-labelledby`), with roving tabindex, so the keyboard and screen readers read a radio choice while the eye sees chips.

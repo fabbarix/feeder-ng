@@ -67,6 +67,7 @@ export function controllerFake(over: Partial<ScanController> = {}): ScanControll
     canVibrate: true,
     flow: flowFake(),
     scanned: scannedFake(),
+    toGetTick: { tick: vi.fn(async () => {}), pendingKeys: new Set<string>() },
     endSession: vi.fn(),
     list: makeList({ lines: [makeLine(), makeLine({ ingredientId: 5, name: 'Cheese', quantity: 200, pack: null })], extras: [makeExtra()] }),
     online: true,

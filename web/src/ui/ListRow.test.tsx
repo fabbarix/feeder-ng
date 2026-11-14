@@ -87,6 +87,18 @@ describe('ListRow (plan 4.13)', () => {
     expect(screen.getByRole('listitem')).toHaveAttribute('data-selected', 'true')
   })
 
+  it('a busy row is aria-busy and its target stays, disabled, so a tap does nothing (beta.8)', async () => {
+    const onActivate = vi.fn()
+    const { rerender } = inList(<ListRow title="Milk" onActivate={onActivate} busy />)
+    expect(screen.getByRole('listitem')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('button', { name: 'Milk' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Milk' }))
+    expect(onActivate).not.toHaveBeenCalled()
+    rerender(<ListGroup label="Stock"><ListRow title="Milk" onActivate={onActivate} /></ListGroup>)
+    expect(screen.getByRole('listitem')).not.toHaveAttribute('aria-busy')
+    expect(screen.getByRole('button', { name: 'Milk' })).toBeEnabled()
+  })
+
   it('rejects href together with onActivate at the type level', () => {
     // @ts-expect-error a row has at most one target
     const bad = () => <ListRow title="x" href="/a" onActivate={() => {}} />

@@ -3,6 +3,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
+import { lineEntry } from '../../shop/lib/lines'
 import { makeLine, makeList } from '../../shop/testData'
 import { parse } from '../lib/barcode'
 import { createMemoryOpStore, createMemoryPictureStore } from '../lib/queue'
@@ -26,6 +27,7 @@ const h = vi.hoisted(() => ({
     product: vi.fn(),
     unarchiveProduct: vi.fn(),
   },
+  shopApi: { tick: vi.fn(), untick: vi.fn() },
   sessionDb: undefined as unknown,
 }))
 
@@ -38,6 +40,7 @@ vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices:
 vi.mock('../../stock/hooks/useStock', () => ({ useStockTotals: () => ({ data: [] }) }))
 vi.mock('../../../ui/Toast', () => ({ useToast: () => ({ show: h.toast }) }))
 vi.mock('../api', () => ({ scanApi: h.api }))
+vi.mock('../../shop/api', () => ({ shopApi: h.shopApi }))
 vi.mock('./useCamera', () => ({
   useCamera: () => ({ status: 'ready', videoRef: { current: null }, torchSupported: false, torchOn: false, toggleTorch: vi.fn(), frame: vi.fn(), retry: vi.fn() }),
 }))
@@ -90,6 +93,16 @@ describe('useScanController: the Scanned session', () => {
     const hook = useIt()
     await waitFor(() => expect(hook.result.current.scanned.toGetCount).toBe(2))
     expect(hook.result.current.scanned.toGet.map((l) => l.name)).toEqual(['Passata', 'Cheese'])
+  })
+
+  it('exposes toGetTick: ticking a To get Line is the Shop screen tick, for this Shop and the list range', async () => {
+    h.shopApi.tick.mockResolvedValue({ ticked: true, lotId: 1, created: true })
+    const hook = useIt()
+    await waitFor(() => expect(hook.result.current.scanned.toGetCount).toBe(2))
+    const [line] = hook.result.current.scanned.toGet
+    await act(() => hook.result.current.toGetTick.tick(lineEntry(line!, 'USD', 'metric')))
+    expect(h.shopApi.tick).toHaveBeenCalledWith(expect.objectContaining({ ingredientId: 2, quantity: 700, to: h.list && (h.list as { to: string }).to, shopId: 1 }))
+    expect(h.toast).toHaveBeenCalledWith('Passata ticked', expect.objectContaining({ actionLabel: 'Undo' }))
   })
 
   it('a scan made offline is a waiting row until the sync brings its Result', async () => {

@@ -1,4 +1,4 @@
-// "Something else" (SR5, 13.5 step 2): Ingredient | Supply as a Segmented, the Select of that kind with its create row, the Base Unit of a
+// "Something else" (SR5, 13.5 step 2): "What it is" with the Ingredient | Supply chips (KindChips), the Select of that kind with its create row, the Base Unit of a
 // new one, and the near-duplicate guard.
 import { Button, Segmented, Select } from '../../../ui'
 import type { SelectOption } from '../../../ui/Select/lib'
@@ -9,6 +9,7 @@ import { BASE_UNIT_CHOICES, choiceValue, kindChoiceOptions, NEW_CHOICE_VALUE } f
 import type { IngredientChoice } from '../lib/unknownForm'
 import type { BaseUnit } from '../types'
 import { newProductStrings } from '../newProductStrings'
+import { KindChips } from './KindChips'
 import './NewProductSheet.css'
 
 export interface NewProductKindProps {
@@ -27,18 +28,13 @@ export interface NewProductKindProps {
   onKeepNew: () => void
 }
 
-const KIND_OPTIONS: { value: IngredientKind; label: string }[] = [
-  { value: 'food', label: newProductStrings.kindIngredient },
-  { value: 'supply', label: newProductStrings.kindSupply },
-]
-
 export function NewProductKind(p: NewProductKindProps) {
   const label = p.kind === 'supply' ? newProductStrings.kindSupply : newProductStrings.kindIngredient
   const options: SelectOption<number>[] = kindChoiceOptions(p.choices, p.kind, p.chosen)
   const existing = p.guard.kind === 'exists' ? p.guard.ingredient : null
   return (
     <div className="new-product__kind">
-      <Segmented<IngredientKind> label={newProductStrings.kindLabel} options={KIND_OPTIONS} value={p.kind} onChange={p.onKind} />
+      <KindChips kind={p.kind} onKind={p.onKind} />
       <Select<number>
         label={label}
         searchable

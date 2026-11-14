@@ -38,6 +38,11 @@ interface ListRowBase {
    * on its own, like `panel`; the rest of the row stays the target.
    */
   footer?: ReactNode
+  /**
+   * Beta.8: the row's action is in flight (like Button's `loading`): the `li` is `aria-busy` and an `onActivate` target stays
+   * in place but is disabled, so a second tap does nothing and the row keeps its spot in the tab order.
+   */
+  busy?: boolean
 }
 
 /**
@@ -120,6 +125,7 @@ export function ListRow(props: ListRowProps) {
     wrapTitle,
     haspopup,
     footer,
+    busy,
   } = props
   const inRouter = useInRouterContext()
   const panelId = useId()
@@ -144,11 +150,22 @@ export function ListRow(props: ListRowProps) {
       />
     )
   } else if (onActivate) {
-    target = <button type="button" className="list-row__target" aria-label={label} aria-current={current} aria-haspopup={haspopup} onClick={onActivate} />
+    target = (
+      <button
+        type="button"
+        className="list-row__target"
+        aria-label={label}
+        aria-current={current}
+        aria-haspopup={haspopup}
+        disabled={busy || undefined}
+        onClick={onActivate}
+      />
+    )
   }
   return (
     <li
       {...passthroughData(props as unknown as Record<string, unknown>)}
+      aria-busy={busy ? true : undefined}
       className="list-row"
       data-height={height}
       data-selected={selected ? 'true' : undefined}
