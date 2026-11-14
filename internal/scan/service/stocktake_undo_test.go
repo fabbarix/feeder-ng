@@ -2,9 +2,11 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
+	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/scan"
 	"github.com/fabbarix/feeder-ng/internal/scan/service"
 )
@@ -166,5 +168,31 @@ func TestUndoGivesBackExactlyWhatThePortReported(t *testing.T) {
 	want := []service.TakenLot{{LotID: 900 + passataIng, LotJSON: `{"id":902}`, Taken: 700}}
 	if len(e.stock.givenBack) != 1 || !reflect.DeepEqual(e.stock.givenBack[0], want) {
 		t.Errorf("GiveBack got %+v, want %+v (the ledger keeps the takes verbatim)", e.stock.givenBack, want)
+	}
+}
+
+// A -1 pack recorded with nothing kept of what it took (before migration 1572, or with no StockTakes port) cannot be
+// undone, and Undo never panics when what it took was kept but the port is missing. A +1 pack can be: it names its Lot.
+func TestStockTakeUndoWithoutTheStockTakesPort(t *testing.T) {
+	e := newEnv(t)
+	e.stock.totals[passataIng] = 1000
+	withTakes := e.svc
+	e.svc = service.New(service.Deps{Ledger: e.ledger, Stock: e.stock, Catalogue: e.cat, Ingredients: e.ing, List: e.list,
+		Household: household{}, Dates: utcDates{}, Clock: clock.NewFake(startTime), Publisher: e.bus})
+	apply(t, e, stockTake("take-old", scan.MinusPack)) // recorded with no takes, as before 1572
+	if _, err := e.svc.Undo(context.Background(), "take-old"); !errors.Is(err, service.ErrNotUndoable) {
+		t.Errorf("Undo of a -1 pack with nothing recorded = %v, want ErrNotUndoable", err)
+	}
+	apply(t, e, stockTake("take-plus", scan.PlusPack))
+	if got := undo(t, e, "take-plus"); !got.Undone {
+		t.Errorf("Undo of a +1 pack = %+v, want undone by its Lot", got)
+	}
+
+	e.svc = withTakes
+	apply(t, e, stockTake("take-new", scan.MinusPack)) // what it took is kept
+	e.svc = service.New(service.Deps{Ledger: e.ledger, Stock: e.stock, Catalogue: e.cat, Ingredients: e.ing, List: e.list,
+		Household: household{}, Dates: utcDates{}, Clock: clock.NewFake(startTime), Publisher: e.bus})
+	if _, err := e.svc.Undo(context.Background(), "take-new"); !errors.Is(err, service.ErrNotUndoable) {
+		t.Errorf("Undo with takes but no StockTakes port = %v, want ErrNotUndoable", err)
 	}
 }

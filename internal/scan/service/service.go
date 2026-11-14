@@ -834,6 +834,9 @@ func (s *Service) undoStockTake(ctx context.Context, ev store.Event) (UndoResult
 			return UndoResult{}, err
 		}
 	}
+	if len(takes) > 0 && s.d.Takes == nil {
+		return UndoResult{}, ErrNotUndoable // what it took cannot be given back without the StockTakes port
+	}
 	done := map[string]bool{}
 	for _, st := range ev.UndoSteps {
 		done[st] = true
