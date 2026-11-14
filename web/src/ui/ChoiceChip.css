@@ -72,7 +72,7 @@
   flex: none;
   color: var(--color-muted);
   font-size: var(--text-chip-size);
-  line-height: var(--text-label-line);
+  line-height: var(--text-chip-line);
   font-weight: var(--text-meta-weight);
 }
 

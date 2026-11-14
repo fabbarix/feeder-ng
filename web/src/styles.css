@@ -48,6 +48,7 @@
   --text-overline-weight: 800;
   --text-overline-tracking: 0.04em;
   --text-chip-size: 0.75rem;
+  --text-chip-line: 1rem;
   --text-nav-size: 0.6875rem;
   --text-nav-weight: 800;
   /* Cook Mode's Step text keeps its size and is Medium (PC-03, SHORT-01): display text read at length is not extra-bold. */

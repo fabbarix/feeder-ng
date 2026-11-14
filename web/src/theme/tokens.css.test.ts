@@ -47,6 +47,8 @@ describe('type tokens (plan 3.2, DS-08): size and line in rem, weight unchanged'
   it('overline tracking and chip / nav label sizes', () => {
     expect(root['--text-overline-tracking']).toBe('0.04em')
     expect(root['--text-chip-size']).toBe('0.75rem')
+    // B9-07: the chip role's line (16 px), for a chip-size count or note that sets its own line
+    expect(root['--text-chip-line']).toBe('1rem')
     expect(root['--text-nav-size']).toBe('0.6875rem')
     expect(root['--text-nav-weight']).toBe('800')
   })
@@ -66,6 +68,7 @@ describe('type tokens (plan 3.2, DS-08): size and line in rem, weight unchanged'
       expect(px(root[`--text-${name}-line`]!), `${name} line`).toBe(line)
     }
     expect(px(root['--text-chip-size']!)).toBe(12)
+    expect(px(root['--text-chip-line']!)).toBe(16)
     expect(px(root['--text-nav-size']!)).toBe(11)
   })
   it('no type size is below 0.6875rem (nav, the one 11 px role) and only nav is below 0.75rem', () => {
