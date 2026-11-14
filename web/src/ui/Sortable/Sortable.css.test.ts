@@ -35,7 +35,7 @@ describe('the handle', () => {
     expect(d['-webkit-touch-callout']).toBe('none')
   })
   it('has a token focus ring', () => {
-    expect(declarations(css, '.sortable-handle:focus-visible')['outline']).toMatch(/var\(--color-accent\)/)
+    expect(declarations(css, '.sortable-handle:focus-visible')['outline']).toMatch(/var\(--focus-ring-color\)/)
   })
   it('is muted until pressed or hovered', () => {
     expect(declarations(css, '.sortable-handle')['color']).toBe('var(--color-muted)')

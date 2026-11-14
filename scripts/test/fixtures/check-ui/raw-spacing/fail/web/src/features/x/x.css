@@ -1,0 +1,7 @@
+/* B9-07 raw-spacing: 6 violations (one per declaration) */
+.a { padding: 6px 10px; }
+.b { margin-block: 2px; }
+.c { gap: 14px; }
+.d { padding-inline: calc(var(--space-2) + 3px); }
+.e { inset: auto 12px 10px; }
+.f { row-gap: 0.5rem; }

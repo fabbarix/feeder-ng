@@ -43,7 +43,7 @@
 }
 
 .page-header__subtitle {
-  margin: 2px 0 0;
+  margin: var(--space-half) 0 0;
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   color: var(--color-muted);

@@ -1,0 +1,6 @@
+/* B9-07 scheme-attr: 3 violations (one per selector or query line) */
+:root[data-theme='dark'] .a { color: var(--color-text); }
+:root:not([data-theme='light']) .b { color: var(--color-text); }
+@media (prefers-color-scheme: dark) {
+  .c { color: var(--color-text); }
+}

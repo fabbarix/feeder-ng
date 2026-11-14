@@ -35,6 +35,6 @@ describe('Button.css block', () => {
   })
 
   it("phone: full width below 600 px only", () => {
-    expect(css).toMatch(/@media\s*\(max-width:\s*599px\)\s*\{[^@]*\.button\[data-block='phone'\]\s*\{[^}]*inline-size:\s*100%/)
+    expect(css).toMatch(/@media\s*\(width < 37\.5em\)\s*\{[^@]*\.button\[data-block='phone'\]\s*\{[^}]*inline-size:\s*100%/)
   })
 })

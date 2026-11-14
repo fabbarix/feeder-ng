@@ -62,9 +62,15 @@ describe('Stepper size="sm" (compact)', () => {
     expect(declarations(stepper, ".stepper[data-size='sm']")['justify-self']).toBe('start')
   })
 
-  it('the Stepper value uses the single focus ring token, not its own outline', () => {
-    const d = declarations(stepper, '.stepper__value:focus-visible')
-    expect(d['box-shadow']).toBe('var(--focus-ring)')
-    expect(d['outline'] ?? 'none').toBe('none')
+  it('the Stepper value draws no ring of its own: the global outline layer (A11Y-02) rings it, no box-shadow ring', () => {
+    const d = (() => {
+      try {
+        return declarations(stepper, '.stepper__value:focus-visible')
+      } catch {
+        return {} as Record<string, string>
+      }
+    })()
+    expect(d['box-shadow'] ?? 'none').toBe('none')
+    expect(d['outline'] ?? 'inherit').not.toBe('none')
   })
 })

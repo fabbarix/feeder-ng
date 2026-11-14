@@ -20,7 +20,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: IconName
   /** Full width: 'phone' below 600 px, 'always', or 'never' (default). */
   block?: 'phone' | 'always' | 'never'
-  /** DS-03: 'narrow' shows only the icon in the narrow band (below 360 px); the label stays the accessible name. Needs `icon`. */
+  /** DS-03: 'narrow' shows only the icon in the narrow band (useNarrow: 375 px and below at 16 px text); the label stays the accessible name. Needs `icon`. */
   iconOnly?: 'narrow'
   /** The button element (React 19 ref-as-prop); merged with the Button's own ref. */
   ref?: Ref<HTMLButtonElement>

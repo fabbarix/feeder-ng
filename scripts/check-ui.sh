@@ -16,7 +16,8 @@
 #                       outside web/src/ui/ImagePicker (use <ImagePicker>); accept=".json" and display URLs like `/api/images/${id}` are fine,
 #                       and so is the capture prop of the shared <ImageFileInput> (capture={onPhone})
 #   type-scale      10  a font-size / font that is not a --text-* token (or inherit), outside a token block (:root, html[...]) (system.md 1)
-#   opacity-muting  11  opacity between 0.5 and 0.95 on a selector that is not a disabled state: mute text with --color-muted (system.md 2)
+#   opacity-muting  11  opacity between 0.05 and 0.95 (B9-07, DS-11; was 0.5) on a selector that is not a disabled state, a pseudo-element,
+#                       a @keyframes step, or a decorative element whose last compound names __glyph or __icon: mute text with --color-muted (system.md 2)
 #   word-break      12  hyphens: auto, overflow-wrap / word-wrap anywhere|break-word, word-break break-all|break-word, unless the selector
 #                       names a one-token value (email, url, link, barcode, code) (system.md 3)
 #
@@ -25,8 +26,10 @@
 #                                    defines rule_NAME (hyphens become underscores); the helpers viol, src_files, css_scan and
 #                                    code_match are there when the function runs. Drop-in rules run after the twelve above, in
 #                                    registration order. A registered rule without its function stops the run (exit 2).
-#   <rules file>.d/*                 more mode lines, read after the rules file, in name order (the later line wins). The default
+#   <rules file>.d/*                 more mode lines, read after the rules file, in name order (the later mode line wins). The default
 #                                    rules file is scripts/check-ui.rules, so scripts/check-ui.rules.d/*; `--rules F` reads F.d.
+#                                    `NAME.fail_paths=...` lines ADD UP (B9-07): every such line, in the rules file and in every
+#                                    rules.d file, adds its prefixes to the rule's fail paths, so a package lists only its own folders.
 #   Both directories are optional.
 #
 # colour-literals has a file-level allowlist, scripts/check-ui.allow-colours: `<path substring>   # reason`,
@@ -110,8 +113,12 @@ for RF in "${RULES_FILES[@]}"; do
     key="${key//[[:space:]]/}"; val="${val#"${val%%[![:space:]]*}"}"; val="${val%"${val##*[![:space:]]}"}"
     case "$key" in
       *.fail_paths) name="${key%.fail_paths}"; [ -n "${MODE[$name]+x}" ] || { echo "check-ui: unknown rule '$name' in $RF" >&2; exit 2; }
-                    norm=""; for p in $val; do norm+="${p%/} "; done   # "web/ui/" behaves like "web/ui"
-                    FAIL_PATHS[$name]="$norm" ;;
+                    # B9-07: fail_paths add up across lines and files (a sweep's rules.d file lists only its own folders); a prefix
+                    # already listed is not listed twice. "web/ui/" behaves like "web/ui".
+                    for p in $val; do
+                      p="${p%/}"
+                      case " ${FAIL_PATHS[$name]} " in *" $p "*) ;; *) FAIL_PATHS[$name]+="$p " ;; esac
+                    done ;;
       *) [ -n "${MODE[$key]+x}" ] || { echo "check-ui: unknown rule '$key' in $RF" >&2; exit 2; }
          case "$val" in warn|fail) MODE[$key]="$val" ;; *) echo "check-ui: rule '$key' must be warn or fail, got '$val'" >&2; exit 2 ;; esac ;;
     esac
@@ -528,18 +535,33 @@ rule_type_scale() {
 
 # ------------------------------------------------------------------ rule 11
 # DS-A (docs/design/system.md 2): muted text is --color-muted, never a partial opacity. Disabled controls may fade.
+# B9-07 (DS-11): 0.05 to 0.95 (a pressed state shown only by fading, 0.45, measured 2.8:1). Exempt, judged per selector of the list:
+# a disabled state; a pseudo-element (::before, ::after, ::placeholder ...); a @keyframes step (from, to, N%); and a decorative,
+# aria-hidden element whose last compound names __glyph or __icon.
 rule_opacity_muting() {
   local f
   while IFS= read -r f; do
     css_scan "$f" | awk -F'\t' -v F="$f" '
+      function lastc(t,   n, a) { gsub(/[ \t]*[>+~][ \t]*/, " ", t); gsub(/[ \t]+$/, "", t); n = split(t, a, /[ \t]+/); return a[n] }
+      function exempt(t,   l) {
+        gsub(/^[ \t]+|[ \t]+$/, "", t)
+        if (t ~ /:disabled|\[disabled|aria-disabled|data-disabled/) return 1
+        if (t ~ /^(from|to|[0-9.]+%)$/) return 1
+        l = lastc(t)
+        if (l ~ /::?(before|after|placeholder|marker|backdrop|selection|first-line|first-letter)([^a-z-]|$)/) return 1
+        if (l ~ /(__glyph|__icon)([^a-z-]|$)/) return 1
+        return 0
+      }
       $1 != "D" || $4 != "opacity" { next }
-      $3 ~ /:disabled|\[disabled|aria-disabled|data-disabled/ { next }
       {
+        k = split($3, parts, ","); all = 1
+        for (i = 1; i <= k; i++) if (!exempt(parts[i])) { all = 0; break }
+        if (all) next
         v = $5; sub(/[ \t]*!important.*$/, "", v)
         if (v ~ /^[0-9.]+%$/) { n = (v + 0) / 100 }
         else if (v ~ /^[0-9.]+$/) { n = v + 0 }
         else next
-        if (n >= 0.5 && n <= 0.95) print "opacity-muting\t" F "\t" $2 "\topacity " v " on \047" $3 "\047 mutes content; use --color-muted for muted text (system.md 2)"
+        if (n >= 0.05 && n <= 0.95) print "opacity-muting\t" F "\t" $2 "\topacity " v " on \047" $3 "\047 mutes content; use --color-muted for muted text (system.md 2)"
       }' >>"$VIOL"
   done < <(src_files css)
 }
@@ -613,7 +635,7 @@ for r in "${RULE_NAMES[@]}"; do
   done <"$OUT"
   total_fail=$((total_fail + failing))
   eff="${MODE[$r]}"
-  [ "$eff" = warn ] && [ -n "${FAIL_PATHS[$r]}" ] && eff="warn; fail in ${FAIL_PATHS[$r]}"
+  [ "$eff" = warn ] && [ -n "${FAIL_PATHS[$r]}" ] && eff="warn; fail in ${FAIL_PATHS[$r]% }"
   printf '  %-16s %4d violations  [%s]\n' "$r" "$count" "$eff"
   if [ "$count" -gt 0 ]; then
     if [ "$VERBOSE" = 1 ]; then limit=100000; else limit=5; fi

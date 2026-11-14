@@ -8,7 +8,7 @@
 /* The stage pads the picture by half a handle (22 px) all round and does NOT clip: the 44 px handles and the focus outline
    overhang the picture's edge. Only the canvas (the picture and the dimming shade) clips. */
 .crop-editor__stage {
-  padding: 22px;
+  padding: calc(var(--target-min) / 2);
   user-select: none;
   -webkit-user-select: none;
 }
@@ -71,8 +71,8 @@
 
 .crop-editor__box:focus-visible,
 .crop-editor__handle:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* 44 px hit area centred on the corner or edge middle; the dot is drawn by ::before. */

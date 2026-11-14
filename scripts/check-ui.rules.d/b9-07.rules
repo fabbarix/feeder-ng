@@ -1,0 +1,15 @@
+# B9-07 (plan section 9, rules 17-19, 21, 22 and the wider opacity-muting): the sweep detectors. Each warns, and fails under
+# web/src/ui and web/src/app, which B9-07 swept. fail_paths lines add up across rules files (scripts/check-ui.sh), so the feature
+# sweeps (B9-08, B9-09, B9-10) each list only their own folders in their own rules.d file; B9-55 flips the rest.
+raw-radius=warn
+raw-radius.fail_paths=web/src/ui web/src/app
+raw-spacing=warn
+raw-spacing.fail_paths=web/src/ui web/src/app
+media-width=warn
+media-width.fail_paths=web/src/ui web/src/app
+focus-ring=warn
+focus-ring.fail_paths=web/src/ui web/src/app
+scheme-attr=warn
+scheme-attr.fail_paths=web/src/ui web/src/app
+# opacity-muting is built in (0.05 to 0.95 since B9-07); the folders already clean before the widening keep failing.
+opacity-muting.fail_paths=web/src/ui web/src/app web/src/features/shop web/src/features/today web/src/features/plan web/src/features/tags

@@ -37,6 +37,7 @@
 .gallery__caption {
   margin: 0;
   font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
   font-weight: var(--text-overline-weight);
   color: var(--color-muted);
 }
@@ -62,7 +63,8 @@
 /* Static focus state so the ring is visible in the catalogue. */
 [data-gallery-focus] .ui-field__control {
   border-color: var(--color-accent);
-  box-shadow: var(--focus-ring);
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 0;
 }
 
 /* Page and StickyActionBar demos: a framed box, so the Page centres inside it (the frame is not the viewport). */

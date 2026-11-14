@@ -1,8 +1,8 @@
 .viewfinder-strip {
   display: grid;
-  gap: 8px;
-  border-radius: 24px;
-  padding: 8px;
+  gap: var(--space-2);
+  border-radius: var(--radius-tile);
+  padding: var(--space-2);
   background: var(--color-surface-2);
 }
 
@@ -10,7 +10,7 @@
   position: relative;
   height: 140px;
   overflow: hidden;
-  border-radius: 20px;
+  border-radius: var(--radius-tile-sm);
   background: var(--viewfinder-frame);
 }
 
@@ -45,16 +45,17 @@
   position: absolute;
   inset: 22% 28%;
   border: 2px solid var(--viewfinder-reticle);
-  border-radius: 12px;
+  border-radius: var(--radius-thumb);
   pointer-events: none;
 }
 
 .viewfinder-strip__status {
   position: absolute;
-  inset: auto 12px 10px;
+  inset: auto var(--space-3) var(--space-2);
   margin: 0;
   color: var(--viewfinder-reticle);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   text-align: center;
   /* White on the fixed dark frame is 18.6:1 in both schemes; the halo keeps it legible over a bright live picture. */
   text-shadow: 0 0 4px var(--viewfinder-frame), 0 1px 2px var(--viewfinder-frame);
@@ -63,7 +64,7 @@
 .viewfinder-strip__controls {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 @media (prefers-reduced-motion: reduce) {

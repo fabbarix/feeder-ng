@@ -22,7 +22,7 @@ describe('TagColour.css', () => {
   })
   it('the chosen swatch has a ring and the focus ring is visible', () => {
     expect(declarations(css, ".tag-swatch[aria-checked='true']")['box-shadow']).toContain('var(--color-accent)')
-    expect(declarations(css, '.tag-swatch:focus-visible').outline).toContain('var(--color-accent)')
+    expect(declarations(css, '.tag-swatch:focus-visible').outline).toContain('var(--focus-ring-color)')
   })
   it('uses no colour literal: tokens only', () => {
     expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|oklch\(/i)
