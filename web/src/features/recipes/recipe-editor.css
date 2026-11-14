@@ -225,8 +225,8 @@
   align-self: flex-end;
   display: grid;
   place-items: center;
-  /* The 44 px target spills 6 px each side over the padding and gap, so the picker keeps as much room as possible. */
-  inline-size: 32px;
+  /* The whole 44 px target: a narrower column let it spill over the picker, and their focus rings met (A11Y-02). */
+  inline-size: var(--target-min);
 }
 
 .line-row__ingredient > :not(.line-row__handle) {
@@ -273,7 +273,7 @@
   grid-area: remove;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2); /* A11Y-02: the ⋮ and remove rings (3 px + 2 px offset) never touch. */
   align-self: center;
   justify-self: end;
 }
@@ -480,7 +480,7 @@
 @container editor-lines (min-width: 49rem) {
   .recipe-editor__lines-head,
   .line-row {
-    grid-template-columns: minmax(0, 1.4fr) 88px 120px minmax(0, 1fr) 84px;
+    grid-template-columns: minmax(0, 1.4fr) 88px 120px minmax(0, 1fr) 88px;
   }
 
   .recipe-editor__lines-head {
