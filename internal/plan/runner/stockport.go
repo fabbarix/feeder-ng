@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -126,7 +127,49 @@ func (a *StockService) DeductCookedTx(ctx context.Context, tx *sql.Tx, needs []N
 		warnings = append(warnings, Warning{IngredientID: w.IngredientID, Name: w.Name, BaseUnit: w.BaseUnit,
 			Have: w.Have, Need: w.Need, Shortfall: w.Shortfall, Message: w.Message})
 	}
-	return Deduction{Warnings: warnings, Handle: d}, nil
+	takes, err := takesOf(d.Takes)
+	if err != nil {
+		return Deduction{}, err
+	}
+	return Deduction{Warnings: warnings, Handle: d, Takes: takes}, nil
+}
+
+// takesOf turns the Stock service's Lot takes into the runner's (the Lot as it was, as JSON).
+func takesOf(in []stockservice.LotTake) ([]Take, error) {
+	out := make([]Take, 0, len(in))
+	for _, t := range in {
+		lot, err := json.Marshal(t.Lot)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, Take{IngredientID: t.Lot.IngredientID, LotID: t.Lot.ID, Taken: t.Taken, LotJSON: lot})
+	}
+	return out, nil
+}
+
+// GiveBackTx implements TakeGiver: the Stock a Cooked took goes back inside tx (stock service GiveBackTx). A Lot deleted
+// since is reported Gone.
+func (a *StockService) GiveBackTx(ctx context.Context, tx *sql.Tx, takes []Take) (GiveBackResult, error) {
+	in := make([]stockservice.LotTake, 0, len(takes))
+	for _, t := range takes {
+		var lot stockstore.StoredLot
+		if err := json.Unmarshal(t.LotJSON, &lot); err != nil {
+			return GiveBackResult{}, fmt.Errorf("runner: a recorded Stock Lot %d cannot be read: %w", t.LotID, err)
+		}
+		in = append(in, stockservice.LotTake{Lot: lot, Taken: t.Taken})
+	}
+	o, err := a.svc.GiveBackTx(ctx, tx, in)
+	if err != nil {
+		return GiveBackResult{}, err
+	}
+	return GiveBackResult{Restored: o.Restored, Gone: o.Gone, Handle: o}, nil
+}
+
+// PublishGiveBack implements TakeGiver: the `stock` event, after the commit.
+func (a *StockService) PublishGiveBack(r GiveBackResult) {
+	if o, ok := r.Handle.(stockservice.GiveBackOutcome); ok {
+		a.svc.PublishGiveBack(o)
+	}
 }
 
 // DeductCookedPickedTx implements PickedDeducter: the Used from deduction for the meals (Course order), inside tx.
@@ -159,7 +202,11 @@ func (a *StockService) DeductCookedPickedTx(ctx context.Context, tx *sql.Tx, mea
 		warnings = append(warnings, Warning{IngredientID: w.IngredientID, Name: w.Name, BaseUnit: w.BaseUnit,
 			Have: w.Have, Need: w.Need, Shortfall: w.Shortfall, Message: w.Message})
 	}
-	return Deduction{Warnings: warnings, Handle: d.Deduction}, nil
+	takes, err := takesOf(d.Takes)
+	if err != nil {
+		return Deduction{}, err
+	}
+	return Deduction{Warnings: warnings, Handle: d.Deduction, Takes: takes}, nil
 }
 
 // PreviewCooked implements CookPreviewer: the Lots of each need in default order, read-only.
@@ -204,3 +251,5 @@ func (a *StockService) RecordLeftoverWasteTx(ctx context.Context, tx *sql.Tx, w 
 		Reason: stockstore.ReasonLeftoverDiscarded, WastedOn: stock.Date(w.On)})
 	return err
 }
+
+var _ TakeGiver = (*StockService)(nil)

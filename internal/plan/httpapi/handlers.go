@@ -149,12 +149,24 @@ func (a *api) regenerate(w http.ResponseWriter, r *http.Request) {
 		a.regenerateDryRun(w, r)
 		return
 	}
-	sum, err := a.run.Regenerate(r.Context())
+	ctx, o := runner.WithOutcome(actorCtx(r))
+	sum, err := a.run.Regenerate(ctx)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]int{"placed": sum.Placed, "kept": sum.Kept, "unfilled": sum.Unfilled})
+	t, err := a.names.load(r.Context())
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	// SAFE-07: changed is the count the toast says; changes and undoToken as every replanning write (B9-11).
+	out := map[string]any{"placed": sum.Placed, "kept": sum.Kept, "unfilled": sum.Unfilled, "changed": len(o.Changes),
+		"changes": changesFor(o.Changes, t)}
+	if o.UndoToken != "" {
+		out["undoToken"] = o.UndoToken
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // regenerateDryRunOut is POST /api/plan/regenerate?dryRun=1: how many Planned Meals Regenerate would replace, and the
@@ -222,29 +234,31 @@ func (a *api) setMeal(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
+	ctx, o := runner.WithOutcome(actorCtx(r))
 	if body.LeftoverID != 0 {
-		res, err := a.run.PickLeftover(r.Context(), k, body.LeftoverID)
+		res, err := a.run.PickLeftover(ctx, k, body.LeftoverID)
 		if err != nil {
 			writeErr(w, err)
 			return
 		}
-		a.putMeal(w, r, res)
+		a.putMeal(w, r, res, o)
 		return
 	}
 	if body.RecipeID <= 0 {
 		writeErr(w, runner.ErrUnknownRecipe)
 		return
 	}
-	res, err := a.run.SetCourseMeal(r.Context(), k, body.RecipeID, body.Batches)
+	res, err := a.run.SetCourseMeal(ctx, k, body.RecipeID, body.Batches)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	a.putMeal(w, r, res)
+	a.putMeal(w, r, res, o)
 }
 
-// putMeal answers a set meal (by Recipe or by Leftover): the meal and the Courses a Whole meal covered.
-func (a *api) putMeal(w http.ResponseWriter, r *http.Request, res runner.SetResult) {
+// putMeal answers a set meal (by Recipe or by Leftover): the meal, the Courses a Whole meal covered, and the other cells
+// the write changed with its undo token.
+func (a *api) putMeal(w http.ResponseWriter, r *http.Request, res runner.SetResult, o *runner.Outcome) {
 	t, err := a.names.load(r.Context(), &res.Meal)
 	if err != nil {
 		writeErr(w, err)
@@ -252,7 +266,7 @@ func (a *api) putMeal(w http.ResponseWriter, r *http.Request, res runner.SetResu
 	}
 	covered := make([]int64, 0, len(res.Covered))
 	covered = append(covered, res.Covered...)
-	httpx.WriteJSON(w, http.StatusOK, putOut{mealOut: mealFor(res.Meal, t), Covered: covered})
+	httpx.WriteJSON(w, http.StatusOK, putOut{mealOut: mealFor(res.Meal, t), Covered: covered, replanOut: replanFor(o, t)})
 }
 
 func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
@@ -261,8 +275,9 @@ func (a *api) confirm(w http.ResponseWriter, r *http.Request) {
 		unknownSlot(w)
 		return
 	}
-	m, err := a.run.Confirm(r.Context(), k)
-	a.mealReply(w, r, m, err)
+	ctx, o := runner.WithOutcome(actorCtx(r))
+	m, err := a.run.Confirm(ctx, k)
+	a.mealReplanReply(w, r, m, o, err)
 }
 
 func (a *api) unpin(w http.ResponseWriter, r *http.Request) {
@@ -271,8 +286,9 @@ func (a *api) unpin(w http.ResponseWriter, r *http.Request) {
 		unknownSlot(w)
 		return
 	}
-	m, err := a.run.Unpin(r.Context(), k)
-	a.mealReply(w, r, m, err)
+	ctx, o := runner.WithOutcome(actorCtx(r))
+	m, err := a.run.Unpin(ctx, k)
+	a.mealReplanReply(w, r, m, o, err)
 }
 
 func (a *api) alternatives(w http.ResponseWriter, r *http.Request) {
@@ -335,7 +351,7 @@ func (a *api) cooked(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, err)
 		return
 	}
-	res, err := a.run.CookedUsing(r.Context(), k, body.LeftoverPortions, usedFromOf(body.UsedFrom))
+	res, err := a.run.CookedUsing(actorCtx(r), k, body.LeftoverPortions, usedFromOf(body.UsedFrom))
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -369,7 +385,7 @@ func (a *api) notCooked(w http.ResponseWriter, r *http.Request) {
 		unknownSlot(w)
 		return
 	}
-	m, err := a.run.NotCooked(r.Context(), k)
+	m, err := a.run.NotCooked(actorCtx(r), k)
 	a.mealReply(w, r, m, err)
 }
 
@@ -399,7 +415,7 @@ func (a *api) allCooked(w http.ResponseWriter, r *http.Request) {
 		list = append(list, runner.CourseLeftover{CourseID: c.CourseID, LeftoverPortions: c.LeftoverPortions,
 			UsedFrom: usedFromOf(c.UsedFrom)})
 	}
-	res, err := a.run.CookedAll(r.Context(), k.Date, k.MealSlotID, list)
+	res, err := a.run.CookedAll(actorCtx(r), k.Date, k.MealSlotID, list)
 	if err != nil {
 		var ce *runner.CourseError
 		if errors.As(err, &ce) {
@@ -447,7 +463,7 @@ func (a *api) notCookedAll(w http.ResponseWriter, r *http.Request) {
 		unknownSlot(w)
 		return
 	}
-	changed, err := a.run.NotCookedAll(r.Context(), k.Date, k.MealSlotID)
+	changed, err := a.run.NotCookedAll(actorCtx(r), k.Date, k.MealSlotID)
 	if err != nil {
 		writeErr(w, err)
 		return

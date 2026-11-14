@@ -52,6 +52,8 @@ type CourseView struct {
 	History         bool   // a Course the slot no longer serves, shown for its Cooked or Not cooked meal
 	// Warning (B5-BO): the Pinned or Bought Planned Meal now breaks a hard rule (plan.HardRuleWarning), else nil.
 	Warning *plan.Warning
+	// Resolution (B9-11) is how a Cooked or Not cooked meal was marked and whether it can be reopened; nil on an open meal.
+	Resolution *Resolution
 }
 
 // MainCourseID is the real id of the main Course.
@@ -250,7 +252,9 @@ func (r *Runner) slotDay(ctx context.Context, st *store.Store, in info, date str
 // slot has no Planned Meal that day), plan.ErrFutureMeal before the day, ErrAlreadyResolved when none is left.
 func (r *Runner) NotCookedAll(ctx context.Context, date string, mealSlotID int64) ([]plan.Meal, error) {
 	var keys []plan.Key
-	_, err := r.write(ctx, plan.ReasonNotCooked, runOpts{}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	mk := &marking{} // B9-11: what Reopen gives back
+	_, err := r.write(ctx, plan.ReasonNotCooked, runOpts{onDiff: mk.record(r)}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+		*mk = marking{}
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -274,6 +278,7 @@ func (r *Runner) NotCookedAll(ctx context.Context, date string, mealSlotID int64
 				return nil, err
 			}
 			keys = append(keys, m.Key)
+			mk.marks = append(mk.marks, mark{key: m.Key, kind: store.MarkNotCooked})
 		}
 		if len(keys) == 0 {
 			return nil, ErrAlreadyResolved
@@ -324,6 +329,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 	var keys []plan.Key
 	var made []plan.Leftover
 	var deduction *Deduction
+	mk := &marking{} // B9-11: what Reopen gives back
 	afterReplan := func(ctx context.Context, st *store.Store) error {
 		in, err := r.info(ctx)
 		if err != nil {
@@ -351,7 +357,8 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 		}
 		return nil
 	}
-	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{afterPlan: afterReplan}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+	_, err := r.write(ctx, plan.ReasonLeftoversChanged, runOpts{afterPlan: afterReplan, onDiff: mk.record(r)}, func(tx *sql.Tx, st *store.Store) (func(), error) {
+		*mk = marking{}
 		in, err := r.info(ctx)
 		if err != nil {
 			return nil, err
@@ -403,7 +410,8 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 			if !ok {
 				i = -1
 			}
-			meal, n, err := r.cookInAll(withTx(ctx, tx), book, st, in, si, m, recipes, lo, listed[real].UsedFrom, i)
+			mk.marks = append(mk.marks, mark{key: m.Key, kind: store.MarkCooked})
+			meal, n, err := r.cookInAll(withTx(ctx, tx), book, st, in, si, m, recipes, lo, listed[real].UsedFrom, i, &mk.marks[len(mk.marks)-1])
 			if err != nil {
 				return nil, err
 			}
@@ -433,6 +441,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 		if len(needs) > 0 || anyPicks(meals) {
 			res.Warnings = d.Warnings
 			deduction = &d
+			mk.takes = d.Takes
 		}
 		return func() {
 			if deduction != nil {
@@ -454,7 +463,7 @@ func (r *Runner) CookedAll(ctx context.Context, date string, mealSlotID int64, c
 // source; fresh ones record their Leftover). It returns the meal to deduct (nil for a Leftover-served one) and the
 // Leftover made. index is the request's entry (-1: none). Picks on a Leftover-served meal are ErrUsedFromInvalid.
 func (r *Runner) cookInAll(ctx context.Context, book *needsBook, st *store.Store, in info, si plan.SlotInfo, m plan.Meal,
-	recipes []planner.Recipe, listedPortions *float64, usedFrom []UsedFrom, index int) (*CookedMeal, *plan.Leftover, error) {
+	recipes []planner.Recipe, listedPortions *float64, usedFrom []UsedFrom, index int, mk *mark) (*CookedMeal, *plan.Leftover, error) {
 	need := cellPortions(si, m.Key.CourseID)
 	if !m.Fresh() {
 		if hasPicks(usedFrom) {
@@ -469,6 +478,7 @@ func (r *Runner) cookInAll(ctx context.Context, book *needsBook, st *store.Store
 		}
 		if src != nil {
 			left := max(src.Portions-need, 0)
+			mk.sourceID, mk.sourceTaken = src.ID, src.Portions-left
 			if err := st.SetLeftoverPortions(ctx, src.ID, left); err != nil {
 				return nil, nil, err
 			}
@@ -506,6 +516,7 @@ func (r *Runner) cookInAll(ctx context.Context, book *needsBook, st *store.Store
 			return nil, nil, err
 		}
 		made = &l
+		mk.leftoverID, mk.leftoverPortions = l.ID, l.Portions
 	}
 	if err := r.unpinMisfits(ctx, st, m.Key, portions, in); err != nil {
 		return nil, nil, err

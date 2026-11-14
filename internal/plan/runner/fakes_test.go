@@ -152,6 +152,12 @@ type fakeStock struct {
 	deductErr  error
 	wasteErr   error
 	events     *[]string // shared log of "deduct", "commit-visible" ordering checks (optional)
+	// B9-11: what Reopen puts back. A take is one fake Lot per Ingredient (id 1000 + the Ingredient's id); gone names Lots
+	// that were deleted since, which GiveBackTx reports and does not restore.
+	giveBacks         [][]runner.Take
+	gone              map[int64]bool
+	giveBackErr       error
+	giveBackPublished []runner.GiveBackResult
 }
 
 func (f *fakeStock) Lots(context.Context) ([]planner.StockLot, map[planner.IngredientID]int, error) {
@@ -165,7 +171,41 @@ func (f *fakeStock) DeductCookedTx(_ context.Context, tx *sql.Tx, needs []runner
 	}
 	f.deductions = append(f.deductions, append([]runner.Need(nil), needs...))
 	f.inTx = append(f.inTx, tx != nil)
-	return runner.Deduction{Warnings: f.warnings, Handle: len(f.deductions)}, nil
+	var takes []runner.Take
+	for _, n := range needs {
+		takes = append(takes, runner.Take{IngredientID: n.IngredientID, LotID: 1000 + n.IngredientID, Taken: n.Quantity,
+			LotJSON: []byte(fmt.Sprintf(`{"id":%d,"ingredientId":%d}`, 1000+n.IngredientID, n.IngredientID))})
+	}
+	return runner.Deduction{Warnings: f.warnings, Handle: len(f.deductions), Takes: takes}, nil
+}
+
+// GiveBackTx implements runner.TakeGiver.
+func (f *fakeStock) GiveBackTx(_ context.Context, tx *sql.Tx, takes []runner.Take) (runner.GiveBackResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.giveBackErr != nil {
+		return runner.GiveBackResult{}, f.giveBackErr
+	}
+	if tx == nil {
+		return runner.GiveBackResult{}, errors.New("GiveBackTx without a transaction")
+	}
+	f.giveBacks = append(f.giveBacks, append([]runner.Take(nil), takes...))
+	var res runner.GiveBackResult
+	for _, t := range takes {
+		if f.gone[t.LotID] {
+			res.Gone = append(res.Gone, t.LotID)
+		} else {
+			res.Restored = append(res.Restored, t.LotID)
+		}
+	}
+	return res, nil
+}
+
+// PublishGiveBack implements runner.TakeGiver.
+func (f *fakeStock) PublishGiveBack(r runner.GiveBackResult) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.giveBackPublished = append(f.giveBackPublished, r)
 }
 func (f *fakeStock) PublishDeduction(d runner.Deduction) {
 	f.mu.Lock()
@@ -196,15 +236,34 @@ func (f *fakeStock) RecordLeftoverWaste(_ context.Context, w runner.LeftoverWast
 	return nil
 }
 
+type busEvent struct {
+	topic string
+	data  any
+}
+
 type fakeBus struct {
 	mu     sync.Mutex
 	topics []string
+	sent   []busEvent // B9-11: topic and data of every event
 }
 
-func (b *fakeBus) Publish(topic string, _ any) {
+func (b *fakeBus) Publish(topic string, data any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.topics = append(b.topics, topic)
+	b.sent = append(b.sent, busEvent{topic, data})
+}
+
+// last is the data of the latest event on the topic (nil when there is none).
+func (b *fakeBus) last(topic string) any {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for i := len(b.sent) - 1; i >= 0; i-- {
+		if b.sent[i].topic == topic {
+			return b.sent[i].data
+		}
+	}
+	return nil
 }
 func (b *fakeBus) count(topic string) int {
 	b.mu.Lock()
