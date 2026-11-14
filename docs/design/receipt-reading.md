@@ -266,8 +266,14 @@ objects inside arrays of objects.
 `additionalProperties: false`; at most one array, and no array or object property inside its items; at most 16 properties in total
 (a new field needs a deliberate change to the test, and a run of the live test below).
 
-**Live tests** (opt-in, billed a few tokens, never in CI): the schema and the fixture reads against the real API are listed, with
-their switches and the key they use, in [docs/dev/live-tests.md](../dev/live-tests.md). The key lookup order is defined there too.
+**Live tests** (opt-in, billed a few tokens, never in CI). What they check:
+- `TestLiveReceiptSchemaCompiles` (`internal/recipeassistant/claude`) sends the exact `receipt.OutputSchema()` with a one-line
+  message and `MaxTokens: 16` to the default model, and passes only on success or `CodeOutputTooLong` (a cut-off answer proves the
+  schema compiled; a refused schema fails before any token);
+- `TestLiveReceiptReadCompletes` (`internal/receipt/service`) reads a synthetic receipt image (drawn by the test, no real purchase)
+  through the whole read service with the real adapter, and checks that the read completes with at least one proposal.
+
+How to switch them on, and the one rule for the key they use, are in [docs/dev/live-tests.md](../dev/live-tests.md).
 
 ### 5.1 Finish: from the answer to a checked result
 
@@ -503,7 +509,7 @@ RR0 ─► RR1 ─┬─► RR2 ───────────┐
 - **Go, service**: the read job with the fake Claude (done, refusal, timeout, invalid output, cancel); Limiter sharing with recipe
   reads; photos never written to disk; the apply plan end to end on a real SQLite (prices, weights, quantities, Shop and date,
   Add of a new Supply, Remove), the fingerprint 409, and compensation after an injected failure at each step (nothing left changed).
-- **Opt-in live**: see [docs/dev/live-tests.md](../dev/live-tests.md) (§5).
+- **Opt-in live**: `TestLiveReceiptSchemaCompiles`, `TestLiveReceiptReadCompletes` (§5; how to run them: [docs/dev/live-tests.md](../dev/live-tests.md)).
 - **Web (Vitest)**: `reviewState` (defaults, Accept all, Clear all, Add needing its form), totals note, offline and waiting states,
   privacy note present, `ConfirmDialog` on leaving; component tests of each section.
 - **BDD**: §10 RR5.
