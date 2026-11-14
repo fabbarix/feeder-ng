@@ -62,7 +62,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
   const hint = pastMealsHint(line.pastPlannedMeals)
   const markIt = hint ? markItTarget(line.pastPlannedMeals) : null
   return {
-    ...(hint ? { hint, hintShort: shopStrings.includes(slotsLabel(line.pastPlannedMeals, false)) } : {}),
+    ...(hint ? { hint, hintShort: shortHint(line.pastPlannedMeals) } : {}),
     ...(markIt ? { markIt } : {}),
     key: `line:${line.ingredientId}`,
     kind: 'line',
@@ -124,6 +124,18 @@ export function listEntries(list: ShoppingList, system: UnitSystem): { open: Lis
 export function pastMealsHint(meals: PastPlannedMeal[] | undefined): string {
   if (!meals || meals.length === 0) return ''
   return shopStrings.unconfirmedMeals(slotsLabel(meals))
+}
+
+/**
+ * b8-shop: the one-line hint of a card: the oldest slot, then "+n" for the other slots ("Includes Tue Dinner +1"), so the text fits the
+ * card grid's text column. Courses do not count; the sheet's full hint keeps every slot. '' without meals.
+ */
+export function shortHint(meals: PastPlannedMeal[] | undefined): string {
+  if (!meals || meals.length === 0) return ''
+  const oldest = [...meals].sort((a, b) => a.date.localeCompare(b.date) || a.mealSlotId - b.mealSlotId)[0]!
+  const slots = new Set(meals.map((m) => `${m.date}|${m.mealSlotId}`)).size
+  const first = slotsLabel([oldest], false)
+  return slots > 1 ? shopStrings.includesMore(first, slots - 1) : shopStrings.includes(first)
 }
 
 /** B5-F1: the oldest slot among the unconfirmed past meals (by date, then Meal Slot id); null without any. */

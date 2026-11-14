@@ -23,15 +23,6 @@
   min-inline-size: 0;
 }
 
-/* beta.7 (page-layout guard, P22 at 360 px): below 420 px the two header chips drop their leading icons, as the filter headers' Sort
-   chip does (docs/design/pantry-filter.md 3, the user's decision there), so "Until Fri 20" and "Any Shop" show in full on one row at
-   360 px. Each combobox keeps its name; its chevron still says it is a picker. */
-@media (width < 420px) {
-  .shop-screen__controls .select__leading {
-    display: none;
-  }
-}
-
 /* The Shop select with "Find the Shop I am in" beside it, bottom-aligned with the field. */
 .shop-screen__shop {
   display: flex;
@@ -210,6 +201,8 @@
     border-radius: var(--radius-tile-sm);
     background: var(--color-surface);
     overflow: hidden;
+    /* b8-shop: the card's text column gets room for the Shop hint ("Includes Tue Dinner +1") */
+    --row-value-min: var(--row-value-narrow);
   }
 
   .shop-lines .list-row + .list-row {

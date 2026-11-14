@@ -64,6 +64,8 @@
   /* List rows (system.md 3): at least 64 px; the value column keeps quantities in one column. */
   --row-min: 64px;
   --row-value-min: 5.5rem;
+  /* the value column of a row in the Shop's card grid (b8-shop): the phone minimum, 20 px more for the text */
+  --row-value-narrow: 4.25rem;
   /* ActionGroup (system.md 5): the minimum width of a group in a wide row (the widest real group needs 18 rem). */
   --action-group-min-inline-size: 18rem;
   /* Section rhythm (system.md 8): the gap between the sections of a Page. */
@@ -121,6 +123,8 @@
   --color-accent: #34724e;
   --color-on-accent: #ffffff;
   --color-accent-text: #135533;
+  /* the brand's heart (docs/brand/master/mark-small.svg), for the phone wordmark's mark (b8-shop) */
+  --brand-heart: #e0763a;
   --color-soft: #bfebcd;
   --color-soft-strong: #9addb2;
   --status-leftover-fg: #065353;
@@ -192,7 +196,7 @@
 /* Phone: a value column that gives the name the room (system.md 3). */
 @media (max-width: 599px) {
   :root {
-    --row-value-min: 4.25rem;
+    --row-value-min: var(--row-value-narrow);
   }
 }
 
@@ -238,6 +242,7 @@
     --color-accent: #89c8a0;
     --color-on-accent: #051b0e;
     --color-accent-text: #a2e3b9;
+    --brand-heart: #f4a36b;
     --color-soft: #143c25;
     --color-soft-strong: #144f30;
     --status-leftover-fg: #85e4e3;
@@ -301,6 +306,7 @@
   --color-accent: #89c8a0;
   --color-on-accent: #051b0e;
   --color-accent-text: #a2e3b9;
+  --brand-heart: #f4a36b;
   --color-soft: #143c25;
   --color-soft-strong: #144f30;
   --status-leftover-fg: #85e4e3;

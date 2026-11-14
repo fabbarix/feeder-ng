@@ -38,6 +38,8 @@ export interface UnitChoices {
 export interface ShopChoice {
   id: number
   name: string
+  /** b8-shop: the value a narrow chip shows instead of the name (the list keeps the name). */
+  shortName?: string
 }
 export interface MealSlotChoice {
   id: number
@@ -128,7 +130,12 @@ export function unitOptions(units: UnitChoices): SelectOption<string>[] {
 
 /** Input order; leading = Storefront icon. */
 export function shopOptions(shops: ShopChoice[]): SelectOption<number>[] {
-  return shops.map((s) => ({ value: s.id, label: s.name, leading: <Icon name="shops" size={20} /> }))
+  return shops.map((s) => ({
+    value: s.id,
+    label: s.name,
+    ...(s.shortName ? { triggerLabel: s.shortName } : {}),
+    leading: <Icon name="shops" size={20} />,
+  }))
 }
 
 /** Grouped by weekday name, ordered by weekday then time; label = name, meta = time; leading = slot icon. */

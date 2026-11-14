@@ -19,6 +19,8 @@ export const shopStrings = {
   locationFailed: 'Could not find where you are',
   addShopNamed: (name: string) => `Add Shop "${name}"`,
   anyShop: 'Any Shop',
+  // b8-shop: the narrow Shop chip shows "Any" (the storefront icon says Shop)
+  anyShopShort: 'Any',
   loadFailed: 'The Shopping List could not be loaded.',
   extraTick: (name: string) => `Tick ${name}`,
   unpriced: (n: number) => (n === 1 ? '1 Line has no Price yet' : `${n} Lines have no Price yet`),
@@ -70,6 +72,8 @@ export const shopStrings = {
   neededAfterAll: 'Needed after all',
   markIt: 'Mark it',
   includes: (slots: string) => `Includes ${slots}`,
+  // b8-shop: the one-line hint names the first slot and counts the rest ("Includes Tue Dinner +1")
+  includesMore: (slot: string, n: number) => `Includes ${slot} +${n}`,
   unconfirmedMeals: (slots: string) => `Includes ${slots}, not marked Cooked yet`,
   // DS-SHOP round 2: the short notice ("Tue Dinner isn't marked Cooked yet") and the metric strip's meta line
   isnt: " isn't marked Cooked yet",
