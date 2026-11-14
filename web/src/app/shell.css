@@ -20,6 +20,15 @@
   display: block;
   padding: 0;
   min-height: 100dvh;
+  /* No bottom bar here: a sticky action bar floats a gutter above the viewport edge. */
+  --nav-top: 0px;
+  --nav-clearance: 0px;
+}
+
+/* A chromeless screen that is a ui Page (the receipt screens) has no top bar above it: the gutter keeps its header off the edge,
+   and the page ends a gutter above the bottom. */
+.app-shell--chromeless .page {
+  padding-block: var(--page-gutter);
 }
 
 .top-bar {

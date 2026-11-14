@@ -29,13 +29,16 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
   const { pathname } = useLocation()
   const pageWidth = pageWidthFor(pathname)
   if (isChromeless(pathname)) {
-    // The kitchen board and Cook Mode: the page alone, no bars, no avatar menu, no status slot.
+    // The kitchen board, Cook Mode and the receipt screens: the page alone, no bars, no avatar menu, no status slot. A screen
+    // that is a ui Page (the receipt ones) still takes its route's width from the table.
     return (
       <div className="app-shell app-shell--chromeless">
         <main className="app-main app-main--full">
-          <PageErrorBoundary resetKey={pathname}>
-            <Outlet />
-          </PageErrorBoundary>
+          <PageWidthProvider value={pageWidth}>
+            <PageErrorBoundary resetKey={pathname}>
+              <Outlet />
+            </PageErrorBoundary>
+          </PageWidthProvider>
         </main>
       </div>
     )

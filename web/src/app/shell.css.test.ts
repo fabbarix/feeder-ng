@@ -375,3 +375,12 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     expect(rail).toMatch(/overflow-y\s*:\s*auto/)
   })
 })
+
+// beta.7: the receipt screens (a ui Page in the chromeless frame) keep a gutter at the top and bottom, and their sticky bar
+// floats above the viewport edge (no bottom bar to clear).
+describe('chromeless ui Pages', () => {
+  it('pads a chromeless .page by the gutter and zeroes the bar offsets', () => {
+    expect(d('.app-shell--chromeless .page')['padding-block']).toBe('var(--page-gutter)')
+    expect(d('.app-shell--chromeless')['--nav-top']).toBe('0px')
+  })
+})
