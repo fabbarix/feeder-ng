@@ -1,7 +1,9 @@
 package household
 
-// B9-04 removals (ADR 0021): what Remove Member and Remove Meal Slot report and keep. STUB: the types are the test
-// author's contract for the developer; the reads and rules are in store.
+import "time"
+
+// B9-04 removals (SAFE-02, ADR 0021): what Remove Member and Remove Meal Slot report and keep. The reads and the
+// writes are in store.
 
 // RestoreWindowMinutes is how long after a removal Undo brings everything back: a Member's snapshot, and a Meal
 // Slot's To confirm rows.
@@ -32,4 +34,12 @@ type RemovedSlot struct {
 	RemovedAt string
 	Cooked    int
 	NotCooked int
+}
+
+// WeekdayName is the English name of an ISO weekday (1 Monday to 7 Sunday).
+func WeekdayName(weekday int) string { return time.Weekday(weekday % 7).String() }
+
+// SlotNameTakenMessage is what a refused Put back says (409 meal_slot_name_taken): "There is already a Dinner on Monday."
+func SlotNameTakenMessage(name string, weekday int) string {
+	return "There is already a " + name + " on " + WeekdayName(weekday) + "."
 }

@@ -69,9 +69,9 @@ func (s *Store) UpdateSlotsBatch(ctx context.Context, in household.BatchInput) (
 	return res, nil
 }
 
-// slotsIn lists Meal Slots with their usual Attendance inside a transaction.
+// slotsIn lists the active Meal Slots with their usual Attendance inside a transaction (a removed one is never edited).
 func slotsIn(ctx context.Context, q querier) ([]household.MealSlot, error) {
-	rows, err := q.QueryContext(ctx, `SELECT id, weekday, name, time FROM meal_slots ORDER BY weekday, time, name`)
+	rows, err := q.QueryContext(ctx, `SELECT id, weekday, name, time FROM meal_slots WHERE removed_at IS NULL ORDER BY weekday, time, name`)
 	if err != nil {
 		return nil, err
 	}

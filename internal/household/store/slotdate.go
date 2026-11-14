@@ -117,10 +117,11 @@ func serveAgain(ctx context.Context, tx *sql.Tx, slotID int64, date string, row 
 	return nil
 }
 
-// slotExists is household.ErrNotFound for an unknown Meal Slot.
+// slotExists is household.ErrNotFound for an unknown or removed Meal Slot: a removed one keeps its dates for Undo
+// and the history, but takes no new date change and is not planned (ADR 0021).
 func slotExists(ctx context.Context, q querier, slotID int64) error {
 	var one int
-	err := q.QueryRowContext(ctx, `SELECT 1 FROM meal_slots WHERE id = ?`, slotID).Scan(&one)
+	err := q.QueryRowContext(ctx, `SELECT 1 FROM meal_slots WHERE id = ? AND removed_at IS NULL`, slotID).Scan(&one)
 	if errors.Is(err, sql.ErrNoRows) {
 		return household.ErrNotFound
 	}

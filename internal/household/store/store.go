@@ -113,8 +113,8 @@ func (s *Store) Member(ctx context.Context, id int64) (household.Member, error) 
 	return getMember(ctx, s.db, id)
 }
 
-// CreateMember adds a Member with no User link. The new Member attends every existing Meal Slot
-// (no Portion Factor override); date Attendance is never touched.
+// CreateMember adds a Member with no User link. The new Member attends every active Meal Slot
+// (no Portion Factor override; a removed one is history, ADR 0021); date Attendance is never touched.
 func (s *Store) CreateMember(ctx context.Context, in household.MemberInput) (household.Member, error) {
 	now := s.clk.Now().UTC().Truncate(time.Second).Format(time.RFC3339)
 	var id int64
@@ -128,7 +128,7 @@ func (s *Store) CreateMember(ctx context.Context, in household.MemberInput) (hou
 			return err
 		}
 		_, err = tx.ExecContext(ctx, `INSERT INTO meal_slot_attendees (slot_id, member_id, portion_factor_override)
-			SELECT id, ?, NULL FROM meal_slots`, id)
+			SELECT id, ?, NULL FROM meal_slots WHERE removed_at IS NULL`, id)
 		return err
 	})
 	if isUnique(err) {
@@ -154,15 +154,6 @@ func (s *Store) UpdateMember(ctx context.Context, id int64, in household.MemberI
 		return household.Member{}, err
 	}
 	return s.Member(ctx, id)
-}
-
-// DeleteMember removes the Member and their place in every Attendance.
-func (s *Store) DeleteMember(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM members WHERE id = ?`, id)
-	if err != nil {
-		return err
-	}
-	return requireOne(res)
 }
 
 // LinkUser links the Member to a User, or unlinks with nil. household.ErrUserLinked when
@@ -202,17 +193,23 @@ func (s *Store) LinkUser(ctx context.Context, memberID int64, userID *int64) (ho
 	return s.Member(ctx, memberID)
 }
 
-// Slots lists Meal Slots ordered by weekday, time, name, each with its usual Attendance.
+// Slots lists the active Meal Slots ordered by weekday, time, name, each with its usual Attendance. A removed Meal
+// Slot is history (ADR 0021): AllSlots and Slot(id) still return it.
 func (s *Store) Slots(ctx context.Context) ([]household.MealSlot, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, weekday, name, time FROM meal_slots
-		ORDER BY weekday, time, name`)
+	return s.slots(ctx, `WHERE removed_at IS NULL`)
+}
+
+// slots lists the Meal Slots that where selects, in the order of Slots, with Attendance and Courses.
+func (s *Store) slots(ctx context.Context, where string) ([]household.MealSlot, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+slotColumns+` FROM meal_slots `+where+`
+		ORDER BY weekday, time, name, id`)
 	if err != nil {
 		return nil, err
 	}
 	var out []household.MealSlot
 	for rows.Next() {
-		var m household.MealSlot
-		if err := rows.Scan(&m.ID, &m.Weekday, &m.Name, &m.Time); err != nil {
+		m, err := scanSlot(rows)
+		if err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -234,11 +231,10 @@ func (s *Store) Slots(ctx context.Context) ([]household.MealSlot, error) {
 	return out, nil
 }
 
-// Slot returns one Meal Slot with its usual Attendance. ErrNotFound if absent.
+// Slot returns one Meal Slot with its usual Attendance, a removed one included (Removed true: history keeps its name
+// and time, ADR 0021). ErrNotFound if absent.
 func (s *Store) Slot(ctx context.Context, id int64) (household.MealSlot, error) {
-	var m household.MealSlot
-	err := s.db.QueryRowContext(ctx, `SELECT id, weekday, name, time FROM meal_slots WHERE id = ?`, id).
-		Scan(&m.ID, &m.Weekday, &m.Name, &m.Time)
+	m, err := scanSlot(s.db.QueryRowContext(ctx, `SELECT `+slotColumns+` FROM meal_slots WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return household.MealSlot{}, household.ErrNotFound
 	}
@@ -289,10 +285,11 @@ func (s *Store) CreateSlot(ctx context.Context, in household.MealSlotInput) (hou
 	return s.Slot(ctx, id)
 }
 
-// UpdateSlot replaces weekday, name, time and the usual Attendance. Date overrides are kept.
+// UpdateSlot replaces weekday, name, time and the usual Attendance. Date overrides are kept. A removed Meal Slot is
+// ErrNotFound.
 func (s *Store) UpdateSlot(ctx context.Context, id int64, in household.MealSlotInput) (household.MealSlot, error) {
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, `UPDATE meal_slots SET weekday = ?, name = ?, time = ? WHERE id = ?`,
+		res, err := tx.ExecContext(ctx, `UPDATE meal_slots SET weekday = ?, name = ?, time = ? WHERE id = ? AND removed_at IS NULL`,
 			in.Weekday, in.Name, in.Time, id)
 		if err != nil {
 			return mapSlotError(err)
@@ -317,19 +314,10 @@ func (s *Store) UpdateSlot(ctx context.Context, id int64, in household.MealSlotI
 	return s.Slot(ctx, id)
 }
 
-// DeleteSlot removes the Meal Slot with its Attendance and date overrides.
-func (s *Store) DeleteSlot(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM meal_slots WHERE id = ?`, id)
-	if err != nil {
-		return err
-	}
-	return requireOne(res)
-}
-
 // DateAttendance returns the override for date when one exists (isOverride true,
-// possibly empty), otherwise the usual Attendance. ErrNotFound for an unknown slot.
+// possibly empty), otherwise the usual Attendance. ErrNotFound for an unknown or removed slot.
 func (s *Store) DateAttendance(ctx context.Context, slotID int64, date string) (att []household.Attendee, isOverride bool, err error) {
-	if _, err := s.Slot(ctx, slotID); err != nil {
+	if err := slotExists(ctx, s.db, slotID); err != nil {
 		return nil, false, err
 	}
 	return dateAttendance(ctx, s.db, slotID, date)
@@ -351,9 +339,9 @@ func dateAttendance(ctx context.Context, q querier, slotID int64, date string) (
 	return att, true, err
 }
 
-// SetDateAttendance stores the override for date, replacing any earlier one.
+// SetDateAttendance stores the override for date, replacing any earlier one. ErrNotFound for an unknown or removed slot.
 func (s *Store) SetDateAttendance(ctx context.Context, slotID int64, date string, att []household.Attendee) error {
-	if _, err := s.Slot(ctx, slotID); err != nil {
+	if err := slotExists(ctx, s.db, slotID); err != nil {
 		return err
 	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
@@ -480,6 +468,22 @@ func getMember(ctx context.Context, q querier, id int64) (household.Member, erro
 }
 
 type scanner interface{ Scan(dest ...any) error }
+
+// slotColumns are the meal_slots columns scanSlot reads.
+const slotColumns = `id, weekday, name, time, removed_at`
+
+// scanSlot reads one meal_slots row of slotColumns (Attendance and Courses are read separately).
+func scanSlot(r scanner) (household.MealSlot, error) {
+	var (
+		m       household.MealSlot
+		removed sql.NullString
+	)
+	if err := r.Scan(&m.ID, &m.Weekday, &m.Name, &m.Time, &removed); err != nil {
+		return household.MealSlot{}, err
+	}
+	m.Removed, m.RemovedAt = removed.Valid, removed.String
+	return m, nil
+}
 
 func scanMember(r scanner) (household.Member, error) {
 	var (

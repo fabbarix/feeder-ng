@@ -136,13 +136,15 @@ func (a *api) deleteMember(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, household.ErrNotFound)
 		return
 	}
-	cur, curErr := a.st.Member(r.Context(), id)
-	if err := a.st.DeleteMember(r.Context(), id); err != nil {
+	// The Member's snapshot keeps their photo for Undo; the snapshots more than ten minutes old go now, with their photos
+	// (the nightly image sweep is the safety net).
+	if err := a.st.RemoveMember(r.Context(), id); err != nil {
 		writeErr(w, err)
 		return
 	}
-	if curErr == nil {
-		a.st.ReleasePhoto(r.Context(), cur.Photo)
+	if _, err := a.st.ExpireMemberRemovals(r.Context()); err != nil {
+		writeErr(w, err)
+		return
 	}
 	a.changed("members")
 	w.WriteHeader(http.StatusNoContent)

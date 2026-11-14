@@ -80,6 +80,15 @@ func (a *api) slotOut(r *http.Request, s household.MealSlot) (slotBody, error) {
 }
 
 func (a *api) listSlots(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Query().Get("removed") {
+	case "":
+	case "with-history":
+		a.listRemovedSlots(w, r)
+		return
+	default:
+		writeErr(w, &household.ValidationError{Field: "removed", Message: `must be "with-history"`})
+		return
+	}
 	list, err := a.st.Slots(r.Context())
 	if err != nil {
 		writeErr(w, err)
@@ -220,18 +229,28 @@ func (a *api) writeSlot(w http.ResponseWriter, r *http.Request, status int, s ho
 	httpx.WriteJSON(w, status, b)
 }
 
+// deleteSlot removes the Meal Slot and keeps its history (ADR 0021); the change replans.
 func (a *api) deleteSlot(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r)
 	if !ok {
 		writeErr(w, household.ErrNotFound)
 		return
 	}
-	if err := a.st.DeleteSlot(r.Context(), id); err != nil {
+	if err := a.st.RemoveSlot(r.Context(), id); err != nil {
 		writeErr(w, err)
 		return
 	}
 	a.changed("mealSlots")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// activeSlot reads the Meal Slot with that id; a removed one is not found (it takes no date change).
+func (a *api) activeSlot(r *http.Request, id int64) (household.MealSlot, error) {
+	slot, err := a.st.Slot(r.Context(), id)
+	if err == nil && slot.Removed {
+		return household.MealSlot{}, household.ErrNotFound
+	}
+	return slot, err
 }
 
 // dateAttendanceBody is the Attendance on one date, with each Course of the Meal Slot on that date.
@@ -251,7 +270,7 @@ func (a *api) dateOnSlot(r *http.Request) (household.MealSlot, string, error) {
 	if !ok {
 		return household.MealSlot{}, "", household.ErrNotFound
 	}
-	slot, err := a.st.Slot(r.Context(), id)
+	slot, err := a.activeSlot(r, id)
 	if err != nil {
 		return household.MealSlot{}, "", err
 	}

@@ -53,7 +53,7 @@ func (a *api) slotOnDate(r *http.Request) (household.MealSlot, string, error) {
 	if !ok {
 		return household.MealSlot{}, "", household.ErrNotFound
 	}
-	slot, err := a.st.Slot(r.Context(), id)
+	slot, err := a.activeSlot(r, id)
 	if err != nil {
 		return household.MealSlot{}, "", err
 	}

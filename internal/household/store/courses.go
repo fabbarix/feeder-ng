@@ -291,9 +291,9 @@ func attendingIDs(att []household.Attendee) []int64 {
 
 // CoursesOn returns the slot's Courses on one date, in the slot's order, each with its effective
 // Course Attendance (household.CourseAttendance over DateAttendance). household.ErrNotFound for an
-// unknown slot.
+// unknown or removed slot.
 func (s *Store) CoursesOn(ctx context.Context, slotID int64, date string) ([]household.CourseDay, error) {
-	if _, err := s.Slot(ctx, slotID); err != nil {
+	if err := slotExists(ctx, s.db, slotID); err != nil {
 		return nil, err
 	}
 	courses, err := loadSlotCourses(ctx, s.db, slotID)
@@ -323,10 +323,10 @@ func (s *Store) CoursesOn(ctx context.Context, slotID int64, date string) ([]hou
 
 // SetDateCourseOptOuts sets (memberIDs non-nil, empty list included: "everyone eats it") or drops
 // (nil: back to the usual opt-outs) the date's own opt-outs for one Course of the slot. It does not
-// touch the slot's date Attendance. household.ErrNotFound (slot), household.ErrCourseNotInSlot,
+// touch the slot's date Attendance. household.ErrNotFound (unknown or removed slot), household.ErrCourseNotInSlot,
 // household.ErrUnknownMember. Repeated Members are dropped; a Member who does not attend is accepted.
 func (s *Store) SetDateCourseOptOuts(ctx context.Context, slotID int64, date string, courseID int64, memberIDs *[]int64) error {
-	if _, err := s.Slot(ctx, slotID); err != nil {
+	if err := slotExists(ctx, s.db, slotID); err != nil {
 		return err
 	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
