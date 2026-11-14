@@ -634,14 +634,14 @@ const cutSelectProbe = `
 })()`
 
 // b8-shop (P23): the Shop hint (a food Line's Meal Slot hint, "Fri Dinner +2") cut by its ellipsis, at every width. The text is measured
-// with a Range like cutSelectProbe, so the ellipsis is found whatever it paints. Review: the Supplies group's Restock reason is not read
-// here: "400 of 1000 ml" is cut by 3 px at 360 px since beta.7 (the phone row's text column), which waits for a design decision.
+// with a Range like cutSelectProbe, so the ellipsis is found whatever it paints. b8-polish: the Supplies group's Restock reason is read
+// too; below 420 px it is the compact "400/1000 ml", which the probe measures as painted.
 const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')
   const out = []
   for (const t of (main ? main.querySelectorAll('.shop-lines .list-row__meta[data-status="info"] .list-row__meta-text') : [])) {
-    if (t.getClientRects().length === 0 || t.closest('.shop-supplies')) continue
+    if (t.getClientRects().length === 0) continue
     const box = t.getBoundingClientRect()
     const range = document.createRange()
     range.selectNodeContents(t)
@@ -736,8 +736,9 @@ const SETUPS = {
   async supplyPage() {
     await until(`!!document.querySelector('main h1') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Supply page')
   },
+  // b8-polish (P23): a Restock reason in the Supplies group ("400/1000 ml" on a phone), so the probe reads the Supplies group too.
   async shopSuppliesGroup() {
-    await until(`!!document.querySelector('.shop-supplies .list-row')`, 'the Supplies group of the Shop list (a Supply below its Restock level)')
+    await until(`!!document.querySelector('.shop-supplies .list-row__meta[data-status="info"]')`, 'a Restock reason in the Supplies group of the Shop list (a Supply below its Restock level)')
   },
   // b8-shop: the header chips (the Shop for and the Shop pickers) shown, the list loaded.
   async shopHeader() {
