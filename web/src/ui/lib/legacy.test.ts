@@ -4,9 +4,9 @@ import { resolveButtonVariant, resolveChip, resolveTile } from './legacy'
 describe('resolveButtonVariant', () => {
   it('maps the deprecated names', () => {
     expect(resolveButtonVariant('tonal')).toBe('secondary')
-    expect(resolveButtonVariant('ghost')).toBe('tertiary')
+    expect(resolveButtonVariant('ghost')).toBe('secondary')
   })
-  it.each(['primary', 'secondary', 'accent-secondary', 'tertiary', 'danger', 'danger-tertiary'] as const)('passes %s through', (v) => {
+  it.each(['primary', 'secondary', 'danger', 'danger-secondary', 'link'] as const)('passes %s through', (v) => {
     expect(resolveButtonVariant(v)).toBe(v)
   })
   it('defaults to primary', () => {

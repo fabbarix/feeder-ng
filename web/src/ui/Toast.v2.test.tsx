@@ -14,13 +14,13 @@ describe('Toast statuses', () => {
   afterEach(() => vi.useRealTimers())
   const setup = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
-  it('a success toast is a status with a status icon, gone after 4 s', async () => {
+  it('a success toast is a status with NO icon (R-D+: the headline already says what happened), gone after 4 s', async () => {
     const user = setup()
     render(<ToastProvider><Fire message="Saved" opts={{ status: 'success' }} /></ToastProvider>)
     await user.click(screen.getByText('fire'))
     const toast = screen.getByText('Saved').closest('[data-status]') as HTMLElement
     expect(toast).toHaveAttribute('data-status', 'success')
-    expect(toast.querySelector('svg')).not.toBeNull()
+    expect(toast.querySelector('.toast__title svg, .toast > svg')).toBeNull()
     act(() => void vi.advanceTimersByTime(4100))
     expect(screen.queryByText('Saved')).toBeNull()
   })

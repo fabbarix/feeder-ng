@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>actions</title>
+<!-- B9-01 (DS-12 R-A, system rule P29 and P30). Every action boundary is about 1.5:1 and a Segmented option wraps to two lines: P29 and P30 must both report. -->
+<style>
+  body { margin: 0; font: 15px/20px sans-serif; background: #fff; color: #111 }
+  .page { padding: 0 16px }
+  .tile { display: grid; gap: 8px; padding: 16px; margin-block: 12px; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px #767676 }
+  .button { display: inline-flex; align-items: center; justify-content: center; min-block-size: 40px; padding: 0 16px; border: 0; border-radius: 12px; background: #fff; color: #111; font: inherit; justify-self: start; box-shadow: inset 0 0 0 1px #d4d4d4 }
+  .toast { display: grid; gap: 8px; padding: 12px 16px; margin-block: 12px; border-radius: 12px; background: #111; color: #fff }
+  .toast__actions { display: flex; gap: 8px }
+  .toast__actions .button { background: transparent; color: #fff; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15) }
+  .sheet__footer, .dialog__actions { display: flex; gap: 8px; padding: 12px 16px; background: #fff }
+  .segmented { display: flex; inline-size: 260px; margin-block: 12px; border-radius: 12px; box-shadow: inset 0 0 0 1px #767676 }
+  .segmented__option { flex: 1 1 0; min-inline-size: 0; padding: 8px 6px; text-align: center;  }
+</style>
+<script>const mq = matchMedia("(prefers-color-scheme: dark)"); const set = () => { document.documentElement.dataset.scheme = mq.matches ? "dark" : "light" }; set(); mq.addEventListener("change", set)</script></head><body>
+<main><div class="page" data-page-width="wide"><h1>Actions</h1>
+  <section class="tile"><h2>Soft tile</h2><p>Dismiss the notice.</p><button class="button" data-variant="secondary">Dismiss</button></section>
+  <div class="toast"><span class="toast__title">Swapped</span><div class="toast__actions"><button class="button" data-variant="secondary">Review</button></div></div>
+  <div class="sheet__footer"><button class="button" data-variant="secondary">Cancel</button></div>
+  <dialog open class="dialog" style="position:static;border:0;padding:0"><div class="dialog__actions"><button class="button" data-variant="secondary">Keep it</button></div></dialog>
+  <div class="segmented" role="radiogroup" aria-label="Repeat"><button role="radio" aria-checked="true" class="segmented__option">Every other day</button><button role="radio" aria-checked="false" class="segmented__option">Weekly on Monday</button></div>
+</div></main></body></html>

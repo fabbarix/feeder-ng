@@ -196,3 +196,65 @@ describe('Neutral metric tile progress on every palette (DS-A)', () => {
     expect(contrastRatio(success.fg, c.surface!)).toBeGreaterThanOrEqual(3)
   })
 })
+
+// ---------------------------------------------------------------------------
+// B9-01 / DS-12 (R-A, R-D+, R-E): the action pairs, for every preset and scheme. The warn and info tones arrive with B9-02
+// (DS-06); until `palette.status` has them they are not iterated, and they join these cases by themselves.
+// ---------------------------------------------------------------------------
+describe('action pairs on every palette (DS-12)', () => {
+  const cases = ACCENT_PRESETS.flatMap((p) => (['light', 'dark'] as const).map((scheme) => [p.name, scheme] as const))
+  const load = (preset: string, scheme: Scheme) => {
+    const accent = ACCENT_PRESETS.find((p) => p.name === preset)!.hex
+    const palette = generatePalette({ accent }, scheme)
+    return {
+      c: palette.colors as unknown as Record<string, string>,
+      status: palette.status as unknown as Record<string, { fg: string; bg: string; solid: string }>,
+    }
+  }
+  const tones = (status: Record<string, unknown>) => Object.keys(status).filter((n) => ['info', 'warn', 'spoil', 'danger', 'leftover', 'success', 'pinned'].includes(n))
+
+  it.each(cases)('%s %s: the button outline is >= 3 against surface, surface-2, the page and every status background (R-A)', (preset, scheme) => {
+    const { c, status } = load(preset, scheme)
+    for (const ground of [c.surface!, c.surface2!, c.bg!]) expect(contrastRatio(c.outline!, ground)).toBeGreaterThanOrEqual(3)
+    for (const name of tones(status)) {
+      expect(contrastRatio(c.outline!, status[name]!.bg), `outline on ${name} bg`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it.each(cases)('%s %s: accent-text (the boundary on an accent container) is >= 3 against soft and soft-strong (R-A correction)', (preset, scheme) => {
+    const { c } = load(preset, scheme)
+    expect(contrastRatio(c.accentText!, c.soft!)).toBeGreaterThanOrEqual(3)
+    expect(contrastRatio(c.accentText!, c.softStrong!)).toBeGreaterThanOrEqual(3)
+  })
+
+  it.each(cases)('%s %s: danger-secondary (status danger fg) is >= 4.5 on surface', (preset, scheme) => {
+    const { c, status } = load(preset, scheme)
+    expect(contrastRatio(status.danger!.fg, c.surface!)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it.each(cases)('%s %s: the toast pairs (bg text on the text-coloured fill) are >= 4.5 and its 55 % / 70 % rings read >= 3 at full strength', (preset, scheme) => {
+    const { c } = load(preset, scheme)
+    expect(contrastRatio(c.bg!, c.text!)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(c.surface!, c.text!)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it.each(cases)('%s %s: the toast status icons (status backgrounds) are >= 3 on the toast fill (R-D+)', (preset, scheme) => {
+    const { c, status } = load(preset, scheme)
+    expect(contrastRatio(status.danger!.bg, c.text!)).toBeGreaterThanOrEqual(3)
+    for (const name of ['warn', 'info']) {
+      if (status[name]) expect(contrastRatio(status[name]!.bg, c.text!), `${name} icon`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it.each(cases)('%s %s: a DetailRow key (text), state (tone fg) and detail (muted) are >= 4.5 on every tone background and on surface (R-E)', (preset, scheme) => {
+    const { c, status } = load(preset, scheme)
+    for (const name of tones(status).filter((n) => n !== 'pinned')) {
+      const bg = status[name]!.bg
+      expect(contrastRatio(c.text!, bg), `${name} key`).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(status[name]!.fg, bg), `${name} state`).toBeGreaterThanOrEqual(4.5)
+      expect(contrastRatio(c.muted!, bg), `${name} detail`).toBeGreaterThanOrEqual(4.5)
+    }
+    expect(contrastRatio(c.text!, c.surface!)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(c.muted!, c.surface!)).toBeGreaterThanOrEqual(4.5)
+  })
+})

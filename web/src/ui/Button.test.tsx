@@ -18,7 +18,7 @@ describe('Button ref', () => {
 })
 
 describe('Button variants and sizes (plan 4.2)', () => {
-  it.each(['primary', 'secondary', 'accent-secondary', 'tertiary', 'danger', 'danger-tertiary'] as const)('exposes variant %s', (variant) => {
+  it.each(['primary', 'secondary', 'danger', 'danger-secondary', 'link'] as const)('exposes variant %s', (variant) => {
     render(<Button variant={variant}>Go</Button>)
     expect(screen.getByRole('button', { name: 'Go' })).toHaveAttribute('data-variant', variant)
   })
@@ -36,10 +36,10 @@ describe('Button variants and sizes (plan 4.2)', () => {
     expect(screen.getByRole('button')).toHaveAttribute('data-size', size)
   })
 
-  it('compat: the deprecated variants tonal and ghost render as secondary and tertiary', () => {
+  it('compat: the deprecated variants tonal and ghost both render as secondary (B9-01: no tertiary)', () => {
     render(<><Button variant="tonal">A</Button><Button variant="ghost">B</Button></>)
     expect(screen.getByRole('button', { name: 'A' })).toHaveAttribute('data-variant', 'secondary')
-    expect(screen.getByRole('button', { name: 'B' })).toHaveAttribute('data-variant', 'tertiary')
+    expect(screen.getByRole('button', { name: 'B' })).toHaveAttribute('data-variant', 'secondary')
   })
 })
 
@@ -89,7 +89,7 @@ describe('Button single-primary dev warning (plan 4.2 "max one per tile/sheet")'
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     render(
       <>
-        <div {...{ [PRIMARY_SCOPE_ATTR]: '' }}><Button>One</Button><Button variant="secondary">Alt</Button><Button variant="tertiary">Cancel</Button></div>
+        <div {...{ [PRIMARY_SCOPE_ATTR]: '' }}><Button>One</Button><Button variant="secondary">Alt</Button><Button variant="secondary">Cancel</Button></div>
         <div {...{ [PRIMARY_SCOPE_ATTR]: '' }}><Button>Two</Button></div>
       </>,
     )
