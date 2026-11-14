@@ -351,6 +351,20 @@ func TestReopenReportsAStockLotThatIsGone(t *testing.T) {
 	}
 }
 
+func TestReopenAddsWhatCookedTookToALotEditedSinceOnce(t *testing.T) {
+	d := newDinner(t)
+	d.User.Post(path(d.World, crsc2.Today, d.Main, "/cooked"), map[string]any{})
+	d.Exec(`UPDATE stock_lots SET quantity = 500 WHERE ingredient_id = ?`, d.chicken) // corrected by hand since: 700 -> 500
+	for i := 0; i < 2; i++ {
+		if r := d.User.Post(path(d.World, crsc2.Today, d.Main, "/reopen"), nil); r.Status != 200 {
+			t.Fatalf("reopen %d = %d %s", i+1, r.Status, r.Body)
+		}
+	}
+	if got := d.StockTotal(d.chicken); got != 800 {
+		t.Errorf("chicken = %v, want 800: the 300 g Cooked took, added once to what the Lot holds now", got)
+	}
+}
+
 func TestReopenCookedIsRefusedOnceSomeOfItsLeftoverWasHad(t *testing.T) {
 	d := newDinner(t)
 	var c cookedBody
