@@ -108,6 +108,28 @@ func TestNormalizeBarcode(t *testing.T) {
 	}
 }
 
+func TestNormalizeTypedBarcode(t *testing.T) {
+	for raw, want := range map[string]string{
+		"4006381333931": "04006381333931", // EAN-13
+		"96385074":      "00000096385074", // EAN-8
+		" PRIVATE-77 ":  "PRIVATE-77",     // a Shop's own label, letters: no length rule
+		"2100-0042":     "2100-0042",      // not only digits
+	} {
+		if got, err := product.NormalizeTypedBarcode(raw); err != nil || got != want {
+			t.Errorf("%q -> %q, %v; want %q", raw, got, err, want)
+		}
+	}
+	for _, bad := range []string{"123", "1234567", "12345678901", "123456789012345", "4006381333932"} {
+		if _, err := product.NormalizeTypedBarcode(bad); !errors.Is(err, product.ErrInvalidBarcode) {
+			t.Errorf("%q: got %v, want ErrInvalidBarcode", bad, err)
+		}
+	}
+	// A scanned or stored code keeps the old rule: an odd-length digits-only code is still an opaque code there.
+	if got, err := product.NormalizeBarcode("12345"); err != nil || got != "12345" {
+		t.Errorf("NormalizeBarcode(12345) = %q, %v; want it accepted", got, err)
+	}
+}
+
 func TestValidateItemCode(t *testing.T) {
 	rule := barcode.WeightRule{Prefix: "21", Item: barcode.Span{Start: 3, Length: 5}, Value: barcode.Span{Start: 8, Length: 5}, ValueKind: barcode.ValueWeight}
 	if err := product.ValidateItemCode(rule, "00123"); err != nil {

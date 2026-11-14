@@ -37,6 +37,8 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("PUT /api/shops/{id}/location", a.setShopLocation)
 	r.Admin("PATCH /api/shops/{id}", a.renameShop)
 	r.Admin("DELETE /api/shops/{id}", a.deleteShop)
+	r.Admin("GET /api/shops/{id}/impact", a.shopImpact) // what Delete Shop takes with it (SAFE-02)
+	r.User("GET /api/shops/{id}/prices", a.shopPrices)  // Prices by Shop (SET-02)
 	r.User("GET /api/shops/{id}/weight-rules", a.listRules)
 	r.Admin("POST /api/shops/{id}/weight-rules", a.createRule)
 	r.Admin("PUT /api/weight-rules/{id}", a.updateRule)
@@ -165,6 +167,34 @@ func (a *api) deleteShop(w http.ResponseWriter, r *http.Request) {
 	}
 	a.changed("shops")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// shopImpact counts what deleting the Shop would remove, for Delete Shop's confirm; it changes nothing.
+func (a *api) shopImpact(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	impact, err := a.store.ShopImpact(r.Context(), id)
+	if err != nil {
+		writeErr(w, err, "shop")
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, impact)
+}
+
+// shopPrices is Prices by Shop: the latest Price of each active Product at the Shop, by Product name.
+func (a *api) shopPrices(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	list, err := a.store.ShopPrices(r.Context(), id)
+	if err != nil {
+		writeErr(w, err, "shop")
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, list)
 }
 
 func (a *api) listRules(w http.ResponseWriter, r *http.Request) {

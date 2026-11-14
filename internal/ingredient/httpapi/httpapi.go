@@ -45,6 +45,7 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("PUT /api/ingredients/{id}/conversions/{unit}", a.putConversion)
 	r.User("DELETE /api/ingredients/{id}/conversions/{unit}", a.deleteConversion)
 	r.User("GET /api/ingredients/{id}/merge-preview", a.mergePreview)
+	r.User("GET /api/ingredients/{id}/impact", a.impact) // what refers to it, for Delete Ingredient's confirm (SAFE-02)
 	r.User("POST /api/ingredients/{id}/merge", a.merge)
 }
 
@@ -357,6 +358,20 @@ func (a *api) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, detailJSON{ingredientJSON: j, References: refs})
+}
+
+// impact reads what refers to the Ingredient ({references, total}); it changes nothing.
+func (a *api) impact(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	impact, err := a.store.Impact(r.Context(), id)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, impact)
 }
 
 func (a *api) patch(w http.ResponseWriter, r *http.Request) {

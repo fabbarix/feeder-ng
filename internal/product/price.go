@@ -124,3 +124,39 @@ func PriceForWeight(p Price, packSize float64, base units.Base, grams float64) (
 	}
 	return int(r), true
 }
+
+// PackOffer is a pack Price of a Product with that Product's pack size (Base Units): what the priced fallback of the
+// Shopping List compares (decision SSP 5, SSP-13).
+type PackOffer struct {
+	Price    Price
+	PackSize float64
+}
+
+// BestPackOffer is the offer that prices an Ingredient before any purchase: the most recent pack Price, ties broken
+// by the lowest price per Base Unit, then by the highest Price id. An offer with no pack Price or no pack size is
+// skipped; ok=false when none is left.
+func BestPackOffer(offers []PackOffer) (PackOffer, bool) {
+	var best PackOffer
+	found := false
+	for _, o := range offers {
+		if o.Price.PriceCents == nil || !(o.PackSize > 0) || math.IsInf(o.PackSize, 0) {
+			continue
+		}
+		if !found || betterOffer(o, best) {
+			best, found = o, true
+		}
+	}
+	return best, found
+}
+
+// betterOffer reports whether a beats b: a later date, else a lower price per Base Unit, else a higher Price id.
+func betterOffer(a, b PackOffer) bool {
+	if a.Price.Date != b.Price.Date {
+		return a.Price.Date > b.Price.Date
+	}
+	ua, ub := float64(*a.Price.PriceCents)/a.PackSize, float64(*b.Price.PriceCents)/b.PackSize
+	if ua != ub {
+		return ua < ub
+	}
+	return a.Price.ID > b.Price.ID
+}

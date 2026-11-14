@@ -632,6 +632,25 @@ func (s *Store) References(ctx context.Context, id int64) (map[string]int, error
 	return s.refCounts(ctx, s.db, id)
 }
 
+// Impact is what refers to an Ingredient, for Delete Ingredient's confirm (SAFE-02): the same per-mover counts the
+// detail serves (References) and their Total.
+type Impact struct {
+	References map[string]int `json:"references"`
+	Total      int            `json:"total"`
+}
+
+// Impact reads what refers to the Ingredient; it changes nothing. ErrNotFound for an unknown Ingredient.
+func (s *Store) Impact(ctx context.Context, id int64) (Impact, error) {
+	if _, err := s.Get(ctx, id); err != nil {
+		return Impact{}, err
+	}
+	refs, err := s.References(ctx, id)
+	if err != nil {
+		return Impact{}, err
+	}
+	return Impact{References: refs, Total: total(refs)}, nil
+}
+
 // MergePreview compares source and target without changing anything.
 // ErrNotFound if either is missing; ErrMergeSelf if the ids are equal.
 func (s *Store) MergePreview(ctx context.Context, sourceID, targetID int64) (Preview, error) {
