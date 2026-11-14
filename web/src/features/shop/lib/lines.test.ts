@@ -46,6 +46,7 @@ describe('lineEntry / extraEntry', () => {
       baseUnit: 'g',
       supply: false,
       restockText: '',
+      restockCompact: '',
     })
   })
 
