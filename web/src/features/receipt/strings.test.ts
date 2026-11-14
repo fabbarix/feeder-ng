@@ -30,4 +30,8 @@ describe('receiptStrings', () => {
     for (const s of ['Read the receipt', 'Fill in Prices and weighed amounts from a photo', 'Take a photo', 'Add another photo', 'Reading the receipt…', 'Review the receipt', 'Nothing changes until you apply.', 'Accept all', 'Clear all', 'Add…', 'Leave without applying?', 'Leave without reading?'])
       expect(all).toContain(s)
   })
+  it('carries the copy of the background read (b8-rxweb, design 3.3)', () => {
+    for (const s of ['You can leave. Feeder keeps reading.', 'The receipt could not be read', 'Review', 'Receipt read: review 1 change', 'Receipt read: review 2 changes', 'Receipt read: nothing to change'])
+      expect(all).toContain(s)
+  })
 })
