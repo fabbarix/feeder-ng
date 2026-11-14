@@ -5,9 +5,11 @@ package service
 import (
 	"context"
 	"errors"
+	"math"
 	"strings"
 	"time"
 
+	"github.com/fabbarix/feeder-ng/internal/auth"
 	"github.com/fabbarix/feeder-ng/internal/clock"
 	"github.com/fabbarix/feeder-ng/internal/shopping"
 	"github.com/fabbarix/feeder-ng/internal/shopping/store"
@@ -169,6 +171,9 @@ func (s *Service) List(ctx context.Context, q Query) (View, error) {
 		return View{}, err
 	}
 	list := shopping.Derive(in)
+	if err := s.nameAdditions(ctx, list); err != nil {
+		return View{}, err
+	}
 	spent, ledgerLots, err := s.ports.Ledger.Totals(ctx, to)
 	if err != nil {
 		return View{}, err
@@ -215,29 +220,38 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 			return shopping.Input{}, ErrUnknownShop
 		}
 	}
-	meals, err := s.ports.Plan.Meals(ctx, from, to)
+	in, idList, err := s.baseInput(ctx, from, to)
 	if err != nil {
 		return shopping.Input{}, err
+	}
+	return s.withPacks(ctx, in, idList, shopID)
+}
+
+// baseInput is the Input without Packs or Prices (what Snapshot derives from), and the Ingredients it names.
+func (s *Service) baseInput(ctx context.Context, from, to stock.Date) (shopping.Input, []int64, error) {
+	meals, err := s.ports.Plan.Meals(ctx, from, to)
+	if err != nil {
+		return shopping.Input{}, nil, err
 	}
 	lots, err := s.ports.Stock.Lots(ctx)
 	if err != nil {
-		return shopping.Input{}, err
+		return shopping.Input{}, nil, err
 	}
 	extras, err := s.st.Extras(ctx, from)
 	if err != nil {
-		return shopping.Input{}, err
+		return shopping.Input{}, nil, err
 	}
 	ticks, err := s.st.Ticks(ctx, to)
 	if err != nil {
-		return shopping.Input{}, err
+		return shopping.Input{}, nil, err
 	}
 	notNeeded, err := s.st.NotNeeded(ctx, to)
 	if err != nil {
-		return shopping.Input{}, err
+		return shopping.Input{}, nil, err
 	}
 	restock, err := s.ports.Ingredients.RestockSupplies(ctx)
 	if err != nil {
-		return shopping.Input{}, err
+		return shopping.Input{}, nil, err
 	}
 	ids := map[int64]bool{}
 	for _, m := range meals {
@@ -264,11 +278,17 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 	}
 	info, err := s.ports.Ingredients.Info(ctx, idList)
 	if err != nil {
-		return shopping.Input{}, err
+		return shopping.Input{}, nil, err
 	}
 	for ing, v := range restock {
 		info[ing] = v
 	}
+	return shopping.Input{Now: s.clk.Now(), From: from, To: to, Meals: meals, Lots: lots, Ingredients: info, Extras: extras,
+		Ticks: ticks, NotNeeded: notNeeded}, idList, nil
+}
+
+// withPacks adds the Packs and Prices for the Ingredients: the Product last bought, else the priced Product (SSP-13).
+func (s *Service) withPacks(ctx context.Context, in shopping.Input, idList []int64, shopID *int64) (shopping.Input, error) {
 	packs, err := s.ports.Products.LastBought(ctx, idList, shopID)
 	if err != nil {
 		return shopping.Input{}, err
@@ -295,18 +315,19 @@ func (s *Service) input(ctx context.Context, from, to stock.Date, shopID *int64)
 		return shopping.Input{}, err
 	}
 	// A priced Product is estimated from the pack Price that chose it.
+	// The Line's pack carries that Price, so the Line sheet can say which one it was (B9-23).
 	priced := make(map[int64]shopping.Pack, len(pricedPacks))
 	for ing, pp := range pricedPacks {
-		priced[ing] = pp.Pack
+		p := pp.Pack
+		p.Price = &shopping.PackPrice{Cents: pp.PriceCents, Date: pp.Date, ShopID: pp.ShopID}
+		priced[ing] = p
 		if prices == nil {
 			prices = map[int64]int{}
 		}
 		prices[pp.Pack.ProductID] = pp.PriceCents
 	}
-	return shopping.Input{
-		Now: s.clk.Now(), From: from, To: to, Meals: meals, Lots: lots, Ingredients: info,
-		Packs: packs, Priced: priced, PackPrices: prices, Extras: extras, Ticks: ticks, NotNeeded: notNeeded,
-	}, nil
+	in.Packs, in.Priced, in.PackPrices = packs, priced, prices
+	return in, nil
 }
 
 // TickInput ticks one Ingredient by hand: Quantity is "how much?" (>= 0); > 0 adds a Stock Lot.
@@ -342,9 +363,11 @@ type TickResult struct {
 	AlsoTickedBy []AlsoTicked
 }
 
-// Tick ticks an Ingredient by hand for the range (ErrUnknownIngredient, ErrInvalid for a negative quantity).
+// Tick ticks an Ingredient by hand for the range with one more addition (ADR 0024): Quantity > 0 puts a Stock Lot into
+// Stock. A client UUID already recorded answers as the first time and changes nothing (Created false). Errors:
+// ErrUnknownIngredient, ErrInvalid for a negative or non-finite amount, ErrNotOnList with RequireOnList.
 func (s *Service) Tick(ctx context.Context, in TickInput) (TickResult, error) {
-	if in.Quantity < 0 {
+	if !validAmount(in.Quantity) || !validAmount(in.Covers) {
 		return TickResult{}, ErrInvalid
 	}
 	info, err := s.ports.Ingredients.Info(ctx, []int64{in.IngredientID})
@@ -362,13 +385,33 @@ func (s *Service) Tick(ctx context.Context, in TickInput) (TickResult, error) {
 	if err := s.purge(ctx, today); err != nil {
 		return TickResult{}, err
 	}
-	needed, err := s.neededFor(ctx, today, to, in.IngredientID, in.ShopID)
+	if prev, ok, err := s.st.AdditionByUUID(ctx, in.ClientUUID); err != nil {
+		return TickResult{}, err
+	} else if ok {
+		return s.tickResult(ctx, prev, false)
+	}
+	view, err := s.input(ctx, today, to, in.ShopID)
 	if err != nil {
 		return TickResult{}, err
 	}
-	var res TickResult
+	line, on := shopping.Derive(view).LineFor(in.IngredientID)
+	if in.RequireOnList && !on {
+		return TickResult{}, ErrNotOnList
+	}
+	a := shopping.Addition{ClientUUID: in.ClientUUID, UserID: in.UserID, By: "hand", Quantity: in.Quantity,
+		Covers: in.Covers, TickedAt: in.TickedAt}
+	if a.Covers == 0 && on {
+		// What the list shows now: the Line's quantity, or the More of a ticked Line (SSP-02).
+		a.Covers = line.Quantity
+		if line.Ticked {
+			a.Covers = line.More
+		}
+	}
+	if !in.TickedAt.IsZero() {
+		a.SyncedAt = s.clk.Now()
+	}
 	if in.Quantity > 0 {
-		id, created, err := s.ports.Stock.AddLot(ctx, StockAdd{IngredientID: in.IngredientID, Quantity: in.Quantity,
+		id, _, err := s.ports.Stock.AddLot(ctx, StockAdd{IngredientID: in.IngredientID, Quantity: in.Quantity,
 			ShopID: in.ShopID, ClientUUID: in.ClientUUID})
 		if err != nil {
 			return TickResult{}, err
@@ -376,19 +419,113 @@ func (s *Service) Tick(ctx context.Context, in TickInput) (TickResult, error) {
 		if err := s.recordTick(ctx, today, to, id, in.ShopID); err != nil {
 			return TickResult{}, err
 		}
-		res.LotID, res.Created = &id, created
+		a.LotID = id
 	}
-	t := shopping.Tick{IngredientID: in.IngredientID, Needed: needed, By: "hand"}
-	if res.LotID != nil {
-		err = s.st.SetTickLot(ctx, to, t, *res.LotID, in.Quantity)
+	id, ok, err := s.st.AddLineAddition(ctx, to, in.IngredientID, a)
+	if err != nil {
+		return TickResult{}, err
+	}
+	if !ok { // a racing request with the same client UUID recorded it first
+		prev, _, err := s.st.AdditionByUUID(ctx, in.ClientUUID)
+		if err != nil {
+			return TickResult{}, err
+		}
+		return s.tickResult(ctx, prev, false)
+	}
+	s.publish("ticks")
+	return s.tickResult(ctx, store.Addition{ID: id, RangeTo: to, IngredientID: in.IngredientID, Addition: a}, true)
+}
+
+// validAmount is a quantity a tick can carry: 0 or more, and finite.
+func validAmount(q float64) bool { return q >= 0 && !math.IsInf(q, 0) && !math.IsNaN(q) }
+
+// tickResult answers a tick by its addition: its Stock Lot and quantity, and the additions other Users made to the same
+// Line (or extra) before it (RES 2), oldest first.
+func (s *Service) tickResult(ctx context.Context, a store.Addition, created bool) (TickResult, error) {
+	res := TickResult{Created: created, Added: finite(a.Quantity), AlsoTickedBy: []AlsoTicked{}}
+	if a.LotID != 0 {
+		lot := a.LotID
+		res.LotID = &lot
+	}
+	var all []store.Addition
+	var err error
+	if a.ExtraID != 0 {
+		all, err = s.st.ExtraAdditions(ctx, a.ExtraID)
 	} else {
-		err = s.st.SetTick(ctx, to, t, nil)
+		all, err = s.st.LineAdditions(ctx, a.RangeTo, a.IngredientID)
 	}
 	if err != nil {
 		return TickResult{}, err
 	}
-	s.publish("ticks")
+	var before []store.Addition
+	ids := []int64{}
+	for _, o := range all {
+		if o.ID >= a.ID {
+			break
+		}
+		if o.UserID == a.UserID {
+			continue
+		}
+		before = append(before, o)
+		ids = append(ids, o.UserID)
+	}
+	names, err := s.names(ctx, ids)
+	if err != nil {
+		return TickResult{}, err
+	}
+	for _, o := range before {
+		res.AlsoTickedBy = append(res.AlsoTickedBy, AlsoTicked{Name: names[o.UserID], Quantity: finite(o.Quantity), By: o.By})
+	}
 	return res, nil
+}
+
+// finite is q, or 0 for the unknown quantity (+Inf) of a tick from before migration 1560.
+func finite(q float64) float64 {
+	if math.IsInf(q, 0) || math.IsNaN(q) {
+		return 0
+	}
+	return q
+}
+
+// names resolves User ids to display names; without a Users port every name is "".
+func (s *Service) names(ctx context.Context, ids []int64) (map[int64]string, error) {
+	if s.ports.Users == nil || len(ids) == 0 {
+		return map[int64]string{}, nil
+	}
+	return s.ports.Users.Names(ctx, ids)
+}
+
+// nameAdditions fills Who on every addition of the list's ticks (RES-03: the Line sheet names who ticked).
+func (s *Service) nameAdditions(ctx context.Context, list shopping.List) error {
+	var all []*shopping.Addition
+	for _, l := range list.Lines {
+		if l.Tick != nil {
+			for i := range l.Tick.Additions {
+				all = append(all, &l.Tick.Additions[i])
+			}
+		}
+	}
+	for _, e := range list.Extras {
+		if e.Tick != nil {
+			for i := range e.Tick.Additions {
+				all = append(all, &e.Tick.Additions[i])
+			}
+		}
+	}
+	ids := make([]int64, 0, len(all))
+	for _, a := range all {
+		if a.UserID != 0 {
+			ids = append(ids, a.UserID)
+		}
+	}
+	names, err := s.names(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for _, a := range all {
+		a.Who = names[a.UserID]
+	}
+	return nil
 }
 
 // recordTick records what the Stock Lot a tick by hand added was bought for (B5-BO). It runs again on a retried tick,
@@ -408,39 +545,25 @@ func (s *Service) recordTick(ctx context.Context, today, to stock.Date, lotID in
 	return s.ports.Bought.RecordBought(ctx, lotID, shares, s.clk.Now())
 }
 
-// neededFor is the Line quantity a tick records: the quantity still to buy, or the amount of an existing tick.
-func (s *Service) neededFor(ctx context.Context, today, to stock.Date, ingredientID int64, shopID *int64) (float64, error) {
-	in, err := s.input(ctx, today, to, shopID)
-	if err != nil {
-		return 0, err
-	}
-	if t, ok := in.Ticks[ingredientID]; ok {
-		return t.Needed, nil
-	}
-	line, ok := shopping.Derive(in).LineFor(ingredientID)
-	if !ok {
-		return 0, nil
-	}
-	return line.Quantity, nil
-}
-
-// Untick removes the tick and takes back the Stock Lot it added: what is left of that Lot, up to what the tick added
-// (ADR 0019). A second untick, or an untick with no tick, changes nothing. A tick set by a Scan owns no Lot. If Stock
-// fails the tick stays, so the Undo can be tried again. Stock records the take-back with it and takes a Lot back at
-// most once, so a retry after a later step failed (the tick row is still there) takes nothing twice.
+// Untick removes the tick with all its additions and takes back the Stock Lot of every addition by hand: what is left of
+// it, up to what the addition added (ADR 0019, 0024). A Scan's Stock Lot stays (it is undone from the Scanned list). A
+// second untick, or an untick with no tick, changes nothing. If Stock fails the tick stays, so the Undo can be tried
+// again; Stock takes a Lot back at most once, so a retry takes nothing twice.
 func (s *Service) Untick(ctx context.Context, ingredientID int64, to stock.Date) error {
 	today, horizon, err := s.household(ctx)
 	if err != nil {
 		return err
 	}
 	r := shopping.ClampTo(today, horizon, to)
-	lotID, added, hasLot, err := s.st.TickLot(ctx, r, ingredientID)
+	adds, err := s.st.LineAdditions(ctx, r, ingredientID)
 	if err != nil {
 		return err
 	}
-	if hasLot {
-		if err := s.takeBack(ctx, lotID, added); err != nil {
-			return err
+	for _, a := range adds {
+		if a.By == "hand" && a.LotID != 0 {
+			if err := s.takeBack(ctx, a.LotID, a.Quantity); err != nil {
+				return err
+			}
 		}
 	}
 	if err := s.st.DeleteTick(ctx, r, ingredientID); err != nil {
@@ -453,14 +576,22 @@ func (s *Service) Untick(ctx context.Context, ingredientID int64, to stock.Date)
 // takeBack takes back what is left of a Stock Lot a tick added, up to added, and forgets what the Lot was bought for
 // once the Lot is gone (ADR 0013: a part-used Lot keeps its records).
 func (s *Service) takeBack(ctx context.Context, lotID int64, added float64) error {
+	_, err := s.takeBackTaken(ctx, lotID, added)
+	return err
+}
+
+// takeBackTaken is takeBack that says how much Stock took back.
+func (s *Service) takeBackTaken(ctx context.Context, lotID int64, added float64) (float64, error) {
 	taken, err := s.ports.Stock.TakeBack(ctx, lotID, added)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if taken.Removed {
-		return s.ForgetLot(ctx, lotID)
+		if err := s.ForgetLot(ctx, lotID); err != nil {
+			return 0, err
+		}
 	}
-	return nil
+	return taken.Taken, nil
 }
 
 // ExtraInput is a manual extra: Text, or IngredientID with Quantity.
@@ -515,10 +646,13 @@ func (s *Service) DeleteExtra(ctx context.Context, id int64) error {
 	return nil
 }
 
-// TickExtra ticks an extra; an Ingredient extra with quantity > 0 also adds a Stock Lot. clientUUID makes a retry
-// idempotent: the same UUID adds no second Lot and counts the quantity into the extra's `got` only once.
-// (clientUUID is accepted but not used yet: the Developer implements the idempotency.)
+// TickExtra ticks an extra; an Ingredient extra with quantity > 0 also adds a Stock Lot, as one more addition of the
+// extra (ADR 0024). clientUUID makes a retry idempotent: a UUID already recorded answers as the first time (Created
+// false), adds no second Lot and counts the quantity into the extra's `got` only once. The User is the signed-in one.
 func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, shopID *int64, clientUUID string) (TickResult, error) {
+	if !validAmount(quantity) {
+		return TickResult{}, ErrInvalid
+	}
 	today, _, err := s.household(ctx)
 	if err != nil {
 		return TickResult{}, err
@@ -527,8 +661,21 @@ func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, sho
 	if err != nil {
 		return TickResult{}, err
 	}
-	var res TickResult
-	if extra.IngredientID != 0 && quantity > 0 {
+	if prev, ok, err := s.st.AdditionByUUID(ctx, clientUUID); err != nil {
+		return TickResult{}, err
+	} else if ok {
+		return s.tickResult(ctx, prev, false)
+	}
+	if extra.IngredientID == 0 { // a text extra: ticked, nothing added, no addition
+		if err := s.st.TickExtra(ctx, id, today); err != nil {
+			return TickResult{}, mapStoreErr(err)
+		}
+		s.publish("extras")
+		return TickResult{Created: true, AlsoTickedBy: []AlsoTicked{}}, nil
+	}
+	u, _ := auth.UserFrom(ctx)
+	a := shopping.Addition{ClientUUID: clientUUID, UserID: u.ID, By: "hand", Quantity: quantity, Covers: math.Max(0, extra.Quantity-extra.Got)}
+	if quantity > 0 {
 		// The client UUID makes a retried tick find the same Lot (Stock answers created false); only the first
 		// answer counts the quantity into the extra's got.
 		lot, created, err := s.ports.Stock.AddLot(ctx, StockAdd{IngredientID: extra.IngredientID, Quantity: quantity, ShopID: shopID, ClientUUID: clientUUID})
@@ -540,18 +687,21 @@ func (s *Service) TickExtra(ctx context.Context, id int64, quantity float64, sho
 				return TickResult{}, mapStoreErr(err)
 			}
 		}
-		res.LotID, res.Created = &lot, created
+		a.LotID = lot
 	}
-	if res.LotID != nil {
-		err = s.st.TickExtraLot(ctx, id, today, *res.LotID, quantity)
-	} else {
-		err = s.st.TickExtra(ctx, id, today)
-	}
+	addID, ok, err := s.st.AddExtraAddition(ctx, id, today, a)
 	if err != nil {
 		return TickResult{}, mapStoreErr(err)
 	}
+	if !ok {
+		prev, _, err := s.st.AdditionByUUID(ctx, clientUUID)
+		if err != nil {
+			return TickResult{}, err
+		}
+		return s.tickResult(ctx, prev, false)
+	}
 	s.publish("extras")
-	return res, nil
+	return s.tickResult(ctx, store.Addition{ID: addID, ExtraID: id, Addition: a}, true)
 }
 
 // openExtra finds an extra that is open or ticked today (ErrNotFound otherwise).
@@ -578,7 +728,10 @@ func (s *Service) Extra(ctx context.Context, id int64) (shopping.ExtraLine, erro
 	if err != nil {
 		return shopping.ExtraLine{}, err
 	}
-	line := shopping.ExtraLine{ID: e.ID, Text: e.Text, IngredientID: e.IngredientID, Ticked: e.Ticked}
+	line := shopping.ExtraLine{ID: e.ID, Text: e.Text, IngredientID: e.IngredientID, Ticked: e.Ticked, Tick: shopping.ExtraTick(e)}
+	if err := s.nameAdditions(ctx, shopping.List{Extras: []shopping.ExtraLine{line}}); err != nil {
+		return shopping.ExtraLine{}, err
+	}
 	if e.IngredientID != 0 {
 		info, err := s.ports.Ingredients.Info(ctx, []int64{e.IngredientID})
 		if err != nil {
@@ -594,33 +747,28 @@ func (s *Service) Extra(ctx context.Context, id int64) (shopping.ExtraLine, erro
 	return line, nil
 }
 
-// UntickExtra clears an extra's tick and takes back the Stock Lot an Ingredient extra's tick added (ADR 0019): what is
-// left of it, up to the quantity the tick added. What was taken back comes off the extra's got, so an untouched Lot
-// shows the extra's full quantity again. A second untick changes nothing.
+// UntickExtra clears an extra's tick and takes back the Stock Lot of each of its additions by hand (ADR 0019, 0024): what
+// is left of it, up to the quantity it added. What was taken back comes off the extra's got, so an untouched Lot shows
+// the extra's full quantity again. A second untick changes nothing.
 func (s *Service) UntickExtra(ctx context.Context, id int64) error {
-	lotID, added, hasLot, err := s.st.ExtraTickLot(ctx, id)
-	if err != nil {
-		return mapStoreErr(err)
-	}
-	if !hasLot {
-		if err := s.st.UntickExtra(ctx, id); err != nil {
-			return mapStoreErr(err)
-		}
-		s.publish("extras")
-		return nil
-	}
-	// Stock answers a retried take-back with what it took the first time and changes nothing; the got and the tick
-	// change together in one statement, so a retry after a failed step takes nothing twice.
-	taken, err := s.ports.Stock.TakeBack(ctx, lotID, added)
+	adds, err := s.st.ExtraAdditions(ctx, id)
 	if err != nil {
 		return err
 	}
-	if taken.Removed {
-		if err := s.ForgetLot(ctx, lotID); err != nil {
+	// Stock answers a retried take-back with what it took the first time and changes nothing; the got and the tick
+	// change together in one transaction, so a retry after a failed step takes nothing twice.
+	taken := 0.0
+	for _, a := range adds {
+		if a.By != "hand" || a.LotID == 0 {
+			continue
+		}
+		t, err := s.takeBackTaken(ctx, a.LotID, a.Quantity)
+		if err != nil {
 			return err
 		}
+		taken += t
 	}
-	if err := s.st.UntickExtraTakenBack(ctx, id, taken.Taken); err != nil {
+	if err := s.st.UntickExtraTakenBack(ctx, id, taken); err != nil {
 		return mapStoreErr(err)
 	}
 	s.publish("extras")
@@ -677,7 +825,15 @@ func (s *Service) AfterLot(ctx context.Context, in AfterLotInput) (Effect, error
 		}
 		eff := Effect{OnList: true, Remaining: rem}
 		if rem <= 1e-9 && !ticked {
-			if err := s.st.SetTick(ctx, in.To, shopping.Tick{IngredientID: in.IngredientID, Needed: line.Quantity, By: "scan"}, nil); err != nil {
+			// The Scan's tick is an addition by scan with its Stock Lot (ADR 0024): Change and Take back leave it alone.
+			a := shopping.Addition{ClientUUID: in.ClientUUID, UserID: in.UserID, By: "scan", LotID: in.LotID, Quantity: in.Quantity,
+				Covers: line.Quantity}
+			_, ok, err := s.st.AddLineAddition(ctx, in.To, in.IngredientID, a)
+			if err == nil && !ok { // the UUID belongs to a tick by hand: keep the Scan's addition without it
+				a.ClientUUID = ""
+				_, _, err = s.st.AddLineAddition(ctx, in.To, in.IngredientID, a)
+			}
+			if err != nil {
 				return Effect{}, err
 			}
 			eff.Ticked = true
@@ -737,8 +893,8 @@ func (s *Service) UndoLot(ctx context.Context, in UndoLotInput) error {
 			return err
 		}
 	}
-	if in.Unmark {
-		if err := s.st.DeleteTick(ctx, in.To, in.IngredientID); err != nil {
+	if in.Unmark && in.ExtraID == 0 {
+		if err := s.unmarkScan(ctx, in.To, in.IngredientID, in.LotID); err != nil {
 			return err
 		}
 	}
@@ -753,6 +909,24 @@ func (s *Service) UndoLot(ctx context.Context, in UndoLotInput) error {
 		}
 	}
 	return nil
+}
+
+// unmarkScan removes the tick a Scan's Stock Lot set: its addition by scan, and the tick with it when no other addition
+// is left. A tick from before beta.9, or with no Lot known, goes whole.
+func (s *Service) unmarkScan(ctx context.Context, to stock.Date, ingredientID, lotID int64) error {
+	if lotID != 0 {
+		adds, err := s.st.LineAdditions(ctx, to, ingredientID)
+		if err != nil {
+			return err
+		}
+		for _, a := range adds {
+			if a.By == "scan" && a.LotID == lotID {
+				_, err := s.st.DeleteAddition(ctx, a.ID)
+				return err
+			}
+		}
+	}
+	return s.st.DeleteTick(ctx, to, ingredientID)
 }
 
 // ForgetLot removes the records of what the Stock Lot was bought for (B5-BO). Lot Delete (Stock Lots, plan 2.6) calls
@@ -791,7 +965,7 @@ type NotNeededInput struct {
 }
 
 // SetNotNeeded takes an open Line off the list for the range: no Stock Lot, no purchase (ErrUnknownIngredient,
-// ErrNotOnList for an Ingredient without an open Line, ticked Lines included). Idempotent.
+// ErrNotOnList for an Ingredient without an open Line, or a ticked Line with no More). Idempotent.
 func (s *Service) SetNotNeeded(ctx context.Context, in NotNeededInput) error {
 	if in.IngredientID <= 0 {
 		return ErrInvalid
@@ -818,14 +992,19 @@ func (s *Service) SetNotNeeded(ctx context.Context, in NotNeededInput) error {
 	if _, marked := view.NotNeeded[in.IngredientID]; marked {
 		return nil
 	}
-	if _, ticked := view.Ticks[in.IngredientID]; ticked {
-		return ErrNotOnList
-	}
 	line, ok := shopping.Derive(view).LineFor(in.IngredientID)
 	if !ok {
 		return ErrNotOnList
 	}
-	if err := s.st.SetNotNeeded(ctx, to, shopping.NotNeeded{IngredientID: in.IngredientID, Needed: line.Quantity}, in.UserID); err != nil {
+	needed := line.Quantity
+	// A ticked Line can only be Not needed on its More (SSP-02): the mark takes that amount off and the tick stays.
+	if line.Ticked {
+		if line.More <= 0 {
+			return ErrNotOnList
+		}
+		needed = line.More
+	}
+	if err := s.st.SetNotNeeded(ctx, to, shopping.NotNeeded{IngredientID: in.IngredientID, Needed: needed}, in.UserID); err != nil {
 		return err
 	}
 	s.publish("list")
