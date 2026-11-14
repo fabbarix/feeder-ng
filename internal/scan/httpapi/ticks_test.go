@@ -232,3 +232,42 @@ func TestAShopTickOfAnExtraAddsItsLot(t *testing.T) {
 		t.Errorf("an extra that is gone = %+v, want rejected not_on_list", res)
 	}
 }
+
+// Reviewer: a Scan and a Tick of the same Line in one batch, in both orders. Each keeps its own Stock Lot (RES 2); the
+// Line is ticked once; a Scan that ticked it is an addition by scan, and its Undo leaves the Tick by hand and its Lot.
+func TestAScanAndATickOfTheSameLineInOneBatchKeepBothLotsInEitherOrder(t *testing.T) {
+	for _, scanFirst := range []bool{true, false} {
+		f := newFixture(t)
+		f.plan(t, 300)
+		ops := []map[string]any{f.op("scan-1"), f.tickOp("tick-1", 300, 300)}
+		if !scanFirst {
+			ops[0], ops[1] = ops[1], ops[0]
+		}
+		for i, r := range syncOps(t, f.user, ops...) {
+			if r.Status != "applied" {
+				t.Fatalf("scanFirst %v: result %d = %+v", scanFirst, i, r)
+			}
+		}
+		if n, total := lotCount(t, f); n != 2 || total != 1000 {
+			t.Errorf("scanFirst %v: Stock Lots = %d total %v; want the Scan's 700 and the Tick's 300", scanFirst, n, total)
+		}
+		l := f.line(t)
+		want := 1 // the Scan ticks the Line only when it was still open
+		if scanFirst {
+			want = 2
+		}
+		if !l.Ticked || l.Tick == nil || len(l.Tick.Additions) != want {
+			t.Fatalf("scanFirst %v: Line = %+v; want ticked with %d additions", scanFirst, l, want)
+		}
+		// Undo of the Scan from the Scanned list: the Tick by hand and its Lot stay.
+		if r := f.user.Post("/api/scan/scan-1/undo", map[string]any{}); r.Status != 200 && r.Status != 204 {
+			t.Fatalf("scanFirst %v: undo = %d %s", scanFirst, r.Status, r.Body)
+		}
+		if n, total := lotCount(t, f); n != 1 || total != 300 {
+			t.Errorf("scanFirst %v: after the Scan's Undo Stock Lots = %d total %v; want the Tick's 300", scanFirst, n, total)
+		}
+		if l := f.line(t); !l.Ticked || l.Tick == nil || len(l.Tick.Additions) != 1 || l.Tick.Additions[0].ClientUUID != "tick-1" {
+			t.Errorf("scanFirst %v: after the Scan's Undo Line = %+v; want ticked by the Tick alone", scanFirst, l)
+		}
+	}
+}
