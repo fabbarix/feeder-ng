@@ -78,6 +78,9 @@ type WasteRecord struct {
 	// and was not forgiven by a Keep (R11c); None otherwise. The streak counts
 	// such waste on LotGoesOff+1, the day the Lot went off, not on WastedOn.
 	LotGoesOff stock.Date
+	// LotJSON is the thrown-out Lot as it was (store.StoredLot as JSON), kept by Throw out so Undo can put it back (B9-05,
+	// migration 1572). "" for other waste and for waste recorded before 1572. B9-05 test stub: nothing writes it yet.
+	LotJSON string
 }
 
 // Mutation is what Update persists: the Ingredient's resulting lots (same ID =

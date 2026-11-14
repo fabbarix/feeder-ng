@@ -1,7 +1,7 @@
 Feature: Spoiled Stock Lots
   Stock Lots past their go-off date are listed as spoiled ("Throw out or keep?").
-  Throw out removes the lot and records the waste. Keep pushes the go-off date out
-  by 1 day from its existing go-off date (not from today).
+  Throw out removes the lot and records the waste. Keep makes the lot good until
+  today in one tap (B9-05, SSP-17), however long ago it went off.
 
   Background:
     Given a running Feeder
@@ -35,7 +35,7 @@ Feature: Spoiled Stock Lots
     And Stock holds nothing of "chicken thighs"
     And the waste records show 200 g of "chicken thighs" wasted because it spoiled
 
-  Scenario: Keep pushes the go-off date one day from the existing date
+  Scenario: Keep makes the Stock Lot good until today
     Given I add a Stock Lot of 200 g of "chicken thighs" bought on "2026-11-04"
     When I keep the spoiled Stock Lot of "chicken thighs"
     Then the response status is 200
@@ -43,12 +43,12 @@ Feature: Spoiled Stock Lots
     And the response JSON field "spoiled" is false
     And Stock holds 200 g of "chicken thighs"
 
-  Scenario: A Stock Lot several days overdue stays spoiled after Keep
+  Scenario: A Stock Lot several days overdue is good until today after one Keep
     Given I add a Stock Lot of 200 g of "chicken thighs" bought on "2026-11-01"
     When I keep the spoiled Stock Lot of "chicken thighs"
-    Then the response JSON field "goesOff" is "2026-11-06"
+    Then the response JSON field "goesOff" is "2026-11-09"
     When I list the spoiled Stock Lots
-    Then the spoiled list has 1 Stock Lot
+    Then the spoiled list has 0 Stock Lots
 
   Scenario: A Stock Lot that has not gone off cannot be thrown out or kept
     Given I add a Stock Lot of 200 g of "chicken thighs" bought today

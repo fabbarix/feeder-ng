@@ -33,8 +33,48 @@ Feature: Stock-take scanning
     Then the Shopping List extra "passata" still needs 1400 g
     And there is no last bought Product for "passata"
 
-  Scenario: A Stock-take cannot be undone
+  # B9-05 (SAFE-09): Stock-take is no longer the one scan that cannot be undone.
+  @b9-stock-undo
+  Scenario: +1 pack in Stock-take can be undone
     Given I scan the barcode "8000500310427" at home and choose "plus_pack" as scan "take-0001"
     When I undo scan "take-0001"
-    Then the response status is 409
-    And the error code is "not_undoable"
+    Then the response status is 200
+    And the shopping Stock total of "passata" is 0 g
+    And the shopping Stock has 0 Lots of "passata"
+    When I view the Shopping List
+    Then the Shopping List extra "passata" still needs 1400 g
+
+  @b9-stock-undo
+  Scenario: -1 pack in Stock-take can be undone
+    Given I scan the barcode "8000500310427" at home and choose "set_total" with total 1500 as scan "take-0001"
+    And I scan the barcode "8000500310427" at home and choose "minus_pack" as scan "take-0002"
+    And the shopping Stock total of "passata" is 800 g
+    When I undo scan "take-0002"
+    Then the response status is 200
+    And the shopping Stock total of "passata" is 1500 g
+
+  @b9-stock-undo
+  Scenario: A -1 pack that found less than a pack gives back only what was there
+    Given I scan the barcode "8000500310427" at home and choose "set_total" with total 500 as scan "take-0001"
+    And I scan the barcode "8000500310427" at home and choose "minus_pack" as scan "take-0002"
+    And the shopping Stock total of "passata" is 0 g
+    When I undo scan "take-0002"
+    Then the shopping Stock total of "passata" is 500 g
+
+  @b9-stock-undo
+  Scenario: Set total can be undone, up or down
+    Given I scan the barcode "8000500310427" at home and choose "set_total" with total 1500 as scan "take-0001"
+    And I scan the barcode "8000500310427" at home and choose "set_total" with total 400 as scan "take-0002"
+    When I undo scan "take-0002"
+    Then the shopping Stock total of "passata" is 1500 g
+    When I undo scan "take-0001"
+    Then the shopping Stock total of "passata" is 0 g
+
+  @b9-stock-undo
+  Scenario: Undoing a Stock-take twice changes nothing more
+    Given I scan the barcode "8000500310427" at home and choose "set_total" with total 1500 as scan "take-0001"
+    And I scan the barcode "8000500310427" at home and choose "minus_pack" as scan "take-0002"
+    When I undo scan "take-0002"
+    And I undo scan "take-0002"
+    Then the response status is 200
+    And the shopping Stock total of "passata" is 1500 g

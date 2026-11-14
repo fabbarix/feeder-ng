@@ -246,14 +246,10 @@ func TestUndoIsIdempotentAndAnUndoneUUIDIsNotReapplied(t *testing.T) {
 	}
 }
 
-func TestUndoOfAnUnknownScanOrAStockTakeFails(t *testing.T) {
+func TestUndoOfAnUnknownScanFails(t *testing.T) {
 	e := newEnv(t)
 	if _, err := e.svc.Undo(context.Background(), "ghost"); !errors.Is(err, service.ErrNotFound) {
 		t.Fatalf("unknown: err = %v", err)
-	}
-	apply(t, e, scan.Op{ClientUUID: "take-1", ScannedAt: "2026-11-09T12:00:00Z", Kind: scan.KindStockTake, ProductID: mutti, Action: scan.PlusPack})
-	if _, err := e.svc.Undo(context.Background(), "take-1"); !errors.Is(err, service.ErrNotUndoable) {
-		t.Fatalf("stock-take: err = %v, want ErrNotUndoable", err)
 	}
 }
 

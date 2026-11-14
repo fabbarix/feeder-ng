@@ -41,6 +41,7 @@ func TestEveryStockRouteRequiresSignIn(t *testing.T) {
 		{"GET", "/api/stock"}, {"GET", "/api/stock/lots"}, {"POST", "/api/stock/lots"},
 		{"PUT", "/api/stock/ingredients/1/total"}, {"GET", "/api/stock/spoiled"},
 		{"POST", "/api/stock/lots/1/throw-out"}, {"POST", "/api/stock/lots/1/keep"},
+		{"POST", "/api/stock/waste/1/undo"}, {"POST", "/api/stock/lots/put-away"},
 		{"POST", "/api/stock/cooked"}, {"GET", "/api/stock/projected"}, {"GET", "/api/stock/waste"},
 	}
 	for _, rt := range routes {
@@ -214,7 +215,8 @@ func TestSpoiledThrowOutKeepAndWaste(t *testing.T) {
 	var kept lot
 	r := c.Post(fmt.Sprintf("/api/stock/lots/%d/keep", old.ID), nil)
 	r.MustJSON(t, &kept)
-	if r.Status != 200 || kept.GoesOff == nil || *kept.GoesOff != "2026-11-06" {
+	// SSP-17 (B9-05): Keep with no body makes the Lot good until today in one tap, not one day further.
+	if r.Status != 200 || kept.GoesOff == nil || *kept.GoesOff != "2026-11-09" {
 		t.Fatalf("keep = %d %s", r.Status, r.Body)
 	}
 

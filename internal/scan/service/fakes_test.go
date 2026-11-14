@@ -58,6 +58,9 @@ type fakeStock struct {
 	removed []int64
 	sets    []float64
 	next    int64
+	// B9-05
+	takeIng   map[int64]int64 // synthetic take id -> Ingredient
+	givenBack [][]service.TakenLot
 }
 
 func newFakeStock() *fakeStock {
@@ -110,6 +113,50 @@ func (f *fakeStock) SetTotal(_ context.Context, ing int64, total float64) error 
 	return nil
 }
 func (f *fakeStock) lotCount() int { return len(f.lots) }
+
+// B9-05: the StockTakes port. A decrease takes the whole difference as one synthetic take of the Ingredient (the fake
+// has no Lots below a total a test sets by hand); an increase adds a Lot. GiveBack puts the totals back.
+func (f *fakeStock) SetTotalRecorded(_ context.Context, ing int64, total float64) (service.StockChange, error) {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.hit("SetTotalRecorded"); err != nil {
+		return service.StockChange{}, err
+	}
+	var ch service.StockChange
+	cur := f.totals[ing]
+	switch {
+	case total < cur:
+		id := 900 + ing
+		if f.takeIng == nil {
+			f.takeIng = map[int64]int64{}
+		}
+		f.takeIng[id] = ing
+		ch.Takes = []service.TakenLot{{LotID: id, LotJSON: `{"id":` + itoa(id) + `}`, Taken: cur - total}}
+	case total > cur:
+		f.next++
+		f.lots[f.next] = service.StockAdd{IngredientID: ing, Quantity: total - cur}
+		f.order = append(f.order, f.next)
+		ch.AddedLotID = f.next
+	}
+	f.totals[ing] = total
+	f.sets = append(f.sets, total)
+	return ch, nil
+}
+
+func (f *fakeStock) GiveBack(_ context.Context, takes []service.TakenLot) error {
+	time.Sleep(f.delay)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.hit("GiveBack"); err != nil {
+		return err
+	}
+	for _, tk := range takes {
+		f.totals[f.takeIng[tk.LotID]] += tk.Taken
+	}
+	f.givenBack = append(f.givenBack, takes)
+	return nil
+}
 
 type fakeCatalogue struct {
 	faults
@@ -528,7 +575,7 @@ func newEnv(t *testing.T) *env {
 	}
 	e.cat.addProduct(mutti, "Mutti passata 700 g", passataIng, "Passata", 700)
 	e.cat.addProduct(milkProd, "Milk 1 l", milkIng, "milk", 1000)
-	e.svc = service.New(service.Deps{Ledger: e.ledger, Stock: e.stock, Catalogue: e.cat, Ingredients: e.ing, List: e.list,
+	e.svc = service.New(service.Deps{Ledger: e.ledger, Stock: e.stock, Takes: e.stock, Catalogue: e.cat, Ingredients: e.ing, List: e.list,
 		Household: household{}, Dates: utcDates{}, Clock: clk, Publisher: e.bus})
 	return e
 }

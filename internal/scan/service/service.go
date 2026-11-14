@@ -68,6 +68,29 @@ type Stock interface {
 	SetTotal(ctx context.Context, ingredientID int64, total float64) error
 }
 
+// TakenLot is what a Stock-take took from one Stock Lot, kept in the ledger so Undo can give it back (B9-05, SAFE-09).
+// LotJSON is the Lot as it was before (opaque here: Stock reads it again); Taken is the quantity taken from it.
+type TakenLot struct {
+	LotID   int64   `json:"lotId"`
+	LotJSON string  `json:"lot"`
+	Taken   float64 `json:"taken"`
+}
+
+// StockChange is what SetTotalRecorded did: the Lot an increase created (0 = none) and what a decrease took.
+type StockChange struct {
+	AddedLotID int64
+	Takes      []TakenLot
+}
+
+// StockTakes is the port a Stock-take that can be undone needs (B9-05). Deps.Takes may be nil (then a Stock-take
+// uses Stock.SetTotal and cannot be undone: ErrNotUndoable). B9-05 test stub: the developer wires it and implements the use.
+type StockTakes interface {
+	// SetTotalRecorded is SetTotal that also says what it took or added.
+	SetTotalRecorded(ctx context.Context, ingredientID int64, total float64) (StockChange, error)
+	// GiveBack puts back what a Stock-take took (Stock already gone is left gone).
+	GiveBack(ctx context.Context, takes []TakenLot) error
+}
+
 // ProductInfo is a Product with its Ingredient.
 type ProductInfo struct {
 	ID             int64
@@ -215,6 +238,7 @@ type Publisher interface{ Publish(topic string, data any) }
 type Deps struct {
 	Ledger      *store.Store
 	Stock       Stock
+	Takes       StockTakes // B9-05; nil = Stock-take is not undoable
 	Catalogue   Catalogue
 	Ingredients Ingredients
 	List        List
