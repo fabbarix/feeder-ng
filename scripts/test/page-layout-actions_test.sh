@@ -5,8 +5,8 @@
 #   P30  a Segmented option on two lines (and a [data-one-line] button): a segmented option is always one line
 # Both are always-fail rules. The real driver runs against a tiny static server (fixtures/page-layout-actions): /plan is the
 # failing page (about 1.5:1 boundaries, a wrapping Segmented option), /settings the clean one. No Chrome: SKIP.
-# Written before the rules exist: it fails until the Developer adds scripts/lib/page-layout/rules/P29-*.mjs and P30-*.mjs
-# (or, before the guard split is merged, the rules in page-layout-rules.mjs) and their probes.
+# The rules are scripts/lib/page-layout/rules/P29-action-boundary.mjs and P30-one-line.mjs, their probes probes/action-boundary.mjs
+# and probes/one-line.mjs.
 set -uo pipefail
 for v in $(compgen -e | grep -E '^PAGE_LAYOUT'); do unset "$v"; done
 
@@ -21,11 +21,16 @@ SERVER=""
 cleanup() { [ -n "$SERVER" ] && kill "$SERVER" 2>/dev/null; rm -rf "$TMP"; }
 trap cleanup EXIT
 
-# static: P29 and P30 are always-fail rules, registered with their owner
-RULES="$ROOT/scripts/lib/page-layout-rules.mjs"
-REG="$(cat "$RULES" "$ROOT"/scripts/lib/page-layout/*.mjs "$ROOT"/scripts/lib/page-layout/rules/*.mjs 2>/dev/null)"
-grep -Eq "ALWAYS_FAIL *=.*'P29'" <<<"$REG" && ok || bad "ALWAYS_FAIL must list P29"
-grep -Eq "ALWAYS_FAIL *=.*'P30'" <<<"$REG" && ok || bad "ALWAYS_FAIL must list P30"
+# static: P29 and P30 are always-fail rule modules of the registry (ALWAYS_FAIL is derived from `always`), with their probes;
+# P29's probe also runs in the dark-scheme pass
+PL="$ROOT/scripts/lib/page-layout"
+grep -qs "always: true" "$PL"/rules/P29-*.mjs && ok || bad "rules/P29-*.mjs must be always: true"
+grep -qs "always: true" "$PL"/rules/P30-*.mjs && ok || bad "rules/P30-*.mjs must be always: true"
+grep -qs "evaluateDark" "$PL"/rules/P29-*.mjs && ok || bad "rules/P29-*.mjs must report the dark pass (evaluateDark)"
+grep -qs "key: 'weakBoundaries'.*dark: true" "$PL/probes/action-boundary.mjs" && ok || bad "probes/action-boundary.mjs must fill weakBoundaries and run in the dark pass"
+grep -qs "key: 'wrappedOptions'" "$PL/probes/one-line.mjs" && ok || bad "probes/one-line.mjs must fill wrappedOptions"
+AF="$(cd "$ROOT" && node -e "import('./scripts/lib/page-layout-rules.mjs').then((m) => console.log(m.ALWAYS_FAIL.join(' ')))" 2>&1)"
+grep -qw P29 <<<"$AF" && grep -qw P30 <<<"$AF" && ok || bad "ALWAYS_FAIL must list P29 and P30 (got: $AF)"
 
 CHROME_BIN="${CHROME:-$(command -v google-chrome || command -v chromium || true)}"
 if [ -z "$CHROME_BIN" ]; then
