@@ -18,6 +18,7 @@ export const receiptStrings = {
   photosLabel: 'Photos',
   photoLabel: (n: number) => `Photo ${n}`,
   removePhoto: (n: number) => `Remove photo ${n}`,
+  editPhoto: (n: number) => `Edit photo ${n}`,
 
   // Progress (design 3.3).
   reading: 'Reading the receipt…',

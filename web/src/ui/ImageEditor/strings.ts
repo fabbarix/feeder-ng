@@ -5,6 +5,8 @@ export const imageEditorStrings = {
   cropGroup: 'Crop image',
   cropMove: 'Move crop area',
   cropReset: 'Reset',
+  cancel: 'Cancel',
+  done: 'Done',
   cropArea: (width: number, height: number) => `Crop area: ${width} by ${height} pixels`,
   turnedRight: 'Turned right.',
   turnedLeft: 'Turned left.',

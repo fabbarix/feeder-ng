@@ -1,6 +1,9 @@
 // The receipt's photos, in memory only (never IndexedDB, ADR 0018): added from the camera or the library, prepared with the shared
-// image pipeline, listed with a preview, removed, and turned into the read's body. Previews are revoked when removed and on unmount.
+// image pipeline, listed with a preview, edited (turned, cropped), removed, and turned into the read's body. Previews are revoked when
+// removed, replaced and on unmount. An edit prepares the current photo again: the original is not kept.
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ImageEdit } from '../../../ui/ImageEditor/lib/edit'
+import { isFullEdit } from '../../../ui/ImageEditor/lib/edit'
 import { browserEngine, ImageEditorError, type ImageEngine } from '../../../ui/ImageEditor/lib/prepare'
 import { MAX_PHOTOS, prepareReceiptPhoto } from '../lib/preparePhoto'
 
@@ -24,6 +27,11 @@ export interface UseReceiptPhotos {
   /** The last thing that went wrong, by code (the copy comes from receiptErrors). */
   problem?: ReceiptPhotoProblem
   add(files: File[]): Promise<void>
+  /**
+   * Prepares the photo again with `edit` (turns and a crop in pixels of the turned photo). It keeps its id and place; the old preview URL is
+   * revoked. Resolves true when the photo was replaced; false when nothing changed (the whole, unturned picture, an unknown id, a failure).
+   */
+  applyEdit(id: string, edit: ImageEdit): Promise<boolean>
   remove(id: string): void
   clear(): void
   dismissProblem(): void
@@ -41,6 +49,11 @@ const DEFAULT_URLS = {
   revoke: (url: string) => URL.revokeObjectURL(url),
 }
 
+/** The problem code a failed prepare is reported as. */
+function problemOf(err: unknown): ReceiptPhotoProblem {
+  return err instanceof ImageEditorError && err.code === 'too_large' ? 'photo_too_large' : 'photo_unsupported'
+}
+
 export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos {
   const [env] = useState(() => ({ engine: deps.engine ?? browserEngine, urls: deps.objectUrls ?? DEFAULT_URLS }))
   const [photos, setPhotos] = useState<ReceiptPhotoItem[]>([])
@@ -49,6 +62,8 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
   // The list and the preview URLs are mirrored in refs, so an add in progress sees the photos added before it.
   const list = useRef<ReceiptPhotoItem[]>([])
   const previews = useRef(new Map<string, string>())
+  // The blob each photo is made of (the pipeline's output): an edit starts from it, never from the original file.
+  const sources = useRef(new Map<string, Blob>())
   const seq = useRef(0)
   // False once the screen is left: an add still preparing a file then makes no preview URL that nothing would revoke.
   const alive = useRef(true)
@@ -74,11 +89,40 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
             const id = `receipt-photo-${++seq.current}`
             const previewUrl = env.urls.create(out.blob)
             previews.current.set(id, previewUrl)
+            sources.current.set(id, out.blob)
             commit([...list.current, { id, previewUrl, dataUrl: out.dataUrl, width: out.width, height: out.height }])
           } catch (err) {
-            setProblem(err instanceof ImageEditorError && err.code === 'too_large' ? 'photo_too_large' : 'photo_unsupported')
+            setProblem(problemOf(err))
           }
         }
+      } finally {
+        if (alive.current) setBusy(false)
+      }
+    },
+    [env, commit],
+  )
+
+  const applyEdit = useCallback(
+    async (id: string, edit: ImageEdit): Promise<boolean> => {
+      const item = list.current.find((p) => p.id === id)
+      const source = sources.current.get(id)
+      if (!item || !source || isFullEdit(edit, { width: item.width, height: item.height })) return false
+      setBusy(true)
+      setProblem(undefined)
+      try {
+        const out = await prepareReceiptPhoto(source, env.engine, edit)
+        // Left, or the photo removed, meanwhile: nothing is replaced and no URL is made that nothing would revoke.
+        if (!alive.current || !list.current.some((p) => p.id === id)) return false
+        const previewUrl = env.urls.create(out.blob)
+        const previous = previews.current.get(id)
+        previews.current.set(id, previewUrl)
+        sources.current.set(id, out.blob)
+        if (previous !== undefined) env.urls.revoke(previous)
+        commit(list.current.map((p) => (p.id === id ? { id, previewUrl, dataUrl: out.dataUrl, width: out.width, height: out.height } : p)))
+        return true
+      } catch (err) {
+        if (alive.current) setProblem(problemOf(err))
+        return false
       } finally {
         if (alive.current) setBusy(false)
       }
@@ -93,6 +137,7 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
         env.urls.revoke(url)
         previews.current.delete(id)
       }
+      sources.current.delete(id)
       commit(list.current.filter((p) => p.id !== id))
     },
     [env, commit],
@@ -101,17 +146,20 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
   const clear = useCallback(() => {
     for (const url of previews.current.values()) env.urls.revoke(url)
     previews.current.clear()
+    sources.current.clear()
     commit([])
   }, [env, commit])
 
   // Synchronous on unmount: the previews are never kept after the screen is left.
   useEffect(() => {
     const urls = previews.current
+    const blobs = sources.current
     alive.current = true
     return () => {
       alive.current = false
       for (const url of urls.values()) env.urls.revoke(url)
       urls.clear()
+      blobs.clear()
     }
   }, [env])
 
@@ -122,6 +170,7 @@ export function useReceiptPhotos(deps: ReceiptPhotosDeps = {}): UseReceiptPhotos
     busy,
     problem,
     add,
+    applyEdit,
     remove,
     clear,
     dismissProblem: useCallback(() => setProblem(undefined), []),
