@@ -53,14 +53,16 @@ func DefaultSettings(timeZone string) Settings {
 		QuietHours:               QuietHours{Start: "22:00", End: "07:00"},
 		PlannerStyle:             0.5,
 		Currency:                 "USD",
+		EarliestStart:            "06:30",
 	}
 }
 
-// Normalized trims the city and upper-cases and trims the currency. It returns a copy.
+// Normalized trims the city and the Earliest start, and upper-cases and trims the currency. It returns a copy.
 func (s Settings) Normalized() Settings {
 	n := s
 	n.TimeZone = strings.TrimSpace(s.TimeZone)
 	n.Currency = strings.ToUpper(strings.TrimSpace(s.Currency))
+	n.EarliestStart = strings.TrimSpace(s.EarliestStart)
 	if s.Location != nil {
 		n.Location = &Location{City: strings.TrimSpace(s.Location.City), Latitude: s.Location.Latitude, Longitude: s.Location.Longitude}
 	}
@@ -92,6 +94,9 @@ func (s Settings) Validate() error {
 	}
 	if s.QuietHours.Start == s.QuietHours.End {
 		return fieldError("quietHours", "start and end must differ")
+	}
+	if s.EarliestStart != "" && !validTimeOfDay(s.EarliestStart) {
+		return fieldError("earliestStart", "must be an HH:MM time, or Off")
 	}
 	if !currencyISO.MatchString(s.Currency) {
 		return fieldError("currency", "must be a three-letter code such as EUR")

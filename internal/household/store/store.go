@@ -59,17 +59,22 @@ func (s *Store) Settings(ctx context.Context) (household.Settings, error) {
 		city                 sql.NullString
 		lat, lon             sql.NullFloat64
 		quietStart, quietEnd string
+		earliest             sql.NullString
+		hidden               int
 	)
 	err := s.db.QueryRowContext(ctx, `SELECT time_zone, time_zone_configured, planning_horizon_days,
 			default_cooldown_days, default_leftover_use_by_days, frozen_use_by_days, quiet_hours_start, quiet_hours_end,
-			planner_style, location_city, location_latitude, location_longitude, currency
+			planner_style, location_city, location_latitude, location_longitude, currency,
+			earliest_start, setup_hidden
 		FROM household_settings WHERE id = 1`).Scan(
 		&v.TimeZone, &configured, &v.PlanningHorizonDays, &v.DefaultCooldownDays, &v.DefaultLeftoverUseByDays, &v.FrozenUseByDays,
-		&quietStart, &quietEnd, &v.PlannerStyle, &city, &lat, &lon, &v.Currency)
+		&quietStart, &quietEnd, &v.PlannerStyle, &city, &lat, &lon, &v.Currency, &earliest, &hidden)
 	if err != nil {
 		return household.Settings{}, err
 	}
 	v.TimeZoneConfigured = configured == 1
+	v.EarliestStart = earliest.String // NULL is Off ("")
+	v.SetupHidden = hidden == 1
 	v.QuietHours = household.QuietHours{Start: quietStart, End: quietEnd}
 	switch {
 	case city.Valid:
@@ -81,7 +86,7 @@ func (s *Store) Settings(ctx context.Context) (household.Settings, error) {
 	return v, nil
 }
 
-// SaveSettings stores every field as given, including TimeZoneConfigured.
+// SaveSettings stores every field as given, including TimeZoneConfigured. An Earliest start of "" (Off) is NULL.
 func (s *Store) SaveSettings(ctx context.Context, v household.Settings) error {
 	var city sql.NullString
 	var lat, lon sql.NullFloat64
@@ -96,10 +101,12 @@ func (s *Store) SaveSettings(ctx context.Context, v household.Settings) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE household_settings SET time_zone = ?, time_zone_configured = ?,
 			planning_horizon_days = ?, default_cooldown_days = ?, default_leftover_use_by_days = ?, frozen_use_by_days = ?,
 			quiet_hours_start = ?, quiet_hours_end = ?, planner_style = ?,
-			location_city = ?, location_latitude = ?, location_longitude = ?, currency = ?
+			location_city = ?, location_latitude = ?, location_longitude = ?, currency = ?,
+			earliest_start = ?, setup_hidden = ?
 		WHERE id = 1`,
 		v.TimeZone, v.TimeZoneConfigured, v.PlanningHorizonDays, v.DefaultCooldownDays, v.DefaultLeftoverUseByDays, v.FrozenUseByDays,
-		v.QuietHours.Start, v.QuietHours.End, v.PlannerStyle, city, lat, lon, v.Currency)
+		v.QuietHours.Start, v.QuietHours.End, v.PlannerStyle, city, lat, lon, v.Currency,
+		sql.NullString{String: v.EarliestStart, Valid: v.EarliestStart != ""}, v.SetupHidden)
 	return err
 }
 
