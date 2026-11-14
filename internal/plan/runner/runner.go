@@ -140,7 +140,7 @@ func (r *Runner) write(ctx context.Context, reason plan.Reason, o runOpts,
 	var targets []plan.Key
 	token := ""
 	err := r.d.Store.InTx(ctx, func(tx *sql.Tx, st *store.Store) error {
-		before, err := captureChanges(ctx, st)
+		before, err := r.captureChanges(ctx, st)
 		if err != nil {
 			return err
 		}

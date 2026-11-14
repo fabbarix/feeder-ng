@@ -96,19 +96,37 @@ func newToken() string {
 	return hex.EncodeToString(b[:])
 }
 
-// changeSet is what a write compares against when it is done: every plan row and Planned Meal before it.
+// changeSet is what a write compares against when it is done: every plan row before it, and the Planned Meals from
+// the earliest one a write can leave planned.
 type changeSet struct {
 	rows  store.Rows
 	meals []plan.Meal
+	from  string
 }
 
-func captureChanges(ctx context.Context, st *store.Store) (changeSet, error) {
+// captureChanges reads the plan before a write. Every row is captured (the undo diff and the digest must see any row a
+// write touches, a Cooked meal's why chips included); the meals for the changes list are read only from the earliest
+// unresolved meal, or today: a cell listed as changed holds a planned meal after the write, and none is older than
+// that, so the history of years is not read twice more by every write.
+func (r *Runner) captureChanges(ctx context.Context, st *store.Store) (changeSet, error) {
 	rows, err := st.CaptureRows(ctx)
 	if err != nil {
 		return changeSet{}, err
 	}
-	meals, err := st.Meals(ctx, "", "")
-	return changeSet{rows: rows, meals: meals}, err
+	in, err := r.info(ctx)
+	if err != nil {
+		return changeSet{}, err
+	}
+	from := in.today
+	unresolved, err := st.UnresolvedBefore(ctx, in.today)
+	if err != nil {
+		return changeSet{}, err
+	}
+	if len(unresolved) > 0 && unresolved[0].Key.Date < from {
+		from = unresolved[0].Key.Date
+	}
+	meals, err := st.Meals(ctx, from, "")
+	return changeSet{rows: rows, meals: meals, from: from}, err
 }
 
 // since compares the plan now with the capture: the row diff, the cells that changed beyond except, and the digest of
@@ -118,7 +136,7 @@ func (r *Runner) since(ctx context.Context, st *store.Store, before changeSet, e
 	if err != nil {
 		return store.RowDiff{}, nil, "", err
 	}
-	meals, err := st.Meals(ctx, "", "")
+	meals, err := st.Meals(ctx, before.from, "")
 	if err != nil {
 		return store.RowDiff{}, nil, "", err
 	}
@@ -206,7 +224,7 @@ func (r *Runner) Restore(ctx context.Context, token string) (RestoreResult, erro
 				return fmt.Errorf("planning: the undo participant %q is not registered", name)
 			}
 		}
-		before, err := captureChanges(ctx, st)
+		before, err := r.captureChanges(ctx, st)
 		if err != nil {
 			return err
 		}
