@@ -407,9 +407,13 @@ func setDateAttendance(ctx context.Context, tx *sql.Tx, slotID int64, date strin
 		if err := checkMember(ctx, tx, a.MemberID); err != nil {
 			return err
 		}
+		despite := 0
+		if a.DespiteAway {
+			despite = 1
+		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO attendance_override_attendees
-			(slot_id, date, member_id, portion_factor_override) VALUES (?, ?, ?, ?)`,
-			slotID, date, a.MemberID, nullFloat(a.PortionFactorOverride)); err != nil {
+			(slot_id, date, member_id, portion_factor_override, despite_away) VALUES (?, ?, ?, ?, ?)`,
+			slotID, date, a.MemberID, nullFloat(a.PortionFactorOverride), despite); err != nil {
 			if isUnique(err) {
 				return household.ErrDuplicateAttendee
 			}
@@ -559,13 +563,30 @@ func usualAttendance(ctx context.Context, q querier, slotID int64) ([]household.
 
 // overrideAttendance lists the attendance recorded for one date.
 func overrideAttendance(ctx context.Context, q querier, slotID int64, date string) ([]household.Attendee, error) {
-	rows, err := q.QueryContext(ctx, `SELECT member_id, portion_factor_override FROM attendance_override_attendees
+	rows, err := q.QueryContext(ctx, `SELECT member_id, portion_factor_override, despite_away FROM attendance_override_attendees
 		WHERE slot_id = ? AND date = ? ORDER BY member_id`, slotID, date)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	return scanAttendees(rows)
+	out := []household.Attendee{}
+	for rows.Next() {
+		var (
+			a       household.Attendee
+			pfo     sql.NullFloat64
+			despite int
+		)
+		if err := rows.Scan(&a.MemberID, &pfo, &despite); err != nil {
+			return nil, err
+		}
+		if pfo.Valid {
+			v := pfo.Float64
+			a.PortionFactorOverride = &v
+		}
+		a.DespiteAway = despite == 1
+		out = append(out, a)
+	}
+	return out, rows.Err()
 }
 
 func scanAttendees(rows *sql.Rows) ([]household.Attendee, error) {

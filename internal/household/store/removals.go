@@ -302,6 +302,19 @@ type memberSnapshot struct {
 	DateOptOuts   []snapDateOptOut   `json:"dateOptOuts"`    // course_attendance_override_opt_outs
 	Preferences   []snapRecipePref   `json:"preferences"`    // member_recipe_preferences
 	Exclusions    []int64            `json:"exclusions"`     // member_ingredient_exclusions (Ingredient ids)
+	Aways         []snapAway         `json:"aways,omitempty"` // member_away (B9-24): back with the same ids
+}
+
+// snapAway is one member_away row (B9-24). The Away goes with its Member (ON DELETE CASCADE) and comes back with them;
+// when the snapshot expires it is gone for good.
+type snapAway struct {
+	ID          int64   `json:"id"`
+	From        string  `json:"from"`
+	FromSlot    *int64  `json:"fromSlot"`
+	Through     *string `json:"through"`
+	ThroughSlot *int64  `json:"throughSlot"`
+	AppliesFrom string  `json:"appliesFrom"`
+	CreatedAt   string  `json:"createdAt"`
 }
 
 type snapAttendee struct {
@@ -310,9 +323,10 @@ type snapAttendee struct {
 }
 
 type snapDateAttendee struct {
-	SlotID   int64    `json:"slotId"`
-	Date     string   `json:"date"`
-	Override *float64 `json:"override"`
+	SlotID      int64    `json:"slotId"`
+	Date        string   `json:"date"`
+	Override    *float64 `json:"override"`
+	DespiteAway bool     `json:"despiteAway,omitempty"` // B9-24: "Eats here anyway"
 }
 
 type snapSlotOptOut struct {
@@ -391,11 +405,11 @@ func readMemberSnapshot(ctx context.Context, tx *sql.Tx, id int64) (memberSnapsh
 				snap.Attendance = append(snap.Attendance, a)
 				return nil
 			}},
-		{`SELECT slot_id, date, portion_factor_override FROM attendance_override_attendees WHERE member_id = ? ORDER BY slot_id, date`,
+		{`SELECT slot_id, date, portion_factor_override, despite_away FROM attendance_override_attendees WHERE member_id = ? ORDER BY slot_id, date`,
 			func(r *sql.Rows) error {
 				var a snapDateAttendee
 				var o sql.NullFloat64
-				if err := r.Scan(&a.SlotID, &a.Date, &o); err != nil {
+				if err := r.Scan(&a.SlotID, &a.Date, &o, &a.DespiteAway); err != nil {
 					return err
 				}
 				a.Override = floatPtr(o)
@@ -436,6 +450,29 @@ func readMemberSnapshot(ctx context.Context, tx *sql.Tx, id int64) (memberSnapsh
 					return err
 				}
 				snap.Exclusions = append(snap.Exclusions, i)
+				return nil
+			}},
+		{`SELECT id, from_date, from_slot_id, through_date, through_slot_id, applies_from, created_at FROM member_away
+			WHERE member_id = ? ORDER BY id`,
+			func(r *sql.Rows) error {
+				var (
+					a                     snapAway
+					fromSlot, throughSlot sql.NullInt64
+					through               sql.NullString
+				)
+				if err := r.Scan(&a.ID, &a.From, &fromSlot, &through, &throughSlot, &a.AppliesFrom, &a.CreatedAt); err != nil {
+					return err
+				}
+				if fromSlot.Valid {
+					a.FromSlot = &fromSlot.Int64
+				}
+				if through.Valid {
+					a.Through = &through.String
+				}
+				if throughSlot.Valid {
+					a.ThroughSlot = &throughSlot.Int64
+				}
+				snap.Aways = append(snap.Aways, a)
 				return nil
 			}},
 	}
@@ -514,8 +551,8 @@ func restoreMemberRows(ctx context.Context, tx *sql.Tx, id int64, snap memberSna
 			SELECT id, ?, ? FROM meal_slots WHERE id = ?`, []any{id, nullFloat(a.Override), a.SlotID}})
 	}
 	for _, a := range snap.DateAttend {
-		stmts = append(stmts, stmt{`INSERT OR IGNORE INTO attendance_override_attendees (slot_id, date, member_id, portion_factor_override)
-			SELECT slot_id, date, ?, ? FROM attendance_overrides WHERE slot_id = ? AND date = ?`, []any{id, nullFloat(a.Override), a.SlotID, a.Date}})
+		stmts = append(stmts, stmt{`INSERT OR IGNORE INTO attendance_override_attendees (slot_id, date, member_id, portion_factor_override, despite_away)
+			SELECT slot_id, date, ?, ?, ? FROM attendance_overrides WHERE slot_id = ? AND date = ?`, []any{id, nullFloat(a.Override), a.DespiteAway, a.SlotID, a.Date}})
 	}
 	for _, o := range snap.SlotOptOuts {
 		stmts = append(stmts, stmt{`INSERT OR IGNORE INTO meal_slot_course_opt_outs (meal_slot_id, course_id, member_id)
@@ -529,6 +566,12 @@ func restoreMemberRows(ctx context.Context, tx *sql.Tx, id int64, snap memberSna
 	for _, p := range snap.Preferences {
 		stmts = append(stmts, stmt{`INSERT OR IGNORE INTO member_recipe_preferences (member_id, recipe_id, state)
 			SELECT ?, id, ? FROM recipes WHERE id = ?`, []any{id, p.State, p.RecipeID}})
+	}
+	for _, a := range snap.Aways {
+		// The Away's Meal Slots are kept as they were: a Meal Slot removed meanwhile only stops matching a day.
+		stmts = append(stmts, stmt{`INSERT OR IGNORE INTO member_away (id, member_id, from_date, from_slot_id, through_date,
+			through_slot_id, applies_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			[]any{a.ID, id, a.From, a.FromSlot, a.Through, a.ThroughSlot, a.AppliesFrom, a.CreatedAt}})
 	}
 	for _, ing := range snap.Exclusions {
 		stmts = append(stmts, stmt{`INSERT OR IGNORE INTO member_ingredient_exclusions (member_id, ingredient_id)
