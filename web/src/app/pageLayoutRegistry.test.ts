@@ -369,9 +369,9 @@ describe('profiles and viewports (plan section 9)', () => {
   it('no profile viewport is narrower than 375 px', () => {
     for (const vp of [...facade.PROFILES.quick, ...facade.PROFILES.full]) expect(vp.width).toBeGreaterThanOrEqual(375)
   })
-  it('scenario-only viewports: 667x375 (the smallest phone in landscape), 320x256 (400 % zoom), 844x390 with a safe-area inset', () => {
+  it('scenario-only viewports: 667x375 (the smallest phone in landscape), 375x256 (400 % zoom of a 1500 px window), 844x390 with a safe-area inset', () => {
     expect(facade.SCENARIO_VIEWPORTS['667x375']).toEqual(v(667, 375, true))
-    expect(facade.SCENARIO_VIEWPORTS['320x256']).toEqual(v(320, 256, false))
+    expect(facade.SCENARIO_VIEWPORTS['375x256']).toEqual(v(375, 256, false))
     const inset = facade.SCENARIO_VIEWPORTS['844x390-inset']!
     expect([inset.width, inset.height, inset.mobile]).toEqual([844, 390, true])
     const a = inset.safeArea!
@@ -381,8 +381,8 @@ describe('profiles and viewports (plan section 9)', () => {
     expect(a.bottom).toBeGreaterThan(0)
   })
   it('a scenario names its viewports by number (the old ones) or by key', () => {
-    const s = { name: 'x', route: '/', widths: [390, '667x375', '320x256', '844x390-inset'] }
-    expect(facade.scenarioViewports(s, []).map((x) => [x.width, x.height])).toEqual([[390, 844], [667, 375], [320, 256], [844, 390]])
+    const s = { name: 'x', route: '/', widths: [390, '667x375', '375x256', '844x390-inset'] }
+    expect(facade.scenarioViewports(s, []).map((x) => [x.width, x.height])).toEqual([[390, 844], [667, 375], [375, 256], [844, 390]])
     expect(() => facade.scenarioViewports({ ...s, widths: ['7x7'] }, [])).toThrow(/7x7/)
   })
   it('the driver emulates through emulationCalls(vp): metrics, plus Emulation.setSafeAreaInsetsOverride when the viewport has an inset', () => {

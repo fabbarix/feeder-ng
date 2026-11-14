@@ -147,7 +147,7 @@ describe('the warn bridge and strict modes lines (B9-03)', () => {
   it('without the line the same finding fails; a 390 px one fails either way; a scenario label is never bridged', () => {
     expect(rules.countFindings('fail_routes=/shop', line(375, '/shop')).fail).toBe(1)
     expect(rules.countFindings(modes, line(390, '/shop')).fail).toBe(1)
-    expect(rules.countFindings(modes, line(320, '/shop#zoom')).fail).toBe(1)
+    expect(rules.countFindings(modes, line(375, '/shop#zoom')).fail).toBe(1)
   })
   it('a line the parser does not know is an error, never dropped', () => {
     for (const bad of ['fail_route=/shop', 'default=maybe', 'width<=375 = fail', 'width<375 = warn', 'words']) {

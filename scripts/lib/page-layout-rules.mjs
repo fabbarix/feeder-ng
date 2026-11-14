@@ -32,10 +32,10 @@ export const SCENARIO_VIEWPORTS = {
   390: { width: 390, height: 844, mobile: true },
   834: { width: 834, height: 1194, mobile: false },
   1440: { width: 1440, height: 900, mobile: false },
-  // B9-03 (plan section 9), scenario-only: the smallest phone in landscape (375 px is the smallest supported width); 400 % zoom of a 1280 x 1024 window (WCAG reflow: 320 CSS px wide,
-  // a desktop, not a phone); and a notched phone in landscape, whose safe-area insets the driver emulates (viewport.mjs).
+  // B9-03 (plan section 9; the user's ruling of 2026-11-14: no guard viewport is narrower than 375 px), scenario-only: the smallest
+  // phone in landscape; 400 % zoom of a 1500 px window (375 CSS px wide, a desktop, not a phone); and a notched phone in landscape, whose safe-area insets the driver emulates (viewport.mjs).
   '667x375': { width: 667, height: 375, mobile: true },
-  '320x256': { width: 320, height: 256, mobile: false },
+  '375x256': { width: 375, height: 256, mobile: false },
   '844x390-inset': { width: 844, height: 390, mobile: true, safeArea: { top: 0, right: 47, bottom: 21, left: 47 } },
 }
 
@@ -48,7 +48,7 @@ for (const s of SCENARIOS) {
 
 /**
  * The viewports a scenario runs at: its own `widths`, or every viewport of the profile (the filtered /recipes and /pantry). A width is a
- * number (the old phone, tablet and desktop widths) or a SCENARIO_VIEWPORTS key ('667x375', '320x256', '844x390-inset').
+ * number (the old phone, tablet and desktop widths) or a SCENARIO_VIEWPORTS key ('667x375', '375x256', '844x390-inset').
  */
 export function scenarioViewports(scenario, profileViewports) {
   if (!scenario.widths) return profileViewports
