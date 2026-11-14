@@ -8,6 +8,7 @@ import (
 
 	"github.com/fabbarix/feeder-ng/internal/app"
 	"github.com/fabbarix/feeder-ng/internal/auth"
+	householdstore "github.com/fabbarix/feeder-ng/internal/household/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 )
 
@@ -18,6 +19,9 @@ type meBody struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"displayName"`
 	IsAdmin     bool   `json:"isAdmin"`
+	// HouseholdTimeZone is the Household's IANA zone name ("UTC" until an Admin sets one), so the shell can show
+	// household dates before any other request returns (RES-08). Only GET /api/me carries it.
+	HouseholdTimeZone string `json:"householdTimeZone,omitempty"`
 }
 
 func me(u auth.User) meBody {
@@ -28,9 +32,17 @@ func mount(r *app.Router, d app.Deps) {
 	signInRoutes(r, d)
 	mountAllowlist(r, d)
 
+	settings := householdstore.New(d.DB, d.Clock)
 	r.User("GET /api/me", func(w http.ResponseWriter, req *http.Request) {
 		u, _ := auth.UserFrom(req.Context())
-		httpx.WriteJSON(w, http.StatusOK, me(u))
+		s, err := settings.Settings(req.Context())
+		if err != nil {
+			httpx.WriteAPIError(w, err)
+			return
+		}
+		body := me(u)
+		body.HouseholdTimeZone = s.TimeZone
+		httpx.WriteJSON(w, http.StatusOK, body)
 	})
 
 	r.Public("POST /api/logout", func(w http.ResponseWriter, req *http.Request) {
