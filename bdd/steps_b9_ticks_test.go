@@ -203,6 +203,40 @@ func b9TickSteps(sc *godog.ScenarioContext, w *World) {
 		return fmt.Errorf("Line %s has no addition of %d g by %s that is %s: %v", name, qty, who, mine, t["additions"])
 	})
 
+	packOf := func(name string) (map[string]any, error) {
+		l, _, err := lineFor(name)
+		if err != nil {
+			return nil, err
+		}
+		pack, _ := l["pack"].(map[string]any)
+		if pack == nil {
+			return nil, fmt.Errorf("Line %q has no pack: %v", name, l)
+		}
+		return pack, nil
+	}
+	sc.Step(`^the pack of "([^"]*)" says it is priced at (\d+) cents on (\d{4}-\d{2}-\d{2}) at "([^"]*)"$`, func(name string, cents int, date, shop string) error {
+		pack, err := packOf(name)
+		if err != nil {
+			return err
+		}
+		sid, _ := w.Vars["ss:shop:"+shop].(int64)
+		price, _ := pack["price"].(map[string]any)
+		if price == nil || ssNum(price["cents"]) != float64(cents) || price["date"] != date || ssNum(price["shopId"]) != float64(sid) || pack["bought"] != false {
+			return fmt.Errorf("pack of %s = %v, want a priced fallback with price {cents %d, date %s, shopId %d}", name, pack, cents, date, sid)
+		}
+		return nil
+	})
+	sc.Step(`^the pack of "([^"]*)" says it has no Price of its own$`, func(name string) error {
+		pack, err := packOf(name)
+		if err != nil {
+			return err
+		}
+		if pack["bought"] != true || pack["price"] != nil {
+			return fmt.Errorf("pack of %s = %v, want a bought pack with price null", name, pack)
+		}
+		return nil
+	})
+
 	// --- the phone's queue (the shopping-scan set keeps it in Vars["ss:queue"] and sends it with "the phone syncs its queue") ---
 	queue := func(op map[string]any) {
 		ops, _ := w.Vars["ss:queue"].([]map[string]any)
