@@ -27,6 +27,14 @@ export const receiptStrings = {
   longRead: 'Long receipts can take up to a minute',
   lostConnection: 'Lost the connection. The read continues; come back to see it.',
   cancel: 'Cancel',
+  /** The line under the progress, and the Scanned list's row while it reads (b8-rxweb, design 3.3). */
+  readingRowMeta: 'You can leave. Feeder keeps reading.',
+
+  // The background read's row and toast (b8-rxweb, design 3.3).
+  failedRowTitle: 'The receipt could not be read',
+  reviewAction: 'Review',
+  nothingToChange: 'Receipt read: nothing to change',
+  readyTitle: (n: number) => (n === 1 ? 'Receipt read: review 1 change' : `Receipt read: review ${n} changes`),
 
   // The review (design 3.4).
   reviewTitle: 'Review the receipt',

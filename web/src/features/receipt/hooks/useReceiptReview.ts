@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
 import { receiptApi } from '../api'
 import { emitReceiptApplied } from '../lib/appliedEvents'
+import { dismissBackgroundRead } from '../lib/backgroundRead'
 import { describeReceiptError } from '../lib/receiptErrors'
 import { forgetRead, recallRead } from '../lib/readStore'
 import { getReceiptSession } from '../lib/receiptSession'
@@ -92,12 +93,18 @@ export function useReceiptReview({ onApplied }: UseReceiptReviewOptions): UseRec
     if (out.ok) {
       emitReceiptApplied({ readId: stored.readId, applied: out.applied, failed: false, results: out.results, undone: out.undone })
       forgetRead()
+      dismissBackgroundRead()
       setStored(undefined)
       onApplied(out.applied)
       return
     }
     // A failed put-back still re-keys the Scanned list: its results go over, and the read is stale now.
     if (out.code === 'receipt_apply_failed') emitReceiptApplied({ readId: stored.readId, applied: 0, failed: true, results: out.results })
+    // The read is kept 10 minutes by the server, and this one is past it (410): the row goes back to the plain one too.
+    if (out.status === 410) {
+      forgetRead()
+      dismissBackgroundRead()
+    }
     const copy = describeReceiptError({ code: out.code }, { isAdmin })
     setError({ code: out.code, message: copy.message, action: copy.action, ...(out.id !== undefined ? { id: out.id } : {}) })
   }, [stored, proposals, state, isAdmin, onApplied])
@@ -106,6 +113,7 @@ export function useReceiptReview({ onApplied }: UseReceiptReviewOptions): UseRec
 
   const readAgain = useCallback(() => {
     forgetRead()
+    dismissBackgroundRead()
     setStored(undefined)
   }, [])
 
