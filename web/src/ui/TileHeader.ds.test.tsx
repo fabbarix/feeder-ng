@@ -55,6 +55,16 @@ describe('TileHeader: anatomy', () => {
     expect(header.lastElementChild!.contains(button)).toBe(true)
   })
 
+  it('the title carries titleId, so the tile section is named by it (aria-labelledby, TB-09)', () => {
+    render(
+      <section aria-labelledby="tc-title">
+        <TileHeader icon="markCooked" title="To confirm" titleId="tc-title" count={2} countLabel="2 items" />
+      </section>,
+    )
+    expect(screen.getByRole('region', { name: 'To confirm' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '2 items' })).toHaveTextContent('2')
+  })
+
   it('the row is one element (a div), so the tile decides the heading outline, not the header', () => {
     const { container } = render(<TileHeader icon="markCooked" title="To confirm" />)
     expect(container.firstElementChild!.tagName).toBe('DIV')
