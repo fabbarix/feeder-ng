@@ -14,7 +14,7 @@ NAMES='FEEDER_ANTHROPIC_KEY|FEEDER_LIVE_ANTHROPIC_KEY|ANTHROPIC_KEY'
 # 1. Only internal/testkit/anthropickey reads the three names (os.Getenv / os.LookupEnv / t.Setenv aside, which are tests of it).
 mapfile -t readers < <(grep -rlE "os\.(Getenv|LookupEnv)\(\"($NAMES)\"\)" --include='*.go' "$ROOT/internal" "$ROOT/cmd" 2>/dev/null \
   | grep -v '/internal/testkit/anthropickey/' | sort)
-if [ "${#readers[@]}" -eq 0 ]; then ok; else bad "these files read the live key variables directly, use anthropickey.Lookup(): ${readers[*]#"$ROOT"/}"; fi
+if [ "${#readers[@]}" -eq 0 ]; then ok; else bad "these files read the live key variables directly, use anthropickey.Lookup(os.Getenv): ${readers[*]#"$ROOT"/}"; fi
 
 # 2. The package exists and reads all three names, the Feeder one first.
 pkg="$ROOT/internal/testkit/anthropickey/anthropickey.go"
@@ -22,11 +22,12 @@ if [ -f "$pkg" ]; then ok; else bad "internal/testkit/anthropickey/anthropickey.
 order="$(grep -oE '"(FEEDER_ANTHROPIC_KEY|FEEDER_LIVE_ANTHROPIC_KEY|ANTHROPIC_KEY)"' "$pkg" 2>/dev/null | tr -d '"' | awk '!s[$0]++' | paste -sd, -)"
 [ "$order" = "FEEDER_ANTHROPIC_KEY,FEEDER_LIVE_ANTHROPIC_KEY,ANTHROPIC_KEY" ] && ok || bad "anthropickey must list the names in the order FEEDER_ANTHROPIC_KEY, FEEDER_LIVE_ANTHROPIC_KEY, ANTHROPIC_KEY (found: ${order:-none})"
 
-# 3. Every live test that needs a key asks the package.
+# 3. Every live test that needs a key asks the package, handing it os.Getenv (the package never reads the environment
+#    itself: scripts/test/env_drift_test.sh).
 for f in internal/receipt/service/live_read_test.go internal/recipeassistant/service/live_read_test.go \
          internal/recipeassistant/claude/live_receipt_schema_test.go internal/recipeassistant/claude/live_schema_test.go \
          internal/recipeassistant/claude/live_test.go; do
-  grep -q 'anthropickey\.Lookup()' "$ROOT/$f" 2>/dev/null && ok || bad "$f must read the key with anthropickey.Lookup()"
+  grep -q 'anthropickey\.Lookup(os\.Getenv)' "$ROOT/$f" 2>/dev/null && ok || bad "$f must read the key with anthropickey.Lookup(os.Getenv)"
 done
 
 # 4. The docs name the rule and each accepted variable, and say .env.local is loaded with set -a.

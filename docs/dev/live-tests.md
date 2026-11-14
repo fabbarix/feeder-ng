@@ -5,8 +5,10 @@ switched on and given a key.
 
 ## The key: one rule
 
-The tests read the key through `internal/testkit/anthropickey` (`anthropickey.Lookup()`), never with `os.Getenv`. It takes
-the first non-empty value, trimmed, of:
+The tests read the key through `internal/testkit/anthropickey` (`anthropickey.Lookup(os.Getenv)`), never by calling
+`os.Getenv` on a key name themselves. The package does not read the environment on its own: the test passes `os.Getenv`,
+so the rule that only `internal/config` reads the environment outside tests holds with no exemption
+(`scripts/test/env_drift_test.sh`). `Lookup` takes the first non-empty value, trimmed, of:
 
 1. `FEEDER_ANTHROPIC_KEY`: the name to use in a shell, a CI secret or a script;
 2. `FEEDER_LIVE_ANTHROPIC_KEY`: the old name of the Recipe Assistant's live test, kept as an alias;

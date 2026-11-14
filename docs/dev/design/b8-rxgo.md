@@ -58,9 +58,10 @@ Read today: `FEEDER_ANTHROPIC_KEY` (four live tests), `FEEDER_LIVE_ANTHROPIC_KEY
 `docs/dev/design/ai-recipe-import.md`), and `ANTHROPIC_KEY` only in the repo's `.env.local` (so the receipt live test
 skipped). Nothing in `cmd/`, `scripts/` or the app reads them; the app keeps its key sealed in the store.
 
-Rule: new package `internal/testkit/anthropickey` with `Lookup() (key, source string)` and `SkipReason() string`. The key
+Rule: new package `internal/testkit/anthropickey` with `Lookup(getenv func(string) string) (key, source string)` and `SkipReason() string`. The key
 is the first non-empty, trimmed value of `FEEDER_ANTHROPIC_KEY`, `FEEDER_LIVE_ANTHROPIC_KEY` (alias), `ANTHROPIC_KEY`
-(the `.env.local` name). `source` and the skip reason carry names, never values. The five live tests call `Lookup()` and
+(the `.env.local` name). `source` and the skip reason carry names, never values. The package never reads the environment itself (env_drift_test.sh allows that only in
+`internal/config`); the five live tests call `Lookup(os.Getenv)` and
 `t.Skip(anthropickey.SkipReason())`. Documented in `docs/dev/live-tests.md` (new). `scripts/test/live-key-env_test.sh`
 guards the rule: no other file reads the names, the live tests use the package, the docs name every variable, and no
 live test formats `key` into output.

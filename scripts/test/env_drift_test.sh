@@ -34,6 +34,18 @@ if grep -rnE 'os\.(Getenv|LookupEnv|Environ)\(' "$ROOT/internal" "$ROOT/cmd" --i
   bad "environment variables must be read in internal/config only (found os.Getenv/LookupEnv elsewhere)"
 else ok; fi
 
+# Test-only helpers (internal/testkit, e.g. anthropickey, which takes os.Getenv from its _test.go callers) must never
+# reach the binary: a getenv handed to them from non-test code would read the environment past internal/config.
+if ! command -v go >/dev/null; then bad "go is needed to check that the binary does not link internal/testkit"
+elif deps="$(cd "$ROOT" && go list -buildvcs=false -deps ./cmd/... 2>&1)"; then
+  leaked="$(grep '/internal/testkit' <<<"$deps" | paste -sd' ' -)"
+  [ -z "$leaked" ] && ok || bad "test-only packages are linked into the binary (import them from _test.go files only): $leaked"
+else bad "go list -deps ./cmd/... failed: $deps"; fi
+# The same, file by file: no non-test file outside internal/testkit imports it.
+importers="$(grep -rlE '"[^"]*/internal/testkit(/[^"]*)?"' "$ROOT/internal" "$ROOT/cmd" --include='*.go' \
+  | grep -v '_test.go' | grep -v '/internal/testkit/' | sed "s|^$ROOT/||" | paste -sd' ' -)"
+[ -z "$importers" ] && ok || bad "non-test files import internal/testkit (test-only): $importers"
+
 TEMPLATES="$(cat "$CHART"/templates/*.yaml "$CHART"/templates/*.tpl 2>/dev/null)"
 DEPLOY="$(cat "$ROOT/docs/dev/deploy.md")"
 for v in "${VARS[@]}"; do
