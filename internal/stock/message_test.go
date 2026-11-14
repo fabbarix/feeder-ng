@@ -14,7 +14,23 @@ func TestFormatQuantity(t *testing.T) {
 		{300, "g", "300 g"},
 		{1.5, "ml", "1.5 ml"},
 		{0.25, "g", "0.25 g"},
-		{1000.004, "g", "1000 g"},
+		{1000.004, "g", "1 kg"},
+		// SSP-16 (decision SSP 7): kg and l from 1000 g / 1000 ml, digits grouped.
+		{999, "g", "999 g"},
+		{999.99, "g", "999.99 g"},
+		{999.996, "g", "1 kg"}, // rounds to 1000 g: promoted, never "1000 g"
+		{1000, "g", "1 kg"},
+		{1250, "g", "1.25 kg"},
+		{1500, "ml", "1.5 l"},
+		{12000, "g", "12 kg"},
+		{1006, "g", "1.01 kg"},
+		{1250000, "g", "1,250 kg"},
+		{-1500, "g", "-1.5 kg"},
+		{1250, "piece", "1,250 pieces"},
+		{1250.5, "piece", "1,250.5 pieces"},
+		{1e6, "piece", "1,000,000 pieces"},
+		{1e15, "piece", "1,000,000,000,000,000 pieces"},
+		{-0.001, "g", "0 g"},
 		{2.345, "g", "2.35 g"},
 		{1, "piece", "1 piece"},
 		{2, "piece", "2 pieces"},
@@ -35,6 +51,10 @@ func TestShortfallMessage(t *testing.T) {
 	}
 	if got, want := ShortfallMessage("chicken thighs", "g", 0, 800),
 		"Stock shows no chicken thighs, the recipe uses 800 g"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if got, want := ShortfallMessage("cauliflower", "g", 800, 12000),
+		"Stock shows only 800 g cauliflower, the recipe uses 12 kg"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 	if got, want := ShortfallMessage("eggs", "piece", 2, 6),

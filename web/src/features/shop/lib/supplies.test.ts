@@ -21,7 +21,7 @@ describe('restockText: why a Restock Line is on the list', () => {
   it('metric g and ml name the unit once; imperial keeps both units', () => {
     expect(restockText({ level: 500, stock: 200 }, 'ml', 'metric')).toBe('200 of 500 ml')
     expect(restockText({ level: 500, stock: 0 }, 'g', 'metric')).toBe('0 of 500 g')
-    expect(restockText({ level: 1200, stock: 800 }, 'g', 'metric')).toBe('800 of 1200 g')
+    expect(restockText({ level: 1200, stock: 800 }, 'g', 'metric')).toBe('800 g of 1.2 kg')
     expect(restockText({ level: 500, stock: 200 }, 'g', 'imperial')).toBe('7.1 oz of 1 lb 2 oz')
     expect(restockText({ level: 1000, stock: 200 }, 'ml', 'imperial')).toBe('0.75 cups of 4.25 cups')
   })

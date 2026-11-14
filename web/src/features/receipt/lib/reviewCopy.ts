@@ -1,4 +1,5 @@
 // The words of a review row, its notes and the counts (docs/design/receipt-reading.md 3.4; mock-ups 15 and 16). Pure.
+import { formatQuantity } from '../../../lib/units'
 import { receiptStrings as t } from '../strings'
 import type { Proposal, ReceiptNote, ReceiptRow } from '../types'
 
@@ -22,8 +23,9 @@ export function localDay(now: Date): string {
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many)
 
+/** A weight as every other quantity reads (SSP-16, decision SSP 7): "450 g", "1.25 kg", "12 kg". */
 function gramsText(g: number): string {
-  return g >= 1000 ? `${g / 1000} kg` : `${g} g`
+  return formatQuantity(g, 'g', 'metric')
 }
 
 function priceText(p: Proposal, money: Money): string {
@@ -40,18 +42,22 @@ function weightText(p: Proposal, money: Money): string {
 }
 
 function packText(p: Proposal): string {
+  const u = p.after.packUnit
   const unit = (n: number | undefined) => {
-    const u = p.after.packUnit
     if (!u) return ''
     return u === 'piece' ? plural(n ?? 0, 'piece', 'pieces') : u
   }
-  const show = (n: number | undefined) => `${n ?? ''}${unit(n) ? ` ${unit(n)}` : ''}`
+  const show = (n: number | undefined) => {
+    // g, ml and pieces read as every other quantity (SSP-16: "1.5 kg", "1,250 pieces"); any other unit as given.
+    if (n !== undefined && (u === 'g' || u === 'ml' || u === 'piece')) return formatQuantity(n, u, 'metric')
+    return `${n ?? ''}${unit(n) ? ` ${unit(n)}` : ''}`
+  }
   return `Pack size ${show(p.before.packSize)} → ${show(p.after.packSize)}`
 }
 
 function addText(p: Proposal, money: Money): string {
   const a = p.after
-  const quantity = a.grams !== undefined ? `${a.grams / 1000} kg` : a.count !== undefined ? `×${a.count}` : ''
+  const quantity = a.grams !== undefined ? gramsText(a.grams) : a.count !== undefined ? `×${a.count}` : ''
   const price = a.priceCents !== undefined ? money(a.priceCents) : ''
   return [quantity, price].filter((s) => s !== '').join(' · ')
 }

@@ -1,5 +1,5 @@
 // H9 (household-items.md section 4.11): the pure rules of the Supplies list's stock level and quick Use. Plain TypeScript, no React.
-import { formatQuantity, type BaseUnit, type UnitSystem } from '../../../lib/units'
+import { formatQuantity, grouped, type BaseUnit, type UnitSystem } from '../../../lib/units'
 import { strings } from '../strings'
 import { displayName } from './names'
 
@@ -21,7 +21,7 @@ export function stockLevel(total: number, level: number | null, baseUnit: BaseUn
   if (!(total > EPS)) return { text: S.noneInStock, below: level !== null }
   const stock = formatQuantity(total, baseUnit, system)
   if (level === null) return { text: stock, below: false }
-  const levelText = baseUnit === 'piece' ? String(level) : formatQuantity(level, baseUnit, system)
+  const levelText = baseUnit === 'piece' ? grouped(level, 1) : formatQuantity(level, baseUnit, system)
   if (total < level - EPS) return { text: S.belowLevel(stock, levelText), below: true }
   return { text: S.restocksBelow(stock, levelText), below: false }
 }

@@ -76,12 +76,12 @@ describe('restockPhrase', () => {
     expect(restockPhrase({ level: 6, stock: 6 }, 'piece', 'metric')).toBe('restocks below 6')
   })
   it('names the unit for ml and g', () => {
-    expect(restockPhrase({ level: 1000, stock: 1500 }, 'ml', 'metric')).toBe('restocks below 1000 ml')
+    expect(restockPhrase({ level: 1000, stock: 1500 }, 'ml', 'metric')).toBe('restocks below 1 l')
     expect(restockPhrase({ level: 500, stock: 600 }, 'g', 'metric')).toBe('restocks below 500 g')
   })
   it('says so when Stock is below the level', () => {
     expect(restockPhrase({ level: 6, stock: 2 }, 'piece', 'metric')).toBe('below Restock level 6')
-    expect(restockPhrase({ level: 1000, stock: 200 }, 'ml', 'metric')).toBe('below Restock level 1000 ml')
+    expect(restockPhrase({ level: 1000, stock: 200 }, 'ml', 'metric')).toBe('below Restock level 1 l')
   })
   it('is empty without a level', () => {
     expect(restockPhrase(null, 'piece', 'metric')).toBe('')

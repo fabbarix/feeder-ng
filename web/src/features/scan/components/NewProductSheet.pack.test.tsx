@@ -84,7 +84,7 @@ describe('NewProductSheet: pack size', () => {
     await waitFor(() => expect(props.onSave).toHaveBeenCalledTimes(1))
     // The form keeps a dot decimal, as the chips do ("1.5" kg); the Op carries the number in Base Units.
     const saved = props.onSave.mock.calls[0]?.[0]
-    expect(saved).toMatchObject({ packSize: '1.5', packUnit: 'kg', productName: 'Passata 1500 g' })
+    expect(saved).toMatchObject({ packSize: '1.5', packUnit: 'kg', productName: 'Passata 1.5 kg' })
     const op = toUnknownOp(saved!, { mode: 'pack', code: '8001234567890' }, { clientUuid: 'u', scannedAt: '2026-11-13T10:00:00Z', shopId: 3 })
     expect(op).toMatchObject({ packSize: 1500, quantity: 1500 })
   })

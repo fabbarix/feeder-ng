@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeLine, makeList } from '../testData'
 
 // b8-polish (docs/dev/design/b8-polish.md 2): below 420 px (the same query as the header chips, useNarrowChips) the screen passes
-// compact to ShoppingBody, so the Supplies group reads "400/1000 ml" at 360 and 390 px, and "400 of 1000 ml" from 420 px up.
+// compact to ShoppingBody, so the Supplies group reads "400 ml/1 l" at 360 and 390 px, and "400 ml of 1 l" from 420 px up.
 const listHook = vi.hoisted(() => ({ useShoppingList: vi.fn() }))
 vi.mock('../hooks/useShoppingList', () => listHook)
 vi.mock('../hooks/useShoppingActions', () => ({ useShoppingActions: () => ({ tick: vi.fn(), untick: vi.fn(), addExtra: vi.fn(), deleteExtra: vi.fn(), tickExtra: vi.fn(), untickExtra: vi.fn() }) }))
@@ -40,12 +40,12 @@ afterEach(() => vi.unstubAllGlobals())
 describe('Shop screen: the Restock reason by width', () => {
   it('below 420 px it is compact, with the full text for assistive technology', () => {
     show(false)
-    expect(screen.getByText('400/1000 ml')).toHaveAttribute('aria-hidden', 'true')
-    expect(screen.getByText('400 of 1000 ml')).toHaveClass('visually-hidden')
+    expect(screen.getByText('400 ml/1 l')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByText('400 ml of 1 l')).toHaveClass('visually-hidden')
   })
   it('from 420 px it is the full text', () => {
     show(true)
-    expect(screen.getByText('400 of 1000 ml')).not.toHaveClass('visually-hidden')
-    expect(screen.queryByText('400/1000 ml')).toBeNull()
+    expect(screen.getByText('400 ml of 1 l')).not.toHaveClass('visually-hidden')
+    expect(screen.queryByText('400 ml/1 l')).toBeNull()
   })
 })

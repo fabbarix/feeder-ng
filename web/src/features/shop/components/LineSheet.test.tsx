@@ -19,7 +19,7 @@ describe('LineSheet', () => {
   it('is a dialog named after the Line, with its quantity, pack and estimated cost', () => {
     render(<LineSheet entry={passata} actions={['not-needed']} onAction={() => {}} onClose={() => {}} />)
     const dialog = screen.getByRole('dialog', { name: 'Passata' })
-    expect(within(dialog).getByText('1400 g')).toBeInTheDocument()
+    expect(within(dialog).getByText('1.4 kg')).toBeInTheDocument()
     expect(within(dialog).getByText('2 × Mutti 700 g')).toBeInTheDocument()
     expect(within(dialog).getByText('$3.18')).toBeInTheDocument()
   })

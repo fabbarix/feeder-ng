@@ -19,9 +19,12 @@ const POUND_THRESHOLD_OZ = 15.95
 /**
  * Formats a quantity given in Base Units.
  *
- * metric (never promotes to kg/l, so a shopping line reads "1400 g"):
- *   g -> "250 g", ml -> "250 ml"; at most 1 decimal, trailing ".0" dropped; "0 g".
- *   piece -> "1 piece", otherwise "<n> pieces" (also 0 and fractions: "0.5 pieces").
+ * metric (SSP-16, decision SSP 7-A: the Base Unit stays the stored and entered unit; only the text promotes):
+ *   below 1000: g -> "250 g", ml -> "250 ml"; at most 1 decimal, trailing ".0" dropped; "0 g".
+ *   from 1000 g / 1000 ml (after that 1-decimal rounding, so 999.96 g never reads "1000 g"):
+ *     kg and l with at most 2 decimals, trailing zeros dropped ("1 kg", "1.25 kg", "1.5 l", "1,250 kg").
+ *   piece -> "1 piece", otherwise "<n> pieces" (also 0 and fractions: "0.5 pieces"); only grouped ("1,250 pieces").
+ *   Numbers are grouped with "," and use "." for decimals (en-US; there is no Household number locale).
  * imperial:
  *   g  : below 15.95 oz -> "<oz, 1 decimal> oz" (e.g. 100 g = "3.5 oz");
  *        otherwise "<lb> lb <oz> oz" with whole oz, the oz part omitted when 0
@@ -37,10 +40,10 @@ const POUND_THRESHOLD_OZ = 15.95
 export function formatQuantity(amount: number, base: BaseUnit, system: UnitSystem): string {
   if (!Number.isFinite(amount)) return ''
   if (base === 'piece') {
-    return withSign(amount, (abs) => `${trim(abs, 1)} ${abs === 1 ? 'piece' : 'pieces'}`)
+    return withSign(amount, (abs) => `${grouped(abs, 1)} ${abs === 1 ? 'piece' : 'pieces'}`)
   }
   if (system === 'metric') {
-    return withSign(amount, (abs) => `${trim(abs, 1)} ${base}`)
+    return withSign(amount, (abs) => metricBody(abs, base))
   }
   return base === 'g'
     ? withSign(amount, imperialMass)
@@ -105,9 +108,36 @@ function imperialBaseSide(toBase: number, base: BaseUnit): string {
   })
 }
 
-/** Applies the sign of amount to the body formatted from its absolute value. */
+/**
+ * Applies the sign of amount to the body formatted from its absolute value. A negative amount that rounds to zero
+ * ("-0.01 g") has no sign: it reads "0 g", never "-0 g".
+ */
 function withSign(amount: number, body: (abs: number) => string): string {
-  return (amount < 0 ? '-' : '') + body(Math.abs(amount))
+  const text = body(Math.abs(amount))
+  return amount < 0 && /[1-9]/.test(text) ? `-${text}` : text
+}
+
+/** g/ml below 1000 (after rounding to 1 decimal), kg/l from there, at most 2 decimals. */
+function metricBody(abs: number, base: 'g' | 'ml'): string {
+  if (Number(abs.toFixed(1)) < 1000) return `${trim(abs, 1)} ${base}`
+  return `${grouped(abs / 1000, 2)} ${base === 'g' ? 'kg' : 'l'}`
+}
+
+/** One en-US formatter per number of decimals: "," groups thousands, "." is the decimal point, never an exponent. */
+const GROUPED = new Map<number, Intl.NumberFormat>()
+
+/**
+ * trim, with the integer part grouped by "," in thousands ("1250.5" -> "1,250.5"), for a non-negative n. It never writes an
+ * exponent (1e21 pieces is "1,000,000,000,000,000,000,000", not "1e+21").
+ */
+export function grouped(n: number, digits: number): string {
+  let f = GROUPED.get(digits)
+  if (!f) {
+    f = new Intl.NumberFormat('en-US', { maximumFractionDigits: digits, useGrouping: true })
+    GROUPED.set(digits, f)
+  }
+  // Rounded by toFixed first, so it rounds exactly as trim does (1005 g is "1 kg": 1005 / 1000 is stored just below 1.005).
+  return f.format(Number(n.toFixed(digits)))
 }
 
 /** Rounds to a fixed number of decimals and drops trailing zeros ("3.50" -> "3.5"). */

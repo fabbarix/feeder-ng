@@ -15,9 +15,9 @@ export interface ListEntry {
   ingredientId: number | null
   extraId: number | null
   title: string
-  /** "1400 g · 2 × Mutti 700 g", "1400 g", "2000 ml" or "" for free text (the Scan live list shows this) */
+  /** "1.4 kg · 2 × Mutti 700 g", "1.4 kg", "2 l" or "" for free text (the Scan live list shows this) */
   detail: string
-  /** the quantity of the tile ("1400 g", "2000 ml"); "" for free text and ticked entries (WP7) */
+  /** the quantity of the tile ("1.4 kg", "2 l"); "" for free text and ticked entries (WP7) */
   quantityText: string
   /** the muted pack line ("2 × Mutti 700 g"); "" when there is no pack suggestion or the entry is ticked (WP7) */
   packLine: string
@@ -49,7 +49,7 @@ export interface ListEntry {
   markIt?: { date: string; mealSlotId: number }
 }
 
-/** "1400 g · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1400 g" with no pack suggestion. */
+/** "1.4 kg · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1.4 kg" with no pack suggestion. */
 export function packText(line: Pick<ShoppingLine, 'quantity' | 'baseUnit' | 'pack'>, system: UnitSystem): string {
   const amount = formatQuantity(line.quantity, line.baseUnit, system)
   return line.pack ? `${amount} · ${line.pack.count} × ${line.pack.name}` : amount

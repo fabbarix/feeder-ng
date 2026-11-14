@@ -48,7 +48,7 @@ describe('PantryLotRow for a Supply', () => {
   })
   it('measures a liquid in its Base Unit', () => {
     const { meta } = setup(makeSupplyLot({ baseUnit: 'ml', quantity: 500 }), { restock: { level: 1000, stock: 1500 } })
-    expect(meta).toHaveTextContent('500 ml · restocks below 1000 ml')
+    expect(meta).toHaveTextContent('500 ml · restocks below 1 l')
   })
   it('shows the Storage Place at the end when not grouped, as for food', () => {
     const { row } = setup(makeSupplyLot(), { placeName: 'Utility cupboard' })

@@ -1,6 +1,6 @@
 // Supplies in the Pantry (household-items.md 4.2, 4.7, 6; H6): a Supply is a Stock Lot or Ingredient of kind "supply". It never goes
 // off, so its rows carry no go-off wording; it says when it restocks instead. Plain TypeScript, no React.
-import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import { formatQuantity, grouped, type UnitSystem } from '../../../lib/units'
 import { stockStrings as strings } from '../strings'
 import { boughtLabel } from './ingredientLots'
 import type { BaseUnit, IngredientStock, StockKind, StockLot } from '../types'
@@ -59,10 +59,10 @@ export function householdHasSupply(lots: readonly StockLot[], choices: readonly 
 
 /** The Restock level as the row says it: a piece is a bare count ("6"); millilitres and grams keep their unit. */
 function levelText(level: number, baseUnit: BaseUnit, system: UnitSystem): string {
-  return baseUnit === 'piece' ? String(level) : formatQuantity(level, baseUnit, system)
+  return baseUnit === 'piece' ? grouped(level, 1) : formatQuantity(level, baseUnit, system)
 }
 
-/** "restocks below 6", "restocks below 1000 ml", or "below Restock level 6" when Stock is under it; '' without a level. */
+/** "restocks below 6", "restocks below 1 l", or "below Restock level 6" when Stock is under it; '' without a level. */
 export function restockPhrase(restock: Restock | null, baseUnit: BaseUnit, system: UnitSystem): string {
   if (restock === null) return ''
   const level = levelText(restock.level, baseUnit, system)

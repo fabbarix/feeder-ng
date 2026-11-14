@@ -58,7 +58,7 @@ describe('Pantry list', () => {
     const names = screen.getAllByRole('list').map((l) => l.getAttribute('aria-label')).filter((n) => n?.includes('Stock Lot'))
     expect(names).toEqual(['Garage Freezer, 1 Stock Lot', 'Garage Fridge, 1 Stock Lot', 'Kitchen Pantry, 1 Stock Lot', 'Not sorted, 1 Stock Lot'])
     expect(within(group(/^Garage Fridge/)).getByText('Minced beef')).toBeInTheDocument()
-    expect(within(group(/^Garage Fridge/)).getByText(/1000 g · Good until tomorrow/)).toBeInTheDocument()
+    expect(within(group(/^Garage Fridge/)).getByText(/1 kg · Good until tomorrow/)).toBeInTheDocument()
   })
 
   it('filters by Storage Place and kind, and searches', async () => {

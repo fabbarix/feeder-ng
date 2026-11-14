@@ -19,7 +19,7 @@ describe('NewProductSheet: Add', () => {
       ingredient: { id: 2, name: 'milk', baseUnit: 'ml' },
       packSize: '1',
       packUnit: 'l',
-      productName: 'Milk 1000 ml',
+      productName: 'Milk 1 l',
       scope: 'global',
     })
   })

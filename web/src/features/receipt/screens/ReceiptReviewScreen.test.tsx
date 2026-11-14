@@ -160,7 +160,7 @@ describe('the rows', () => {
   it('a Not scanned row shows the receipt line and Add…', () => {
     show()
     const row = rowOf(/^Pane casereccio/)
-    expect(row).toHaveTextContent('0.45 kg · €2.25')
+    expect(row).toHaveTextContent('450 g · €2.25')
     expect(row).toHaveTextContent('PANE CASERECCIO 0,45 kg 2,25')
     expect(within(row).getByRole('button', { name: 'Add…' })).toBeInTheDocument()
   })

@@ -68,11 +68,11 @@ describe('the Pantry by default (D6): Supplies beside food', () => {
     expect(within(utility).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('Dish soap'), expect.stringContaining('Toilet paper')])
     expect(within(await groupNamed(/^Kitchen Pantry, 2 Stock Lots/)).getByText('Rice')).toBeInTheDocument()
   })
-  it('a Supply row says its quantity and Restock level: "4 pieces · below Restock level 6" and "1500 ml · restocks below 1000 ml"', async () => {
+  it('a Supply row says its quantity and Restock level: "4 pieces · below Restock level 6" and "1.5 l · restocks below 1 l"', async () => {
     setup()
     await groupNamed(/^Utility cupboard/)
     await waitFor(() => expect(rowOf(/Toilet paper/)).toHaveTextContent('4 pieces · below Restock level 6'))
-    expect(rowOf(/Dish soap/)).toHaveTextContent('1500 ml · restocks below 1000 ml')
+    expect(rowOf(/Dish soap/)).toHaveTextContent('1.5 l · restocks below 1 l')
   })
   it('a Supply below its Restock level is marked info, not spoil; the other is not marked', async () => {
     setup()

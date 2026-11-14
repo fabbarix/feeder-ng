@@ -45,8 +45,14 @@ describe('changeText', () => {
   it('a name correction', () => {
     expect(changeText(name0, o)).toBe('Name Mutti passata 700 g → Mutti passata 500 g')
   })
-  it('an Add by weight shows kilos and the Price; by count shows the count', () => {
-    expect(changeText(add0, o)).toBe('0.45 kg · €2.25')
+  it('a Weight reads as every other quantity: rounded and grouped (SSP-16)', () => {
+    const p = proposal({ id: 'weight:3', kind: 'weight', row: 3, before: { grams: 1234.5 }, after: { grams: 999.96 } })
+    expect(changeText(p, o)).toBe('1.23 kg → 1 kg')
+    const big = proposal({ id: 'pack_size:0', kind: 'pack_size', row: 0, before: { packSize: 1000 }, after: { packSize: 1500, packUnit: 'g' } })
+    expect(changeText(big, o)).toBe('Pack size 1 kg → 1.5 kg')
+  })
+  it('an Add by weight shows the weight (kg from 1000 g) and the Price; by count shows the count', () => {
+    expect(changeText(add0, o)).toBe('450 g · €2.25')
     expect(changeText(add1, o)).toBe('1.2 kg · €1.80')
     const n = proposal({ id: 'add:2', kind: 'add', line: 2, needsInput: true, after: { name: 'Sacchetto', count: 2, priceCents: 498, packSize: 20, packUnit: 'piece' } })
     expect(changeText(n, o)).toBe('×2 · €4.98')

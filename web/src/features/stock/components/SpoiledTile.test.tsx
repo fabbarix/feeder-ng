@@ -31,7 +31,7 @@ describe('SpoiledTile', () => {
     expect(screen.getByText('Chicken thighs')).toBeInTheDocument()
     // L-07: each lot is a ListRow; the meta line carries the amount and the go-off wording.
     expect(screen.getByText('200 g · Went off 3 days ago')).toBeInTheDocument()
-    expect(screen.getByText('1000 ml · Went off today')).toBeInTheDocument()
+    expect(screen.getByText('1 l · Went off today')).toBeInTheDocument()
     expect(screen.getByText('Milk')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Throw out or keep?' })).toHaveAttribute('data-status', 'danger')
   })

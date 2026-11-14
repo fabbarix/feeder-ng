@@ -50,7 +50,7 @@ describe('IngredientScreen: a Base recipe\'s Ingredient', () => {
   })
   it('shows the batch and portion conversions read-only ("Set by the Base recipe"), and others as before', () => {
     setup()
-    expect(screen.getByText('1 batch = 1000 ml')).toBeInTheDocument()
+    expect(screen.getByText('1 batch = 1 l')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Remove batch' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Remove portion' })).toBeNull()
     expect(screen.getAllByText('Set by the Base recipe')).toHaveLength(2)

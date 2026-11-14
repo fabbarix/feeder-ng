@@ -53,7 +53,7 @@ describe('Scan screen: To get ticks by hand', () => {
     const c = controllerFake({ scanned: scannedFake(sessionEntries()), toGetTick: { tick: vi.fn(async () => {}), pendingKeys: new Set(['line:5']) } })
     open(c)
     const rows = within(toGet()).getAllByRole('listitem')
-    expect(rows[0]!.querySelector('.list-row__meta')).toHaveTextContent(/of 1400 g/)
+    expect(rows[0]!.querySelector('.list-row__meta')).toHaveTextContent(/of 1.4 kg/)
     expect(rows[1]).toHaveAttribute('aria-busy', 'true')
   })
 
