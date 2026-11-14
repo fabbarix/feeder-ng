@@ -372,7 +372,7 @@
 
 .step-card__moves {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-2); /* A11Y-02: the ⋮ and remove rings never touch. */
 }
 
 .step-card__timing {
