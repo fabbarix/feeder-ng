@@ -11,9 +11,9 @@ const RestoreWindowMinutes = 10
 
 // SlotImpact is what removing one Meal Slot does (read-only, GET /api/meal-slots/{id}/impact).
 type SlotImpact struct {
-	PlannedMeals []RemovedMeal // unresolved (state planned) from today on, Pinned included: they go
+	PlannedMeals []RemovedMeal // unresolved (state planned) whose slot time is still ahead, Pinned included: they go
 	SlotRules    []RemovedRule // the slot's Slot Rules: they stop applying (they are kept for Undo)
-	ToConfirm    []RemovedMeal // unresolved before today: they go, and Undo within RestoreWindowMinutes brings them back
+	ToConfirm    []RemovedMeal // unresolved whose slot time has passed (today's included): they go, and Undo within RestoreWindowMinutes brings them back
 	CookedKept   int           // Cooked and Not cooked meals that stay in the history
 }
 

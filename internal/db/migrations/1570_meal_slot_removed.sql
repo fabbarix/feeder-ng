@@ -22,7 +22,7 @@ DROP TABLE meal_slots;
 ALTER TABLE meal_slots_new RENAME TO meal_slots;
 CREATE UNIQUE INDEX meal_slots_active_name ON meal_slots (weekday, name) WHERE removed_at IS NULL;
 
--- meal_slot_removals: the To confirm rows (unresolved Planned Meals from before the day of the removal) that removing a
+-- meal_slot_removals: the To confirm rows (unresolved Planned Meals whose slot time had passed) that removing a
 -- Meal Slot deleted, so Undo within ten minutes puts them back. meal_json is the planned_meals row (id included) with
 -- its Bought rows. Removing the Meal Slot again replaces them; putting it back deletes them.
 CREATE TABLE meal_slot_removals (

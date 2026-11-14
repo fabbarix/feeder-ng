@@ -25,7 +25,7 @@ func (s *Store) AllSlots(ctx context.Context) ([]household.MealSlot, error) {
 }
 
 // RemoveSlot soft-removes an active Meal Slot in one transaction: it deletes the slot's unresolved Planned Meals
-// (keeping the To confirm ones, from before today, for Undo) and Couldn't plan reasons, and sets removed_at. Cooked and
+// (keeping for Undo the To confirm ones, whose slot time has passed, today's included) and Couldn't plan reasons, and sets removed_at. Cooked and
 // Not cooked meals, Slot Rules, Attendance, Courses and date changes stay. household.ErrNotFound for an unknown or
 // already removed one. The caller announces the change, which replans.
 func (s *Store) RemoveSlot(ctx context.Context, id int64) error {
@@ -34,7 +34,7 @@ func (s *Store) RemoveSlot(ctx context.Context, id int64) error {
 		if err := slotExists(ctx, tx, id); err != nil {
 			return err
 		}
-		today, err := s.today(ctx, tx)
+		today, hhmm, err := s.householdNow(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -53,8 +53,8 @@ func (s *Store) RemoveSlot(ctx context.Context, id int64) error {
 						'quantity', b.quantity, 'bought_at', b.bought_at))
 					FROM planned_meal_bought b WHERE b.planned_meal_id = pm.id))
 			FROM planned_meals pm
-			WHERE pm.meal_slot_id = ? AND pm.state = 'planned' AND pm.date < ?
-			ORDER BY pm.date, pm.id`, now, id, today); err != nil {
+			WHERE pm.meal_slot_id = ? AND pm.state = 'planned' AND `+slotPassed+`
+			ORDER BY pm.date, pm.id`, now, id, today, today, hhmm); err != nil {
 			return err
 		}
 		for _, q := range []string{
@@ -149,15 +149,15 @@ func (s *Store) SlotImpact(ctx context.Context, id int64) (household.SlotImpact,
 	if err := slotExists(ctx, s.db, id); err != nil {
 		return household.SlotImpact{}, err
 	}
-	today, err := s.today(ctx, s.db)
+	today, hhmm, err := s.householdNow(ctx, s.db)
 	if err != nil {
 		return household.SlotImpact{}, err
 	}
 	im := household.SlotImpact{SlotRules: []household.RemovedRule{}}
-	if im.PlannedMeals, err = unresolvedMeals(ctx, s.db, `pm.meal_slot_id = ? AND pm.state = 'planned' AND pm.date >= ?`, id, today); err != nil {
+	if im.PlannedMeals, err = unresolvedMeals(ctx, s.db, `pm.meal_slot_id = ? AND pm.state = 'planned' AND NOT `+slotPassed, id, today, today, hhmm); err != nil {
 		return household.SlotImpact{}, err
 	}
-	if im.ToConfirm, err = unresolvedMeals(ctx, s.db, `pm.meal_slot_id = ? AND pm.state = 'planned' AND pm.date < ?`, id, today); err != nil {
+	if im.ToConfirm, err = unresolvedMeals(ctx, s.db, `pm.meal_slot_id = ? AND pm.state = 'planned' AND `+slotPassed, id, today, today, hhmm); err != nil {
 		return household.SlotImpact{}, err
 	}
 	if err := scanAll(ctx, s.db, `SELECT id, meal_slot_id, course_id, COALESCE(recipe_id, 0), COALESCE(tag, '')
@@ -565,6 +565,31 @@ func (s *Store) ExpireMemberRemovals(ctx context.Context) (int, error) {
 		s.ReleasePhoto(ctx, p)
 	}
 	return n, nil
+}
+
+// slotPassed selects the Planned Meals pm whose slot time has passed in household time (args: today, today, now as
+// HH:MM): an earlier date, or today at or before now, at the date's own time when it has one (ADR 0014). These wait in
+// To confirm and a replan cannot plan them again, so RemoveSlot keeps them for Undo.
+const slotPassed = `(pm.date < ? OR (pm.date = ? AND COALESCE(
+	(SELECT d.time FROM meal_slot_dates d WHERE d.slot_id = pm.meal_slot_id AND d.date = pm.date),
+	(SELECT ms.time FROM meal_slots ms WHERE ms.id = pm.meal_slot_id)) <= ?))`
+
+// householdNow is the clock's now in the household time zone (UTC when unset or unknown, as clock.HouseholdToday):
+// the date and the time as HH:MM.
+func (s *Store) householdNow(ctx context.Context, q querier) (date, hhmm string, err error) {
+	loc := time.UTC
+	var tz string
+	err = q.QueryRowContext(ctx, `SELECT time_zone FROM household_settings WHERE id = 1`).Scan(&tz)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", "", err
+	}
+	if err == nil {
+		if l, lerr := time.LoadLocation(tz); lerr == nil {
+			loc = l
+		}
+	}
+	now := s.clk.Now().In(loc)
+	return now.Format("2006-01-02"), now.Format("15:04"), nil
 }
 
 // stamp is the clock's now as stored: RFC 3339 UTC, to the second.

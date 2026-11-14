@@ -291,6 +291,40 @@ func TestRestoreSlotBringsItBackWithItsToConfirmRowsWithinTenMinutes(t *testing.
 	}
 }
 
+// Today's meal whose slot time has passed waits in To confirm too, and the replan cannot plan it again (it is in the
+// past): removal keeps it for Undo, and the impact lists it under To confirm, not under the Planned Meals from today.
+// The clock is Mon 9 Nov 12:00 UTC: Breakfast 08:00 has passed, Dinner 19:00 has not, Lunch moved to 13:00 today has not.
+func TestTodaysPassedMealCountsAsToConfirmAndComesBackWithUndo(t *testing.T) {
+	r := newRfx(t)
+	breakfast := r.slot(1, "Breakfast", "08:00")
+	lunch := r.slot(1, "Lunch", "11:00")
+	r.meal(breakfast.ID, "2026-11-09", "planned", false)
+	r.meal(lunch.ID, "2026-11-09", "planned", false)
+	r.exec(`INSERT INTO meal_slot_dates (slot_id, date, time, updated_at) VALUES (?, '2026-11-09', '13:00', '2026-11-01T00:00:00Z')`, lunch.ID)
+
+	im, err := r.st.SlotImpact(r.ctx, breakfast.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(im.ToConfirm) != 1 || len(im.PlannedMeals) != 0 {
+		t.Errorf("Breakfast impact = %d To confirm, %d Planned Meals; want today's passed Breakfast under To confirm", len(im.ToConfirm), len(im.PlannedMeals))
+	}
+	if im, err = r.st.SlotImpact(r.ctx, lunch.ID); err != nil || len(im.ToConfirm) != 0 || len(im.PlannedMeals) != 1 {
+		t.Errorf("Lunch moved to 13:00 today = %+v, %v; want it under the Planned Meals from today", im, err)
+	}
+
+	if err := r.st.RemoveSlot(r.ctx, breakfast.ID); err != nil {
+		t.Fatal(err)
+	}
+	r.clk.Advance(5 * time.Minute)
+	if _, err := r.st.RestoreSlot(r.ctx, breakfast.ID); err != nil {
+		t.Fatal(err)
+	}
+	if n := r.count(`SELECT count(*) FROM planned_meals WHERE meal_slot_id = ? AND date = '2026-11-09' AND state = 'planned'`, breakfast.ID); n != 1 {
+		t.Errorf("today's passed Breakfast came back %d times, want once (Undo puts To confirm back)", n)
+	}
+}
+
 func TestRestoreSlotAfterTenMinutesBringsBackTheSlotButNotItsToConfirmRows(t *testing.T) {
 	r := newRfx(t)
 	dinner := r.slot(1, "Dinner", "19:00")
