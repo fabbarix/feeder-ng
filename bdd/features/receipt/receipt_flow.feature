@@ -61,7 +61,7 @@ Feature: Reading and applying a receipt, end to end (receipt reading, RR5)
     Then the receipt flow response status is 409 with the error "receipt_session_changed"
     And the latest Price of "Mutti passata 700 g" at "Esselunga" is 7771 cents
 
-  Scenario: A read is kept for 10 minutes, so the next day it is gone
+  Scenario: A read is kept only 10 minutes, so applying it after that (here, the next day) answers 410 and writes nothing
     Given the provider will read row 0 as 2 packs at 149 cents each
     When I read the receipt with 1 photos for "Esselunga"
     And the household day turns
