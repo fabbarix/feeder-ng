@@ -7,11 +7,14 @@
 # A guard that did not run FAILS in every mode (quick too): a refused run (a busy port, or a run already holding this
 # worktree's lock), a server or seed that did not come up, a timeout, a crash, or a driver exit 2. Only two environment gaps
 # pass in quick: no Chrome (SKIP) and no web build (WARN). Both FAIL in full (PAGE_LAYOUT=full, release QA).
-#   scripts/check-page-layout.sh                 quick profile (390, 834, 1024, 1440, 1920)
-#   PAGE_LAYOUT=full scripts/check-page-layout.sh    six viewports (release QA)
+#   scripts/check-page-layout.sh                 quick profile (320, 390, 834, 1024, 1440, 1920)
+#   PAGE_LAYOUT=full scripts/check-page-layout.sh    nine viewports (release QA; scripts/lib/page-layout-rules.mjs PROFILES)
+#   scripts/check-page-layout.sh --scenario NAME[,NAME]   only those scenarios (scripts/lib/page-layout/scenarios/), no route table:
+#                                                 a package's targeted run. The driver refuses an unknown name (exit 2).
 #   PAGE_LAYOUT=skip ...                          do nothing
 #   scripts/check-page-layout.sh --print-port [--root DIR]    the port this worktree uses (20000 + cksum(DIR) % 20000)
 #   scripts/check-page-layout.sh --mode-of ROUTE              warn|fail for a route
+# Modes: scripts/check-page-layout.modes, then every file of scripts/check-page-layout.modes.d/ (a package's own lines; B9-03).
 # Overrides (tests): PAGE_LAYOUT_BUILD_DIR, PAGE_LAYOUT_PORT, PAGE_LAYOUT_MODES, PAGE_LAYOUT_SERVER_CMD, PAGE_LAYOUT_SEED_CMD,
 # PAGE_LAYOUT_GUARD_CMD, PAGE_LAYOUT_GUARD_TIMEOUT (600 s), PAGE_LAYOUT_SEED_TIMEOUT (90 s), CHROME, PAGE_LAYOUT_FAKE_CMD.
 # beta.7 (RR5): the real run also starts the fake Anthropic API (cmd/fakeanthropic, loopback, detached, stopped by its PID) and
@@ -37,6 +40,23 @@ case "${1:-}" in
     exit $?
     ;;
 esac
+
+# --scenario NAME[,NAME]: passed to the guard as it is.
+GUARD_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --scenario)
+      if [ $# -lt 2 ] || [ -z "$2" ] || [ "${2#--}" != "$2" ]; then
+        echo "check-page-layout.sh: usage: check-page-layout.sh [--scenario NAME[,NAME]] (--scenario needs a name)" >&2
+        exit 2
+      fi
+      GUARD_ARGS+=(--scenario "$2")
+      shift 2 ;;
+    *)
+      echo "check-page-layout.sh: usage: check-page-layout.sh [--scenario NAME[,NAME]] | --print-port [--root DIR] | --mode-of ROUTE (unknown argument $1)" >&2
+      exit 2 ;;
+  esac
+done
 
 MODE="${PAGE_LAYOUT:-quick}"
 if [ "$MODE" = skip ]; then
@@ -247,7 +267,7 @@ LIMIT=""
 command -v timeout >/dev/null 2>&1 && LIMIT="timeout -k 5 ${PAGE_LAYOUT_GUARD_TIMEOUT:-600}"
 START=$SECONDS
 # In the background and waited for, so a signal reaches the trap at once (bash defers traps while a foreground command runs).
-(cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS") 9>&- >"$OUT" 2>&1 &
+(cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS" "${GUARD_ARGS[@]}") 9>&- >"$OUT" 2>&1 &
 GUARD_PID=$!
 wait "$GUARD_PID"
 RC=$?

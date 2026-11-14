@@ -2,7 +2,10 @@
 // CLI over modeFor for scripts/check-page-layout.sh.
 //   page-layout-modes.mjs mode-of <modes-file> <route>      prints warn|fail
 //   page-layout-modes.mjs count-fail <modes-file>            reads guard output on stdin, prints how many finding lines fail: on fail routes, or ALWAYS_FAIL rules anywhere
-import { readFileSync } from 'node:fs'
+// B9-03: the files of <modes-file>.d/ (scripts/check-page-layout.modes.d/: a package's own fail_routes / warn_routes lines) are read
+// after the modes file, in name order. Lines of a key are unioned across all files, and warn_routes win over fail_routes, as in one file.
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { ALWAYS_FAIL, modeFor } from './page-layout-rules.mjs'
 
 const [cmd, file, route] = process.argv.slice(2)
@@ -11,6 +14,19 @@ try {
   text = readFileSync(file, 'utf8')
 } catch {
   /* a missing modes file means warn everywhere */
+}
+let dropins = []
+try {
+  dropins = readdirSync(`${file}.d`).filter((n) => !n.startsWith('.')).sort()
+} catch {
+  /* no modes.d directory */
+}
+for (const n of dropins) {
+  try {
+    text += '\n' + readFileSync(join(`${file}.d`, n), 'utf8')
+  } catch {
+    /* a directory or an unreadable entry adds nothing */
+  }
 }
 if (cmd === 'mode-of') {
   console.log(modeFor(text, route ?? ''))
