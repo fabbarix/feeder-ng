@@ -341,8 +341,9 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
     // its minWidth; a soft probe (the dialog) that throws reads as nothing there.
     for (const p of PROBES) {
       if (p.key === null || vp.width < (p.minWidth ?? 0)) continue
-      // B9-03: a probe module whose key the layout probe already fills would overwrite a metric in silence.
-      if (Object.hasOwn(m, p.key)) throw new Error(`probe ${p.name}: metrics key "${p.key}" is already filled by the layout probe`)
+      // B9-03: a probe module whose key the layout probe already fills would overwrite a metric in silence. A field the layout probe
+      // leaves null is a placeholder for its probe (dialog: null, filled by the dialog probe from 768 px).
+      if (Object.hasOwn(m, p.key) && m[p.key] !== null) throw new Error(`probe ${p.name}: metrics key "${p.key}" is already filled by the layout probe`)
       m[p.key] = p.soft ? await evaluate(p.source).catch(() => null) : await evaluate(p.source)
     }
     // PAGE_LAYOUT_SHOTS=<dir>: a screenshot of every light probe, to see the state a scenario's setup reached (debugging only).
