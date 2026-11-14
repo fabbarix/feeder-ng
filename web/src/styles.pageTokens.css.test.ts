@@ -40,11 +40,11 @@ describe('page-width tokens (L-01)', () => {
     expect(decl(root, '--page-default')).toBe('1120px')
     expect(decl(root, '--page-wide')).toBe('1480px')
   })
-  it('--page-gutter follows the existing gutter ramp: 16 on phones, 24 from 768, 32 from 1200', () => {
+  it('--page-gutter follows the existing gutter ramp: 16 on phones, 24 from 48em (768), 32 from 80em (1280, DS-09)', () => {
     expect(decl(root, '--page-gutter')).toBe('var(--gutter)')
     expect(decl(root, '--gutter')).toBe('16px')
-    expect(decl(mediaBlock('min-width: 768px'), '--gutter')).toBe('24px')
-    expect(decl(mediaBlock('min-width: 1200px'), '--gutter')).toBe('32px')
+    expect(decl(mediaBlock('min-width: 48em'), '--gutter')).toBe('24px')
+    expect(decl(mediaBlock('min-width: 80em'), '--gutter')).toBe('32px')
   })
 })
 

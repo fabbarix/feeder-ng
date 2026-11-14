@@ -254,8 +254,8 @@
   }
 }
 
-/* Tablet and desktop rhythm (plan 3.3) */
-@media (min-width: 768px) {
+/* Tablet and desktop rhythm (plan 3.3), at DS-09's md step (48em, 768 px at the default text size) */
+@media (min-width: 48em) {
   :root {
     --gutter: 24px;
     --bento-gap: 12px;
