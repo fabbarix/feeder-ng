@@ -1,0 +1,8 @@
+# B9-09 (plan section 3 and 6, the sweep by folder): Shop, Scan, Stock, Receipt and the catalogue are swept, so the
+# sweep detectors fail there. fail_paths add up across rules files (scripts/check-ui.sh).
+focus-ring.fail_paths=web/src/features/shop web/src/features/scan web/src/features/stock web/src/features/receipt web/src/features/ingredients web/src/features/products web/src/features/shops
+raw-radius.fail_paths=web/src/features/shop web/src/features/scan web/src/features/stock web/src/features/receipt web/src/features/ingredients web/src/features/products web/src/features/shops
+raw-spacing.fail_paths=web/src/features/shop web/src/features/scan web/src/features/stock web/src/features/receipt web/src/features/ingredients web/src/features/products web/src/features/shops
+media-width.fail_paths=web/src/features/shop web/src/features/scan web/src/features/stock web/src/features/receipt web/src/features/ingredients web/src/features/products web/src/features/shops
+opacity-muting.fail_paths=web/src/features/shop web/src/features/scan web/src/features/stock web/src/features/receipt web/src/features/ingredients web/src/features/products web/src/features/shops
+type-scale.fail_paths=web/src/features/shop web/src/features/scan web/src/features/stock web/src/features/receipt web/src/features/ingredients web/src/features/products web/src/features/shops
