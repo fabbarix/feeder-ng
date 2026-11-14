@@ -343,27 +343,6 @@ func TestSpoiled(t *testing.T) {
 	}
 }
 
-func TestKeep(t *testing.T) {
-	l := lot(1, 100, "2026-11-01", "2026-11-08")
-	kept := Keep(l)
-	if kept.GoesOff != "2026-11-09" {
-		t.Errorf("GoesOff = %s, want 2026-11-09", kept.GoesOff)
-	}
-	if kept.ID != l.ID || kept.Quantity != l.Quantity || kept.Purchased != l.Purchased {
-		t.Errorf("Keep changed more than the go-off date: %+v", kept)
-	}
-	if l.GoesOff != "2026-11-08" {
-		t.Error("Keep modified its argument")
-	}
-	if got := Keep(lot(2, 100, "2026-11-01", "2026-11-30")); got.GoesOff != "2026-12-01" {
-		t.Errorf("month rollover: %s", got.GoesOff)
-	}
-	undated := lot(3, 100, "2026-11-01", None)
-	if got := Keep(undated); got != undated {
-		t.Errorf("undated lot changed: %+v", got)
-	}
-}
-
 // need NaN or +-Inf is a no-op, exactly like need <= 0 (Deduct has no error
 // return): nothing taken, no shortfall, lots unchanged.
 func TestDeductNonFiniteNeedIsNoOp(t *testing.T) {

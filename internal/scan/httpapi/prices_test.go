@@ -13,7 +13,8 @@ import (
 //	PATCH /api/scan/prices  {"clientUuids":["a","b"], "priceCents":129, "pricePerKgCents":2000?}
 //	  200 {"results":[{"clientUuid":"a","status":"applied","scan":{...,"priceCents":129}}, ...]}  (in the order sent)
 //	  404 not_found          any uuid unknown to the server (a scan still queued on the phone, an offline uuid not yet synced)
-//	  409 already_undone     any scan was undone;  409 not_undoable  any is a stock_take
+//	  409 already_undone     any scan was undone;  409 not_undoable  any is a stock_take (a Stock-take has no Price; since
+//	                         B9-05 it can be undone, through POST /api/scan/{uuid}/undo, but never priced)
 //	  422 validation_failed  no uuids, priceCents or pricePerKgCents <= 0 (priceCents is required), scans of more than one
 //	                         Shop or Product, pricePerKgCents on a Product in pieces
 //	  Nothing is written on any error.

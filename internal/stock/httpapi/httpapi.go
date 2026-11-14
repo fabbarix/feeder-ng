@@ -5,6 +5,7 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -31,6 +32,9 @@ func mount(r *app.Router, d app.Deps) {
 	r.User("GET /api/stock/spoiled", a.spoiled)
 	r.User("POST /api/stock/lots/{id}/throw-out", a.throwOut)
 	r.User("POST /api/stock/lots/{id}/keep", a.keep)
+	// B9-05: the same-day Undo of a Throw out (SAFE-09) and Put away, many Lots in one request (SSP-10).
+	r.User("POST /api/stock/waste/{id}/undo", a.undoThrowOut)
+	r.User("POST /api/stock/lots/put-away", a.putAway)
 	r.User("POST /api/stock/cooked", a.cooked)
 	r.User("GET /api/stock/projected", a.projected)
 	r.User("GET /api/stock/waste", a.waste)
@@ -298,18 +302,91 @@ func (a *api) throwOut(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, wasteToJSON(rec))
 }
 
+// keepBody is Keep's optional body (SSP-17): goodUntil absent or "" = good until today.
+type keepBody struct {
+	GoodUntil string `json:"goodUntil"`
+}
+
 func (a *api) keep(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r)
 	if !ok {
 		writeNotFound(w, "Stock Lot not found")
 		return
 	}
-	v, err := a.svc.Keep(r.Context(), id)
+	var body keepBody
+	if err := decodeOptionalJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	v, err := a.svc.KeepUntil(r.Context(), id, stock.Date(body.GoodUntil))
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, lotToJSON(v))
+}
+
+// undoThrowOut puts a Lot thrown out today back and removes its waste record; the body is the Lot.
+func (a *api) undoThrowOut(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok {
+		writeNotFound(w, "Waste record not found")
+		return
+	}
+	v, err := a.svc.UndoThrowOut(r.Context(), id)
+	if errors.Is(err, store.ErrNotFound) {
+		writeNotFound(w, "Waste record not found")
+		return
+	}
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, lotToJSON(v))
+}
+
+type putAwayBody struct {
+	Moves []struct {
+		LotID          int64 `json:"lotId"`
+		StoragePlaceID int64 `json:"storagePlaceId"`
+	} `json:"moves"`
+}
+
+// putAway moves Not sorted Lots into Storage Places, all or none: {lots, skipped}.
+func (a *api) putAway(w http.ResponseWriter, r *http.Request) {
+	var body putAwayBody
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.WriteAPIError(w, err)
+		return
+	}
+	moves := make([]service.PlaceMove, 0, len(body.Moves))
+	for _, m := range body.Moves {
+		moves = append(moves, service.PlaceMove{LotID: m.LotID, PlaceID: m.StoragePlaceID})
+	}
+	res, err := a.svc.MoveMany(r.Context(), moves)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"lots": lotsToJSON(res.Moved), "skipped": res.Skipped})
+}
+
+// decodeOptionalJSON is httpx.DecodeJSON for a body that may be absent: no body leaves v as it is.
+func decodeOptionalJSON(r *http.Request, v any) error {
+	if r.Body == nil {
+		return nil
+	}
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20+1))
+	if err != nil || len(raw) > 1<<20 {
+		return &httpx.APIError{Status: http.StatusBadRequest, Code: "bad_request", Message: "The request body must be JSON"}
+	}
+	if strings.TrimSpace(string(raw)) == "" {
+		return nil
+	}
+	if err := json.Unmarshal(raw, v); err != nil {
+		return &httpx.APIError{Status: http.StatusBadRequest, Code: "bad_request", Message: "The request body must be JSON"}
+	}
+	return nil
 }
 
 type cookedBody struct {
@@ -428,6 +505,10 @@ func mapError(err error) error {
 	case errors.Is(err, service.ErrInvalid):
 		msg := strings.TrimPrefix(err.Error(), service.ErrInvalid.Error()+": ")
 		return &httpx.APIError{Status: http.StatusUnprocessableEntity, Code: "validation_failed", Message: msg}
+	case errors.Is(err, service.ErrNotUndoable):
+		return &httpx.APIError{Status: http.StatusConflict, Code: "not_undoable", Message: "This waste cannot be undone"}
+	case errors.Is(err, service.ErrUndoWindowOver):
+		return &httpx.APIError{Status: http.StatusConflict, Code: "undo_window_over", Message: "A Throw out can only be undone on the day it was done"}
 	case errors.Is(err, service.ErrNotSpoiled):
 		return &httpx.APIError{Status: http.StatusConflict, Code: "not_spoiled", Message: "Only a spoiled Stock Lot can be thrown out or kept"}
 	case errors.Is(err, store.ErrPlaceNotFound):

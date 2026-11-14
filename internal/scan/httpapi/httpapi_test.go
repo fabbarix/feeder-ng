@@ -172,14 +172,81 @@ func TestUndoRemovesTheLotAndIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestStockTakeCannotBeUndone(t *testing.T) {
+// B9-05 (SAFE-09): a Stock-take is undone through the same route as a Shop scan, against the real Stock. It replaces
+// TestStockTakeCannotBeUndone (409 not_undoable), the beta.8 behaviour.
+func TestStockTakeCanBeUndone(t *testing.T) {
 	f := newFixture(t)
-	r := f.user.Post("/api/scan", map[string]any{"clientUuid": "take-1", "scannedAt": "2026-11-09T12:00:00Z", "kind": "stock_take", "productId": f.product, "action": "plus_pack"})
-	if r.Status != 200 {
-		t.Fatalf("stock-take = %d %s", r.Status, r.Body)
+	take := func(uuid, action string, total float64) {
+		t.Helper()
+		op := map[string]any{"clientUuid": uuid, "scannedAt": "2026-11-09T12:00:00Z", "kind": "stock_take", "productId": f.product, "action": action}
+		if action == "set_total" {
+			op["total"] = total
+		}
+		if r := f.user.Post("/api/scan", op); r.Status != 200 {
+			t.Fatalf("stock-take %s = %d %s", uuid, r.Status, r.Body)
+		}
 	}
-	if r := f.user.Post("/api/scan/take-1/undo", nil); r.Status != 409 || r.ErrorCode() != "not_undoable" {
-		t.Fatalf("undo = %d %s", r.Status, r.Body)
+	type lotRow struct {
+		ID       int64   `json:"id"`
+		Quantity float64 `json:"quantity"`
+	}
+	lots := func() (ids map[int64]float64, total float64) {
+		t.Helper()
+		var out struct {
+			Lots []lotRow `json:"lots"`
+		}
+		f.user.Get("/api/stock/lots").MustJSON(t, &out)
+		ids = map[int64]float64{}
+		for _, l := range out.Lots {
+			ids[l.ID] = l.Quantity
+			total += l.Quantity
+		}
+		return ids, total
+	}
+	undo := func(uuid string) {
+		t.Helper()
+		if r := f.user.Post("/api/scan/"+uuid+"/undo", nil); r.Status != 200 {
+			t.Fatalf("undo %s = %d %s", uuid, r.Status, r.Body)
+		}
+	}
+
+	// +1 pack: Undo removes the Lot it added.
+	take("take-1", "plus_pack", 0)
+	undo("take-1")
+	if ids, total := lots(); len(ids) != 0 || total != 0 {
+		t.Fatalf("after undoing +1 pack: lots %v, total %v; want none", ids, total)
+	}
+
+	// -1 pack: Undo gives back what it took, to the same Lot.
+	take("take-2", "set_total", 1500)
+	before, _ := lots()
+	take("take-3", "minus_pack", 0)
+	if _, total := lots(); total != 800 {
+		t.Fatalf("after -1 pack total = %v, want 800", total)
+	}
+	undo("take-3")
+	after, total := lots()
+	if total != 1500 || len(after) != len(before) {
+		t.Fatalf("after undoing -1 pack: lots %v (total %v), want %v back", after, total, before)
+	}
+	for id, q := range before {
+		if after[id] != q {
+			t.Errorf("Lot %d = %v after Undo, want %v", id, after[id], q)
+		}
+	}
+	// A second Undo is answered, and gives nothing back twice.
+	if r := f.user.Post("/api/scan/take-3/undo", nil); r.Status != 200 {
+		t.Errorf("second undo = %d %s", r.Status, r.Body)
+	}
+	if _, total := lots(); total != 1500 {
+		t.Errorf("total after a second Undo = %v, want 1500", total)
+	}
+
+	// Set total up: Undo removes the Lot it added.
+	take("take-4", "set_total", 2000)
+	undo("take-4")
+	if _, total := lots(); total != 1500 {
+		t.Errorf("after undoing Set total up total = %v, want 1500", total)
 	}
 }
 

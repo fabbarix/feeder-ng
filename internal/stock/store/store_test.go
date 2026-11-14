@@ -361,7 +361,7 @@ func TestUpdatePersistsKeptOn(t *testing.T) {
 		t.Fatalf("new lot KeptOn = %q", l.KeptOn)
 	}
 	if _, err := f.st.Update(ctx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
-		return store.Mutation{Lots: []stock.Lot{stock.KeepOn(lots[0], "2026-11-09")}}, nil
+		return store.Mutation{Lots: []stock.Lot{stock.KeepUntil(lots[0], "2026-11-06", "2026-11-09")}}, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -435,7 +435,7 @@ func TestUpdateRecordsNothingForLotsThatDidNotGoOffUnforgiven(t *testing.T) {
 		for i, l := range lots {
 			out[i] = l
 			if l.ID == kept.ID {
-				out[i] = stock.KeepOn(l, "2026-11-08") // go-off 11-04 forgiven
+				out[i] = stock.KeepUntil(l, "2026-11-04", "2026-11-08") // go-off 11-04 forgiven
 			}
 		}
 		return store.Mutation{Lots: out}, nil
@@ -453,7 +453,7 @@ func TestUpdateRecordsTheGoOffOfAKeptLotThatWentOffAgain(t *testing.T) {
 	f := setup(t)
 	l := f.add(t, f.thighs, 100, "2026-11-01", "2026-11-03")
 	if _, err := f.st.Update(ctx, f.thighs, func(lots []stock.Lot) (store.Mutation, error) {
-		return store.Mutation{Lots: []stock.Lot{stock.KeepOn(lots[0], "2026-11-04")}}, nil // now 11-04, kept 11-04
+		return store.Mutation{Lots: []stock.Lot{stock.KeepUntil(lots[0], "2026-11-04", "2026-11-04")}}, nil // now 11-04, kept 11-04
 	}); err != nil {
 		t.Fatal(err)
 	}
