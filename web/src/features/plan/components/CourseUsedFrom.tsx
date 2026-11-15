@@ -5,10 +5,12 @@ import { UsedFromSection } from './UsedFromSection'
 export interface CourseUsedFromProps {
   usedFrom: UsedFromController
   courseId: number
+  /** Mark all Cooked: the Course's name, so each section's row is named for it. */
+  courseName?: string
 }
 
 /** The Used from section of one Course, wired to the sheet's controller. */
-export function CourseUsedFrom({ usedFrom, courseId }: CourseUsedFromProps): ReactNode {
+export function CourseUsedFrom({ usedFrom, courseId, courseName }: CourseUsedFromProps): ReactNode {
   return (
     <UsedFromSection
       summary={usedFrom.summary(courseId)}
@@ -18,6 +20,7 @@ export function CourseUsedFrom({ usedFrom, courseId }: CourseUsedFromProps): Rea
       onToggle={(ingredientId, lotId, on) => usedFrom.toggle(courseId, ingredientId, lotId, on)}
       onAmount={(ingredientId, lotId, amount) => usedFrom.setAmount(courseId, ingredientId, lotId, amount)}
       conflicts={usedFrom.conflictsOf(courseId)}
+      course={courseName}
     />
   )
 }

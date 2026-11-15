@@ -64,7 +64,7 @@ export function MarkAllCookedSheet({ open, onClose, rows, isLoading, onLeftoverC
                 ) : (
                   <Chip>{s.noLeftover}</Chip>
                 )}
-                {usedFrom.lines(row.courseId).length > 0 ? <CourseUsedFrom usedFrom={usedFrom} courseId={row.courseId} /> : null}
+                {usedFrom.lines(row.courseId).length > 0 ? <CourseUsedFrom usedFrom={usedFrom} courseId={row.courseId} courseName={row.courseName} /> : null}
               </>
             ) : (
               <p className="plan__muted">{s.fromLeftoverNote}</p>
