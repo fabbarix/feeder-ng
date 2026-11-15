@@ -108,6 +108,7 @@ const ADDED = {
   // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-26: scenarios/b9-26.mjs (order 326): plan-after-swap (PC-01), regenerate (SAFE-07) and to-confirm-not-cooked (SAFE-03).
   // B9-32: scenarios/b9-32.mjs (order 332): plan-grid (PC-11, PC-06, A11Y-08, A11Y-09) and plan-couldnt (PC-07); rules/P38-unique-names.mjs (A11Y-08).
+  // B9-38: scenarios/b9-38.mjs (order 338): plan-sheet-actions, plan-sheet-mark-cooked, plan-sheet-swap, plan-sheet-choose, plan-sheet-choose-ring and plan-sheet-whos-eating (PC-09, PC-10, SHORT-02).
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
@@ -115,9 +116,11 @@ const ADDED = {
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
     'planning-recipe-select', 'toast-pricing', 'toast-over-bar',
+    'plan-after-swap', 'regenerate', 'to-confirm-not-cooked',
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
     'recipe-editor-guard', 'recipe-new-empty-save',
-    'plan-after-swap', 'regenerate', 'to-confirm-not-cooked', 'plan-grid', 'plan-couldnt',
+    'plan-grid', 'plan-couldnt',
+    'plan-sheet-actions', 'plan-sheet-mark-cooked', 'plan-sheet-swap', 'plan-sheet-choose', 'plan-sheet-choose-ring', 'plan-sheet-whos-eating',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
   ],

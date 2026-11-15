@@ -55,6 +55,6 @@ export default {
   key: 'sheetMetrics',
   order: 200,
   soft: true,
-  scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'bottom-bar'],
+  scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'bottom-bar', 'plan-sheet-actions', 'plan-sheet-mark-cooked', 'plan-sheet-swap', 'plan-sheet-choose', 'plan-sheet-whos-eating'],
   source,
 }
