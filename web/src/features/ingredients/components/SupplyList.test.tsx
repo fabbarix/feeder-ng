@@ -1,6 +1,6 @@
 // H9: a Supplies list row shows its Stock level and carries a "Use" icon button (household-items.md section 4.11). Pinned props:
 //   <SupplyList supplies stock system onOpen onUse busyIds label? />
-//   stock: ReadonlyMap<ingredientId, total> | null   null = not loaded yet: rows keep their old meta ("piece · restocks below 6
+//   stock: ReadonlyMap<ingredientId, total> | null   null = not loaded yet: rows keep their old meta ("piece · Restocks below 6
 //                                                    pieces") and every Use is disabled. A Supply missing from a loaded map has 0.
 //   The row's meta is stockLevel(...).text, with stockLevel(...).compact as its compact form; below the level it takes the info tone (the meta's data-status="info", with its icon).
 //   The Use button is an IconButton (icon "use"), named useLabel(...), in the row's trailing slot, beside the chevron: tapping it
@@ -47,8 +47,8 @@ describe('SupplyList: the stock level', () => {
   })
   it('keeps the old row meta until Stock has loaded', () => {
     setup(null)
-    expect(row('Toilet paper')).toHaveTextContent('piece · restocks below 6 pieces')
-    expect(row('Dish soap')).toHaveTextContent('ml · restocks below 500 ml')
+    expect(row('Toilet paper')).toHaveTextContent('piece · Restocks below 6')
+    expect(row('Dish soap')).toHaveTextContent('ml · Restocks below 500 ml')
   })
   it('is a list named like the screen, one row per Supply, and a row still opens its page', async () => {
     const { onOpen } = setup(stock([[22, 4]]), { label: 'Supplies' })

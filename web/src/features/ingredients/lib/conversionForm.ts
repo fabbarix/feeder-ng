@@ -34,6 +34,24 @@ export function checkConversion(
   return { ok: true, value: { unit: u, toBase: n } }
 }
 
+/** SAFE-04: the problems of the add form, each against its own field ({} = valid). The words are checkConversion's. */
+export function conversionErrors(
+  unit: string,
+  amount: string,
+  base: BaseUnit,
+  existingUnits: readonly string[],
+): { unit?: string; amount?: string } {
+  const errors: { unit?: string; amount?: string } = {}
+  const u = unit.trim().toLowerCase()
+  if (u === '') errors.unit = strings.errors.unitRequired
+  else if (u === base) errors.unit = strings.errors.unitIsBase(base)
+  else if (existingUnits.some((e) => e.trim().toLowerCase() === u)) errors.unit = strings.errors.unitTaken
+  const text = amount.trim().replace(',', '.')
+  const n = DECIMAL.test(text) ? Number(text) : Number.NaN
+  if (!Number.isFinite(n) || n <= 0) errors.amount = strings.errors.amountInvalid
+  return errors
+}
+
 /** Parses the Shelf Life field: '' -> null (none); a whole number >= 1 -> that; anything else -> undefined (invalid). */
 export function parseShelfLife(text: string): number | null | undefined {
   const t = text.trim()

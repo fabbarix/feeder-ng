@@ -1,6 +1,6 @@
 // R11a: Ingredient detail: Ingredients > name above the h1; no inline back link in any state.
-import { render, screen } from '@testing-library/react'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { screen } from '@testing-library/react'
+import { renderRoutes } from '../ingredient.test-helper'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
 import type { IngredientDetail } from '../types'
@@ -8,6 +8,7 @@ import type { IngredientDetail } from '../types'
 const base: IngredientDetail = { id: 7, name: 'garlic', baseUnit: 'g', shelfLifeDays: 30, conversions: [], references: {} }
 const hook = { ingredient: base as IngredientDetail | undefined, isLoading: false, error: null as Error | null, referenceCount: 0 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
+vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false }) }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
 vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))
@@ -15,8 +16,7 @@ vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientE
 import { IngredientScreen } from './IngredientScreen'
 
 const setup = () => {
-  const router = createMemoryRouter([{ path: '/ingredients/:id', element: <IngredientScreen /> }], { initialEntries: ['/ingredients/7'] })
-  return render(<RouterProvider router={router} />)
+  return renderRoutes([{ path: '/ingredients/:id', element: <IngredientScreen /> }], '/ingredients/7')
 }
 const trail = () => screen.getByRole('navigation', { name: 'Breadcrumb' })
 

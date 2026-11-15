@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../../../lib/http'
 import { dishSoapJSON, garlicJSON } from '../supply.test-helper'
-import { checkRestockLevel, kindBasePath, kindInUseFrom, kindInUseReasons, kindInUseTitle, kindOf, restockSummary, supplyMeta } from './kind'
+import { checkRestockLevel, kindBasePath, kindInUseFrom, kindInUseReasons, kindInUseTitle, kindOf, restockSummary, supplyMeta, wordsFor } from './kind'
 import { errorMessage } from './errorMessage'
 
 describe('kindOf', () => {
@@ -73,8 +73,18 @@ describe('restockSummary: the level in the household unit display', () => {
 
 describe('supplyMeta: the row meta of the Supplies list', () => {
   it('is the Base Unit label, and the level when there is one', () => {
-    expect(supplyMeta('piece', 6, 'piece', 'metric')).toBe('piece · restocks below 6 pieces')
+    expect(supplyMeta('piece', 6, 'piece', 'metric')).toBe('piece · Restocks below 6')
     expect(supplyMeta('ml', null, 'ml', 'metric')).toBe('ml')
+  })
+  // B9-48 (user decision SSP 4): the one Restock wording, lib/restock restockReason without the Stock: "Restocks below 6", a piece amount bare.
+  it('words the level as the Restock reason does: capital R, a piece count bare, g and ml with their unit', () => {
+    expect(supplyMeta('ml', 500, 'ml', 'metric')).toBe('ml · Restocks below 500 ml')
+    expect(supplyMeta('g', 1200, 'g', 'metric')).toBe('g · Restocks below 1.2 kg')
+    expect(supplyMeta('piece', 2000, 'piece', 'metric')).toBe('piece · Restocks below 2,000')
+    expect(supplyMeta('oz', 100, 'g', 'imperial')).toBe('oz · Restocks below 3.5 oz')
+  })
+  it('never says "restocks below" in lower case, nor counts the unit after a piece amount', () => {
+    expect(supplyMeta('piece', 6, 'piece', 'metric')).not.toMatch(/restocks below|pieces/)
   })
 })
 
@@ -85,5 +95,20 @@ describe('errorMessage: H2 refusals in words', () => {
   })
   it('keeps the generic message for anything else', () => {
     expect(errorMessage(new ApiError(422, 'validation_failed', 'x', { reason: 'other' }))).toBe('That did not work. Try again.')
+  })
+})
+
+// B9-48 (SET-14e): the words of an empty search, for either kind.
+describe('wordsFor: an empty search offers to create what was typed (SET-14e)', () => {
+  it('food: No Ingredient matches “Chickpeas”. / New Ingredient “Chickpeas”', () => {
+    expect(wordsFor('food').noMatchFor('Chickpeas')).toBe('No Ingredient matches “Chickpeas”.')
+    expect(wordsFor('food').newFromSearch('Chickpeas')).toBe('New Ingredient “Chickpeas”')
+  })
+  it('a Supply: No Supply matches ... / New Supply ...', () => {
+    expect(wordsFor('supply').noMatchFor('Batteries')).toBe('No Supply matches “Batteries”.')
+    expect(wordsFor('supply').newFromSearch('Batteries')).toBe('New Supply “Batteries”')
+  })
+  it('trims the query and collapses runs of spaces', () => {
+    expect(wordsFor('food').noMatchFor('  olive   oil ')).toBe('No Ingredient matches “olive oil”.')
   })
 })

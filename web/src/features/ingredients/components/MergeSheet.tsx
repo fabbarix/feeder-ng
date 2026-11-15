@@ -1,13 +1,15 @@
-import { useState } from 'react'
-import { BottomSheet, Button, ListGroup, ListRow, TextField } from '../../../ui'
+import { useId, useState } from 'react'
+import { BottomSheet, Button, DetailList, DetailRow, ListGroup, ListRow, Overline, TextField } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
 import { useMergeFlow } from '../hooks/useMergeFlow'
 import { errorMessage } from '../lib/errorMessage'
-import { totalReferences } from '../lib/references'
+import { mergeMovesGroup } from '../lib/impact'
 import { wordsFor } from '../lib/kind'
 import { strings } from '../strings'
 import type { IngredientKind } from '../types'
 import { MergeConflictList } from './MergeConflictList'
+import '../ingredients.css'
 
 export interface MergeSheetProps {
   open: boolean
@@ -21,8 +23,8 @@ export interface MergeSheetProps {
 
 /**
  * BottomSheet "Merge Ingredient" driven by useMergeFlow. Step 1: "Find the Ingredient to keep" input and a
- * button per candidate. Step 2: strings.mergeSummary, strings.mergeMoves(total source references) when > 0,
- * the blocked message when preview.blocked is set (no confirm button then), MergeConflictList when there are
+ * button per candidate. Step 2: strings.mergeSummary, what moves as "Moves to <target>" rows (R-E), the blocked message
+ * (the one FormError) when preview.blocked is set (no confirm button then), MergeConflictList when there are
  * conflicts, and a "Merge" button disabled until canMerge.
  */
 export function MergeSheet({ open, sourceId, onClose, onMerged, kind = 'food' }: MergeSheetProps) {
@@ -56,8 +58,7 @@ export function MergeSheet({ open, sourceId, onClose, onMerged, kind = 'food' }:
       ) : (
         <>
           {preview ? <p>{strings.mergeSummary(preview.source.name, target.name)}</p> : null}
-          {preview && totalReferences(preview.sourceReferences) > 0 ? <p>{strings.mergeMoves(totalReferences(preview.sourceReferences))}</p> : null}
-          {preview?.blocked ? <p role="alert">{preview.blocked === 'kind_differs' ? strings.mergeBlockedKind : words.mergeBlocked}</p> : null}
+          {preview ? <MovesRows targetName={target.name} sourceReferences={preview.sourceReferences} /> : null}
           {preview && preview.conflicts.length > 0 ? (
             <MergeConflictList
               conflicts={preview.conflicts}
@@ -75,9 +76,26 @@ export function MergeSheet({ open, sourceId, onClose, onMerged, kind = 'food' }:
           <Button variant="secondary" onClick={() => flow.selectTarget(null)}>
             {words.mergeChangeTarget}
           </Button>
-          {error ? <p role="alert">{error}</p> : null}
+          <FormError>{preview?.blocked ? (preview.blocked === 'kind_differs' ? strings.mergeBlockedKind : words.mergeBlocked) : error}</FormError>
         </>
       )}
     </BottomSheet>
+  )
+}
+
+/** SAFE-02 (R-E): what moves to the Ingredient that is kept, as labelled rows; nothing when nothing moves. */
+function MovesRows({ targetName, sourceReferences }: { targetName: string; sourceReferences: Record<string, number> }) {
+  const id = useId()
+  const group = mergeMovesGroup(targetName, sourceReferences)
+  if (!group) return null
+  return (
+    <div className="merge-sheet__moves">
+      <Overline id={id}>{group.label}</Overline>
+      <DetailList aria-labelledby={id}>
+        {group.rows.map((row) => (
+          <DetailRow key={row.key} label={row.key} state={row.state} />
+        ))}
+      </DetailList>
+    </div>
   )
 }

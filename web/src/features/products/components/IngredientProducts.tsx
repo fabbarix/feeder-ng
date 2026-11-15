@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { UnitSystem } from '../../../lib/units'
-import { BottomSheet, Button, SectionTitle, Tile } from '../../../ui'
+import { BottomSheet, Button, SectionTitle, Tile, type TileSpan } from '../../../ui'
 import { useIngredientProducts } from '../hooks/useIngredientProducts'
 import { strings } from '../strings'
 import type { BaseUnit } from '../types'
@@ -14,6 +14,9 @@ export interface IngredientProductsProps {
   baseUnit: BaseUnit
   /** The User's display system, passed by the Ingredient screen (useDisplayUnitSystem). */
   system?: UnitSystem
+  /** B9-48 (SET-05): the Ingredient page pairs it with Unit Conversions (a half-width tile with that page's class). Default full. */
+  span?: TileSpan
+  className?: string
 }
 
 /**
@@ -22,11 +25,11 @@ export interface IngredientProductsProps {
  * EmptyState when there are none, and a "New Product" button opening a BottomSheet
  * with ProductForm. A successful create closes the sheet.
  */
-export function IngredientProducts({ ingredientId, ingredientName, baseUnit, system = 'metric' }: IngredientProductsProps) {
+export function IngredientProducts({ ingredientId, ingredientName, baseUnit, system = 'metric', span = 'full', className }: IngredientProductsProps) {
   const { products, create } = useIngredientProducts(ingredientId)
   const [open, setOpen] = useState(false)
   return (
-    <Tile as="section" span="full" aria-label={strings.ingredientProductsTitle}>
+    <Tile as="section" span={span} className={className} aria-label={strings.ingredientProductsTitle}>
       <SectionTitle>{strings.ingredientProductsTitle}</SectionTitle>
       {products.length === 0 ? <p>{strings.ingredientProductsEmpty}</p> : <ProductList products={products} system={system} showIngredient={false} />}
       <Button variant="secondary" onClick={() => setOpen(true)}>

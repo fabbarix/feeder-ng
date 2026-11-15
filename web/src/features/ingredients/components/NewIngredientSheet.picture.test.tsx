@@ -34,7 +34,7 @@ describe('NewIngredientSheet: Picture', () => {
 
   it('comes after the Shelf Life field and before the action bar', () => {
     setup()
-    const shelf = screen.getByLabelText(new RegExp(strings.sheet.shelfLifeLabel))
+    const shelf = screen.getByRole('group', { name: strings.sheet.shelfLifeLabel })
     expect(shelf.compareDocumentPosition(picker()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(picker().compareDocumentPosition(screen.getByRole('button', { name: strings.createIngredient })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

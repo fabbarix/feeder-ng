@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { renderRoutes } from '../ingredient.test-helper'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { IngredientDetail } from '../types'
 
@@ -16,6 +16,7 @@ const hook = {
   setConversion: vi.fn().mockResolvedValue({}), removeConversion: vi.fn().mockResolvedValue({}), remove: vi.fn().mockResolvedValue(undefined),
 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
+vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false }) }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
 vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))
@@ -24,11 +25,7 @@ vi.mock('./../components/MergeSheet', () => ({ MergeSheet: () => null }))
 import { IngredientScreen } from './IngredientScreen'
 
 const setup = () => {
-  const router = createMemoryRouter(
-    [{ path: '/recipes/:id', element: <p>recipe page</p> }, { path: '/ingredients/:id', element: <IngredientScreen /> }],
-    { initialEntries: ['/ingredients/30'] },
-  )
-  render(<RouterProvider router={router} />)
+  renderRoutes([{ path: '/recipes/:id', element: <p>recipe page</p> }, { path: '/ingredients/:id', element: <IngredientScreen /> }], '/ingredients/30')
 }
 
 beforeEach(() => {
@@ -45,7 +42,7 @@ describe('IngredientScreen: a Base recipe\'s Ingredient', () => {
   })
   it('has no Rename; the name follows the Base recipe, and says so', () => {
     setup()
-    expect(screen.queryByRole('button', { name: 'Rename' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Rename/ })).toBeNull()
     expect(screen.getByText('Rename the Base recipe to rename this Ingredient.')).toBeInTheDocument()
   })
   it('shows the batch and portion conversions read-only ("Set by the Base recipe"), and others as before', () => {
@@ -59,7 +56,7 @@ describe('IngredientScreen: a Base recipe\'s Ingredient', () => {
   it('a plain Ingredient is unchanged: Rename and every Remove stay', () => {
     hook.ingredient = { ...base, baseRecipe: null, name: 'milk', conversions: [{ unit: 'batch', toBase: 1000 }] }
     setup()
-    expect(screen.getByRole('button', { name: 'Rename' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Rename Milk' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Remove batch' })).toBeInTheDocument()
     expect(screen.queryByText('Base recipe')).toBeNull()
   })
