@@ -28,6 +28,7 @@ export function StepperField({ label, helper, error, value, onChange, min, max, 
         step={step}
         unit={unit}
         describedBy={describedBy(ids, helper, error)}
+        invalid={Boolean(error)}
       />
     </FieldFrame>
   )
