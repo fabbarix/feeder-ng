@@ -225,6 +225,13 @@
   background: var(--color-surface-2);
 }
 
+/* The list itself takes focus (Tab, or a sheet without a search): it draws no ring of its own (it scrolls and would clip it), so the
+   active option carries the focus, as an inner ring (R-C+), while the list has keyboard focus. */
+.select__list:focus-visible .select__option[data-active] {
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+}
+
 .select__option[aria-selected='true'] {
   color: var(--color-accent-text);
 }

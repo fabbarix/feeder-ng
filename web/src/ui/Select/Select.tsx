@@ -283,7 +283,10 @@ function SelectCore<V extends string | number>({
         e.preventDefault()
         return close(true)
       case 'Tab':
-        return close(false)
+        // From the trigger, Tab leaves the list closed. From the search or the list it moves on inside the panel (the filter chips, "+N",
+        // the sort button, the list), as any Tab does; a popover closes once focus leaves it (below), and a sheet keeps focus inside.
+        if (e.currentTarget === trigger.current) close(false)
+        return
       default:
         if (!showSearch && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
           e.preventDefault()
@@ -316,6 +319,16 @@ function SelectCore<V extends string | number>({
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
+  })
+
+  // Focus that leaves the trigger and the popover (Tab past the last control, or a click elsewhere) closes the popover.
+  useEffect(() => {
+    if (!open || phone) return
+    const onFocusIn = (e: FocusEvent) => {
+      if (!anchor.current?.contains(e.target as Node)) close(false)
+    }
+    document.addEventListener('focusin', onFocusIn)
+    return () => document.removeEventListener('focusin', onFocusIn)
   })
 
   useFloatingPopover(open && !phone, trigger, popover, 'flex')

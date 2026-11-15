@@ -132,7 +132,8 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
         aria-labelledby={p.labelId}
         aria-multiselectable={p.multi || undefined}
         aria-activedescendant={p.activeId}
-        tabIndex={-1}
+        // A Tab stop after the search and the tools, so the list is reached by Tab as well as by the arrows from the search.
+        tabIndex={0}
         className="select__list"
         onKeyDown={p.onKey}
         onMouseDown={(e) => e.preventDefault()}
