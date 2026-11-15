@@ -56,6 +56,27 @@ describe('MemberAwaySection', () => {
     await waitFor(() => expect(rowButton).toHaveFocus()) // focus returns to what opened it
   })
 
+  it('w6a: an Away removed from its sheet leaves the list, and focus goes to "Add an Away" (its row is gone)', async () => {
+    let list = [away()]
+    mockApi({
+      'GET /api/members': [marco],
+      'GET /api/meal-slots': SLOTS,
+      'GET /api/plan': { today: '2026-11-15', horizonDays: 7, updating: false, slots: [], away: [] },
+      'GET /api/members/2/away': () => list,
+      'PATCH /api/away/1?dryRun=1': { slotsWithout: 0, mealsChanged: 0, days: [], beyondHorizon: null },
+      'DELETE /api/away/1': () => {
+        list = []
+        return { json: { id: 1, changes: [], undoToken: 'tok' } }
+      },
+    })
+    renderWithProviders(<MemberAwaySection member={marco} />)
+    await userEvent.click(await screen.findByRole('button', { name: /^Away Thu 19 – Thu 26 Nov/ }))
+    const dialog = await screen.findByRole('dialog', { name: /Marco is away/ })
+    await userEvent.click(within(dialog).getByRole('button', { name: /^Remove Away/ }))
+    expect(await screen.findByText('Not away on any day.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add an Away' })).toHaveFocus())
+  })
+
   it('"Add an Away" is an outlined secondary button; it opens the sheet with Marco chosen and no Who pills', async () => {
     routes([away()])
     renderWithProviders(<MemberAwaySection member={marco} />)

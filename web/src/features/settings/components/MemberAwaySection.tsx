@@ -45,7 +45,7 @@ function AwaySection({ member }: { member: Member }): ReactNode {
         <Muted>{s.none}</Muted>
       )}
       <div className="member-away__add">
-        <Button variant="secondary" icon="add" onClick={section.openNew}>
+        <Button ref={section.addRef} variant="secondary" icon="add" onClick={section.openNew}>
           {s.addAway}
         </Button>
       </div>
