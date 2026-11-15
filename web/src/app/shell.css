@@ -5,7 +5,8 @@
   --nav-inset: 12px;
   /* Content clearance above the floating bottom bar: nothing ends up behind it. Zero from 1024 (no bottom bar). */
   --nav-clearance: calc(var(--nav-height) + var(--nav-inset) + var(--space-6) + env(safe-area-inset-bottom, 0px));
-  /* The top edge of the floating bottom bar above the viewport bottom (no gap): sticky bars sit on it. Zero from 1024. */
+  /* The top edge of the floating bottom bar above the viewport bottom (no gap): sticky bars sit on it. Where no bar floats (the rail
+     from 1024, the compact rail, the keyboard up, under 340 px tall, chromeless) it is the bottom inset alone (SHORT-04). */
   --nav-top: calc(var(--nav-height) + var(--nav-inset) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -26,8 +27,8 @@ html {
   display: block;
   padding: 0;
   min-height: 100dvh;
-  /* No bottom bar here: a sticky action bar floats a gutter above the viewport edge. */
-  --nav-top: 0px;
+  /* No bottom bar here: a sticky action bar floats --bar-gap above the bottom inset. */
+  --nav-top: var(--safe-bottom);
   --nav-clearance: 0px;
 }
 
@@ -42,8 +43,11 @@ html {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  height: 64px;
-  padding-inline: var(--gutter);
+  /* SHORT-05: 64 px below the top inset (an installed app's status bar), and each side is max(gutter, the inset on that side). */
+  box-sizing: border-box;
+  height: calc(64px + var(--safe-top));
+  padding-top: var(--safe-top);
+  padding-inline: max(var(--gutter), var(--safe-left)) max(var(--gutter), var(--safe-right));
 }
 
 /* The brand: the mark and the word "Feeder" at every width (b8-shop). The word is text in the title type, so it is selectable and
@@ -112,7 +116,9 @@ html {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   column-gap: var(--space-half);
-  padding-inline: var(--space-1);
+  /* 14 px: the end labels ("Settings", 43 px) clear the bar's rounded ends by 8 px at the label's height, and neighbouring labels
+     ("Recipes", "Settings") keep 4 px between them, from 376 px (the narrowest labelled width: a track is 44.3 px there). */
+  padding-inline: calc(var(--space-3) + var(--space-half));
   align-items: center;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -125,44 +131,72 @@ html {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-half);
-  width: 100%;
-  min-width: 44px;
-  height: 54px;
-  border-radius: var(--radius-button);
   color: var(--color-muted);
   text-decoration: none;
 }
 
+/* DS-02 / R-F: each link is its whole track (the tap target); the shapes are on the inner 40 px squircle, never on the link, so no
+   link box is ever filled or stretched. The focus ring follows the whole target (the button radius). */
+.bottom-bar__link,
+.bottom-bar__link[aria-current='page'],
+.bottom-bar__link[data-accent='true'] {
+  align-self: stretch;
+  justify-self: stretch;
+  /* The link is its track plus half the gap on each side (so neighbouring links meet, never overlap), and 4 px short of the bar's
+     border top and bottom, which leaves room for its outer focus ring inside the bar (below). */
+  inline-size: auto;
+  margin-block: var(--space-1);
+  margin-inline: calc(var(--space-half) / -2);
+  block-size: auto;
+  min-width: 0;
+  gap: var(--space-half);
+  background: none;
+  box-shadow: none;
+  border-radius: var(--radius-button);
+}
+
+.bottom-bar__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--radius-thumb);
+}
+
+/* A11Y-06: the current page is accent text on icon and label, the filled icon weight, the soft squircle and aria-current. */
 .bottom-bar__link[aria-current='page'] {
+  color: var(--color-accent-text);
+}
+
+.bottom-bar__link[aria-current='page'] .bottom-bar__icon {
   background: var(--color-soft);
   color: var(--color-accent-text);
 }
 
-/* Scan: the accent button, in the bar (not raised). Rules after the current-tab rule so the accent wins. */
+/* Scan: always the accent squircle; its label is plain text, accent text when Scan is the current page. No ring. */
 .bottom-bar__link[data-accent='true'] {
-  justify-self: center;
-  width: min(58px, 100%);
-  height: 58px;
-  border-radius: var(--radius-button-lg);
+  color: var(--color-text);
+}
+
+.bottom-bar__link[data-accent='true'] .bottom-bar__icon {
   background: var(--color-accent);
   color: var(--color-on-accent);
 }
 
 .bottom-bar__link[data-accent='true'][aria-current='page'] {
-  box-shadow: 0 0 0 3px var(--color-soft);
+  color: var(--color-accent-text);
 }
 
-/* A11Y-02 (R-C+): the bar is a bounded container with 4 px of padding and 2 px between its links, so an outer ring would run over
-   the next link (the current pill, the Scan button). A link rings inside itself with the inner width; its fill does not change, so a
-   focused link never looks like the current one. On the accent Scan button the ring is the on-accent colour. */
+/* A11Y-02 (R-C+): the bar has 14 px of inline padding, so the ring is outer: drawn just outside the link, inside the 4 px the link
+   leaves above and below it and over the empty edge of its neighbour's track. An inner ring touched a long label ("Settings" fills
+   43 of a 46 px link at 390) and fused with the bar's border. The ring is the normal ring colour on every link, Scan included: the
+   link sits on the bar surface, the accent is the span's. */
 .bottom-bar__link:focus-visible {
   outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
-  outline-offset: calc(-1 * var(--focus-ring-inner-width));
-}
-
-.bottom-bar__link[data-accent='true'] {
-  --focus-ring-color: var(--color-on-accent);
+  /* Just outside the link, which reaches halfway into the gap: the ring sits midway between a long label and its neighbour's
+     (Settings and Recipes are 6.4 px apart at 390 px: about 2 px of air on each side of the 2 px ring). */
+  outline-offset: 0;
 }
 
 .bottom-bar__label {
@@ -173,7 +207,106 @@ html {
   white-space: nowrap;
 }
 
-/* Side rail: hidden on phones; the grid column and the rail appear from 1024. */
+/* A1 / DS 1: the narrow band (375 px and below) shows icons only, the labels stay the links' accessible names. The bar's side inset
+   drops to --space-1 and it gets 6 px of inline padding (--space-1 + --space-half) with no gap, so a track is 50 px at 375. */
+@media (width < 23.5em) {
+  .bottom-bar {
+    left: calc(var(--space-1) + env(safe-area-inset-left, 0px));
+    right: calc(var(--space-1) + env(safe-area-inset-right, 0px));
+    column-gap: 0;
+    padding-inline: calc(var(--space-1) + var(--space-half));
+  }
+
+  /* No gap here: the links are exactly their tracks (the same selectors as the base rule, so the current link and Scan follow). */
+  .bottom-bar__link,
+  .bottom-bar__link[aria-current='page'],
+  .bottom-bar__link[data-accent='true'] {
+    margin-inline: 0;
+  }
+
+  .bottom-bar__label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* SHORT-04: short and narrow (under 500 px tall, under 600 px wide): the bar stays, compact. 52 px with an 8 px inset, icons only with
+   R-F's squircles, which sit 6 px clear of the bar's top and bottom (52 - 2 border - 40 = 2 x 5, + the border). */
+@media (max-height: 499px) and (width < 37.5em) {
+  :root {
+    --nav-height: 52px;
+    --nav-inset: 8px;
+  }
+
+  .bottom-bar {
+    padding-inline: calc(var(--space-1) + var(--space-half));
+    column-gap: 0;
+  }
+
+  /* No gap, and the 52 px bar has no room above its squircles for an inset: the links are exactly their tracks. */
+  .bottom-bar__link,
+  .bottom-bar__link[aria-current='page'],
+  .bottom-bar__link[data-accent='true'] {
+    margin: 0;
+  }
+
+  /* No room outside the link in the 52 px bar: the ring rings inside the link. */
+  .bottom-bar__link:focus-visible {
+    outline-offset: calc(-1 * var(--focus-ring-inner-width));
+  }
+
+  .bottom-bar__label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* SHORT-04: very short (under 340 px tall, 400 % zoom): nothing floats over the page. The bar ends the page, after <main>. */
+@media (max-height: 339px) {
+  :root {
+    --nav-top: var(--safe-bottom);
+    --nav-clearance: calc(var(--space-6) + var(--safe-bottom));
+  }
+
+  .bottom-bar {
+    position: static;
+    inline-size: min(480px, calc(100% - 2 * var(--nav-inset)));
+    margin-block: 0 calc(var(--nav-inset) + var(--safe-bottom));
+  }
+}
+
+/* SHORT-04 / SHORT 2: while a text field has focus on a coarse pointer (useKeyboardInset) the bar steps aside: it slides away and is
+   hidden (out of the Tab order and the accessibility tree), and sticky bars drop to the bottom inset, on the keyboard. */
+html[data-keyboard='open'] {
+  --nav-top: var(--safe-bottom);
+  --nav-clearance: calc(var(--space-6) + var(--safe-bottom));
+}
+
+html[data-keyboard='open'] .bottom-bar {
+  transform: translateY(calc(100% + var(--nav-inset) + var(--safe-bottom)));
+  visibility: hidden;
+}
+
+/* The slide, only for people who have not asked for reduced motion. Visibility flips after the slide out, at once on the way back. */
+@media (prefers-reduced-motion: no-preference) {
+  .bottom-bar {
+    transition: transform var(--dur-2) var(--ease-out), visibility 0s linear 0s;
+  }
+
+  html[data-keyboard='open'] .bottom-bar {
+    transition: transform var(--dur-2) var(--ease-out), visibility 0s linear var(--dur-2);
+  }
+}
+
+/* Side rail: hidden on phones; the grid column and the rail appear from 1024, and the compact rail in phone landscape. */
 .side-rail {
   display: none;
 }
@@ -184,11 +317,142 @@ html {
   font-weight: var(--text-overline-weight);
 }
 
+/* SHORT-04 / SHORT 1: phone landscape (under 500 px tall, 600 px to 1024 px wide). The bottom bar is not shown; the compact rail takes
+   column 1 across all rows: 64 px plus the left inset, sticky, the viewport's height. The top bar sits beside it at 48 px. It comes
+   before the 1024 block, so a short desktop window keeps its 88 or 240 px rail. */
+@media (max-height: 499px) and (min-width: 37.5em) and (width < 64em) {
+  :root {
+    --nav-top: var(--safe-bottom);
+    --nav-clearance: calc(var(--space-6) + var(--safe-bottom));
+  }
+
+  .app-shell:not(.app-shell--chromeless) {
+    display: grid;
+    grid-template-columns: calc(var(--rail-compact) + var(--safe-left)) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    align-content: start;
+  }
+
+  .app-shell:not(.app-shell--chromeless) > .app-status,
+  .app-shell:not(.app-shell--chromeless) > .app-main {
+    grid-column: 2;
+  }
+
+  /* The rail has taken the left inset: the page and the top bar do not add it again (SHORT-05). */
+  .app-main {
+    --safe-left: 0px;
+  }
+
+  .top-bar {
+    grid-column: 2;
+    --safe-left: 0px;
+    height: calc(48px + var(--safe-top));
+  }
+
+  .bottom-bar {
+    display: none;
+  }
+
+  .side-rail {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-1);
+    position: sticky;
+    top: 0;
+    align-self: start;
+    block-size: 100dvh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding-block: var(--space-2) calc(var(--space-2) + var(--safe-bottom));
+    padding-inline-start: var(--safe-left);
+  }
+
+  .side-rail__link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-half);
+    flex: none;
+    width: 56px;
+    height: 44px;
+    margin-inline: auto;
+    border-radius: var(--radius-button);
+    color: var(--color-muted);
+    text-decoration: none;
+  }
+
+  .side-rail__link svg {
+    inline-size: 20px;
+    block-size: 20px;
+  }
+
+  /* The current page: a 44 x 26 capsule (radius 13: the pill radius on a 26 px box) behind its icon. */
+  .side-rail__pill {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 26px;
+    border-radius: var(--radius-pill);
+  }
+
+  .side-rail__link[aria-current='page'] {
+    color: var(--color-accent-text);
+  }
+
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    background: var(--color-soft);
+  }
+
+  /* Scan: a 56 x 44 rounded rectangle (radius 14, --radius-control) in the accent fill, never stretched; no ring when it is the current page (R-F). */
+  .side-rail__link[data-accent='true'] {
+    width: 56px;
+    height: 44px;
+    border-radius: var(--radius-control);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  .side-rail__link[data-accent='true'][aria-current='page'] {
+    box-shadow: none;
+  }
+
+  .side-rail__link[data-accent='true'][aria-current='page'] .side-rail__pill {
+    background: none;
+  }
+
+  .side-rail__label {
+    font-size: var(--text-nav-size);
+    line-height: 1;
+    font-weight: var(--text-nav-weight);
+    white-space: nowrap;
+  }
+}
+
+/* Under 360 px tall the compact rail's rows are 40 px, so seven fit. */
+@media (max-height: 499px) and (min-width: 37.5em) and (width < 64em) and (max-height: 359px) {
+  .side-rail {
+    gap: var(--space-half);
+    padding-block: var(--space-1) calc(var(--space-1) + var(--safe-bottom));
+  }
+
+  .side-rail__link {
+    height: 40px;
+  }
+
+  .side-rail__link[data-accent='true'] {
+    height: 40px;
+  }
+}
+
 /* Tablet landscape and desktop */
 @media (min-width: 64em) {
   :root {
     --nav-clearance: 0;
-    --nav-top: 0px;
+    --nav-top: var(--safe-bottom);
   }
 
   .app-shell {
@@ -314,6 +578,14 @@ html {
   }
 }
 
+/* A short desktop window keeps its 88 or 240 px rail, with 44 px rows so seven fit. */
+@media (max-height: 499px) and (min-width: 64em) {
+  .side-rail__link,
+  .side-rail__link[data-accent='true'] {
+    height: 44px;
+  }
+}
+
 /* Avatar menu (5.17): trigger, scrim and popover */
 .your-menu-anchor {
   position: relative;
@@ -332,6 +604,21 @@ html {
   background: var(--color-surface-2);
   cursor: pointer;
   overflow: hidden;
+}
+
+/* A11Y-09: on a coarse pointer the 40 px avatar button is a 44 px target. The Avatar inside clips itself (border-radius 50%), so the
+   button need not clip, and the hit area grows by 2 px each side. */
+@media (pointer: coarse) {
+  .your-menu-button {
+    position: relative;
+    overflow: visible;
+  }
+
+  .your-menu-button::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+  }
 }
 
 .your-menu-scrim {

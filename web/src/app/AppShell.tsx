@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Icon, Page, PageWidthProvider } from '../ui'
+import { useKeyboardInset } from '../ui/lib/useKeyboardInset'
 import { withAccessRequests } from './accessMenu'
 import { BrandMark } from './BrandMark'
 import { isChromeless } from './chromeless'
@@ -29,6 +30,8 @@ export interface AppShellProps {
 export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
   const { pathname } = useLocation()
   const pageWidth = pageWidthFor(pathname)
+  // Mounted before the chromeless return so both frames get it: the receipt screens carry a sticky Save bar there too.
+  useKeyboardInset()
   if (isChromeless(pathname)) {
     // The kitchen board, Cook Mode and the receipt screens: the page alone, no bars, no avatar menu, no status slot. A screen
     // that is a ui Page (the receipt ones) still takes its route's width from the table.
@@ -100,7 +103,9 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
               className="bottom-bar__link"
               data-accent={item.accent ? 'true' : undefined}
             >
-              <Icon name={item.icon} size={item.accent ? 28 : 24} weight={isActive ? 'fill' : 'regular'} />
+              <span className="bottom-bar__icon" aria-hidden="true">
+                <Icon name={item.icon} size={item.accent ? 28 : 24} weight={isActive ? 'fill' : 'regular'} />
+              </span>
               <span className="bottom-bar__label">{item.label}</span>
             </Link>
           )

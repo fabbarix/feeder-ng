@@ -4,7 +4,8 @@
   inline-size: 100%;
   max-inline-size: var(--page-max);
   margin-inline: auto;
-  padding-inline: var(--page-gutter);
+  /* SHORT-05: each side is max(gutter, the safe-area inset on that side), so a notch or a rounded corner never covers content. */
+  padding-inline: max(var(--page-gutter), var(--safe-left)) max(var(--page-gutter), var(--safe-right));
   box-sizing: border-box;
   min-inline-size: 0;
 }

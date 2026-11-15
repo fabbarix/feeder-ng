@@ -46,3 +46,11 @@ describe('BoardScreen layout switch', () => {
     expect(document.querySelectorAll('.board-cell')).toHaveLength(8)
   })
 })
+
+describe('A11Y-01 (B9-19): the kitchen board names the document', () => {
+  it('the document title is "Kitchen board · Feeder" (the board has no PageHeader)', () => {
+    width(true)
+    view()
+    expect(document.title).toBe('Kitchen board · Feeder')
+  })
+})
