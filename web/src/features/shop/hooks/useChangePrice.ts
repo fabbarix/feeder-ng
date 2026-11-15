@@ -1,7 +1,13 @@
-// B9-43 (SSP-13): "Change the Price" of a Line's Product at a Shop. STUB (test author).
+// B9-43 (SSP-13): "Change the Price" of a Line's suggested Product at a Shop, from the open Line's sheet.
+import { useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { failureLine, saveFailed } from '../../../lib/errorCopy'
 import type { PriceEntry } from '../../../ui/PriceKeypad'
 import type { PackSize } from '../../../ui/lib/priceImplication'
+import { productsApi } from '../../products/api'
+import { priceBodyOf } from '../lib/changePrice'
 import type { ListEntry } from '../lib/lines'
+import { liveRefreshFor } from '../lib/liveRefresh'
 
 export interface ChangePrice {
   /** the Line whose Product's Price is being changed; null while closed */
@@ -25,6 +31,81 @@ export interface UseChangePriceOptions {
   today: string | undefined
 }
 
-export function useChangePrice(_options: UseChangePriceOptions): ChangePrice {
-  throw new Error('not implemented (B9-43)')
+/** The Shop a Line's Price is changed at: the picked one, else the priced fallback's; null = none (no Price can be set). */
+export function changePriceShop(entry: ListEntry, shopId: number | null): number | null {
+  return shopId ?? entry.details?.priceShopId ?? null
+}
+
+export function useChangePrice({ shopId, today }: UseChangePriceOptions): ChangePrice {
+  const queryClient = useQueryClient()
+  const [target, setTarget] = useState<ListEntry | null>(null)
+  const [last, setLast] = useState<{ cents: number; date: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  // the open request: a late answer for an earlier Line is dropped
+  const seq = useRef(0)
+  useEffect(() => () => void (seq.current += 1), [])
+
+  const productOf = target?.details?.product ?? null
+  const product = useMemo(
+    () => (productOf ? { id: productOf.id, name: productOf.name, pack: { amount: productOf.packSize, unit: productOf.baseUnit } } : null),
+    [productOf],
+  )
+  const shop = target ? changePriceShop(target, shopId) : null
+
+  const open = useCallback(
+    (entry: ListEntry) => {
+      const p = entry.details?.product
+      const at = changePriceShop(entry, shopId)
+      if (!p || at === null) return
+      const mine = ++seq.current
+      setTarget(entry)
+      setLast(null)
+      setError(null)
+      productsApi
+        .latestPrice(p.id, at)
+        .then((price) => {
+          if (seq.current !== mine) return
+          setLast(price && price.priceCents !== null ? { cents: price.priceCents, date: price.date } : null)
+        })
+        .catch(() => undefined)
+    },
+    [shopId],
+  )
+
+  const finish = useCallback(() => {
+    seq.current += 1
+    setTarget(null)
+    setLast(null)
+    setError(null)
+  }, [])
+
+  const save = useCallback(
+    async (entry: PriceEntry) => {
+      if (!target || !productOf || shop === null || !today) return
+      const body = priceBodyOf(entry, { shopId: shop, date: today })
+      if (!body) return
+      try {
+        await productsApi.recordPrice(productOf.id, body)
+      } catch (err) {
+        setError(failureLine(saveFailed('the Price', err)))
+        return
+      }
+      liveRefreshFor(queryClient).request()
+      finish()
+    },
+    [target, productOf, shop, today, queryClient, finish],
+  )
+
+  const close = useCallback(
+    (entry: PriceEntry) => {
+      if (entry.cents !== null && target) {
+        void save(entry)
+        return
+      }
+      finish()
+    },
+    [save, target, finish],
+  )
+
+  return useMemo(() => ({ target, product, last, error, open, close, save }), [target, product, last, error, open, close, save])
 }

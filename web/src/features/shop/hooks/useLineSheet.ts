@@ -57,6 +57,9 @@ export function useLineSheet(handlers: LineSheetHandlers, resolve?: (entry: List
       case 'untick':
         handlers.onUntick?.(entry)
         return
+      case 'get-something-else':
+        handlers.onGetSomethingElse?.(entry)
+        return
     }
   }
 

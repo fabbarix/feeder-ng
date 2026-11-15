@@ -1,11 +1,11 @@
-// DS-SHOP (docs/design/system.md §3, §9): "Tue Dinner isn't marked Cooked yet" is said ONCE for the whole list, above it.
-// Plain TypeScript, no React. The slots are segments so the view can set them in bold; the text is their join.
+// DS-SHOP (docs/design/system.md §3, §9): the unconfirmed past meals are said ONCE for the whole list, above it. B9-43 (SSP-04): the
+// predicate comes first, as a title ("Not marked Cooked yet"), then a count chip and the slots as a plain meta line. No React.
 import { shopStrings } from '../strings'
 import type { PastPlannedMeal, ShoppingList } from '../types'
 import { markItTarget } from './lines'
 import { weekdayOf, joinAnd } from './rows'
 
-/** A piece of the notice; a slot ("Tue Dinner") is `strong`. */
+/** A piece of the notice's slots line; plain text (B9-43: nothing in the notice is set bold). */
 export interface NoticeSegment {
   text: string
   strong?: boolean
@@ -16,16 +16,13 @@ export interface UnconfirmedNotice {
   title: string
   /** B9-43: the slots, plain segments (none `strong`): "Sat Breakfast, Sat Lunch and Sat Dinner", "… and 2 more" */
   slots: NoticeSegment[]
-  /** @deprecated B9-43 retires `text` and `segments` (the sentence is the title plus the slots) */
-  text: string
-  segments: NoticeSegment[]
-  /** how many open Lines include unconfirmed past meals */
+  /** the Meal Slots to mark (one per day and slot), the count chip */
   count: number
   /** "Mark it" opens the oldest of those slots on the Plan */
   markIt: { date: string; mealSlotId: number }
 }
 
-/** At most this many slot groups are named; the rest is "and N more", so the notice stays on two lines. */
+/** At most this many slot groups are named; the rest is "and N more", so the slots line stays on two lines. */
 const MAX_GROUPS = 3
 
 /**
@@ -35,16 +32,7 @@ const MAX_GROUPS = 3
 export function unconfirmedNotice(list: ShoppingList): UnconfirmedNotice | null {
   const open = list.lines.filter((line) => !line.ticked && (line.pastPlannedMeals?.length ?? 0) > 0)
   if (open.length === 0) return null
-  const seen = new Set<string>()
-  const meals: PastPlannedMeal[] = []
-  for (const line of open) {
-    for (const meal of line.pastPlannedMeals ?? []) {
-      const key = `${meal.date}|${meal.mealSlotId}|${meal.courseName}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      meals.push(meal)
-    }
-  }
+  const meals: PastPlannedMeal[] = open.flatMap((line) => line.pastPlannedMeals ?? [])
   meals.sort((a, b) => a.date.localeCompare(b.date) || a.mealSlotId - b.mealSlotId)
   const markIt = markItTarget(meals)
   if (!markIt) return null
@@ -61,13 +49,12 @@ export function unconfirmedNotice(list: ShoppingList): UnconfirmedNotice | null 
   const shown = labels.slice(0, MAX_GROUPS)
   const more = labels.length - shown.length
 
-  const segments: NoticeSegment[] = []
+  const slots: NoticeSegment[] = []
   shown.forEach((label, i) => {
-    if (i > 0) segments.push({ text: i === shown.length - 1 && more === 0 ? ` ${shopStrings.andJoin} ` : ', ' })
-    segments.push({ text: label, strong: true })
+    if (i > 0) slots.push({ text: i === shown.length - 1 && more === 0 ? ` ${shopStrings.andJoin} ` : ', ' })
+    slots.push({ text: label })
   })
-  const distinctSlots = new Set(meals.map((m) => `${m.date}|${m.mealSlotId}`)).size
-  segments.push({ text: `${more > 0 ? shopStrings.andMore(more) : ''}${distinctSlots > 1 ? shopStrings.arent : shopStrings.isnt}` })
-
-  return { title: '', slots: [], text: segments.map((s) => s.text).join(''), segments, count: open.length, markIt }
+  if (more > 0) slots.push({ text: ` ${shopStrings.andMore(more)}` })
+  const count = new Set(meals.map((m) => `${m.date}|${m.mealSlotId}`)).size
+  return { title: shopStrings.notMarkedTitle, slots, count, markIt }
 }

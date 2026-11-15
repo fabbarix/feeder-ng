@@ -5,7 +5,7 @@ import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { defaultTickAmount, tickedMeta, type TickedMeta } from './tickAmount'
 import type { BaseUnit, LineTick, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 import { shopStrings } from '../strings'
-import type { LineDetails } from './lineDetails'
+import { lineDetails, type LineDetails } from './lineDetails'
 import { slotsLabel } from './rows'
 import { restockText } from './supplies'
 
@@ -118,6 +118,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     packChoice: line.pack ? { count: line.pack.count, name: line.pack.name, size: line.pack.size } : null,
     tick: line.tick ?? null,
     tickMeta: line.ticked ? tickedMeta(line.tick, line.baseUnit, system) : null,
+    details: lineDetails(line, currency, system),
     moreSince: false,
   }
 }

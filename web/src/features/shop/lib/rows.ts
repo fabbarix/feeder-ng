@@ -125,6 +125,8 @@ export function lineActions(entry: ListEntry, group: RowGroup): LineAction[] {
   if (entry.kind === 'extra') {
     if (group !== 'not-needed') out.push('delete')
   } else if (group === 'open') {
+    // B9-43 (SSP-14, SSP 6): a substitute for an open Line; not on the "more since your tick" row (it takes only the difference off)
+    if (!entry.moreSince) out.push('get-something-else')
     out.push('not-needed')
   } else if (group === 'not-needed') {
     out.push('needed-after-all')

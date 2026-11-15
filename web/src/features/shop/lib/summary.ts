@@ -43,7 +43,7 @@ export function shopSummary(list: ShoppingList, shopName: string | null): ShopSu
     ticked,
     total,
     percent: total > 0 ? Math.min(100, Math.max(0, (ticked / total) * 100)) : 0,
-    complete: false,
+    complete: list.complete,
     leftOf: shopStrings.leftOf(total),
     meta: `${shopStrings.tickedCount(ticked)} · ${untilText(list.today, list.to)}`,
     estimated:

@@ -44,7 +44,7 @@ const KIND_OPTIONS = (hasIngredients: boolean) => [
  * SAFE-11: no arbitrary default (the Ingredient reads "Choose an Ingredient", the disabled Quantity says why), Save is always enabled,
  * and a failed Save puts its error on the field and the focus in it.
  */
-export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetProps) {
+export function ExtraSheet({ open, onClose, ingredients, onSubmit, autoOpenIngredient = false }: ExtraSheetProps) {
   const formId = useId()
   const hasIngredients = ingredients.length > 0
   // The mode is the User's pick, or else the starting choice, which follows the Ingredients as they load.
@@ -71,6 +71,21 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
     setQuantity(null)
     setError(null)
   }, [open])
+
+  // B9-43 (SSP-14): "Get something else…" opens the sheet with the Ingredient select open, so the person only picks the replacement. The
+  // shared Select opens from its trigger only, so the sheet presses it once per opening (when the sheet is on the Ingredient choice).
+  const autoOpened = useRef(false)
+  useEffect(() => {
+    if (!open) {
+      autoOpened.current = false
+      return
+    }
+    if (!autoOpenIngredient || autoOpened.current || mode !== 'ingredient') return
+    const trigger = formRef.current?.querySelector<HTMLButtonElement>('[role="combobox"]')
+    if (!trigger) return
+    autoOpened.current = true
+    trigger.click()
+  }, [open, autoOpenIngredient, mode])
 
   const chooseMode = (next: ExtraMode) => {
     setChosen(next)

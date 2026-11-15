@@ -127,22 +127,88 @@
   line-height: var(--text-meta-line);
 }
 
-/* The one notice: the sentence and "Mark it". Its colour comes from the info status Tile. */
 .shop-notice {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  /* The one notice: its title, slots and "Mark it". Its colour comes from the info status Tile. */
+  /* B9-43 (SSP-04; mocks/ssp-04-notice.html): the notice says its predicate first, as a title with a round count chip; the slots are
+     the meta line under it and may clamp to two lines, the title never (it wraps). The notice is a size container: below 26 rem of
+     tile Mark it takes its own line under the text (so the text column keeps its width), from 26 rem it sits at the end. */
+  container-type: inline-size;
   gap: var(--space-3);
 }
 
+.shop-notice__body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: var(--space-3);
+  row-gap: var(--space-2);
+}
+
+.shop-notice__body > svg {
+  margin-block-start: var(--space-half);
+}
+
+.shop-notice__body > .button {
+  grid-column: 2;
+  justify-self: start;
+}
+
+@container (min-width: 26rem) {
+  .shop-notice__body {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .shop-notice__body > .button {
+    grid-column: auto;
+    align-self: center;
+  }
+}
+
 .shop-notice__text {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.shop-notice__title {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.shop-notice__count {
+  /* a round chip on the surface fill in the info text colour (9.0:1 light, 10.81:1 dark) */
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  box-sizing: border-box;
+  min-inline-size: var(--space-6);
+  block-size: var(--space-6);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-info-fg);
+  font-size: var(--text-chip-size);
+  line-height: 1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-notice__slots {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  margin: 0;
-  font-size: var(--text-body-size);
-  line-height: var(--text-body-line);
 }
 
 /* Sections: "To get", "Supplies" and "Ticked (N)". */
@@ -433,8 +499,56 @@
 }
 
 .shop-line-sheet__actions {
-  display: grid;
+  /* B9-43 (SSP-14; mocks/ssp-13-line-sheet.html): the rare actions side by side, wrapping onto the next line rather than crushing */
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+.shop-line-sheet__actions > * {
+  /* R-A: a footer button keeps its text on one line; a button that does not fit moves to the next line */
+  flex: none;
+}
+
+.shop-line-sheet__rows {
+  /* B9-43 (SSP-13): To get and Estimated, closed by a hairline above Change the Price */
+  border-block-end: 1px solid var(--color-line);
+}
+
+.shop-line-sheet__price {
+  /* start-aligned under the rows, never stretched to the sheet's width */
+  align-self: start;
+  justify-self: start;
+}
+
+.shop-line-sheet__no-product,
+.shop-line-sheet__more {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.shop-line-sheet__for {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.shop-line-sheet__for-title {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+}
+
+.shop-line-sheet__consequence {
+  /* what Not needed leaves short: muted meta text, wrapping, never cut */
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
 }
 
 /* B9-34 (SSP-18, mocks/ssp-18-ticked-sheet.html): a ticked entry's sheet. The state line in its tone, what the Line needed in meta,
@@ -598,11 +712,14 @@
   transform: rotate(90deg);
 }
 
-/* Completion: the celebration sits above every tile. */
 .celebration-tile {
+  /* Completion (B9-43, SSP-09): the success status tile sits above every tile; its rows take the full width, its buttons wrap under them. */
   display: grid;
   gap: var(--space-2);
-  justify-items: start;
+}
+
+.celebration-tile > svg {
+  color: var(--status-success-fg);
 }
 
 .celebration-tile__title {
@@ -612,13 +729,14 @@
   line-height: var(--text-title-2-line);
 }
 
-.celebration-tile__facts {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: var(--color-muted);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
+.celebration-tile__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+.celebration-tile__actions > * {
+  /* R-A: a button is never shrunk below its text; on a narrow tile they wrap onto their own lines */
+  flex: none;
 }
