@@ -1,7 +1,7 @@
 // B9-42 seed (SET-15, SAFE-02): a removed Meal Slot that keeps Cooked history, so /settings/meal-slots draws its "Removed Meal Slots" tile.
 // Creates "Snack" on every weekday, plans today's Snack with the seed's Recipe (a Swap, PUT /api/plan/{today}/{slot}/{main}) and marks
 // it Cooked (POST …/cooked: today's meal may be marked at any hour; only a later date is a future_meal), then removes every Snack
-// (DELETE /api/meal-slots/{id}: a soft removal, 204). Everything goes through the API; nothing touches the database.
+// in one call (POST /api/meal-slots/remove {ids}: a soft removal, 204, all or nothing). Everything goes through the API; nothing touches the database.
 // Snack is at 23:45 so today's run is still ahead in the household's zone when the Swap is made (a past run refuses a Swap).
 // A refused step is reported by `step`; the scenario `removed-meal-slots` then fails on a page without the tile instead of passing.
 // seed(ctx) reads api, step, attendance, recipeId from ctx; adds ctx.removedSnackIds.
@@ -39,6 +39,6 @@ export async function seed(ctx) {
     console.error(`page-layout-seed: meal-slots: no Snack today (${today.date}), no main Course or no Recipe, so no Cooked history`)
   }
   const ids = [...byDay.values()]
-  for (const id of ids) await step('remove Snack', 'DELETE', `/api/meal-slots/${id}`)
+  if (ids.length) await step('remove Snack', 'POST', '/api/meal-slots/remove', { ids })
   ctx.removedSnackIds = ids
 }

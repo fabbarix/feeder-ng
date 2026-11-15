@@ -108,6 +108,21 @@ describe('the ⋮ menu of an edit sheet (SHORT-02: Change a date and Remove Meal
     await userEvent.click(within(dialog()).getByRole('button', { name: 'More for Dinner' }))
     expect((await screen.findAllByRole('menuitem')).map((i) => i.textContent)).toEqual(['Change a date'])
   })
+  // B9-42 ruling: Remove acts on the days ticked in the sheet, like Save; the page asks the confirm.
+  it('Remove hands the page the weekdays ticked at that moment', async () => {
+    const { onDelete } = edit({ initialWeekdays: [1, 2, 3, 4, 5, 6, 7] })
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'Sunday' }))
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove Meal Slot' }))
+    expect(onDelete).toHaveBeenCalledWith([1, 2, 3, 4, 5, 6])
+  })
+  it('Remove is disabled while no ticked day runs the name', async () => {
+    edit({ slots: [dinner(2)] })
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'Tuesday' }))
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'Monday' }))
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'More for Dinner' }))
+    expect(await screen.findByRole('menuitem', { name: 'Remove Meal Slot' })).toHaveAttribute('aria-disabled', 'true')
+  })
   it('Remove is disabled in the menu while a save is running', async () => {
     edit({ saving: true })
     await userEvent.click(within(dialog()).getByRole('button', { name: 'More for Dinner' }))

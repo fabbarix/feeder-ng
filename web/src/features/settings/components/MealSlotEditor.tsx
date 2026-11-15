@@ -5,7 +5,7 @@ import { FormError } from '../../../ui/fields/FormError'
 import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { useSlotForm } from '../hooks/useSlotForm'
 import { documentLocale } from '../lib/locale'
-import { sameDays } from '../lib/multiDay'
+import { matchingSlots, sameDays } from '../lib/multiDay'
 import { settingsStrings } from '../strings'
 import type { MealSlot, MealSlotInput, Member, SlotBatchRequest, SlotBatchResult } from '../types'
 import { coursesStrings } from '../coursesStrings'
@@ -36,8 +36,11 @@ export interface MealSlotEditorProps {
   /** CRS D2, editing: a dry run of the batch (`dryRun: true`), asked while the Admin takes Courses off, to name what goes. */
   onPreview?: (request: SlotBatchRequest) => Promise<SlotBatchResult>
   locale?: string
-  /** Editing only: "Remove Meal Slot" in the ⋮ (danger tone). The page asks the confirm. */
-  onDelete?: () => void | Promise<void>
+  /**
+   * Editing only: "Remove Meal Slot" in the ⋮ (danger tone), given the weekdays ticked in the sheet at that moment (B9-42: Remove
+   * acts on them, like Save). The page asks the confirm; unsaved edits are dropped with the sheet, the confirm is the question.
+   */
+  onDelete?: (weekdays: number[]) => void | Promise<void>
   /** Editing only: "Change a date" in the ⋮, the one-date Attendance for this slot. */
   onChangeDate?: () => void
   onClose: () => void
@@ -95,7 +98,9 @@ function SlotSheet({ slot, members, defaultWeekdays, defaultName, saving, error,
 
   const more: MenuEntry[] = []
   if (slot && onChangeDate) more.push({ id: 'change-date', label: text.changeDateButton, onSelect: onChangeDate })
-  if (slot && onDelete) more.push({ id: 'remove', label: text.remove, tone: 'danger', disabled: saving, onSelect: () => void onDelete() })
+  // Remove needs at least one ticked day the name runs on.
+  const removable = slot ? matchingSlots(slots ?? [slot], slot.name, weekdays).matched.length > 0 : false
+  if (slot && onDelete) more.push({ id: 'remove', label: text.remove, tone: 'danger', disabled: saving || !removable, onSelect: () => void onDelete([...weekdays]) })
 
   return (
     <BottomSheet

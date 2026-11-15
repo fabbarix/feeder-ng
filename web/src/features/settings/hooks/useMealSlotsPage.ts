@@ -6,7 +6,7 @@ import { resultMessage } from '../lib/multiDay'
 import { createSlotsSequentially, slotFormFromCard, slotFormFromCell } from '../lib/slotForm'
 import { slotAnchorId } from '../lib/slotAnchor'
 import type { RemovedRow } from '../lib/removedMealSlots'
-import { nameTakenRefusal, otherDaysOf, putBackRefusedHeadline, removedHeadline, removeGroups, removeLead, removeTitle, restoredHeadline, undoRemoveLabel } from '../lib/slotRemoval'
+import { mergeImpacts, nameTakenRefusal, putBackRefusedHeadline, removalTarget, removedHeadline, removeGroups, removeLead, removeTitle, restoredHeadline, undoRemoveLabel } from '../lib/slotRemoval'
 import { documentLocale } from '../lib/locale'
 import { batchErrorMessage, errorMessage } from '../lib/errors'
 import { nextDateForWeekday, todayIso, weekdayName } from '../lib/weekdays'
@@ -112,30 +112,35 @@ export function useMealSlotsPage() {
   }
 
   /**
-   * SAFE-02 (decisions SAFE 4 and 7): read what goes, ask with the rows (Goes, Stays), remove, then an Undo toast. Undo is restore
-   * by id; the page words its own refusal for a taken name, so the toast's "is back" follows only a real restore.
+   * SAFE-02 (decisions SAFE 4 and 7) and the B9-42 ruling: Remove acts on the days ticked in the sheet. Read what goes on each
+   * (merged into one confirm), ask with the rows (Goes, Stays), remove them in one call, then one Undo toast that puts them all
+   * back in one call. The page words its own refusal for a taken name, so "… is back" follows only a real restore. Unsaved edits
+   * in the sheet go with it: the confirm is the question.
    */
-  const remove = async () => {
+  const remove = async (weekdays: number[]) => {
     const editing = editor?.item
     if (!editing) return
     const locale = documentLocale()
+    const target = removalTarget(editing, weekdays, slots.slots)
+    const ids = target.slots.map((s) => s.id)
+    if (ids.length === 0) return
     let impact
     try {
-      impact = await slots.impact(editing.id)
+      impact = mergeImpacts(await Promise.all(ids.map((id) => slots.impact(id))))
     } catch {
       toast.show(settingsStrings.removal.impactFailed, { status: 'error' })
       return
     }
     const ok = await confirmer.confirm({
-      title: removeTitle(editing, locale),
-      body: removeLead(editing.name.trim(), otherDaysOf(editing, slots.slots)),
+      title: removeTitle(target, locale),
+      body: removeLead(target),
       groups: removeGroups(impact, { today: todayIso(), locale }),
       confirmLabel: settingsStrings.removal.confirm,
       tone: 'danger',
     })
     if (!ok) return
     try {
-      await slots.remove(editing.id)
+      await slots.removeMany(ids)
     } catch (err) {
       setError(errorMessage(err))
       return
@@ -143,39 +148,32 @@ export function useMealSlotsPage() {
     setError(undefined)
     setEditor(null)
     undoToast.show({
-      headline: removedHeadline(editing, locale),
-      undoAriaLabel: undoRemoveLabel(editing, locale),
+      headline: removedHeadline(target, locale),
+      undoAriaLabel: undoRemoveLabel(target, locale),
       undo: async () => {
         try {
-          await slots.restore(editing.id)
+          await slots.restoreMany(ids)
         } catch (err) {
           if (!nameTakenRefusal(err)) throw err // useUndoToast says "Nothing was undone" with its own reason
           showRefusal(undoStrings.refusedHeadline, err)
           return
         }
-        toast.show({ status: 'success', title: restoredHeadline(editing, locale) })
-        setFocusSlotId(editing.id)
+        toast.show({ status: 'success', title: restoredHeadline(target, locale) })
+        setFocusSlotId(ids[0]!)
       },
     })
   }
 
-  /** SET-15: puts back every Meal Slot of the row in turn, stopping at the first refusal; then focus goes to the card. */
+  /** SET-15: puts back every Meal Slot of the row in one call, all or nothing; then focus goes to the card. */
   const putBack = async (row: RemovedRow) => {
     if (busyKey !== null) return
     setBusyKey(row.key)
-    let restored = 0
     try {
-      for (const id of row.ids) {
-        try {
-          await slots.restore(id)
-        } catch (err) {
-          showRefusal(putBackRefusedHeadline(row.name, restored), err)
-          return
-        }
-        restored += 1
-      }
+      await slots.restoreMany(row.ids)
       toast.show({ status: 'success', title: settingsStrings.removed.back(row.name) })
       setFocusSlotId(row.ids[0] ?? null)
+    } catch (err) {
+      showRefusal(putBackRefusedHeadline(row.name), err)
     } finally {
       setBusyKey(null)
     }

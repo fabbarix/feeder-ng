@@ -1,7 +1,9 @@
 // SAFE-02 (decisions SAFE 4 and SAFE 7) and SET-15, on the Meal Slots page.
-//   Remove Meal Slot: the sheet's ⋮ -> "Remove Meal Slot" -> GET impact -> a danger confirm (Goes / Stays rows, Cancel focused) -> DELETE (204,
-//   soft removal) -> the sheet closes -> an Undo toast "Dinner on Monday removed" -> Undo is POST restore -> "Dinner on Monday is back".
-//   Removed Meal Slots: a tile under the cards, from `GET /api/meal-slots?removed=with-history`; "Put back" restores every id of the row.
+//   Remove Meal Slot: the sheet's ⋮ -> "Remove Meal Slot" -> GET impact of each ticked day -> a danger confirm (Goes / Stays rows, Cancel
+//   focused) -> POST /api/meal-slots/remove {ids} (204, soft removal, all or nothing) -> the sheet closes -> one Undo toast ("Dinner on
+//   Monday removed", "Dinner removed") -> Undo is POST /api/meal-slots/restore {ids} -> "… is back".
+//   B9-42 ruling: Remove acts on the days ticked in the sheet, like Save; unsaved edits go with the sheet (the confirm is the question).
+//   Removed Meal Slots: a tile under the cards, from `GET /api/meal-slots?removed=with-history`; "Put back" restores the row in one call.
 // Built on B9-18 (`useUndoToast`, ConfirmDialog `groups`) and B9-14 (the ⋮ footer): red on this branch until those are built.
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -28,6 +30,7 @@ const impact = {
   toConfirm: [meal('2026-11-14')],
   cookedKept: 4,
 }
+const empty = { plannedMeals: [], slotRules: [], toConfirm: [], cookedKept: 0 }
 const snack = { ids: [41, 42, 43, 44, 45], name: 'Snack', weekdays: [1, 2, 3, 4, 5], time: '16:30', removedAt: '2026-11-14T12:00:00Z', cookedCount: 6, notCookedCount: 0 }
 const brunch = { ids: [51], name: 'Brunch', weekdays: [7], time: '11:00', removedAt: '2026-11-02T12:00:00Z', cookedCount: 3, notCookedCount: 1 }
 
@@ -52,13 +55,15 @@ function routes(me = ADMIN_ME, extra: Record<string, unknown> = {}) {
     'GET /api/meal-slots': () => slots,
     'GET /api/meal-slots?removed=with-history': () => removed,
     'GET /api/meal-slots/601/impact': impact,
-    'DELETE /api/meal-slots/601': () => {
-      slots = slots.filter((s) => s.id !== 601)
+    ...Object.fromEntries([602, 603, 604, 605, 606, 607, 650].map((id) => [`GET /api/meal-slots/${id}/impact`, empty])),
+    'POST /api/meal-slots/remove': (c: { body: { ids: number[] } }) => {
+      slots = slots.filter((s) => !c.body.ids.includes(s.id))
       return { status: 204 }
     },
-    'POST /api/meal-slots/601/restore': () => {
-      slots = household()
-      return slots.find((s) => s.id === 601)
+    'POST /api/meal-slots/restore': (c: { body: { ids: number[] } }) => {
+      const back = household().filter((s) => c.body.ids.includes(s.id))
+      slots = [...slots, ...back]
+      return { slots: back }
     },
     ...extra,
   })
@@ -82,7 +87,7 @@ describe('Remove Meal Slot: the confirm (SAFE-02, R-E)', () => {
     await askToRemove()
     const dialog = await confirm()
     expect(api.callsTo('GET', '/api/meal-slots/601/impact')).toHaveLength(1)
-    expect(api.callsTo('DELETE', '/api/meal-slots/601')).toHaveLength(0)
+    expect(api.callsTo('POST', '/api/meal-slots/remove')).toHaveLength(0)
     expect(within(dialog).getByText('Dinner stays on the other days.')).toBeInTheDocument()
     expect(within(dialog).getByText('Goes')).toBeInTheDocument()
     expect(within(dialog).getByText('Stays')).toBeInTheDocument()
@@ -119,7 +124,7 @@ describe('Remove Meal Slot: the confirm (SAFE-02, R-E)', () => {
     renderWithProviders(<MealSlotsPage />)
     await askToRemove()
     await userEvent.click(within(await confirm()).getByRole('button', { name: 'Cancel' }))
-    expect(api.callsTo('DELETE', '/api/meal-slots/601')).toHaveLength(0)
+    expect(api.callsTo('POST', '/api/meal-slots/remove')).toHaveLength(0)
     expect(screen.getByRole('dialog', { name: 'Edit Meal Slot' })).toBeInTheDocument()
   })
   it('when the impact cannot be read nothing is removed and a toast says so', async () => {
@@ -128,7 +133,7 @@ describe('Remove Meal Slot: the confirm (SAFE-02, R-E)', () => {
     await askToRemove()
     await findToast('Couldn')
     expect(screen.queryByRole('dialog', { name: 'Remove Dinner on Monday?' })).toBeNull()
-    expect(api.callsTo('DELETE', '/api/meal-slots/601')).toHaveLength(0)
+    expect(api.callsTo('POST', '/api/meal-slots/remove')).toHaveLength(0)
   })
 })
 
@@ -138,7 +143,8 @@ describe('Remove Meal Slot: then Undo (SAFE 4, 7)', () => {
     renderWithProviders(<MealSlotsPage />)
     await askToRemove()
     await userEvent.click(within(await confirm()).getByRole('button', { name: 'Remove Meal Slot' }))
-    await waitFor(() => expect(api.callsTo('DELETE', '/api/meal-slots/601')).toHaveLength(1))
+    await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots/remove')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/meal-slots/remove')[0]!.body).toEqual({ ids: [601] })
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Meal Slot' })).toBeNull())
     const toast = await findToast('Dinner on Monday removed')
     expect(within(toast).getByRole('button', { name: 'Undo: put back Dinner on Monday' })).toBeInTheDocument()
@@ -168,13 +174,14 @@ describe('Remove Meal Slot: then Undo (SAFE 4, 7)', () => {
     await userEvent.click(within(await confirm()).getByRole('button', { name: 'Remove Meal Slot' }))
     const toast = await findToast('Dinner on Monday removed')
     await userEvent.click(within(toast).getByRole('button', { name: 'Undo: put back Dinner on Monday' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots/601/restore')).toHaveLength(1))
+    await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots/restore')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/meal-slots/restore')[0]!.body).toEqual({ ids: [601] })
     await findToast('Dinner on Monday is back')
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Add Dinner on Monday' })).toBeNull())
   })
   it('a refused Undo (the name is taken) says why, in the server\'s words, and what to do', async () => {
     routes(ADMIN_ME, {
-      'POST /api/meal-slots/601/restore': { status: 409, json: { error: { code: 'meal_slot_name_taken', message: 'There is already a Dinner on Monday.' } } },
+      'POST /api/meal-slots/restore': { status: 409, json: { error: { code: 'meal_slot_name_taken', message: 'There is already a Dinner on Monday.', ids: [601], weekdays: [1] } } },
     })
     renderWithProviders(<MealSlotsPage />)
     await askToRemove()
@@ -219,30 +226,27 @@ describe('Removed Meal Slots (SET-15)', () => {
     expect(await screen.findByRole('region', { name: 'Removed Meal Slots' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Put back/ })).toBeNull()
   })
-  it('"Put back" restores every Meal Slot of the row, one after the other, then says "Snack is back"', async () => {
-    const calls: number[] = []
-    const extra = Object.fromEntries(snack.ids.map((id) => [`POST /api/meal-slots/${id}/restore`, () => (calls.push(id), { id, weekday: id - 40, name: 'Snack', time: '16:30', portionsNeeded: 2, attendance: both })]))
-    const { setRemoved, api } = routes(ADMIN_ME, extra)
+  it('"Put back" restores every Meal Slot of the row in one call, then says "Snack is back"', async () => {
+    const { setRemoved, api } = routes(ADMIN_ME, {
+      'POST /api/meal-slots/restore': (c: { body: { ids: number[] } }) => ({ slots: c.body.ids.map((id) => slot(id, id - 40, 'Snack', '16:30')) }),
+    })
     setRemoved([snack])
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Put back Snack · Mon to Fri' }))
     await findToast('Snack is back')
-    expect(calls).toEqual([41, 42, 43, 44, 45])
-    expect(api.calls.filter((c) => c.method === 'POST' && /restore$/.test(c.path))).toHaveLength(5)
+    expect(api.callsTo('POST', '/api/meal-slots/restore')).toHaveLength(1)
+    expect(api.callsTo('POST', '/api/meal-slots/restore')[0]!.body).toEqual({ ids: [41, 42, 43, 44, 45] })
+    expect(api.calls.filter((c) => c.method === 'POST' && /\/\d+\/restore$/.test(c.path))).toHaveLength(0)
   })
   it('after the restore focus moves to the restored card', async () => {
     let add: (m: MealSlot[]) => void = () => {}
-    const extra = Object.fromEntries(
-      snack.ids.map((id) => [
-        `POST /api/meal-slots/${id}/restore`,
-        () => {
-          const restored = slot(id, id - 40, 'Snack', '16:30')
-          add([restored])
-          return restored
-        },
-      ]),
-    )
-    const r = routes(ADMIN_ME, extra)
+    const r = routes(ADMIN_ME, {
+      'POST /api/meal-slots/restore': (c: { body: { ids: number[] } }) => {
+        const back = c.body.ids.map((id) => slot(id, id - 40, 'Snack', '16:30'))
+        add(back)
+        return { slots: back }
+      },
+    })
     add = r.addSlots
     r.setRemoved([snack])
     renderWithProviders(<MealSlotsPage />)
@@ -250,19 +254,95 @@ describe('Removed Meal Slots (SET-15)', () => {
     await findToast('Snack is back')
     await waitFor(() => expect(screen.getByRole('region', { name: 'Snack' }).contains(document.activeElement)).toBe(true))
   })
-  it('a taken name keeps the row, says so in the warning words, and goes no further down the row', async () => {
-    const calls: number[] = []
-    const extra: Record<string, unknown> = {
-      'POST /api/meal-slots/41/restore': () => (calls.push(41), { id: 41, weekday: 1, name: 'Snack', time: '16:30', portionsNeeded: 2, attendance: both }),
-      'POST /api/meal-slots/42/restore': () => (calls.push(42), { status: 409, json: { error: { code: 'meal_slot_name_taken', message: 'There is already a Snack on Tuesday.' } } }),
-    }
-    const { setRemoved } = routes(ADMIN_ME, extra)
+  it('a taken name puts nothing back (all or nothing), keeps the row and says so in the warning words', async () => {
+    const { setRemoved, api } = routes(ADMIN_ME, {
+      'POST /api/meal-slots/restore': { status: 409, json: { error: { code: 'meal_slot_name_taken', message: 'There is already a Snack on Tuesday.', ids: [42], weekdays: [2] } } },
+    })
     setRemoved([snack])
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Put back Snack · Mon to Fri' }))
-    await findToast('There is already a Snack on Tuesday.')
+    const toast = await findToast('There is already a Snack on Tuesday.')
+    expect(toast).toHaveTextContent('Snack was not put back')
     await findToast('Rename or remove that Meal Slot first.')
-    expect(calls).toEqual([41, 42])
+    expect(api.callsTo('POST', '/api/meal-slots/restore')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Put back Snack · Mon to Fri' })).toBeInTheDocument()
+  })
+})
+
+// B9-42 ruling: Remove acts on the days ticked in the sheet, like Save would.
+describe('Remove Meal Slot acts on the days ticked in the sheet', () => {
+  async function openFromCard() {
+    const dinner = await screen.findByRole('region', { name: 'Dinner' })
+    await userEvent.click(within(dinner).getByRole('button', { name: 'Edit Dinner' }))
+    return screen.findByRole('dialog', { name: 'Edit Meal Slot' })
+  }
+  async function pressRemove(sheet: HTMLElement) {
+    await userEvent.click(within(sheet).getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove Meal Slot' }))
+  }
+  it('from an "Every day" card, all seven days ticked: "Remove Dinner?" with no lead, the seven read and removed in one call', async () => {
+    const { api } = routes()
+    renderWithProviders(<MealSlotsPage />)
+    await pressRemove(await openFromCard())
+    const dialog = await screen.findByRole('dialog', { name: 'Remove Dinner?' })
+    expect(dialog.querySelector('.confirm-dialog__lead')).toBeNull()
+    expect([601, 602, 603, 604, 605, 606, 607].every((id) => api.callsTo('GET', `/api/meal-slots/${id}/impact`).length === 1)).toBe(true)
+    expect(api.callsTo('GET', '/api/meal-slots/650/impact')).toHaveLength(0)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove Meal Slot' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots/remove')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/meal-slots/remove')[0]!.body).toEqual({ ids: [601, 602, 603, 604, 605, 606, 607] })
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Dinner' })).toBeNull())
+  })
+  it('one Undo puts every day back in one call: "Dinner removed", then "Dinner is back"', async () => {
+    const { api } = routes()
+    renderWithProviders(<MealSlotsPage />)
+    await pressRemove(await openFromCard())
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Remove Dinner?' })).getByRole('button', { name: 'Remove Meal Slot' }))
+    const toast = await findToast('Dinner removed')
+    await userEvent.click(within(toast).getByRole('button', { name: 'Undo: put back Dinner' }))
+    await findToast('Dinner is back')
+    expect(api.callsTo('POST', '/api/meal-slots/restore')).toHaveLength(1)
+    expect(api.callsTo('POST', '/api/meal-slots/restore')[0]!.body).toEqual({ ids: [601, 602, 603, 604, 605, 606, 607] })
+    expect(await screen.findByRole('region', { name: 'Dinner' })).toBeInTheDocument()
+  })
+  it('a refused Undo of several days puts nothing back and names the days in the server\'s words', async () => {
+    routes(ADMIN_ME, {
+      'POST /api/meal-slots/restore': { status: 409, json: { error: { code: 'meal_slot_name_taken', message: 'There is already a Dinner on Monday and Wednesday.', ids: [601, 603], weekdays: [1, 3] } } },
+    })
+    renderWithProviders(<MealSlotsPage />)
+    await pressRemove(await openFromCard())
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Remove Dinner?' })).getByRole('button', { name: 'Remove Meal Slot' }))
+    await userEvent.click(within(await findToast('Dinner removed')).getByRole('button', { name: 'Undo: put back Dinner' }))
+    const refused = await findToast('There is already a Dinner on Monday and Wednesday.')
+    expect(refused).toHaveTextContent('Nothing was undone')
+    expect(refused).toHaveTextContent('Rename or remove that Meal Slot first.')
+  })
+  it('some days ticked: "Remove Dinner on Mon, Tue and Wed?" and only those go', async () => {
+    const { api } = routes()
+    renderWithProviders(<MealSlotsPage />)
+    const dinner = await screen.findByRole('region', { name: 'Dinner' })
+    await userEvent.click(within(dinner).getByRole('button', { name: /^Dinner on Monday/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Edit Meal Slot' })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Tuesday' }))
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Wednesday' }))
+    await pressRemove(sheet)
+    const dialog = await screen.findByRole('dialog', { name: 'Remove Dinner on Mon, Tue and Wed?' })
+    expect(within(dialog).getByText('Dinner stays on the other days.')).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove Meal Slot' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots/remove')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/meal-slots/remove')[0]!.body).toEqual({ ids: [601, 602, 603] })
+    expect(await findToast('Dinner on Mon, Tue and Wed removed')).toBeInTheDocument()
+  })
+  it('unsaved edits in the sheet are dropped without "Discard changes?": the Remove confirm is the question', async () => {
+    const { api } = routes()
+    renderWithProviders(<MealSlotsPage />)
+    const sheet = await openFromCard()
+    await userEvent.type(within(sheet).getByLabelText('Name'), ' late')
+    await pressRemove(sheet)
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Remove Dinner?' })).getByRole('button', { name: 'Remove Meal Slot' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots/remove')).toHaveLength(1))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Meal Slot' })).toBeNull())
+    expect(screen.queryByRole('dialog', { name: 'Discard changes?' })).toBeNull()
+    expect(api.callsTo('PATCH', '/api/meal-slots/batch')).toHaveLength(0)
   })
 })

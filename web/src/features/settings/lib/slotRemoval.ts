@@ -3,6 +3,7 @@ import { ApiError } from '../../../lib/http'
 import { weekdayLongName, weekdayShortName } from '../../../ui/WeekdayPicker/weekdays'
 import { settingsStrings } from '../strings'
 import { joinList } from './slotCourses'
+import type { MealSlot } from '../types'
 import { weekdayOfDate } from './weekdays'
 
 const text = settingsStrings.removal
@@ -41,27 +42,76 @@ export interface RemoveGroup {
   rows: { key: string; state?: string; detail?: string }[]
 }
 
-type SlotDay = { name: string; weekday: number }
+/**
+ * What Remove in the Edit Meal Slot sheet acts on (B9-42 ruling): the Meal Slots of the sheet's name on the days ticked
+ * in it. `everyDay` is true when those are all the days the name runs on (more than one), so the words leave the days out.
+ */
+export interface RemovalTarget {
+  name: string
+  /** The Meal Slots that go, by weekday ascending. */
+  slots: MealSlot[]
+  /** Their weekdays, ascending. */
+  weekdays: number[]
+  everyDay: boolean
+  /** How many days of the name stay. */
+  otherDays: number
+}
 
-/** "Remove Dinner on Monday?" */
-export function removeTitle(slot: SlotDay, locale = 'en'): string {
-  return text.title(slot.name, weekdayLongName(slot.weekday, locale))
+const nameKey = (name: string) => name.trim().toLowerCase()
+
+/** The target of Remove: the active Meal Slots named like `editing` on the ticked weekdays (days without it are left out). */
+export function removalTarget(editing: Pick<MealSlot, 'name'>, weekdays: readonly number[], slots: readonly MealSlot[]): RemovalTarget {
+  const same = slots.filter((s) => nameKey(s.name) === nameKey(editing.name))
+  const days = new Set(weekdays)
+  const going = same.filter((s) => days.has(s.weekday)).sort((a, b) => a.weekday - b.weekday || a.id - b.id)
+  const name = (going[0]?.name ?? editing.name).trim()
+  return {
+    name,
+    slots: going,
+    weekdays: going.map((s) => s.weekday),
+    everyDay: going.length > 1 && going.length === same.length,
+    otherDays: same.length - going.length,
+  }
 }
-/** "Dinner stays on the other days."; none when the name runs on no other weekday. */
-export function removeLead(name: string, otherDays: number): string | undefined {
-  return otherDays > 0 ? text.lead(name) : undefined
+
+/** "" for every day, " on Monday" for one day, " on Mon, Tue and Wed" for some of the days. */
+function whereOf(target: Pick<RemovalTarget, 'weekdays' | 'everyDay'>, locale: string): string {
+  if (target.everyDay) return ''
+  if (target.weekdays.length === 1) return text.onDays(weekdayLongName(target.weekdays[0]!, locale))
+  return text.onDays(joinList(target.weekdays.map((d) => weekdayShortName(d, locale))))
 }
-/** The Undo toast's headline: "Dinner on Monday removed". */
-export function removedHeadline(slot: SlotDay, locale = 'en'): string {
-  return text.removed(slot.name, weekdayLongName(slot.weekday, locale))
+
+type Named = Pick<RemovalTarget, 'name' | 'weekdays' | 'everyDay'>
+
+/** "Remove Dinner?", "Remove Dinner on Monday?", "Remove Dinner on Mon, Tue and Wed?" */
+export function removeTitle(target: Named, locale = 'en'): string {
+  return text.title(target.name, whereOf(target, locale))
 }
-/** After Undo: "Dinner on Monday is back". */
-export function restoredHeadline(slot: SlotDay, locale = 'en'): string {
-  return text.back(slot.name, weekdayLongName(slot.weekday, locale))
+/** "Dinner stays on the other days."; none when every day of the name goes. */
+export function removeLead(target: Pick<RemovalTarget, 'name' | 'otherDays'>): string | undefined {
+  return target.otherDays > 0 ? text.lead(target.name) : undefined
+}
+/** The Undo toast's headline: "Dinner removed", "Dinner on Monday removed". */
+export function removedHeadline(target: Named, locale = 'en'): string {
+  return text.removed(target.name, whereOf(target, locale))
+}
+/** After Undo: "Dinner is back", "Dinner on Monday is back". */
+export function restoredHeadline(target: Named, locale = 'en'): string {
+  return text.back(target.name, whereOf(target, locale))
 }
 /** The Undo button's accessible name: "Undo: put back Dinner on Monday". */
-export function undoRemoveLabel(slot: SlotDay, locale = 'en'): string {
-  return text.undoLabel(slot.name, weekdayLongName(slot.weekday, locale))
+export function undoRemoveLabel(target: Named, locale = 'en'): string {
+  return text.undoLabel(target.name, whereOf(target, locale))
+}
+
+/** One impact for several Meal Slots: their reads together (B9-42: the confirm of a Remove on several days). */
+export function mergeImpacts(impacts: readonly MealSlotImpact[]): MealSlotImpact {
+  return {
+    plannedMeals: impacts.flatMap((i) => i.plannedMeals),
+    slotRules: impacts.flatMap((i) => i.slotRules),
+    toConfirm: impacts.flatMap((i) => i.toConfirm),
+    cookedKept: impacts.reduce((n, i) => n + i.cookedKept, 0),
+  }
 }
 
 /** "Mon 16": a date as the confirm rows word it. */
@@ -87,8 +137,9 @@ export function removeGroups(impact: MealSlotImpact, opts: { today: string; loca
   }
   if (impact.slotRules.length > 0) {
     const many = impact.slotRules.length > 1
-    const rules = impact.slotRules.map((r) => text.rule(r.mealSlotName, r.recipeName ?? r.tag ?? r.courseName))
-    goes.push({ key: many ? text.slotRules : text.slotRule, state: String(impact.slotRules.length), detail: text.ruleStops(joinList(rules), many) })
+    // The same rule on several days ("Dinner = Pasta" on Mon and Tue) is named once; the count says how many there are.
+    const rules = [...new Set(impact.slotRules.map((r) => text.rule(r.mealSlotName, r.recipeName ?? r.tag ?? r.courseName)))]
+    goes.push({ key: many ? text.slotRules : text.slotRule, state: String(impact.slotRules.length), detail: text.ruleStops(joinList(rules), rules.length > 1) })
   }
   if (impact.toConfirm.length > 0) {
     const seen = new Set<string>()
@@ -115,13 +166,8 @@ export function nameTakenRefusal(error: unknown): { subline: string; body: strin
   return { subline: error.message, body: text.nameTaken }
 }
 
-/** The Put back refusal's headline: "Snack was not put back", or "Snack was put back on some days only" after a partial restore. */
-export function putBackRefusedHeadline(name: string, restored: number): string {
-  return restored > 0 ? text.putBackPartial(name) : text.putBackRefused(name)
+/** The Put back refusal's headline: "Snack was not put back" (Put back is all or nothing, B9-42). */
+export function putBackRefusedHeadline(name: string): string {
+  return text.putBackRefused(name)
 }
 
-/** How many other weekdays run a Meal Slot of this name (the confirm's lead says it stays there). */
-export function otherDaysOf(slot: { id: number; name: string }, slots: readonly { id: number; name: string }[]): number {
-  const key = slot.name.trim().toLowerCase()
-  return slots.filter((s) => s.id !== slot.id && s.name.trim().toLowerCase() === key).length
-}

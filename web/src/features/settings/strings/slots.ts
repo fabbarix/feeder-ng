@@ -82,7 +82,9 @@ export const settingsSlotsStrings = {
 
   /** SAFE-02 (Remove Meal Slot): the confirm, its rows and the Undo toast. */
   removal: {
-    title: (name: string, weekday: string) => `Remove ${name} on ${weekday}?`,
+    /** `where` is "" (every day the name runs), " on Monday" (one day) or " on Mon, Tue and Wed" (some of its days). */
+    title: (name: string, where: string) => `Remove ${name}${where}?`,
+    onDays: (days: string) => ` on ${days}`,
     lead: (name: string) => `${name} stays on the other days.`,
     confirm: 'Remove Meal Slot',
     goes: 'Goes',
@@ -99,12 +101,11 @@ export const settingsSlotsStrings = {
     today: (day: string) => `Today, ${day}`,
     ruleStops: (rules: string, many: boolean) => `${rules} ${many ? 'stop' : 'stops'} applying`,
     rule: (slot: string, what: string) => `${slot} = ${what}`,
-    removed: (name: string, weekday: string) => `${name} on ${weekday} removed`,
-    undoLabel: (name: string, weekday: string) => `Undo: put back ${name} on ${weekday}`,
-    back: (name: string, weekday: string) => `${name} on ${weekday} is back`,
+    removed: (name: string, where: string) => `${name}${where} removed`,
+    undoLabel: (name: string, where: string) => `Undo: put back ${name}${where}`,
+    back: (name: string, where: string) => `${name}${where} is back`,
     impactFailed: 'Couldn\u2019t check what removing it would change. Try again in a moment.',
     putBackRefused: (name: string) => `${name} was not put back`,
-    putBackPartial: (name: string) => `${name} was put back on some days only`,
     nameTaken: 'Rename or remove that Meal Slot first.',
   },
 

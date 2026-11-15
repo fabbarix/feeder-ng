@@ -7,7 +7,8 @@
 //   meal-slot-editor-narrow  the same sheet at 375 and 390 with P31 (the bottom bar under the sheet) and P13: one Attendance row anatomy, and the
 //                          Portion Factor stepper never alone on a line (all rows stack under 20 rem of list, none above).
 //   meal-slot-editor-short the same sheet at 667x375: the body keeps its floor (P33) and Save is reachable.
-//   meal-slot-remove-confirm  the ⋮ menu -> Remove Meal Slot -> the danger confirm opens: rows, Cancel focused, no Close. Nothing is removed.
+//   meal-slot-remove-confirm  the ⋮ menu -> Remove Meal Slot -> the danger confirm opens ("Remove Dinner?": the sheet opened from the card
+//                          has every day ticked): rows, Cancel focused, no Close. Nothing is removed.
 //   removed-meal-slots     the tile of the removed Snack (seed meal-slots.mjs): rows, "Put back" on its own line below 35 rem of list width.
 //   change-date            Change a date: the title is "<Slot> on Sat 14 Nov" (not ISO), focus is on the Date field, one Close, Reset is outlined,
 //                          and the footer is [Reset] [Save] on one row with no label wrapped (user ruling, B9-42 follow-up).
@@ -155,7 +156,7 @@ export default {
       const item = `[...document.querySelectorAll('[role=menuitem], dialog[open] .list-row__target')].find((i) => (i.getAttribute('aria-label') || i.textContent).trim() === 'Remove Meal Slot')`
       await until(`!!(${item})`, 'the ⋮ menu')
       await press(item, '"Remove Meal Slot" in the menu')
-      await until(`[...document.querySelectorAll('dialog[open] h2')].some((h) => /^Remove .+ on \\w+\\?$/.test(h.textContent.trim()))`, 'the Remove confirm')
+      await until(`[...document.querySelectorAll('dialog[open] h2')].some((h) => /^Remove .+\\?$/.test(h.textContent.trim()))`, 'the Remove confirm')
       await until(settled, 'the confirm to finish opening')
       const bad = await evaluate(`(() => {
         const out = []

@@ -17,11 +17,12 @@ export interface MealSlotsState {
   isError: boolean
   create: (input: MealSlotInput) => Promise<MealSlot>
   update: (id: number, input: MealSlotInput) => Promise<MealSlot>
-  remove: (id: number) => Promise<void>
   /** SAFE-02: what removing the Meal Slot takes away, read before the confirm. */
   impact: (id: number) => Promise<MealSlotImpact>
-  /** SAFE-02 Undo and SET-15 Put back: one removed Meal Slot back. */
-  restore: (id: number) => Promise<MealSlot>
+  /** B9-42: Remove on several days, one call, all or nothing. */
+  removeMany: (ids: number[]) => Promise<void>
+  /** B9-42: one Undo or Put back for several Meal Slots, one call, all or nothing. */
+  restoreMany: (ids: number[]) => Promise<MealSlot[]>
   /** SET-15: the removed Meal Slots that kept Cooked history ([] until loaded or when the read fails). */
   removed: RemovedMealSlotGroup[]
   /** R15: edit every Meal Slot with the same name on several weekdays in one call. */
@@ -44,8 +45,8 @@ export function useMealSlots(): MealSlotsState {
     onSuccess: refresh,
   })
   const batch = useMutation({ mutationFn: settingsApi.batchUpdateMealSlots, onSuccess: refresh })
-  const remove = useMutation({ mutationFn: settingsApi.deleteMealSlot, onSuccess: refresh })
-  const restore = useMutation({ mutationFn: settingsApi.restoreMealSlot, onSuccess: refresh })
+  const removeMany = useMutation({ mutationFn: settingsApi.removeMealSlots, onSuccess: refresh })
+  const restoreMany = useMutation({ mutationFn: async (ids: number[]) => (await settingsApi.restoreMealSlots(ids)).slots, onSuccess: refresh })
   // SET-15: a tile of its own; a failed read only leaves the tile out (the cards are the page).
   const removed = useQuery({ queryKey: settingsKeys.removedSlots, queryFn: settingsApi.listRemovedMealSlots })
   const state = useScreenState(query, { isEmpty: query.data?.length === 0, hasFilter: false })
@@ -57,12 +58,12 @@ export function useMealSlots(): MealSlotsState {
     isError: query.isError,
     create: create.mutateAsync,
     update: (id, input) => update.mutateAsync({ id, input }),
-    remove: remove.mutateAsync,
     impact: (id) => settingsApi.mealSlotImpact(id),
-    restore: restore.mutateAsync,
+    removeMany: removeMany.mutateAsync,
+    restoreMany: restoreMany.mutateAsync,
     removed: removed.data ?? NO_REMOVED,
     batchUpdate: batch.mutateAsync,
     preview: (request) => settingsApi.batchUpdateMealSlots(request),
-    saving: create.isPending || update.isPending || remove.isPending || batch.isPending,
+    saving: create.isPending || update.isPending || removeMany.isPending || batch.isPending,
   }
 }
