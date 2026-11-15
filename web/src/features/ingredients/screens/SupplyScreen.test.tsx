@@ -88,12 +88,13 @@ describe('SupplyScreen: what a Supply has', () => {
     expect(within(menu).getByRole('menuitem', { name: 'Merge into another Supply' })).toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: 'Delete Supply' })).not.toHaveAttribute('aria-disabled', 'true')
   })
-  it('lays out Keeping first and full width, then the Unit Conversions and Products pair, then Picture; no lone half-width tile (SET-05)', () => {
+  // Batch w3e ruling: the order follows the render, Products before Unit Conversions.
+  it('lays out Keeping first and full width, then the Products and Unit Conversions pair, then Picture; no lone half-width tile (SET-05)', () => {
     setup()
     const tiles = [...document.querySelectorAll('[role="group"][aria-label="Supply details"] > .tile')] as HTMLElement[]
     const name = (t: HTMLElement) => t.getAttribute('aria-label') ?? t.querySelector('h2')?.textContent
-    expect(tiles.map(name)).toEqual(['Keeping', 'Unit Conversions', 'Products', 'Picture'])
-    expect(tiles.filter((t) => t.getAttribute('data-span') !== 'full').map(name)).toEqual(['Unit Conversions', 'Products'])
+    expect(tiles.map(name)).toEqual(['Keeping', 'Products', 'Unit Conversions', 'Picture'])
+    expect(tiles.filter((t) => t.getAttribute('data-span') !== 'full').map(name)).toEqual(['Products', 'Unit Conversions'])
   })
   it('names its regions for a Supply, not an Ingredient', () => {
     setup()

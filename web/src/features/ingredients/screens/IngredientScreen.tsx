@@ -23,7 +23,7 @@ import type { IngredientDetail, IngredientKind } from '../types'
 /**
  * Route /ingredients/:id (food, the default) and /supplies/:id (kind "supply"). SET-05: the header holds the name, "Food" or
  * "Supply", and two outline IconButtons: Rename (a sheet) and More (Merge, Change kind, Delete). Below, a BentoGrid: Keeping (one
- * tile, one Save) first and full width, then Unit Conversions and Products as a pair, then (food) Excluded by and the Picture, full
+ * tile, one Save) first and full width, then Products and Unit Conversions as a pair (the render's order), then (food) Excluded by and the Picture, full
  * width. An Ingredient opened under the other kind's route is sent to its own page.
  */
 export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
@@ -122,6 +122,15 @@ function IngredientPage({ id, kind, ing, ingredient, breadcrumbs }: IngredientPa
         <BentoGrid min="card" label={words.detailsLabel}>
           <KeepingTile kind={kind} name={ingredient.name} form={keeping} referenceCount={ing.referenceCount} system={system} />
 
+          <IngredientProducts
+            ingredientId={id}
+            ingredientName={ingredient.name}
+            baseUnit={ingredient.baseUnit}
+            system={system}
+            span={1}
+            className="ingredient__tile"
+          />
+
           <Tile as="section" className="ingredient__tile" aria-label={strings.conversionsTitle}>
             <ConversionEditor
               conversions={ingredient.conversions}
@@ -132,15 +141,6 @@ function IngredientPage({ id, kind, ing, ingredient, breadcrumbs }: IngredientPa
               onRemove={(unit) => void page.removeConversion(unit)}
             />
           </Tile>
-
-          <IngredientProducts
-            ingredientId={id}
-            ingredientName={ingredient.name}
-            baseUnit={ingredient.baseUnit}
-            system={system}
-            span={1}
-            className="ingredient__tile"
-          />
 
           {isFood ? (
             <Tile as="section" id="exclusions" span="full" aria-label={strings.excludedBy}>

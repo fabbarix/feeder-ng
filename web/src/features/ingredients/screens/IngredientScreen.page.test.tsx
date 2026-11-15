@@ -48,7 +48,8 @@ describe('layout: one Keeping tile, no orphan (SET-05)', () => {
     setup()
     await ready()
     const names = tiles().map((t) => t.getAttribute('aria-label') ?? t.querySelector('h2')?.textContent)
-    expect(names).toEqual(['Keeping', 'Unit Conversions', 'Products', 'Excluded by', 'Picture'])
+    // Batch w3e ruling: the order follows the render (set-05-after): Products before Unit Conversions.
+    expect(names).toEqual(['Keeping', 'Products', 'Unit Conversions', 'Excluded by', 'Picture'])
     const span = (name: string) => tiles().find((t) => (t.getAttribute('aria-label') ?? t.querySelector('h2')?.textContent) === name)!.getAttribute('data-span')
     expect(span('Keeping')).toBe('full')
     expect(span('Excluded by')).toBe('full')
