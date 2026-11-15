@@ -18,6 +18,11 @@ export interface PlacePopoverInput {
   margin?: number
   /** Which edges line up: the popover's start with the anchor's start (default), or its end with the anchor's end (hf-recipes-filter). */
   align?: 'start' | 'end'
+  /**
+   * The lowest viewport y the popover may reach (b9-w2b): the top of the floating bottom bar while it shows
+   * (lib/floatingFloor), else the viewport bottom (the default).
+   */
+  floor?: number
 }
 
 export interface PopoverPlacement {
@@ -29,11 +34,12 @@ export interface PopoverPlacement {
 }
 
 /**
- * Below the anchor when the popover fits there, or when below has at least as much room as above; otherwise above.
+ * Below the anchor (down to `floor`) when the popover fits there, or when below has at least as much room as above; otherwise above.
  * Edges align with the anchor as `align` says, clamped inside the viewport by `margin`.
  */
-export function placePopover({ anchor, size, viewport, gap = 4, margin = 8, align = 'start' }: PlacePopoverInput): PopoverPlacement {
-  const roomBelow = viewport.height - anchor.bottom - gap - margin
+export function placePopover({ anchor, size, viewport, gap = 4, margin = 8, align = 'start', floor }: PlacePopoverInput): PopoverPlacement {
+  const bottom = Math.min(floor ?? viewport.height, viewport.height)
+  const roomBelow = bottom - anchor.bottom - gap - margin
   const roomAbove = anchor.top - gap - margin
   const below = roomBelow >= size.height || roomBelow >= roomAbove
 
