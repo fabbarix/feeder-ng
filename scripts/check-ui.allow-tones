@@ -4,3 +4,5 @@
 # food, with B9-44).
 web/src/ui/Gallery.tsx   # the primitives Gallery shows every tone as a specimen, spoil and danger included
 web/src/ui/GalleryOverlays.tsx   # the Gallery's overlay specimens show the danger confirm dialogs (a loss)
+web/src/features/ingredients/lib/impact.ts   # Delete Ingredient / Delete Supply is a destructive confirm (a loss), which keeps its danger tone (B9-48, SAFE-02)
+web/src/features/ingredients/screens/IngredientScreen.tsx   # the More menu's Delete Ingredient / Delete Supply item is the destructive action (a loss) (B9-48, SAFE-02)
