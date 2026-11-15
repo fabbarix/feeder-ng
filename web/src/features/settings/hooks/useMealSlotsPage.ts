@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import type { ScreenState } from '../../../lib/dataState'
 import { useMe } from '../../../app/useMe'
 import { useToast } from '../../../ui'
 import { resultMessage } from '../lib/multiDay'
@@ -131,6 +132,8 @@ export function useMealSlotsPage() {
 
   return {
     isAdmin,
+    /** B9-20: the screen state (loading, ready, empty, failed, offlineUnknown...). Stub: always 'loading' until B9-42 builds it. */
+    state: 'loading' as ScreenState,
     /** True once the Meal Slots and the Members have loaded (the cards are derived from both). */
     loaded,
     /** MS: one card per Meal Slot name (empty until the Meal Slots and the Members have loaded). */

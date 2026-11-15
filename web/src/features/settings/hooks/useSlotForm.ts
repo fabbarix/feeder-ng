@@ -17,6 +17,8 @@ export interface UseSlotFormOptions {
   /** Add mode: the Name the draft starts with (the grid row whose add button was pressed). */
   defaultName?: string
   slots?: MealSlot[]
+  /** SET-14h, edit mode: the weekdays the selection starts with. Stub: not read yet (B9-42). */
+  initialWeekdays?: number[]
   /** CRS D2: the household's active Courses. Without them the form has no Courses field and sends none. */
   courses?: CourseChoice[]
   /** CRS D2: the dry run of the batch, asked while a Course is taken off a matching slot. */
@@ -90,6 +92,8 @@ export function useSlotForm({ slot, members, defaultWeekdays, defaultName, slots
     summary,
     problem,
     submit,
+    /** True while the sheet holds unsaved changes (drives BottomSheet `confirmDismiss`). Stub: always false until B9-42 builds it. */
+    dirty: false as boolean,
     /** The Courses problem, once Save was pressed (the picker shows it). */
     coursesError: attempted ? (courseProblem ?? undefined) : undefined,
     removal: { lines: removalLines, status: removals.length > 0 ? preview.status : 'idle' as const },

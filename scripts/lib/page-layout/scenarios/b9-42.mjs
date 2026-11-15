@@ -1,8 +1,8 @@
 // B9-42 (plan section 9; SAFE-02, SET-08, SET-09, SET-10, SET-15, SHORT-02, A11Y-07): the Meal Slots scenarios. Each setup measures what a
 // rule cannot say and throws a line that names it, so a regression is reported, not passed on an empty page.
-//   meal-slots-cards       /settings/meal-slots at 375, 390, 820, 1024 and 1440: a day's time fits its pill, the "differs" dot is clear of the
-//                          weekday and the time, the Avatar stack overlaps by less than a third, cards are one column below 1024 and two from 1024.
-//   meal-slot-editor       Edit Dinner at 390, 820 and 1440 (P13): every Course row has its up, down and remove buttons at the same x, 8 px apart or
+//   meal-slots-cards       /settings/meal-slots at 375, 390, 834 and 1440: a day's time fits its pill, the "differs" dot is clear of the
+//                          weekday and the time, the Avatar stack overlaps by less than a third, cards are one column below 1024 and two from 1024 (834 has one, 1440 two).
+//   meal-slot-editor       Edit Dinner at 390, 834 and 1440 (P13): every Course row has its up, down and remove buttons at the same x, 8 px apart or
 //                          more; the footer is Cancel and Save with no Close; Save is in the viewport.
 //   meal-slot-editor-narrow  the same sheet at 375 and 390 with P31 (the bottom bar under the sheet) and P13: one Attendance row anatomy, and the
 //                          Portion Factor stepper never alone on a line (all rows stack under 20 rem of list, none above).
@@ -30,8 +30,8 @@ async function openEditDinner() {
 export default {
   order: 320,
   scenarios: [
-    { name: 'meal-slots-cards', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'cardsMeasured', widths: [375, 390, 820, 1024, 1440], rules: ['P1', 'P11', 'P13', 'P26'] },
-    { name: 'meal-slot-editor', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'editorMeasured', widths: [390, 820, 1440], rules: ['P13', 'P18', 'P39'] },
+    { name: 'meal-slots-cards', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'cardsMeasured', widths: [375, 390, 834, 1440], rules: ['P1', 'P11', 'P13', 'P26'] },
+    { name: 'meal-slot-editor', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'editorMeasured', widths: [390, 834, 1440], rules: ['P13', 'P18', 'P39'] },
     { name: 'meal-slot-editor-narrow', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'editorNarrow', widths: [375, 390], rules: ['P13', 'P31', 'P40'] },
     { name: 'meal-slot-editor-short', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'editorShort', widths: ['667x375'], rules: ['P33'] },
     { name: 'meal-slot-remove-confirm', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'removeConfirm', widths: [375, 390, 1440], rules: ['P8', 'P13'] },

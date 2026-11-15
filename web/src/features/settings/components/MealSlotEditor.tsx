@@ -26,6 +26,8 @@ export interface MealSlotEditorProps {
   slots?: MealSlot[]
   onApply?: (request: SlotBatchRequest) => void | Promise<void>
   weekStart?: 1 | 6 | 7
+  /** SET-14h, editing: the weekdays "Apply to" starts with (a card: every day of the name); absent, the slot's own day. Stub: not read yet (B9-42). */
+  initialWeekdays?: number[]
   /** CRS D2: the household's active Courses (household order). Given, the editor shows the Courses field; absent or empty, it does not. */
   courses?: CourseChoice[]
   /** CRS D2, editing: a dry run of the batch (`dryRun: true`), asked while the Admin takes Courses off, to name what goes. */

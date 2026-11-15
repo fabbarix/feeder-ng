@@ -17,6 +17,8 @@ export interface MealSlotCardProps {
   locale?: string
   /** Admin: "Edit <name>" (card.editSlot), a strip day or a "Differs on" row (that weekday's slot): opens the Meal Slot sheet. */
   onEdit: (slot: MealSlot) => void
+  /** SET-14h: the card's own "Edit <name>" hands over the whole card. Stub: not wired yet (B9-42). */
+  onEditCard?: (card: Card) => void
   /** "Nobody attending": an Admin gets the sheet, a plain User the one-date Attendance (the page decides). */
   onFix: (slot: MealSlot) => void
   /** "Change a date for <name>": the one-date Attendance of the card's next run. */

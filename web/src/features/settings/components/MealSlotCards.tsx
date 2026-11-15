@@ -14,6 +14,8 @@ export interface MealSlotCardsProps {
   addDisabled?: boolean
   locale?: string
   onEdit: (slot: MealSlot) => void
+  /** SET-14h: "Edit <name>" on a card hands over the whole card (the sheet starts with every day of the name). Stub: not wired yet (B9-42). */
+  onEditCard?: (card: Card) => void
   onFix: (slot: MealSlot) => void
   onChangeDate: (card: Card) => void
   onAddOn: (weekday: number, name: string) => void

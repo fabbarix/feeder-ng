@@ -65,7 +65,7 @@ describe('RemovedMealSlots', () => {
     const { onPutBack } = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Put back Snack · Mon to Fri' }))
     expect(onPutBack).toHaveBeenCalledTimes(1)
-    expect(onPutBack.mock.calls[0]![0]).toMatchObject({ name: 'Snack', ids: [41, 42, 43, 44, 45] })
+    expect((onPutBack as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toMatchObject({ name: 'Snack', ids: [41, 42, 43, 44, 45] })
   })
   it('while a row is being put back its button is busy and the other buttons are disabled', () => {
     setup({ busyKey: '41-42-43-44-45' })
