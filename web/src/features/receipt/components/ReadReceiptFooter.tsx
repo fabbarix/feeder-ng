@@ -45,5 +45,6 @@ export function ReadReceiptFooter({ shopId, clientUuids, online, assistantAvaila
   }
   if (!online) return <ListRow title={t.readTitle} meta={t.needsConnection} icon="receipt" />
   if (pendingScans > 0) return <ListRow title={t.readTitle} meta={waitingText(pendingScans)} icon="receipt" />
-  return <ListRow title={t.readTitle} meta={t.readMeta} icon="receipt" chevron onActivate={() => open('/scan/receipt')} />
+  // B9-41 (main-session ruling 4): the description may take two lines and is never cut (scan.css).
+  return <ListRow title={t.readTitle} meta={t.readMeta} icon="receipt" chevron onActivate={() => open('/scan/receipt')} data-receipt-read="" />
 }

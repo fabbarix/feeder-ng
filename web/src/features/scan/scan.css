@@ -303,3 +303,14 @@
     background: var(--color-surface);
   }
 }
+
+/* B9-41 (main-session ruling 4): the "Read the receipt" row's description may take two lines and is never cut. */
+.list-row[data-receipt-read] {
+  padding-block: var(--space-2);
+}
+
+.list-row[data-receipt-read] .list-row__meta,
+.list-row[data-receipt-read] .list-row__meta-text {
+  white-space: normal;
+  text-overflow: clip;
+}
