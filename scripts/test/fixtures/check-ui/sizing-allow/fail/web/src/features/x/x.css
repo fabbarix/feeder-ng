@@ -1,0 +1,19 @@
+/* allowed: listed with a reason */
+.tile-error {
+  min-block-size: 96px;
+}
+/* flagged: listed without a reason */
+.tile-noreason {
+  min-height: 80px;
+}
+.tile-noreason-hash {
+  min-height: 80px;
+}
+/* flagged: not listed */
+.tile-other {
+  min-block-size: 96px;
+}
+/* flagged: a listed selector is matched exactly, not as a prefix of another selector */
+.tile-error .tile-body {
+  min-height: 40px;
+}

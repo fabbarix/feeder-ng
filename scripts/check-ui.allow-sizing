@@ -1,0 +1,4 @@
+# Rule sizing: tile-like selectors that may set min-height / min-block-size. Format: <selector>   # reason (required: an
+# entry without a reason is ignored). An entry matches only that exact selector, so keep it to a tile whose floor is part
+# of its design, never a content tile (content tiles size to content).
+.tile-error   # RES-09: a crashed tile keeps its slot with a 96 px floor, so the Today grid does not jump when it fails
