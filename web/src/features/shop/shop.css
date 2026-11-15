@@ -313,6 +313,47 @@
   border-style: dashed;
 }
 
+/* B9-34 (SSP-05, P23): a long meta with a compact form keeps the compact one until its text column is wide enough for the long one
+   (lib/rows metaWidth: 'm' up to 34 characters, 'l' longer), not only under ListRow's 12 rem, so "Added twice · Sam 50 g, you 50 g" is
+   never cut in a card of the grid. The same two declarations as ListRow's own switch (the long text stays the accessible text). */
+@container row-text (inline-size < 16rem) {
+  .list-row[data-meta-wide] .list-row__meta-text:has(+ .list-row__meta-compact) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .list-row[data-meta-wide] .list-row__meta-compact {
+    display: block;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@container row-text (inline-size < 22rem) {
+  .list-row[data-meta-wide='l'] .list-row__meta-text:has(+ .list-row__meta-compact) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .list-row[data-meta-wide='l'] .list-row__meta-compact {
+    display: block;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 /* B9-34 (A11Y-07): each group's stable wrapper (its focus keeper's root) adds no box of its own. */
 .shop-group {
   display: contents;

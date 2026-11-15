@@ -87,6 +87,20 @@ export function rowMeta(entry: ListEntry): RowMeta {
   return { text: entry.packLine, ...(entry.packLine && entry.packCompact && entry.packCompact !== entry.packLine ? { compact: entry.packCompact } : {}) }
 }
 
+/**
+ * B9-34 (SSP-05, P23): how wide a text column the long meta needs before ListRow's 12 rem switch can show it uncut. ListRow shows the
+ * compact form under 12 rem of text column, which fits a long meta of about 26 characters at the meta size; a longer one ("Added twice ·
+ * Sam 50 g, you 50 g", "Below 1 l · 400 ml in Stock") would be cut just above 12 rem. 'm' (27 to 34 characters) keeps the compact
+ * form under 16 rem, 'l' (longer) under 22 rem (shop.css). undefined when the meta has no compact form or fits 12 rem.
+ */
+export function metaWidth(meta: RowMeta): 'm' | 'l' | undefined {
+  if (!meta.compact) return undefined
+  const n = [...meta.text].length
+  if (n > 34) return 'l'
+  if (n > 26) return 'm'
+  return undefined
+}
+
 /** The value column: the quantity, and the estimated cost under it when there is a Price. Nothing for free text or a ticked Line. */
 export function rowValue(entry: ListEntry): RowValue {
   const out: RowValue = {}

@@ -5,7 +5,7 @@
 import { ListRow } from '../../../ui/ListRow'
 import { Icon } from '../../../ui/Icon'
 import { Thumb } from '../../../ui/Thumb'
-import { rowMeta, rowValue, type RowGroup } from '../lib/rows'
+import { metaWidth, rowMeta, rowValue, type RowGroup } from '../lib/rows'
 import type { ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
 
@@ -51,6 +51,7 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, pending }: Lin
       haspopup="dialog"
       data-state={group}
       data-focus-key={entry.key}
+      data-meta-wide={metaWidth(meta)}
       leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={40} />}
       control={control}
       meta={meta.text || undefined}

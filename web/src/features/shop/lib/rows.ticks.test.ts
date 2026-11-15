@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeAddition, makeExtra, makeGarlic, makeLine, makeList, makeTick } from '../testData'
 import { extraEntry, lineEntry, listEntries } from './lines'
-import { lineActions, rowMeta, rowValue } from './rows'
+import { lineActions, metaWidth, rowMeta, rowValue } from './rows'
 
 const tickedGarlic = (tick = makeTick()) => lineEntry(makeGarlic({ ticked: true, quantity: 0, tick }), 'USD', 'metric')
 
@@ -92,5 +92,18 @@ describe('lineActions of a ticked Line (SSP-18)', () => {
   it('the "more since your tick" row offers Not needed (it takes only the difference off)', () => {
     const { open } = listEntries(makeList({ lines: [makeLine({ ingredientId: 5, ticked: true, more: 750, quantity: 750, tick: makeTick() })] }), 'metric')
     expect(lineActions(open[0]!, 'open')).toEqual(['not-needed'])
+  })
+})
+
+describe('metaWidth: how wide a column a long meta needs before it shows uncut (SSP-05, P23 in the card grid)', () => {
+  it('short metas, and metas with no compact form, are ListRow\'s 12 rem case', () => {
+    expect(metaWidth({ text: 'More since your tick', compact: 'More needed' })).toBeUndefined()
+    expect(metaWidth({ text: 'Added twice · Sam 50 g, you 50 g but no compact form' })).toBeUndefined()
+  })
+  it('two additions (27 to 34 characters) need the middle width; three need the wide one', () => {
+    const two = rowMeta(tickedGarlic(makeTick({ additions: [makeAddition({ who: 'Sam', mine: false, quantity: 50 }), makeAddition({ quantity: 50, clientUuid: 'u-2' })] })))
+    expect(metaWidth(two)).toBe('m')
+    const three = rowMeta(tickedGarlic(makeTick({ additions: ['Ann', 'Sam', 'You'].map((who, i) => makeAddition({ who, mine: who === 'You', quantity: 40, clientUuid: `u-${i}` })) })))
+    expect(metaWidth(three)).toBe('l')
   })
 })
