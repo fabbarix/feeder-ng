@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
+import { configDefaults } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
 import { phosphorWeights } from './vite.phosphor-weights.ts'
 
@@ -72,6 +73,9 @@ function precompress(): Plugin {
     },
   }
 }
+
+// The vitest files of the "logic" project (test.projects below).
+const LOGIC_TESTS = ['src/**/lib/**/*.test.ts', 'src/**/*.css.test.ts']
 
 // The PWA: src/sw/sw.ts is the worker (injectManifest, so it can be extended); registration is ours (app/serviceWorker.ts,
 // which offers a new version with a toast), so injectRegister is off. The precache glob never lists the .br/.gz siblings.
@@ -150,8 +154,17 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
     // node_modules are externalised (untransformed) by default; inline Phosphor so tests see the slimmed weights
     server: { deps: { inline: [/@phosphor-icons/] } },
+    // fast-checks: two projects, the same ~2,000 files (src/**/*.test.{ts,tsx}) between them. "logic" is the pure-library tests
+    // (any lib/ folder) and the CSS-contract tests (*.css.test.ts): they share no module state worth isolating, so they run in
+    // threads without per-file isolation (about 9x faster: 29 s -> 3 s for its ~590 files). "dom" is every other test, isolated
+    // as before, in threads (about 12 % faster than forks). Measured and rejected: the logic tests in the node environment (126
+    // fail: they read navigator, localStorage), the dom tests without isolation (132 files fail: module mocks leak), happy-dom
+    // for the dom tests (70 files fail).
+    projects: [
+      { extends: true, test: { name: 'logic', include: LOGIC_TESTS, isolate: false, pool: 'threads', unstubGlobals: true } },
+      { extends: true, test: { name: 'dom', include: ['src/**/*.test.{ts,tsx}'], exclude: [...configDefaults.exclude, ...LOGIC_TESTS], pool: 'threads' } },
+    ],
   },
 })
