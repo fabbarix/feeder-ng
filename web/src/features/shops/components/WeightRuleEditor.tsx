@@ -1,5 +1,6 @@
 import { useId } from 'react'
-import { BottomSheet, FieldRow, SectionTitle, Select, Stack, TextField } from '../../../ui'
+import { BottomSheet, FieldRow, Select, Stack, TextField } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
 import type { ValueKind } from '../../scan/lib/barcode'
 import type { RuleBody } from '../api'
 import { useRuleForm } from '../hooks/useRuleForm'
@@ -60,16 +61,21 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
       >
         <Stack>
           {text(strings.prefixLabel, 'prefix', 'sm')}
+          {/* SHORT-02 (A11Y): the visible label names the group once; it is not also a heading. */}
           <div>
-            <SectionTitle as="h3">{strings.itemCodeGroup}</SectionTitle>
-            <FieldRow label={strings.itemCodeGroup}>
+            <span id={form.fieldId('item-group')} className="section-title rule-editor__group">
+              {strings.itemCodeGroup}
+            </span>
+            <FieldRow labelledBy={form.fieldId('item-group')}>
               {text(strings.itemStartLabel, 'itemStart')}
               {text(strings.itemLengthLabel, 'itemLength')}
             </FieldRow>
           </div>
           <div>
-            <SectionTitle as="h3">{strings.valueGroup}</SectionTitle>
-            <FieldRow label={strings.valueGroup}>
+            <span id={form.fieldId('value-group')} className="section-title rule-editor__group">
+              {strings.valueGroup}
+            </span>
+            <FieldRow labelledBy={form.fieldId('value-group')}>
               {text(strings.valueStartLabel, 'valueStart')}
               {text(strings.valueLengthLabel, 'valueLength')}
               {text(strings.decimalPlacesLabel, 'decimalPlaces')}
@@ -96,16 +102,7 @@ export function WeightRuleEditor({ initial, currency, onSave, onCancel }: Weight
           </FieldRow>
           <TextField label={strings.sampleLabel} helper={strings.sampleHint} inputMode="numeric" data-size-intent="long" value={form.sample} onChange={form.setSample} />
           <RulePreview preview={form.preview} currency={currency} unit={v.unit} />
-          {form.shownError && form.errorField === null ? (
-            <p role="alert" className="pg__error">
-              {form.shownError}
-            </p>
-          ) : null}
-          {form.serverError ? (
-            <p role="alert" className="pg__error">
-              {form.serverError}
-            </p>
-          ) : null}
+          <FormError>{form.serverError ?? (form.errorField === null ? form.shownError : null)}</FormError>
         </Stack>
       </form>
     </BottomSheet>

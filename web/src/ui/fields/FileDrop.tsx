@@ -13,6 +13,8 @@ export interface FileDropProps extends Omit<FieldProps, 'name' | 'required'> {
   multiple?: boolean
   /** The button's text and accessible name; default "Choose a file or drop it here". */
   buttonLabel?: string
+  /** B9-30 (R-A): muted text in the zone after the button ("or drop it here"); the button then reads "Choose a file". */
+  hint?: string
   /** The chosen file's name, shown under the zone. */
   fileName?: string
   /** Accepted files (only the first unless `multiple`). */
@@ -24,7 +26,7 @@ export interface FileDropProps extends Omit<FieldProps, 'name' | 'required'> {
 }
 
 /** A dashed drop zone with a "Choose a file or drop it here" button. The native file input stays inside this primitive. */
-export function FileDrop({ label, helper, error, disabled, accept, multiple, fileName, buttonLabel, onFiles, onReject, 'aria-describedby': describedBy }: FileDropProps) {
+export function FileDrop({ label, helper, error, disabled, accept, multiple, fileName, buttonLabel, hint, onFiles, onReject, 'aria-describedby': describedBy }: FileDropProps) {
   const ids = useFieldIds()
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -61,8 +63,9 @@ export function FileDrop({ label, helper, error, disabled, accept, multiple, fil
       >
         <Icon name="file" size={24} />
         <button type="button" className="file-drop__button" disabled={disabled} aria-describedby={describedBy} onClick={() => input.current?.click()}>
-          {buttonLabel ?? fieldStrings.chooseFile}
+          {buttonLabel ?? (hint ? fieldStrings.chooseFileShort : fieldStrings.chooseFile)}
         </button>
+        {hint ? <p className="file-drop__hint">{hint}</p> : null}
         {fileName ? <p className="file-drop__name">{fileName}</p> : null}
         <input
           ref={input}

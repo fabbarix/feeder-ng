@@ -21,13 +21,15 @@ describe('Shops components without .pg__* (DS-07)', () => {
     expect(noPg(container)).toHaveLength(0)
   })
 
-  it('the weight rule editor\'s "Item code" and "Value" subheads are SectionTitle h3, visible and not aria-hidden; the groups keep their names', () => {
+  // B9-30 (ruling 6, SHORT-02): the subheads keep the SectionTitle look but are no longer h3 headings, so a screen reader hears each
+  // name once, as the group's name (WeightRuleEditor.b9-30.test.tsx pins the rest).
+  it('the weight rule editor\'s "Item code" and "Value" subheads look like a SectionTitle, are visible and not aria-hidden, and name their groups', () => {
     const { container } = render(<WeightRuleEditor currency="USD" onSave={vi.fn()} onCancel={vi.fn()} />)
     for (const name of [strings.itemCodeGroup, strings.valueGroup]) {
-      const h = screen.getByRole('heading', { level: 3, name })
-      expect(h).toHaveClass('section-title')
-      expect(h).not.toHaveAttribute('aria-hidden')
-      expect(screen.getByRole('group', { name })).toBeInTheDocument()
+      const label = screen.getByText(name)
+      expect(label).toHaveClass('section-title')
+      expect(label).not.toHaveAttribute('aria-hidden')
+      expect(screen.getByRole('group', { name })).toHaveAttribute('aria-labelledby', label.id)
     }
     expect(container.querySelectorAll('.pg__subhead, .pg__stack, .pg__group')).toHaveLength(0)
   })

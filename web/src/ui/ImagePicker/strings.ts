@@ -23,6 +23,13 @@ export const imagePickerStrings = {
   useCameraApp: 'Use the camera app',
   crop: 'Crop',
   removeImage: 'Remove image',
+  /** B9-30 (R-A): the full picker's button; "or drop it here" is text in the zone. */
+  chooseFile: 'Choose a file',
+  dropHint: 'or drop it here',
+  /** B9-30: the compact picker. */
+  noPictureYet: 'No Picture yet.',
+  change: 'Change',
+  remove: 'Remove',
   cancel: 'Cancel',
   preparing: 'Preparing the image',
   uploading: 'Saving the image',

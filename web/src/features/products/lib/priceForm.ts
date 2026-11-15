@@ -77,3 +77,13 @@ export function todayIso(now: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
+
+/** The body that records a Price again (the Undo of Delete Price): the price, and the per-kg price only when it was not worked out. */
+export function priceBodyOf(p: Price): PriceBody {
+  return {
+    shopId: p.shopId,
+    date: p.date,
+    ...(p.priceCents != null ? { priceCents: p.priceCents } : {}),
+    ...(p.pricePerKgCents != null && !p.pricePerKgDerived ? { pricePerKgCents: p.pricePerKgCents } : {}),
+  }
+}

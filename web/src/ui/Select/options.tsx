@@ -254,3 +254,48 @@ export function currencyOptions({ codes, locale, include }: CurrencyOptionsInput
     .sort((a, b) => a.label.localeCompare(b.label, locale))
   return [...common, ...others]
 }
+
+/** B9-30 (SET-01): a Product as the Product Select lists it. The caller formats `packLabel` ("700 g"). */
+export interface ProductChoice {
+  id: number
+  name: string
+  ingredientName?: string
+  packLabel?: string
+  /** true for a Supply, false for Food; absent when it is not known (then the Food and Supplies filters are not offered). */
+  supply?: boolean
+  imageUrl?: string
+  /** The Shops it is sold at (a Price or a Shop Barcode there). */
+  shopIds?: number[]
+}
+
+/** "<Ingredient> · <pack size>", or "Supply · <pack size>"; the parts it does not have are left out. */
+export function productMeta(p: ProductChoice): string | undefined {
+  const parts = [p.supply ? selectStrings.supply : p.ingredientName, p.packLabel].filter((s): s is string => Boolean(s))
+  return parts.length > 0 ? parts.join(' · ') : undefined
+}
+
+/** Whether the Product is sold at the Shop. */
+export const soldAt = (p: ProductChoice, shopId: number | undefined) => shopId !== undefined && (p.shopIds ?? []).includes(shopId)
+
+/**
+ * SET-01: value = id, label = name, meta = productMeta, leading = a Thumb (the monogram without a Picture). Grouped "Sold at <Shop>"
+ * first, then "Other Products", only when some Products are sold at the Shop and some are not; each group keeps the given order and
+ * every Product is kept.
+ */
+export function productOptions(products: ProductChoice[], shop?: { id: number; name: string }): SelectOption<number>[] {
+  const sold = products.filter((p) => soldAt(p, shop?.id))
+  const grouped = shop !== undefined && sold.length > 0 && sold.length < products.length
+  const option = (p: ProductChoice, group?: string): SelectOption<number> => ({
+    value: p.id,
+    label: p.name,
+    meta: productMeta(p),
+    keywords: [p.ingredientName, p.packLabel].filter((s): s is string => Boolean(s)),
+    leading: <Thumb name={p.name} imageUrl={p.imageUrl} size={40} />,
+    ...(group ? { group } : {}),
+  })
+  if (!grouped) return products.map((p) => option(p))
+  return [
+    ...sold.map((p) => option(p, selectStrings.soldAt(shop.name))),
+    ...products.filter((p) => !soldAt(p, shop.id)).map((p) => option(p, selectStrings.otherProducts)),
+  ]
+}

@@ -109,3 +109,23 @@
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
 }
+
+/* B9-30: the compact picker: the 72 px Thumb beside its line and its small outline buttons. */
+.image-picker__compact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.image-picker__compact-text {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.image-picker__compact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

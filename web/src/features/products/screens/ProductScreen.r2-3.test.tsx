@@ -1,8 +1,8 @@
 // R2-3 (S-02 Products part, F-01, F-04; guard P4 "Pack size"): the Product page.
 //   - the Ingredient link and the subtitle use displayName ("Tomato passata"); data stays lower case.
-//   - pack size: sm field, "Save pack size" is the FormActions primary (not a centred tertiary button).
+//   - pack size: (B9-30: xs field, "Save pack size" beside it in one FieldRow).
 //   - Add barcode: the field (md) and its button share one FieldRow (button aligned to the control).
-//   - Archive / Delete: FormActions, Delete (danger) as the destructive action at the far left.
+//   - (B9-30: Archive and Delete moved into the header's ⋮ menu, see ProductScreen.b9-30.test.tsx.)
 import { screen } from '@testing-library/react'
 import { rule as cssRule, stylesheet } from '../../../test/cssRules'
 import { Route, Routes } from 'react-router-dom'
@@ -60,11 +60,11 @@ describe('ProductScreen (R2-3)', () => {
     expect(screen.queryByText('tomato passata')).toBeNull()
   })
 
-  it('sizes the pack size sm and saves it from FormActions', async () => {
+  it('sizes the pack size xs and saves it from the FieldRow beside the field (B9-30, SET-04: Save beside its field)', async () => {
     setup()
     const field = await screen.findByLabelText('Pack size (g)')
-    expect(field.closest('[data-size]')).toHaveAttribute('data-size', 'sm')
-    expect(screen.getByRole('button', { name: 'Save pack size' }).closest('.form-actions__primary')).not.toBeNull()
+    expect(field.closest('[data-size]')).toHaveAttribute('data-size', 'xs')
+    expect(screen.getByRole('button', { name: 'Save pack size' }).closest('.field-row')).toBe(field.closest('.field-row'))
   })
 
   it('puts the barcode field and Add barcode on one FieldRow', async () => {
@@ -74,12 +74,6 @@ describe('ProductScreen (R2-3)', () => {
     const row = field.closest('.field-row')
     expect(row).not.toBeNull()
     expect(row).toContainElement(screen.getByRole('button', { name: 'Add barcode' }))
-  })
-
-  it('offers Archive and Delete through FormActions, Delete as the destructive action', async () => {
-    setup()
-    expect((await screen.findByRole('button', { name: 'Delete Product' })).closest('.form-actions__destructive')).not.toBeNull()
-    expect(screen.getByRole('button', { name: 'Archive Product' }).closest('.form-actions')).not.toBeNull()
   })
 
   it('marks the Barcode field as intentionally long for the layout guard (no label exemption)', async () => {

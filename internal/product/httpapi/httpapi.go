@@ -98,7 +98,7 @@ type shopBody struct {
 }
 
 func (a *api) listShops(w http.ResponseWriter, r *http.Request) {
-	list, err := a.store.Shops(r.Context())
+	list, err := a.store.ShopsWithPriceCount(r.Context())
 	if err != nil {
 		writeErr(w, err, "shop")
 		return

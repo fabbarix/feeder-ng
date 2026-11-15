@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { BottomSheet, Button, Stack, TextField } from '../../../ui'
 import { Switch } from '../../../ui/fields/Switch'
-import { errorText } from '../../products/lib/productForm'
+import { FormError } from '../../../ui/fields/FormError'
 import { usePosition } from '../hooks/usePosition'
+import { useShopNameForm } from '../hooks/useShopNameForm'
 import { useShops } from '../hooks/useShops'
 import { goodForSaving, locationToSave } from '../lib/nearest'
 import { strings } from '../strings'
@@ -29,33 +30,24 @@ export function AddShopSheet({ open, onClose, initialName = '', onAdded }: AddSh
 function AddShopForm({ initialName, onAdded }: { initialName: string; onAdded: (shop: Shop) => void }) {
   const { add } = useShops()
   const here = usePosition({ auto: 'always' })
-  const [name, setName] = useState(initialName)
   const [wanted, setWanted] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
+  const form = useShopNameForm(initialName, async (name) => onAdded(await add(name, locationToSave(wanted, here.position))))
   const usable = here.status === 'ready' && here.position !== null && goodForSaving(here.position)
   return (
     <form
+      ref={form.formRef}
+      noValidate
       onSubmit={(e) => {
         e.preventDefault()
-        setSaving(true)
-        setError(null)
-        add(name.trim(), locationToSave(wanted, here.position))
-          .then(onAdded)
-          .catch((err: unknown) => setError(errorText(err)))
-          .finally(() => setSaving(false))
+        void form.submit()
       }}
     >
       <Stack>
-        <TextField label={strings.shopNameLabel} value={name} onChange={setName} />
+        <TextField label={strings.shopNameLabel} value={form.name} onChange={form.setName} error={form.nameError ?? undefined} />
         <Switch label={strings.saveLocationSwitch} checked={wanted && usable} disabled={!usable} onChange={setWanted} />
         <LocationStatus status={here.status} position={here.position} failure={here.failure} onRetry={here.locate} />
-        {error ? (
-          <p role="alert" className="pg__error">
-            {error}
-          </p>
-        ) : null}
-        <Button type="submit" disabled={name.trim() === ''} loading={saving}>
+        <FormError>{form.formError}</FormError>
+        <Button type="submit" loading={form.saving}>
           {strings.addShop}
         </Button>
       </Stack>

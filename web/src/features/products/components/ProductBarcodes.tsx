@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { Button, Chip, Cluster, FieldRow, IconButton, ListGroup, ListRow, Muted, SectionTitle, Stack, TextField } from '../../../ui'
-import { barcodeError, errorText } from '../lib/productForm'
+import { useEffect, useId, useRef } from 'react'
+import { Button, Chip, Cluster, DetailList, DetailRow, FieldRow, Muted, Stack, TextField } from '../../../ui'
+import { useBarcodeAdd } from '../hooks/useBarcodeAdd'
 import { formatBarcode } from '../lib/barcodeFormat'
-import { shopBarcodeLabel } from '../../shops/lib/shopBarcodeForm'
+import { shopBarcodeRows } from '../lib/shopBarcodeRows'
 import type { ShopRule } from '../../shops/types'
 import { strings } from '../strings'
 import type { Shop, ShopBarcode } from '../types'
@@ -14,68 +14,82 @@ export interface ProductBarcodesProps {
   shops: Shop[]
   /** The weight rules of the Shops that hold weighed codes (names the prefix, never the rule id). */
   rules: ShopRule[]
+  /** Rejects with the server's refusal, shown at the Barcode field. */
   onAdd: (raw: string) => Promise<void>
-  /** Gets the stored code (the label on screen is the human form). */
+  /** Gets the stored code (the label on screen is the human form); removes it at once (the screen offers Undo). */
   onRemove: (code: string) => void
 }
 
-/** Global barcodes as Chips with remove, an add field (validated with scan/lib canonical), and the Shop Barcodes read-only per Shop. */
+/**
+ * SET-04: the barcodes as removable Chips ("8 001505 005707 ×", one button each), the Barcode field with an outline "Add barcode", then
+ * the Shop Barcodes as R-E rows. After a removal focus moves to the next Chip, or to the field when none is left.
+ */
 export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, onRemove }: ProductBarcodesProps) {
-  const [text, setText] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const field = useBarcodeAdd(onAdd)
+  const fieldId = useId()
+  const chips = useRef<HTMLDivElement>(null)
+  const removedAt = useRef<number | null>(null)
 
-  const add = async () => {
-    const t = text.trim()
-    const invalid = t === '' ? strings.errBarcode : barcodeError(t)
-    if (invalid) return setError(invalid)
-    try {
-      await onAdd(t)
-      setText('')
-      setError(null)
-    } catch (e) {
-      setError(errorText(e))
-    }
-  }
-  const shopName = (id: number) => shops.find((s) => s.id === id)?.name ?? strings.unknownShop
+  useEffect(() => {
+    const at = removedAt.current
+    if (at === null) return
+    removedAt.current = null
+    const next = chips.current?.querySelectorAll<HTMLElement>('button.chip')
+    const target = next && next.length > 0 ? next[Math.min(at, next.length - 1)] : document.getElementById(fieldId)
+    target?.focus()
+  }, [barcodes, fieldId])
 
+  const rows = shopBarcodeRows(shopBarcodes, shops, rules)
   return (
     <Stack>
       {barcodes.length === 0 ? (
         <Muted>{strings.noBarcodes}</Muted>
       ) : (
-        <Cluster>
-          {barcodes.map((code) => (
-            <Cluster key={code}>
-              <Chip kind="tag">{formatBarcode(code)}</Chip>
-              <IconButton icon="remove" label={strings.removeBarcode(formatBarcode(code))} onClick={() => onRemove(code)} />
-            </Cluster>
-          ))}
-        </Cluster>
+        <div ref={chips}>
+          <Cluster>
+            {barcodes.map((code, i) => (
+              <Chip
+                key={code}
+                kind="tag"
+                removeLabel={strings.removeBarcode(formatBarcode(code))}
+                onRemove={() => {
+                  removedAt.current = i
+                  onRemove(code)
+                }}
+              >
+                {formatBarcode(code)}
+              </Chip>
+            ))}
+          </Cluster>
+        </div>
       )}
       <form
+        ref={field.formRef}
         noValidate
         onSubmit={(e) => {
           e.preventDefault()
-          void add()
+          void field.submit()
         }}
       >
         <FieldRow align="end">
-          <TextField size="md" label={strings.barcodeLabel} inputMode="numeric" data-size-intent="long" value={text} onChange={setText} error={error ?? undefined} />
+          <TextField id={fieldId} size="md" label={strings.barcodeLabel} inputMode="numeric" data-size-intent="long" value={field.text} onChange={field.setText} error={field.error ?? undefined} />
           <Button type="submit" variant="secondary" icon="add">
             {strings.addBarcode}
           </Button>
         </FieldRow>
       </form>
-      <SectionTitle as="h3">{strings.shopBarcodesTitle}</SectionTitle>
-      {shopBarcodes.length === 0 ? (
-        <Muted>{strings.noShopBarcodes}</Muted>
-      ) : (
-        <ListGroup label={strings.shopBarcodesTitle}>
-          {shopBarcodes.map((b) => (
-            <ListRow key={b.id} title={`${shopName(b.shopId)} · ${shopBarcodeLabel(b, rules)}`} />
-          ))}
-        </ListGroup>
-      )}
+      <div className="product-barcodes__shop">
+        <h3 className="product-subhead">{strings.shopBarcodesTitle}</h3>
+        {rows.length === 0 ? (
+          <Muted>{strings.noShopBarcodesYet}</Muted>
+        ) : (
+          <DetailList>
+            {rows.map((r) => (
+              <DetailRow key={r.id} label={r.key} state={r.state} detail={r.detail} />
+            ))}
+          </DetailList>
+        )}
+      </div>
     </Stack>
   )
 }

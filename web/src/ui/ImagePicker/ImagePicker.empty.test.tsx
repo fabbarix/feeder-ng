@@ -12,7 +12,7 @@ describe('ImagePicker, empty', () => {
     expect(group()).toBeInTheDocument()
     expect(screen.getByText('Recipe photo')).toBeInTheDocument()
     expect(screen.getByText(/JPEG, PNG, WebP or HEIC, up to 8 MB/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Choose a file or drop it here/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Choose a file' })).toBeInTheDocument()
     expect(screen.getByTestId('file-drop-zone')).toBeInTheDocument()
   })
 

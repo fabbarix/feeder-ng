@@ -27,6 +27,8 @@ export interface Shop {
   name: string
   /** The Shop Location; null (or absent in older fixtures) = not saved. */
   location?: ShopLocation | null
+  /** SET-14b: distinct non-archived Products with a Price at the Shop (GET /api/shops). */
+  priceCount?: number
 }
 
 export interface ShopBarcode {

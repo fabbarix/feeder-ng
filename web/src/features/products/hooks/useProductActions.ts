@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useConfirm, useToast } from '../../../ui'
+import { useConfirm, useToast, useUndoToast } from '../../../ui'
 import { deleteOutcome } from '../lib/archive'
 import { errorText } from '../lib/productForm'
 import { strings } from '../strings'
@@ -8,13 +8,14 @@ import type { UseProduct } from './useProduct'
 import { useAttempt } from './useAttempt'
 
 /**
- * The Product page's archive and delete flows (R8). Archive asks first; Unarchive acts at once. Delete asks with a danger
+ * The Product page's archive and delete flows (R8). Archive acts at once with Undo (SAFE-02); Unarchive acts at once. Delete asks with a danger
  * dialog; on 409 product_bought it offers to archive instead ("Keep" leaves the Product active), and any other failure is
  * shown as an alert. The server decides what may be deleted.
  */
 export function useProductActions(product: ProductDetail | undefined, p: UseProduct) {
   const dialogs = useConfirm()
   const toast = useToast()
+  const undo = useUndoToast()
   const navigate = useNavigate()
   const { error, setError, attempt } = useAttempt()
 
@@ -24,11 +25,11 @@ export function useProductActions(product: ProductDetail | undefined, p: UseProd
     if (ok) toast.show(archived ? strings.archivedToast(product.name) : strings.unarchivedToast(product.name), { status: 'success' })
   }
 
+  // SAFE-02: Archive loses nothing, so it acts at once and offers Undo (which unarchives).
   const archive = async () => {
     if (!product) return
-    // a routine, reversible question: Archive keeps focus (B9-18: a confirm focuses Cancel unless it opts in)
-    const yes = await dialogs.confirm({ title: strings.archiveTitle(product.name), body: strings.archiveBody, confirmLabel: strings.archive, focus: 'confirm' })
-    if (yes) await setArchived(true)
+    const ok = await attempt(() => p.archive())
+    if (ok) undo.show({ headline: strings.archivedToast(product.name), undo: () => p.unarchive() })
   }
 
   const unarchive = () => setArchived(false)

@@ -24,10 +24,11 @@
 .file-drop__button {
   min-block-size: 44px;
   padding: 0 var(--space-4);
-  border: 0;
+  /* B9-30 (R-A): the shared outline look, so it reads as a button on the dashed zone. */
+  border: 1px solid var(--color-outline);
   border-radius: var(--radius-button);
   background: var(--color-surface);
-  color: var(--color-accent-text);
+  color: var(--color-text);
   font: inherit;
   font-size: var(--text-label-size);
   font-weight: var(--text-label-weight);
@@ -37,6 +38,18 @@
 .file-drop__button:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
+}
+
+.file-drop__button:hover:not(:disabled) {
+  background: var(--color-surface-2);
+}
+
+/* B9-30: "or drop it here", muted text after the button. */
+.file-drop__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
 }
 
 .file-drop__name {
