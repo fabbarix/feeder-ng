@@ -15,6 +15,14 @@ export interface TimerTileProps {
   onDismiss?: () => void
   /** WP3b: a separate "Cancel <label>" control (stop a timer still going); Dismiss clears a finished one. */
   onCancel?: () => void
+  /** B9-17 (PC-03): `md` is the Cook Mode rail tile (a 2-line label, a place line, 44 px circular controls, a focus scope). Default: the compact tile. */
+  size?: 'md'
+  /** B9-17: `compact` drops the progress bar and tightens the tile (the board's grid). */
+  density?: 'compact'
+  /** B9-17: the place line of an md tile ("Step 1 · Roast chicken"). */
+  place?: string
+  /** B9-17: md only, the "Options for <label>" button. */
+  onMore?: () => void
   /** @deprecated use the controls above; kept for unmigrated screens (a clickable tile, role button). */
   onClick?: () => void
 }
@@ -29,7 +37,7 @@ function stateOf(seconds: number, running: boolean): TimerState {
 }
 
 /** A cook timer, announced as a timer (docs/design/ui-fix-plan.md 4.12). */
-export function TimerTile({ label, seconds, running = false, totalSeconds, onToggle, onAddMinute, onDismiss, onCancel, onClick }: TimerTileProps) {
+export function TimerTile({ label, seconds, running = false, totalSeconds, size: _size, density: _density, place: _place, onMore: _onMore, onToggle, onAddMinute, onDismiss, onCancel, onClick }: TimerTileProps) {
   const state = stateOf(seconds, running)
   const variant = state === 'running' ? 'soft' : state === 'paused' ? 'surface' : 'status'
   const status = state === 'finished' ? 'success' : state === 'overdue' ? 'spoil' : undefined

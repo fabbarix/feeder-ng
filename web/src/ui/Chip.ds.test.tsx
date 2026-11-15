@@ -1,4 +1,4 @@
-// DS-A (docs/design/system.md §6): a chip is one line, 26 px, its label truncates with an ellipsis and the full text stays
+// DS-A (docs/design/system.md §6): a chip is one line, at least 26 px (B9-17: a minimum, DS-08), its label truncates with an ellipsis and the full text stays
 // available (tooltip `title` and the accessible name). One kind, one look: a why chip is neutral with an accent icon (an
 // accent-soft fill read as "spoiling" with a red accent), "Leftover for" is the outlined leftover tone.
 import { render, screen } from '@testing-library/react'
@@ -27,9 +27,10 @@ describe('Chip: one line', () => {
     expect(screen.getByRole('button')).toHaveAttribute('title', long)
   })
 
-  it('is 26 px high, never wraps, and its label ends in an ellipsis', () => {
+  it('is at least 1.625rem (26 px at the default text size) high, never wraps, and its label ends in an ellipsis (B9-17, DS-08: a minimum, not a fixed height)', () => {
     const chip = declarations(css, '.chip')
-    expect(chip['block-size']).toBe('26px')
+    expect(chip['min-block-size']).toBe('1.625rem')
+    expect(chip['block-size']).toBe('auto')
     expect(chip['white-space']).toBe('nowrap')
     expect(chip['max-inline-size']).toBe('100%')
     expect(chip['min-inline-size']).toBe('0')
@@ -39,9 +40,10 @@ describe('Chip: one line', () => {
     expect(label['min-inline-size']).toBe('0')
   })
 
-  it('no rule anywhere in Chip.css lets a chip wrap or grow (white-space normal, block-size auto)', () => {
+  it('no rule anywhere in Chip.css lets a chip wrap (white-space normal); the one block-size: auto is the .chip rule that pairs it with min-block-size', () => {
     expect(code(css)).not.toMatch(/white-space:\s*normal/)
-    expect(code(css)).not.toMatch(/\.chip[^{]*\{[^}]*block-size:\s*auto/)
+    const autos = [...code(css).matchAll(/([^{}]+)\{[^}]*block-size:\s*auto/g)].map((m) => m[1]!.trim())
+    expect(autos).toEqual(['.chip'])
   })
 })
 

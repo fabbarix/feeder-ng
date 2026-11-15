@@ -15,7 +15,11 @@ export interface ViewfinderStripProps {
   /** Accessible name of the region. Default "Scanner". The ImagePicker passes "Camera". */
   label?: string
   /** `strip` (default, 140 px, with the barcode reticle), `tall` (180 px, with the reticle; sets data-size="tall") or `photo` (4:3, no reticle, sets data-size="photo"). */
-  size?: 'strip' | 'tall' | 'photo'
+  size?: 'strip' | 'tall' | 'photo' | 'bar'
+  /** B9-17 (SSP-06): extra controls in the strip's control row, beside Mute (Scan's "Type a barcode" IconButton). */
+  controls?: ReactNode
+  /** B9-17 (SSP-06): `size="bar"` only: the action at the end of the bar (Try again). */
+  action?: ReactNode
   /**
    * `on` (default) shows the live camera. `paused` keeps the last frame and says "Camera paused" (a Picture or the Price entry is open).
    * `off` is no camera at all (a computer without one): no video, no reticle, no torch, the camera-off glyph.
@@ -27,7 +31,7 @@ export interface ViewfinderStripProps {
  * The compact camera strip above the live Shopping List (functional spec §10.1): a wide, short viewfinder with a
  * reticle, a torch button (when the camera has one) and a mute button. Layout only; it knows nothing about scanning.
  */
-export function ViewfinderStrip({ children, status, torch, mute, label, size = 'strip', camera = 'on' }: ViewfinderStripProps) {
+export function ViewfinderStrip({ children, status, torch, mute, label, size = 'strip', camera = 'on', controls: _controls, action: _action }: ViewfinderStripProps) {
   const off = camera === 'off'
   const line = status ?? (off ? uiStrings.noCamera : camera === 'paused' ? uiStrings.cameraPaused : undefined)
   return (

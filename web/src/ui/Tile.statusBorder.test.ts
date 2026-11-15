@@ -8,7 +8,8 @@ import { ACCENT_PRESETS } from '../features/settings/lib/accents'
 import { declarations, readUiCss, ruleBlocks } from './test-utils'
 
 const css = readUiCss('Tile.css')
-const STATUSES: StatusName[] = ['leftover', 'spoil', 'danger', 'success', 'pinned']
+// B9-17 (DS-06): warn is a status tile with the same 1 px border in its own fg.
+const STATUSES: StatusName[] = ['leftover', 'spoil', 'danger', 'success', 'pinned', 'warn']
 
 describe('Tile.css: status tiles are bordered in their tone', () => {
   it.each(STATUSES)('%s: border 1px solid its --status-*-fg', (s) => {
