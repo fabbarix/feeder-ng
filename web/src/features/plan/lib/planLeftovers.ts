@@ -1,13 +1,15 @@
 // B9-32 (PC-07, PLAN-19): "Leftovers to use" on the Plan below 1024 px is one summary row. Plain TypeScript, no React.
+// B9-55: a question waiting for an answer is counted on that row ("3 Leftovers · 1 to answer") and asked in the sheet, as the PC-07
+// mock draws one summary row: asked inline, its three answers pushed the week below the first viewport at 375 x 667.
 import { weekdayShort } from '../../../lib/leftovers/dates'
 import { tileRows } from '../../../lib/leftovers/rows'
 import type { Leftover } from '../../../lib/leftovers'
 import { planStrings as s } from '../strings'
 
 export interface LeftoverSummary {
-  /** The questions waiting for an answer: never folded into the summary. */
+  /** The questions waiting for an answer: counted in the title, asked first in the sheet. */
   questions: Leftover[]
-  /** "3 Leftovers"; null when only questions are left. */
+  /** "3 Leftovers", "3 Leftovers · 1 to answer"; null when there is nothing to list. */
   title: string | null
   /** "Cauliflower al gorgonzola, Slow cooker beef · first Use by Tue". */
   meta: string
@@ -24,15 +26,17 @@ export function leftoverSummary(leftovers: Leftover[], today: string): LeftoverS
   const rows = tileRows(leftovers, today)
   const questions = rows.filter((r) => r.kind === 'question').map((r) => byId.get(r.id)!)
   const rest = rows.filter((r) => r.kind !== 'question').map((r) => byId.get(r.id)!)
-  if (rest.length === 0) return { questions, title: null, meta: '', names: '', useBy: '', showLabel: '' }
-  const names = rest.map((l) => l.recipeName).join(', ')
-  const useBy = s.leftoverSummary.firstUseBy(weekdayShort(rest[0]!.useBy))
+  const all = [...questions, ...rest]
+  if (all.length === 0) return { questions, title: null, meta: '', names: '', useBy: '', showLabel: '' }
+  const names = all.map((l) => l.recipeName).join(', ')
+  const useBy = rest.length > 0 ? s.leftoverSummary.firstUseBy(weekdayShort(rest[0]!.useBy)) : s.leftoverSummary.toAnswer(questions.length)
+  const count = s.leftoverSummary.count(all.length)
   return {
     questions,
-    title: s.leftoverSummary.count(rest.length),
+    title: questions.length > 0 && rest.length > 0 ? `${count} · ${s.leftoverSummary.toAnswer(questions.length)}` : count,
     meta: `${names} · ${useBy}`,
     names,
     useBy,
-    showLabel: s.leftoverSummary.showLabel(rest.length),
+    showLabel: s.leftoverSummary.showLabel(all.length),
   }
 }

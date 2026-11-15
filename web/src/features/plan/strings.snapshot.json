@@ -298,6 +298,7 @@
   "count": "__fn__(n) => n === 1 ? \"1 Leftover\" : `${n} Leftovers`",
   "firstUseBy": "__fn__(weekday) => `first Use by ${weekday}`",
   "showLabel": "__fn__(n) => n === 1 ? \"Show 1 Leftover\" : `Show ${n} Leftovers`",
+    "toAnswer": "__fn__(n) => `${n} to answer`",
   "show": "Show"
  },
  "couldntShowMeals": "Show which meals",

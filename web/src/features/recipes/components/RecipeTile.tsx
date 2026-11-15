@@ -19,6 +19,8 @@ export interface RecipeTileProps {
   colourOf?: (name: string) => string | undefined
   /** Beta.5 F7: the "Last cooked ..." / "Not cooked yet" line for the meta row (lib/lastCooked), already worded. */
   lastCooked?: string
+  /** B9-55 (P38): the tile's accessible name when another Recipe of the list has the same name (lib/distinctNames). Default: the name. */
+  label?: string
 }
 
 /**
@@ -26,7 +28,7 @@ export interface RecipeTileProps {
  * meta row with the total time ("No Steps" when none) and the "+4 h ahead" Chip. The whole tile is one link-like
  * button named after the Recipe. Ready Meal and Archived are tag Chips.
  */
-export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal, colourOf, lastCooked }: RecipeTileProps): ReactNode {
+export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal, colourOf, lastCooked, label }: RecipeTileProps): ReactNode {
   const time = timeSummary(recipe)
   // BR-D: a Base recipe's tile shows its Yield and Used in where a plannable tile shows Last cooked (never both).
   const baseMeta = baseTileMeta(recipe)
@@ -36,7 +38,7 @@ export function RecipeTile({ recipe, onOpen, courseNames, wholeMeal, colourOf, l
       variant="media"
       className="recipe-tile"
       media={thumb}
-      stretched={{ label: recipe.name, onActivate: () => onOpen(recipe.id) }}
+      stretched={{ label: label ?? recipe.name, onActivate: () => onOpen(recipe.id) }}
     >
       <p className="recipe-tile__name">{recipe.name}</p>
       <div className="recipe-tile__meta">
