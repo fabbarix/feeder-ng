@@ -1,6 +1,6 @@
 import { useId, type ReactElement } from 'react'
 import { Link } from 'react-router-dom'
-import { ListRow, Thumb, Tile, TileHeader, TileHeaderLink } from '../../../ui'
+import { ListRow, Thumb, Tile, TileHeader, TileHeaderLink, TileRows } from '../../../ui'
 import type { UnitSystem } from '../../../lib/units'
 import { useSoonRow, splitUseSoon, USE_SOON_LINK } from '../lib/useSoon'
 import { todayStrings as s } from '../strings'
@@ -29,7 +29,7 @@ export function UseSoonTile({ items, system, onOpenLot }: UseSoonTileProps): Rea
   if (items.length === 0) return null
   const { rows, more } = splitUseSoon(items)
   return (
-    <Tile as="section" variant="status" status="spoil" aria-labelledby={titleId} className="use-soon">
+    <Tile as="section" variant="status" status="spoil" aria-labelledby={titleId}>
       <TileHeader
         icon="useSoon"
         {...SPOIL_BADGE}
@@ -39,7 +39,7 @@ export function UseSoonTile({ items, system, onOpenLot }: UseSoonTileProps): Rea
         countLabel={s.countItems(items.length)}
         action={<TileHeaderLink to={USE_SOON_LINK} label={s.pantryLink} context={s.useSoonLinkContext} />}
       />
-      <ul className="today__rows">
+      <TileRows className="today__rows">
         {rows.map((item) => {
           const row = useSoonRow(item, system)
           const common = {
@@ -54,7 +54,7 @@ export function UseSoonTile({ items, system, onOpenLot }: UseSoonTileProps): Rea
             <ListRow key={item.ingredientId} title={item.name} {...common} />
           )
         })}
-      </ul>
+      </TileRows>
       {more > 0 ? (
         <Link className="today__more-link" to={USE_SOON_LINK}>
           {s.useSoonMore(more)}

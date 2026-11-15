@@ -69,6 +69,8 @@ export type { TileHeaderProps, TileHeaderTone } from './TileHeader'
 // B9-44 (TB-09): a TileHeader's trailing link ("Pantry ›").
 export { TileHeaderLink } from './TileHeaderLink'
 export type { TileHeaderLinkProps } from './TileHeaderLink'
+export { TileRow, TileRows } from './TileRows'
+export type { TileRowsProps } from './TileRows'
 export { Muted } from './Muted'
 export type { MutedProps } from './Muted'
 export { Overline } from './Overline'

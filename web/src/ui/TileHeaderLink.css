@@ -6,7 +6,6 @@
   gap: var(--space-1);
   min-block-size: 44px;
   padding-inline: var(--space-1);
-  margin-inline-end: calc(-1 * var(--space-1));
   border-radius: var(--radius-button);
   background: transparent;
   color: inherit;
@@ -23,4 +22,7 @@
 }
 .tile-header__link svg {
   flex: none;
+}
+.tile-header__link-text {
+  min-inline-size: 0;
 }

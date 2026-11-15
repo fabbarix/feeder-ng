@@ -68,7 +68,7 @@ Every list uses one anatomy: Shop Lines, Pantry Stock Lots, Plan Courses, To con
 - **The title** wraps **at word boundaries**, at most **2 lines**, then ends in an ellipsis. It never uses `overflow-wrap: anywhere/break-word`, `word-break` or `hyphens: auto`. The full text stays in the accessible name.
 - **The meta line** is **one line** with an ellipsis. That is where a hint goes, coloured by its tone (`metaStatus`) and led by a 14 px icon, e.g. "ⓘ Fri Dinner +2" (the first Meal Slot, then how many more; never the word "Includes"). A row never grows a third line.
 - **A sentence that applies to many rows** is said **once**, in a notice above the list, with one action ("Review"). It is never repeated on each row.
-- **The value column** (`value`, `subValue`) has a minimum width, `--row-value-min`: 5.5 rem, or 4.25 rem below 600 px. It is end-aligned, tabular and never wraps, so quantities line up down a list.
+- **The value column** (`value`, `subValue`) has a minimum width, `--row-value-min`: 5.5 rem, or 4.25 rem below 600 px. It is end-aligned, tabular and never wraps, so quantities line up down a list. Inside a row narrower than 20 rem (a tile in a narrow track), the minimum is `--row-value-narrow`, whatever the viewport. A row inside a tile has no inline padding of its own.
 - **The whole row is the tap target.** It opens the row's sheet ("Not needed", "Mark it", Price). Only the leading control (a tick) and at most one trailing IconButton catch the pointer on their own, so lists need no ⋮ column.
 
 ## 4. Grid: by minimum tile width
@@ -86,7 +86,7 @@ grid-template-columns: repeat(auto-fill, minmax(min(var(--tile-min-*), 100%), 1f
 | `day` | `--tile-min-day` | 21 rem | Plan day tiles | 1 / 2 / 2 |
 | `wide` | `--tile-min-wide` | 28 rem | Two-up feature tiles | 1 / 1 / 2 |
 
-- **Width never comes from status.** No tile spans extra columns because it is "today" or "important". Today in Plan is marked by its accent ring and an accent name. The hero, when it spans, spans the **full row** (`span="full"`).
+- **Width never comes from status.** No tile spans extra columns because it is "today" or "important". Today in Plan is marked by its accent ring and an accent name. The hero, when it spans, spans the **full row** (`span="full"`). Exception, Today from 60 rem of page: the hero and To confirm span two of three tracks, and an aside in the third track stacks Advance Steps and the metric strip. Columns on Today come from the page's container width (40 rem → 2, 60 rem → 3), never from the viewport ([ADR 0026](../adr/0026-today-composes-its-grid-by-container-width.md)).
 - **Small tiles come only as a metric strip** (`min="metric"`, `auto-fit`) that fills its row and holds **at most three tiles per row at any width**: a track is never narrower than a third of the row (`calc((100% - 2 * var(--bento-gap)) / 3)`). On a phone the strip is one row of up to three. A half-width orphan cannot happen.
 - **Metric tiles are neutral (surface) or status-toned** (the Zero-waste streak is success), never accent-soft (§2).
 - **Gaps.** `--bento-gap` between tiles. A tile's content is top-aligned.

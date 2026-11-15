@@ -1,6 +1,6 @@
 // B9-44 (TB-09, TB-11): the Leftovers tile on Today, in its own file (re-exported from TodayTiles).
 import { useId, type ReactNode } from 'react'
-import { ListRow, Tile, TileHeader, TileHeaderLink } from '../../../ui'
+import { ListRow, Tile, TileHeader, TileHeaderLink, TileRows } from '../../../ui'
 import { LeftoverItems } from '../../../ui/LeftoverActions/LeftoverItems'
 import type { LeftoverActionKind, LeftoverAnswer } from '../../../lib/leftovers/types'
 import type { Leftover as LeftoverFull } from '../../../lib/leftovers/types'
@@ -48,7 +48,7 @@ export function LeftoversTile({ leftovers, today, flow, tone = 'leftover' }: Lef
         countLabel={s.leftoversCount(count)}
         action={<TileHeaderLink to="/pantry?leftovers=1" label={s.pantryLink} context={s.leftoversTileTitle} />}
       />
-      <ul className="plan-leftovers__list">
+      <TileRows className="plan-leftovers__list">
         {flow ? (
           <LeftoverItems
             leftovers={full}
@@ -62,7 +62,7 @@ export function LeftoversTile({ leftovers, today, flow, tone = 'leftover' }: Lef
         ) : (
           rows.map((row) => <ListRow key={row.id} title={row.recipeName} meta={s.leftoverRowMeta(row.portions, row.useBy)} />)
         )}
-      </ul>
+      </TileRows>
     </Tile>
   )
 }

@@ -1,5 +1,5 @@
 import { useId, useState, type ReactElement } from 'react'
-import { Button, Tile, TileHeader } from '../../../ui'
+import { Button, Tile, TileHeader, TileRow, TileRows } from '../../../ui'
 import { useRowFocusAfterRemoval } from '../../plan'
 import { badgeFor, doneName, metaFor, splitShown, stepKey } from '../lib/advanceSteps'
 import { todayStrings as s } from '../strings'
@@ -36,11 +36,11 @@ export function AdvanceStepsTile({ steps, today, timeZone, onDone, offline = fal
   return (
     <Tile as="section" variant="status" status="info" aria-labelledby={titleId} className="advance-steps">
       <TileHeader icon="advanceStep" {...INFO_BADGE} title={s.advanceStepsHeading} titleId={titleId} count={steps.length} countLabel={s.countItems(steps.length)} />
-      <ul className="advance-steps__list" onFocus={focus.onFocus}>
+      <TileRows className="advance-steps__list" onFocus={focus.onFocus}>
         {shown.map((step) => {
           const badge = badgeFor(step, today, timeZone)
           return (
-            <li key={stepKey(step)} className="advance-step" data-row-focus-key={stepKey(step)}>
+            <TileRow key={stepKey(step)} className="advance-step" data-row-focus-key={stepKey(step)}>
               <p className="advance-step__when" data-overdue={badge.overdue ? 'true' : undefined}>
                 <span>{badge.top}</span>
                 <span>{badge.bottom}</span>
@@ -62,10 +62,10 @@ export function AdvanceStepsTile({ steps, today, timeZone, onDone, offline = fal
                   {s.advanceDone}
                 </Button>
               </div>
-            </li>
+            </TileRow>
           )
         })}
-      </ul>
+      </TileRows>
       {more > 0 ? (
         <Button variant="secondary" size="sm" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
           {expanded ? s.advanceShowFewer : s.advanceShowMore(more)}
