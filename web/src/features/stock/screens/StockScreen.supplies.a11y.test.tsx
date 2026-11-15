@@ -90,7 +90,7 @@ describe('Supply rows', () => {
   it('say their Restock level in text, not by colour alone; the row is one button named by the Supply', async () => {
     await view()
     const row = await screen.findByRole('button', { name: /Toilet paper/ })
-    await vi.waitFor(() => expect(row.closest('li')).toHaveTextContent('4 pieces · below Restock level 6'))
+    await vi.waitFor(() => expect(row.closest('li')).toHaveTextContent('4 pieces · Below 6 · 4 in Stock'))
   })
 })
 

@@ -145,8 +145,6 @@ export const strings = {
   /** H9 (household-items.md section 4.11): the Supplies list's stock level, the Use button and its sheet, and the toasts. */
   supplyUse: {
     noneInStock: 'None in Stock',
-    belowLevel: (stock: string, level: string) => `${stock} · below Restock level ${level}`,
-    restocksBelow: (stock: string, level: string) => `${stock} · restocks below ${level}`,
     useOne: (name: string) => `Use one ${name}`,
     useSome: (name: string) => `Use some ${name}`,
     sheetTitle: (name: string) => `Use ${name}`,

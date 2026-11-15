@@ -142,11 +142,6 @@ export const stockStrings = {
   deleted: (name: string) => `${name} removed from Stock`,
   /** H6: the Food or Supplies filter (?stock=food|supply) of the Pantry. */
   stockFilter: { heading: 'Food or Supplies', food: 'Food', supplies: 'Supplies' } as const,
-  /** H6: the row meta of a Supply: its Restock level, in words. */
-  supplies: {
-    restocksBelow: (level: string) => `restocks below ${level}`,
-    belowRestock: (level: string) => `below Restock level ${level}`,
-  },
   /** H6: a Supply's Stock Lot is used up: not waste, not a mistake. */
   usedUp: {
     heading: 'Used up',

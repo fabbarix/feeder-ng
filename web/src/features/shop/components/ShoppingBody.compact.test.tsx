@@ -5,7 +5,7 @@ import { makeLine, makeList } from '../testData'
 import { ShoppingBody } from './ShoppingBody'
 
 // b8-polish (docs/dev/design/b8-polish.md 2): ShoppingBody takes `compact` from the screen (a hook decides). A compact Supply row
-// shows "400 ml/1 l" and keeps the full "400 ml of 1 l" for assistive technology; food hints and wide rows are untouched.
+// shows "400 ml in Stock" and keeps the full "Below 1 l · 400 ml in Stock" for assistive technology; food hints and wide rows are untouched.
 const base = { system: 'metric' as const, shopName: 'Coop', onTick: () => {}, onUntick: () => {}, onOpenLine: () => {}, onScan: () => {} }
 const list = () =>
   makeList({
@@ -15,16 +15,16 @@ const list = () =>
 const supplies = () => within(screen.getByRole('list', { name: 'Supplies' }))
 
 describe('ShoppingBody: compact Restock reason', () => {
-  it('without compact the row reads "400 ml of 1 l"', () => {
+  it('without compact the row reads "Below 1 l · 400 ml in Stock"', () => {
     render(<ShoppingBody {...base} list={list()} />)
-    expect(supplies().getByText('400 ml of 1 l')).not.toHaveClass('visually-hidden')
-    expect(supplies().queryByText('400 ml/1 l')).toBeNull()
+    expect(supplies().getByText('Below 1 l · 400 ml in Stock')).not.toHaveClass('visually-hidden')
+    expect(supplies().queryByText('400 ml in Stock')).toBeNull()
   })
-  it('with compact the meta shows "400 ml/1 l" and its accessible text is the full "400 ml of 1 l"', () => {
+  it('with compact the meta shows "400 ml in Stock" and its accessible text is the full "Below 1 l · 400 ml in Stock"', () => {
     render(<ShoppingBody {...base} list={list()} compact />)
-    const meta = supplies().getByText('400 ml/1 l')
+    const meta = supplies().getByText('400 ml in Stock')
     expect(meta.closest('.list-row__meta')).toHaveAttribute('data-status', 'info')
-    expect(supplies().getByText('400 ml of 1 l')).toHaveClass('visually-hidden')
+    expect(supplies().getByText('Below 1 l · 400 ml in Stock')).toHaveClass('visually-hidden')
     expect(meta).toHaveAttribute('aria-hidden', 'true')
   })
   it('a Not needed Supply row follows the same width: compact, with the full text for assistive technology', async () => {
@@ -32,8 +32,8 @@ describe('ShoppingBody: compact Restock reason', () => {
     render(<ShoppingBody {...base} list={makeList({ lines: [], notNeeded: [line], progress: { ticked: 0, total: 0 } })} compact />)
     await userEvent.click(screen.getByRole('button', { name: 'Not needed (1)' }))
     const notNeeded = within(screen.getByRole('list', { name: 'Not needed' }))
-    expect(notNeeded.getByText('400 ml/1 l')).toBeInTheDocument()
-    expect(notNeeded.getByText('400 ml of 1 l')).toHaveClass('visually-hidden')
-    expect(notNeeded.getByText('400 ml/1 l')).toHaveAttribute('aria-hidden', 'true')
+    expect(notNeeded.getByText('400 ml in Stock')).toBeInTheDocument()
+    expect(notNeeded.getByText('Below 1 l · 400 ml in Stock')).toHaveClass('visually-hidden')
+    expect(notNeeded.getByText('400 ml in Stock')).toHaveAttribute('aria-hidden', 'true')
   })
 })

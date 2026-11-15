@@ -62,14 +62,14 @@ afterEach(() => {
 describe('SuppliesScreen: the stock level', () => {
   it('asks GET /api/stock once and shows each Supply\'s Stock beside its Restock level', async () => {
     const api = setup()
-    expect(await screen.findByText('4 pieces · below Restock level 6')).toBeInTheDocument()
-    expect(row('Dish soap')).toHaveTextContent('800 ml · restocks below 500 ml')
+    expect(await screen.findByText('Below 6 · 4 in Stock')).toBeInTheDocument()
+    expect(row('Dish soap')).toHaveTextContent('800 ml in Stock · Restocks below 500 ml')
     expect(row('Batteries')).toHaveTextContent('None in Stock')
     expect(api.callsTo('GET', '/api/stock')).toHaveLength(1)
   })
   it('marks the Supply below its level with the info tone', async () => {
     setup()
-    await screen.findByText('4 pieces · below Restock level 6')
+    await screen.findByText('Below 6 · 4 in Stock')
     expect(row('Toilet paper').querySelector('.list-row__meta')).toHaveAttribute('data-status', 'info')
     expect(row('Dish soap').querySelector('.list-row__meta')).not.toHaveAttribute('data-status')
   })
@@ -80,7 +80,7 @@ describe('SuppliesScreen: the stock level', () => {
   })
   it('disables Use for a Supply with no Stock', async () => {
     setup()
-    await screen.findByText('4 pieces · below Restock level 6')
+    await screen.findByText('Below 6 · 4 in Stock')
     expect(screen.getByRole('button', { name: 'Use one Batteries' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Use one Toilet paper' })).toBeEnabled()
   })
@@ -89,12 +89,12 @@ describe('SuppliesScreen: the stock level', () => {
 describe('SuppliesScreen: Use one piece', () => {
   it('takes one with a single tap, toasts with Undo and refreshes the level', async () => {
     const api = setup()
-    await screen.findByText('4 pieces · below Restock level 6')
+    await screen.findByText('Below 6 · 4 in Stock')
     await userEvent.click(screen.getByRole('button', { name: 'Use one Toilet paper' }))
     expect(await screen.findByText('Used 1 Toilet paper')).toBeInTheDocument()
     expect(posts(api, '/api/stock/ingredients/22/use').map((c) => c.body)).toEqual([{ quantity: 1 }])
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
-    await waitFor(() => expect(row('Toilet paper')).toHaveTextContent('3 pieces · below Restock level 6'))
+    await waitFor(() => expect(row('Toilet paper')).toHaveTextContent('Below 6 · 3 in Stock'))
     expect(api.callsTo('GET', '/api/stock').length).toBeGreaterThanOrEqual(2)
   })
   it('Undo puts back exactly what was taken', async () => {
@@ -104,30 +104,30 @@ describe('SuppliesScreen: Use one piece', () => {
       'POST /api/stock/ingredients/22/use': () => ((paper = 3), paperUsed),
       'POST /api/stock/ingredients/22/use/undo': () => ((paper = 4), { ...paperUsed, quantity: 1, total: 4 }),
     })
-    await screen.findByText(/pieces · below Restock level 6/)
+    await screen.findByText(/Below 6 · \d+ in Stock/)
     await userEvent.click(screen.getByRole('button', { name: 'Use one Toilet paper' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Undo' }))
     expect(await screen.findByText('Put back 1 Toilet paper')).toBeInTheDocument()
     expect(posts(api, '/api/stock/ingredients/22/use/undo').map((c) => c.body)).toEqual([{ taken: paperUsed.taken }])
-    await waitFor(() => expect(row('Toilet paper')).toHaveTextContent('4 pieces · below Restock level 6'))
+    await waitFor(() => expect(row('Toilet paper')).toHaveTextContent('Below 6 · 4 in Stock'))
   })
   it('says so when there is less in Stock than the list showed', async () => {
     setup({ 'POST /api/stock/ingredients/22/use': refusal(422, 'use_exceeds_stock') })
-    await screen.findByText('4 pieces · below Restock level 6')
+    await screen.findByText('Below 6 · 4 in Stock')
     await userEvent.click(screen.getByRole('button', { name: 'Use one Toilet paper' }))
     expect(await screen.findByText('There is less in Stock than that')).toBeInTheDocument()
   })
   it('does nothing offline but say a connection is needed', async () => {
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
     const api = setup()
-    await screen.findByText('4 pieces · below Restock level 6')
+    await screen.findByText('Below 6 · 4 in Stock')
     await userEvent.click(screen.getByRole('button', { name: 'Use one Toilet paper' }))
     expect(await screen.findByText('Using a Supply needs a connection')).toBeInTheDocument()
     expect(posts(api, '/api/stock/ingredients/22/use')).toEqual([])
   })
   it('never offers the Use of food: the list only holds Supplies', async () => {
     const api = setup()
-    await screen.findByText('4 pieces · below Restock level 6')
+    await screen.findByText('Below 6 · 4 in Stock')
     expect(api.callsTo('GET', '/api/ingredients?kind=supply')).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: /^Use (one|some) / })).toHaveLength(3)
   })
@@ -135,7 +135,7 @@ describe('SuppliesScreen: Use one piece', () => {
 
 describe('SuppliesScreen: Use some of a g or ml Supply', () => {
   const openSheet = async () => {
-    await screen.findByText('800 ml · restocks below 500 ml')
+    await screen.findByText('800 ml in Stock · Restocks below 500 ml')
     await userEvent.click(screen.getByRole('button', { name: 'Use some Dish soap' }))
     return screen.findByRole('dialog', { name: 'Use Dish soap' })
   }

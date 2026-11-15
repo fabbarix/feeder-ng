@@ -36,6 +36,7 @@ export function SupplyList({ supplies, stock, system, onOpen, onUse, busyIds = N
             key={supply.id}
             title={displayName(supply.name)}
             meta={level ? level.text : rowMeta(supply, system)}
+            metaCompact={level?.compact}
             metaStatus={level?.below ? 'info' : undefined}
             leading={<Thumb name={supply.name} imageUrl={supply.imageUrl} size={40} />}
             chevron

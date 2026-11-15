@@ -1,6 +1,7 @@
 // Supplies in the Pantry (household-items.md 4.2, 4.7, 6; H6): a Supply is a Stock Lot or Ingredient of kind "supply". It never goes
 // off, so its rows carry no go-off wording; it says when it restocks instead. Plain TypeScript, no React.
-import { formatQuantity, grouped, type UnitSystem } from '../../../lib/units'
+import { restockReason } from '../../../lib/restock'
+import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { stockStrings as strings } from '../strings'
 import { boughtLabel } from './ingredientLots'
 import type { BaseUnit, IngredientStock, StockKind, StockLot } from '../types'
@@ -57,19 +58,16 @@ export function householdHasSupply(lots: readonly StockLot[], choices: readonly 
   return lots.some(isSupply) || choices.some(isSupply)
 }
 
-/** The Restock level as the row says it: a piece is a bare count ("6"); millilitres and grams keep their unit. */
-function levelText(level: number, baseUnit: BaseUnit, system: UnitSystem): string {
-  return baseUnit === 'piece' ? grouped(level, 1) : formatQuantity(level, baseUnit, system)
-}
-
-/** "restocks below 6", "restocks below 1 l", or "below Restock level 6" when Stock is under it; '' without a level. */
+/**
+ * The Restock reason of a Supply row whose quantity is already on the row (SSP-05, decision SSP 4; the rule is lib/restock):
+ * "Restocks below 6", "Restocks below 1 l", or "Below 6 · 2 in Stock" when Stock is under the level; '' without a level.
+ */
 export function restockPhrase(restock: Restock | null, baseUnit: BaseUnit, system: UnitSystem): string {
   if (restock === null) return ''
-  const level = levelText(restock.level, baseUnit, system)
-  return isBelowRestock(restock) ? strings.supplies.belowRestock(level) : strings.supplies.restocksBelow(level)
+  return restockReason(restock.stock, restock.level, baseUnit, system, { stockInReason: false }).long
 }
 
-/** The meta of a Supply Lot row: "4 pieces · restocks below 6". Never a go-off phrase. */
+/** The meta of a Supply Lot row: "4 pieces · Restocks below 6". Never a go-off phrase. */
 export function supplyLotMeta(lot: StockLot, restock: Restock | null, system: UnitSystem): string {
   const parts = [formatQuantity(lot.quantity, lot.baseUnit, system)]
   const phrase = restockPhrase(restock, lot.baseUnit, system)
@@ -77,7 +75,7 @@ export function supplyLotMeta(lot: StockLot, restock: Restock | null, system: Un
   return parts.join(' · ')
 }
 
-/** The meta of a Supply in By Ingredient: "2 Stock Lots · restocks below 6". Never a go-off phrase. */
+/** The meta of a Supply in By Ingredient: "2 Stock Lots · Restocks below 6". Never a go-off phrase. */
 export function supplyRowMeta(item: IngredientStock, restock: Restock | null, system: UnitSystem): string {
   const parts = [strings.lotCount(item.lotCount)]
   const phrase = restockPhrase(restock, item.baseUnit, system)
