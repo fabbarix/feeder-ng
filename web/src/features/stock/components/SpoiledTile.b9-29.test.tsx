@@ -11,7 +11,7 @@ import { SpoiledTile } from './SpoiledTile'
 
 const today = '2026-11-09'
 const setup = () =>
-  render(<SpoiledTile today={today} lots={[makeLot({ id: 1, ingredientName: 'flour', quantity: 500, goesOff: '2026-10-03' })]} onThrowOut={() => {}} onKeep={() => {}} />)
+  render(<SpoiledTile today={today} lots={[makeLot({ id: 1, ingredientName: 'flour', quantity: 500, goesOff: '2026-10-02' })]} onThrowOut={() => {}} onKeep={() => {}} />)
 
 describe('SpoiledTile (beta.9)', () => {
   it('is a spoil tile, never a danger one', () => {

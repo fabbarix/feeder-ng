@@ -67,7 +67,8 @@ describe('LotSheet: Edit and Delete', () => {
   })
 
   it('keeps Move to, behind "Move…" (SAFE-11)', async () => {
-    setup(fine)
+    // B9-29 developer: a Not sorted Lot, so Kitchen Pantry is somewhere to move to (with no other place there is no Move…).
+    setup({ ...fine, storagePlaceId: null })
     expect(screen.queryByRole('heading', { name: 'Move to' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Move…' }))
     expect(screen.getByRole('heading', { name: 'Move to' })).toBeInTheDocument()

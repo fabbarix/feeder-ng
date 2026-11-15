@@ -176,4 +176,13 @@ export const stockStrings = {
     change: 'Change',
     changeLabel: (name: string) => `Change the date ${name} is good until`,
   },
+  /** B9-29 (SAFE-11): Add a Stock Lot never assumes the Ingredient. */
+  addLot: {
+    chooseIngredient: 'Choose an Ingredient',
+    needIngredient: 'Choose an Ingredient.',
+    needQuantity: 'Enter how much.',
+  },
+  /** B9-29 (SAFE-11): the Lot sheet's Move is a disclosure. */
+  moveDisclosure: 'Move…',
+  movePlaceNeeded: 'Choose where to move it.',
 }
