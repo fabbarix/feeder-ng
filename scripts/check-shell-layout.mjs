@@ -131,19 +131,19 @@ listeners.push(({ method, params, sessionId: sid }) => {
 // is still not ready then is a failure of its own, not a silent pass. A short settle follows for layout and transitions.
 const LOAD_CAP_MS = Number(process.env.SHELL_LAYOUT_LOAD_CAP_MS ?? 20000)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const readyProbe = (chromeless, until) => `(() => {
+const readyProbe = (chromeless, until, orText) => `(() => {
   if (window.__shellLayoutPrevious || document.readyState !== 'complete') return false
   const main = document.querySelector('main')
   if (!main || main.childElementCount === 0) return false
   if (!${chromeless} && !document.querySelector('nav.bottom-bar, nav.side-rail')) return false
   if (document.querySelector('[aria-busy="true"]')) return false
-  return ${until ? `!!document.querySelector(${JSON.stringify(until)})` : 'true'}
+  return ${until ? `!!document.querySelector(${JSON.stringify(until)})` : 'true'}${orText ? ` || document.body.innerText.includes(${JSON.stringify(orText)})` : ''}
 })()`
-async function load(url, { chromeless = false, until } = {}) {
+async function load(url, { chromeless = false, until, orText } = {}) {
   await evaluate('window.__shellLayoutPrevious = true').catch(() => {})
   await cdp('Page.navigate', { url })
   for (const end = Date.now() + LOAD_CAP_MS; Date.now() < end; await sleep(100)) {
-    if (await evaluate(readyProbe(chromeless, until)).catch(() => false)) {
+    if (await evaluate(readyProbe(chromeless, until, orText)).catch(() => false)) {
       await sleep(250)
       return true
     }
@@ -517,7 +517,7 @@ for (const width of [390, 412]) {
   const tag0 = `${width}px /_editor-fixture`
   // The fixture is a dev-only route (import.meta.env.DEV): a production build served by the Go binary has none, so rule 16 is
   // reported as not run there (it needs the Vite dev server), rather than failing every other rule's run.
-  if (!(await load(base + '/_editor-fixture?w=2268&h=3226', { until: '.crop-editor__rect, .not-found, h1' }))) {
+  if (!(await load(base + '/_editor-fixture?w=2268&h=3226', { until: '.crop-editor__rect', orText: 'Page not found' }))) {
     fail(`${tag0}: the page did not render within ${LOAD_CAP_MS / 1000} s (rule 16)`)
     continue
   }
