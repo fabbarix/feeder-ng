@@ -2,6 +2,7 @@ import { useId, useRef, type ReactNode } from 'react'
 import { Button, Chip, OptionList, Popover, TagDot } from '../../../ui'
 import { tagColourStrings } from '../../../ui/TagColour/strings'
 import { useTagChooser } from '../hooks/useTagChooser'
+import { tagKey } from '../lib/keys'
 import { recipeStrings } from '../strings'
 import type { TagCount } from '../types'
 
@@ -31,10 +32,12 @@ export function TagChooser({ tags, onChange, known = NO_TAGS, colourOf }: TagCho
     chooser.close()
     addRef.current?.focus()
   }
+  const saved = new Set(known.map((k) => tagKey(k.name)))
   const options = chooser.rows.map((r) => ({
     value: r.name,
     label: r.name,
-    meta: r.recipes === 0 ? recipeStrings.newTag : tagColourStrings.recipes(r.recipes),
+    // A Tag no one has saved yet says so; a saved Tag says how many Recipes carry it (0 too).
+    meta: saved.has(tagKey(r.name)) ? tagColourStrings.recipes(r.recipes) : recipeStrings.newTag,
     leading: <TagDot colour={colourOf?.(r.name)} />,
   }))
   const emptyText = known.length === 0 && tags.length === 0 && chooser.query.trim() === '' ? t.empty : null

@@ -49,6 +49,13 @@
   display: grid;
   gap: var(--space-2);
   min-inline-size: 0;
+  padding-inline: var(--space-1); /* an option's ring stays inside the sheet's clip */
+}
+
+/* The Tag list scrolls inside a capped height under its search, so the sheet never runs off the screen and no bar covers it (P12). */
+.tag-chooser__body [role='listbox'] {
+  max-block-size: min(20rem, 40dvh);
+  overflow-y: auto;
 }
 
 .tag-chooser__chosen {

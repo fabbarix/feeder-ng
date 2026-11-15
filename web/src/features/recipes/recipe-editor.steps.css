@@ -89,9 +89,13 @@
   white-space: nowrap;
 }
 
-/* B9-31 (user ruling): a Step's text is set at the Step weight (500), never bold. */
+/* B9-31 (user ruling): a Step's text is set at the Step weight (500), never bold. RX-02: it opens at two lines and grows with its text. */
 .step-card textarea {
   font-weight: var(--text-step-weight);
+}
+
+.step-card .ui-field__textarea {
+  min-block-size: calc(2lh + 2 * var(--space-3));
 }
 
 /* One timing row: the compact kind Segmented (each option as wide as its label, never wrapping; P30) and the Duration or Lead time.
@@ -229,6 +233,25 @@
   display: grid;
   gap: var(--space-2);
   min-inline-size: 0;
+}
+
+/* A Step that has its Photo shows it at 72 px with its actions beside it; adding another source (the drop zone, paste, link, camera)
+   is the empty picker's job, so it is not drawn under a Photo already set. Remove the Photo to choose another. */
+.step-card__photo .image-picker:has(.image-picker__preview) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step-card__photo .image-picker:has(.image-picker__preview) > :is(div:not([class]), .image-picker__sources, .image-picker__helper) {
+  display: none;
+}
+
+.step-card__photo .image-picker__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .step-card__error {

@@ -138,6 +138,17 @@
   color: var(--color-muted);
 }
 
+/* The fields of a line have no visible labels (the mock): the picker and the units say what they are, the Note has its placeholder, and
+   from 42 rem the captions name the columns. Their labels stay the accessible names. */
+.line-row .ui-field__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* A pending Ready Meal line is the summary and its actions: two tracks at every width. */
 .line-row.line-row--pending {
   grid-template-columns: minmax(0, 1fr) auto;
@@ -247,8 +258,7 @@
     grid-row: 2;
   }
 
-  /* The captions name the columns; the fields' own labels stay for assistive tech (Optional: garlic is the checkbox's name). */
-  .line-row .ui-field__label,
+  /* The captions name the columns; the Optional label is hidden too (Optional: garlic stays the checkbox's name). */
   .line-row__optional .checkbox__label {
     position: absolute;
     inline-size: 1px;

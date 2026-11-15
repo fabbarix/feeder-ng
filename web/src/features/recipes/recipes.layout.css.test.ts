@@ -97,8 +97,8 @@ describe('E-01: an ingredient line is one row from 42rem (672 px) of its lines b
     for (const c of ['quantity', 'unit', 'note', 'optional', 'remove']) expect(valueFor(`.line-row__${c}`, 'grid-area', FROM), c).toBe('auto')
     for (const sel of ['.line-row__amount', '.line-row__extras']) expect(rulesFor(sel), sel).toEqual([])
   })
-  it('from 42rem the field labels in a row and the Optional label are visually hidden (kept for assistive tech); the header names the columns', () => {
-    const body = [...rulesFor('.line-row .ui-field__label'), ...rulesFor('.line-row__optional .checkbox__label')].filter((r) => r.minWidth === FROM)
+  it('the field labels of a line are visually hidden at every width (the mock; captions name the columns from 42rem), the Optional label from 42rem; all stay for assistive tech', () => {
+    const body = [...rulesFor('.line-row .ui-field__label').filter((r) => r.minWidth === 0), ...rulesFor('.line-row__optional .checkbox__label').filter((r) => r.minWidth === FROM)]
     expect(body.length).toBe(2)
     expect(body.map((r) => r.body).join(' ')).toMatch(/clip-path:\s*inset\(50%\)/)
     expect(body.map((r) => r.body).join(' ')).toMatch(/position:\s*absolute/)
