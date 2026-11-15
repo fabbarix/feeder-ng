@@ -229,7 +229,7 @@
 /* The why chip's look on the hero (its tint and boundary), the hero's colours in dark and its focus ring are ui/Tile's hero rules
    (TB-05): this file has no dark block and no chip colour of its own. */
 
-/* TB-10: a why chip is a button; its touch target reaches 44 px through an ::after overlay (a 26 px chip, 9 px above and below),
+/* TB-10: a why chip is a button; its touch target reaches 44 px through an ::after overlay (a 26 px chip, 9 px above and below, none to the sides so the clipping row never cuts it),
    drawn whole: the chip row keeps that room above and below inside its own clipping box (padding), given back by negative margins.
    At the top it gives back only the row gap, so the target ends where the name above it ends and never covers it. */
 .plan-hero__chips {
@@ -243,7 +243,7 @@
 .plan-hero__chips .chip::after {
   content: '';
   position: absolute;
-  inset: -9px -2px;
+  inset: -9px 0;
   inline-size: auto;
   block-size: auto;
   min-inline-size: 0;
