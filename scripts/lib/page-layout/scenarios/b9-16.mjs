@@ -5,7 +5,7 @@
 //   household-errors        Household settings with an invalid Currency, saved: the error lands under the field, as wide as the field's
 //                           track (at least 120 px) and on at most two lines at 375 and 390 (SET-07: it was 112 x 54 px on three lines).
 //                           The setup measures the errors itself, so the check holds before P40 (B9-13: a field error under 120 px) lands.
-import { evaluate, js, press, byText, until } from '../helpers.mjs'
+import { evaluate, js, press, until } from '../helpers.mjs'
 
 const TOUCH = [
   { method: 'Emulation.setTouchEmulationEnabled', params: { enabled: true, maxTouchPoints: 5 } },
@@ -27,7 +27,8 @@ export default {
       const input = `(() => { const l = [...document.querySelectorAll('main form label')].find((x) => x.textContent.trim() === 'Currency'); return l && l.htmlFor ? document.getElementById(l.htmlFor) : null })()`
       if (!(await evaluate(`!!${input}`))) throw new Error('setup: no "Currency" field in the Household form')
       await evaluate(`(() => { const e = ${input}; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(e, 'EURO'); e.dispatchEvent(new Event('input', { bubbles: true })) })()`)
-      await press(byText('main form button[type=submit]', 'Save'), '"Save" in the Household form')
+      // The submit button reads "Save Household settings": find it by its first word, so a wording change does not break the setup.
+      await press(`[...document.querySelectorAll('main form button[type=submit]')].find((e) => /^Save\\b/.test(e.textContent.trim()))`, 'Save button in the Household form')
       await until(`!!document.querySelector('main form .ui-field__error')`, 'the Currency error')
       const bad = await evaluate(`(() => [...document.querySelectorAll('main form .ui-field__error')].map((e) => {
         const r = e.getBoundingClientRect(), lh = parseFloat(getComputedStyle(e).lineHeight) || 18
