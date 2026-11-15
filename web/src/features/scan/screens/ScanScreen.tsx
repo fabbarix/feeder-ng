@@ -32,6 +32,7 @@ import { ScannedList } from '../components/ScannedList'
 import { ShopPicker } from '../components/ShopPicker'
 import { StockTakeSheet } from '../components/StockTakeSheet'
 import { ToGetList } from '../components/ToGetList'
+import { useCompleteTile } from '../../shop/hooks/useCompleteTile'
 import { toGetRows } from '../lib/toGet'
 import { UnarchiveProductSheet } from '../components/UnarchiveProductSheet'
 import { NewProductSheet } from '../components/NewProductSheet'
@@ -186,6 +187,8 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   const justScanned = useJustScanned(scanCount, scanned.rows[0]?.key ?? null)
   const [priceFailure, setPriceFailure] = useState<PriceFailure | null>(null)
   // Receipt reading (beta.7): the Scanned list's last row, the session the receipt routes read, an apply's results.
+  // B9-43 (SSP-09): an empty To get of a complete list is the Shop's "Shopping List complete" tile
+  const celebration = useCompleteTile({ list: c.list, shopId: shop?.id ?? null, shopName: shop?.name ?? null })
   const receipt = useScanReceipt({ shopId: isShop && shop ? shop.id : null, scanned, online: c.online, pendingScans: c.pendingCount, refreshLive: c.refreshLive })
 
   // The Price entry's row. A new Product's row is asked for by its `new:<uuid>` key and found by its scan once the
@@ -318,6 +321,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           rows={toGetRows(scanned.toGet, scanned.rows, c.currency, c.system)}
           pendingKeys={c.toGetTick.pendingKeys}
           onTick={(entry) => void c.toGetTick.tick(entry)}
+          celebration={celebration}
         />
       )}
     </div>

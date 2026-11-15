@@ -1,12 +1,9 @@
-// SR4: the Price entry of one row (shop-scan-proposals.md 13.4): a non-modal half-height BottomSheet around the compact
-// PriceKeypad, so the Scanned list stays in view above it (the row being priced is outlined). Keyed by the entry, so the next
-// row starts afresh. It reports Save, Next and Close with what was typed; the screen saves it. Replaces PriceEditSheet.
-import { useRef } from 'react'
-import { BottomSheet } from '../../../ui/BottomSheet'
-import { PriceKeypad, type PriceEntry, type PriceKeypadHandle } from '../../../ui/PriceKeypad'
-import type { PackSize } from '../../../ui/lib/priceImplication'
+// SR4: the Price entry of one row (shop-scan-proposals.md 13.4): a non-modal half-height sheet around the compact keypad, so the
+// Scanned list stays in view above it (the row being priced is outlined). Keyed by the entry, so the next row starts afresh. It reports
+// Save, Next and Close with what was typed; the screen saves it. B9-43 (SSP-13): a thin wrapper of the shared ui/PriceSheet (the Shop's
+// "Change the Price" uses the same sheet). SSP-12 (R-B): the keypad's own footer Close is the only Close.
+import { PriceSheet, type PackSize, type PriceEntry } from '../../../ui/PriceSheet'
 import type { ScannedRow } from '../lib/scannedList'
-import { scanStrings } from '../strings'
 
 export interface PriceEntrySheetProps {
   row: ScannedRow
@@ -30,39 +27,14 @@ export interface PriceEntrySheetProps {
   entryKey?: string
 }
 
-const NOTHING_TYPED: PriceEntry = { basis: 'pack', cents: null, packCents: null, perKgCents: null }
-
-export function PriceEntrySheet({ row, shopName, currency, locale, pack, last, weighed, initialPerKgCents, hasNext, error, onNext, onSave, onClose, entryKey }: PriceEntrySheetProps) {
-  const keypad = useRef<PriceKeypadHandle>(null)
-  // Escape closes like the keypad's Close: through the keypad, which keeps a valid typed Price.
-  const close = () => (keypad.current ? keypad.current.close() : onClose(NOTHING_TYPED))
+export function PriceEntrySheet({ row, entryKey, ...rest }: PriceEntrySheetProps) {
   return (
-    // SSP-12 (R-B): the keypad's own footer Close is the only Close; the header has none. Escape still closes with what was typed.
-    <BottomSheet open modal={false} size="half" title={scanStrings.priceOf(row.name)} onClose={close} closeButton={false}>
-      <PriceKeypad
-        ref={keypad}
-        key={entryKey ?? row.key}
-        compact
-        showName={false}
-        productName={row.name}
-        currency={currency}
-        locale={locale}
-        pack={pack}
-        last={last}
-        weighed={weighed}
-        initialCents={row.weighed ? null : row.priceCents}
-        initialPerKgCents={initialPerKgCents}
-        shopName={shopName}
-        hasNext={hasNext}
-        onNext={onNext}
-        onSave={onSave}
-        onClose={onClose}
-      />
-      {error ? (
-        <p role="alert" className="price-entry__error">
-          {error}
-        </p>
-      ) : null}
-    </BottomSheet>
+    <PriceSheet
+      {...rest}
+      modal={false}
+      productName={row.name}
+      initialCents={row.weighed ? null : row.priceCents}
+      entryKey={entryKey ?? row.key}
+    />
   )
 }

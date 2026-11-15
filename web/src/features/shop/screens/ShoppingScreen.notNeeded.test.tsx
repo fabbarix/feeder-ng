@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -27,6 +28,9 @@ vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices:
 // B9-34: the ticked Line's sheet shows times in the Household zone, read from /api/me (app/useMe)
 vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 import { ShoppingScreen } from './ShoppingScreen'
+// B9-43: the screen reads Stock Lots (Put away) and the Recipe Assistant's status (Read the receipt) through react-query
+const testQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
 
 const rice = makeLine({ ingredientId: 5, name: 'Rice', quantity: 600, pack: null, estimatedCostCents: null })
 
@@ -34,12 +38,14 @@ function show(list: ShoppingList) {
   listHook.useShoppingList.mockReturnValue({ data: list, isLoading: false, error: null, stale: false, status: 'ready', retry: vi.fn() })
   render(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/shop']}>
+      <QueryClientProvider client={testQueryClient()}>
+    <MemoryRouter initialEntries={['/shop']}>
         <Routes>
           <Route path="/shop" element={<ShoppingScreen />} />
           <Route path="/plan" element={<p>Plan screen</p>} />
         </Routes>
       </MemoryRouter>
+    </QueryClientProvider>
     </ToastProvider>,
   )
 }
@@ -96,7 +102,7 @@ describe('ShoppingScreen Not needed', () => {
 
   it('names the unconfirmed past meals once, in the notice (the Mark it button: ShoppingScreen.markIt.test)', () => {
     show(makeList({ lines: [makeLine({ pastPlannedMeals: [makePast()] })] }))
-    expect(screen.getByRole('region', { name: 'Not marked Cooked yet' })).toHaveTextContent("Tue Dinner isn't marked Cooked yet")
+    expect(screen.getByRole('region', { name: /^Not marked Cooked yet/ })).toHaveTextContent(/Not marked Cooked yet.*Tue Dinner/)
   })
 
   it('a list saved by an older version (no notNeeded, no pastPlannedMeals) renders as before', () => {

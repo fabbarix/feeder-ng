@@ -1,7 +1,7 @@
 // XS: the Add to Shopping List sheet picks ONE mode (an Ingredient with a quantity, or a note), so a draft is checked
 // for the mode it is in; "text and Ingredient together" can no longer happen.
 import { describe, expect, it } from 'vitest'
-import { checkExtraDraft } from './extraDraft'
+import { addedNameOf, checkExtraDraft } from './extraDraft'
 
 const base = { text: '', ingredientId: null, quantityText: '' }
 
@@ -32,5 +32,18 @@ describe('checkExtraDraft: Ingredient mode', () => {
   })
   it('ignores leftover text from the other mode', () => {
     expect(checkExtraDraft({ mode: 'ingredient', text: 'candles', ingredientId: 1, quantityText: '5' })).toEqual({ ok: true, input: { ingredientId: 1, quantity: 5 } })
+  })
+})
+
+describe('addedNameOf (B9-43, SSP-14)', () => {
+  const ingredients = [{ id: 6, name: 'shallot' }]
+  it('an Ingredient extra is named by its display name', () => {
+    expect(addedNameOf({ ingredientId: 6, quantity: 12 }, ingredients)).toBe('Shallot')
+  })
+  it('free text is named as typed', () => {
+    expect(addedNameOf({ text: 'shallots from the market' }, ingredients)).toBe('shallots from the market')
+  })
+  it('an Ingredient that is not loaded has no name', () => {
+    expect(addedNameOf({ ingredientId: 99, quantity: 1 }, ingredients)).toBe('')
   })
 })

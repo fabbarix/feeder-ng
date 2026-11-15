@@ -1,5 +1,5 @@
 // DS-SHOP (docs/design/system.md §2, §4): the header metrics as a metric strip (BentoGrid min="metric"): "16 of 18 left" over a
-// full-width progress track, the estimated total, and the Scan tile (the one primary action). Render only.
+// full-width progress track, the estimated total, and the Scan tile (the one primary action, until the list is complete). Render only.
 import { BentoGrid } from '../../../ui/BentoGrid'
 import { Button } from '../../../ui/Button'
 import { Tile } from '../../../ui/Tile'
@@ -12,7 +12,7 @@ export interface ShopMetricsProps {
 }
 
 export function ShopMetrics({ summary, onScan }: ShopMetricsProps) {
-  const { left, ticked, total, percent, leftOf, meta, estimated, unpriced } = summary
+  const { left, ticked, total, percent, leftOf, meta, estimated, unpriced, complete } = summary
   return (
     <BentoGrid min="metric" label={shopStrings.summary}>
       <Tile className="shop-metrics__tile">
@@ -37,8 +37,13 @@ export function ShopMetrics({ summary, onScan }: ShopMetricsProps) {
         </Tile>
       ) : null}
       <Tile className="shop-metrics__scan-tile">
-        {unpriced ? <p className="shop-metrics__caption">{unpriced.text}</p> : null}
-        <Button size="sm" icon="scan" className="shop-metrics__scan" onClick={onScan}>
+        {complete ? (
+          <p className="shop-metrics__caption">{shopStrings.everyLineTicked}</p>
+        ) : unpriced ? (
+          <p className="shop-metrics__caption">{unpriced.text}</p>
+        ) : null}
+        {/* B9-43 (SSP-09): with every Line ticked the complete tile owns the one primary; Scan steps back to an outlined secondary */}
+        <Button size="sm" icon="scan" variant={complete ? 'secondary' : 'primary'} className="shop-metrics__scan" onClick={onScan}>
           {shopStrings.scan}
         </Button>
       </Tile>

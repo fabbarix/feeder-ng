@@ -43,11 +43,11 @@ describe('LineRow: the ticked row says what reached Stock (SSP-01)', () => {
     expect(meta(container)).not.toHaveAttribute('data-status')
   })
 
-  it('a Line added twice: "Added twice · Sam 50 g, you 50 g", compact "Added twice · 100 g"', () => {
+  it('a Line added twice: "Added twice · Sam 50 g, you 50 g", compact "Twice · 100 g" (B9-43: shorter, it was cut at 375)', () => {
     const tick = makeTick({ additions: [makeAddition({ who: 'Sam', mine: false, quantity: 50 }), makeAddition({ quantity: 50, clientUuid: 'u-2' })] })
     const { container } = row(ticked(tick), 'ticked')
     expect(meta(container).querySelector('.list-row__meta-text')).toHaveTextContent('Added twice · Sam 50 g, you 50 g')
-    expect(container.querySelector('.list-row__meta-compact')).toHaveTextContent('Added twice · 100 g')
+    expect(container.querySelector('.list-row__meta-compact')).toHaveTextContent('Twice · 100 g')
   })
 
   it('the value stays what the Line needed, and the tick keeps its stable name with aria-pressed', () => {

@@ -43,7 +43,7 @@ export function tickedMeta(tick: LineTick | null | undefined, baseUnit: BaseUnit
     const times = shopStrings.addedTimes(tick.additions.length)
     return {
       text: `${times} · ${who.join(', ')}`,
-      compact: `${times} · ${q(total)}`,
+      compact: `${shopStrings.addedTimesCompact(tick.additions.length)} · ${q(total)}`,
       tone: total > 0 ? 'success' : 'muted',
       icon: 'rotateRight',
     }

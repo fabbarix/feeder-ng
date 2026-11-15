@@ -1,6 +1,7 @@
 // SR4: the To get view of the Scan screen: the Shopping List's open Lines not yet covered. A tap on a row ticks that Line by
 // hand (no navigation); a row whose tick is in flight is busy and ignores taps. Its second line reads like a Scanned row's:
-// the pack, then one tick and "x of y". With nothing left it says so. Render only (the rows come from lib/toGet).
+// the pack, then one tick and "x of y". With nothing left it says so; B9-43 (SSP-09): with every Line ticked it shows the Shop's
+// "Shopping List complete" tile instead. Render only (the rows come from lib/toGet).
 import { EmptyState } from '../../../ui/EmptyState'
 import { ListGroup, ListRow } from '../../../ui/ListRow'
 import { Thumb } from '../../../ui/Thumb'
@@ -8,6 +9,7 @@ import type { ListEntry } from '../../shop/lib/lines'
 import { rowValue } from '../../shop/lib/rows'
 import type { ToGetRow } from '../lib/toGet'
 import { scanStrings } from '../strings'
+import { CelebrationTile, type CelebrationTileProps } from '../../shop/components/CelebrationTile'
 import { CoverMeta } from './CoverMeta'
 
 export interface ToGetListProps {
@@ -15,10 +17,13 @@ export interface ToGetListProps {
   /** the keys of the rows whose tick is in flight */
   pendingKeys: ReadonlySet<string>
   onTick: (entry: ListEntry) => void
+  /** B9-43 (SSP-09): with nothing left to get, the Shop's "Shopping List complete" tile (the same CelebrationTile); omitted = the plain empty state */
+  celebration?: CelebrationTileProps | null
 }
 
-export function ToGetList({ rows, pendingKeys, onTick }: ToGetListProps) {
+export function ToGetList({ rows, pendingKeys, onTick, celebration }: ToGetListProps) {
   if (rows.length === 0) {
+    if (celebration) return <CelebrationTile {...celebration} />
     return <EmptyState title={scanStrings.nothingToGet} description={scanStrings.nothingToGetHint} icon="success" />
   }
   return (

@@ -14,6 +14,8 @@ export interface DetailListProps {
   className?: string
   /** The id of a visible label that names the list ("Goes with Sam"): a screen reader reads "Goes with Sam, list, 3 items". */
   'aria-labelledby'?: string
+  /** B9-43: a name for a list with no visible label ("This shop", "Line"); `aria-labelledby` wins when both are given. */
+  'aria-label'?: string
   /** DetailRow elements. */
   children?: ReactNode
 }
@@ -28,7 +30,7 @@ export interface DetailRowProps {
 }
 
 /** A `<ul role="list">`; a screen reader reads each row as key, state, detail. */
-export function DetailList({ tone = 'neutral', fill, className, 'aria-labelledby': labelledBy, children }: DetailListProps) {
+export function DetailList({ tone = 'neutral', fill, className, 'aria-labelledby': labelledBy, 'aria-label': label, children }: DetailListProps) {
   return (
     <ul
       role="list"
@@ -36,6 +38,7 @@ export function DetailList({ tone = 'neutral', fill, className, 'aria-labelledby
       data-tone={tone}
       data-fill={fill === 'surface' ? 'surface' : undefined}
       aria-labelledby={labelledBy}
+      aria-label={labelledBy ? undefined : label}
     >
       {children}
     </ul>

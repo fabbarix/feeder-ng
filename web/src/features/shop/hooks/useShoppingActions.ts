@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { newClientUuid } from '../../scan/lib/queue'
 import { shopApi } from '../api'
-import type { ChangeTickInput, ChangeTickResult, ExtraInput, NotNeededInput, TickResult } from '../types'
+import type { ChangeTickInput, ChangeTickResult, ExtraInput, NotNeededInput, ShoppingExtra, TickResult } from '../types'
 import { liveRefreshFor } from '../lib/liveRefresh'
 
 export interface ShoppingActions {
@@ -17,7 +17,8 @@ export interface ShoppingActions {
   changeExtraTick(id: number, quantity: number): Promise<ChangeTickResult>
   /** B9-34: take one addition (by its client id) off its Line as if never made; refreshes the list and Stock. */
   untickAddition(tickClientUuid: string): Promise<void>
-  addExtra(input: ExtraInput): Promise<void>
+  /** B9-43 (SSP-14): resolves with the new extra, so "Get something else…" can Undo it. */
+  addExtra(input: ExtraInput): Promise<ShoppingExtra>
   deleteExtra(id: number): Promise<void>
   tickExtra(id: number, quantity: number, shopId?: number | null, clientUuid?: string): Promise<TickResult>
   untickExtra(id: number): Promise<void>
@@ -72,8 +73,9 @@ export function useShoppingActions(): ShoppingActions {
         await refreshStock()
       },
       async addExtra(input) {
-        await shopApi.addExtra(input)
+        const extra = await shopApi.addExtra(input)
         await refreshList()
+        return extra
       },
       async deleteExtra(id) {
         await shopApi.deleteExtra(id)

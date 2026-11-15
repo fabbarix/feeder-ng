@@ -10,6 +10,18 @@ export interface PackSuggestion {
   remainder: number
   /** B9-23: the Price of a pack the Ingredient was never bought as (the priced fallback); absent or null for a last-bought pack. */
   price?: { cents: number; date: string; shopId: number } | null
+  /** B9-06 (SSP-13): false = the Product was never bought and its pack is suggested from a known Price (the priced fallback). */
+  bought?: boolean
+}
+
+/** B9-06 (SSP-14): a Planned Meal a Line is for. The server always sends the list (empty for a Line no meal needs). */
+export interface PlannedMealRef {
+  /** YYYY-MM-DD */
+  date: string
+  mealSlotId: number
+  mealSlotName: string
+  courseName: string
+  recipeName: string
 }
 
 /** B5-SH: a Planned Meal whose slot has passed and that is not marked Cooked or Not cooked yet; one entry per Course. */
@@ -65,6 +77,8 @@ export interface ShoppingLine {
   imageUrl?: string
   /** B5-SH: the unconfirmed past meals this need includes; absent in a list saved by an older version. */
   pastPlannedMeals?: PastPlannedMeal[]
+  /** B9-06 (SSP-14): the Planned Meals this Line is for; absent in a list saved by an older version. */
+  plannedMeals?: PlannedMealRef[]
   /** H4/H7′: a Supply is 'supply'; absent (an older saved list) or 'food' is food. */
   kind?: 'food' | 'supply'
   /** H7′: why a Supply Line is on the list (Base Units): its Restock level and the Stock now; null when it has no reason. */

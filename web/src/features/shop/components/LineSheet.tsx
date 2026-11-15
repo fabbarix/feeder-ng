@@ -2,10 +2,14 @@
 // "not marked Cooked yet" sentence) and its rare actions. The tick stays on the row. Render only.
 // B9-34 (SSP-18, mocks/ssp-18-ticked-sheet.html): a ticked entry's sheet is not a dead end: a state line, what the Line needed, the
 // additions as R-E rows (each hand addition with its own Take back: anyone may take back any hand addition), then Change amount and
-// Untick, and one note. The open Line's sheet (B9-43's) is unchanged here.
-import { useEffect, useRef } from 'react'
+// Untick, and one note.
+// B9-43 (SSP-13, SSP-14; mocks/ssp-13-line-sheet.html): an open Line's sheet is two R-E rows (To get, Estimated at <Shop>), Change the Price
+// (or "No Product yet: scan one in the Shop"), the Planned Meals it is "For" as rows, then Get something else… and Not needed side by side
+// and one line saying what Not needed leaves short. One Close (the circular one), no Cancel, no primary (the one primary is Scan).
+import { useEffect, useId, useRef } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import { DetailList, DetailRow } from '../../../ui/DetailList'
 import { Icon } from '../../../ui/Icon'
 import type { IconName } from '../../../ui/icons'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
@@ -13,6 +17,7 @@ import type { TickAddition } from '../types'
 import type { LineAction } from '../lib/rows'
 import type { ListEntry } from '../lib/lines'
 import { additionDetail } from '../lib/tickAmount'
+import { canChangePrice } from '../lib/changePrice'
 import { shopStrings } from '../strings'
 
 export interface LineSheetProps {
@@ -26,6 +31,10 @@ export interface LineSheetProps {
   timeZone?: string | null
   /** B9-34: Take back one addition of this ticked entry (hand additions only; anyone's) */
   onTakeBack?: (entry: ListEntry, addition: TickAddition) => void
+  /** B9-43 (SSP-13): the Shop the estimate is at ("Estimated at Coop"); null/omitted for Any Shop ("Estimated") */
+  shopName?: string | null
+  /** B9-43 (SSP-13): "Change the Price" opens the Price sheet of the Line's Product; the sheet stays open under it */
+  onChangePrice?: (entry: ListEntry) => void
 }
 
 const labels: Record<Exclude<LineAction, 'delete'>, string> = {
@@ -34,18 +43,23 @@ const labels: Record<Exclude<LineAction, 'delete'>, string> = {
   'needed-after-all': shopStrings.neededAfterAll,
   'change-amount': shopStrings.changeAmount,
   'untick': '',
+  'get-something-else': shopStrings.getSomethingElse,
 }
 
-const actionIcons: Partial<Record<LineAction, IconName>> = { 'change-amount': 'edit', untick: 'undo' }
+const actionIcons: Partial<Record<LineAction, IconName>> = { 'change-amount': 'edit', untick: 'undo', 'get-something-else': 'swap' }
 
-export function LineSheet({ entry, actions, onAction, onClose, system = 'metric', timeZone, onTakeBack }: LineSheetProps) {
+export function LineSheet({ entry, actions, onAction, onClose, system = 'metric', timeZone, onTakeBack, shopName = null, onChangePrice }: LineSheetProps) {
   if (!entry) return null
   const isLine = entry.kind === 'line' && !entry.ticked
+  const details = isLine ? entry.details : undefined
+  const consequence = details && actions.includes('not-needed') ? details.consequence : ''
   return (
     <BottomSheet open onClose={onClose} title={entry.title}>
       <div className="shop-line-sheet">
         {entry.ticked ? (
           <TickedDetails entry={entry} actions={actions} system={system} timeZone={timeZone ?? null} onTakeBack={onTakeBack} />
+        ) : details ? (
+          <OpenDetails entry={entry} shopName={shopName} onChangePrice={onChangePrice} />
         ) : (
           <>
             {entry.quantityText ? <p className="shop-line-sheet__quantity">{entry.quantityText}</p> : null}
@@ -74,9 +88,50 @@ export function LineSheet({ entry, actions, onAction, onClose, system = 'metric'
             )}
           </div>
         ) : null}
+        {consequence ? <p className="shop-line-sheet__consequence">{consequence}</p> : null}
         {entry.ticked && hasHandAddition(entry) ? <p className="shop-line-sheet__note">{shopStrings.tickedNote}</p> : null}
       </div>
     </BottomSheet>
+  )
+}
+
+interface OpenDetailsProps {
+  entry: ListEntry
+  shopName: string | null
+  onChangePrice?: (entry: ListEntry) => void
+}
+
+/** B9-43: the open Line's rows, Change the Price and "For". `entry.details` is set (lib/lineDetails). */
+function OpenDetails({ entry, shopName, onChangePrice }: OpenDetailsProps) {
+  const forId = useId()
+  const details = entry.details!
+  return (
+    <>
+      <DetailList aria-label={shopStrings.lineRows} className="shop-line-sheet__rows">
+        <DetailRow label={shopStrings.toGet} state={details.toGet.state} detail={details.toGet.detail} />
+        <DetailRow label={shopName ? shopStrings.estimatedAtShop(shopName) : shopStrings.estimated} state={details.estimate.state} detail={details.estimate.detail} />
+      </DetailList>
+      {details.product === null ? (
+        <p className="shop-line-sheet__no-product">{shopStrings.noProductYet}</p>
+      ) : onChangePrice && canChangePrice(details, shopName !== null) ? (
+        <Button variant="secondary" size="sm" icon="price" className="shop-line-sheet__price" onClick={() => onChangePrice(entry)}>
+          {shopStrings.changePrice}
+        </Button>
+      ) : null}
+      {details.plannedMeals.length > 0 ? (
+        <div className="shop-line-sheet__for">
+          <h3 className="shop-line-sheet__for-title" id={forId}>
+            {shopStrings.forTitle}
+          </h3>
+          <DetailList aria-labelledby={forId}>
+            {details.plannedMeals.map((row, i) => (
+              <DetailRow key={`${row.key}|${i}`} label={row.key} detail={row.detail} />
+            ))}
+          </DetailList>
+          {details.morePlannedMeals > 0 ? <p className="shop-line-sheet__more">{shopStrings.andMore(details.morePlannedMeals)}</p> : null}
+        </div>
+      ) : null}
+    </>
   )
 }
 

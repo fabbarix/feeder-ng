@@ -261,13 +261,6 @@
   border-radius: var(--radius-tile-sm);
 }
 
-.price-entry__error {
-  margin: 0;
-  color: var(--status-danger-fg);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-}
-
 /* The Price entry is a non-modal half sheet fixed at the bottom on a phone: the page gets room under the list, so even the
    last row can scroll up to sit just above it (hooks/useScrollAboveSheet). From 768 px the sheet is docked in the camera
    column and needs no room. The room is the half sheet's own height (ui/BottomSheet.css, .sheet[data-size='half']), named

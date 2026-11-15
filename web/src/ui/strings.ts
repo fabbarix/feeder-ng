@@ -14,6 +14,8 @@ export const uiStrings = {
   noCamera: 'No camera available',
   // PriceKeypad (beta.7 SR2, shop-scan-proposals.md 13.4)
   priceOf: (product: string) => `Price of ${product}`,
+  /** B9-43: the Shop the Price sheet records the Price at ("At Coop") */
+  priceAt: (shop: string) => `At ${shop}`,
   priceBasis: 'Price basis',
   keypad: 'Keypad',
   decimalKey: 'Decimal separator',

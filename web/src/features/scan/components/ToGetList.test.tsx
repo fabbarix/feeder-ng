@@ -129,3 +129,38 @@ describe('ToGetList: accessibility', () => {
     expect(list.querySelector('.list-row__meta svg')).toHaveAttribute('aria-hidden', 'true')
   })
 })
+
+// B9-43 (SSP-09; mocks/ssp-09-complete.html): with nothing left to get, Scan's To get shows the SAME CelebrationTile as the Shop (shared), not
+// the plain "Nothing left to get" empty state, when the screen passes it a `celebration` (the tile's props). Without it, the empty state stays.
+describe('ToGetList: the complete tile as the empty state (SSP-09)', () => {
+  const celebration = {
+    summary: { lines: 20, spentCents: 1079, lotsAdded: 23 },
+    currency: 'USD',
+    shopName: 'Coop',
+    unsorted: 17,
+    canReadReceipt: false,
+    onPutAway: vi.fn(),
+    onReadReceipt: vi.fn(),
+  }
+
+  it('shows "Shopping List complete" with its rows and the Put away primary', async () => {
+    setup({ rows: [], celebration })
+    const tile = screen.getByRole('status')
+    expect(tile).toHaveTextContent('Shopping List complete')
+    expect(within(tile).getByRole('list', { name: 'This shop' })).toHaveTextContent('Lines ticked')
+    await userEvent.click(within(tile).getByRole('button', { name: 'Put away 17 Stock Lots' }))
+    expect(celebration.onPutAway).toHaveBeenCalledOnce()
+    expect(screen.queryByText('Nothing left to get')).toBeNull()
+  })
+
+  it('keeps the plain empty state without a celebration', () => {
+    setup({ rows: [] })
+    expect(screen.getByText('Nothing left to get')).toBeInTheDocument()
+    expect(screen.queryByText('Shopping List complete')).toBeNull()
+  })
+
+  it('shows the list, not the tile, while rows are left', () => {
+    setup({ celebration })
+    expect(screen.queryByText('Shopping List complete')).toBeNull()
+  })
+})
