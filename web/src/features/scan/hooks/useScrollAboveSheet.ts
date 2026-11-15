@@ -15,7 +15,9 @@ export function useScrollAboveSheet(rowKey: string | null, fresh: JustScanned | 
   useEffect(() => {
     if (freshKey === null || rowKey !== null || typeof window === 'undefined') return
     const frame = window.requestAnimationFrame(() => {
-      document.querySelector<HTMLElement>('.list-row[data-fresh]')?.scrollIntoView({ block: 'nearest', behavior: smoothScroll() ? 'smooth' : 'auto' })
+      const row = document.querySelector<HTMLElement>('.list-row[data-fresh]')
+      // jsdom has no scrollIntoView
+      if (typeof row?.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest', behavior: smoothScroll() ? 'smooth' : 'auto' })
     })
     return () => window.cancelAnimationFrame(frame)
     // a new scan only: the keypad closing does not scroll the last fresh row again
