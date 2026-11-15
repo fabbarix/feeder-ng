@@ -129,7 +129,8 @@ l_build=$(grep -n 'step "vite build"' "$CH" | cut -d: -f1); l_b=$(grep -n 'check
 if (cd "$WEB" && pnpm exec vite build --outDir "$SCRATCH/dist" --emptyOutDir >"$SCRATCH/build.log" 2>&1); then
   D="$SCRATCH/dist"
   entry="$(grep -oE 'src="/assets/index-[^"]+\.js"' "$D/index.html" | head -1 | sed -E 's|src="/(.*)"|\1|')"
-  css="$(grep -oE 'href="/assets/index-[^"]+\.css"' "$D/index.html" | head -1 | sed -E 's|href="/(.*)"|\1|')"
+  # the app's one stylesheet, as index.html names it (B9-59: cssCodeSplit is off, so it is style-*.css, no longer index-*.css)
+  css="$(grep -oE '<link[^>]*rel="stylesheet"[^>]*href="/assets/[^"]+\.css"' "$D/index.html" | grep -oE 'href="/assets/[^"]+"' | head -1 | sed -E 's|href="/(.*)"|\1|')"
   [ -n "$entry" ] && [ -f "$D/$entry" ] && ok || bad "build: the entry JS is not named in index.html"
   for f in "$entry" "$css"; do
     for ext in br gz; do
