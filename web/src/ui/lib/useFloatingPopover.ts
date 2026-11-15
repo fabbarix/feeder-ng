@@ -2,6 +2,7 @@
 // Popover API too: the element is still position: fixed and placed by script. Used by Select and DateField, so a dialog's
 // overflow or stacking context cannot clip the list.
 import { useEffect, useLayoutEffect, type RefObject } from 'react'
+import { floatingFloor } from './floatingFloor'
 import { placePopover } from './placePopover'
 
 type PopoverEl = HTMLElement & { showPopover?: () => void; hidePopover?: () => void }
@@ -96,6 +97,7 @@ function place(anchorEl: HTMLElement | null, el: HTMLElement | null, options: Pl
     anchor: { top: a.top, left: a.left, right: a.right, bottom: a.bottom },
     size: { width: p.width, height: p.height },
     viewport: { width: window.innerWidth, height: window.innerHeight },
+    floor: floatingFloor(anchorEl, window.innerHeight),
     ...options,
   })
   el.style.position = 'fixed'
