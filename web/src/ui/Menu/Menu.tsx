@@ -7,6 +7,7 @@ import { IconButton, type IconButtonProps } from '../IconButton'
 import { Switch } from '../fields/Switch'
 import type { IconName } from '../icons'
 import { useBreakpoint } from '../lib/breakpoints'
+import { floatingFloor } from '../lib/floatingFloor'
 import { ListGroup, ListRow } from '../ListRow'
 import { useMenuKeys } from './useMenuKeys'
 import './Menu.css'
@@ -114,7 +115,8 @@ function Popover({
     const m = menuRef.current?.getBoundingClientRect()
     if (!t || !m) return
     const below = t.bottom + GAP
-    const fits = below + m.height <= window.innerHeight - GAP
+    // Never under the floating bottom bar (b9-w2b): the floor is the bar's top while it shows, else the viewport bottom.
+    const fits = below + m.height <= floatingFloor(triggerRef.current, window.innerHeight) - GAP
     const top = fits ? below : Math.max(GAP, t.top - GAP - m.height)
     // End-aligned with the trigger; a trigger near the start edge (the ⋮ first in a FormActions row) gets it start-aligned instead.
     // The start edge is the open dialog the trigger is in (a ⋮ in a centred sheet's footer opens inside the sheet), else the viewport.
