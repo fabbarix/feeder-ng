@@ -21,10 +21,14 @@ export function initialMatchKey(matches: ReceiptMatch[]): string | null {
   return first?.kind === 'product' ? matchKey(first) : null
 }
 
-/** The Lines under "Other Lines": every chip but the Lines the matches already offer. */
+/** How many "Other Lines" show before "More Lines" (mocks/ssp-08-add.html draws three), so a chosen match's note and Use stay near it. */
+export const OTHER_LINES_SHOWN = 3
+
+/** The Lines under "Other Lines": every chip but the Lines the matches already offer; three show, the rest are behind "More Lines". */
 export function otherLines(chips: LineChips, matches: ReceiptMatch[]): LineChips {
   const offered = new Set(matches.filter((m) => m.kind === 'line').map((m) => m.ingredientId))
-  return { chips: chips.chips.filter((c) => !offered.has(c.ingredientId)), more: chips.more.filter((c) => !offered.has(c.ingredientId)) }
+  const all = [...chips.chips, ...chips.more].filter((c) => !offered.has(c.ingredientId))
+  return { chips: all.slice(0, OTHER_LINES_SHOWN), more: all.slice(OTHER_LINES_SHOWN) }
 }
 
 /** The Line chip a Line match stands for: the sheet's own chip of that Ingredient, else one built from the match. */

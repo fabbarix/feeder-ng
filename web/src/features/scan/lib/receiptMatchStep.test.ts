@@ -27,6 +27,12 @@ describe('receiptMatchStep', () => {
     const out = otherLines(lineChips(candidates), [product, line])
     expect(out.chips.map((c) => c.name)).toEqual(['Cheese'])
   })
+  it('Other Lines shows three, as the mock draws it; the rest are behind More Lines (batch w5a: Use stays near the matches at 375)', () => {
+    const many = ['Apples', 'Beans', 'Carrots', 'Dates', 'Eggs'].map((name, i) => ({ ingredientId: 100 + i, name, baseUnit: 'g' as const, kind: 'food' as const, restock: false, quantity: 100 }))
+    const out = otherLines({ chips: many.slice(0, 4), more: many.slice(4) }, [product])
+    expect(out.chips.map((c) => c.name)).toEqual(['Apples', 'Beans', 'Carrots'])
+    expect(out.more.map((c) => c.name)).toEqual(['Dates', 'Eggs'])
+  })
   it('a Line match picks the sheet\'s own chip, or one built from the match', () => {
     expect(chipOfLineMatch(line, lineChips(candidates)).name).toBe('Kitchen roll')
     expect(chipOfLineMatch(line, { chips: [], more: [] })).toEqual({ ingredientId: 7, name: 'Kitchen roll', baseUnit: 'piece', kind: 'food', restock: false, quantity: 2 })
