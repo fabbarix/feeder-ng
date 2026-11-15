@@ -103,8 +103,6 @@
 .sheet__body {
   flex: 1 1 auto;
   min-height: 0;
-  /* SHORT-02 rule 3: never squeezed to nothing by the header and footer. */
-  min-block-size: min(6rem, 30dvh);
   overflow-y: auto;
   overscroll-behavior: contain;
   /* A scrolling body clips at its own edges, so a focused field's ring (up to 3px + 2px offset) needs room inside it: the
@@ -114,6 +112,12 @@
   /* R-C: 5 px of block room too (3 px ring + 2 px offset), and a focused control scrolled into view keeps it. */
   padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
   scroll-padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+}
+
+/* SHORT-02 rule 3: a squeezed body (the panel at its maximum height, the body scrolling: BottomSheet sets data-body="scroll") is
+   never squeezed to nothing by the header and footer. A body that fits keeps its content's height: no floor, no blank space. */
+.sheet__panel[data-body='scroll'] .sheet__body {
+  min-block-size: min(6rem, 30dvh);
 }
 
 /* A status chip in the body keeps its natural width (it is never stretched across a grid or flex column). */

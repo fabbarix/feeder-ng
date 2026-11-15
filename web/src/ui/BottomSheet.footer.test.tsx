@@ -177,6 +177,19 @@ describe('data-footer="flow" (SHORT-02 rule 5)', () => {
     trigger()
     expect(panel).not.toHaveAttribute('data-footer')
   })
+  it('data-body="scroll" (the body floor) is set only while the body scrolls, never for a body that fits', () => {
+    const { panel, body } = render390()
+    size(panel, { clientHeight: 400 })
+    size(body, { clientHeight: 60, scrollHeight: 60 })
+    trigger()
+    expect(panel).not.toHaveAttribute('data-body')
+    size(body, { clientHeight: 220, scrollHeight: 400 })
+    trigger()
+    expect(panel).toHaveAttribute('data-body', 'scroll')
+    size(body, { clientHeight: 220, scrollHeight: 220 })
+    trigger()
+    expect(panel).not.toHaveAttribute('data-body')
+  })
   it('a browser without ResizeObserver still renders the sheet', () => {
     vi.stubGlobal('ResizeObserver', undefined)
     render(

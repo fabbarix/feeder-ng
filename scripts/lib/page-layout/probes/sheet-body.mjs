@@ -1,6 +1,6 @@
 // Probe "sheet-body" (in-page, B9-14; P33, SHORT-02). It fills
-//   sheetBody: { sel, bodyH, panelH, innerHeight, flow, firstControl: { sel, clipped } | null, footerVisible } | null
-// for the open modal sheet: the .sheet__body's client height, the panel's, whether data-footer="flow" is set, the sheet's first
+//   sheetBody: { sel, bodyH, bodyScroll, panelH, innerHeight, flow, firstControl: { sel, clipped } | null, footerVisible } | null
+// for the open modal sheet: the .sheet__body's client and scroll heights, the panel's, whether data-footer="flow" is set, the sheet's first
 // required control (else its first control) and whether it is cut by a clipping ancestor inside the dialog (its box outside the
 // clipper's padding box by more than 1 px, at scrollTop 0), and whether any control of the footer is on screen.
 const source = `
@@ -31,7 +31,7 @@ const source = `
     firstControl = { sel: name(first), clipped }
   }
   const footerVisible = !!footer && [...footer.querySelectorAll(CONTROLS)].some((e) => shown(e) && inView(e.getBoundingClientRect()))
-  return { sel: name(dialog), bodyH: body.clientHeight, panelH: panel.clientHeight, innerHeight, flow: panel.dataset.footer === 'flow', firstControl, footerVisible }
+  return { sel: name(dialog), bodyH: body.clientHeight, bodyScroll: body.scrollHeight, panelH: panel.clientHeight, innerHeight, flow: panel.dataset.footer === 'flow', firstControl, footerVisible }
 })()`
 
 export default { name: 'sheet-body', key: 'sheetBody', order: 210, soft: true, scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400'], source }

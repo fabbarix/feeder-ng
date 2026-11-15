@@ -212,6 +212,8 @@ function SheetSurface({
  * SHORT-02 rule 5: sets data-footer="flow" on the panel while the body would show less than 40 % of it (footerShouldFlow). In flow
  * mode the body is not a scroller, so the decision uses the height the body would have with the sticky footer: the panel's height
  * less everything that is not the body. Written to the DOM directly: React never renders the attribute.
+ * SHORT-02 rule 3: sets data-body="scroll" while the (sticky-footer) body scrolls, i.e. the panel is at its maximum height and the
+ * body is squeezed; only then does the CSS give the body its floor, so a short sheet stays exactly as tall as its content.
  */
 function useFooterFlow(panelRef: RefObject<HTMLDivElement | null>, bodyRef: RefObject<HTMLDivElement | null>) {
   useLayoutEffect(() => {
@@ -224,6 +226,8 @@ function useFooterFlow(panelRef: RefObject<HTMLDivElement | null>, bodyRef: RefO
       const flow = footerShouldFlow({ panel: panel.clientHeight, body: stickyBody, bodyScroll: body.scrollHeight })
       if (flow) panel.dataset['footer'] = 'flow'
       else delete panel.dataset['footer']
+      if (!flow && body.scrollHeight > body.clientHeight + 1) panel.dataset['body'] = 'scroll'
+      else delete panel.dataset['body']
     }
     const observer = new ResizeObserver(decide)
     observer.observe(panel)

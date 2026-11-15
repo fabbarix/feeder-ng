@@ -89,6 +89,13 @@ describe('P33: a sheet body under the floor, or a footer visible over a clipped 
     expect(run({ sheetBody: body({ innerHeight: 256, bodyH: 77, panelH: 248 }) }, 'P33')).toEqual([])
     expect(run({ sheetBody: body({ innerHeight: 256, bodyH: 70, panelH: 248 }) }, 'P33')).toHaveLength(1)
   })
+  // Ruling 1 (B9-14 review): the floor is judged on a squeezed body only (its content taller than it); a body that fits may be short.
+  it('a body that fits its content may be under the floor (a one-line confirm sheet: 24 px of content, 24 px body)', () => {
+    expect(run({ sheetBody: body({ bodyH: 24, bodyScroll: 24 }) }, 'P33', 844)).toEqual([])
+  })
+  it('a squeezed body under the floor is reported (40 px showing of 300 px of content)', () => {
+    expect(run({ sheetBody: body({ bodyH: 40, bodyScroll: 300 }) }, 'P33', 844)).toHaveLength(1)
+  })
   it('reports a visible footer while the first control is clipped (Mark as Cooked: the stepper cut, the button shown)', () => {
     const f = run({ sheetBody: body({ firstControl: { sel: 'div.stepper', clipped: true } }) }, 'P33')
     expect(f).toHaveLength(1)
