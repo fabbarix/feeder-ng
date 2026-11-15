@@ -10,11 +10,13 @@ describe('the day tile\'s Away line (.plan-day__away)', () => {
   it('is in the info text colour, from the token', () => {
     expect(d()['color']).toBe('var(--color-info-fg)')
   })
-  it('is a 44 px target and a single line that ends with an ellipsis rather than wrapping its button', () => {
+  // Main-session ruling 7 (B9-46): the Away line never cuts; at 375 a long one wraps to a second line. (The test author's first pin was
+  // one line with an ellipsis.)
+  it('is a 44 px target whose words are never cut: no ellipsis, no clipping, it wraps instead', () => {
     expect(d()['min-height'] ?? d()['min-block-size'] ?? d()['block-size']).toMatch(/var\(--target-min\)|44px/)
-    expect(d()['white-space']).toBe('nowrap')
-    expect(d()['text-overflow']).toBe('ellipsis')
-    expect(d()['overflow']).toMatch(/hidden|clip/)
+    expect(d()['white-space'] ?? 'normal').not.toBe('nowrap')
+    expect(d()['text-overflow']).toBeUndefined()
+    expect(d()['overflow'] ?? 'visible').not.toMatch(/hidden|clip/)
   })
   it('is not set bold (no sentence of running text is bold; the type role is weight 500)', () => {
     const w = d()['font-weight']

@@ -1,6 +1,7 @@
 import { Button, EmptyState, ListGroup, ListRow } from '../../../ui'
 import { settingsStrings } from '../strings'
 import type { Away } from '../../plan/types'
+import { awayMeta, memberRowName } from '../lib/away'
 import type { Member } from '../types'
 import { MemberAvatar } from './MemberAvatar'
 import '../settings.css'
@@ -21,7 +22,7 @@ const text = settingsStrings.member
 
 /** A ListGroup of Member rows: Avatar in the Member colour, name, linked-User meta, trailing "×1.25". An Admin's row opens
  *  the editor; a plain User's rows are static. Admins also get "Add Member". */
-export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEdit }: MemberListProps) {
+export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEdit, aways, today }: MemberListProps) {
   const addButton = canEdit ? (
     <Button variant="secondary" onClick={onAdd}>
       {text.add}
@@ -35,11 +36,15 @@ export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEd
       <ListGroup label={settingsStrings.members}>
         {members.map((m) => {
           const linked = m.userId !== null ? linkedUserNames[m.userId] : undefined
+          // B9-46 (SET-16): the next current or coming Away leads the meta line, in the info tone; the row is named with it.
+          const away = aways && today ? awayMeta(aways[m.id] ?? [], today) : null
           return (
             <ListRow
               key={m.id}
               title={m.name}
-              meta={[linked, m.email].filter(Boolean).join(' · ') || undefined}
+              aria-label={memberRowName(m.name, away)}
+              meta={[away, linked, m.email].filter(Boolean).join(' · ') || undefined}
+              metaStatus={away ? 'info' : undefined}
               leading={<MemberAvatar name={m.name} colour={m.colour} avatar={m.avatar} photo={m.photo} size="sm" />}
               trailing={<span className="settings__portion-factor">{text.portionFactor(m.portionFactor)}</span>}
               onActivate={canEdit ? () => onEdit(m) : undefined}

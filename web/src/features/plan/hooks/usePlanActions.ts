@@ -67,7 +67,7 @@ export function usePlanActions(): UsePlanActions {
 
   /** Shares the changes (marks, Review) and shows What changed for the signed-in User's own write. */
   const announce = useCallback(
-    (kind: ReplanKind, target: SlotKey | undefined, res: ReplanFields & { changed?: number; recipeName?: string; courseName?: string }, marked = false) => {
+    (kind: Exclude<ReplanKind, 'away'>, target: SlotKey | undefined, res: ReplanFields & { changed?: number; recipeName?: string; courseName?: string }, marked = false) => {
       const changes = res.changes ?? []
       const slots = cachedSlots(client)
       const plain = replanToast({ kind, target, changes, slots, changed: res.changed })

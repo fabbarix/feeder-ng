@@ -48,6 +48,9 @@ export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddC
   for (const add of model.add) items.push({ id: `add-${add.key.courseId}`, label: add.label, onSelect: () => onAddCourse(add.key) })
   if (dateActions && model.whosEating) {
     items.push({ id: 'whos-eating', label: choiceLabel(s.slotDate.whosEating, offline), disabled: offline, onSelect: () => dateActions.onWhosEating(slotKey) })
+    // B9-46 (PC-08): the Away sheet from this Meal Slot, where the screen offers it.
+    const onAway = dateActions.onAway
+    if (onAway) items.push({ id: 'away', label: choiceLabel(s.away.menuItem, offline), disabled: offline, onSelect: () => onAway(slotKey) })
   }
   if (dateActions && model.time) {
     items.push({ id: 'time', label: choiceLabel(model.time, offline), disabled: offline, onSelect: () => dateActions.onTime(slotKey) })

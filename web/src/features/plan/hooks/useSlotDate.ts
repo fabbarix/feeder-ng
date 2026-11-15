@@ -9,6 +9,7 @@ import { planStrings } from '../strings'
 import { needsNotServedConfirm, notServedConfirm, notServedToastText, slotDateErrorText } from '../lib/slotDate'
 import type { PlanSlot, SlotDateActions, SlotDatePatch, SlotDayKey } from '../types'
 import { invalidatePlan } from './planCache'
+import { useAwayOpen, type AwayOpenControl } from './useAwayOpen'
 
 /** Who's eating is the Settings feature's Date Attendance sheet (WhosEatingSheet); this hook decides when it is open and what surrounds an emptied date. */
 export interface WhosEatingControl {
@@ -34,6 +35,11 @@ export interface SlotDateController {
   whosEating: WhosEatingControl
   /** A PATCH is running. */
   busy: boolean
+  /**
+   * B9-46 (PC-08), with `{ away: true }` only (the Plan): the Away sheet's state ("Someone is away…", the day tile's Away line) and
+   * Who's eating's "Add an Away", which swaps Who's eating for the Away sheet from the same Meal Slot.
+   */
+  away?: AwayOpenControl & { fromWhosEating: () => void }
 }
 
 function sameSlot(a: SlotDayKey, b: SlotDayKey): boolean {
@@ -41,7 +47,7 @@ function sameSlot(a: SlotDayKey, b: SlotDayKey): boolean {
 }
 
 /** `slots` resolve the keys to names and times. */
-export function useSlotDate(slots: PlanSlot[]): SlotDateController {
+export function useSlotDate(slots: PlanSlot[], options?: { away?: boolean }): SlotDateController {
   const client = useQueryClient()
   const confirm = useConfirm()
   const toast = useToast()
@@ -49,6 +55,8 @@ export function useSlotDate(slots: PlanSlot[]): SlotDateController {
   const [timeKey, setTimeKey] = useState<SlotDayKey | null>(null)
   const [whosKey, setWhosKey] = useState<SlotDayKey | null>(null)
   const [busy, setBusy] = useState(false)
+  const awayOpen = useAwayOpen()
+  const withAway = options?.away === true
 
   const find = (key: SlotDayKey): PlanSlot | null => slots.find((sl) => sameSlot(sl, key)) ?? null
   const timeSlot = timeKey ? find(timeKey) : null
@@ -138,6 +146,13 @@ export function useSlotDate(slots: PlanSlot[]): SlotDateController {
         if (!offline) setTimeKey(key)
       },
       onPlanAgain: (key) => void planAgain(key),
+      ...(withAway
+        ? {
+            onAway: (key: SlotDayKey) => {
+              if (!offline) awayOpen.openFrom(key)
+            },
+          }
+        : {}),
     },
     timeSlot,
     closeTime: () => setTimeKey(null),
@@ -150,5 +165,17 @@ export function useSlotDate(slots: PlanSlot[]): SlotDateController {
       onEmptied,
     },
     busy,
+    ...(withAway
+      ? {
+          away: {
+            ...awayOpen,
+            fromWhosEating: () => {
+              if (!whosKey) return
+              setWhosKey(null)
+              awayOpen.openFrom(whosKey)
+            },
+          },
+        }
+      : {}),
   }
 }

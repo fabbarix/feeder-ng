@@ -81,6 +81,8 @@ export function PlanScreen(): ReactNode {
               onNotCookedSlot={(k) => void actions.notCookedSlot(k)}
               onAddCourse={(k) => s.openChoose(k)}
               dateActions={s.slotDate.actions}
+              aways={plan.view?.away}
+              onAway={s.slotDate.away?.openAway}
             />
           ))
         }

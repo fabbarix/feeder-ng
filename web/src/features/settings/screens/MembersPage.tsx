@@ -3,6 +3,7 @@ import { MemberEditor } from '../components/MemberEditor'
 import { MemberList } from '../components/MemberList'
 import { SettingsHeader } from '../components/SettingsHeader'
 import { SettingsLoadGate } from '../components/SettingsLoadGate'
+import { useMemberListAways } from '../hooks/useMemberListAways'
 import { useMembersPage } from '../hooks/useMembersPage'
 import { settingsStrings } from '../strings'
 import '../settings.css'
@@ -10,6 +11,8 @@ import '../settings.css'
 /** /settings/members: the Members as a list; an Admin adds and edits them in the sheet (Linked User from the allowlist). */
 export function MembersPage() {
   const page = useMembersPage()
+  // B9-46 (SET-16): each Member's next Away on the list.
+  const away = useMemberListAways(page.members.members)
   return (
     <div className="settings">
       <SettingsHeader title={settingsStrings.members} />
@@ -25,6 +28,8 @@ export function MembersPage() {
               linkedUserNames={page.linkedUserNames}
               onAdd={page.add}
               onEdit={page.edit}
+              aways={away.aways}
+              today={away.today}
             />
           )}
         </Tile>

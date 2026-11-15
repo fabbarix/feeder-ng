@@ -7,6 +7,7 @@ import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft,
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP } from '../lib/portions'
 import { settingsStrings } from '../strings'
 import type { AllowedUser, Member, MemberInput } from '../types'
+import { MemberAwaySection } from './MemberAwaySection'
 import '../settings.css'
 
 export interface MemberEditorProps {
@@ -80,6 +81,8 @@ export function MemberEditor({ open, member, users, members, currentUserId, savi
         onDirtyChange={setDirty}
         onPhotoBusy={setPhotoBusy}
       />
+      {/* B9-46 (SET-16): the Member's Aways, after the fields; an existing Member only. */}
+      {member ? <MemberAwaySection member={member} /> : null}
     </BottomSheet>
   )
 }

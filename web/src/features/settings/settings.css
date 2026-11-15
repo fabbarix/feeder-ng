@@ -436,3 +436,48 @@
 .member-sheet__form {
   padding-block-end: var(--space-1);
 }
+
+/* B9-46 (PC-08): an away Member's row in Who's eating: the Away's days in the info tone, then the "Eats here anyway" switch. */
+.attendance__away {
+  display: grid;
+  gap: 0;
+  min-inline-size: 0;
+}
+.attendance__away-line {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 600;
+  color: var(--color-info-fg);
+}
+.attendance__away .switch-row__label {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+/* "Someone away for more days?" and the outlined "Add an Away". */
+.attendance-add-away {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.attendance-add-away__text {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+/* B9-46 (SET-16): the Member sheet's Away section, after the fields. */
+.member-away {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-6);
+}
+.member-away__title {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+.member-away__add {
+  display: flex;
+}

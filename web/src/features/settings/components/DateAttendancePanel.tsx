@@ -7,6 +7,8 @@ import { dateLabel } from '../lib/mealSlotCards'
 import { dateCourseChanges, dateCourseDrafts, hasDateOverride, resetDateCourse, sameAttendance, withDateEater, type DateCourseDraft } from '../lib/dateCourses'
 import { settingsStrings } from '../strings'
 import type { AttendanceEntry, DateAttendance, DateCourseChange, MealSlot, Member } from '../types'
+import { presentAttendance } from '../lib/away'
+import { AddAwayLine } from './AddAwayLine'
 import { AttendanceEditor, type AttendanceEditorProps } from './AttendanceEditor'
 import { DateCoursesSection } from './DateCoursesSection'
 import '../settings.css'
@@ -43,7 +45,7 @@ const text = settingsStrings.attendance
 
 /** What the server says for one date, as a key: a new answer for the same date replaces a pristine form, never an edited one. */
 const answerKey = (a: DateAttendance | undefined) =>
-  a ? `${a.isOverride}|${a.attendance.map((e) => `${e.memberId}:${e.portionFactorOverride}`).join(',')}|${a.guests ?? 0}|${(a.courses ?? []).map((c) => `${c.courseId}:${c.optOutMemberIds.join('.')}`).join(',')}` : 'none'
+  a ? `${a.isOverride}|${a.attendance.map((e) => `${e.memberId}:${e.portionFactorOverride}${e.despiteAway ? '!' : ''}`).join(',')}|${a.guests ?? 0}|${(a.courses ?? []).map((c) => `${c.courseId}:${c.optOutMemberIds.join('.')}`).join(',')}` : 'none'
 
 interface FormState {
   draft: AttendanceEntry[]
@@ -72,7 +74,7 @@ export function DateAttendancePanel(props: DateAttendancePanelProps) {
   return props.open ? <DateSheet {...props} /> : null
 }
 
-function DateSheet({ slot, date, attendance, members, saving, dateReadOnly = false, onChangeDate, onSave, onReset, onClose, memberExtra, locale = documentLocale() }: DateAttendancePanelProps) {
+function DateSheet({ slot, date, attendance, members, saving, dateReadOnly = false, onChangeDate, onSave, onReset, onClose, memberExtra, onAddAway, locale = documentLocale() }: DateAttendancePanelProps) {
   const [form, setForm] = useState<FormState>(() => formFrom(slot, attendance))
   const [source, setSource] = useState({ date, answer: answerKey(attendance) })
   const answer = answerKey(attendance)
@@ -139,9 +141,10 @@ function DateSheet({ slot, date, attendance, members, saving, dateReadOnly = fal
         <Muted>
           {text.thisDateOnly} {text.resetHelper}
         </Muted>
-        <AttendanceEditor members={members} value={draft} onChange={(next) => edit({ draft: next })} memberExtra={memberExtra} />
+        <AttendanceEditor members={members} value={draft} onChange={(next) => edit({ draft: next })} memberExtra={memberExtra} away={attendance?.away} />
         <StepperField label={text.guests} helper={text.guestsHelper} value={guests} min={MIN_GUESTS} max={MAX_GUESTS} onChange={(n) => edit({ guests: clampGuests(n) })} />
-        <Muted>{portionsPreviewText(portionsPreview(members, draft, guests))}</Muted>
+        <Muted>{portionsPreviewText(portionsPreview(members, presentAttendance(draft, attendance?.away), guests))}</Muted>
+        {onAddAway ? <AddAwayLine onAddAway={onAddAway} /> : null}
         {empty ? <Muted>{text.emptiedNote}</Muted> : null}
         {showCourses ? (
           <DateCoursesSection

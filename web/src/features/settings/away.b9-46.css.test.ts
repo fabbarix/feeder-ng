@@ -6,7 +6,8 @@ describe('SET-16 parts', () => {
   it('MemberList passes the Away line as the row\'s meta with the info status', () => {
     const src = readSource('features/settings/components/MemberList.tsx')
     expect(src).toContain('awayMeta')
-    expect(src).toMatch(/metaStatus=\{?['"]info['"]/)
+    // B9-46 developer: the info status is set only on a row that has an Away line (`metaStatus={away ? 'info' : undefined}`).
+    expect(src).toMatch(/metaStatus=\{?[^}\n]*['"]info['"]/)
   })
   it('MemberAwaySection uses ListRow rows (key, state, detail), a title-3 heading and the shared Away sheet; no free-text list items', () => {
     const src = readSource('features/settings/components/MemberAwaySection.tsx')

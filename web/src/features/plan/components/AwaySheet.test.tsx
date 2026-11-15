@@ -76,7 +76,8 @@ describe('AwaySheet: opened from a Meal Slot', () => {
     expect(await screen.findByRole('dialog', { name: /Someone is away/ })).toBeInTheDocument()
     expect(document.querySelector('.sheet__context')).toHaveTextContent('From Tue 17 Dinner')
     const pills = await screen.findByRole('radiogroup', { name: 'Who' })
-    expect(within(pills).getAllByRole('radio').map((r) => r.textContent?.trim())).toEqual(['Anna', 'Ben', 'Chiara'])
+    // B9-46 developer: each pill shows the Member's Avatar, whose initials are text, so the pills are compared by their names.
+    expect(within(pills).getAllByRole('radio').map((r) => r.getAttribute('aria-label'))).toEqual(['Anna', 'Ben', 'Chiara'])
     expect(within(pills).queryByRole('radio', { checked: true })).toBeNull()
     expect(d.queryByRole('button', { name: 'Close' })).toBeNull()
     expect(d.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
@@ -139,8 +140,9 @@ describe('AwaySheet: What changes', () => {
     expect(await screen.findByText('Checking the plan…', {}, { timeout: 3000 })).toBeInTheDocument()
     release({ json: PREVIEW })
     const summary = await screen.findByText('9 Meal Slots without Ben · 6 meals change')
-    const details = summary.closest('details')!
-    expect(details).not.toHaveAttribute('open')
+    // Ruling 1 (main session): the shared ui Disclosure, not a bare <details>: closed is the toggle's aria-expanded="false".
+    const details = summary.closest('[data-disclosure]')!
+    expect(within(details as HTMLElement).getByRole('button', { expanded: false })).toBeInTheDocument()
     expect(api.callsTo('POST', '/api/members/2/away?dryRun=1')[0]!.body).toEqual({ from: '2026-11-17', fromMealSlotId: null, through: '2026-11-17', throughMealSlotId: null })
   })
 
@@ -149,8 +151,8 @@ describe('AwaySheet: What changes', () => {
     mount({ memberId: 2 })
     const summary = await screen.findByText('9 Meal Slots without Ben · 6 meals change')
     await userEvent.click(summary)
-    const details = summary.closest('details')!
-    expect(details).toHaveAttribute('open')
+    const details = summary.closest<HTMLElement>('[data-disclosure]')!
+    expect(within(details).getByRole('button', { expanded: true })).toBeInTheDocument()
     const rows = within(details).getAllByRole('listitem')
     expect(rows.map((r) => r.querySelector('.detail-row__label')?.textContent)).toEqual(['Tue 17', 'Wed 18', 'Thu 19', 'Unchanged'])
     expect(rows[0]!.querySelector('.detail-row__state')).toHaveTextContent('3 meals')
@@ -163,7 +165,7 @@ describe('AwaySheet: What changes', () => {
     mount({ memberId: 2 })
     const summary = await screen.findByText("Nothing in this week's plan changes")
     await userEvent.click(summary)
-    expect(within(summary.closest('details')!).getByText('The plan runs to Sat 21. From Tue 1 Dec the planner plans without Ben.')).toBeInTheDocument()
+    expect(within(summary.closest<HTMLElement>('[data-disclosure]')!).getByText('The plan runs to Sat 21. From Tue 1 Dec the planner plans without Ben.')).toBeInTheDocument()
   })
 })
 
