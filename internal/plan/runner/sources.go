@@ -214,6 +214,16 @@ func (s *DBSources) Recipes(ctx context.Context) ([]planner.Recipe, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Inside a write, the Course lists come from its transaction (sources_courses.go).
+	if tx := txFrom(ctx); tx != nil {
+		courses, err := recipeCoursesIn(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		for i := range list {
+			list[i].CourseIDs = courses[list[i].ID]
+		}
+	}
 	out := make([]planner.Recipe, 0, len(list))
 	for _, sum := range list {
 		tr, ok := trees[sum.ID]

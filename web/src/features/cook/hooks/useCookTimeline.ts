@@ -7,6 +7,7 @@ import { connectEvents } from '../../../lib/sse'
 import { cookApi } from '../api'
 import { coveredLines, readyBefore } from '../lib/baseSteps'
 import { advanceGroups, courseMenuEntries, effectiveFilter, filterChips, itemCaption, plannedClock, toCookStep, unresolvedCourses, visibleItems, type CourseFilter, type CourseMenuEntry, type FilterChip, type VisibleItem } from '../lib/timeline'
+import { isFutureMeal } from '../lib/future'
 import { reheatTimerOfCourse } from '../lib/reheat'
 import { createNav, goBack, goNext, isFirst, isLast, type StepNav } from '../lib/steps'
 import type { AdvanceGroup } from '../lib/timeline'
@@ -62,7 +63,10 @@ const TIMELINE_KEY = ['cook', 'view', 'timeline'] as const
  * topics `cook`, `plan`, `household` and after a reconnect. Reaching a Passive item starts its Step timer once, in the
  * item's scope; reaching a Reheat item starts the free Reheat timer of its Course unless that Course already has one.
  */
-export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
+/** `today` is the household date (usePlan): a future meal's Course menu has no "Mark <Course> as Cooked" (PC-12). */
+/** B9-45 (PC-05): `hold` (Cook Mode is on Get ready) starts no timer until it is let go. */
+export function useCookTimeline(target: CookTimelineTarget, today = '', options: { hold?: boolean } = {}): UseCookTimeline {
+  const hold = options.hold === true
   const client = useQueryClient()
   const key = [...TIMELINE_KEY, target.date, target.mealSlotId] as const
   const query = useQuery({
@@ -106,7 +110,7 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
   // the timers are known and that Course has none (the Reheat screen may have started one).
   const started = useRef<Set<string>>(new Set())
   useEffect(() => {
-    if (!item || !item.timer) return
+    if (hold || !item || !item.timer) return
     if (item.kind === 'passive' && item.step !== null) {
       const id = `${item.scope}#${item.step}`
       if (started.current.has(id)) return
@@ -127,7 +131,7 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
         .then(() => client.invalidateQueries({ queryKey: ['cook', 'timers'] }))
         .catch(() => started.current.delete(id))
     }
-  }, [item, timers.isLoading, timers.timers, client])
+  }, [item, timers.isLoading, timers.timers, client, hold])
 
   const gate = useItemGate(items, nav.index, timers.items, () => {})
   const step = current ? toCookStep(current) : null
@@ -163,7 +167,7 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
     timers,
     advance: view ? advanceGroups(view) : [],
     markAdvanceDone,
-    courseMenu: view ? courseMenuEntries(view) : [],
+    courseMenu: view ? courseMenuEntries(view, !isFutureMeal(view.date, today)) : [],
     unresolved: view ? unresolvedCourses(view) : [],
   }
 }

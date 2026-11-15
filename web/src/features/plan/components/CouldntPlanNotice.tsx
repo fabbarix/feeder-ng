@@ -1,25 +1,49 @@
-import type { ReactNode } from 'react'
-import { useCauseExpansion } from '../hooks/useCauseExpansion'
+import { useId, type ReactNode } from 'react'
+import { Button, Tile, TileHeader } from '../../../ui'
 import type { NoticeGroup } from '../hooks/useCouldntPlanNotice'
-import { CouldntPlanTile } from './CouldntPlanTile'
+import { planStrings as s } from '../strings'
+import { CouldntCauseRow } from './CouldntPlanTile'
 import '../plan.css'
+
+/** The TileHeader badge tone, spread (the native-controls check reads a tone attribute on a Tile-named element as the legacy prop). */
+const INFO_BADGE = { tone: 'info' } as const
 
 export interface CouldntPlanNoticeProps {
   groups: NoticeGroup[]
   onFix: (group: NoticeGroup) => void
-  /** Columns each tile takes: 2 (default, two causes side by side on 4 columns) or the full row. */
-  span?: 2 | 'full'
+  /** B9-32 (PC-07): opens the sheet of the affected meals; "Show which meals" is left out without it (Today). */
+  onShowMeals?: () => void
+  /** The grid tracks the tile takes; Today passes `full`. Default one track (the Plan's two-up grid). */
+  span?: 1 | 2 | 'full'
 }
 
-/** Couldn't plan: one tile per cause. Its wrapper is `display: contents`, so the tiles are items of the grid it sits in. */
-export function CouldntPlanNotice({ groups, onFix, span = 2 }: CouldntPlanNoticeProps): ReactNode {
-  const expansion = useCauseExpansion()
+/**
+ * B9-32 (PC-07): Couldn't plan as ONE compact info tile, a section named "Couldn't plan": the TileHeader (B9-44) with "Show which
+ * meals" as its action, then one row per cause. The long explanation lives in the sheets.
+ */
+export function CouldntPlanNotice({ groups, onFix, onShowMeals, span }: CouldntPlanNoticeProps): ReactNode {
+  const titleId = useId()
   if (groups.length === 0) return null
+  const showMeals = onShowMeals ? (
+    <Button variant="secondary" size="sm" onClick={onShowMeals}>
+      {s.couldntShowMeals}
+    </Button>
+  ) : undefined
   return (
-    <div className="plan-couldnt-notice">
+    <Tile as="section" variant="status" status="info" span={span} aria-labelledby={titleId} className="plan-couldnt">
+      {/* B9-44 (TB-09): the shared tile header: an info badge, the title that names the section, a count of the causes, Show which meals. */}
+      <TileHeader
+        icon="info"
+        {...INFO_BADGE}
+        title={s.couldntPlanTitle}
+        titleId={titleId}
+        count={groups.length}
+        countLabel={s.couldntCauseCount(groups.length)}
+        action={showMeals}
+      />
       {groups.map((group) => (
-        <CouldntPlanTile key={group.cause} group={group} expanded={expansion.isOpen(group.cause)} onToggle={() => expansion.toggle(group.cause)} onFix={() => onFix(group)} span={span} />
+        <CouldntCauseRow key={group.cause} group={group} onFix={() => onFix(group)} />
       ))}
-    </div>
+    </Tile>
   )
 }

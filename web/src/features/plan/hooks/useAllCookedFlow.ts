@@ -1,5 +1,5 @@
 // CRS F: the Mark all Cooked flow shared by the Plan, Today and Cook Mode (the sheet's open state, its controller, the
-// Stock correction and the outcome toast). The outcome is the same as the single Course's: a toast, the shortfalls.
+// ONE shortfall notice with its ONE Correct Stock sheet, and the outcome toast). The outcome is the same as the single Course's.
 // DS-TODAY: quickAll is the one-tap "All Cooked" of a To confirm row: the planned Leftovers, no sheet.
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
@@ -13,7 +13,11 @@ import type { CookedAllResult, SlotDayKey, StockWarning } from '../types'
 import { invalidatePlan } from './planCache'
 import { cachedSlots } from './replanState'
 import { useReopen } from './useReopen'
-import { useStockSheet, type StockSheetController } from './useStockSheet'
+import { useShortfalls } from './useShortfalls'
+import { cookedAllRecipe, shortfallGroupFor } from '../lib/cook'
+import type { StockCorrectionController } from '../../stock/hooks/useStockCorrection'
+import type { ShortfallGroup } from '../../stock/lib/shortfall'
+import type { UnitSystem } from '../../../lib/units'
 import type { MarkAllCookedController } from './useMarkAllCooked'
 import { useMarkAllCooked } from './useMarkAllCooked'
 
@@ -24,9 +28,7 @@ export interface AllCookedFlow {
   open: (slot: SlotDayKey, courseIds: number[]) => void
   close: () => void
   controller: MarkAllCookedController
-  /** The "Correct Stock" sheet for the shortfalls of this Mark all Cooked. */
-  stock: StockSheetController
-  /** Stock shortfall warnings still to show (controller.warnings, and the one-tap's). */
+  /** Stock shortfall warnings still to show (the groups', one per Ingredient). */
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
   /** The sheet's primary button: controller.confirm(); closes on success with the Cooked toast and its Undo; a shortfall stays in `warnings`. */
@@ -35,17 +37,26 @@ export interface AllCookedFlow {
   quickAll: (slot: SlotDayKey, courseIds: number[]) => Promise<boolean>
   /** The slot whose one-tap All Cooked is being saved, or null. */
   quickBusy: SlotDayKey | null
+  /** B9-45 (PC-02): the slot's group for the ONE notice (id "date/slot"; recipeName null with several Courses, the Recipe's name with one). */
+  shortfalls: ShortfallGroup[]
+  dismissShortfalls: () => void
+  /** B9-45 (PC-02): the ONE Correct Stock sheet. */
+  correct: StockCorrectionController
+  /** The User's unit system for the notice and the sheet. */
+  system?: UnitSystem
 }
 
-export function useAllCookedFlow(): AllCookedFlow {
+/** `toast: false` (Cook Mode, whose confirmation page has its own Undo) shows no Cooked toast. */
+export function useAllCookedFlow(options: { toast?: boolean } = {}): AllCookedFlow {
+  const withToast = options.toast !== false
   const toast = useToast()
   const client = useQueryClient()
   const [key, setKey] = useState<SlotDayKey | null>(null)
   const [courseIds, setCourseIds] = useState<number[]>([])
   const [quickBusy, setQuickBusy] = useState<SlotDayKey | null>(null)
-  const [quick, setQuick] = useState<StockWarning[]>([])
   const controller = useMarkAllCooked(key, courseIds)
-  const stock = useStockSheet((id) => controller.dismissWarning(id))
+  const notice = useShortfalls()
+  const { add, remove } = notice
   const reopen = useReopen()
   const open = useCallback((slot: SlotDayKey, ids: number[]) => {
     setKey(slot)
@@ -61,13 +72,14 @@ export function useAllCookedFlow(): AllCookedFlow {
       const first = ids[0]
       if (first === undefined) return
       const key = { date: slot.date, mealSlotId: slot.mealSlotId, courseId: first }
-      const gone = res.warnings.map((w) => w.ingredientId)
+      const group = shortfallGroupFor(cachedSlots(client), slot, cookedAllRecipe(res), res.warnings)
+      add(group)
+      if (!withToast) return
       reopen.offerUndo(cookedToast({ slots: cachedSlots(client), key, recipeName: '', result: res, courses: ids.length }), key, () => {
-        setQuick((ws) => ws.filter((w) => !gone.includes(w.ingredientId)))
-        gone.forEach((id) => controller.dismissWarning(id))
+        if (group) remove(group.id)
       })
     },
-    [client, reopen, controller],
+    [client, reopen, add, remove, withToast],
   )
   const confirm = useCallback(async () => {
     const slot = key
@@ -83,7 +95,6 @@ export function useAllCookedFlow(): AllCookedFlow {
       try {
         const previews = await Promise.all(ids.map((courseId) => planApi.cookPreview({ date: slot.date, mealSlotId: slot.mealSlotId, courseId })))
         const res = await usedFromApi.cookedAll(slot, allCookedBody(previewRows(ids, previews)))
-        setQuick(res.warnings)
         offerUndo(slot, ids, res)
         await invalidatePlan(client)
         return true
@@ -96,14 +107,19 @@ export function useAllCookedFlow(): AllCookedFlow {
     },
     [client, toast, offerUndo],
   )
-  const fromSheet = controller.warnings
-  const warnings = [...fromSheet, ...quick.filter((w) => !fromSheet.some((c) => c.ingredientId === w.ingredientId))]
-  const dismissWarning = useCallback(
-    (ingredientId: number) => {
-      setQuick((ws) => ws.filter((w) => w.ingredientId !== ingredientId))
-      controller.dismissWarning(ingredientId)
-    },
-    [controller],
-  )
-  return { key, open, close, controller, stock, warnings, dismissWarning, confirm, quickAll, quickBusy }
+  return {
+    key,
+    open,
+    close,
+    controller,
+    warnings: notice.warnings,
+    dismissWarning: notice.dismissWarning,
+    confirm,
+    quickAll,
+    quickBusy,
+    shortfalls: notice.groups,
+    dismissShortfalls: notice.dismiss,
+    correct: notice.correct,
+    system: notice.system,
+  }
 }

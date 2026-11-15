@@ -1,6 +1,8 @@
 // Reheat: pure helpers for the reheating timer of a Planned Meal served from a Leftover. Plain TypeScript, no React.
 // Design: docs/dev/design/r12-reheat.md.
-import type { SlotKey } from '../../plan/types'
+import type { LeftoverSource, SlotKey } from '../../plan/types'
+import { formatPortions } from '../../plan/lib/cook'
+import { weekdayName } from '../../plan/lib/phrase'
 import type { CookTimer } from '../types'
 import { sameScope } from './scope'
 
@@ -47,4 +49,23 @@ export function cookReheatPath(key: SlotKey): string {
  */
 export function reheatTimerOfCourse(timers: CookTimer[], scope: string): CookTimer | null {
   return timers.find((t) => t.step === null && t.label === REHEAT_LABEL && sameScope(t.scope, scope)) ?? null
+}
+
+/** A Meal Slot's name and time, as the Plan sends them. */
+export interface SlotLabel {
+  date: string
+  mealSlotId: number
+  name: string
+  time: string
+}
+
+/**
+ * B9-40 (PC-15): the Reheat tile's overline "Leftover from Mon Dinner" and meta "2.75 portions · Tue Dinner 19:00". A Meal Slot has
+ * the same name on every date, so the source's name is found by its mealSlotId in any slot of the Plan; unknown, the day alone.
+ */
+export function reheatLines(portions: number, source: LeftoverSource | null, slot: SlotLabel | null, slots: SlotLabel[]): { overline: string; meta: string } {
+  const sourceName = source ? (slots.find((x) => x.mealSlotId === source.mealSlotId)?.name ?? '') : ''
+  const overline = source ? `Leftover from ${[weekdayName(source.date, 'short'), sourceName].filter(Boolean).join(' ')}` : REHEAT_LABEL
+  const when = slot ? [weekdayName(slot.date, 'short'), slot.name, slot.time].filter(Boolean).join(' ') : ''
+  return { overline, meta: [formatPortions(portions), when].filter(Boolean).join(' · ') }
 }

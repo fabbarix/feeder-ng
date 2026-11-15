@@ -1,5 +1,5 @@
-import { useEffect, useRef, type ReactElement } from 'react'
-import { Button, ListRow, Tile } from '../../../ui'
+import { useEffect, useId, useRef, type ReactElement } from 'react'
+import { Button, ListRow, Tile, TileHeader, TileHeaderLink } from '../../../ui'
 import { useShowMore } from '../../../ui/lib/useShowMore'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { describeGoOff } from '../lib/view'
@@ -19,7 +19,7 @@ export interface SpoiledTileProps {
 /**
  * 'Throw out or keep?' for spoiled Stock Lots: `Tile variant='status' status='spoil' as='section'` (B9-29, DS-06: food going off
  * is the spoil tone; danger is loss), with
- * the overline 'Throw out or keep?' and the `spoiled` icon. One row per lot, with two
+ * B9-44 (TB-09): the TileHeader (the `spoiled` badge, the title, a count of the Lots, the link "Pantry ›" to the spoiled Stock). One row per lot, with two
  * icon + label `Button size='sm'`s: Throw out = danger-secondary with `throwOut` (Trash), Keep = secondary with `tick`
  * (Check). L-07: each lot is a `ListRow` (title = name, meta = 'go-off wording · amount': SSP-05, the status leads) with the two buttons in its extra
  * slot. B9-09 (DS-09): one DOM at every width; a container query on the list (stock.css, `spoiled-tile`) sets them beside the
@@ -27,6 +27,9 @@ export interface SpoiledTileProps {
  * Capped at 3 rows with a 'Show N more' toggle (DS-TODAY). Exported for the Today screen.
  * B9-29: when the row a button acted on leaves, focus goes to the next row's Keep (the previous row's after the last one).
  */
+/** The header badge: the `spoiled` icon in the spoil tone (spread: the WP8 hygiene check reads a tone attribute as the legacy Tile prop). */
+const HEADER_BADGE = { icon: 'spoiled', tone: 'spoil' } as const
+
 export function SpoiledTile({
   lots,
   today,
@@ -35,6 +38,7 @@ export function SpoiledTile({
   system = 'metric',
 }: SpoiledTileProps): ReactElement | null {
   const more = useShowMore(lots)
+  const titleId = useId()
   const keepButtons = useRef(new Map<number, HTMLButtonElement>())
   const acted = useRef<{ id: number; index: number } | null>(null)
   const act = (lot: StockLot) => {
@@ -57,10 +61,17 @@ export function SpoiledTile({
       variant='status'
       status='spoil'
       span='full'
-      aria-label={strings.spoiledHeading}
-      overline={strings.spoiledHeading}
-      overlineIcon='spoiled'
+      aria-labelledby={titleId}
     >
+      {/* B9-44 (TB-09): the shared tile header, with the link to the spoiled Stock in the Pantry. */}
+      <TileHeader
+        {...HEADER_BADGE}
+        title={strings.spoiledHeading}
+        titleId={titleId}
+        count={lots.length}
+        countLabel={strings.spoiledCount(lots.length)}
+        action={<TileHeaderLink to='/pantry?status=spoiled' label={strings.pantryLink} context={strings.spoiledHeading} />}
+      />
       <ul className='spoiled-tile__list'>
         {more.visible.map((lot) => {
           const actions = (

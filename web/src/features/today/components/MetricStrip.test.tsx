@@ -1,11 +1,16 @@
 // DS-TODAY: the metric strip replaces the half-width streak tile (an orphan beside nothing). It is one BentoGrid min="metric"
 // (auto-fit, so it fills its row), one status-coloured tile per metric. Replaces StreakTile.test.tsx.
-import { render, screen, within } from '@testing-library/react'
+import type { ReactElement } from 'react'
+import { render as rtlRender, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { composeMetrics } from '../lib/metrics'
 import { MetricStrip } from './MetricStrip'
 
 const all = composeMetrics({ streakDays: 2, leftovers: 3, linesToGet: 16 })
+
+// B9-44 (TB-03, changed on purpose): the strip needs a router (Lines to get is a link to /shop); the icon sits in the value's row.
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
 
 describe('MetricStrip', () => {
   it('is one labelled grid by minimum width (metric), with one tile per metric, in order', () => {
@@ -24,15 +29,26 @@ describe('MetricStrip', () => {
     expect(within(screen.getByText('Lines to get').closest('[data-metric]') as HTMLElement).getByText('16')).toBeInTheDocument()
   })
 
-  // DS-TODAY round 2 (mockup): the icon sits top-right beside the number, in its own aria-hidden box.
-  it('each tile has its icon in .today-metric__icon, before the value in the DOM (CSS puts it top-right)', () => {
+  // B9-44 (TB-03): the icon is in the value's row (flex, space-between) and can never cover the number: it is a sibling of the
+  // value inside .today-metric__head, no longer absolutely positioned over the tile.
+  it('each tile has its icon and its value in one .today-metric__head row; the icon is aria-hidden and follows the value', () => {
     const { container } = render(<MetricStrip metrics={all} />)
     for (const t of container.querySelectorAll('[data-metric]')) {
-      const icon = t.querySelector('.today-metric__icon')!
+      const head = t.querySelector('.today-metric__head')!
+      expect(head).not.toBeNull()
+      const icon = head.querySelector('.today-metric__icon')!
       expect(icon).toHaveAttribute('aria-hidden', 'true')
       expect(icon.querySelector('svg')).toBeInTheDocument()
-      expect(icon.compareDocumentPosition(t.querySelector('.tile-metric')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(head.querySelector('.tile-metric__value, .today-metric__value')).not.toBeNull()
+      expect(head.firstElementChild).not.toBe(icon)
     }
+  })
+
+  it('the streak says "2 days" in full words to assistive technology and "2 d" to the eye', () => {
+    const { container } = render(<MetricStrip metrics={all} />)
+    const streak = container.querySelector('[data-metric="streak"]') as HTMLElement
+    expect(within(streak).getByText('2 days')).toHaveClass('visually-hidden')
+    expect(within(streak).getByText('2 d')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('colour roles: success for the streak, the leftover teal for Leftovers, a neutral surface tile for Lines (never accent-soft)', () => {
@@ -44,11 +60,17 @@ describe('MetricStrip', () => {
     expect(container.querySelector('[data-variant="soft"]')).toBeNull()
   })
 
-  it('no tile spans extra columns (status never changes width) and none is a button or link (the Leftovers tile below owns the tap)', () => {
+  // B9-44 (TB-03, changed on purpose): "Lines to get" is a link to /shop; the streak and Leftovers stay non-interactive.
+  it('no tile spans extra columns; only Lines to get is a link (to /shop); there is no button; the streak is a div', () => {
     const { container } = render(<MetricStrip metrics={all} />)
     for (const t of container.querySelectorAll('[data-metric]')) expect(t).not.toHaveAttribute('data-span', '2')
     expect(screen.queryAllByRole('button')).toHaveLength(0)
-    expect(screen.queryAllByRole('link')).toHaveLength(0)
+    const links = screen.getAllByRole('link')
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', '/shop')
+    expect(links[0]).toHaveAccessibleName(/Lines to get/)
+    expect(container.querySelector('[data-metric="streak"]')!.tagName).toBe('DIV')
+    expect(container.querySelector('[data-metric="streak"] a')).toBeNull()
   })
 
   it('does not say a label twice and has no heading per metric', () => {

@@ -10,6 +10,9 @@ vi.mock('../seams', () => ({
   useTodayStock: vi.fn(() => ({ spoiled: 0, useSoon: [], loading: false })),
 }))
 
+// B9-44 (TB-12): a Scan session is read from the persisted session, in its own seam.
+vi.mock('../shoppingSeam', () => ({ useShoppingSession: vi.fn(() => null) }))
+
 // DS-TODAY: Today also reads the Shop list (Lines to get) through ../shopSeam.
 vi.mock('../shopSeam', () => ({ useLinesToGet: vi.fn(() => ({ count: 0, loading: false })) }))
 
@@ -43,15 +46,18 @@ describe('useToday', () => {
     expect(result.current.today).toBe('2026-11-09')
     expect(layout.mode).toBe('today')
     if (layout.mode === 'today') {
-      expect(layout.tiles.map((t) => t.id)).toEqual(['nextMeal', 'toConfirm', 'metrics', 'advanceSteps', 'leftovers', 'spoiled'])
+      expect(layout.tiles.map((t) => t.id)).toEqual(['nextMeal', 'toConfirm', 'advanceSteps', 'metrics', 'spoiled', 'leftovers'])
     }
   })
 
-  it('is the Shopping List while a scan session is active', async () => {
-    vi.mocked(seams.useScanSessionActive).mockReturnValue(true)
+  // B9-44 (TB-12, changed on purpose): a persisted Scan session puts the shopping tile first; Today is still composed.
+  it('puts the shopping tile first while a Scan session is active', async () => {
+    const shopping = await import('../shoppingSeam')
+    vi.mocked(shopping.useShoppingSession).mockReturnValue({ shopId: 7, shopName: 'Coop', scanned: 2, lastScanAt: Date.now(), end: async () => {}, resume: () => {} })
     mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 } })
     const { result } = renderHook(() => useToday(), { wrapper })
-    await waitFor(() => expect(result.current.layout).toEqual({ mode: 'shopping' }))
+    await waitFor(() => expect(result.current.layout).toMatchObject({ mode: 'today', tiles: [{ id: 'shopping' }] }))
+    vi.mocked(shopping.useShoppingSession).mockReturnValue(null)
   })
 
   // DS-TODAY: Lines to get (the Shop list) is a Today input: it alone makes the metric strip show, and Today waits for it.

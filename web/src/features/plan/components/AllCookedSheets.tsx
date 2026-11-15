@@ -1,20 +1,17 @@
 import type { ReactNode } from 'react'
 import type { AllCookedFlow } from '../hooks/useAllCookedFlow'
 import { MarkAllCookedSheet } from './MarkAllCookedSheet'
-import { ShortfallNotice } from './ShortfallNotice'
-import { StockCorrectionSheet } from './StockCorrectionSheet'
+import { ShortfallSheets } from './ShortfallSheets'
 
 /**
  * The Mark all Cooked sheet, the Stock shortfall notices and the Stock correction sheet of one AllCookedFlow (Plan and
  * Today; the same outcome as the single Course's CookFlowSheets).
  */
-export function AllCookedSheets({ flow }: { flow: AllCookedFlow }): ReactNode {
-  const { controller, stock, key, close, warnings, dismissWarning } = flow
+export function AllCookedSheets({ flow, notice = true }: { flow: AllCookedFlow; /** B9-44: false when the screen shows the flows' ONE shortfall notice itself (Today). */ notice?: boolean }): ReactNode {
+  const { controller, key, close } = flow
   return (
     <>
-      {warnings.map((w) => (
-        <ShortfallNotice key={w.ingredientId} warning={w} onCorrect={stock.open} onDismiss={(x) => dismissWarning(x.ingredientId)} />
-      ))}
+      {notice ? <ShortfallSheets groups={flow.shortfalls} correct={flow.correct} onDismiss={flow.dismissShortfalls} system={flow.system} placement="list" /> : null}
       <MarkAllCookedSheet
         open={key !== null}
         onClose={close}
@@ -25,14 +22,6 @@ export function AllCookedSheets({ flow }: { flow: AllCookedFlow }): ReactNode {
         busy={controller.busy}
         error={controller.error}
         usedFrom={controller.usedFrom}
-      />
-      <StockCorrectionSheet
-        open={stock.correction !== null}
-        onClose={stock.close}
-        correction={stock.correction}
-        onSave={(t) => void stock.save(t)}
-        busy={stock.busy}
-        error={stock.error}
       />
     </>
   )

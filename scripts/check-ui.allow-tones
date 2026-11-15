@@ -15,3 +15,4 @@ web/src/features/ingredients/lib/impact.ts   # Delete Ingredient / Delete Supply
 web/src/features/ingredients/screens/IngredientScreen.tsx   # the More menu's Delete Ingredient / Delete Supply item is the destructive action (a loss) (B9-48, SAFE-02)
 web/src/features/import/components/StartOverButton.tsx   # the Start over confirm loses every answer given so far: a destructive confirm keeps its danger tone (main-session ruling, B9-28)
 web/src/features/recipes/lib/editorExit.ts   # B9-31: "Discard your changes?" is a destructive confirm (the changes are lost), danger as R1 and the safe-06 mock draw it
+web/src/features/today/components/UseSoonTile.tsx   # B9-44 (TB-11, DS-06): Use soon is food about to go off: the spoil tile and its spoil meta

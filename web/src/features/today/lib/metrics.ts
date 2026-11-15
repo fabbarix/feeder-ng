@@ -8,8 +8,10 @@ export type MetricId = 'streak' | 'leftovers' | 'lines'
 
 export interface Metric {
   id: MetricId
-  /** The big number: "2 d", "3 wk", "3", "16". */
+  /** The big number: "2 d", "3", "16". */
   value: string
+  /** B9-44 (TB-08): the value's accessible name when the short form needs spelling out ("2 days"). */
+  name?: string
   label: string
   /** Metric tiles are never accent-soft (system.md §2): neutral is a surface tile, the others are status tones. */
   tone: 'success' | 'leftover' | 'neutral'
@@ -30,7 +32,10 @@ export interface MetricCounts {
  */
 export function composeMetrics(c: MetricCounts): Metric[] {
   const out: Metric[] = []
-  if (c.streakDays >= 1) out.push({ id: 'streak', value: streakMetric(c.streakDays).value, label: s.streakLabel, tone: 'success', icon: 'streak' })
+  if (c.streakDays >= 1) {
+    const streak = streakMetric(c.streakDays)
+    out.push({ id: 'streak', value: streak.value, name: streak.name, label: s.streakLabel, tone: 'success', icon: 'streak' })
+  }
   if (c.leftovers > 0 && !c.leftoversTile) out.push({ id: 'leftovers', value: String(c.leftovers), label: s.leftoversMetric, tone: 'leftover', icon: 'leftover' })
   if (c.linesToGet > 0) out.push({ id: 'lines', value: String(c.linesToGet), label: s.linesMetric, tone: 'neutral', icon: 'shop' })
   return out

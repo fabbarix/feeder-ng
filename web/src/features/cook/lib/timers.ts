@@ -1,6 +1,6 @@
 // Pure helpers for synced timers. Plain TypeScript, no React.
 import { weekdayName } from '../../plan/lib/phrase'
-import type { CookTimer } from '../types'
+import type { CookTimer, StartTimerInput } from '../types'
 
 /**
  * serverNow - clientNow in ms, measured from a response's `now`. Add it to the
@@ -92,4 +92,59 @@ export function timerPlace(timerScope: string | null, currentScope: string, reci
   const meal = /^meal:(\d{4}-\d{2}-\d{2})\//.exec(timerScope)
   if (meal) return `${weekdayName(meal[1]!, 'short')} Planned Meal`
   return 'another Recipe'
+}
+
+// ---- B9-40 (PC-03, SHORT-01): the Cook strip's pills and the rail's place lines ----
+
+/** Short landscape shows whole pills only: two from 768 px (48 em, the breakpoint table's md) wide, one below. */
+export function visiblePillCount(width: number): number {
+  return width >= 768 ? 2 : 1
+}
+
+/** The timers that hold Next first (keeping their order), then the rest in the order given. Does not mutate. */
+export function stripOrder<T extends { timer: CookTimer }>(items: T[], holdingIds: number[]): T[] {
+  const holding = items.filter((i) => holdingIds.includes(i.timer.id))
+  const rest = items.filter((i) => !holdingIds.includes(i.timer.id))
+  return [...holding, ...rest]
+}
+
+/** The first `max` items and how many are left over ("+N"); no `max` shows them all. */
+export function splitPills<T>(items: T[], max?: number): { shown: T[]; more: number } {
+  if (max === undefined || max >= items.length) return { shown: [...items], more: 0 }
+  const n = Math.max(0, max)
+  return { shown: items.slice(0, n), more: items.length - n }
+}
+
+const STEP_NUMBER = /^Step\s+(\d+)\b/i
+
+/**
+ * The place line of a rail timer tile (PC-03): "Step 1 · next waits for it" for a timer that holds Next, "Step 4" for this scope's,
+ * "<where> · Step 2" for another scope's (the Recipe's name, "Tue Planned Meal" or "another Recipe"), '' for a free timer here.
+ */
+export function railPlace(timer: CookTimer, scope: string, holdsNext: boolean): string {
+  const m = STEP_NUMBER.exec(timer.label.trim())
+  const step = m ? `Step ${m[1]}` : timer.step !== null && timer.step !== undefined ? `Step ${timer.step + 1}` : ''
+  if (holdsNext) return step ? `${step} · next waits for it` : 'Next waits for it'
+  if (!timer.scope) return ''
+  if (timer.scope === scope) return step
+  const where = timerPlace(timer.scope, scope, timer.recipeName)
+  return step ? `${where} · ${step}` : where
+}
+
+/** What starts `timer` again with `seconds` (Undo of a cancel, Add 1 minute): its scope and Step when it has them, its label. */
+export function restartInput(timer: CookTimer, seconds: number): StartTimerInput {
+  const input: StartTimerInput = { label: timer.label, durationSeconds: Math.max(1, Math.round(seconds)) }
+  if (timer.scope) input.scope = timer.scope
+  if (timer.step !== null && timer.step !== undefined) input.step = timer.step
+  return input
+}
+
+/**
+ * The order of Cook Mode's timers (PC-03): the ones that hold Next first, then this scope's (or, on the timeline, every one that
+ * `belongs`), then the others. Does not mutate.
+ */
+export function cookTimerOrder<T extends { timer: CookTimer }>(items: T[], scope: string, holdingIds: number[] = [], belongs?: (timerScope: string | null) => boolean): T[] {
+  const here = belongs ? items.filter((i) => belongs(i.timer.scope)) : items.filter((i) => i.timer.scope === scope)
+  const elsewhere = belongs ? items.filter((i) => !belongs(i.timer.scope)) : items.filter((i) => i.timer.scope !== scope)
+  return stripOrder([...here, ...elsewhere], holdingIds)
 }

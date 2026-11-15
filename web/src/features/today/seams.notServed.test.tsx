@@ -8,6 +8,11 @@ const dinner = { date: '2026-11-10', mealSlotId: 4, name: 'Dinner', notServed: t
 const h = vi.hoisted(() => ({ plan: { slots: [] as unknown[], today: '2026-11-10', isLoading: false, failed: false, refetch: vi.fn() } }))
 vi.mock('../plan', () => ({
   heroSelection: () => null,
+  // B9-39: the clock and the just-served rows (the seam merges them into To confirm)
+  useHeroClock: () => new Date('2026-11-09T12:00:00Z'),
+  heroNextChange: () => null,
+  justServed: () => [],
+  withJustServed: (served: unknown[], server: unknown[]) => [...served, ...server],
   notServedToday: (slots: { notServed?: boolean }[]) => slots.filter((s) => s.notServed),
   usePlan: () => h.plan,
   useToConfirm: () => ({ slots: [], isLoading: false, failed: false }),
@@ -17,6 +22,8 @@ vi.mock('../plan', () => ({
 vi.mock('../stock', () => ({
   useSpoiledLots: () => ({ data: [], today: '2026-11-10', isLoading: false, status: 'ready', throwOut: vi.fn(), keep: vi.fn(), refetch: vi.fn() }),
   useStockTotals: () => ({ data: [], system: 'metric', isLoading: false, status: 'ready', refetch: vi.fn() }),
+  // B9-44 (TB-11): Use soon rows name their Lot, so the seam reads the Lots too.
+  useAllLots: () => ({ data: [], isLoading: false, status: 'ready', refetch: vi.fn() }),
 }))
 vi.mock('../shop', () => ({ ShoppingScreen: () => null }))
 vi.mock('../scan', () => ({ useScanSessionActive: () => false }))

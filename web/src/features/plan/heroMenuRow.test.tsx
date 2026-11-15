@@ -9,7 +9,8 @@ import { TonightHero } from './components/TonightHero'
 import { meal, slot } from './test-utils'
 import { readFeatureCss } from './test-css'
 
-const css = readFeatureCss('plan.css').replace(/\/\*[\s\S]*?\*\//g, '')
+// B9-39: the hero's styles move to components/TonightHero.css (plan.css is B9-38's in this wave): the rules are read from both files.
+const css = `${readFeatureCss('plan.css')}\n${readFeatureCss('components/TonightHero.css')}`.replace(/\/\*[\s\S]*?\*\//g, '')
 const longName = 'Roasted two-colour cauliflower with sweet peppers and capers' // 60 characters
 const hero = (name = 'Slow cooker beef and barley stew') =>
   render(

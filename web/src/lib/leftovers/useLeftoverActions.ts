@@ -7,6 +7,7 @@ import { useToast } from '../../ui/Toast'
 import { leftoversApi } from './api'
 import { actionError, answerToast, freezeToast, hadItToast, leftoverStrings, takeOutToast, threwOutToast } from './copy'
 import { leftoverKeys } from './queryKeys'
+import { takeFromSoonest } from './rows'
 import type { Leftover, LeftoverAnswer, LeftoverRequest, PlannedMealRef } from './types'
 
 export interface LeftoversState {
@@ -36,7 +37,7 @@ export interface LeftoverActions {
    * Runs the confirmed sheet. On success: toast (copy.ts), refresh Leftovers, the plan and the Pantry, resolve true.
    * On failure: an error toast with `actionError`, nothing refreshed, resolve false.
    */
-  run: (leftover: Pick<Leftover, 'id' | 'recipeName'>, request: LeftoverRequest) => Promise<boolean>
+  run: (leftover: Pick<Leftover, 'id' | 'recipeName'>, request: LeftoverRequest, members?: Leftover[]) => Promise<boolean>
   /** The three buttons of the question row. Same toast and refresh rules. */
   answer: (leftover: Pick<Leftover, 'id' | 'recipeName'>, answer: LeftoverAnswer) => Promise<boolean>
   /** True while a call is in flight (disables the sheet's confirm button). */
@@ -44,7 +45,8 @@ export interface LeftoverActions {
 }
 
 type Target = Pick<Leftover, 'id' | 'recipeName'>
-type Job = { leftover: Target; request: LeftoverRequest } | { leftover: Target; answer: LeftoverAnswer }
+/** `members`: the Leftovers a merged row stands for (B9-45, PC-13); the request then takes from the soonest first. */
+type Job = { leftover: Target; request: LeftoverRequest; members?: Leftover[] } | { leftover: Target; answer: LeftoverAnswer }
 
 /** What a successful job changed: the toast line, and whether waste was recorded (the streak and the Board then move). */
 interface Outcome {
@@ -60,6 +62,7 @@ async function perform(job: Job, today: string): Promise<Outcome> {
     return { message: answerToast(leftover.recipeName, job.answer), waste: job.answer === 'threw_out' }
   }
   const r = job.request
+  if (job.members && job.members.length > 1) return performMerged(leftover, r, job.members, today)
   switch (r.kind) {
     case 'had-it': {
       const out = await leftoversApi.hadIt(leftover.id, r.portions)
@@ -75,6 +78,34 @@ async function perform(job: Job, today: string): Promise<Outcome> {
     case 'take-out': {
       const out = await leftoversApi.takeOut(leftover.id, r.storagePlaceId)
       return { message: takeOutToast(leftover.recipeName, out.leftover.useBy, today), waste: false }
+    }
+  }
+}
+
+/**
+ * B9-45 (PC-13): a merged row's action. Had it, Threw it out and Freeze it take their portions from the soonest Leftover first
+ * (lib/leftovers takeFromSoonest), one call each; Take out takes every member out. One toast for the whole action.
+ */
+async function performMerged(leftover: Target, r: LeftoverRequest, members: Leftover[], today: string): Promise<Outcome> {
+  const total = members.reduce((n, m) => n + m.portions, 0)
+  if (r.kind === 'take-out') {
+    let useBy = ''
+    for (const m of members) useBy = (await leftoversApi.takeOut(m.id, r.storagePlaceId)).leftover.useBy
+    return { message: takeOutToast(leftover.recipeName, useBy, today), waste: false }
+  }
+  const parts = takeFromSoonest(members, r.portions)
+  switch (r.kind) {
+    case 'had-it': {
+      for (const p of parts) await leftoversApi.hadIt(p.leftoverId, p.portions)
+      return { message: hadItToast(leftover.recipeName, r.portions, Math.round((total - r.portions) * 100) / 100), waste: false }
+    }
+    case 'threw-out':
+      for (const p of parts) await leftoversApi.threwOut(p.leftoverId, p.portions)
+      return { message: threwOutToast(leftover.recipeName, r.portions), waste: true }
+    case 'freeze': {
+      let frozen: { storagePlaceName: string | null; useBy: string } | null = null
+      for (const p of parts) frozen = (await leftoversApi.freeze(p.leftoverId, r.storagePlaceId, p.portions)).frozen
+      return { message: freezeToast(leftover.recipeName, frozen?.storagePlaceName ?? leftoverStrings.notSorted, frozen?.useBy ?? today, today), waste: false }
     }
   }
 }
@@ -121,7 +152,7 @@ export function useLeftoverActions({ today }: { today: string }): LeftoverAction
   }
 
   return {
-    run: (leftover, request) => settle({ leftover, request }),
+    run: (leftover, request, members) => settle({ leftover, request, members }),
     answer: (leftover, answer) => settle({ leftover, answer }),
     busy,
   }

@@ -146,8 +146,8 @@ describe('toneStyle: warn and info tokens, never danger', () => {
   it('info is the blue info status tile and chip', () => {
     expect(toneStyle('info')).toEqual({ tile: { variant: 'status', status: 'info' }, chip: { kind: 'status', status: 'info' } })
   })
-  it('warn is the spoil (amber) status tile and chip', () => {
-    expect(toneStyle('warn')).toEqual({ tile: { variant: 'status', status: 'spoil' }, chip: { kind: 'status', status: 'spoil' } })
+  it('warn is the warn (mustard) status tile and chip, never spoil (DS-06)', () => {
+    expect(toneStyle('warn')).toEqual({ tile: { variant: 'status', status: 'warn' }, chip: { kind: 'status', status: 'warn' } })
   })
 })
 

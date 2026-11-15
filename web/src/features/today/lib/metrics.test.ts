@@ -6,14 +6,15 @@ import { composeMetrics, countLinesToGet } from './metrics'
 describe('composeMetrics', () => {
   it('is the three metrics in this order, each with a tone and an icon', () => {
     expect(composeMetrics({ streakDays: 2, leftovers: 3, linesToGet: 16 })).toEqual([
-      { id: 'streak', value: '2 d', label: 'zero-waste streak', tone: 'success', icon: 'streak' },
+      { id: 'streak', value: '2 d', name: '2 days', label: 'zero-waste streak', tone: 'success', icon: 'streak' },
       { id: 'leftovers', value: '3', label: 'Leftovers to use', tone: 'leftover', icon: 'leftover' },
       { id: 'lines', value: '16', label: 'Lines to get', tone: 'neutral', icon: 'shop' },
     ])
   })
 
-  it('the streak is "3 wk" from a week on, as before', () => {
-    expect(composeMetrics({ streakDays: 21, leftovers: 0, linesToGet: 0 })[0]).toMatchObject({ id: 'streak', value: '3 wk' })
+  // B9-44 (TB-08, changed on purpose): days only.
+  it('the streak is in days only, "21 d", with the unit spelled out as its accessible name', () => {
+    expect(composeMetrics({ streakDays: 21, leftovers: 0, linesToGet: 0 })[0]).toMatchObject({ id: 'streak', value: '21 d', name: '21 days' })
   })
 
   it('leaves out a metric with nothing to say: no streak under one day, no zero counts', () => {

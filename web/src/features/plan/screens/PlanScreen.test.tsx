@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PlanScreen } from './PlanScreen'
 import { meal, mockApi, renderWithProviders, slot } from '../test-utils'
 import type { CookedResult, CookPreview, PlanView } from '../types'
-import { noticeWith, findNotice } from '../../../test/notices'
+import { findNotice } from '../../../test/notices'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -34,9 +34,17 @@ const phone = () =>
 const headingOf = (day: string): string | RegExp => ({ Today: /· Today$/, Tomorrow: /· Tomorrow$/, Wednesday: 'Wed 11' })[day] ?? day
 const tile = async (name: string) => ((await screen.findByRole('heading', { name: headingOf(name) })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
-  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
+  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(`^${recipe}$`) }))
   return screen.findByRole('dialog', { name: recipe })
 }
+
+/** B9-45 (PC-02): the ONE shortfall notice (an info status tile with DetailList rows), not one danger alert per warning. */
+const findShortfallNotice = () =>
+  waitFor(() => {
+    const el = document.querySelector<HTMLElement>('.shortfall-notice')
+    if (!el) throw new Error('no shortfall notice')
+    return el
+  })
 
 describe('PlanScreen load failure', () => {
   afterEach(() => {
@@ -159,8 +167,8 @@ describe('PlanScreen: the Planned Meal sheet', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     const tomorrow = await openSheet('Tomorrow', 'Stew')
     expect(within(tomorrow).queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
-    expect(within(tomorrow).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
-    expect(within(tomorrow).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
+    expect(within(tomorrow).queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
+    expect(within(tomorrow).getByRole('button', { name: /^Swap / })).toBeInTheDocument()
   })
 
   it('Pin posts to the confirm route (the word is Pin, the route is old)', async () => {
@@ -194,7 +202,7 @@ describe('PlanScreen: B2 Cook Mode from a Planned Meal', () => {
   it("the Cook icon on today's tile opens Cook Mode for that slot", async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(routed, '/plan')
-    await userEvent.click(within(await tile('Today')).getByRole('button', { name: 'Cook' }))
+    await userEvent.click(within(await tile('Today')).getByRole('button', { name: /^Cook / }))
     expect(await screen.findByText('Cook Mode screen')).toBeInTheDocument()
   })
 
@@ -209,7 +217,7 @@ describe('PlanScreen: B2 Cook Mode from a Planned Meal', () => {
   it("tomorrow's tile has no Cook icon", async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(routed, '/plan')
-    expect(within(await tile('Tomorrow')).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    expect(within(await tile('Tomorrow')).queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
   })
 })
 
@@ -225,7 +233,7 @@ describe('PlanScreen: Swap', () => {
   it('the icon button opens three alternative rows and tapping one sets it on the slot', async () => {
     const api = mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives, 'PUT /api/plan/2026-11-10/3/1': meal({ recipeId: 21, pinned: true }) })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
     const dialog = await screen.findByRole('dialog', { name: 'Swap for…' })
     expect(await within(dialog).findByRole('button', { name: 'Pizza' })).toBeInTheDocument()
     expect(within(dialog).getByRole('list', { name: 'Alternatives' }).querySelectorAll('li')).toHaveLength(3)
@@ -242,7 +250,7 @@ describe('PlanScreen: Swap', () => {
       'PUT /api/plan/2026-11-10/3/1': { ...meal({ recipeId: 21, pinned: true }), changes: [], undoToken: 'tok-1' },
     })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
     await userEvent.click(await screen.findByRole('button', { name: 'Pizza' }))
     const toast = await findNotice('status', 'Swapped')
     expect(within(toast).getByRole('button', { name: 'Undo the Swap' })).toBeInTheDocument()
@@ -251,7 +259,7 @@ describe('PlanScreen: Swap', () => {
   it('"Keep it" closes the sheet and changes nothing', async () => {
     const api = mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
     await userEvent.click(await screen.findByRole('button', { name: 'Keep it' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(api.calls.some((c) => c.method !== 'GET')).toBe(false)
@@ -266,7 +274,7 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
       'PUT /api/plan/2026-11-11/4/1': meal({ recipeId: 32, pinned: true }),
     })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Choose a Recipe for / }))
     const dialog = await screen.findByRole('dialog', { name: 'Choose a Recipe' })
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Risotto' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-11/4/1')[0]?.body).toEqual({ recipeId: 32 }))
@@ -291,14 +299,15 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Mark as Cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2.5 }))
 
-    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
+    const notice = await findShortfallNotice()
+    expect(notice).toHaveTextContent('Stock was short for chicken thighs')
+    expect(notice).toHaveTextContent('100 g short')
     await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
-    const correct = await screen.findByRole('dialog', { name: 'How much chicken thighs do you have?' })
-    const input = within(correct).getByRole('spinbutton', { name: 'Total in Stock' })
-    await userEvent.clear(input)
-    await userEvent.type(input, '250')
-    await userEvent.click(within(correct).getByRole('button', { name: 'Set total' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 }))
+    const correct = await screen.findByRole('dialog', { name: /Correct Stock/ })
+    await userEvent.click(within(within(correct).getByRole('group', { name: 'chicken thighs left now' })).getByRole('button', { name: /^Increase/ }))
+    await userEvent.click(within(correct).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 10 }))
+    await waitFor(() => expect(document.querySelector('.shortfall-notice')).toBeNull())
   })
 
   it('dismissing the shortfall leaves Stock alone', async () => {
@@ -312,10 +321,8 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     await userEvent.click(within(planned).getByRole('button', { name: 'Mark as Cooked' }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Mark as Cooked' }))
-    // B9-26: the Cooked toast has its own Dismiss now; press the one inside the shortfall notice.
-    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
-    await userEvent.click(within(notice).getByRole('button', { name: 'Dismiss' }))
-    await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
+    await userEvent.click(within(await findShortfallNotice()).getByRole('button', { name: 'Dismiss' }))
+    await waitFor(() => expect(document.querySelector('.shortfall-notice')).toBeNull())
     expect(api.calls.some((c) => c.path.startsWith('/api/stock'))).toBe(false)
   })
 

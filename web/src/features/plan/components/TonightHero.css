@@ -2,47 +2,6 @@
    the hero is a size container, so its title and Course rows follow its own width (container queries, not the viewport). */
 
 /* ---- To confirm (docs/design/system.md §9): one row per Meal Slot ---- */
-.to-confirm__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-block-end: var(--space-3);
-}
-.to-confirm__badge {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  inline-size: 2rem;
-  block-size: 2rem;
-  border-radius: var(--radius-chip);
-}
-.to-confirm__badge[data-tone='info'] {
-  background: var(--color-info-bg);
-  color: var(--color-info-fg);
-}
-.to-confirm__heading {
-  flex: 1 1 auto;
-  margin: 0;
-  font-size: var(--text-title-3-size);
-  line-height: var(--text-title-3-line);
-  font-weight: 800;
-}
-/* The count of rows is a pill: a neutral container, round, padded. On the meta line it is a circle for one digit (as wide as it
-   is tall) and a pill from two digits (VC6). */
-.to-confirm__count {
-  box-sizing: border-box;
-  min-inline-size: calc(var(--text-meta-line) + 2 * var(--space-1));
-  padding-inline: var(--space-2);
-  padding-block: var(--space-1);
-  border-radius: var(--radius-chip);
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
 .to-confirm__list {
   list-style: none;
   margin: 0;
@@ -92,6 +51,14 @@
   line-height: var(--text-meta-line);
   font-weight: 700;
   text-align: center;
+}
+/* A long Meal Slot name ("Sunday lunch with the grandparents") ends in an ellipsis inside the badge, never across the title beside it. */
+.to-confirm__when > span {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .to-confirm__when > span:first-child {
   font-size: var(--text-meta-size);
@@ -152,12 +119,60 @@
     line-height: var(--text-title-1-line);
   }
 }
-/* After the slot time: "<Recipe> cooked?" under the title. */
-.plan-hero__ask {
+/* TB-15b: the eyebrow is a wrapping row of parts. A part never breaks inside ("start 08:00" stays whole) and carries its leading
+   "·", so a line never ends in a lone separator. The slot icon keeps the Tile's own gap before the first part. */
+.plan-hero .tile__overline {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 0;
+  column-gap: 0.4em;
+}
+.plan-hero .tile__overline > svg {
+  margin-inline-end: calc(var(--tile-overline-gap) - 0.4em);
+}
+/* A part never breaks inside. One that is longer than the whole line (a 50-character Meal Slot name at 375 px) ends in an ellipsis
+   within the eyebrow's column, beside the slot icon, so it never runs under the ⋮ or out of the hero; the full name is still read. */
+.plan-hero__eyebrow-part {
+  white-space: nowrap;
+  min-inline-size: 0;
+  max-inline-size: calc(100% - 1rem - var(--tile-overline-gap));
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* TB-01: from the start time until the slot time the start part reads "start now", underlined. */
+.plan-hero__start[data-now='true'] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* TB-10: the Recipe name is a button that reads as the title it is: the heading's font and colour, underlined on hover. The
+   browser's look is reset by longhands (not `all: unset`), so the app's one focus ring still applies (ui/Tile sets its colour). */
+.plan-hero__name-button {
+  appearance: none;
   margin: 0;
-  font-size: var(--text-body-strong-size);
-  line-height: var(--text-body-strong-line);
-  font-weight: 700;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--radius-control);
+  overflow-wrap: normal;
+  min-inline-size: 0;
+}
+.plan-hero__name-button:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* TB-01: what to start while the timeline must start now, under the Courses: meta size, weight 600 (not bold running text). */
+.plan-hero__hint {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 600;
 }
 /* The why chips stay on one line: a row that never wraps, clipped by the row, each chip may shrink. */
 .plan-hero__chips {
@@ -170,11 +185,29 @@
 .plan-hero__chips > * {
   min-inline-size: 0;
 }
-/* On the accent hero a why chip is on-accent at 18 % (neutral, never an accent-soft fill). The hero's colours in dark, and its
-   focus ring, are ui/Tile's hero rule (TB-05): this file has no dark block of its own. */
-.plan-hero .chip[data-kind='why'] {
-  background: color-mix(in srgb, var(--color-on-accent) 18%, transparent);
-  color: var(--color-on-accent);
+/* The why chip's look on the hero (its tint and boundary), the hero's colours in dark and its focus ring are ui/Tile's hero rules
+   (TB-05): this file has no dark block and no chip colour of its own. */
+
+/* TB-10: a why chip is a button; its touch target reaches 44 px through an ::after overlay (a 26 px chip, 9 px above and below, none to the sides so the clipping row never cuts it),
+   drawn whole: the chip row keeps that room above and below inside its own clipping box (padding), given back by negative margins.
+   At the top it gives back only the row gap, so the target ends where the name above it ends and never covers it. */
+.plan-hero__chips {
+  --plan-hero-chip-reach: 9px;
+  padding-block: var(--plan-hero-chip-reach);
+  margin-block: calc(-1 * var(--space-2)) calc(-1 * var(--plan-hero-chip-reach));
+}
+.plan-hero__chips .chip {
+  position: relative;
+}
+.plan-hero__chips .chip::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+  inline-size: auto;
+  block-size: auto;
+  min-inline-size: 0;
+  min-block-size: 0;
+  transform: none;
 }
 
 /* The Course list: a divider above it, in the hero's own text colour. */
@@ -257,4 +290,21 @@
   margin-inline-start: auto;
   /* A11Y-02, P39: 8 px between the icon buttons, so a focused button's ring (3 px at a 2 px offset) never meets the next. */
   gap: var(--space-2);
+}
+
+/* TB-01: a slot of today that has just joined To confirm: its badge reads "Today" in the info tone. */
+.to-confirm__row[data-fresh='true'] .to-confirm__when {
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+}
+
+/* TB-01: Today's polite live region ("Lunch moved to To confirm."): read, never seen. */
+.to-confirm__announce {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

@@ -12,7 +12,7 @@ export { RULES, RESERVED, ALWAYS_FAIL, PROBES, DARK_PROBES, SCENARIOS, SETUPS, e
 
 /** [route pattern, width kind]; ":id" is resolved with resolveRoute(). Must equal web/src/app/pageWidths.ts (contract test). */
 export const ROUTES = [
-  ['/', 'wide'], ['/plan', 'wide'], ['/plan/couldnt-plan/excluded', 'default'], ['/shop', 'wide'], ['/scan', 'narrow'], ['/pantry', 'default'],
+  ['/', 'default'], ['/plan', 'wide'], ['/plan/couldnt-plan/excluded', 'default'], ['/shop', 'wide'], ['/scan', 'narrow'], ['/pantry', 'default'],
   ['/recipes', 'wide'], ['/recipes/:id', 'default'], ['/recipes/:id/edit', 'default'], ['/recipes/new', 'default'],
   ['/recipes/import', 'narrow'], ['/recipes/export', 'narrow'], ['/ingredients', 'narrow'], ['/ingredients/:id', 'narrow'],
   ['/supplies', 'narrow'], ['/supplies/:id', 'narrow'], ['/scan/receipt', 'narrow'], ['/scan/receipt/review', 'narrow'],
@@ -46,6 +46,11 @@ export const SCENARIO_VIEWPORTS = {
   '390x400': { width: 390, height: 400, mobile: true },
   // B9-29 (SSP-05): a 320 px card on a 1120 px screen, where P23 reads the Pantry's and Supplies' metas at desktop widths.
   1120: { width: 1120, height: 800, mobile: false },
+  // Desktop sizes for the wide layouts (B9-32's plan-grid runs at 1920x1080, the 4-column week; the same keys are added on
+  // another branch, so the merge is a union).
+  '1024x768': { width: 1024, height: 768, mobile: false },
+  '1280x800': { width: 1280, height: 800, mobile: false },
+  '1920x1080': { width: 1920, height: 1080, mobile: false },
 }
 
 // B9-03: a scenario module that names a viewport this table lacks fails on load, not halfway through a run.

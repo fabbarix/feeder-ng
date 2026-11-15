@@ -71,6 +71,18 @@ export interface UsePantryFilters {
   count: number
   remove(key: PantryChipKey): void
   clear(): void
+  /** B9-44 (TB-11, TB-14): `?lot=<id>`, the Lot whose sheet the Pantry opens on arrival (a positive whole id, else null). Not a filter. */
+  lot: number | null
+  /** Removes `?lot=` from the address (replacing the history entry), so the sheet does not open again. */
+  clearLot(): void
+}
+
+/** A positive whole Lot id from `?lot=`, else null. */
+function lotParam(params: URLSearchParams): number | null {
+  const raw = params.get('lot')
+  if (raw === null || !/^\d+$/.test(raw)) return null
+  const id = Number(raw)
+  return id > 0 ? id : null
 }
 
 export function usePantryFilters(places: readonly StoragePlace[]): UsePantryFilters {
@@ -106,5 +118,12 @@ export function usePantryFilters(places: readonly StoragePlace[]): UsePantryFilt
     count: chips.length,
     remove: (key) => write((prev) => withoutChip(prev, key)),
     clear: () => write(withoutPantryFilters),
+    lot: lotParam(params),
+    clearLot: () =>
+      write((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('lot')
+        return next
+      }),
   }
 }

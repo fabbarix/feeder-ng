@@ -4,8 +4,6 @@
 # each file moves its list to DetailList (or confirms it is not a key/state/detail list) and removes its line here.
 # Format: <exact path>   # <owner>: <what the list is>. An entry without a reason is ignored. New files never go here.
 web/src/features/board/components/BoardTiles.tsx                        # B9-47: board tile lists
-web/src/features/cook/components/AdvanceStepsTile.tsx                   # B9-40: Advance Steps rows
-web/src/features/cook/components/TimelineAdvanceTile.tsx                # B9-40: Advance Steps timeline
 web/src/features/import/components/ExportPicker.tsx                     # B9-28: export choices
 web/src/features/import/components/ImageWarningsTile.tsx                # B9-28: image warnings
 web/src/features/import/components/ReadErrorTile.tsx                    # B9-28: read errors
@@ -20,6 +18,4 @@ web/src/features/recipes/components/CourseLossDialog.tsx                # B9-37:
 web/src/features/settings/components/MealSlotCard.tsx                   # B9-42: usual Courses (a list of Chips, not bullets)
 web/src/features/shop/components/CelebrationTile.tsx                    # B9-43: Shop celebration facts
 web/src/features/stock/components/SpoiledTile.tsx                       # B9-29: spoiled Lots (rows with actions: ListRow)
-web/src/features/today/components/AdvanceStepsTile.tsx                  # B9-44: Advance Steps on Today
 web/src/features/today/components/SetupChecklistTile.tsx                # B9-44: setup checklist
-web/src/features/today/components/UseSoonTile.tsx                       # B9-44: Use soon rows

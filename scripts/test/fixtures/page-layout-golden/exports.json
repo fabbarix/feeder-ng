@@ -28,7 +28,7 @@
  "ROUTES": [
   [
    "/",
-   "wide"
+   "default"
   ],
   [
    "/plan",

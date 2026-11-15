@@ -18,6 +18,12 @@ export const leftoverStrings = {
   fromTheFreezer: 'From the freezer',
   fromTheFreezerHint: 'From the freezer: take it out the day before',
   notSorted: 'Not sorted',
+  /** B9-45 (PC-13): the Freeze sheet. */
+  portionsToFreeze: 'Portions to freeze',
+  portionsUnit: 'portions',
+  goesTo: 'Goes to',
+  change: 'Change',
+  changeStoragePlace: 'Change Storage Place',
 }
 
 /** "1 portion", "2 portions", "1.5 portions", "0.5 portions". */

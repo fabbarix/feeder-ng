@@ -32,7 +32,7 @@ describe('CouldntPlanExclusionSummary', () => {
   it('is warn (amber), not danger, with the Exclusion icon', () => {
     const { container } = setup()
     const tile = container.querySelector('section')!
-    expect(tile).toHaveAttribute('data-status', 'spoil')
+    expect(tile).toHaveAttribute('data-status', 'warn')
     expect(tile.querySelector('.tile__overline svg')).not.toBeNull()
   })
 })

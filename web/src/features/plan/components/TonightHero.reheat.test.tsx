@@ -6,7 +6,6 @@ import { TonightHero } from './TonightHero'
 
 const key = { date: '2026-11-10', mealSlotId: 2, courseId: 1 }
 const before = new Date('2026-11-10T17:00:00Z')
-const after = new Date('2026-11-10T20:00:00Z')
 const served = slot({
   at: '2026-11-10T19:30:00Z',
   time: '19:30',
@@ -35,23 +34,13 @@ describe('TonightHero: Reheat (R12)', () => {
     expect(screen.getByText(/Leftover from/)).toBeInTheDocument()
   })
 
-  it('after the slot time it asks Cooked (primary) with Reheat (secondary) instead of Adjust (DS-TODAY round 2: was Yes, Cooked)', async () => {
-    const h = setup(after)
-    expect(screen.getByRole('button', { name: 'Cooked' })).toHaveAttribute('data-variant', 'primary')
-    const reheat = screen.getByRole('button', { name: 'Reheat' })
-    expect(reheat).toHaveAttribute('data-variant', 'secondary')
-    expect(screen.queryByRole('button', { name: 'Adjust' })).not.toBeInTheDocument()
-    await userEvent.click(reheat)
-    expect(h.onReheat).toHaveBeenCalledWith(key)
-  })
-
   it('a Leftover meal on a later day (action leftover) offers no Reheat', () => {
     setup(before, 'leftover')
     expect(screen.queryByRole('button', { name: 'Reheat' })).not.toBeInTheDocument()
   })
 
-  it('without an onReheat handler the Reheat button is not shown, before or after the slot time', () => {
-    for (const now of [before, after]) {
+  it('without an onReheat handler the Reheat button is not shown', () => {
+    for (const now of [before]) {
       const { unmount } = render(<TonightHero slot={served} now={now} action="reheat" onCook={vi.fn()} onYesCooked={vi.fn()} onAdjust={vi.fn()} />)
       expect(screen.queryByRole('button', { name: 'Reheat' })).not.toBeInTheDocument()
       unmount()
