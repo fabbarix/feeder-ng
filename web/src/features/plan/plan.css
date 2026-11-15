@@ -555,7 +555,13 @@
   padding-inline: var(--space-3);
 }
 /* DS-05: the title clamp and the one-line meta are ListRow's (system.md §3); this tile does not override them. */
-/* B9-32 (PC-07): below 1024 px the Plan's Leftovers tile is one summary row with Show. */
+/* B9-32 (PC-07): the Plan's Leftovers tile lists its rows (questions first) from 1024 px, and in its sheet. */
+.plan-leftovers__rows {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+/* Below 1024 px it is one summary row with Show. */
 .plan-leftovers__summary {
   display: flex;
   align-items: center;
