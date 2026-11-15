@@ -8,6 +8,10 @@ export interface CookEntryProps {
   onBatchesChange: (n: number) => void
   /** Yield of the Recipe (portions per Batch); the hint multiplies it with lib/cookEntry.batchPortions. */
   yieldValue: number
+  /** RX-06 (B9-27 stub: type only): the Yield's unit of a Base recipe ('g', 'l', 'portion'...); absent for a plannable Recipe. */
+  yieldUnit?: string | null
+  /** RX-06 (B9-27 stub: type only): the User's display units for the hint. Default 'metric'. */
+  system?: 'metric' | 'imperial'
   onStart: () => void
 }
 

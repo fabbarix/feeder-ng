@@ -142,6 +142,8 @@ export interface Recipe extends Omit<RecipeInput, 'courseIds' | 'lines' | 'yield
   updatedAt: string
   /** Beta.5 F7: the latest date (YYYY-MM-DD) a Cooked fresh Planned Meal of this Recipe had; null = never cooked. */
   lastCookedOn: string | null
+  /** SAFE-05 (B9-27): false when Delete would refuse (planned before, or a Base recipe in use). Absent = unknown, treated as deletable. */
+  deletable?: boolean
 }
 
 export interface RecipeSummary {
@@ -157,6 +159,8 @@ export interface RecipeSummary {
   archived: boolean
   totalMinutes: number
   advanceMinutes: number
+  /** RX-07 (B9-27): how many Steps the Recipe has; absent in older payloads. */
+  stepCount?: number
   /** Beta.5 F7: see Recipe.lastCookedOn. */
   lastCookedOn: string | null
   /** BR-D: true = a Base recipe (the list is plannable only unless `?kind=base|all`). */

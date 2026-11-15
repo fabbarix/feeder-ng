@@ -5,8 +5,18 @@ import { timeSummary } from '../lib/timeSummary'
 import { recipeStrings } from '../strings'
 
 export interface RecipeMetricsProps {
-  yieldText: string
-  readyMeal: boolean
+  /** RX-06 (B9-27 stub: type only): the number; replaces yieldText. */
+  yieldValue?: number
+  /** RX-06: a Base recipe's Yield unit. */
+  yieldUnit?: string | null
+  /** RX-06: true for a Base recipe ("800 g per Batch"). */
+  baseRecipe?: boolean
+  /** RX-07: the number of Steps (untimed Steps are not "No Steps"). */
+  stepCount?: number
+  /** @deprecated B9-27 replaces it with yieldValue. */
+  yieldText?: string
+  /** @deprecated B9-27 moves the Ready Meal chip to the hero line; the metrics no longer take it. */
+  readyMeal?: boolean
   totalMinutes: number
   advanceMinutes: number
   /** Beta.5 F7: the "Last cooked ..." / "Not cooked yet" line (lib/lastCooked), already worded. */
@@ -17,7 +27,7 @@ export interface RecipeMetricsProps {
  * The two metric Tiles of Recipe detail: "4 portions per Batch" (plus a Ready Meal chip) and the time
  * (lib/timeSummary): "25 min cooking" with "+ 4 h ahead" beneath when an Advance Step exists, or "No Steps".
  */
-export function RecipeMetrics({ yieldText, readyMeal, totalMinutes, advanceMinutes, lastCooked }: RecipeMetricsProps): ReactNode {
+export function RecipeMetrics({ yieldText = '', readyMeal = false, totalMinutes, advanceMinutes, lastCooked }: RecipeMetricsProps): ReactNode {
   const time = timeSummary({ totalMinutes, advanceMinutes })
   const ahead = time.ahead ? recipeStrings.aheadMetric(formatMinutes(advanceMinutes)) : null
   return (

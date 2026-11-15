@@ -11,7 +11,7 @@ describe('CookTile', () => {
     const { container } = render(<CookTile {...props()} />)
     const section = screen.getByRole('region', { name: 'Cook' })
     expect(section.tagName).toBe('SECTION')
-    expect(section).toHaveClass('tile')
+    expect(section).toHaveClass('tile', 'recipe-cook')
     expect(section).toHaveAttribute('data-variant', 'surface')
     const heading = within(section).getByRole('heading', { level: 2, name: 'Cook' })
     expect(section).toHaveAttribute('aria-labelledby', heading.id)

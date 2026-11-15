@@ -12,6 +12,10 @@ export interface RecipeTagsProps {
   limit?: number
   /** Makes each chip a button; absent = plain chips. */
   onOpen?: (name: string) => void
+  /** RX-04 (B9-27 stub: type only): the hero line: plain chips before the Tags (Archived, Courses, Whole meal, Ready Meal), in one list named "Courses and Tags". Never collapsed. */
+  lead?: readonly string[]
+  /** RX-04: fit the line to its width; "+N" is a button that opens the whole line in place. */
+  fitted?: boolean
 }
 
 /** TG-RW: a list named "Tags" of Tag chips in their colours; shared by the Recipe tile and the Recipe detail. Nothing for no Tags. */
