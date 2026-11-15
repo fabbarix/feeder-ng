@@ -10,6 +10,10 @@ describe('chipShowsFull', () => {
   it('1 px short: the short value shows', () => {
     expect(chipShowsFull({ natural: 121, room: 120 })).toBe(false)
   })
+  it('a chip showing its short value goes back to the full one only with 2 px to spare (a row on a sub-pixel boundary settles)', () => {
+    expect(chipShowsFull({ natural: 120, room: 121 }, false)).toBe(false)
+    expect(chipShowsFull({ natural: 120, room: 122 }, false)).toBe(true)
+  })
   it('an unmeasured chip (null) shows the full value', () => {
     expect(chipShowsFull(null)).toBe(true)
   })

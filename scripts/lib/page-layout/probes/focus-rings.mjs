@@ -55,7 +55,9 @@ const source = `
       const insideInner = b.x > inner.x && b.r < inner.r && b.y > inner.y && b.b < inner.b
       if (meets && !insideInner) neighbours.push({ sel: sel(o), box: b })
     }
-    const barList = bars.filter((b) => !b.contains(ringEl) && !ringEl.contains(b)).map((b) => ({ sel: sel(b), box: box(b.getBoundingClientRect()) }))
+    // B9-14: a control in an open modal dialog sits in the top layer, over every bar of the page behind it: only the dialog's own bars count.
+    const modal = ringEl.closest('dialog[open]')
+    const barList = bars.filter((b) => !b.contains(ringEl) && !ringEl.contains(b) && (!modal || modal.contains(b))).map((b) => ({ sel: sel(b), box: box(b.getBoundingClientRect()) }))
     let accentOutlines = 0
     for (let p = el; p && p !== document.body; p = p.parentElement) if (outlined(p) && !(p === el && hidden)) accentOutlines++
     if (ringEl !== el && !ringEl.contains(el) && !el.contains(ringEl)) accentOutlines++

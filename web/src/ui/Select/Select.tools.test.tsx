@@ -1,5 +1,5 @@
 // B9-15 (SET-06): the filter chips of an open Select are one line: active filters first, then as many others as fit, then "+N"
-// (aria-expanded, "Show N more filters"); "+N" expands the line in place and the expanded line ends with "Fewer"; the sort IconButton keeps
+// (aria-expanded, named "+N more filters": main session ruling, the name starts with the visible "+N", WCAG 2.5.3 label in name); "+N" expands the line in place and the expanded line ends with "Fewer"; the sort IconButton keeps
 // its place at the end; each chip is capped (12 rem) and carries its full text in its title. The fit is useFittingChips (ui/lib).
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -41,10 +41,10 @@ describe('the Select filter line', () => {
     expect(within(toolbar()).getAllByRole('button').filter((b) => tags.includes(b.textContent ?? ''))).toHaveLength(5)
     expect(screen.queryByRole('button', { name: /more filter/ })).toBeNull()
   })
-  it('when they do not fit it shows "+N" named "Show N more filters", collapsed', async () => {
+  it('when they do not fit it shows "+N" named "+N more filters", collapsed', async () => {
     fit.visible = 2
     await open()
-    const more = screen.getByRole('button', { name: 'Show 3 more filters' })
+    const more = screen.getByRole('button', { name: '+3 more filters' })
     expect(more).toHaveTextContent('+3')
     expect(more).toHaveAttribute('aria-expanded', 'false')
     expect(within(toolbar()).queryByRole('button', { name: 'Vegetarian' })).toBeNull()
@@ -53,7 +53,7 @@ describe('the Select filter line', () => {
   it('active filters come first, so a chosen one is never in "+N"', async () => {
     fit.visible = 2
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Show 3 more filters' }))
+    await userEvent.click(screen.getByRole('button', { name: '+3 more filters' }))
     await userEvent.click(within(toolbar()).getByRole('button', { name: 'Vegetarian' }))
     await userEvent.click(screen.getByRole('button', { name: 'Fewer' }))
     const names = within(toolbar()).getAllByRole('button').map((b) => b.textContent)
@@ -62,7 +62,7 @@ describe('the Select filter line', () => {
   it('"+N" expands the line in place, every chip shows, and the expanded line ends with "Fewer"; focus stays on that one button', async () => {
     fit.visible = 2
     await open()
-    const more = screen.getByRole('button', { name: 'Show 3 more filters' })
+    const more = screen.getByRole('button', { name: '+3 more filters' })
     more.focus()
     await userEvent.keyboard('{Enter}')
     expect(toolbar()).toHaveAttribute('data-expanded', 'true')
@@ -77,9 +77,9 @@ describe('the Select filter line', () => {
   it('"Fewer" collapses again and focus stays on the button', async () => {
     fit.visible = 2
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Show 3 more filters' }))
+    await userEvent.click(screen.getByRole('button', { name: '+3 more filters' }))
     await userEvent.click(screen.getByRole('button', { name: 'Fewer' }))
-    const more = screen.getByRole('button', { name: 'Show 3 more filters' })
+    const more = screen.getByRole('button', { name: '+3 more filters' })
     expect(more).toHaveAttribute('aria-expanded', 'false')
     expect(more).toHaveFocus()
   })
@@ -88,7 +88,7 @@ describe('the Select filter line', () => {
     await open()
     const last = () => within(toolbar()).getAllByRole('button').at(-1)!
     expect(last()).toHaveAccessibleName('Sort: Name')
-    await userEvent.click(screen.getByRole('button', { name: 'Show 3 more filters' }))
+    await userEvent.click(screen.getByRole('button', { name: '+3 more filters' }))
     expect(last()).toHaveAccessibleName('Sort: Name')
   })
   it('each chip carries its full text in its title', async () => {
@@ -98,9 +98,51 @@ describe('the Select filter line', () => {
   it('the expanded state resets when the list is opened again', async () => {
     fit.visible = 2
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Show 3 more filters' }))
+    await userEvent.click(screen.getByRole('button', { name: '+3 more filters' }))
     await userEvent.keyboard('{Escape}')
     await userEvent.click(screen.getByRole('combobox', { name: 'Recipe' }))
-    expect(screen.getByRole('button', { name: 'Show 3 more filters' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: '+3 more filters' })).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+// jsdom does not implement `inert`, so the hidden measuring copy of the chip line would take Tab stops a browser skips.
+const tab = async () => {
+  do await userEvent.tab()
+  while (document.activeElement?.closest('[inert]'))
+}
+
+describe('the open list by keyboard (Tab)', () => {
+  it('Tab moves from the search through the filter chips, "+N" and sort to the list, and the list stays open', async () => {
+    fit.visible = 2
+    await open({ searchable: true })
+    expect(screen.getByRole('searchbox')).toHaveFocus()
+    await tab()
+    expect(screen.getByRole('button', { name: 'Pasta' })).toHaveFocus()
+    await tab()
+    await tab()
+    expect(screen.getByRole('button', { name: '+3 more filters' })).toHaveFocus()
+    await tab()
+    expect(screen.getByRole('button', { name: /^Sort/ })).toHaveFocus()
+    await tab()
+    expect(screen.getByRole('listbox', { name: 'Recipe' })).toHaveFocus()
+  })
+  it('Escape from a filter chip closes the list and returns focus to the trigger', async () => {
+    await open({ searchable: true })
+    await tab()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Recipe' })).toHaveFocus()
+  })
+  it('a popover closes once focus leaves it', async () => {
+    render(
+      <>
+        <Select label="Recipe" options={options} filters={filters} sorts={sorts} value={null} onChange={() => {}} searchable />
+        <button type="button">after</button>
+      </>,
+    )
+    await userEvent.click(screen.getByRole('combobox', { name: 'Recipe' }))
+    screen.getByRole('button', { name: 'after' }).focus()
+    await screen.findByRole('button', { name: 'after' })
+    expect(screen.queryByRole('listbox')).toBeNull()
   })
 })

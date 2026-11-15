@@ -17,7 +17,9 @@ ICONS="$WEB/src/ui/icons.ts"
 # the budget moved to 45 KiB, keeping about 1.2 kB of headroom again.
 # beta.7 added the Supplies, Scanned list, receipt and photo-edit glyphs: 47,047 B, so the budget moved to 47 KiB
 # (about 1.1 kB of headroom, as before).
-BUDGET=48128
+# beta.9 (main session, 2026-11-15): the wave 2 primitives add BellRinging, Keyboard, CaretDown and ClockCounterClockwise; room for
+# the icons the remaining beta.9 packages add (Globe and a few more). Measured 48,598 B at w2a.
+BUDGET=51200
 MIN_MODULES=107   # distinct Phosphor icons in docs/dev/design/wp2-icons.md (+4 in UF1, +3 in R14/WP-D: Drop, Cube, Key; +1 in photo-read: Images; +1 in beta.5 WP D: ShoppingCart)
 PLUGIN="$WEB/vite.phosphor-weights.ts"
 if [ ! -f "$PLUGIN" ]; then

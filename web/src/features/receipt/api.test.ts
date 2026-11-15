@@ -70,7 +70,10 @@ describe('getRead and cancelRead', () => {
     const [url, init] = f.mock.calls[0]!
     expect(url).toBe('/api/scan/receipt/reads/a%2Fb')
     expect(init?.method).toBe('GET')
-    expect(init?.signal).toBe(ctl.signal)
+    // B9-20 (RES-06): a GET's signal is the caller's combined with the 10 s timeout: the caller's abort still aborts it
+    expect(init?.signal?.aborted).toBe(false)
+    ctl.abort()
+    expect(init?.signal?.aborted).toBe(true)
   })
   it('answers the running and failed shapes as they are', async () => {
     expect(await createReceiptApi(fake(json(200, { status: 'running' }))).getRead('x')).toEqual({ status: 'running' })

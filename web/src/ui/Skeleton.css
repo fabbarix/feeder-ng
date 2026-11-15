@@ -34,6 +34,112 @@
   border-radius: 50%;
 }
 
+/* B9-20 (RES-02): the block reserves its size from the first frame; only the shimmer waits for delayMs. */
+.skeleton[data-shown='false'] {
+  background: transparent;
+  animation: none;
+}
+
+.skeleton[data-variant='card'] {
+  block-size: auto;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-tile);
+}
+
+/* Today's hero, at its measured heights (RES-05): 193 px, 208 px from 600 px, 220 px from 1024 px. */
+.skeleton[data-variant='hero'] {
+  block-size: var(--skeleton-hero, 193px);
+  border-radius: var(--radius-hero, var(--radius-tile));
+}
+
+.skeleton[data-variant='title'] {
+  block-size: 28px;
+  inline-size: 55%;
+  border-radius: var(--radius-pill);
+}
+
+.skeleton[data-variant='meta'] {
+  block-size: 18px;
+  inline-size: 7em;
+  border-radius: var(--radius-pill);
+}
+
+/* The photo of a media SkeletonTile fills the Tile's 16:9 header. */
+.skeleton[data-variant='media'] {
+  block-size: 100%;
+  border-radius: 0;
+}
+
+/* A skeleton Tile is a Tile (the same box); its blocks keep their own widths beside the Tile's inline margins. */
+.skeleton-tile > .skeleton {
+  inline-size: auto;
+}
+
+.skeleton-tile > .skeleton[data-variant='line'] {
+  inline-size: 60%;
+}
+
+.skeleton-tile > .skeleton[data-variant='title'] {
+  inline-size: 55%;
+}
+
+.skeleton-tile > .skeleton[data-variant='meta'] {
+  inline-size: 7em;
+}
+
+/* A ListRow-shaped row at the row's 72 px: the 40 px leading thumb, then a title and a meta line. */
+.skeleton-list {
+  display: grid;
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  min-block-size: 72px;
+  padding-inline: var(--space-4);
+}
+
+.skeleton-list > .skeleton-row + .skeleton-row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.skeleton-row .skeleton[data-variant='circle'] {
+  border-radius: var(--radius-tile-sm);
+}
+
+.skeleton-row__text {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-row__text .skeleton[data-variant='line'] {
+  block-size: 14px;
+  inline-size: 55%;
+}
+
+.skeleton-row__text .skeleton[data-variant='meta'] {
+  block-size: 12px;
+  inline-size: 35%;
+}
+
+@media (min-width: 37.5em) /* 600px */ {
+  :root {
+    --skeleton-hero: 208px;
+  }
+}
+
+@media (min-width: 64em) /* 1024px */ {
+  :root {
+    --skeleton-hero: 220px;
+  }
+}
+
 @keyframes skeleton-shimmer {
   from {
     background-position: 100% 0;

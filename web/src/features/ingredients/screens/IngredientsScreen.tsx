@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Button, EmptyState, ListPage, PageHeader, SearchField, Skeleton } from '../../../ui'
+import { Button, EmptyState, ErrorState, ListPage, LoadState, PageHeader, SearchField, Skeleton } from '../../../ui'
 import { IngredientList } from '../components/IngredientList'
 import { NewIngredientSheet } from '../components/NewIngredientSheet'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
@@ -24,18 +24,21 @@ export function IngredientsScreen({ kind = 'food' }: { kind?: IngredientKind }) 
   const words = wordsFor(kind)
 
   const openNew = () => setCreating(true)
+  // B9-20 (RES-02): one state model; "unknown is not empty".
   let body
-  if (list.error) {
-    body = <p role="alert">{strings.actionFailed}</p>
-  } else if (list.isLoading) {
+  if (list.state === 'loading') {
     // The first load: rows to come, not "no match" (which would flash before the list).
     body = <Skeleton variant="row" count={5} />
-  } else if (list.ingredients.length > 0) {
-    body = <IngredientList ingredients={list.ingredients} system={system} label={words.title} onOpen={(id) => navigate(`${kindBasePath(kind)}/${id}`)} />
-  } else if (list.isEmpty) {
+  } else if (list.state === 'offlineUnknown') {
+    body = <LoadState title={words.offlineListTitle} text={strings.offlineListText} />
+  } else if (list.state === 'failed') {
+    body = <ErrorState message={words.listError} onRetry={list.refetch} />
+  } else if (list.state === 'empty') {
     body = <EmptyState title={words.emptyTitle} description={words.emptyText} action={<Button onClick={openNew}>{words.newLabel}</Button>} />
-  } else {
+  } else if (list.state === 'filteredEmpty') {
     body = <p>{words.noMatches}</p>
+  } else {
+    body = <IngredientList ingredients={list.ingredients} system={system} label={words.title} onOpen={(id) => navigate(`${kindBasePath(kind)}/${id}`)} />
   }
 
   return (

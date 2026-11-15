@@ -25,6 +25,7 @@ import { Skeleton } from './Skeleton'
 import { Stepper } from './Stepper'
 import { ToastProvider, useToast } from './Toast'
 import { GALLERY_ACCENT, GALLERY_SWATCHES } from './galleryData'
+import { SheetGalleryGroup } from './GallerySheets'
 import './Gallery.css'
 
 const noop = () => {}
@@ -268,6 +269,8 @@ export function OverlayGalleryGroups(): ReactNode {
             <CancelSheetDemo />
           </Cell>
         </Group>
+        {/* B9-14: context, submit, confirmDismiss, FormActions more and the destructive row. */}
+        <SheetGalleryGroup />
         <Group name="Toast">
           <Cell caption="statuses">
             <ToastDemo />

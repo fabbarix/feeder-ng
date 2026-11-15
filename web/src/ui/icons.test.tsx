@@ -56,6 +56,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['confirm', 'Check'],
   ['close', 'X'],
   ['remove', 'X'], // B9-01 DS-12 R-B: remove or clear one item; Close is CloseButton
+  ['globe', 'Globe'], // B9-15 SET-07: TimeZoneSelect
   ['back', 'ArrowLeft'],
   ['next', 'ArrowRight'],
   ['backspace', 'Backspace'], // beta.7 SR2: the PriceKeypad's backspace key
@@ -65,8 +66,11 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['sort', 'SortAscending'],
   ['expand', 'CaretUpDown'],
   ['chevron', 'CaretRight'],
+  ['caretDown', 'CaretDown'],
+  ['selected', 'Check'],
   ['copy', 'Copy'],
   ['undo', 'ArrowCounterClockwise'],
+  ['history', 'ClockCounterClockwise'], // B9-18 SAFE-01: DraftNotice
   ['import', 'DownloadSimple'],
   ['export', 'UploadSimple'],
   ['agentPrompt', 'Robot'],
@@ -139,6 +143,8 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['question', 'Question'], // beta.5 WP D
   ['shoppingCart', 'ShoppingCart'], // beta.5 WP D
   ['guests', 'UserPlus'], // beta.5 WP D
+  ['bellRinging', 'BellRinging'], // B9-17: the finished Timer pill (PC-04)
+  ['typeBarcode', 'Keyboard'], // B9-17: Type a barcode on Scan (SSP-06)
   ['receipt', 'Receipt'], // beta.7 SR2: "Read the receipt" (receipt-reading.md 3.1)
   ['key', 'Key'], // WP-D
   ['assistant', 'Robot'], // WP-D

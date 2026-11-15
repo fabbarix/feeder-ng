@@ -1,0 +1,83 @@
+/* RX-02: a section Tile whose heading is the toggle. The tile pads the button, so its focus ring is the outer ring. */
+/* A hash that names the section (and opens it) scrolls it clear of the app bar. */
+.disclosure {
+  scroll-margin-block-start: var(--space-14);
+}
+
+.disclosure__heading {
+  margin: 0;
+}
+
+.disclosure__button {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.disclosure__text {
+  display: grid;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+.disclosure__title {
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+
+.disclosure__summary {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.disclosure__caret {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+
+.disclosure__caret > svg {
+  transition: transform var(--motion-fast) ease;
+}
+
+.disclosure__button[aria-expanded='true'] .disclosure__caret > svg {
+  transform: rotate(180deg);
+}
+
+.disclosure__body {
+  display: grid;
+  gap: var(--space-4);
+  padding-block-start: var(--space-3);
+}
+
+.disclosure__body[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure__caret > svg {
+    transition: none;
+  }
+}

@@ -1,8 +1,12 @@
-import { useId, useRef, type ReactNode, type RefObject } from 'react'
+import { useCallback, useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { Button, PRIMARY_SCOPE_ATTR } from './Button'
+import { sheetStrings } from './BottomSheet.strings'
 import { CloseButton } from './CloseButton'
-import type { CancelButtonProps } from './Dialog'
+import { Dialog, type CancelButtonProps } from './Dialog'
 import { ActionSurface } from './lib/actionSurface'
+import { inheritScheme, stopReactPropagation } from './lib/portalStop'
+import { footerShouldFlow } from './lib/sheetLayout'
 import { overlayStrings } from './overlayStrings'
 import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
 import './BottomSheet.css'
@@ -13,6 +17,8 @@ export interface SheetSubmit {
   /** The id of the `<form>` in the body. */
   form: string
   disabled?: boolean
+  /** The save is in flight: the Button shows its spinner and is disabled (additive to the pinned API). */
+  loading?: boolean
   tone?: 'danger'
 }
 
@@ -41,25 +47,27 @@ export interface BottomSheetProps {
    * and the header Close still dismiss it. Default true.
    */
   modal?: boolean
-  /** B9-14 STUB (types only, behaviour is the developer's): false hides the header Close. Default true. */
+  /** false hides the header Close (Escape and the scrim still dismiss). Default true. With `onCancel` there is never a Close. */
   closeButton?: boolean
-  /** B9-14 STUB: a muted meta line above the title; part of the dialog's accessible name. */
+  /** A muted meta line above the title ("Mon 16 Nov · Dinner"); part of the dialog's accessible name. */
   context?: string
-  /** B9-14 STUB: the caller's dirty flag. While true every dismissal asks "Discard changes?" first. */
+  /** The caller's dirty flag. While true every dismissal (Escape, scrim, Close, Cancel) asks "Discard changes?" first. */
   confirmDismiss?: boolean
-  /** B9-14 STUB: the footer's primary submit Button bound to a body form by its `form` attribute. */
+  /** The footer's primary submit Button, bound to the body's `<form id>` by its `form` attribute; last in the footer. */
   submit?: SheetSubmit
   /** 'half': about half the viewport high on a phone, the body scrolling inside (a keypad beside a list). Default 'auto'. */
   size?: 'auto' | 'half'
 }
 
 /**
- * A modal panel that rises from the bottom (a `<dialog>`); a centred dialog from 768 px. Escape, backdrop and Close dismiss it.
- * `modal={false}` makes it a non-modal sheet (see the prop).
+ * A modal panel that rises from the bottom (a `<dialog>` portalled to document.body); a centred dialog from 768 px. Escape,
+ * backdrop and Close dismiss it. `modal={false}` makes it a non-modal sheet that stays where it is mounted (see the prop).
  */
 export function BottomSheet(props: BottomSheetProps) {
   return props.open ? <SheetSurface {...props} /> : null
 }
+
+type Dismissal = 'close' | 'cancel'
 
 function SheetSurface({
   onClose,
@@ -71,12 +79,30 @@ function SheetSurface({
   cancelProps,
   initialFocusRef,
   modal = true,
+  closeButton = true,
+  context,
+  confirmDismiss = false,
+  submit,
   size = 'auto',
 }: Omit<BottomSheetProps, 'open'>) {
   const ref = useRef<HTMLDialogElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
+  const contextId = useId()
+  const [asking, setAsking] = useState<Dismissal | null>(null)
+
+  const dismiss = useCallback(
+    (kind: Dismissal) => {
+      if (confirmDismiss) setAsking(kind)
+      else if (kind === 'cancel' && onCancel) onCancel()
+      else onClose()
+    },
+    [confirmDismiss, onCancel, onClose],
+  )
+
   const { onBackdropClick } = useModalDialog(ref, {
-    onClose,
+    onClose: () => dismiss('close'),
     modal,
     dismissOnBackdrop: modal,
     initialFocus: (dialog) =>
@@ -85,38 +111,155 @@ function SheetSurface({
       dialog.querySelector<HTMLElement>('.sheet__title'),
   })
 
-  return (
+  useFooterFlow(panelRef, bodyRef)
+  useLateInitialFocus(ref, bodyRef, !initialFocusRef)
+  const anchorRef = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => inheritScheme(anchorRef.current, ref.current), [])
+
+  const hasFooter = Boolean(footer || onCancel || submit)
+  const showClose = closeButton && !onCancel
+
+  const sheet = (
     <dialog
       ref={ref}
       className="sheet"
       data-modal={modal ? undefined : 'false'}
       data-size={size === 'auto' ? undefined : size}
-      aria-labelledby={titleId}
+      aria-labelledby={context ? `${contextId} ${titleId}` : titleId}
       {...{ [PRIMARY_SCOPE_ATTR]: '' }}
-      onClick={onBackdropClick}
+      onClick={(e: MouseEvent<HTMLDialogElement>) => {
+        onBackdropClick(e)
+        if (modal) stopReactPropagation(e)
+      }}
+      onPointerDown={modal ? stopReactPropagation : undefined}
+      onKeyDown={modal ? stopReactPropagation : undefined}
     >
-      <div className="sheet__panel">
+      <div ref={panelRef} className="sheet__panel">
         <span className="sheet__grip" aria-hidden="true" />
         <header className="sheet__header">
-          <h2 id={titleId} className="sheet__title" tabIndex={-1}>
-            {title}
-          </h2>
-          {onCancel ? null : <CloseButton onClick={onClose} />}
+          {context ? (
+            <div className="sheet__heading">
+              <p id={contextId} className="sheet__context">
+                {context}
+              </p>
+              <h2 id={titleId} className="sheet__title" tabIndex={-1}>
+                {title}
+              </h2>
+            </div>
+          ) : (
+            <h2 id={titleId} className="sheet__title" tabIndex={-1}>
+              {title}
+            </h2>
+          )}
+          {showClose ? <CloseButton onClick={() => dismiss('close')} /> : null}
         </header>
-        <div className="sheet__body">{children}</div>
-        {footer || onCancel ? (
+        <div ref={bodyRef} className="sheet__body">
+          {children}
+        </div>
+        {hasFooter ? (
           <div className="sheet__footer" data-cancel={onCancel ? '' : undefined}>
             <ActionSurface>
               {onCancel ? (
-                <Button variant="secondary" className="sheet__cancel" onClick={onCancel} {...cancelProps}>
+                <Button variant="secondary" className="sheet__cancel" onClick={() => dismiss('cancel')} {...cancelProps}>
                   {cancelLabel}
                 </Button>
               ) : null}
               {footer}
+              {submit ? (
+                <Button type="submit" form={submit.form} variant={submit.tone === 'danger' ? 'danger' : 'primary'} disabled={submit.disabled} loading={submit.loading}>
+                  {submit.label}
+                </Button>
+              ) : null}
             </ActionSurface>
           </div>
         ) : null}
       </div>
+      {asking ? (
+        <Dialog
+          open
+          title={sheetStrings.discardTitle}
+          onClose={() => setAsking(null)}
+          onCancel={() => setAsking(null)}
+          cancelLabel={sheetStrings.keepEditing}
+          cancelProps={{ 'data-autofocus': true }}
+          actions={
+            <Button
+              variant="danger"
+              onClick={() => {
+                const kind = asking
+                setAsking(null)
+                if (kind === 'cancel' && onCancel) onCancel()
+                else onClose()
+              }}
+            >
+              {sheetStrings.discard}
+            </Button>
+          }
+        />
+      ) : null}
     </dialog>
   )
+
+  if (!modal) return sheet
+  return (
+    <>
+      <span ref={anchorRef} hidden />
+      {createPortal(sheet, document.body)}
+    </>
+  )
+}
+
+/**
+ * SHORT-02 rule 6 for a body that loads after the sheet opens (Mark as Cooked shows "Loading…" first): the open focused the title,
+ * as there was no control yet. When the body's first control appears while focus is still on the title, it moves there and is
+ * scrolled into view (nearest), so the question is never left cut off under the footer. Focus the person moved is never taken.
+ */
+function useLateInitialFocus(dialogRef: RefObject<HTMLDialogElement | null>, bodyRef: RefObject<HTMLDivElement | null>, enabled: boolean) {
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current
+    const body = bodyRef.current
+    if (!enabled || !dialog || !body || typeof MutationObserver !== 'function') return
+    const title = dialog.querySelector('.sheet__title')
+    const waiting = () => document.activeElement === title || document.activeElement === dialog
+    if (!waiting() || body.querySelector(INTERACTIVE_SELECTOR)) return
+    const observer = new MutationObserver(() => {
+      if (!waiting()) return observer.disconnect()
+      const first = body.querySelector<HTMLElement>(INTERACTIVE_SELECTOR)
+      if (!first) return
+      observer.disconnect()
+      first.focus()
+      first.scrollIntoView?.({ block: 'nearest' })
+    })
+    observer.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] })
+    return () => observer.disconnect()
+  }, [dialogRef, bodyRef, enabled])
+}
+
+/**
+ * SHORT-02 rule 5: sets data-footer="flow" on the panel while the body would show less than 40 % of it (footerShouldFlow). In flow
+ * mode the body is not a scroller, so the decision uses the height the body would have with the sticky footer: the panel's height
+ * less everything that is not the body. Written to the DOM directly: React never renders the attribute.
+ * SHORT-02 rule 3: sets data-body="scroll" while the (sticky-footer) body scrolls, i.e. the panel is at its maximum height and the
+ * body is squeezed; only then does the CSS give the body its floor, so a short sheet stays exactly as tall as its content.
+ */
+function useFooterFlow(panelRef: RefObject<HTMLDivElement | null>, bodyRef: RefObject<HTMLDivElement | null>) {
+  useLayoutEffect(() => {
+    const panel = panelRef.current
+    const body = bodyRef.current
+    if (!panel || !body || typeof ResizeObserver !== 'function') return
+    const decide = () => {
+      const flowing = panel.dataset['footer'] === 'flow'
+      const stickyBody = flowing ? panel.clientHeight - Math.max(0, panel.scrollHeight - body.offsetHeight) : body.clientHeight
+      const flow = footerShouldFlow({ panel: panel.clientHeight, body: stickyBody, bodyScroll: body.scrollHeight })
+      if (flow) panel.dataset['footer'] = 'flow'
+      else delete panel.dataset['footer']
+      if (!flow && body.scrollHeight > body.clientHeight + 1) panel.dataset['body'] = 'scroll'
+      else delete panel.dataset['body']
+    }
+    const observer = new ResizeObserver(decide)
+    observer.observe(panel)
+    observer.observe(body)
+    if (body.firstElementChild) observer.observe(body.firstElementChild)
+    return () => observer.disconnect()
+  }, [panelRef, bodyRef])
 }

@@ -15,7 +15,7 @@ export interface LineRowProps {
   onUntick?: (entry: ListEntry) => void
   /** the row was tapped: open its sheet with the group it is in */
   onOpen: (entry: ListEntry, group: RowGroup) => void
-  /** b8-polish: the narrow layout shows the short Restock reason; the screen decides (useNarrowChips) */
+  /** b8-polish: the narrow layout shows the short Restock reason; the screen decides (useCompactRows) */
   compact?: boolean
 }
 
@@ -45,6 +45,7 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, compact }: Lin
       leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={40} />}
       control={control}
       meta={metaNode(meta)}
+      metaCompact={meta.fullText ? undefined : entry.restockCompact}
       metaStatus={meta.status}
       value={value}
       subValue={subValue}

@@ -7,16 +7,18 @@
  *   accent action) and the More menu ("Storage Places").
  * - L-06: from 1280 px a two-column `.stock-screen__layout`: a sticky `<aside aria-label="Filter Stock">` (SpoiledTile, then the filter
  *   header) beside `.stock-screen__main` (the list). One tree: on a phone the aside simply comes first.
- * - The filter header (pantry-filter), only when status is 'ready': row 1 Search Stock + Filters; row 2 the List control + Sort (By
+ * - The filter header (pantry-filter), while the list loads or shows (ready, or its saved copy offline): row 1 Search Stock + Filters; row 2 the List control + Sort (By
  *   Storage Place); row 3 the active filter chips. The filters are chosen in the Filters panel and live in the URL (usePantryFilters).
  * - The list: the Storage Place groups, or a `ListGroup label="Stock"` of IngredientLotsRow. If the filters leave nothing: EmptyState
  *   "Nothing in Stock matches".
- * Status (from useStockTotals().status): loading -> Skeleton; error -> ErrorState with Try again; offline -> EmptyState "Stock is not
- * saved on this device yet"; empty -> EmptyState "Nothing in Stock yet" + hint; ready -> the list.
+ * State (B9-20, from useStockTotals().state): loading -> Skeleton; failed -> ErrorState with Try again; offlineUnknown -> LoadState
+ * "Your Stock isn’t on this phone yet"; empty -> EmptyState "Nothing in Stock yet" + hint; ready or offlineSaved -> the list.
  * A failed change shows an error toast. No `<main>`: the shell provides it. No tile grid.
  */
 import { useId, useMemo, useRef, useState, type ReactElement } from 'react'
-import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, PageHeader, SearchField, Skeleton, useToast } from '../../../ui'
+import { combineScreenStates } from '../../../lib/dataState'
+import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, LoadState, PageHeader, SearchField, useToast } from '../../../ui'
+import { SkeletonGroup, SkeletonList } from '../../../ui/Skeleton'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { IngredientLotsRow } from '../components/IngredientLotsRow'
 import { LotEditSheet } from '../components/LotEditSheet'
@@ -83,7 +85,11 @@ export function StockScreen(): ReactElement | null {
   const { restockFor, hasSupplies } = useSupplyRestock(choices.choices, pantry.lots.data)
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
-  const ready = totals.status === 'ready'
+  // B9-20 (RES-02): the Storage Place view lists the Lots, so it waits for them as well as for the totals.
+  const listState = mode === 'places' ? combineScreenStates(totals.state, pantry.lots.state) : totals.state
+  // B9-20 (RES-02): the filter header shows while the list loads too (the skeleton then sits where the list will be, so
+  // nothing jumps when it arrives) and over a saved copy offline; not over an empty, unknown or failed list.
+  const ready = totals.state === 'loading' || totals.state === 'ready' || totals.state === 'offlineSaved'
   // No empty aside: it exists when something is spoiled or the filter header is shown.
   const showAside = spoiledLots.length > 0 || ready
 
@@ -155,15 +161,15 @@ export function StockScreen(): ReactElement | null {
         ) : null}
 
         <div className="stock-screen__main">
-          {totals.status === 'loading' ? (
-            <div aria-busy="true">
-              <Skeleton variant="row" count={5} />
-            </div>
-          ) : totals.status === 'error' ? (
-            <ErrorState message={strings.errorMessage} onRetry={() => void totals.refetch()} />
-          ) : totals.status === 'offline' ? (
-            <EmptyState icon="offline" title={strings.offlineTitle} description={strings.offlineHint} />
-          ) : totals.status === 'empty' && leftovers.frozenCount === 0 ? (
+          {listState === 'loading' ? (
+            <SkeletonGroup label={strings.loading}>
+              <SkeletonList rows={6} />
+            </SkeletonGroup>
+          ) : listState === 'failed' ? (
+            <ErrorState message={strings.errorMessage} onRetry={() => void Promise.all([totals.refetch(), pantry.lots.refetch()])} />
+          ) : listState === 'offlineUnknown' ? (
+            <LoadState title={strings.offlineTitle} text={strings.offlineHint} />
+          ) : totals.state === 'empty' && leftovers.frozenCount === 0 ? (
             <EmptyState icon="stock" title={strings.empty} description={strings.emptyHint} />
           ) : mode === 'places' ? (
             sections.length === 0 ? (

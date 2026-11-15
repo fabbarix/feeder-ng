@@ -107,6 +107,16 @@ describe('Tile: the why chip on a hero (TB-05: a currentColor tint, one rule, in
     expect(val(why, 'color')).toBe('inherit')
   })
 
+  it('it has a 1 px currentColor boundary: the tint alone is about 1.3:1 on the hero and read as loose text on a dark hero', () => {
+    expect(val(rule(".tile[data-variant='hero'] .chip[data-kind='why']"), 'box-shadow')).toMatch(
+      /^inset 0 0 0 1px color-mix\(in srgb, currentColor \d+%, transparent\)$/,
+    )
+  })
+
+  it("its icon is the hero's colour, not Chip.css's accent-text (a dark accent on the light accent hero all but hid the glyph)", () => {
+    expect(val(rule(".tile[data-variant='hero'] .chip[data-kind='why'] svg"), 'color')).toBe('inherit')
+  })
+
   it('the tint is at most 14 % (TB-05) and Chip.css has no second rule for the same chip (a surface chip there fought this one)', () => {
     const pct = Number(/currentColor (\d+)%/.exec(val(rule(".tile[data-variant='hero'] .chip[data-kind='why']"), 'background') ?? '')?.[1])
     expect(pct).toBeLessThanOrEqual(14)

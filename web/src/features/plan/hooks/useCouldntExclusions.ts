@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { planApi } from '../api'
 import { excludedSummary, explanationGroups, type ExplanationGroup } from '../lib/couldntExclusions'
 import type { ExclusionCell } from '../types'
-import { queryFailed } from './queryFailed'
+import { useScreenState } from '../../../app/useScreenState'
 import { usePlan } from './usePlan'
 
 export interface CouldntExclusions {
@@ -29,6 +29,7 @@ export function useCouldntExclusions(): CouldntExclusions {
     queryKey: ['plan', 'couldnt-plan', 'exclusions'],
     queryFn: () => planApi.couldntExclusions(),
   })
+  const queryState = useScreenState(query, { isEmpty: false, hasFilter: false })
   const cells = query.data?.cells ?? NO_CELLS
   const slots = plan.slots
   const groups = useMemo(() => explanationGroups(cells, slots), [cells, slots])
@@ -38,7 +39,7 @@ export function useCouldntExclusions(): CouldntExclusions {
     groups,
     headline,
     isLoading: query.isLoading || plan.isLoading,
-    failed: queryFailed(query) || plan.failed,
+    failed: queryState === 'failed' || plan.failed,
     refetch: query.refetch,
   }
 }

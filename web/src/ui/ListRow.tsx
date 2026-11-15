@@ -3,6 +3,7 @@ import { useHref, useInRouterContext, useLinkClickHandler } from 'react-router-d
 import { defaultStatusIcon, type ChipStatus } from './Chip'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
+import './fields/Field.css' // the shared .visually-hidden utility (a ListGroup's spelled-out count)
 import './ListRow.css'
 
 interface ListRowBase {
@@ -103,24 +104,40 @@ export interface ListGroupProps {
  * A router link that keeps `aria-current` explicit. react-router's `Link` only sets aria-current while its route is
  * active, so a selected row whose href is not the current location would lose it. Same navigation as `Link`.
  */
-function RouterTarget({ to, label, current }: { to: string; label: string; current?: 'true' }) {
+function RouterTarget({ to, label, current, describedBy }: { to: string; label: string; current?: 'true'; describedBy?: string }) {
   const href = useHref(to)
   const onClick = useLinkClickHandler(to)
-  return <a className="list-row__target" href={href} onClick={onClick} aria-label={label} aria-current={current} />
+  return <a className="list-row__target" href={href} onClick={onClick} aria-label={label} aria-describedby={describedBy} aria-current={current} />
 }
 
 /** Plain anchor for a row outside a Router (no client-side navigation). */
-function PlainTarget({ href, label, current }: { href: string; label: string; current?: 'true' }) {
-  return <a className="list-row__target" href={href} aria-label={label} aria-current={current} />
+function PlainTarget({ href, label, current, describedBy }: { href: string; label: string; current?: 'true'; describedBy?: string }) {
+  return <a className="list-row__target" href={href} aria-label={label} aria-describedby={describedBy} aria-current={current} />
 }
 
-/** `data-*` attributes from the row props, for the `li` (never data-height / data-selected / data-wrap-title, which are ours). */
+/** The `data-*` attributes the row writes itself. */
+const OWN_DATA = new Set(['data-height', 'data-selected', 'data-wrap-title', 'data-expanded', 'data-footer', 'data-meta-lines', 'data-actions', 'data-has-below', 'data-sync'])
+
+/** `data-*` attributes from the row props, for the `li` (never the ones in OWN_DATA, which the row writes). */
 function passthroughData(props: Record<string, unknown>): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(props)) {
-    if (key.startsWith('data-') && typeof value === 'string' && key !== 'data-height' && key !== 'data-selected' && key !== 'data-wrap-title') out[key] = value
+    if (key.startsWith('data-') && typeof value === 'string' && !OWN_DATA.has(key)) out[key] = value
   }
   return out
+}
+
+/** True when a slot has something to render: not null, undefined, false or an empty string. */
+function filled(node: ReactNode): boolean {
+  return node !== null && node !== undefined && node !== false && node !== ''
+}
+
+/** The meta glyph: an explicit `metaIcon` wins, then the sync state's (Clock waiting, WarningCircle refused), then the status's. */
+function metaGlyphFor(metaIcon: IconName | undefined, sync: ListRowBase['sync'], status: ChipStatus | undefined): IconName | undefined {
+  if (metaIcon) return metaIcon
+  if (sync === 'pending') return 'duration'
+  if (sync === 'failed') return 'spoiled'
+  return status ? defaultStatusIcon(status) : undefined
 }
 
 /** A `li`; its whole area is the target through a stretched `<a>`/`<button>` named after `title` (or `aria-label`, required for a ReactNode title on a row with a target). */
@@ -148,24 +165,49 @@ export function ListRow(props: ListRowProps) {
     haspopup,
     footer,
     busy,
+    metaLines,
+    metaCompact,
+    actions,
+    below,
+    sync,
   } = props
   const inRouter = useInRouterContext()
   const panelId = useId()
+  const valueId = useId()
+  const subValueId = useId()
+  const metaId = useId()
   const isExpanded = onToggle !== undefined && expanded === true
   // Every row is at least 64 px (72 with a picture) and grows with its title; only an expanded, rich or wrapping row is `auto`.
   const height = isExpanded || children || wrapTitle ? 'auto' : leading ? 72 : 64
   const current = selected ? 'true' : undefined
   const label = props['aria-label'] ?? (typeof title === 'string' ? title : '')
-  const metaGlyph: IconName | undefined = metaIcon ?? (metaStatus ? defaultStatusIcon(metaStatus) : undefined)
+  // RES-03: a refused sync is a loss (danger); a waiting one is muted, with no status.
+  const status: ChipStatus | undefined = sync === 'failed' ? 'danger' : sync === 'pending' ? undefined : metaStatus
+  const metaGlyph = metaGlyphFor(metaIcon, sync, status)
+  const hasValue = value !== undefined
+  const hasSubValue = hasValue && subValue !== undefined
+  const hasMeta = Boolean(meta)
+  const hasActions = filled(actions)
+  const hasBelow = filled(below)
+  // A11Y-08: the target is named by the title and described by the value, sub-value and meta (in reading order), after the caller's ids.
+  const describedBy =
+    [props['aria-describedby'], hasValue ? valueId : '', hasSubValue ? subValueId : '', hasMeta ? metaId : ''].filter(Boolean).join(' ') || undefined
+  // DS-10: only a navigation row may take a two-line description; a status row keeps its one line.
+  const metaTwoLines = metaLines === 2 && href !== undefined
   let target: ReactNode = null
   if (href !== undefined) {
-    target = inRouter ? <RouterTarget to={href} label={label} current={current} /> : <PlainTarget href={href} label={label} current={current} />
+    target = inRouter ? (
+      <RouterTarget to={href} label={label} current={current} describedBy={describedBy} />
+    ) : (
+      <PlainTarget href={href} label={label} current={current} describedBy={describedBy} />
+    )
   } else if (onToggle) {
     target = (
       <button
         type="button"
         className="list-row__target"
         aria-label={label}
+        aria-describedby={describedBy}
         aria-expanded={isExpanded}
         aria-controls={panelId}
         onClick={() => onToggle()}
@@ -177,6 +219,7 @@ export function ListRow(props: ListRowProps) {
         type="button"
         className="list-row__target"
         aria-label={label}
+        aria-describedby={describedBy}
         aria-current={current}
         aria-haspopup={haspopup}
         disabled={busy || undefined}
@@ -194,8 +237,21 @@ export function ListRow(props: ListRowProps) {
       data-wrap-title={wrapTitle ? 'true' : undefined}
       data-expanded={isExpanded ? 'true' : undefined}
       data-footer={footer ? 'true' : undefined}
+      data-meta-lines={metaTwoLines ? '2' : undefined}
+      data-actions={hasActions ? 'true' : undefined}
+      data-has-below={hasBelow ? 'true' : undefined}
+      data-sync={sync}
     >
-      {control ? <span className="list-row__control">{control}</span> : null}
+      {control ? (
+        <span className="list-row__control">
+          {control}
+          {sync === 'pending' ? (
+            <span className="list-row__sync-badge" aria-hidden="true">
+              <Icon name="duration" size={14} />
+            </span>
+          ) : null}
+        </span>
+      ) : null}
       {target}
       {leading ? (
         <span className="list-row__leading">{leading}</span>
@@ -206,18 +262,28 @@ export function ListRow(props: ListRowProps) {
       ) : null}
       <span className="list-row__text">
         <span className="list-row__title">{title}</span>
-        {meta ? (
-          <span className="list-row__meta" data-status={metaStatus}>
+        {hasMeta ? (
+          <span id={metaId} className="list-row__meta" data-status={status} data-tone={sync === 'pending' ? 'pending' : undefined}>
             {metaGlyph ? <Icon name={metaGlyph} size={14} /> : null}
             <span className="list-row__meta-text">{meta}</span>
+            {filled(metaCompact) ? (
+              <span className="list-row__meta-compact" aria-hidden="true">
+                {metaCompact}
+              </span>
+            ) : null}
           </span>
         ) : null}
         {children ? <span className="list-row__extra">{children}</span> : null}
       </span>
-      {value !== undefined ? (
-        <span className="list-row__value">
+      {hasValue ? (
+        <span id={valueId} className="list-row__value">
           {value}
-          {subValue !== undefined ? <span className="list-row__sub-value">{subValue}</span> : null}
+          {/* aria-hidden keeps the sub-value out of the value's own text in the description; its id still reads it, once, after it. */}
+          {hasSubValue ? (
+            <span id={subValueId} className="list-row__sub-value" aria-hidden="true">
+              {subValue}
+            </span>
+          ) : null}
         </span>
       ) : null}
       {trailing ? <span className="list-row__trailing">{trailing}</span> : null}
@@ -226,6 +292,8 @@ export function ListRow(props: ListRowProps) {
           <Icon name="chevron" size={20} />
         </span>
       ) : null}
+      {hasActions ? <div className="list-row__actions">{actions}</div> : null}
+      {hasBelow ? <div className="list-row__below">{below}</div> : null}
       {footer ? <div className="list-row__footer">{footer}</div> : null}
       {onToggle ? (
         <div id={panelId} className="list-row__panel" hidden={!isExpanded}>
@@ -236,13 +304,55 @@ export function ListRow(props: ListRowProps) {
   )
 }
 
-/** A `ul` inside a surface tile (radius 20, no padding) holding ListRows, with inset dividers. */
-export function ListGroup({ label, children }: ListGroupProps) {
+/**
+ * A `ul` inside a surface tile (radius 20, no padding) holding ListRows, with inset dividers.
+ *
+ * SSP-03: a group named for a person to see has a `title`: a visible `h2` heading row (icon, name, count chip, one action) that
+ * names the list. `label` names a list for assistive technology only, for a list whose heading is already on screen right
+ * above it (a tile or section title). `title` wins over `label`.
+ */
+export function ListGroup({ label, title, count, countLabel, icon, action, children }: ListGroupProps) {
+  const headingId = useId()
+  if (title === undefined || title === '') {
+    return (
+      <div className="list-group" data-primary-scope="">
+        <ul className="list-group__list" aria-label={label}>
+          {children}
+        </ul>
+      </div>
+    )
+  }
   return (
-    <div className="list-group" data-primary-scope="">
-      <ul className="list-group__list" aria-label={label}>
-        {children}
-      </ul>
-    </div>
+    <section className="list-group-section">
+      <div className="list-group__header">
+        <h2 className="list-group__title" id={headingId}>
+          {icon ? (
+            <span className="list-group__icon">
+              <Icon name={icon} size={20} />
+            </span>
+          ) : null}
+          <span className="list-group__name">{title}</span>
+          {/* A space for the accessible name ("Kitchen Fridge 5 Stock Lots"); the flex heading does not render it. */}{' '}
+          {count !== undefined ? (
+            <span className="list-group__count">
+              {countLabel ? (
+                <>
+                  <span aria-hidden="true">{count}</span>
+                  <span className="visually-hidden">{countLabel(count)}</span>
+                </>
+              ) : (
+                count
+              )}
+            </span>
+          ) : null}
+        </h2>
+        {action ? <div className="list-group__action">{action}</div> : null}
+      </div>
+      <div className="list-group" data-primary-scope="">
+        <ul className="list-group__list" aria-labelledby={headingId}>
+          {children}
+        </ul>
+      </div>
+    </section>
   )
 }

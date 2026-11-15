@@ -202,24 +202,31 @@ else
 fi
 [ -n "${PAGE_LAYOUT_FAKE_CMD:-}" ] && FAKE_CMD="$PAGE_LAYOUT_FAKE_CMD"
 
-# The fake Anthropic API (beta.7, RR5): a port of its own range (40000..59999, from the worktree path), the next free one of five.
+# The fake Anthropic API (beta.7, RR5): a port of its own range (40000..59999, from the worktree path). A port that answers is
+# skipped, and a fake that dies on start (its bind failed: a socket another run left in TIME-WAIT, or a race with another worktree)
+# is replaced on the next port, up to eight tries, as the fixture tests start their servers.
 if [ -n "${FAKE_CMD:-}" ]; then
-  fport=$((40000 + $(printf '%s' "$ROOT" | cksum | cut -d' ' -f1) % 20000))
-  for _ in 1 2 3 4 5; do
-    curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$fport/" 2>/dev/null || break
-    fport=$((fport + 1))
-  done
+  fbase=$((40000 + $(printf '%s' "$ROOT" | cksum | cut -d' ' -f1) % 20000))
   : >"$FAKE_LOG"
-  rm -f "$FAKE_PIDFILE"
-  PORT="$fport" setsid nohup bash -c 'echo $$ >"$1"; shift; eval "exec $1"' _ "$FAKE_PIDFILE" "$FAKE_CMD" >>"$FAKE_LOG" 2>&1 </dev/null 9>&- &
-  FAKE_PID=$!
-  for _ in $(seq 1 50); do
-    if curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$fport/v1/models" 2>/dev/null; then FAKE_URL="http://127.0.0.1:$fport"; break; fi
-    kill -0 "$FAKE_PID" 2>/dev/null || break
-    sleep 0.2
+  for try in 0 1 2 3 4 5 6 7; do
+    fport=$((fbase + try))
+    curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$fport/" 2>/dev/null && continue
+    rm -f "$FAKE_PIDFILE"
+    echo "page layout: starting the fake Anthropic API on port $fport" >>"$FAKE_LOG"
+    PORT="$fport" setsid nohup bash -c 'echo $$ >"$1"; shift; eval "exec $1"' _ "$FAKE_PIDFILE" "$FAKE_CMD" >>"$FAKE_LOG" 2>&1 </dev/null 9>&- &
+    FAKE_PID=$!
+    for _ in $(seq 1 50); do
+      if curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$fport/v1/models" 2>/dev/null; then FAKE_URL="http://127.0.0.1:$fport"; break; fi
+      kill -0 "$FAKE_PID" 2>/dev/null || break
+      sleep 0.2
+    done
+    [ -s "$FAKE_PIDFILE" ] && FAKE_PID="$(cat "$FAKE_PIDFILE")"
+    [ -n "$FAKE_URL" ] && break
+    # Alive but not answering in 10 s is not a port problem: stop it and give up rather than leave it running.
+    if kill -0 "$FAKE_PID" 2>/dev/null; then stop_fake; break; fi
+    FAKE_PID=""
   done
-  [ -s "$FAKE_PIDFILE" ] && FAKE_PID="$(cat "$FAKE_PIDFILE")"
-  [ -n "$FAKE_URL" ] || not_run "the fake Anthropic API did not start on port $fport (see $FAKE_LOG); guard not run"
+  [ -n "$FAKE_URL" ] || not_run "the fake Anthropic API did not start (last port $fport; see $FAKE_LOG); guard not run"
 fi
 # A throwaway key, so the Recipe Assistant can keep the fake's API key (FEEDER_SECRET_KEY: base64 of 32 bytes).
 SECRET_KEY="$(head -c 32 /dev/urandom | base64 | tr -d '\n')"

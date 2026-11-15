@@ -26,7 +26,8 @@ export function useProductActions(product: ProductDetail | undefined, p: UseProd
 
   const archive = async () => {
     if (!product) return
-    const yes = await dialogs.confirm({ title: strings.archiveTitle(product.name), body: strings.archiveBody, confirmLabel: strings.archive })
+    // a routine, reversible question: Archive keeps focus (B9-18: a confirm focuses Cancel unless it opts in)
+    const yes = await dialogs.confirm({ title: strings.archiveTitle(product.name), body: strings.archiveBody, confirmLabel: strings.archive, focus: 'confirm' })
     if (yes) await setArchived(true)
   }
 
@@ -55,6 +56,8 @@ export function useProductActions(product: ProductDetail | undefined, p: UseProd
         body: strings.boughtBody,
         confirmLabel: strings.archive,
         cancelLabel: strings.keep,
+        // the delete was refused; archiving instead loses nothing, so Archive keeps focus (B9-18)
+        focus: 'confirm',
       })
       if (archiveInstead) await setArchived(true)
     }

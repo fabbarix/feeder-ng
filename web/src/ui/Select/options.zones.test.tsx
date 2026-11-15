@@ -8,7 +8,7 @@ import { currencyOptions, supportedCurrencies, supportedTimeZones, timeZoneOptio
 // 2026-11-14 20:14 UTC: Rome (CET, UTC+1) reads 21:14, Kolkata (UTC+5:30) 01:44, New York (EST, UTC-5) 15:14.
 const NOW = new Date('2026-11-14T20:14:00Z')
 const zones = ['Europe/Rome', 'Europe/London', 'America/New_York', 'America/Argentina/Buenos_Aires', 'Asia/Kolkata', 'UTC']
-const byValue = <V extends string | number>(list: { value: V }[], value: V) => list.find((o) => o.value === value)!
+const byValue = <T extends { value: unknown }>(list: T[], value: T['value']) => list.find((o) => o.value === value)!
 
 describe('timeZoneOptions({ zones, now, deviceZone })', () => {
   const list = timeZoneOptions({ zones, now: NOW, deviceZone: 'Europe/Rome' })
@@ -17,12 +17,12 @@ describe('timeZoneOptions({ zones, now, deviceZone })', () => {
     expect(byValue(list, 'America/New_York').label).toBe('New York')
     expect(byValue(list, 'America/Argentina/Buenos_Aires').label).toBe('Buenos Aires')
   })
-  it('the meta is "<IANA> · UTC+1 · 21:14" (24 hour clock at `now`)', () => {
-    expect(byValue(list, 'Europe/Rome').meta).toBe('Europe/Rome · UTC+1 · 21:14')
-    expect(byValue(list, 'America/New_York').meta).toBe('America/New_York · UTC-5 · 15:14')
+  it('the meta is "UTC+1 · 21:14 · <IANA>" (offset, then the 24 hour clock at `now`, then the zone name, so a cut falls on the name)', () => {
+    expect(byValue(list, 'Europe/Rome').meta).toBe('UTC+1 · 21:14 · Europe/Rome')
+    expect(byValue(list, 'America/New_York').meta).toBe('UTC-5 · 15:14 · America/New_York')
   })
   it('a half-hour zone reads "UTC+5:30"', () => {
-    expect(byValue(list, 'Asia/Kolkata').meta).toBe('Asia/Kolkata · UTC+5:30 · 01:44')
+    expect(byValue(list, 'Asia/Kolkata').meta).toBe('UTC+5:30 · 01:44 · Asia/Kolkata')
   })
   it('the first group is "This device" and holds the device zone', () => {
     expect(list[0]?.group).toBe('This device')

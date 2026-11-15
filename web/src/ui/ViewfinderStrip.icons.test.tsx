@@ -36,8 +36,10 @@ describe('WP3b #16: ViewfinderStrip uses IconButton, not legacy Buttons', () => 
     expect(screen.getByRole('button', { name: 'Unmute beep' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('the stylesheet carries no legacy button styling', () => {
-    expect(readUiCss('ViewfinderStrip.css')).not.toMatch(/\.button\b/)
+  it('the stylesheet carries no legacy button styling (B9-17: the one .button rule is the camera bar\'s R-A Try again, a caller\'s Button)', () => {
+    const css = readUiCss('ViewfinderStrip.css').replace(/\/\*[\s\S]*?\*\//g, '')
+    const selectors = [...css.matchAll(/([^{}]+)\{/g)].map((m) => m[1]!.trim()).filter((sel) => /\.button\b/.test(sel))
+    expect(selectors).toEqual([".viewfinder-strip[data-size='bar'] .button"])
   })
 })
 

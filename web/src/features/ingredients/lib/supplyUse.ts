@@ -1,5 +1,6 @@
 // H9 (household-items.md section 4.11): the pure rules of the Supplies list's stock level and quick Use. Plain TypeScript, no React.
-import { formatQuantity, grouped, type BaseUnit, type UnitSystem } from '../../../lib/units'
+import { isBelowLevel, restockReason } from '../../../lib/restock'
+import { formatQuantity, type BaseUnit, type UnitSystem } from '../../../lib/units'
 import { strings } from '../strings'
 import { displayName } from './names'
 
@@ -9,21 +10,25 @@ const EPS = 1e-9
 
 export interface StockLevelText {
   text: string
+  /** The short form for a narrow row ("4 in Stock"); '' when the text has none. */
+  compact: string
   /** Stock under the Restock level (equal is not below); true for no Stock when a level is set. The info tone follows it. */
   below: boolean
 }
 
 /**
- * The stock level of a Supply row: "9 pieces · restocks below 6", "4 pieces · below Restock level 6", "9 pieces" with no level,
- * "None in Stock". A piece level is the bare number; a g or ml level carries its unit.
+ * The stock level of a Supply row, in the one Restock wording (SSP-05, decision SSP 4; the rule is lib/restock):
+ * "9 in Stock · Restocks below 6" (compact "9 in Stock"), "Below 6 · 4 in Stock" (compact "4 in Stock"), "9 pieces" with no
+ * level, "None in Stock" with neither. A piece amount is the bare number; a g or ml amount carries its unit.
  */
 export function stockLevel(total: number, level: number | null, baseUnit: BaseUnit, system: UnitSystem): StockLevelText {
-  if (!(total > EPS)) return { text: S.noneInStock, below: level !== null }
-  const stock = formatQuantity(total, baseUnit, system)
-  if (level === null) return { text: stock, below: false }
-  const levelText = baseUnit === 'piece' ? grouped(level, 1) : formatQuantity(level, baseUnit, system)
-  if (total < level - EPS) return { text: S.belowLevel(stock, levelText), below: true }
-  return { text: S.restocksBelow(stock, levelText), below: false }
+  if (level === null) {
+    return total > EPS ? { text: formatQuantity(total, baseUnit, system), compact: '', below: false } : { text: S.noneInStock, compact: '', below: false }
+  }
+  // Float dust at the level is at it (not below), as the server reads it.
+  const stock = Math.abs(total - level) <= EPS ? level : total
+  const reason = restockReason(stock, level, baseUnit, system)
+  return { text: reason.long, compact: reason.compact, below: isBelowLevel(stock, level) }
 }
 
 /** A Supply can be used when it has Stock (beyond float dust). */

@@ -28,10 +28,10 @@ function tint(fg: Hex, bg: Hex, pct: number): Hex {
   return rgbToHex(...([0, 1, 2].map((i) => a[i]! * (pct / 100) + b[i]! * (1 - pct / 100)) as [number, number, number]))
 }
 
-/** The percentage of the hero why chip's `color-mix(in srgb, currentColor N%, transparent)` in ui/Tile.css (NaN when the rule is absent). */
+/** The percentage of the hero why chip's background `color-mix(in srgb, currentColor N%, transparent)` (not its boundary's) in ui/Tile.css (NaN when the rule is absent). */
 function whyTintPercent(): number {
   const css = readUiCss('Tile.css').replace(/\/\*[\s\S]*?\*\//g, '')
-  const m = /\.tile\[data-variant=['"]hero['"]\]\s+\.chip\[data-kind=['"]why['"]\]\s*\{[^}]*color-mix\(in srgb,\s*currentColor\s+(\d+(?:\.\d+)?)%/.exec(css)
+  const m = /\.tile\[data-variant=['"]hero['"]\]\s+\.chip\[data-kind=['"]why['"]\]\s*\{[^}]*?background:\s*color-mix\(in srgb,\s*currentColor\s+(\d+(?:\.\d+)?)%/.exec(css)
   return m ? Number(m[1]) : Number.NaN
 }
 

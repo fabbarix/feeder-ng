@@ -16,6 +16,7 @@ import { BarcodeIcon } from '@phosphor-icons/react/dist/csr/Barcode'
 import { BasketIcon } from '@phosphor-icons/react/dist/csr/Basket'
 import { BackspaceIcon } from '@phosphor-icons/react/dist/csr/Backspace'
 import { BellIcon } from '@phosphor-icons/react/dist/csr/Bell'
+import { BellRingingIcon } from '@phosphor-icons/react/dist/csr/BellRinging'
 import { BirdIcon } from '@phosphor-icons/react/dist/csr/Bird'
 import { BookOpenTextIcon } from '@phosphor-icons/react/dist/csr/BookOpenText'
 import { BowlFoodIcon } from '@phosphor-icons/react/dist/csr/BowlFood'
@@ -25,6 +26,7 @@ import { CalendarCheckIcon } from '@phosphor-icons/react/dist/csr/CalendarCheck'
 import { CalendarDotsIcon } from '@phosphor-icons/react/dist/csr/CalendarDots'
 import { CameraIcon } from '@phosphor-icons/react/dist/csr/Camera'
 import { CameraSlashIcon } from '@phosphor-icons/react/dist/csr/CameraSlash'
+import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight'
 import { CaretUpDownIcon } from '@phosphor-icons/react/dist/csr/CaretUpDown'
 import { CarrotIcon } from '@phosphor-icons/react/dist/csr/Carrot'
@@ -33,6 +35,7 @@ import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
 import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
 import { CircleIcon } from '@phosphor-icons/react/dist/csr/Circle'
 import { ClockIcon } from '@phosphor-icons/react/dist/csr/Clock'
+import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ClockCounterClockwise'
 import { ClipboardTextIcon } from '@phosphor-icons/react/dist/csr/ClipboardText'
 import { CloudSlashIcon } from '@phosphor-icons/react/dist/csr/CloudSlash'
 import { CoffeeIcon } from '@phosphor-icons/react/dist/csr/Coffee'
@@ -54,6 +57,7 @@ import { FlashlightIcon } from '@phosphor-icons/react/dist/csr/Flashlight'
 import { ForkKnifeIcon } from '@phosphor-icons/react/dist/csr/ForkKnife'
 import { FunnelSimpleIcon } from '@phosphor-icons/react/dist/csr/FunnelSimple'
 import { GearSixIcon } from '@phosphor-icons/react/dist/csr/GearSix'
+import { GlobeIcon } from '@phosphor-icons/react/dist/csr/Globe'
 import { HeartIcon } from '@phosphor-icons/react/dist/csr/Heart'
 import { HourglassMediumIcon } from '@phosphor-icons/react/dist/csr/HourglassMedium'
 import { HourglassSimpleIcon } from '@phosphor-icons/react/dist/csr/HourglassSimple'
@@ -62,6 +66,7 @@ import { HouseLineIcon } from '@phosphor-icons/react/dist/csr/HouseLine'
 import { ImagesIcon } from '@phosphor-icons/react/dist/csr/Images'
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
 import { KeyIcon } from '@phosphor-icons/react/dist/csr/Key'
+import { KeyboardIcon } from '@phosphor-icons/react/dist/csr/Keyboard'
 import { KnifeIcon } from '@phosphor-icons/react/dist/csr/Knife'
 import { LeafIcon } from '@phosphor-icons/react/dist/csr/Leaf'
 import { LinkSimpleIcon } from '@phosphor-icons/react/dist/csr/LinkSimple'
@@ -176,10 +181,14 @@ export const icons = {
   search: MagnifyingGlassIcon,
   filter: FunnelSimpleIcon,
   sort: SortAscendingIcon,
+  globe: GlobeIcon, // B9-15 SET-07: the neutral leading of a TimeZoneSelect option
   expand: CaretUpDownIcon,
   chevron: CaretRightIcon,
+  caretDown: CaretDownIcon,
+  selected: CheckIcon,
   copy: CopyIcon,
   undo: ArrowCounterClockwiseIcon,
+  history: ClockCounterClockwiseIcon, // B9-18 SAFE-01: the DraftNotice (a reload draft brought back)
   camera: CameraIcon,
   photos: ImagesIcon, // photo-read: Choose photos
   clipboard: ClipboardTextIcon,
@@ -258,6 +267,9 @@ export const icons = {
   question: QuestionIcon, // an unknown barcode (same glyph as unknownBarcode)
   shoppingCart: ShoppingCartIcon, // a cart, not the shop basket
   guests: UserPlusIcon, // a guest added to the table (not the Members glyph)
+  // B9-17: the finished Timer pill (PC-04) and Scan's Type a barcode (SSP-06)
+  bellRinging: BellRingingIcon,
+  typeBarcode: KeyboardIcon,
 } as const
 
 export type IconName = keyof typeof icons

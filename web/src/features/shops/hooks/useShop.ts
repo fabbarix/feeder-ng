@@ -1,9 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../lib/http'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { shopsApi, type RuleBody } from '../api'
 import type { Shop, ShopBarcode, ShopLocation, ShopRule } from '../types'
 
 export interface UseShop {
+  /** B9-20 (RES-02): the state of the Shops list the Shop is read from (ready with no Shop: it does not exist). */
+  state: ScreenState
+  /** Fetches the Shops again (the error state's Try again). */
+  refetch: () => void
   shop: Shop | undefined
   rules: ShopRule[]
   barcodes: ShopBarcode[]
@@ -38,7 +44,10 @@ export function useShop(id: number): UseShop {
 
   const shop = list.data?.find((s) => s.id === id)
   const missing = list.isSuccess && shop === undefined
+  const state = useScreenState(list, { isEmpty: false, hasFilter: false })
   return {
+    state,
+    refetch: () => void list.refetch(),
     shop,
     rules: rules.data ?? [],
     barcodes: barcodes.data ?? [],

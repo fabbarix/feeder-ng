@@ -71,17 +71,17 @@ describe('householdHasSupply', () => {
 })
 
 describe('restockPhrase', () => {
-  it('"restocks below 6" for a piece Supply (the unit is the row\'s own, so the number stands alone)', () => {
-    expect(restockPhrase({ level: 6, stock: 9 }, 'piece', 'metric')).toBe('restocks below 6')
-    expect(restockPhrase({ level: 6, stock: 6 }, 'piece', 'metric')).toBe('restocks below 6')
+  it('"Restocks below 6" for a piece Supply (the unit is the row\'s own, so the number stands alone)', () => {
+    expect(restockPhrase({ level: 6, stock: 9 }, 'piece', 'metric')).toBe('Restocks below 6')
+    expect(restockPhrase({ level: 6, stock: 6 }, 'piece', 'metric')).toBe('Restocks below 6')
   })
   it('names the unit for ml and g', () => {
-    expect(restockPhrase({ level: 1000, stock: 1500 }, 'ml', 'metric')).toBe('restocks below 1 l')
-    expect(restockPhrase({ level: 500, stock: 600 }, 'g', 'metric')).toBe('restocks below 500 g')
+    expect(restockPhrase({ level: 1000, stock: 1500 }, 'ml', 'metric')).toBe('Restocks below 1 l')
+    expect(restockPhrase({ level: 500, stock: 600 }, 'g', 'metric')).toBe('Restocks below 500 g')
   })
   it('says so when Stock is below the level', () => {
-    expect(restockPhrase({ level: 6, stock: 2 }, 'piece', 'metric')).toBe('below Restock level 6')
-    expect(restockPhrase({ level: 1000, stock: 200 }, 'ml', 'metric')).toBe('below Restock level 1 l')
+    expect(restockPhrase({ level: 6, stock: 2 }, 'piece', 'metric')).toBe('Below 6 · 2 in Stock')
+    expect(restockPhrase({ level: 1000, stock: 200 }, 'ml', 'metric')).toBe('Below 1 l · 200 ml in Stock')
   })
   it('is empty without a level', () => {
     expect(restockPhrase(null, 'piece', 'metric')).toBe('')
@@ -91,8 +91,8 @@ describe('restockPhrase', () => {
 describe('supplyLotMeta: the meta of a Supply Lot row', () => {
   it('the quantity and the restock phrase; never Good until, "No go-off date", Use soon or Spoiled', () => {
     const lot = makeSupplyLot({ quantity: 4 })
-    expect(supplyLotMeta(lot, { level: 6, stock: 9 }, 'metric')).toBe('4 pieces · restocks below 6')
-    expect(supplyLotMeta(lot, { level: 6, stock: 2 }, 'metric')).toBe('4 pieces · below Restock level 6')
+    expect(supplyLotMeta(lot, { level: 6, stock: 9 }, 'metric')).toBe('4 pieces · Restocks below 6')
+    expect(supplyLotMeta(lot, { level: 6, stock: 2 }, 'metric')).toBe('4 pieces · Below 6 · 2 in Stock')
   })
   it('just the quantity without a level', () => {
     expect(supplyLotMeta(makeSupplyLot({ quantity: 1 }), null, 'metric')).toBe('1 piece')
@@ -102,8 +102,8 @@ describe('supplyLotMeta: the meta of a Supply Lot row', () => {
 
 describe('supplyRowMeta: the meta of a Supply in By Ingredient', () => {
   it('the Lot count and the restock phrase; no go-off phrase', () => {
-    expect(supplyRowMeta(makeSupplyTotal({ lotCount: 2 }), { level: 6, stock: 9 }, 'metric')).toBe('2 Stock Lots · restocks below 6')
-    expect(supplyRowMeta(makeSupplyTotal({ lotCount: 1, total: 2 }), { level: 6, stock: 2 }, 'metric')).toBe('1 Stock Lot · below Restock level 6')
+    expect(supplyRowMeta(makeSupplyTotal({ lotCount: 2 }), { level: 6, stock: 9 }, 'metric')).toBe('2 Stock Lots · Restocks below 6')
+    expect(supplyRowMeta(makeSupplyTotal({ lotCount: 1, total: 2 }), { level: 6, stock: 2 }, 'metric')).toBe('1 Stock Lot · Below 6 · 2 in Stock')
     expect(supplyRowMeta(makeSupplyTotal({ lotCount: 1 }), null, 'metric')).toBe('1 Stock Lot')
   })
   it('ignores a stray next go-off date', () => {

@@ -1,0 +1,31 @@
+/* B9-20 (RES-02): a day Tile's skeleton has the day's rows and spacing (plan.css .plan-day, .plan-meal): the title, then each
+   Meal Slot's head (32 px) and its Course rows (94 px, the mean of a plain and a chipped Course row), the Meal Slots 12 px apart with 12 px above each after the first. */
+.plan-day-skeleton {
+  gap: var(--space-3);
+}
+
+.plan-day-skeleton > .skeleton[data-variant='title'] {
+  block-size: 22px;
+}
+
+.plan-day-skeleton__meal {
+  display: grid;
+  row-gap: var(--space-2);
+}
+
+.plan-day-skeleton__meal + .plan-day-skeleton__meal {
+  padding-block-start: var(--space-3);
+}
+
+.plan-day-skeleton__meal > .skeleton[data-variant='meta'] {
+  block-size: 32px;
+}
+
+.plan-day-skeleton__meal > .skeleton[data-variant='row'] {
+  block-size: 94px;
+  margin-block-start: calc(-1 * var(--space-2));
+}
+
+.plan-day-skeleton__meal > .skeleton[data-variant='meta'] + .skeleton[data-variant='row'] {
+  margin-block-start: 0;
+}

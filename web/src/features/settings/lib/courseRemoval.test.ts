@@ -103,7 +103,15 @@ describe('refusals', () => {
     [refusal(409, 'course_main'), 'Make another Course main first.'],
     [refusal(409, 'course_last'), 'A Household needs at least one Course.'],
     [refusal(422, 'validation_failed', { field: 'replacement', reason: 'replacement_invalid' }), 'Choose a replacement Course.'],
-    [refusal(500, 'internal'), 'Something went wrong. Please try again.'],
-    [new Error('boom'), 'Something went wrong. Please try again.'],
-  ])('%j reads %s', (err, text) => expect(removalErrorMessage(err)).toBe(text))
+    // B9-20 (RES-06): the fallback names what failed and what to do, never "Something went wrong".
+    [refusal(500, 'internal'), 'Couldn’t delete Starter. Try again.'],
+    [new Error('boom'), 'Couldn’t delete Starter. Try again.'],
+  ])('%j reads %s', (err, text) => expect(removalErrorMessage(err, 'delete', 'Starter')).toBe(text))
+
+  it('names an Archive that failed, and says when Feeder is offline (B9-20)', () => {
+    expect(removalErrorMessage(refusal(500, 'internal'), 'archive', 'Starter')).toBe('Couldn’t archive Starter. Try again.')
+    expect(removalErrorMessage(new ApiError(0, 'network', 'x'), 'archive', 'Starter')).toBe(
+      'Couldn’t archive Starter. Feeder is offline. Try again when you’re back online.',
+    )
+  })
 })

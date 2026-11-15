@@ -89,10 +89,13 @@ describe('RecipeFiltersPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Show Recipes' }))
     expect(props.onClose).toHaveBeenCalledTimes(1)
   })
-  it('has no accent button (New Recipe stays the one primary action)', () => {
+  // B9-14 / SHORT-07: the Filters footer is Clear filters (secondary) and Show Recipes, the commit, as the one primary.
+  it('Show Recipes is the one primary of the panel, Clear filters the secondary', () => {
     panel({ count: 1, tags: ['fish'] })
     const dialog = screen.getByRole('dialog', { name: 'Filters' })
-    expect(dialog.querySelector('button[data-variant="primary"]')).toBeNull()
+    const primaries = dialog.querySelectorAll('button[data-variant="primary"]')
+    expect([...primaries].map((b) => b.textContent)).toEqual(['Show Recipes'])
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toHaveAttribute('data-variant', 'secondary')
   })
   it('opens on the first Course chip', () => {
     panel()

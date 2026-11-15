@@ -12,8 +12,9 @@ describe('Select.css: the chip strip', () => {
     const t = declarations(css, '.select__tools')
     expect(t['flex-wrap']).toBe('nowrap')
     expect(t['overflow']).toBe('hidden')
-    expect(t['padding']).toBe('5px')
-    expect(t['margin']).toBe('-5px')
+    // B9-15 developer: written with the ring tokens (3 px + 2 px), as the main session ruled for the panel; check-ui raw-spacing fails a raw 5px.
+    expect(t['padding']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
+    expect(t['margin']).toBe('calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)))')
   })
   it('wraps once "+N" has expanded it', () => {
     expect(declarations(css, ".select__tools[data-expanded='true']")['flex-wrap']).toBe('wrap')
@@ -28,8 +29,9 @@ describe('Select.css: the chip strip', () => {
   })
   it('a focused chip or sort button draws its ring inside itself on a soft fill (R-C+)', () => {
     const body = bodyOf((s) => s.includes('.select__tools') && s.includes(':focus-visible'))
-    expect(body).toMatch(/outline:\s*2px solid var\(--color-accent\)/)
-    expect(body).toMatch(/outline-offset:\s*-2px/)
+    // B9-15 developer: the inner ring in the ring tokens (2 px, the ring colour), as focusLayer.css.test.ts requires of every ring.
+    expect(body).toMatch(/outline:\s*var\(--focus-ring-inner-width\) solid var\(--focus-ring-color\)/)
+    expect(body).toMatch(/outline-offset:\s*calc\(-1 \* var\(--focus-ring-inner-width\)\)/)
     expect(body).toMatch(/background:\s*var\(--color-soft\)/)
   })
 })
@@ -58,8 +60,9 @@ describe('Select.css: options and the list', () => {
 })
 
 describe('Select.css: ring room', () => {
+  // Main session ruling (B9-15): the 5 px is written with the ring tokens, not a raw 5px.
   it('the panel keeps 5 px around the search field so its 3 px ring at a 2 px offset shows in full', () => {
-    expect(declarations(css, '.select__panel')['padding']).toBe('5px')
+    expect(declarations(css, '.select__panel')['padding']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
   })
 })
 

@@ -2,7 +2,11 @@
 .dialog {
   inline-size: min(400px, 100vw - 32px);
   max-inline-size: calc(100vw - 32px);
+  /* SHORT-02 rule 8: never taller than the viewport; the body scrolls. */
+  max-block-size: calc(100dvh - 16px);
   margin: auto;
+  pointer-events: auto;
+  text-align: start;
   padding: 0;
   border: 0;
   border-radius: var(--radius-dialog);
@@ -27,10 +31,18 @@ html:has(dialog:modal) {
   white-space: pre-line;
 }
 
+/* A column as tall as the dialog allows: the title and the actions keep their size, the body scrolls between them (SHORT-02 rule 8). */
 .dialog__panel {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
+  max-block-size: inherit;
+  box-sizing: border-box;
   padding: var(--space-6);
+}
+
+.dialog__panel > * {
+  flex: none;
 }
 
 .dialog__icon {
@@ -55,12 +67,50 @@ html:has(dialog:modal) {
   line-height: var(--text-title-2-line);
 }
 
-.dialog__title:focus {
+.dialog__title:focus,
+.dialog [data-step-heading]:focus,
+.dialog [tabindex='-1']:focus {
   outline: none;
+}
+
+/* PC-10: a muted context line above the title ("Tue 17 · Dinner"), 2 px from it. */
+.dialog__context {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  font-weight: 600;
+  line-height: var(--text-meta-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialog__context + .dialog__title {
+  margin-block-start: calc(var(--space-half) - var(--space-3));
+}
+
+/* The panel's gap is the spacing: a paragraph's default margins add no blank line above the first line or under the last. */
+.dialog__body > :first-child {
+  margin-block-start: 0;
+}
+
+.dialog__body > :last-child {
+  margin-block-end: 0;
+}
+
+.dialog__panel > .dialog__body {
+  flex: 1 1 auto;
 }
 
 .dialog__body {
   min-inline-size: 0;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* The body is a scroller, so it clips: it reaches into the panel padding and pads it back, so a focused control's ring (3 px
+     at a 2 px offset) has room at its sides too (R-C). */
+  margin-inline: calc(-1 * var(--space-2));
+  padding-inline: var(--space-2);
   /* R-C: room for a focused control's ring (3 px + 2 px offset), kept when it is scrolled into view. */
   padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
   scroll-padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
@@ -86,6 +136,13 @@ html:has(dialog:modal) {
 @keyframes scrim-in {
   from {
     opacity: 0;
+  }
+}
+
+/* SHORT-02 rule 8: a short viewport keeps more of the height for the question. */
+@media (max-height: 499px) {
+  .dialog__panel {
+    padding: var(--space-4);
   }
 }
 

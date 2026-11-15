@@ -92,3 +92,23 @@ describe('DetailList.css (DS-12 R-E tokens)', () => {
     expect(declarations(css, '.detail-list')['background'] ?? 'none').toMatch(/^(none|transparent)$/)
   })
 })
+
+// B9-18 (main-session ruling 6): a visible label can name the list, so ConfirmDialog's groups read "Goes with Sam, list, 3 items".
+describe('DetailList aria-labelledby', () => {
+  it('names the list from a visible label', () => {
+    render(
+      <>
+        <p id="goes">Goes with Sam</p>
+        <DetailList aria-labelledby="goes">
+          <DetailRow label="Preferences" state="3" />
+        </DetailList>
+      </>,
+    )
+    expect(screen.getByRole('list', { name: 'Goes with Sam' })).toBeInTheDocument()
+  })
+
+  it('without it the list has no name', () => {
+    render(rows)
+    expect(screen.getByRole('list')).not.toHaveAttribute('aria-labelledby')
+  })
+})

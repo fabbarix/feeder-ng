@@ -2,7 +2,7 @@
 //   <SupplyList supplies stock system onOpen onUse busyIds label? />
 //   stock: ReadonlyMap<ingredientId, total> | null   null = not loaded yet: rows keep their old meta ("piece · restocks below 6
 //                                                    pieces") and every Use is disabled. A Supply missing from a loaded map has 0.
-//   The row's meta is stockLevel(...).text; below the level it takes the info tone (the meta's data-status="info", with its icon).
+//   The row's meta is stockLevel(...).text, with stockLevel(...).compact as its compact form; below the level it takes the info tone (the meta's data-status="info", with its icon).
 //   The Use button is an IconButton (icon "use"), named useLabel(...), in the row's trailing slot, beside the chevron: tapping it
 //   calls onUse(supply) and never opens the row. Disabled when there is no Stock or while that Supply is busy.
 import { render, screen, within } from '@testing-library/react'
@@ -26,21 +26,21 @@ function setup(map: ReadonlyMap<number, number> | null, extra: Partial<React.Com
 describe('SupplyList: the stock level', () => {
   it('shows the Stock and the Restock level on each row', () => {
     setup(stock([[22, 9], [21, 800], [23, 12]]))
-    expect(row('Toilet paper')).toHaveTextContent('9 pieces · restocks below 6')
-    expect(row('Dish soap')).toHaveTextContent('800 ml · restocks below 500 ml')
+    expect(row('Toilet paper')).toHaveTextContent('9 in Stock · Restocks below 6')
+    expect(row('Dish soap')).toHaveTextContent('800 ml in Stock · Restocks below 500 ml')
     expect(row('Batteries')).toHaveTextContent('12 pieces')
     expect(row('Batteries')).not.toHaveTextContent(/restock/i)
   })
-  it('marks a Supply below its Restock level with the info tone and the words "below Restock level"', () => {
+  it('marks a Supply below its Restock level with the info tone and the words "Below 6"', () => {
     setup(stock([[22, 4], [21, 800]]))
     const meta = row('Toilet paper').querySelector('.list-row__meta')
-    expect(meta).toHaveTextContent('4 pieces · below Restock level 6')
+    expect(meta).toHaveTextContent('Below 6 · 4 in Stock')
     expect(meta).toHaveAttribute('data-status', 'info')
     expect(row('Dish soap').querySelector('.list-row__meta')).not.toHaveAttribute('data-status')
   })
-  it('reads "None in Stock" for a Supply with no Stock (missing from the loaded totals)', () => {
+  it('reads "Below 500 ml · 0 ml in Stock" for a Supply with a level and no Stock (missing from the loaded totals); "None in Stock" without a level', () => {
     setup(stock([[22, 4]]))
-    expect(row('Dish soap')).toHaveTextContent('None in Stock')
+    expect(row('Dish soap')).toHaveTextContent('Below 500 ml · 0 ml in Stock')
     expect(row('Dish soap').querySelector('.list-row__meta')).toHaveAttribute('data-status', 'info') // it has a Restock level
     expect(row('Batteries')).toHaveTextContent('None in Stock')
     expect(row('Batteries').querySelector('.list-row__meta')).not.toHaveAttribute('data-status') // no level, nothing to restock

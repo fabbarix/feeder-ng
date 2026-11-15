@@ -1,6 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { act, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../ui'
@@ -44,6 +43,13 @@ function mount() {
     </QueryClientProvider>,
   )
 }
+// The ToastProvider's empty alert live region (.toast-live) is always on the page: these look at the page's own alert.
+const pageAlerts = () => screen.queryAllByRole('alert').filter((el) => !el.classList.contains('toast-live'))
+const pageAlert = () => {
+  const all = pageAlerts()
+  if (all.length !== 1) throw new Error(`expected one page alert, found ${all.length}`)
+  return all[0]!
+}
 const advance = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)))
 
 beforeEach(() => {
@@ -61,7 +67,7 @@ describe('first launch (nothing remembered) while the API is down', () => {
     server().answer = () => down(503)
     mount()
     await advance(1500)
-    const alert = screen.getByRole('alert')
+    const alert = pageAlert()
     expect(alert.closest('.error-state')).not.toBeNull()
     expect(alert).toHaveTextContent('Feeder could not load. Try again in a moment.')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
@@ -73,10 +79,10 @@ describe('first launch (nothing remembered) while the API is down', () => {
     mount()
     await advance(1500)
     s.answer = ok
-    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole('button', { name: 'Try again' }))
+    act(() => void fireEvent.click(screen.getByRole('button', { name: 'Try again' })))
     await advance(100)
-    expect(await screen.findByText('page body')).toBeInTheDocument()
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByText('page body')).toBeInTheDocument()
+    expect(pageAlerts()).toHaveLength(0)
   })
 
   it('recovers by itself every 5 s while the error shows: no tap needed when the server comes back', async () => {
@@ -84,11 +90,11 @@ describe('first launch (nothing remembered) while the API is down', () => {
     s.answer = () => down(503)
     mount()
     await advance(1500)
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(pageAlert()).toBeInTheDocument()
     s.answer = ok
     await advance(5200)
     expect(screen.getByText('page body')).toBeInTheDocument()
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(pageAlerts()).toHaveLength(0)
   })
 
   it('recovers when the connection returns (the online event) without waiting for the 5 s tick', async () => {
@@ -105,7 +111,7 @@ describe('first launch (nothing remembered) while the API is down', () => {
   it('an answer that never comes: a polite status from the first frame (not a bare "Loading"), a slow line after 3 s', async () => {
     server().answer = () => 'hang'
     mount()
-    const status = screen.getByRole('status')
+    const status = screen.getAllByRole('status').find((el) => !el.classList.contains('toast-live'))!
     expect(status).toHaveAttribute('aria-busy', 'true')
     expect(screen.queryByText('Still trying to reach Feeder.')).toBeNull()
     await advance(3100)
@@ -120,7 +126,7 @@ describe('first launch (nothing remembered) while the API is down', () => {
     await advance(3100)
     act(() => ctl.abort(new DOMException('timed out', 'TimeoutError')))
     await advance(100)
-    expect(screen.getByRole('alert').closest('.error-state')).not.toBeNull()
+    expect(pageAlert().closest('.error-state')).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
@@ -139,7 +145,7 @@ describe('a remembered User while the API is down or hangs', () => {
     server().answer = () => 'hang'
     mount()
     expect(screen.getByText('page body')).toBeInTheDocument()
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(pageAlerts()).toHaveLength(0)
   })
 
   it('a 503 from /api/me keeps the shell: no error page, the screens show their own states', async () => {

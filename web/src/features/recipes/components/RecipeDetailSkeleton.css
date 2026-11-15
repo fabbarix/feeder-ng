@@ -1,0 +1,15 @@
+/* B9-20 (RES-02): the Recipe detail's skeleton, at the heights of what replaces it (measured at 375 and 1440 px): text lines
+   of the body line height, the hero's chip rows, and the metric Tiles' one line. */
+.recipe-detail-skeleton .skeleton-tile > .skeleton[data-variant='line'] {
+  block-size: var(--text-body-line);
+}
+
+.recipe-detail-skeleton .recipe-detail-skeleton__hero > .skeleton[data-variant='line'] {
+  block-size: 26px;
+  inline-size: 45%;
+  border-radius: var(--radius-pill);
+}
+
+.recipe-detail-skeleton .recipe-detail-skeleton__metric > .skeleton[data-variant='line'] {
+  block-size: 33px;
+}

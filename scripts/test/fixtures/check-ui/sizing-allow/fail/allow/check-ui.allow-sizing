@@ -1,0 +1,3 @@
+.tile-error   # a crashed tile keeps its slot
+.tile-noreason
+.tile-noreason-hash   #

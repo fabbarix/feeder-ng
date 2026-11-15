@@ -1,10 +1,13 @@
-/* Chip (docs/design/system.md 6): one line, 26 high, the label truncates. Tokens only. */
+/* Chip (docs/design/system.md 6): one line, at least 26 high (a minimum, so a larger browser text size grows it: DS-08), the label
+   truncates. It may shrink so a row of chips shares a narrow line, but never past its line (DS-04). Tokens only. */
 .chip {
   position: relative;
   display: inline-flex;
+  flex: 0 1 auto;
   align-items: center;
   gap: var(--space-2);
-  block-size: 26px;
+  min-block-size: 1.625rem;
+  block-size: auto;
   max-inline-size: 100%;
   min-inline-size: 0;
   padding: 0 var(--space-2);
@@ -53,20 +56,34 @@ button.chip:focus-visible {
   color: var(--color-accent-text);
 }
 
-/* WP3b (plan 4.3, 5.1): on the accent hero the why chip is a surface chip, so it reads on the accent fill. */
-.tile[data-variant='hero'] .chip[data-kind='why'] {
-  background: var(--color-surface);
-  color: var(--color-accent-text);
-}
+/* The why chip on a hero is ui/Tile.css's (a currentColor tint that follows the hero's scheme): one rule, one file. */
 
 .chip[data-kind='tag'] {
   background: var(--color-surface-2);
   color: var(--color-muted);
 }
 
+/* VC6: one digit ("3", "+2") is a circle; two or more ("12", "128") are a pill with real straight sides (Chip.tsx sets data-wide),
+   never a 31 by 26 near-circle that reads as a squashed one. */
 .chip[data-kind='count'] {
+  flex: none;
+  justify-content: center;
+  min-inline-size: 1.625rem;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
   background: var(--color-surface-2);
   color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keep the whole text (a Plan row's "Leftover for Fri"): never shrink below it, still never past the line. */
+.chip[data-kind='count'][data-wide='true'] {
+  padding-inline: var(--space-3);
+}
+
+.chip[data-whole='true'] {
+  flex: none;
+  max-inline-size: 100%;
 }
 
 /* Filter: one chip height, hit area 44 via ::after. */
@@ -82,14 +99,35 @@ button.chip:focus-visible {
   inset: -9px 0;
 }
 
+/* A11Y-06: the one selected look (the Segmented option, ChoiceChip, a pressed IconButton): the accent container, an accent ring that
+   carries the state, and the Check. */
 .chip[data-kind='filter'][aria-pressed='true'] {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  border-color: var(--color-accent);
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  border-color: var(--selected-ring);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
 }
 
 .chip[data-kind='filter']:hover:not(:disabled) {
   box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
+}
+
+.chip[data-kind='filter'][aria-pressed='true']:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring), inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
+}
+
+/* A11Y-09: on a coarse pointer every button chip has a 44 px target, centred on it, without growing what you see. */
+@media (pointer: coarse) {
+  button.chip::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    inline-size: 100%;
+    block-size: 100%;
+    min-inline-size: var(--target-min);
+    min-block-size: var(--target-min);
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* state and status: the status container and its foreground, one pair per status. */
@@ -127,6 +165,30 @@ button.chip:focus-visible {
 .chip[data-kind="status"][data-status="info"] {
   background: var(--color-info-bg);
   color: var(--color-info-fg);
+}
+
+/* DS-06: warn is a rule or a setting that needs a decision (mustard, fixed, never the accent). */
+.chip[data-kind='state'][data-status='warn'],
+.chip[data-kind='status'][data-status='warn'] {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
+/* DS-06: neutral is a record, not a problem ("Not cooked"): the why-chip pair with a muted icon. State chips only. */
+.chip[data-kind='state'][data-status='neutral'] {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.chip[data-kind='state'][data-status='neutral'] > svg {
+  color: var(--color-muted);
+}
+
+/* DS-06: the Overdue chip, an info chip on a surface fill with a 1 px info ring (after the info rule: the same specificity). */
+.chip[data-status='info'][data-overdue='true'] {
+  background: var(--color-surface);
+  color: var(--color-info-fg);
+  box-shadow: inset 0 0 0 1px var(--color-info-fg);
 }
 
 /* "Leftover for": the outlined leftover tone (system.md 6). */
@@ -199,61 +261,51 @@ button.chip:focus-visible {
 .chip[data-kind='filter'][data-tag-colour='tomato'][aria-pressed='true'] {
   background: var(--tag-tomato-bg);
   color: var(--tag-tomato-fg);
-  border-color: var(--tag-tomato-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='apricot'][aria-pressed='true'] {
   background: var(--tag-apricot-bg);
   color: var(--tag-apricot-fg);
-  border-color: var(--tag-apricot-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='mustard'][aria-pressed='true'] {
   background: var(--tag-mustard-bg);
   color: var(--tag-mustard-fg);
-  border-color: var(--tag-mustard-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='olive'][aria-pressed='true'] {
   background: var(--tag-olive-bg);
   color: var(--tag-olive-fg);
-  border-color: var(--tag-olive-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='sage'][aria-pressed='true'] {
   background: var(--tag-sage-bg);
   color: var(--tag-sage-fg);
-  border-color: var(--tag-sage-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='teal'][aria-pressed='true'] {
   background: var(--tag-teal-bg);
   color: var(--tag-teal-fg);
-  border-color: var(--tag-teal-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='sky'][aria-pressed='true'] {
   background: var(--tag-sky-bg);
   color: var(--tag-sky-fg);
-  border-color: var(--tag-sky-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='blue'][aria-pressed='true'] {
   background: var(--tag-blue-bg);
   color: var(--tag-blue-fg);
-  border-color: var(--tag-blue-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='plum'][aria-pressed='true'] {
   background: var(--tag-plum-bg);
   color: var(--tag-plum-fg);
-  border-color: var(--tag-plum-bg);
 }
 
 .chip[data-kind='filter'][data-tag-colour='rose'][aria-pressed='true'] {
   background: var(--tag-rose-bg);
   color: var(--tag-rose-fg);
-  border-color: var(--tag-rose-bg);
 }
 
 .chip[data-tag-colour='tomato'] .chip__dot {

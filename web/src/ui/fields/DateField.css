@@ -114,6 +114,19 @@
   color: var(--color-on-accent);
 }
 
+/* PC-08 rangeStart: the first day is the accent fill like the chosen day; the days between them are one soft band. */
+.date-field__grid button[data-range-start] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  --focus-ring-color: var(--color-on-accent);
+}
+
+.date-field__grid button[data-in-range] {
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+  border-radius: 0;
+}
+
 .date-field__grid button[aria-disabled='true'] {
   opacity: 0.38;
   cursor: default;

@@ -6,6 +6,9 @@ export const gridStrings = {
   yesterday: 'Yesterday',
   loading: 'Loading the plan…',
   loadError: 'The plan could not be loaded.',
+  /** B9-20 (RES-02): offline, and the plan was never loaded on this phone. */
+  offlineUnknownTitle: 'The plan isn’t on this phone yet',
+  offlineUnknownText: 'Feeder loads it the first time this phone is online. It will appear here as soon as the connection is back.',
   updating: 'Updating the plan…',
   regenerate: 'Regenerate',
   empty: 'Nothing is planned yet. Add Meal Slots in Settings, and some Recipes.',

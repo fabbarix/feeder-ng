@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { Select } from '../../../ui/Select/Select'
 import { rangeOptions } from '../lib/range'
-import { useNarrowChips } from '../hooks/useNarrowChips'
 import { shopStrings } from '../strings'
 
 export interface RangePickerProps {
@@ -14,14 +13,13 @@ export interface RangePickerProps {
 }
 
 /**
- * "Shop for": one Select of the days from today to the Planning Horizon; it shows the range in use ("Until Thu 12", or "Thu 12" below
- * 420 px, b8-shop). The list always shows the full labels.
+ * "Shop for": one Select of the days from today to the Planning Horizon; it shows the range in use ("Until Thu 12", or "Thu 12" when
+ * the chip's own row has no room for it: B9-15, the chip Select's shortLabel). The list always shows the full labels.
  */
 export function RangePicker({ today, maxTo, to, onChange }: RangePickerProps) {
-  const narrow = useNarrowChips()
   const options = useMemo(
-    () => rangeOptions(today, maxTo).map((o) => ({ value: o.value, label: o.label, ...(narrow ? { triggerLabel: o.short } : {}) })),
-    [today, maxTo, narrow],
+    () => rangeOptions(today, maxTo).map((o) => ({ value: o.value, label: o.label, ...(o.short !== o.label ? { shortLabel: o.short } : {}) })),
+    [today, maxTo],
   )
   return <Select<string> label={shopStrings.range} appearance="chip" icon="plan" options={options} value={to} onChange={onChange} />
 }

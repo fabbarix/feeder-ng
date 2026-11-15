@@ -6,7 +6,7 @@
 //     `addError`) is shown under the field.
 //   - a row is a ListRow: title = the email (once), meta = "You", "Last Admin" or "You · Last Admin", trailing = a Switch
 //     visibly labelled "Admin" (aria-label "Admin: <email>") and an IconButton "Remove <email>" (no visible text to clip).
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -49,11 +49,10 @@ describe('AllowlistPanel: add form', () => {
     const message = 'That email already belongs to a Member, a User or the allowlist.'
     setup({ addError: message })
     const input = screen.getByLabelText('Email to allow')
-    const alert = screen.getByRole('alert')
-    expect(alert).toHaveTextContent(message)
+    const error = screen.getByText(message).closest('p')!
     expect(input).toHaveAttribute('aria-invalid', 'true')
-    expect(input.getAttribute('aria-describedby')).toContain(alert.id)
-    expect(alert.closest('.allowlist__field')).not.toBeNull()
+    expect(input.getAttribute('aria-describedby')).toContain(error.id)
+    expect(error.closest('.allowlist__field')).not.toBeNull()
     await userEvent.type(input, 'x')
     expect(input).toHaveValue('x')
   })
@@ -138,7 +137,7 @@ describe('AllowlistPanel: review send-back', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add to allowlist' }))
     const expected = memberEmailProblem('nope')
     expect(expected).toMatch(/email/i)
-    expect(await screen.findByRole('alert')).toHaveTextContent(expected!)
+    await waitFor(() => expect(screen.getByLabelText('Email to allow')).toHaveAccessibleDescription(expect.stringContaining(expected!)))
   })
 })
 

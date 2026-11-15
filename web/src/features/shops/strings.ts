@@ -65,6 +65,13 @@ export const strings = {
   loading: 'Loading…',
   deleteBarcode: 'Delete',
   actionFailed: 'That did not work. Try again.',
+  /** B9-20 (RES-02): the failed, and offline-and-never-loaded, states of the list and the page. */
+  listError: 'The Shops could not be loaded.',
+  itemError: 'The Shop could not be loaded.',
+  offlineListTitle: 'Your Shops aren’t on this phone yet',
+  offlineItemTitle: 'This Shop isn’t on this phone yet',
+  offlineListText: 'Feeder loads them the first time this phone is online. They’ll appear here as soon as the connection is back.',
+  offlineItemText: 'Feeder needs a connection to load it the first time. It will appear here as soon as the connection is back.',
   notFoundTitle: 'Shop not found',
   confirmDeleteShop: 'Yes, delete Shop',
   rulePositions: (item: string, value: string) => `item digits ${item} · value digits ${value}`,

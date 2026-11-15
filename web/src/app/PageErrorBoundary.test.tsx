@@ -52,9 +52,10 @@ describe('PageErrorBoundary inside the shell (B12)', () => {
     expect(screen.queryByRole('heading', { name: 'Something went wrong' })).toBeNull()
   })
 
-  it('offers Reload page and Go to Today', async () => {
+  it('offers Try again and Go to Today (B9-20, RES-09: Try again replaces Reload page)', async () => {
     const router = mount()
-    expect(screen.getByRole('button', { name: 'Reload page' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reload page' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Go to Today' }))
     expect(router.state.location.pathname).toBe('/')
   })

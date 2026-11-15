@@ -16,5 +16,10 @@ export const fieldStrings = {
   hexHint: 'Use #RGB or #RRGGBB',
   useColour: 'Use colour',
   cancel: 'Cancel',
+  /** DateField rangeStart: appended to the day names of a range. */
+  rangeFirstDay: ', first day',
+  inRange: ', in the range',
+  /** DurationField: the unit Select is named after the field. */
+  durationUnit: (label: string) => `${label} unit`,
   weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
 }

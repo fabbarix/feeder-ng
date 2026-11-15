@@ -49,7 +49,7 @@ describe('ImagePicker, from a link', () => {
     const { deps } = setup()
     const field = await open()
     await user.type(field, 'http://photos.example/soup.png{Enter}')
-    expect(await screen.findByRole('alert')).toHaveTextContent(/https/)
+    await waitFor(() => expect(field).toHaveAccessibleDescription(/https/))
     expect(deps.api.ingestUrl).not.toHaveBeenCalled()
     expect(field).toBeInTheDocument()
     expect(field).toHaveAttribute('aria-invalid', 'true')
@@ -57,9 +57,10 @@ describe('ImagePicker, from a link', () => {
 
   it('an empty field asks for a link', async () => {
     const { deps } = setup()
-    await open()
+    const field = await open()
     await user.click(screen.getByRole('button', { name: 'Use link' }))
-    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    await waitFor(() => expect(field).toHaveAttribute('aria-invalid', 'true'))
+    expect(field).not.toHaveAccessibleDescription('')
     expect(deps.api.ingestUrl).not.toHaveBeenCalled()
   })
 
@@ -68,15 +69,16 @@ describe('ImagePicker, from a link', () => {
     setup(api)
     const field = await open()
     await user.type(field, 'https://10.0.0.5/a.png{Enter}')
-    expect(await screen.findByRole('alert')).toHaveTextContent(/private/i)
+    await waitFor(() => expect(field).toHaveAccessibleDescription(/private/i))
     expect(field).toBeInTheDocument()
   })
 
   it('a download that fails (404, timeout) says the image could not be downloaded', async () => {
     const api = fakeApi({ ingestUrl: vi.fn().mockRejectedValue(new ApiError(502, 'image_url_unreachable', 'x')) })
     setup(api)
-    await user.type(await open(), 'https://photos.example/gone.png{Enter}')
-    expect(await screen.findByRole('alert')).toHaveTextContent(/download/i)
+    const field = await open()
+    await user.type(field, 'https://photos.example/gone.png{Enter}')
+    await waitFor(() => expect(field).toHaveAccessibleDescription(/download/i))
   })
 
   it('shows the downloading status and locks Use link while the server fetches', async () => {

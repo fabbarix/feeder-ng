@@ -1,6 +1,8 @@
-// B9-20 (RES-02): STUB for the tests; the developer builds it.
-import type { ScreenState, QueryShape } from '../lib/dataState'
+// B9-20 (RES-02): the React-facing wrapper of screenState; the connection comes from useConnectivity.
+import { screenState, type QueryShape, type ScreenState } from '../lib/dataState'
+import { useConnectivity } from './useConnectivity'
 
-export function useScreenState(_q: QueryShape, _o: { isEmpty: boolean; hasFilter: boolean }): ScreenState {
-  throw new Error('not implemented (B9-20)')
+export function useScreenState(q: QueryShape, o: { isEmpty: boolean; hasFilter: boolean }): ScreenState {
+  const { offline } = useConnectivity()
+  return screenState(q, { online: !offline, isEmpty: o.isEmpty, hasFilter: o.hasFilter })
 }

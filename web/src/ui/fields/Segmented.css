@@ -1,11 +1,24 @@
-/* Segmented / RadioCards: a radiogroup of buttons. Tokens only. */
+/* Segmented: a radiogroup of buttons on a RULED track (A11Y-05 option B: the strong fill and a 2 px bottom rule, the shape the
+   Search field shares). The selected option is the accent container with a ring inside its edge and, at full width, a Check
+   (A11Y-06). An option never wraps (P30). Tokens only. */
 .segmented {
   display: flex;
   gap: var(--space-1);
   padding: var(--space-1);
-  border: var(--field-border-width) solid transparent;
-  border-radius: var(--radius-control);
-  background: var(--color-surface-2);
+  background: var(--field-fill-strong);
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--field-rule-color);
+  border-radius: var(--field-radius-ruled);
+}
+
+.segmented:not([data-disabled]):hover {
+  background: color-mix(in oklab, var(--field-fill-strong), var(--color-text) 6%);
+}
+
+/* A full-width Segmented's field is the container the Check query reads; a compact one sizes to max-content, which a size
+   container would collapse, so it never is one. */
+.ui-field:has(> .segmented:not([data-compact])) {
+  container-type: inline-size;
 }
 
 .segmented[data-compact] {
@@ -22,9 +35,11 @@
   inline-size: max-content;
 }
 
+/* Disabled: no fill, the rule in --color-line (exempt from 1.4.11), text muted. */
 .segmented[data-disabled] {
-  border-color: var(--color-outline);
   background: transparent;
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--color-line);
   color: var(--color-muted);
 }
 
@@ -35,7 +50,11 @@
 }
 
 .segmented__option {
-  flex: 1;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
   min-block-size: 40px;
   padding: 0 var(--space-3);
   border: 0;
@@ -45,13 +64,29 @@
   font: inherit;
   font-size: var(--text-label-size);
   font-weight: var(--text-label-weight);
+  white-space: nowrap;
   cursor: pointer;
 }
 
 .segmented__option[aria-checked='true'] {
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--elev-1);
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+
+.segmented__check {
+  flex: none;
+}
+
+/* Under 18 rem of field the Check is dropped (the ring still marks the choice) and the options tighten, so none wraps. */
+@container (max-width: 18rem) {
+  .segmented__check {
+    display: none;
+  }
+
+  .segmented__option {
+    padding-inline: var(--space-2);
+  }
 }
 
 /* A11Y-02: one tab stop (the arrows choose), so the whole track rings with the outer ring and the option draws none. */
@@ -71,4 +106,17 @@
 
 .segmented__option[aria-checked='true']:disabled {
   color: var(--color-muted);
+}
+
+/* A11Y-09: each option's hit area is the track's full 48 px height and abuts its neighbours'. */
+@media (pointer: coarse) {
+  .segmented__option {
+    position: relative;
+  }
+
+  .segmented__option::after {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--space-1)) calc(-0.5 * var(--space-1));
+  }
 }

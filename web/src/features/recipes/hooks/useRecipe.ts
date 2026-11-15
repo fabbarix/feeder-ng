@@ -1,10 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { recipesApi } from '../api'
-import type { Recipe } from '../types'
+import type { Recipe, RecipeSummary } from '../types'
 import { useRecipeLiveUpdates } from './useRecipeLiveUpdates'
 
 export interface UseRecipe {
+  /** B9-20 (RES-02): loading, ready, offlineSaved, offlineUnknown or failed (a 404 is failed after one request). */
+  state: ScreenState
   recipe: Recipe | undefined
+  /** The Recipe's name from a loaded list, while the Recipe itself is not known (the LoadState keeps the title). */
+  knownName: string | undefined
   isLoading: boolean
   error: Error | null
   /** Fetches the Recipe again (the error state's Try again). */
@@ -30,8 +36,11 @@ export function useRecipe(id: number): UseRecipe {
       void client.invalidateQueries({ queryKey: ['tags'] })
     },
   })
+  const state = useScreenState(query, { isEmpty: false, hasFilter: false })
   return {
+    state,
     recipe: query.data,
+    knownName: query.data?.name ?? nameFromLists(client.getQueriesData<RecipeSummary[]>({ queryKey: ['recipes'] }), id),
     isLoading: query.isLoading,
     error: query.error,
     refetch: () => {
@@ -44,4 +53,14 @@ export function useRecipe(id: number): UseRecipe {
       await remove.mutateAsync()
     },
   }
+}
+
+/** The name of Recipe `id` in any cached Recipes list (['recipes', filter] holds arrays; ['recipes', id] does not). */
+function nameFromLists(entries: Array<[unknown, RecipeSummary[] | undefined]>, id: number): string | undefined {
+  for (const [, data] of entries) {
+    if (!Array.isArray(data)) continue
+    const hit = data.find((r) => r.id === id)
+    if (hit) return hit.name
+  }
+  return undefined
 }

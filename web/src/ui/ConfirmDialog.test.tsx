@@ -135,15 +135,20 @@ describe('useConfirm', () => {
 })
 
 describe('ConfirmDialog: body line breaks', () => {
+  // B9-18 (SAFE R1): a one-paragraph body is the lead line (.confirm-dialog__lead, weight 600); later paragraphs keep .confirm-dialog__body.
   it('the body paragraph uses the shared class, not an inline style', () => {
     render(<ConfirmDialog {...base} body={'Replaces 3 meals.\nTue Dinner: Stew'} onConfirm={() => {}} onCancel={() => {}} />)
     const body = screen.getByText(/Replaces 3 meals\./)
-    expect(body).toHaveClass('confirm-dialog__body')
+    expect(body).toHaveClass('confirm-dialog__lead')
     expect(body).not.toHaveAttribute('style')
     expect(body).toHaveTextContent('Tue Dinner: Stew')
   })
 
   it('Dialog.css keeps line breaks for .confirm-dialog__body (white-space: pre-line)', () => {
     expect(declarations(readUiCss('Dialog.css'), '.confirm-dialog__body')['white-space']).toBe('pre-line')
+  })
+
+  it('ConfirmDialog.css keeps line breaks for the lead too (white-space: pre-line)', () => {
+    expect(declarations(readUiCss('ConfirmDialog.css'), '.confirm-dialog__lead')['white-space']).toBe('pre-line')
   })
 })

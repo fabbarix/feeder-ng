@@ -1,14 +1,18 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { recipesApi } from '../api'
 import { sortRecipes } from '../lib/sort'
 import type { RecipeFilter, RecipeSummary, TagCount } from '../types'
 import { useRecipeLiveUpdates } from './useRecipeLiveUpdates'
 
 export interface UseRecipes {
+  /** B9-20 (RES-02): which of the seven screen states the list is in. */
+  state: ScreenState
   recipes: RecipeSummary[]
   tags: TagCount[]
-  /** True when there are no Recipes at all (not just no match). */
+  /** True when there are no Recipes at all (not just no match): `state === 'empty'`. */
   isEmpty: boolean
   isLoading: boolean
   error: Error | null
@@ -25,10 +29,12 @@ export function useRecipes(filter: RecipeFilter): UseRecipes {
   // The server sorts too; sorting again keeps the order right when a live update changes a date.
   const sort = filter.sort
   const recipes = useMemo(() => (list.data === undefined ? [] : sort ? sortRecipes(list.data, sort) : list.data), [list.data, sort])
+  const state = useScreenState(list, { isEmpty: list.data?.length === 0, hasFilter: filtered })
   return {
+    state,
     recipes,
     tags: tags.data ?? [],
-    isEmpty: list.isSuccess && list.data.length === 0 && !filtered,
+    isEmpty: state === 'empty',
     isLoading: list.isLoading,
     error: list.error,
     refetch: () => void list.refetch(),

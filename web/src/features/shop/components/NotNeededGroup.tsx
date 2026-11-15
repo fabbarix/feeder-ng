@@ -12,7 +12,7 @@ export interface NotNeededGroupProps {
   entries: ListEntry[]
   /** a row was tapped: its sheet offers "Needed after all" */
   onOpen: (entry: ListEntry, group: RowGroup) => void
-  /** b8-polish: a narrow screen shows the short Restock reason, as in the other groups (the screen decides, useNarrowChips) */
+  /** b8-polish: a narrow screen shows the short Restock reason, as in the other groups (the screen decides, useCompactRows) */
   compact?: boolean
 }
 

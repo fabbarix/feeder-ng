@@ -32,8 +32,13 @@ export function useModalDialog(ref: RefObject<HTMLDialogElement | null>, options
       if (modal) dialog.showModal()
       else dialog.show()
     }
-    const target = latest.current.initialFocus(dialog) ?? dialog
-    target.focus()
+    const focusInitial = () => {
+      const target = latest.current.initialFocus(dialog) ?? dialog
+      target.focus()
+      // SHORT-02 rule 6: the first control is scrolled into view, nearest (Mark as Cooked shows its Leftover portions).
+      target.scrollIntoView?.({ block: 'nearest' })
+    }
+    focusInitial()
     const onCancel = (event: Event) => {
       event.preventDefault()
       latest.current.onClose()
@@ -47,7 +52,26 @@ export function useModalDialog(ref: RefObject<HTMLDialogElement | null>, options
       latest.current.onClose()
     }
     if (!modal) window.addEventListener('keydown', onKey)
+    // A11Y-07: while a modal dialog is open focus never rests on <body> or outside it. When focus leaves (a focused child was
+    // remounted, or something focused an element behind), check on the next frame and put it back on the initial target.
+    let frame = 0
+    const onFocusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget as Node | null
+      if (next && dialog.contains(next)) return
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        if (!dialog.open || !dialog.isConnected) return
+        const active = document.activeElement
+        if (active && dialog.contains(active)) return
+        // A dialog stacked above this one (the "Discard changes?" question) owns the focus.
+        if (active && inAnotherOpenDialog(dialog, active)) return
+        focusInitial()
+      })
+    }
+    if (modal) dialog.addEventListener('focusout', onFocusOut)
     return () => {
+      cancelAnimationFrame(frame)
+      dialog.removeEventListener('focusout', onFocusOut)
       dialog.removeEventListener('cancel', onCancel)
       window.removeEventListener('keydown', onKey)
       if (dialog.open) dialog.close()
@@ -65,6 +89,12 @@ export function useModalDialog(ref: RefObject<HTMLDialogElement | null>, options
 /** Another modal dialog is open: every open <dialog> but `self` is modal unless it is marked non-modal (only this hook opens one). */
 function anotherModalOpen(self: HTMLDialogElement): boolean {
   return [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].some((d) => d !== self && d.dataset['modal'] !== 'false')
+}
+
+/** `el` is inside an open <dialog> other than `self` (a dialog stacked above it). */
+function inAnotherOpenDialog(self: HTMLDialogElement, el: Element): boolean {
+  const owner = el.closest('dialog[open]')
+  return owner !== null && owner !== self
 }
 
 /** Selector for elements a user can operate (used by initialFocus pickers). */

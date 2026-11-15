@@ -45,6 +45,12 @@
     align-items: start;
   }
 
+  /* B9-20 (RES-02): with no aside (a LoadState, an error or an empty Pantry with nothing spoiled) the state takes the whole
+     row, centred in the list region, not the aside's 24 rem column. */
+  .stock-screen__main:only-child {
+    grid-column: 1 / -1;
+  }
+
   .stock-screen__aside {
     position: sticky;
     inset-block-start: var(--space-4);

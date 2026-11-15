@@ -25,7 +25,9 @@ type Status = 'loading' | 'error' | 'offline' | 'empty' | 'ready'
 
 function show(list: ShoppingList | undefined, extra: Record<string, unknown> = {}, status: Status = list ? 'ready' : 'loading') {
   const retry = vi.fn()
-  listHook.useShoppingList.mockReturnValue({ data: list, isLoading: !list, error: null, stale: false, status, retry, ...extra })
+  // B9-20 (RES-02): the screen reads `state` for loading, failed and offlineUnknown; it follows `status` here.
+  const state = ({ loading: 'loading', error: 'failed', offline: 'offlineSaved', empty: 'empty', ready: 'ready' } as const)[status]
+  listHook.useShoppingList.mockReturnValue({ data: list, isLoading: !list, error: null, stale: false, status, state, retry, ...extra })
   render(
     <MemoryRouter initialEntries={['/shop']}>
       <Routes>

@@ -70,10 +70,11 @@ describe('FormActions.css', () => {
     expect(declarations(css, '.form-actions')).toMatchObject({ display: 'flex', 'inline-size': '100%', gap: 'var(--space-2)' })
   })
 
-  it('phone first: below 600 px it is a column-reverse stack (primary on top) with full-width buttons', () => {
+  // B9-14 / SHORT-02 replaced the phone stack: below 600 px the row stays one row, each button filling its natural-width track.
+  it('below 600 px it is still one row (never column-reverse), each button filling its track', () => {
     expect(css).toMatch(/@media\s*\(width < 37\.5em\)/)
     const phone = css.slice(css.search(/@media\s*\(width < 37\.5em\)/))
-    expect(phone).toMatch(/flex-direction:\s*column-reverse/)
+    expect(phone).not.toMatch(/column-reverse/)
     expect(phone).toMatch(/\.form-actions\s+\.button\s*\{[^}]*inline-size:\s*100%/)
   })
 

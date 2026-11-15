@@ -1,10 +1,11 @@
-// hf-recipes-filter: a panel anchored to its trigger from 768 px (a non-modal dialog, floated in the top layer), and the modal
-// BottomSheet below that (docs/design/recipes-filter.md 7.1). Escape and an outside click close it; closing it by its own
+// hf-recipes-filter: a panel anchored to its trigger (a non-modal dialog, floated in the top layer), and the modal BottomSheet on a
+// phone or a short viewport (POPOVER_SHEET_QUERY, SHORT-07: phone landscape has no height to place a popover; docs/design/recipes-filter.md 7.1). Escape and an outside click close it; closing it by its own
 // controls returns focus to the trigger.
-import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
+import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import { BottomSheet } from '../BottomSheet'
 import { floatingPopoverAttr, useFloatingPopover } from '../lib/useFloatingPopover'
 import { useBreakpoint } from '../lib/breakpoints'
+import { POPOVER_SHEET_HEIGHT_QUERY } from '../lib/sheetLayout'
 import { INTERACTIVE_SELECTOR } from '../lib/useModalDialog'
 import './Popover.css'
 
@@ -23,8 +24,10 @@ export interface PopoverProps {
 }
 
 export function Popover({ open, onClose, anchorRef, title, className, id, children, footer }: PopoverProps) {
-  const phone = !useBreakpoint('md')
-  if (phone) {
+  // POPOVER_SHEET_QUERY: below 768 px wide (the md band) or under 600 px tall.
+  const wide = useBreakpoint('md')
+  const short = useShortViewport()
+  if (!wide || short) {
     return (
       <BottomSheet open={open} onClose={onClose} title={title} footer={footer}>
         <div id={id}>{children}</div>
@@ -36,6 +39,19 @@ export function Popover({ open, onClose, anchorRef, title, className, id, childr
       {children}
     </FloatingPopover>
   ) : null
+}
+
+/** True while POPOVER_SHEET_HEIGHT_QUERY matches. Without matchMedia (jsdom, old browsers) it is false: the desktop presentation. */
+function useShortViewport(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mql = typeof globalThis.matchMedia === 'function' ? globalThis.matchMedia(POPOVER_SHEET_HEIGHT_QUERY) : null
+      mql?.addEventListener?.('change', onChange)
+      return () => mql?.removeEventListener?.('change', onChange)
+    },
+    () => (typeof globalThis.matchMedia === 'function' ? globalThis.matchMedia(POPOVER_SHEET_HEIGHT_QUERY).matches : false),
+    () => false,
+  )
 }
 
 type FloatingProps = Omit<PopoverProps, 'open'>

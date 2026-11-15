@@ -1,8 +1,9 @@
 // B9-20 (RES-02, RES-06; plan sections 3 and 9): the scenarios of "unknown is not empty" and "errors in about 1 s".
-//   offline-unknown   Today is loaded, then the phone loses its signal (navigator.onLine false, the offline event, every request fails) and
+//   offline-unknown   Settings is loaded (it asks for none of the four screens' data: Today loads the plan, so /plan would rightly be
+//                     the saved copy), then the phone loses its signal (navigator.onLine false, the offline event, every request fails) and
 //                     /recipes, /pantry, /plan and /recipes/:id are opened in the app. Each must show one .load-state and no .empty-state
 //                     and no text matching /match|Nothing in/ (the setup throws otherwise, so the probes do not inspect: the run fails).
-//                     The page measured is the last one, the Recipe detail.
+//                     The page measured is the last one, the Recipe detail (so its route is /recipes/:id).
 //   error-state-fast  Today is loaded, then every /api/recipes request answers 500 and /recipes is opened in the app: an .error-state with
 //                     a Try again button shows within 2.5 s (the retry policy: one retry after 1 s).
 // Both go through page code only (the driver's helpers have no network control): the page's own fetch and navigator are replaced.
@@ -28,12 +29,12 @@ const LOADED = `!!document.querySelector('main') && !document.querySelector('[ar
 export default {
   order: 400,
   scenarios: [
-    { name: 'offline-unknown', route: '/', start: '/', setup: 'offlineUnknown', widths: [390, 1440] },
-    { name: 'error-state-fast', route: '/', start: '/', setup: 'errorStateFast', widths: [390] },
+    { name: 'offline-unknown', route: '/recipes/:id', start: '/settings', setup: 'offlineUnknown', widths: [390, 1440] },
+    { name: 'error-state-fast', route: '/recipes', start: '/', setup: 'errorStateFast', widths: [390] },
   ],
   setups: {
     async offlineUnknown(h) {
-      await until(LOADED, 'Today loaded')
+      await until(LOADED, 'Settings loaded')
       await h.evaluate(GO_OFFLINE)
       const ids = h.ids ?? {}
       for (const path of ['/recipes', '/pantry', '/plan', `/recipes/${ids.recipeId ?? 1}`]) {

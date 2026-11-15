@@ -1,6 +1,7 @@
 // Settings > Courses: the list, add, rename, Make main, reorder, Unarchive and the Delete / Archive dialog.
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
+import { actionFailed, failureLine } from '../../../lib/errorCopy'
 import { ApiError } from '../../../lib/http'
 import { validateCourseName, type Course } from '../../../lib/courses'
 import { useCourses } from '../../../lib/courses/useCourses'
@@ -18,13 +19,16 @@ interface Renaming extends RenameState {
 /** Where focus goes after a change: a row's Actions button, or the list itself when no row is left. A new object asks again. */
 type FocusTarget = { kind: 'actions'; courseId: number } | { kind: 'list' }
 
-/** The sentence for a refused add, rename or Unarchive: the server's own for a taken name, the 20 limit, else the usual one. */
-function refusalMessage(err: unknown): string {
+/**
+ * The sentence for a refused add, rename or Unarchive: the server's own for a taken name, the 20 limit, else one that names
+ * what failed (`phrase`) and what to do (B9-20, RES-06: lib/errorCopy).
+ */
+function refusalMessage(err: unknown, phrase: string): string {
   if (err instanceof ApiError) {
     if (err.code === 'course_name_taken') return err.message
     if (err.code === 'too_many_courses') return s.atLimit
   }
-  return s.actionFailed
+  return failureLine(actionFailed(phrase, err))
 }
 
 export function useCoursesPage() {
@@ -71,7 +75,7 @@ export function useCoursesPage() {
       setNewName('')
       toast.show(s.added(checked.name), { status: 'success' })
     } catch (err) {
-      setAddError(refusalMessage(err))
+      setAddError(refusalMessage(err, s.failed.add(checked.name)))
     }
   }
 
@@ -96,7 +100,7 @@ export function useCoursesPage() {
       endRename(course.id)
       toast.show(s.renamed(checked.name), { status: 'success' })
     } catch (err) {
-      setRenaming({ ...renaming, busy: false, error: refusalMessage(err) })
+      setRenaming({ ...renaming, busy: false, error: refusalMessage(err, s.failed.rename(course.name)) })
     }
   }
 
@@ -104,8 +108,8 @@ export function useCoursesPage() {
     try {
       await courses.makeMain(course.id)
       toast.show(s.nowMain(course.name), { status: 'success' })
-    } catch {
-      toast.show(s.actionFailed, { status: 'error' })
+    } catch (err) {
+      toast.show(failureLine(actionFailed(s.failed.makeMain(course.name), err)), { status: 'error' })
     }
   }
 
@@ -115,8 +119,8 @@ export function useCoursesPage() {
     if (next.every((id, i) => id === ids[i])) return
     try {
       await courses.reorder(next)
-    } catch {
-      toast.show(s.actionFailed, { status: 'error' })
+    } catch (err) {
+      toast.show(failureLine(actionFailed(s.failed.reorder, err)), { status: 'error' })
     }
   }
 
@@ -125,7 +129,7 @@ export function useCoursesPage() {
       await courses.unarchive(course.id)
       toast.show(s.unarchived(course.name), { status: 'success' })
     } catch (err) {
-      toast.show(refusalMessage(err), { status: 'error' })
+      toast.show(refusalMessage(err, s.failed.unarchive(course.name)), { status: 'error' })
     }
   }
 

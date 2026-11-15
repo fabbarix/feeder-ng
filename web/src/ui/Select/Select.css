@@ -76,7 +76,8 @@
   flex-direction: column;
   inline-size: 360px;
   max-inline-size: calc(100vw - 32px);
-  padding: var(--space-2);
+  /* SET-06: the panel inside keeps the ring room, so the popover's own padding is what is left of --space-2. */
+  padding: calc(var(--space-2) - var(--focus-ring-width) - var(--focus-ring-offset));
   border: 0;
   border-radius: var(--radius-tile);
   background: var(--color-surface);
@@ -89,22 +90,101 @@
   flex-direction: column;
   gap: var(--space-2);
   min-block-size: 0;
+  /* SET-06 (R-C): ring room. A sheet body clips at its edge, so the search field's outer ring (3 px at a 2 px offset) needs this much
+     around it to show in full. */
+  padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 }
 
+/* In a bottom sheet the body already keeps the ring room on every side (BottomSheet.css), so the panel adds none of its own. The
+   list is the sheet's one scroller and takes the room left under the search and the chip line: an option scrolled into view never
+   scrolls the sheet body, so the search field (and its ring) stays in place. */
+.sheet__body:has(> .select__panel) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+
+.sheet__body > .select__panel {
+  flex: 1 1 auto;
+  padding: 0;
+}
+
+.sheet__body > .select__panel > .select__list {
+  max-block-size: none;
+}
+
+/* Only the list gives way, in a sheet or a popover capped to the window: the search field and the chip line (which clips) keep their
+   height. */
+.select__panel > :not(.select__list) {
+  flex: none;
+}
+
+/* SET-06: the filter chips are one line: what does not fit is "+N" (SelectTools). The line clips its overflow, so it is padded by the
+   ring room and pulled back by it: a chip's ring stays inside the clip and the chips still line up with the search field. */
 .select__tools {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-1);
-  padding: 0 var(--space-1);
+  overflow: hidden;
+  padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  margin: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
 }
 
+/* "+N" has expanded the line in place: it wraps, and ends with "Fewer" and the sort button. */
+.select__tools[data-expanded='true'] {
+  flex-wrap: wrap;
+}
+
+.select__tools > .chip {
+  flex: none;
+  max-inline-size: 12rem;
+}
+
+.select__tools > .filter-chips__more {
+  display: inline-flex;
+  flex: none;
+}
+
+/* The outlined sort IconButton keeps its place at the end of the line and never shrinks (R-A: an action on a surface has a boundary). */
 .select__sort {
+  flex: none;
   margin-inline-start: auto;
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+
+/* R-C+: the strip clips, so a focused chip or sort button draws its ring inside itself on a soft fill and never touches a neighbour. */
+.select__tools .chip:focus-visible,
+.select__tools .icon-button:focus-visible {
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+}
+
+/* The hidden copy of the line that measures every chip at its natural width (SelectTools). Fixed, so it takes no room and is not part
+   of any scrollable overflow. */
+.select__tools-measure {
+  position: fixed;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-1);
+  inline-size: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.select__tools-measure > .chip {
+  flex: none;
+  max-inline-size: 12rem;
 }
 
 .select__list {
   display: grid;
+  /* SET-06: an active option scrolled into view stops clear of the list's edge. */
+  scroll-padding-block: var(--space-2);
   flex: 1 1 auto;
   min-block-size: 0;
   max-block-size: 420px;
@@ -145,6 +225,13 @@
   background: var(--color-surface-2);
 }
 
+/* The list itself takes focus (Tab, or a sheet without a search): it draws no ring of its own (it scrolls and would clip it), so the
+   active option carries the focus, as an inner ring (R-C+), while the list has keyboard focus. */
+.select__list:focus-visible .select__option[data-active] {
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+}
+
 .select__option[aria-selected='true'] {
   color: var(--color-accent-text);
 }
@@ -179,15 +266,23 @@
 }
 
 .select__label {
+  /* SET-06: an option's title wraps to at most two lines at word boundaries, so similar Recipes can be told apart. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
   font-size: var(--text-body-strong-size);
   line-height: var(--text-body-strong-line);
   font-weight: var(--text-body-strong-weight);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
+/* The meta stays one line ("30 min", "UTC+1 · 21:14 · Europe/Rome"): a cut falls at its end. */
 .select__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
@@ -221,6 +316,39 @@
 .ui-field[data-appearance='chip'] {
   inline-size: auto;
   min-inline-size: 0;
+}
+
+/* B9-15: the hidden copy of a chip's full value beside its trigger (useChipFit measures it to choose the full or the short value). Set
+   like the value; fixed, so it takes no room. */
+.select__measure {
+  position: fixed;
+  inline-size: max-content;
+  visibility: hidden;
+  pointer-events: none;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  white-space: nowrap;
+}
+
+/* DS-03 (decision DS 6): an icon-only Sort keeps its sort glyph even where the narrow header hides the leading icon of a Sort that shows
+   its value (FilterBar.css, under 24 rem); its value is visually hidden and carried in its name. */
+.filter-bar__sort .select__trigger[data-icon-only='true'] .select__leading {
+  display: inline-grid;
+}
+
+/* DS-03: an icon-only Sort never shrinks: its glyph and chevron are all it shows (VC6, nothing squished). */
+.filter-bar__sort:has(.select__trigger[data-icon-only='true']) {
+  flex: none;
+}
+
+/* DS-03: the FilterBar view row's hidden copy of the Sort with its value shown (FilterBarViewRow); useSortFits reads its width. Fixed and
+   hidden, so it takes no room in the row. */
+.filter-bar__sort-measure {
+  position: fixed;
+  inline-size: max-content;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* BR-D: the "Base recipe" badge after an Ingredient's name; a pill that never shrinks the label. */

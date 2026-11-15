@@ -237,6 +237,21 @@ describe('Chip count: a proper round shape (VC6: "count badges are round, never 
     expect(declarations(css, '.chip')['min-block-size']).toBe(d['min-inline-size'])
   })
 
+  it('one digit is a circle (4 px side room), two or more digits a clear pill (data-wide, 12 px side room); "+2" is one digit', () => {
+    expect(declarations(css, ".chip[data-kind='count']")['padding-inline']).toBe('var(--space-1)')
+    expect(declarations(css, ".chip[data-kind='count'][data-wide='true']")['padding-inline']).toBe('var(--space-3)')
+    const { container } = render(
+      <>
+        <Chip kind="count">3</Chip>
+        <Chip kind="count">+2</Chip>
+        <Chip kind="count">12</Chip>
+        <Chip kind="count">{128}</Chip>
+        <Chip kind="count">+{12}</Chip>
+      </>,
+    )
+    expect([...container.querySelectorAll('.chip')].map((c) => c.getAttribute('data-wide'))).toEqual([null, null, 'true', 'true', 'true'])
+  })
+
   it('it is never squashed: a count chip does not shrink', () => {
     expect(declarations(css, ".chip[data-kind='count']")['flex']).toBe('none')
   })

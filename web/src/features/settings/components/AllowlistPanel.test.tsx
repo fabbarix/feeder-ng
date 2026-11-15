@@ -55,7 +55,7 @@ describe('AllowlistPanel', () => {
     const { onAdd } = setup()
     await userEvent.type(screen.getByLabelText('Email to allow'), 'nonna')
     await userEvent.click(screen.getByRole('button', { name: 'Add to allowlist' }))
-    expect(screen.getByRole('alert')).toHaveTextContent(/email/i)
+    expect(screen.getByLabelText('Email to allow')).toHaveAccessibleDescription(/email/i)
     expect(onAdd).not.toHaveBeenCalled()
   })
 

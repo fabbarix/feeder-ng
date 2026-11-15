@@ -1,6 +1,6 @@
 // Supplies in the Pantry (household-items.md 6, 8; H6): keyboard and screen-reader behaviour of the Food or Supplies filter and of
 // Used up. Names, roles and states, as pantry-filter.md 8 does for the rest of the header.
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
@@ -90,7 +90,7 @@ describe('Supply rows', () => {
   it('say their Restock level in text, not by colour alone; the row is one button named by the Supply', async () => {
     await view()
     const row = await screen.findByRole('button', { name: /Toilet paper/ })
-    await vi.waitFor(() => expect(row.closest('li')).toHaveTextContent('4 pieces · below Restock level 6'))
+    await vi.waitFor(() => expect(row.closest('li')).toHaveTextContent('4 pieces · Below 6 · 4 in Stock'))
   })
 })
 
@@ -109,18 +109,18 @@ describe('Used up', () => {
     expect(within(sheet).getByRole('button', { name: 'Used up' })).toBeInTheDocument()
     expect(sheet.querySelector('select, input[type="number"], input[type="date"], input[type="checkbox"]')).toBeNull()
   })
-  it('a refused amount is announced as an alert on the field, and the field is marked invalid', async () => {
+  it('a refused amount is the field error (SAFE-04: not an alert), and the field is marked invalid', async () => {
     const sheet = await openSheet()
     const field = within(sheet).getByRole('textbox', { name: 'How much was used up' })
     await userEvent.type(field, '9')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Used up' }))
-    expect(await within(sheet).findByRole('alert')).toHaveTextContent('That is more than this Stock Lot holds')
+    await waitFor(() => expect(field).toHaveAccessibleDescription(expect.stringContaining('That is more than this Stock Lot holds')))
     expect(field).toHaveAttribute('aria-invalid', 'true')
   })
   it('Enter in the field submits it; Escape closes the sheet with no change', async () => {
     const sheet = await openSheet()
     await userEvent.type(within(sheet).getByRole('textbox', { name: 'How much was used up' }), '9{Enter}')
-    expect(await within(sheet).findByRole('alert')).toBeInTheDocument()
+    await waitFor(() => expect(within(sheet).getByRole('textbox', { name: 'How much was used up' })).toHaveAttribute('aria-invalid', 'true'))
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Toilet paper' })).toBeNull()
   })

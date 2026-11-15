@@ -116,7 +116,12 @@ function Popover({
     const below = t.bottom + GAP
     const fits = below + m.height <= window.innerHeight - GAP
     const top = fits ? below : Math.max(GAP, t.top - GAP - m.height)
-    const left = Math.min(Math.max(GAP, t.right - m.width), Math.max(GAP, window.innerWidth - m.width - GAP))
+    // End-aligned with the trigger; a trigger near the start edge (the ⋮ first in a FormActions row) gets it start-aligned instead.
+    // The start edge is the open dialog the trigger is in (a ⋮ in a centred sheet's footer opens inside the sheet), else the viewport.
+    const owner = triggerRef.current?.closest('dialog[open]')?.getBoundingClientRect()
+    const startEdge = Math.max(GAP, owner && owner.width > 0 ? owner.left : 0)
+    const endAligned = t.right - m.width
+    const left = Math.min(endAligned >= startEdge ? endAligned : Math.max(GAP, t.left), Math.max(GAP, window.innerWidth - m.width - GAP))
     setPlaced({ top, left, placement: fits ? 'below' : 'above' })
   }, [triggerRef])
 
@@ -172,7 +177,9 @@ function Popover({
         ),
       )}
     </div>,
-    document.body,
+    // Inside an open modal dialog (a ⋮ in a sheet's footer) the popover is portalled into that dialog: everything outside a modal
+    // dialog is inert. Its fixed position still places it against the viewport.
+    triggerRef.current?.closest<HTMLElement>('dialog[open]') ?? document.body,
   )
 }
 

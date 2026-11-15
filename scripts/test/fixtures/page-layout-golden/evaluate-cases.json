@@ -443,7 +443,7 @@
    },
    {
     "rule": "P22",
-    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value; a chip Select shows its value in full or, when it cannot, is icon-only with its value in its name (system.md 6)"
    },
    {
     "rule": "P23",
@@ -753,7 +753,7 @@
    },
    {
     "rule": "P22",
-    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value; a chip Select shows its value in full or, when it cannot, is icon-only with its value in its name (system.md 6)"
    },
    {
     "rule": "P23",
@@ -1079,7 +1079,7 @@
    },
    {
     "rule": "P22",
-    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value; a chip Select shows its value in full or, when it cannot, is icon-only with its value in its name (system.md 6)"
    },
    {
     "rule": "P23",
@@ -1409,7 +1409,7 @@
    },
    {
     "rule": "P22",
-    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value; a chip Select shows its value in full or, when it cannot, is icon-only with its value in its name (system.md 6)"
    },
    {
     "rule": "P23",
@@ -1426,6 +1426,65 @@
    {
     "rule": "P15",
     "message": "P15 .action-group runs 6 px under the actions; give the row a real actions track (max-content) and let the group take its own line on a phone"
+   }
+  ]
+ },
+ {
+  "name": "SET-07 (B9-16): P4 reads the control width at 1440px /settings",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1440,
+   "clientW": 1440,
+   "over": [],
+   "content": {
+    "x": 480,
+    "r": 1200
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "pageWidthAttr": "narrow",
+   "fields": [
+    {
+     "label": "Servings",
+     "type": "spinbutton",
+     "short": true,
+     "segment": false,
+     "size": "xs",
+     "w": 136
+    },
+    {
+     "label": "Currency",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "xs",
+     "w": 160
+    },
+    {
+     "label": "Weight",
+     "type": "text",
+     "short": true,
+     "segment": false,
+     "size": "md",
+     "w": 400
+    }
+   ],
+   "bars": [],
+   "railContrast": 7,
+   "dialog": null
+  },
+  "ctx": {
+   "width": 1440,
+   "route": "/settings",
+   "kind": "narrow"
+  },
+  "findings": [
+   {
+    "rule": "P4",
+    "message": "P4 short field \"Weight\" is 400px wide (max 240; set size=\"xs|sm\")"
    }
   ]
  }

@@ -10,7 +10,7 @@ export interface LeftoverRowModel {
   id: number
   kind: LeftoverRowKind
   recipeName: string
-  /** The question text for a question; "3 portions · Use by Thu" otherwise. */
+  /** The question text for a question; "Use by Thu · 3 portions" otherwise (DS 5: the Use-by leads, so it survives a cut). */
   text: string
   tone: 'info' | 'spoil' | 'leftover'
   icon: IconName
@@ -31,7 +31,7 @@ export function leftoverRow(l: Leftover, today: string): LeftoverRowModel {
     id: l.id,
     kind: l.frozen ? 'frozen' : 'leftover',
     recipeName: l.recipeName,
-    text: `${portionsLabel(l.portions)} · ${useByPhrase(l.useBy, today)}`,
+    text: `${useByPhrase(l.useBy, today)} · ${portionsLabel(l.portions)}`,
     tone: soon ? 'spoil' : 'leftover',
     icon: l.frozen ? 'snowflake' : 'leftover',
   }

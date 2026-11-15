@@ -1,10 +1,16 @@
 import { useQuery, useQueryClient, useQueries } from '@tanstack/react-query'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { shopsApi } from '../../shops/api'
 import type { ShopRule } from '../../shops/types'
 import { productsApi } from '../api'
 import type { Price, PriceBody, ProductDetail, Shop } from '../types'
 
 export interface UseProduct {
+  /** B9-20 (RES-02): loading, ready, offlineSaved, offlineUnknown or failed (a 404 is failed after one request). */
+  state: ScreenState
+  /** Fetches the Product again (the error state's Try again). */
+  refetch: () => void
   product: ProductDetail | undefined
   isLoading: boolean
   /** ApiError with status 404 when the id does not exist. */
@@ -58,7 +64,10 @@ export function useProduct(id: number): UseProduct {
   const latestByShop: Record<number, Price | undefined> = {}
   for (const p of query.data?.latestPrices ?? []) latestByShop[p.shopId] = p
 
+  const state = useScreenState(query, { isEmpty: false, hasFilter: false })
   return {
+    state,
+    refetch: () => void query.refetch(),
     product: query.data,
     isLoading: query.isLoading,
     error: query.error,

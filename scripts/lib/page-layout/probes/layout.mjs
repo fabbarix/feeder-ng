@@ -36,7 +36,9 @@ const layoutProbe = `
     const size = frame.getAttribute('data-size') || ''
     const short = ['numeric', 'decimal'].includes(e.inputMode) || e.getAttribute('role') === 'spinbutton' || ['xs', 'sm'].includes(size)
     const segment = e.closest('.time-field, .stepper')
-    fields.push({ label: (e.getAttribute('aria-label') || (e.id && document.querySelector('label[for="' + e.id + '"]')?.innerText) || e.name || '').trim().slice(0, 30), type: e.type || e.getAttribute('role'), short, segment: !!segment, long: !!e.closest('[data-size-intent="long"]'), inline: !!e.closest('[data-size-intent="inline"]'), size, w: Math.round(frame.getBoundingClientRect().width) })
+    // SET-07 (B9-16): a field's size caps its control, not its frame (the error spans the frame), so the width is the control's: the frame's child that holds the input.
+    const box = frame.classList.contains('ui-field') ? ([...frame.children].find((c) => c.contains(e)) ?? frame) : frame
+    fields.push({ label: (e.getAttribute('aria-label') || (e.id && document.querySelector('label[for="' + e.id + '"]')?.innerText) || e.name || '').trim().slice(0, 30), type: e.type || e.getAttribute('role'), short, segment: !!segment, long: !!e.closest('[data-size-intent="long"]'), inline: !!e.closest('[data-size-intent="inline"]'), size, w: Math.round(box.getBoundingClientRect().width) })
   }
   const bars = []
   for (const e of (main ? main.querySelectorAll('*') : [])) {

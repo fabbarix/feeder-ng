@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { frozenChilli, leftover, TODAY } from '../../../lib/leftovers/fixtures'
+import { frozenChilli, leftover } from '../../../lib/leftovers/fixtures'
 import type { StoragePlace } from '../types'
-import { filterPantryLeftovers, leftoverGroups, pantryLeftoverText, pantryLeftovers } from './pantryLeftovers'
+import { filterPantryLeftovers, leftoverGroups, pantryLeftovers } from './pantryLeftovers'
 
 const places: StoragePlace[] = [
   { id: 1, name: 'Kitchen Pantry', kind: 'pantry', default: true },
@@ -65,11 +65,5 @@ describe('filterPantryLeftovers', () => {
     expect(ids(filterPantryLeftovers(all, places, { ...none, kinds: ['pantry'] }))).toEqual([])
     expect(ids(filterPantryLeftovers(all, places, { ...none, kinds: ['freezer'] }))).toEqual([1, 2])
     expect(ids(filterPantryLeftovers(all, places, { ...none, search: 'creme' }))).toEqual([2])
-  })
-})
-
-describe('pantryLeftoverText', () => {
-  it('names the Recipe and shows portions and the frozen Use-by', () => {
-    expect(pantryLeftoverText(frozenChilli(), TODAY)).toEqual({ title: 'Chilli', meta: '3 portions · Use by 10 Feb' })
   })
 })

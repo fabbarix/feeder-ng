@@ -1,0 +1,7 @@
+/* A11Y-09: a row of icon buttons whose rings never touch and whose hit areas never overlap. */
+.icon-set {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--icon-set-gap);
+}

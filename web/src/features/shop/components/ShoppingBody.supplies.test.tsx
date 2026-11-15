@@ -116,9 +116,9 @@ describe('ShoppingBody: Restock copy', () => {
     render(<ShoppingBody {...base} list={mixed()} />)
     const row = within(screen.getByRole('list', { name: 'Supplies' })).getAllByRole('listitem')[0]!
     const meta = row.querySelector('.list-row__meta')!
-    expect(meta).toHaveTextContent('2 of 6')
+    expect(meta).toHaveTextContent('Below 6 · 2 in Stock')
     expect(meta).toHaveAttribute('data-status', 'info')
-    expect(within(screen.getByRole('list', { name: 'Supplies' })).getByText('0 of 20')).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Supplies' })).getByText('Below 20 · 0 in Stock')).toBeInTheDocument()
   })
 
   it('the row still shows the quantity to buy, and the estimate when there is a Price', () => {
@@ -163,9 +163,11 @@ describe('ShoppingBody: food-only lists render exactly as before', () => {
     const tagged = structuredClone(plain)
     tagged.lines.forEach((l) => Object.assign(l, { kind: 'food', restock: null }))
     tagged.extras.forEach((e) => Object.assign(e, { kind: null }))
-    const a = render(<ShoppingBody {...base} list={plain} />).container.innerHTML
+    // useId differs between two renders (A11Y-08 row ids); the DOM is otherwise the same.
+    const ids = (html: string) => html.replace(/(id|aria-describedby|aria-labelledby|aria-controls)="[^"]*"/g, '$1=""')
+    const a = ids(render(<ShoppingBody {...base} list={plain} />).container.innerHTML)
     document.body.innerHTML = ''
-    const b = render(<ShoppingBody {...base} list={tagged} />).container.innerHTML
+    const b = ids(render(<ShoppingBody {...base} list={tagged} />).container.innerHTML)
     expect(b).toBe(a)
     expect(a).not.toContain('shop-supplies')
   })

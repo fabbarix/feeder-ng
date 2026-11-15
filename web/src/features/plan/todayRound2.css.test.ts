@@ -89,6 +89,8 @@ describe('the hero\'s slot menu and rows follow the content inset and the mockup
     expect(d['display']).toMatch(/^(grid|inline-grid)$/)
     expect(d['grid-auto-columns'] ?? d['grid-template-columns']).toMatch(/1fr|var\(--/)
     expect(d['margin-inline-start']).toBe('auto')
+    // A11Y-02, P39 (as B9-08 did for .plan-row__actions): 8 px between the icon buttons, so a focused ring never meets the next.
+    expect(d['gap']).toBe('var(--space-2)')
   })
 })
 

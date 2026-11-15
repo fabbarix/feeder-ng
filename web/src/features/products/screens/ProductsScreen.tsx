@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Chip, ListPage, PageHeader, SearchField } from '../../../ui'
+import { Chip, ErrorState, ListPage, LoadState, PageHeader, SearchField } from '../../../ui'
 import { ProductList } from '../components/ProductList'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { applyArchivedFilter } from '../lib/archive'
@@ -12,7 +12,7 @@ import { strings } from '../strings'
 export function ProductsScreen() {
   const [q, setQ] = useState('')
   const [archived, setArchived] = useState(false)
-  const { products, isLoading, error } = useProducts(q, archived)
+  const list = useProducts(q, archived)
   useProductsLiveUpdates()
   const system = useDisplayUnitSystem()
   const breadcrumbs = useBreadcrumbs()
@@ -26,12 +26,15 @@ export function ProductsScreen() {
         </Chip>
       }
     >
-      {error ? (
-        <p role="alert">{strings.actionFailed}</p>
-      ) : isLoading ? (
+      {/* B9-20 (RES-02): one state model; offline and never loaded is a LoadState, never an empty list. */}
+      {list.state === 'loading' ? (
         <p role="status">{strings.loading}</p>
+      ) : list.state === 'offlineUnknown' ? (
+        <LoadState title={strings.offlineListTitle} text={strings.offlineListText} />
+      ) : list.state === 'failed' ? (
+        <ErrorState message={strings.listError} onRetry={list.refetch} />
       ) : (
-        <ProductList products={applyArchivedFilter(products, archived)} system={system} showingArchived={archived} />
+        <ProductList products={applyArchivedFilter(list.products, archived)} system={system} showingArchived={archived} />
       )}
     </ListPage>
   )

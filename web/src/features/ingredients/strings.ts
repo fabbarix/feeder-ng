@@ -38,6 +38,13 @@ export const strings = {
   detailsLabel: 'Ingredient details',
   notFoundTitle: 'That Ingredient does not exist',
   actionFailed: 'That did not work. Try again.',
+  /** B9-20 (RES-02): the failed, and offline-and-never-loaded, states of the list and the page. */
+  listError: 'The Ingredients could not be loaded.',
+  itemError: 'The Ingredient could not be loaded.',
+  offlineListTitle: 'Your Ingredients aren’t on this phone yet',
+  offlineItemTitle: 'This Ingredient isn’t on this phone yet',
+  offlineListText: 'Feeder loads them the first time this phone is online. They’ll appear here as soon as the connection is back.',
+  offlineItemText: 'Feeder needs a connection to load it the first time. It will appear here as soon as the connection is back.',
   nameTaken: 'An Ingredient with that name already exists',
   rename: 'Rename',
   saveName: 'Save name',
@@ -97,6 +104,10 @@ export const strings = {
     emptyTitle: 'No Supplies yet',
     emptyText: "Toilet paper, batteries or laundry pods: things you buy and keep in Stock but don't cook with.",
     noMatches: 'No Supply matches that search',
+    listError: 'The Supplies could not be loaded.',
+    itemError: 'The Supply could not be loaded.',
+    offlineListTitle: 'Your Supplies aren’t on this phone yet',
+    offlineItemTitle: 'This Supply isn’t on this phone yet',
     detailsLabel: 'Supply details',
     mergeTitle: 'Merge Supply',
     mergeFindLabel: 'Find the Supply to keep',
@@ -145,8 +156,6 @@ export const strings = {
   /** H9 (household-items.md section 4.11): the Supplies list's stock level, the Use button and its sheet, and the toasts. */
   supplyUse: {
     noneInStock: 'None in Stock',
-    belowLevel: (stock: string, level: string) => `${stock} · below Restock level ${level}`,
-    restocksBelow: (stock: string, level: string) => `${stock} · restocks below ${level}`,
     useOne: (name: string) => `Use one ${name}`,
     useSome: (name: string) => `Use some ${name}`,
     sheetTitle: (name: string) => `Use ${name}`,

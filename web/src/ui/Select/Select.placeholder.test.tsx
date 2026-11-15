@@ -23,3 +23,14 @@ describe('Select placeholder', () => {
     expect(screen.getByRole('combobox', { name: 'Ingredient' })).toBeInTheDocument()
   })
 })
+
+describe('Select trigger anatomy', () => {
+  it('the leading visual (an icon, or the option\'s Thumb with its monogram letter) is hidden from assistive technology, so the value reads "Flour", not "FFlour"', () => {
+    const withThumb = [{ value: 1, label: 'Flour', leading: <span className="thumb">F</span> }]
+    const { unmount } = render(<Select label="Ingredient" options={withThumb} value={1} onChange={() => {}} />)
+    expect(screen.getByRole('combobox', { name: 'Ingredient' }).querySelector('.select__leading')).toHaveAttribute('aria-hidden', 'true')
+    unmount()
+    render(<Select label="Shop for" appearance="chip" icon="plan" options={options} value={1} onChange={() => {}} />)
+    expect(screen.getByRole('combobox', { name: 'Shop for' }).querySelector('.select__leading')).toHaveAttribute('aria-hidden', 'true')
+  })
+})

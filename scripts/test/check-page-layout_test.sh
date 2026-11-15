@@ -127,6 +127,24 @@ run_full "/plan" 'default=warn\nfail_routes=/shop\n'
 PAGE_LAYOUT=full run_full "" 'default=warn\n'
 grep -q -- "--profile full" "$RUN/guard" 2>/dev/null && ok || bad "PAGE_LAYOUT=full must pass --profile full"
 
+# the fake Anthropic API: one that dies on start (its port could not be bound: a TIME-WAIT socket, another run) is replaced on the
+# next port, and the run goes on; the fake is stopped after the run
+cat >"$TMP/fake-anthropic.sh" <<'FS'
+n=$(cat "$FAKE_TRIES" 2>/dev/null || echo 0); echo $((n + 1)) >"$FAKE_TRIES"
+[ "$n" -eq 0 ] && exit 1
+echo "$PORT" >"$FAKE_PORT_OUT"
+exec node -e 'require("http").createServer((q,s)=>s.end("{}")).listen(Number(process.env.PORT),"127.0.0.1")'
+FS
+d="$(mktemp -d "$TMP/run.XXXX")"; PORT="$(free_port)"; printf 'default=warn\n' >"$d/modes"
+OUT=$(CHROME=/bin/true PAGE_LAYOUT_BUILD_DIR="$d" PAGE_LAYOUT_PORT="$PORT" PAGE_LAYOUT_MODES="$d/modes" \
+  PAGE_LAYOUT_SERVER_CMD="bash $TMP/fake-server.sh" PAGE_LAYOUT_SEED_CMD="true" PAGE_LAYOUT_GUARD_CMD="bash $TMP/fake-guard.sh" \
+  PAGE_LAYOUT_FAKE_CMD="bash $TMP/fake-anthropic.sh" FAKE_TRIES="$d/tries" FAKE_PORT_OUT="$d/fport" \
+  FAKE_ENV_OUT="$d/env" FAKE_PID_OUT="$d/pid" FAKE_GUARD_OUT="$d/guard" "$W" 2>&1); RC=$?; RUN="$d"
+[ "$RC" -eq 0 ] && [ "$(cat "$d/tries" 2>/dev/null)" = 2 ] && [ -s "$d/fport" ] && [ -e "$d/guard" ] && ok || bad "a fake Anthropic API that dies on start must be replaced on the next port and the guard must run (rc $RC, tries $(cat "$d/tries" 2>/dev/null)): $OUT"
+fp="$(cat "$d/fport" 2>/dev/null)"
+[ -n "$fp" ] && ! curl -s --max-time 1 "http://127.0.0.1:$fp/" >/dev/null 2>&1 && ok || bad "the fake Anthropic API must be stopped after the run (port $fp)"
+server_gone && ok || bad "the server must be stopped after a run that replaced its fake Anthropic API"
+
 # a crashing seeder still stops the server (and, in quick, fails the run: see the coverage test)
 echo 'exit 3' >"$TMP/fake-seed.sh"
 run_full "" 'default=warn\n'

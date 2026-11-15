@@ -18,12 +18,6 @@ export interface AppUpdateInputs {
   subscribe?: (listener: (controls: UpdateControls) => void) => () => void
 }
 
-/**
- * "Stays until acted on": the toast has no sticky option yet (B9-18 may add one), so an explicit day, which an explicit
- * duration always wins with, and which fits setTimeout's 2^31 - 1 ms.
- */
-const UNTIL_ACTED_ON_MS = 24 * 60 * 60 * 1000
-
 const BOARD = /^\/board(\/|$)/
 
 /** What to do with a waiting update on this screen: show the prompt, hold it, or (the Kitchen board) apply it. */
@@ -73,10 +67,12 @@ export function useAppUpdate({ pendingSyncCount = 0, hasUnsavedChanges = false, 
       title: updateStrings.updateReady,
       actions: [
         { label: updateStrings.reload, onClick: () => ready.applyUpdate() },
-        // Later: the new version applies at the next launch, when every Feeder tab has closed.
-        { label: updateStrings.later, onClick: () => {} },
+        // Later: the new version applies at the next launch, when every Feeder tab has closed. It only closes the toast,
+        // so the toast draws no round Dismiss beside it (RES-10).
+        { label: updateStrings.later, role: 'dismiss', onClick: () => {} },
       ],
-      durationMs: UNTIL_ACTED_ON_MS,
+      // stays until acted on (B9-18)
+      sticky: true,
     })
   }, [ready, move, show, session])
 }

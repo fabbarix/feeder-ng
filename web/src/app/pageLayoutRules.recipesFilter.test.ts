@@ -119,7 +119,8 @@ describe('P20: Recipes filter spacing', () => {
 describe('SCENARIOS: a filtered /recipes, closed and with the panel open', () => {
   // pantry-filter: SCENARIOS also holds the filtered /pantry (pageLayoutRules.pantryFilter.test.ts); the Recipes ones come first.
   it('has both, on /recipes', () => {
-    expect(rules.SCENARIOS?.filter((s) => s.route === '/recipes').map((s) => [s.name, s.open])).toEqual([
+    // B9-20: other scenarios also measure /recipes (error-state-fast); these are the filtered ones.
+    expect(rules.SCENARIOS?.filter((s) => s.route === '/recipes' && s.name.startsWith('recipes-filtered')).map((s) => [s.name, s.open])).toEqual([
       ['recipes-filtered', false],
       ['recipes-filtered-open', true],
     ])
@@ -127,7 +128,7 @@ describe('SCENARIOS: a filtered /recipes, closed and with the panel open', () =>
   })
   it('resolveScenario puts the Side Course and the long Tag from the ids file in the URL', () => {
     const ids = { sideCourseId: 2, longTag: 'extraordinarily long family favourite weeknight tag' }
-    for (const s of (rules.SCENARIOS ?? []).filter((x) => x.route === '/recipes')) {
+    for (const s of (rules.SCENARIOS ?? []).filter((x) => x.route === '/recipes' && x.name.startsWith('recipes-filtered'))) {
       const url = rules.resolveScenario?.(s, ids) ?? ''
       const q = new URLSearchParams(url.split('?')[1] ?? '')
       expect(url.startsWith('/recipes?')).toBe(true)

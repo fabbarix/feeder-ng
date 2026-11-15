@@ -20,7 +20,8 @@ describe('TimeZoneSelect', () => {
   it('is searchable whatever the number of zones', async () => {
     setup({ zones: ['Europe/Rome', 'UTC'] })
     await userEvent.click(screen.getByRole('combobox', { name: 'Time zone' }))
-    expect(screen.getByRole('combobox', { name: /Search/ })).toBeInTheDocument()
+    // The open Select's search field is a searchbox (the trigger is the one combobox, as Select.keys.test pins).
+    expect(screen.getByRole('searchbox', { name: /Search/ })).toBeInTheDocument()
   })
   it('An Admin finds Rome by typing "Rom" and picks it', async () => {
     const onChange = setup()
@@ -31,10 +32,10 @@ describe('TimeZoneSelect', () => {
     await userEvent.click(within(listbox).getByRole('option', { name: 'Rome' }))
     expect(onChange).toHaveBeenCalledWith('Europe/Rome')
   })
-  it('an option is described by its IANA name, offset and time', async () => {
+  it('an option is described by its offset, time and IANA name, in that order', async () => {
     setup()
     await userEvent.click(screen.getByRole('combobox', { name: 'Time zone' }))
-    expect(within(screen.getByRole('listbox')).getByRole('option', { name: 'London' })).toHaveAccessibleDescription('Europe/London · UTC+0 · 20:14')
+    expect(within(screen.getByRole('listbox')).getByRole('option', { name: 'London' })).toHaveAccessibleDescription('UTC+0 · 20:14 · Europe/London')
   })
   it('lists "This device" first, then the regions', async () => {
     setup()

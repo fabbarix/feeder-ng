@@ -1,7 +1,8 @@
-import { Tile } from '../../../ui'
+import { Skeleton, Tile } from '../../../ui'
 import { MemberEditor } from '../components/MemberEditor'
 import { MemberList } from '../components/MemberList'
 import { SettingsHeader } from '../components/SettingsHeader'
+import { SettingsLoadGate } from '../components/SettingsLoadGate'
 import { useMembersPage } from '../hooks/useMembersPage'
 import { settingsStrings } from '../strings'
 import '../settings.css'
@@ -12,15 +13,22 @@ export function MembersPage() {
   return (
     <div className="settings">
       <SettingsHeader title={settingsStrings.members} />
-      <Tile as="section" span="full" aria-label={settingsStrings.members}>
-        <MemberList
-          members={page.members.members}
-          canEdit={page.isAdmin}
-          linkedUserNames={page.linkedUserNames}
-          onAdd={page.add}
-          onEdit={page.edit}
-        />
-      </Tile>
+      {/* B9-20 (RES-02): offline and never loaded is a LoadState, never an empty list. */}
+      <SettingsLoadGate state={page.members.state} onRetry={page.members.refetch}>
+        <Tile as="section" span="full" aria-label={settingsStrings.members}>
+          {page.members.state === 'loading' ? (
+            <Skeleton variant="row" count={3} label={settingsStrings.loading} />
+          ) : (
+            <MemberList
+              members={page.members.members}
+              canEdit={page.isAdmin}
+              linkedUserNames={page.linkedUserNames}
+              onAdd={page.add}
+              onEdit={page.edit}
+            />
+          )}
+        </Tile>
+      </SettingsLoadGate>
       <MemberEditor
         open={page.editor !== null}
         member={page.editor?.item}

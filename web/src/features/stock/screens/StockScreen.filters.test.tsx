@@ -178,8 +178,8 @@ describe('filters', () => {
   it('counts one filter per chip, in the order of the panel', async () => {
     // jsdom lays nothing out, so every chip shows; "+N" is covered by ActiveFilterChips and the page-layout guard (P17, P21).
     view('/pantry?status=spoiled&place=3&place=1&kind=fridge')
-    await screen.findByRole('group', { name: 'Active filters' })
-    expect(screen.getByRole('button', { name: 'Filters, 4 active' })).toBeInTheDocument()
+    // B9-20: the filter header shows while the list loads; the chips are complete once the Storage Places are known.
+    expect(await screen.findByRole('button', { name: 'Filters, 4 active' })).toBeInTheDocument()
     expect(within(screen.getByRole('group', { name: 'Active filters' })).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
       'Remove Spoiled',
       'Remove kind: Fridge',

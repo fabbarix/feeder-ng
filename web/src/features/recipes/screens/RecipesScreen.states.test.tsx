@@ -7,7 +7,8 @@ import { summary } from '../fixtures.test-helper'
 
 // B9-20 (RES-02): the Recipes screen switches on the hook's `state`: all seven states, one screen, "Unknown is not empty".
 const state = vi.hoisted(() => ({ result: {} as Record<string, unknown> }))
-vi.mock('../hooks/useRecipes', () => ({ useRecipes: () => state.result }))
+const live = vi.hoisted(() => ({ byFilter: null as null | ((f: { q?: string; tags?: string[] }) => Record<string, unknown>) }))
+vi.mock('../hooks/useRecipes', () => ({ useRecipes: (f: { q?: string; tags?: string[] }) => (live.byFilter ? live.byFilter(f) : state.result) }))
 vi.mock('../../import/hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ state: 'idle', copy: vi.fn() }) }))
 
 import { RecipesScreen } from './RecipesScreen'
@@ -28,6 +29,7 @@ const view = (entry = '/recipes') =>
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response('[]', { status: 200 }))))
   state.result = { ...base }
+  live.byFilter = null
 })
 
 describe('RecipesScreen by state', () => {
@@ -81,7 +83,8 @@ describe('RecipesScreen by state', () => {
   })
 
   it('filteredEmpty: "No Recipe matches “lasagne”." and Show all Recipes, which clears the search and the filters', async () => {
-    state.result = { ...base, state: 'filteredEmpty' }
+    // The hook's state follows the filter it is given, as the real one does: filtered → filteredEmpty, else empty.
+    live.byFilter = (f) => ({ ...base, state: f.q || f.tags ? 'filteredEmpty' : 'empty' })
     view('/recipes?tag=roast')
     await userEvent.type(screen.getByRole('searchbox'), 'lasagne')
     expect(screen.getByText('No Recipe matches “lasagne”.')).toBeInTheDocument()

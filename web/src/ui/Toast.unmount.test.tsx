@@ -6,7 +6,13 @@ import { ToastProvider, useToast } from './Toast'
 
 function Fire() {
   const { show } = useToast()
-  return <button onClick={() => show('Saved')}>fire</button>
+  return (
+    <>
+      <button onClick={() => show('Saved')}>fire</button>
+      {/* B9-18 (SAFE R1): one toast per lane, so a second timer on screen needs a second lane: an Undo toast */}
+      <button onClick={() => show({ title: 'Sam removed', actions: [{ label: 'Undo', role: 'undo', onClick: () => {} }] })}>fire undo</button>
+    </>
+  )
 }
 
 describe('Toast timers on unmount', () => {
@@ -30,7 +36,7 @@ describe('Toast timers on unmount', () => {
     const clear = vi.spyOn(globalThis, 'clearTimeout')
     const { unmount } = render(<ToastProvider><Fire /></ToastProvider>)
     await user.click(screen.getByText('fire'))
-    await user.click(screen.getByText('fire'))
+    await user.click(screen.getByText('fire undo'))
     clear.mockClear()
     unmount()
     expect(clear).toHaveBeenCalledTimes(2)

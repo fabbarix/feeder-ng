@@ -2,7 +2,7 @@
 // End was never wrong; the option was just never shown (OptionList did this, SelectCore did not).
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Select } from './Select'
 
 const scrolled: { id: string; arg: unknown }[] = []
@@ -51,5 +51,16 @@ describe('Select: the active option is scrolled into view', () => {
     await userEvent.click(screen.getByRole('combobox', { name: 'Recipe' }))
     await userEvent.keyboard('{End}')
     expect(scrolled.at(-1)?.id).toBe(screen.getByRole('option', { name: 'Pasta 19' }).id)
+  })
+  it('PageDown moves a page of options on (ten where nothing is laid out) and scrolls it into view; PageUp moves back; both stop at the ends', async () => {
+    await open()
+    await userEvent.keyboard('{PageDown}')
+    const k = screen.getByRole('option', { name: 'Recipe K' })
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-activedescendant', k.id)
+    expect(scrolled.at(-1)?.id).toBe(k.id)
+    await userEvent.keyboard('{PageDown}')
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'Recipe L' }).id)
+    await userEvent.keyboard('{PageUp}{PageUp}')
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'Recipe A' }).id)
   })
 })

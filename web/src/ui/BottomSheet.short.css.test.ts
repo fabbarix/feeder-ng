@@ -21,8 +21,20 @@ const short = mediaBlock(css, /max-height:\s*499px/)
 const shortWide = mediaBlock(css, /max-height:\s*499px\)\s*and\s*\(min-width:\s*(768px|48em)/)
 
 describe('BottomSheet.css: the body never collapses (rule 3)', () => {
-  it('the body keeps min(6rem, 30dvh)', () => {
-    expect(declarations(css, '.sheet__body')['min-block-size']).toBe('min(6rem, 30dvh)')
+  // Ruling 1 (main session, B9-14 review): the floor applies only to a squeezed body (the panel at its maximum height, the body
+  // scrolling), so a one-line sheet has no blank space above its footer.
+  it('a squeezed body (data-body="scroll") keeps min(6rem, 30dvh)', () => {
+    expect(declarations(css, ".sheet__panel[data-body='scroll'] .sheet__body")['min-block-size']).toBe('min(6rem, 30dvh)')
+  })
+  it('a body that fits has no floor: a short sheet is as tall as its content', () => {
+    expect(declarations(css, '.sheet__body')['min-block-size']).toBeUndefined()
+  })
+  it("the body's first and last child add no margin (a one-line sheet has no blank space)", () => {
+    expect(declarations(css, '.sheet__body > :first-child')['margin-block-start']).toBe('0')
+    expect(declarations(css, '.sheet__body > :last-child')['margin-block-end']).toBe('0')
+    const dialog = readUiCss('Dialog.css')
+    expect(declarations(dialog, '.dialog__body > :first-child')['margin-block-start']).toBe('0')
+    expect(declarations(dialog, '.dialog__body > :last-child')['margin-block-end']).toBe('0')
   })
   it('header and footer never shrink', () => {
     expect(declarations(css, '.sheet__header')['flex'] ?? declarations(css, '.sheet__header, .sheet__footer')['flex']).toBe('none')

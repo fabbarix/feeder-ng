@@ -45,7 +45,8 @@ export function FiltersPanel({ id, open, onClose, anchorRef, count, onClear, sho
           <Button ref={clear} variant="secondary" size="sm" disabled={count === 0} onClick={onClear}>
             {filterBarStrings.clear}
           </Button>
-          <Button ref={show} variant="secondary" size="sm" onClick={onClose}>
+          {/* SHORT-07: Show … is the commit, so it is the filled primary; Clear filters is the outlined secondary (R-A). */}
+          <Button ref={show} variant="primary" size="sm" onClick={onClose}>
             {showLabel}
           </Button>
         </>

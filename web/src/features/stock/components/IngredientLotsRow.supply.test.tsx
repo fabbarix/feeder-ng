@@ -23,17 +23,17 @@ function setup(over: Partial<IngredientLotsRowProps> = {}) {
 }
 
 describe('IngredientLotsRow for a Supply', () => {
-  it('shows the total, the Lot count and "restocks below 6"; no go-off phrase, no Use soon tone', () => {
+  it('shows the total, the Lot count and "Restocks below 6"; no go-off phrase, no Use soon tone', () => {
     const { row } = setup({ restock: { level: 6, stock: 9 } })
     expect(screen.getByText('9 pieces')).toBeInTheDocument()
     const meta = row.querySelector('.list-row__meta') as HTMLElement
-    expect(meta).toHaveTextContent('2 Stock Lots · restocks below 6')
+    expect(meta).toHaveTextContent('2 Stock Lots · Restocks below 6')
     expect(meta).not.toHaveAttribute('data-status', 'spoil')
   })
   it('a Supply below its Restock level says so, with the info status', () => {
     const { row } = setup({ item: makeSupplyTotal({ total: 2, lotCount: 2 }), restock: { level: 6, stock: 2 } })
     const meta = row.querySelector('.list-row__meta') as HTMLElement
-    expect(meta).toHaveTextContent('2 Stock Lots · below Restock level 6')
+    expect(meta).toHaveTextContent('2 Stock Lots · Below 6 · 2 in Stock')
     expect(meta).toHaveAttribute('data-status', 'info')
   })
   it('a stray use soon flag on the row does not tint it', () => {

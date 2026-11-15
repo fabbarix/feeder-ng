@@ -7,7 +7,7 @@
 //   scripts/lib/page-layout/probes/clipped-rings.mjs      (B9-03's, extended here) P18's targets include the controls of an open modal's body
 //   scripts/lib/page-layout/probes/focus-rings.mjs        (B9-07's, one name added) P39 also runs on focus-ring-room-sheet
 //   scripts/lib/page-layout/scenarios/b9-14.mjs           order 310: leftover-menu-sheet, sheet-planned-meal, sheet-add-member, sheet-short-landscape, sheet-zoom-400, focus-ring-room-sheet
-//   scripts/test/fixtures/page-layout-seed/b9-14.mjs      a Leftover for leftover-menu-sheet
+//   (no seed drop-in: the leftover-menu-sheet setup makes its own Leftover and undoes it; Today's default state is the seed's)
 import { describe, expect, it } from 'vitest'
 
 const nodeModule = 'node:module'
@@ -15,7 +15,7 @@ const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { cre
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
 const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
+const { readFileSync, existsSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string; existsSync: (p: string) => boolean }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const req = createRequire(resolve(cwd, 'package.json'))
 const api = req(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
@@ -23,6 +23,7 @@ const api = req(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
   ALWAYS_FAIL: string[]
   PROBES: { name: string; key: string | null; source: string; scenarios?: string[] }[]
   SCENARIOS: { name: string; route: string; start?: string; widths?: (number | string)[]; rules?: string[]; setup?: string }[]
+  SCENARIO_VIEWPORTS: Record<string, { width: number; height: number; mobile: boolean; safeArea?: unknown }>
   evaluateMetrics: (m: unknown, c: Ctx) => Finding[]
 }
 interface Ctx { width: number; route: string; kind: string }
@@ -88,6 +89,13 @@ describe('P33: a sheet body under the floor, or a footer visible over a clipped 
     expect(run({ sheetBody: body({ innerHeight: 256, bodyH: 77, panelH: 248 }) }, 'P33')).toEqual([])
     expect(run({ sheetBody: body({ innerHeight: 256, bodyH: 70, panelH: 248 }) }, 'P33')).toHaveLength(1)
   })
+  // Ruling 1 (B9-14 review): the floor is judged on a squeezed body only (its content taller than it); a body that fits may be short.
+  it('a body that fits its content may be under the floor (a one-line confirm sheet: 24 px of content, 24 px body)', () => {
+    expect(run({ sheetBody: body({ bodyH: 24, bodyScroll: 24 }) }, 'P33', 844)).toEqual([])
+  })
+  it('a squeezed body under the floor is reported (40 px showing of 300 px of content)', () => {
+    expect(run({ sheetBody: body({ bodyH: 40, bodyScroll: 300 }) }, 'P33', 844)).toHaveLength(1)
+  })
   it('reports a visible footer while the first control is clipped (Mark as Cooked: the stepper cut, the button shown)', () => {
     const f = run({ sheetBody: body({ firstControl: { sel: 'div.stepper', clipped: true } }) }, 'P33')
     expect(f).toHaveLength(1)
@@ -109,6 +117,8 @@ describe('probes and scenarios', () => {
     expect(probe('sheet-targets')?.key).toBe('sheetMetrics')
     expect(probe('sheet-body')?.key).toBe('sheetBody')
     for (const n of ['sheet-targets', 'sheet-body']) expect(() => new Function(`return ${probe(n)!.source}`), n).not.toThrow()
+    // A Stepper's value span (role=spinbutton) is a keyboard stop, not a pointer target: its ± buttons are.
+    expect(probe('sheet-targets')!.source).toMatch(/spinbutton/)
   })
   it('the sheet probes run on the sheet scenarios', () => {
     expect(probe('sheet-body')?.scenarios).toEqual(expect.arrayContaining(['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400']))
@@ -123,8 +133,24 @@ describe('probes and scenarios', () => {
       expect(s!.widths?.length, n).toBeGreaterThan(0)
     }
     expect(api.SCENARIOS.find((s) => s.name === 'leftover-menu-sheet')?.widths).toEqual([375, 390])
-    expect(api.SCENARIOS.find((s) => s.name === 'sheet-planned-meal')?.widths).toContain('844x390-inset')
+    expect(api.SCENARIOS.find((s) => s.name === 'sheet-planned-meal')?.widths).toContain('844x390')
+    expect(api.SCENARIOS.find((s) => s.name === 'sheet-add-member')?.widths).toContain('390x400')
+    expect(api.SCENARIOS.find((s) => s.name === 'sheet-short-landscape')?.widths).toContain('844x390-inset')
     expect(api.SCENARIOS.find((s) => s.name === 'sheet-zoom-400')?.widths).toEqual(['375x256'])
+  })
+  it("SHORT-02's sizes are scenario viewports: phone landscape 844x390 and a 390 px phone with the keyboard up (390x400)", () => {
+    expect(api.SCENARIO_VIEWPORTS['844x390']).toEqual({ width: 844, height: 390, mobile: true })
+    expect(api.SCENARIO_VIEWPORTS['390x400']).toEqual({ width: 390, height: 400, mobile: true })
+  })
+  // Ruling 3 (B9-14 review): P25 judges a target as B9-16's P36 does, its border box united with its ::after box, on a touch
+  // emulation (the coarse-pointer ::after hit areas of the swatches and Segmented options apply).
+  it('P25 measures box united with ::after, and every P25 scenario emulates touch', () => {
+    const src = probe('sheet-targets')!.source
+    expect(src).toMatch(/getComputedStyle\(t, '::after'\)/)
+    expect(src).toMatch(/Math\.min\(box\.x, x\)/)
+    for (const s of api.SCENARIOS.filter((x) => x.rules?.includes('P25'))) {
+      expect((s as { emulate?: { method: string }[] }).emulate?.map((c) => c.method), s.name).toContain('Emulation.setTouchEmulationEnabled')
+    }
   })
   it('each scenario reports only its own rules: P25/P33 for the sheets, P39 for the ring room', () => {
     expect(api.SCENARIOS.find((s) => s.name === 'focus-ring-room-sheet')?.rules).toEqual(['P39'])
@@ -133,15 +159,21 @@ describe('probes and scenarios', () => {
   it('P39 runs on the sheet scenario: the focus-rings probe lists it, and it measures an open dialog', () => {
     expect(probe('focus-rings')?.scenarios).toContain('focus-ring-room-sheet')
     expect(probe('focus-rings')?.source).toMatch(/dialog\[open\]/)
+    // A control in an open modal is in the top layer, over the page's bottom bar: only bars inside its dialog count.
+    expect(probe('focus-rings')?.source).toMatch(/modal\.contains\(b\)/)
   })
   it('P18 is extended to sheet and dialog bodies: the clipped-rings probe reads the open modal body', () => {
     const src = probe('clipped-rings')!.source
     expect(src).toMatch(/dialog\[open\]:modal/)
     expect(src).toMatch(/\.sheet__body, \.dialog__body/)
   })
-  it('the seed drop-in exists, with an order from 100 up', () => {
-    const seed = read('scripts/test/fixtures/page-layout-seed/b9-14.mjs')
-    expect(seed).toMatch(/export const order = \d{3}/)
-    expect(seed).toMatch(/export async function seed\(/)
+  // Ruling 4 (B9-14 review): the seed is not changed (a seeded Leftover changed Today for every other scenario); the
+  // leftover-menu-sheet setup makes its own Leftover (Cooked with 2 portions) and the next b9-14 setup undoes it (reopen).
+  it('no seed drop-in: the leftover-menu-sheet setup makes its Leftover and a later setup undoes it', () => {
+    expect(existsSync(resolve(cwd, '..', 'scripts/test/fixtures/page-layout-seed/b9-14.mjs'))).toBe(false)
+    const src = read('scripts/lib/page-layout/scenarios/b9-14.mjs')
+    expect(src).toMatch(/leftoverPortions: 2/)
+    expect(src).toMatch(/\/reopen'/)
+    expect(src.match(/await restoreToday\(\)/g)?.length).toBeGreaterThanOrEqual(2)
   })
 })

@@ -36,7 +36,7 @@ function setup() {
       </ToastProvider>
     </QueryClientProvider>,
   )
-  return screen.findByText('4 pieces · below Restock level 6')
+  return screen.findByText('Below 6 · 4 in Stock')
 }
 
 beforeEach(() => vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(true))
@@ -66,9 +66,9 @@ describe('names and roles', () => {
     expect(use.textContent).toBe('')
     expect(use.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
-  it('says "below Restock level" in words, so the info tone is never the only signal', async () => {
+  it('says "Below 6" in words, so the info tone is never the only signal', async () => {
     await setup()
-    expect(screen.getByText('4 pieces · below Restock level 6')).toBeInTheDocument()
+    expect(screen.getByText('Below 6 · 4 in Stock')).toBeInTheDocument()
   })
   it('disables a Use button natively when there is no Stock, so it leaves the tab order', async () => {
     await setup()
@@ -120,15 +120,14 @@ describe('the how-much sheet', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('button', { name: 'Use some Dish soap' })).toHaveFocus()
   })
-  it('announces a refused amount as an alert tied to the field', async () => {
+  it('shows a refused amount as the field error, tied to the field (SAFE-04: not an alert)', async () => {
     const dialog = await open()
     const field = within(dialog).getByRole('textbox', { name: 'How much' })
     await waitFor(() => expect(field).toHaveValue('500'))
     await userEvent.clear(field)
     await userEvent.type(field, '900')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Use' }))
-    const alert = within(dialog).getByRole('alert')
-    expect(alert).toHaveTextContent('Only 800 ml in Stock')
+    await waitFor(() => expect(field).toHaveAttribute('aria-invalid', 'true'))
     expect(field).toHaveAccessibleDescription(expect.stringContaining('Only 800 ml in Stock'))
   })
 })

@@ -139,6 +139,19 @@ describe('DurationField editing', () => {
     expect(number().value).toBe('12')
   })
 
+  it('a unit whose number is rounded keeps the stored minutes: 50 min in d shows 0.03, and back in min it is 50 again, with no onChange', async () => {
+    const onMinutes = vi.fn()
+    render(<Harness initial={50} units={['min', 'h', 'd']} onMinutes={onMinutes} />)
+    await pickUnit('d')
+    expect(number().value).toBe('0.03')
+    await userEvent.click(number())
+    await userEvent.tab()
+    expect(onMinutes).not.toHaveBeenCalled()
+    await pickUnit('min')
+    expect(number().value).toBe('50')
+    expect(onMinutes).not.toHaveBeenCalled()
+  })
+
   it('a typed value uses the unit on screen: after switching to min, 30 is 30 minutes', async () => {
     const onMinutes = vi.fn()
     render(<Harness initial={720} onMinutes={onMinutes} />)

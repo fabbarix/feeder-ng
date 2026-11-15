@@ -1,0 +1,27 @@
+/* RX-08: the number and its unit side by side on one line, under the field's one visible label. */
+.duration-field__controls {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.duration-field__number {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: var(--field-size-xs);
+}
+
+.duration-field__unit {
+  flex: none;
+  inline-size: 6rem;
+}
+
+/* The unit Select is named "<label> unit" for assistive technology; on screen the field's label names both. */
+.duration-field__unit .ui-field__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

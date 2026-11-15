@@ -114,6 +114,7 @@ describe('Chip.css: Tag colour tokens', () => {
   })
   it('the existing kinds still map to their tokens', () => {
     expect(declarations(css, ".chip[data-kind='tag']")).toMatchObject({ background: 'var(--color-surface-2)', color: 'var(--color-muted)' })
-    expect(declarations(css, ".chip[data-kind='filter'][aria-pressed='true']")).toMatchObject({ background: 'var(--color-accent)' })
+    // B9-17 (A11Y-06): a selected filter chip is the shared selected look (Chip.tones.test.tsx), no longer the accent solid
+    expect(declarations(css, ".chip[data-kind='filter'][aria-pressed='true']")).toMatchObject({ background: 'var(--selected-bg)' })
   })
 })

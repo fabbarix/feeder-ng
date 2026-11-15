@@ -86,10 +86,12 @@ describe('ChoiceChip.css', () => {
     expect(d['border-radius']).toBe('var(--radius-pill)')
   })
 
-  it('a pressed chip uses the primary container tokens', () => {
+  // A11Y-06 (B9-16): a pressed chip is the shared selected state (soft fill, accent-text, the selected ring), no longer the primary
+  // container tokens; ChoiceChip.pressed.test.tsx pins the ring and the Check.
+  it('a pressed chip uses the selected tokens', () => {
     const d = declarations(css, ".choice-chip[aria-pressed='true']")
-    expect(d['background']).toBe('var(--color-primary-container)')
-    expect(d['color']).toBe('var(--color-on-primary-container)')
+    expect(d['background']).toBe('var(--selected-bg)')
+    expect(d['color']).toBe('var(--selected-fg)')
   })
 
   it('has no raw colours and no px font sizes: tokens only', () => {

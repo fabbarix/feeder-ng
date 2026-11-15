@@ -38,7 +38,8 @@ describe('the debounce', () => {
     await vi.advanceTimersByTimeAsync(499)
     expect(await stored()).toBeNull()
     await vi.advanceTimersByTimeAsync(2)
-    expect(await stored()).toEqual({ draft: { name: 'L' }, baseUpdatedAt: '2026-11-14T10:00:00Z', savedAt: Date.now() })
+    // the write ran at T0 + 500 (the debounce), not at the clock's T0 + 501 after the 2 ms step
+    expect(await stored()).toEqual({ draft: { name: 'L' }, baseUpdatedAt: '2026-11-14T10:00:00Z', savedAt: T0 + 500 })
     w.dispose()
   })
 

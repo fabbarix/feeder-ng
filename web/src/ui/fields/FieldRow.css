@@ -1,4 +1,6 @@
-/* FieldRow: short fields on one row; each is its own size (cap from data-size), never grown or shrunk below it; the row wraps when full. Tokens only. */
+/* FieldRow: short fields on one row; each is its own size (cap from data-size), never grown or shrunk below it; the row wraps when full. Tokens only.
+   SET-07: the size caps a field's control, not its frame, so in a row the frame is as wide as its control; an invalid field grows to
+   its error's width (up to 60 ch) so the error reads on one or two lines, and the row wraps round it. */
 .field-row {
   display: flex;
   flex-wrap: wrap;
@@ -13,4 +15,14 @@
 
 .field-row[data-align='end'] {
   align-items: flex-end;
+}
+
+.field-row > .ui-field[data-size]:not([data-size='full']) {
+  inline-size: min(var(--field-control-max), 100%);
+}
+
+.field-row > .ui-field[data-size]:not([data-size='full'])[data-invalid] {
+  inline-size: auto;
+  min-inline-size: min(var(--field-control-max), 100%);
+  max-inline-size: 100%;
 }

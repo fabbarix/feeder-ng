@@ -63,7 +63,8 @@ export function useRecipeActions(
       // BR-D: a Base recipe that Recipes call for is not deleted; the dialog names them and offers Archive instead.
       const inUse = inUseRefusal(err, meta.name)
       if (inUse) {
-        const archive = await confirm.confirm({ title: recipeStrings.inUse.title(meta.name), body: inUse.message, confirmLabel: inUse.alternate })
+        // archiving instead loses nothing, so Archive keeps focus (B9-18)
+        const archive = await confirm.confirm({ title: recipeStrings.inUse.title(meta.name), body: inUse.message, confirmLabel: inUse.alternate, focus: 'confirm' })
         if (!archive) return
         try {
           await recipe.setArchived(true)

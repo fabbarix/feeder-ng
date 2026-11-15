@@ -255,5 +255,6 @@
   grid-auto-columns: 1fr;
   flex: none;
   margin-inline-start: auto;
-  gap: var(--space-1);
+  /* A11Y-02, P39: 8 px between the icon buttons, so a focused button's ring (3 px at a 2 px offset) never meets the next. */
+  gap: var(--space-2);
 }
