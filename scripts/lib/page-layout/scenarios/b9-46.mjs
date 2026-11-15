@@ -101,13 +101,15 @@ const assertSheetJs = `(() => {
   const tops = foot.map((b) => Math.round(b.getBoundingClientRect().top))
   if (Math.max(...tops) - Math.min(...tops) > 4) return 'the footer is not one row: tops ' + tops.join(',')
   for (const label of ['From', 'Through']) {
-    const c = [...d.querySelectorAll('[role="combobox"]')].find((e) => (e.getAttribute('aria-label') || '').startsWith(label) || [...(e.labels ?? [])].some((l) => l.textContent.trim().startsWith(label)) || e.closest('.field')?.textContent.trim().startsWith(label))
+    const c = [...d.querySelectorAll('[role="combobox"]')].find((e) => (e.getAttribute('aria-label') || '').startsWith(label) || [...(e.labels ?? [])].some((l) => l.textContent.trim().startsWith(label)) || e.closest('.ui-field, .field')?.textContent.trim().startsWith(label) || (e.getAttribute('aria-labelledby') || '').split(' ').some((id) => document.getElementById(id)?.textContent.trim().startsWith(label)))
     if (!c) return 'no ' + label + ' select'
     const line = parseFloat(getComputedStyle(c).lineHeight) || 20
     if (c.getBoundingClientRect().height > line * 2.6) return label + ' wraps: ' + c.getBoundingClientRect().height + ' px tall'
   }
-  const first = [...d.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.textContent).includes('First day'))
-  const last = [...d.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || b.textContent).includes('Last day'))
+  // A field's button is named by its label (aria-labelledby: the shared DateField), by aria-label, or by its text.
+  const nameOf = (b) => b.getAttribute('aria-label') || (b.getAttribute('aria-labelledby') || '').split(' ').map((id) => document.getElementById(id)?.textContent ?? '').join(' ').trim() || b.textContent
+  const first = [...d.querySelectorAll('button')].find((b) => nameOf(b).includes('First day'))
+  const last = [...d.querySelectorAll('button')].find((b) => nameOf(b).includes('Last day'))
   if (!first || !last) return 'First day or Last day is missing'
   const sideBySide = Math.abs(first.getBoundingClientRect().top - last.getBoundingClientRect().top) < 6
   if (window.innerWidth >= 600 && !sideBySide) return 'First day and Last day are not side by side at ' + window.innerWidth + ' px'
