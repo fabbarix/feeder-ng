@@ -91,7 +91,21 @@ export function useTimerActions(timers: TimerActionsSource): TimerActions {
         await startAgain(item, left)
         toast.show({ status: 'warning', title: s.addMinuteFailed, subline: s.addMinuteKept(name, formatTimer(left)) })
       } catch {
-        toast.show({ status: 'warning', title: s.timerLost(name), subline: s.timerLostDetail(formatTimer(left)), sticky: true })
+        toast.show({
+          status: 'warning',
+          title: s.timerLost(name),
+          subline: s.timerLostDetail(formatTimer(left)),
+          sticky: true,
+          actions: [
+            {
+              label: s.startAgain,
+              ariaLabel: s.startAgainName(name),
+              onClick: () => {
+                void startAgain(item, left).catch(failed)
+              },
+            },
+          ],
+        })
       }
     },
     [failed, find, startAgain, toast],

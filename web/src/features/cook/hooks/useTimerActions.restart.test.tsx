@@ -1,6 +1,7 @@
 // B9-40 (main-session ruling 4): "Add 1 minute" is cancel-then-start; if the second call fails the timer is started again with the time it
 // had and a warning toast says so; the cook is never left without the timer silently.
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../ui'
@@ -36,6 +37,15 @@ describe('useTimerActions Add 1 minute when the restart fails', () => {
     expect(start).toHaveBeenCalledTimes(2)
     await waitFor(() => expect(toastText()).toContain('Pre-heat the oven stopped'))
     expect(toastText()).toContain('2:43')
+  })
+
+  it('the lost timer\'s warning offers "Start again", which starts it with the time it had (B9-40 review)', async () => {
+    const start = vi.fn().mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ ...timer, id: 11 })
+    const { result } = setup(start)
+    await act(() => result.current.addMinute(5))
+    await userEvent.click(await screen.findByRole('button', { name: 'Start Pre-heat the oven again' }))
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(3))
+    expect(start).toHaveBeenLastCalledWith({ scope: 'recipe:7', step: 0, label: 'Step 1: Pre-heat the oven', durationSeconds: 163 })
   })
 
   it('a failed cancel changes nothing and says so: no start, an error toast', async () => {

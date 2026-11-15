@@ -82,7 +82,10 @@ export const cookStrings = {
   addMinuteFailed: 'The minute was not added',
   addMinuteKept: (name: string, time: string) => `${name} goes on with ${time} left.`,
   timerLost: (name: string) => `${name} stopped`,
-  timerLostDetail: (time: string) => `It could not be started again. Start it again with ${time} left.`,
+  timerLostDetail: (time: string) => `It could not be started again with ${time} left.`,
+  /** B9-40 review: the lost timer's toast action, which tries again with the time it had */
+  startAgain: 'Start again',
+  startAgainName: (name: string) => `Start ${name} again`,
   restart: 'Restart',
   timerDone: 'Ready',
   reheatTime: 'Reheat time',
