@@ -1,23 +1,6 @@
 import { http } from '../../lib/http'
 import type { RegenerateDryRun } from './lib/bought'
 import type { PlanChange } from './lib/replan'
-
-/** B9-32: the answer of POST /api/courses/<id>/recipes. */
-export interface MarkRecipesResult {
-  marked: number
-  /** The Recipes this call newly marked (absent from an old server: then there is no Undo). */
-  markedIds?: number[]
-  changes: PlanChange[]
-  undoToken?: string
-}
-
-/** B9-32: the answer of POST /api/courses/<id>/recipes/unmark. */
-export interface UnmarkRecipesResult {
-  unmarked: number
-  unmarkedIds: number[]
-  changes: PlanChange[]
-  undoToken?: string
-}
 import type {
   Alternative,
   CookedAllEntry,
@@ -40,6 +23,23 @@ import type {
   TagChoice,
   VarietyRule,
 } from './types'
+
+/** B9-32: the answer of POST /api/courses/<id>/recipes. */
+export interface MarkRecipesResult {
+  marked: number
+  /** The Recipes this call newly marked (absent from an old server: then there is no Undo). */
+  markedIds?: number[]
+  changes: PlanChange[]
+  undoToken?: string
+}
+
+/** B9-32: the answer of POST /api/courses/<id>/recipes/unmark. */
+export interface UnmarkRecipesResult {
+  unmarked: number
+  unmarkedIds: number[]
+  changes: PlanChange[]
+  undoToken?: string
+}
 
 /** B9-11: what every replanning write adds to its answer: the cells it changed beyond its target and the token that undoes it (none when it issued none). */
 export interface ReplanFields {
