@@ -17,6 +17,8 @@ const KEYS = [
   'invalidEmail', 'title', 'household', 'members', 'mealSlots', 'allowlist', 'allowlistAdminOnly', 'preferences', 'index', 'loading', 'loadError',
   'householdSaved', 'preferencesSaved', 'attendanceSaved', 'attendanceReset', 'slotStarted', 'form', 'plannerStyle', 'plannerStyleAnchor',
   'plannerStyleBetween', 'member', 'slot', 'attendance', 'allowlistPanel', 'prefs',
+  // B9-20 (RES-02): the LoadState of a Settings list.
+  'offline',
 ]
 // `courses` holds the Courses page strings, which are not keys of settingsStrings (coursesStrings is its own object).
 const parts = {

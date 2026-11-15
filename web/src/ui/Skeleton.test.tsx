@@ -6,20 +6,20 @@ describe('Skeleton', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
-  it('paints nothing for the first 300 ms, then the blocks', () => {
+  it('reserves the blocks unpainted for the first 300 ms, then paints them (B9-20, RES-02)', () => {
     const { container } = render(<Skeleton variant="tile" count={3} />)
-    expect(container.querySelectorAll('.skeleton')).toHaveLength(0)
+    expect(container.querySelectorAll('.skeleton[data-shown="false"]')).toHaveLength(3)
     act(() => void vi.advanceTimersByTime(299))
-    expect(container.querySelectorAll('.skeleton')).toHaveLength(0)
+    expect(container.querySelectorAll('.skeleton[data-shown="true"]')).toHaveLength(0)
     act(() => void vi.advanceTimersByTime(2))
-    expect(container.querySelectorAll('.skeleton')).toHaveLength(3)
+    expect(container.querySelectorAll('.skeleton[data-shown="true"]')).toHaveLength(3)
     expect(container.querySelector('.skeleton')).toHaveAttribute('data-variant', 'tile')
   })
 
   it('honours delayMs, including 0', () => {
     const { container } = render(<Skeleton delayMs={0} />)
     act(() => void vi.advanceTimersByTime(1))
-    expect(container.querySelectorAll('.skeleton')).toHaveLength(1)
+    expect(container.querySelectorAll('.skeleton[data-shown="true"]')).toHaveLength(1)
   })
 
   it('announces Loading once to assistive tech while the blocks are decorative', () => {

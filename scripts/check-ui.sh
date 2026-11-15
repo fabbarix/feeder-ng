@@ -36,6 +36,10 @@
 # one line per file that holds a third party's brand colours (never a feature screen or a primitive). An entry
 # without a reason is ignored; an entry matches every colour-literals violation in each file it is a substring of.
 #
+# sizing has a selector-level allowlist, scripts/check-ui.allow-sizing (B9-20): `<selector>   # reason`, one line per
+# tile-like selector that must keep a floor (a crashed tile keeps its slot, so the grid does not jump). An entry without a
+# reason is ignored; an entry matches only the min-height / min-block-size violation on exactly that selector.
+#
 # Output: counts per rule and the first few violations; every violation goes to
 # <root>/build/check-ui.txt (override with CHECK_UI_OUT). Exit 1 only if a rule in
 # `fail` mode (or a violation under that rule's fail_paths) has violations.
@@ -63,6 +67,7 @@ SRC=web/src
 ALLOW_CLASSES="$ALLOW_DIR/check-ui.allow-classnames"
 ALLOW_GLOSSARY="$ALLOW_DIR/check-ui.allow-glossary"
 ALLOW_COLOURS="$ALLOW_DIR/check-ui.allow-colours"
+ALLOW_SIZING="$ALLOW_DIR/check-ui.allow-sizing"
 OUT="${CHECK_UI_OUT:-$ROOT/build/check-ui.txt}"
 mkdir -p "$(dirname "$OUT")"
 TMP="$(mktemp -d)"
@@ -612,6 +617,27 @@ if [ -f "$ALLOW_COLOURS" ]; then
     }
     {
       if ($1 == "colour-literals") for (i = 1; i <= n; i++) if (index($2, paths[i]) > 0) next
+      print
+    }' "$VIOL" >"$TMP/violations.kept" && mv "$TMP/violations.kept" "$VIOL"
+fi
+
+# Selector-level sizing allowlist (B9-20): drop the tile min-height violation of a selector named by an entry with a reason.
+if [ -f "$ALLOW_SIZING" ]; then
+  awk -F'\t' -v ALLOW="$ALLOW_SIZING" '
+    BEGIN {
+      n = 0
+      while ((getline l < ALLOW) > 0) {
+        h = index(l, "#"); if (!h) continue
+        p = substr(l, 1, h - 1); r = substr(l, h + 1)
+        gsub(/^[ \t]+|[ \t]+$/, "", p); gsub(/^[ \t]+|[ \t]+$/, "", r)
+        if (p != "" && r != "") sel[p] = 1
+      }
+    }
+    {
+      if ($1 == "sizing" && match($4, /on tile variant \047[^\047]*\047/)) {
+        s = substr($4, RSTART + 17, RLENGTH - 18)
+        if (s in sel) next
+      }
       print
     }' "$VIOL" >"$TMP/violations.kept" && mv "$TMP/violations.kept" "$VIOL"
 fi

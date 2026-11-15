@@ -9,7 +9,13 @@ import { findToast } from '../../../test/notices'
 
 type Status = 'loading' | 'error' | 'offline' | 'empty' | 'ready'
 const hooks = vi.hoisted(() => ({
-  totals: { data: [] as unknown[], isLoading: false, error: null, status: 'ready' as Status, refetch: vi.fn() },
+  // B9-20 (RES-02): the screen switches on `state`; these tests set `status`, so `state` follows it.
+  totals: {
+    data: [] as unknown[], isLoading: false, error: null, status: 'ready' as Status, refetch: vi.fn(),
+    get state() {
+      return ({ loading: 'loading', error: 'failed', offline: 'offlineUnknown', empty: 'empty', ready: 'ready' } as const)[this.status]
+    },
+  },
   lots: { data: [] as unknown[], today: '2026-11-09', isLoading: false, error: null, status: 'ready' as Status, refetch: vi.fn() },
   spoiled: { data: [] as unknown[], today: '2026-11-09', isLoading: false, error: null, status: 'empty' as Status, refetch: vi.fn() },
   throwOut: vi.fn(),
@@ -29,7 +35,7 @@ vi.mock('../hooks/useStock', () => ({
 // The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list (?view=ingredients).
 vi.mock('../hooks/usePantry', () => ({
   usePantry: () => ({
-    lots: { get data() { return hooks.lots.data }, today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
+    lots: { get data() { return hooks.lots.data }, today: '2026-11-09', isLoading: false, error: null, status: 'ready', state: 'ready', refetch: vi.fn() },
     places: [],
     groups: [],
     placeOf: () => null,
@@ -170,11 +176,11 @@ describe('StockScreen status', () => {
     expect(hooks.totals.refetch).toHaveBeenCalledTimes(1)
   })
 
-  it('offline with nothing saved says so and is not "Nothing in Stock yet"', () => {
+  it('offline with nothing saved is the LoadState (B9-20), not "Nothing in Stock yet"', () => {
     hooks.totals.status = 'offline'
     hooks.totals.data = undefined as never
     view()
-    expect(screen.getByText('Stock is not saved on this device yet')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Your Stock isn’t on this phone yet' })).toBeInTheDocument()
     expect(screen.queryByText('Nothing in Stock yet')).toBeNull()
     expect(screen.queryByRole('searchbox')).toBeNull()
   })

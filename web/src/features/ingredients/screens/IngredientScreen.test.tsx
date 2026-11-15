@@ -21,6 +21,11 @@ const hook = {
   setConversion: vi.fn().mockResolvedValue({}),
   removeConversion: vi.fn().mockResolvedValue({}),
   remove: vi.fn().mockResolvedValue(undefined),
+  refetch: vi.fn(),
+  // B9-20 (RES-02): the screen switches on `state`; it follows the fields these tests set.
+  get state() {
+    return this.ingredient ? 'ready' : this.isLoading ? 'loading' : this.error ? 'failed' : 'loading'
+  },
 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
@@ -125,11 +130,12 @@ describe('IngredientScreen', () => {
     expect(screen.getByRole('status')).toHaveTextContent(strings.loading)
     expect(screen.queryByText(strings.notFoundTitle)).not.toBeInTheDocument()
   })
-  it('shows a failure, not "does not exist", when the load fails for another reason', () => {
+  it('shows a failure with Try again (B9-20), not "does not exist", when the load fails for another reason', () => {
     hook.ingredient = undefined
     hook.error = new ApiError(500, 'server_error', 'boom')
     setup()
-    expect(screen.getByRole('alert')).toHaveTextContent(strings.actionFailed)
+    expect(screen.getByRole('alert')).toHaveTextContent(strings.itemError)
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(screen.queryByText(strings.notFoundTitle)).not.toBeInTheDocument()
   })
   it('groups its details into Bento tiles', () => {

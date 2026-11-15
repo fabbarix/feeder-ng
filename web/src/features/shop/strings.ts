@@ -22,6 +22,18 @@ export const shopStrings = {
   // b8-shop: the Shop chip shows "Any" when "Any Shop" does not fit its row (the storefront icon says Shop)
   anyShopShort: 'Any',
   loadFailed: 'The Shopping List could not be loaded.',
+  /** B9-20 (RES-02): offline, and the Shopping List was never loaded (and no saved copy) on this phone. */
+  offlineUnknownTitle: 'Your Shopping List isn’t on this phone yet',
+  offlineUnknownText: 'Feeder loads it the first time this phone is online. It will appear here as soon as the connection is back.',
+  /** B9-20 (RES-06): what a failed action was, for its toast "Couldn’t {phrase}". */
+  failed: {
+    tick: (line: string) => `tick ${line}`,
+    untick: (line: string) => `undo the Tick on ${line}`,
+    delete: (line: string) => `delete ${line}`,
+    notNeeded: (line: string) => `mark ${line} Not needed`,
+    neededAfterAll: (line: string) => `put ${line} back on the list`,
+    addExtra: (text: string | null) => (text ? `add ${text} to the list` : 'add that to the list'),
+  },
   extraTick: (name: string) => `Tick ${name}`,
   unpriced: (n: number) => (n === 1 ? '1 Line has no Price yet' : `${n} Lines have no Price yet`),
   range: 'Shop for',

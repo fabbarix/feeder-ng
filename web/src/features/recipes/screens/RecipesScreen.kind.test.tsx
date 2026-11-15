@@ -110,9 +110,9 @@ describe('RecipesScreen: Base recipes', () => {
   })
 
   it('has its own empty state, not the Recipes one', () => {
-    state.result = { recipes: [], tags: [], isLoading: false, isEmpty: true, error: null }
+    state.result = { recipes: [], tags: [], isLoading: false, isEmpty: true, error: null, state: 'empty' }
     view('/recipes?kind=base')
     expect(screen.getByText(/No Base recipes yet/)).toBeInTheDocument()
-    expect(screen.queryByText('No Recipes yet. Add your first one.')).toBeNull()
+    expect(screen.queryByText('No Recipes yet')).toBeNull()
   })
 })

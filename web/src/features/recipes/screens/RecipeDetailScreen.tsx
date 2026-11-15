@@ -4,7 +4,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
-import { Button, Chip, ErrorState, IconButton, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, TextLink, useBreakpoint } from '../../../ui'
+import { Button, Chip, ErrorState, IconButton, LoadState, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, TextLink, useBreakpoint } from '../../../ui'
 import { BaseRecipeBadge } from '../components/BaseRecipeBadge'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
 import { useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
@@ -21,6 +21,7 @@ import { StepsList } from '../components/StepsList'
 import { useHashTarget } from '../hooks/useHashTarget'
 import { useHouseholdPreferences } from '../hooks/useHouseholdPreferences'
 import { useIngredientRefs } from '../hooks/useIngredientRefs'
+import { RecipeDetailSkeleton } from '../components/RecipeDetailSkeleton'
 import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
 import { useRecipeTags } from '../hooks/useRecipeTags'
@@ -65,14 +66,22 @@ export function RecipeDetailScreen(): ReactNode {
     setCandidateTick((n) => n + 1)
   }
 
-  if (recipe.isLoading) return <Skeleton variant="tile" count={3} />
-  if (!r)
+  // B9-20 (RES-02): one state model. Unknown offline is a LoadState (Try again could not work), never the error.
+  if (!r) {
+    const title = recipe.knownName ?? recipeStrings.detailTitle
     return (
       <section className="recipe-detail">
-        <PageHeader title={recipeStrings.title} breadcrumbs={crumbs} />
-        <ErrorState message={recipeStrings.loadError} onRetry={() => recipe.refetch()} />
+        <PageHeader title={title} breadcrumbs={crumbs} actions={recipe.state === 'loading' ? <RecipeDetailSkeleton.Actions /> : undefined} />
+        {recipe.state === 'offlineUnknown' ? (
+          <LoadState title={recipeStrings.detailOfflineTitle} text={recipeStrings.detailOfflineText} />
+        ) : recipe.state === 'failed' ? (
+          <ErrorState message={recipeStrings.loadError} onRetry={() => recipe.refetch()} />
+        ) : (
+          <RecipeDetailSkeleton label={recipeStrings.loading} />
+        )}
       </section>
     )
+  }
 
   const rows = preferenceRows(household.members, household.prefsByMember, r.id, r.lines, household.meUserId)
   const cook = (

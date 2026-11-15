@@ -32,4 +32,9 @@ export const settingsHubStrings = {
   },
   loading: 'Loading',
   loadError: 'Settings could not load. Try again in a moment.',
+  /** B9-20 (RES-02): a Settings list offline and never loaded on this phone (a LoadState, never an empty list). */
+  offline: {
+    title: 'Your settings aren’t on this phone yet',
+    text: 'Feeder loads them the first time this phone is online. They’ll appear here as soon as the connection is back.',
+  },
 }

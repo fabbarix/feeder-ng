@@ -82,7 +82,7 @@ export function useCourseRemoval(
       onDone?.({ mode: current, course })
     } catch (err) {
       if (current === 'delete' && isPlannedRefusal(err)) setMode('archive')
-      else setError(removalErrorMessage(err))
+      else setError(removalErrorMessage(err, current, course.name))
     } finally {
       setBusy(false)
     }

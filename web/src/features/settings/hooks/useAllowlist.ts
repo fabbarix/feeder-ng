@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { settingsApi } from '../api'
 import type { AllowedUser } from '../types'
 import { settingsKeys } from './queryKeys'
 
 export interface AllowlistState {
+  /** B9-20 (RES-02): the page's screen state; offline and never loaded is offlineUnknown, never an empty or default page. */
+  state: ScreenState
+  /** Fetches again (the error state's Try again). */
+  refetch: () => void
   users: AllowedUser[]
   isPending: boolean
   isError: boolean
@@ -25,7 +31,10 @@ export function useAllowlist(enabled: boolean): AllowlistState {
     onSuccess: refresh,
   })
   const remove = useMutation({ mutationFn: settingsApi.removeAllowedUser, onSuccess: refresh })
+  const state = useScreenState(query, { isEmpty: query.data?.length === 0, hasFilter: false })
   return {
+    state,
+    refetch: () => void query.refetch(),
     users: query.data ?? NO_USERS,
     isPending: enabled && query.isPending,
     isError: query.isError,

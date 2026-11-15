@@ -1,14 +1,20 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { ingredientsApi } from '../api'
 import { totalReferences } from '../lib/references'
 import type { BaseUnit } from '../../../lib/units'
 import type { Conversion, Ingredient, IngredientDetail, IngredientKind } from '../types'
 
 export interface UseIngredient {
+  /** B9-20 (RES-02): loading, ready, offlineSaved, offlineUnknown or failed (a 404 is failed after one request). */
+  state: ScreenState
   ingredient: IngredientDetail | undefined
   isLoading: boolean
   /** ApiError with status 404 when the id does not exist. */
   error: Error | null
+  /** Fetches the Ingredient again (the error state's Try again). */
+  refetch: () => void
   /** Sum of the reference counts; the Base Unit and deletion are locked while > 0. */
   referenceCount: number
   rename: (name: string) => Promise<Ingredient>
@@ -43,10 +49,13 @@ export function useIngredient(id: number): UseIngredient {
   const ingredient = query.data
   const referenceCount = totalReferences(ingredient?.references ?? {})
 
+  const state = useScreenState(query, { isEmpty: false, hasFilter: false })
   return {
+    state,
     ingredient,
     isLoading: query.isLoading,
     error: query.error,
+    refetch: () => void query.refetch(),
     referenceCount,
     rename: (name) => changed(ingredientsApi.patch(id, { name })),
     setBaseUnit: (baseUnit) => changed(ingredientsApi.patch(id, { baseUnit })),

@@ -117,3 +117,14 @@
   font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
+
+/* B9-20 (RES-02): a RecipeTile's skeleton has the tile's rows: the name line, the meta line and two chip rows. */
+.recipe-tile-skeleton > .skeleton[data-variant='title'] {
+  block-size: var(--text-title-3-line);
+}
+
+.recipe-tile-skeleton > .skeleton[data-variant='line'] {
+  block-size: 26px;
+  inline-size: 40%;
+  border-radius: var(--radius-pill);
+}

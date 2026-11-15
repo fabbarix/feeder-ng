@@ -29,8 +29,8 @@ describe('useMe', () => {
       vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: 'unauthenticated', message: 'x' } }), { status: 401 })),
     )
     const { result } = renderHook(() => useMe(), { wrapper })
-    await waitFor(() => expect(result.current.isPending).toBe(false))
-    expect(result.current.data).toBeNull()
+    // B9-20: a remembered User is the starting data, so wait for the answer itself, not for isPending
+    await waitFor(() => expect(result.current.data).toBeNull())
     expect(result.current.isError).toBe(false)
   })
 
@@ -93,8 +93,8 @@ describe('useMe offline (R10)', () => {
     localStorage.setItem(ME_CACHE_KEY, JSON.stringify(me))
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: 'unauthenticated', message: 'x' } }), { status: 401 })))
     const { result } = renderHook(() => useMe(), { wrapper })
-    await waitFor(() => expect(result.current.isPending).toBe(false))
-    expect(result.current.data).toBeNull()
+    // B9-20: a remembered User is the starting data, so wait for the answer itself, not for isPending
+    await waitFor(() => expect(result.current.data).toBeNull())
     expect(localStorage.getItem(ME_CACHE_KEY)).toBeNull()
   })
 

@@ -3,6 +3,7 @@ import { DateAttendancePanel } from '../components/DateAttendancePanel'
 import { MealSlotCards } from '../components/MealSlotCards'
 import { MealSlotEditor } from '../components/MealSlotEditor'
 import { SettingsHeader } from '../components/SettingsHeader'
+import { SettingsLoadGate } from '../components/SettingsLoadGate'
 import { useMealSlotsPage } from '../hooks/useMealSlotsPage'
 import { settingsStrings } from '../strings'
 import '../settings.css'
@@ -21,21 +22,23 @@ export function MealSlotsPage() {
   return (
     <div className="settings">
       <SettingsHeader title={settingsStrings.mealSlots} actions={addButton} />
-      {ready ? (
-        <MealSlotCards
-          cards={page.cards}
-          dateRows={page.dateRows}
-          members={page.members.members}
-          canEdit={page.isAdmin}
-          addDisabled={page.members.isPending}
-          onEdit={page.open}
-          onFix={page.open}
-          onChangeDate={page.changeDateOf}
-          onAddOn={page.addOn}
-        />
-      ) : (
-        <p role="status">{settingsStrings.loading}</p>
-      )}
+      <SettingsLoadGate state={page.state} onRetry={page.refetch}>
+        {ready ? (
+          <MealSlotCards
+            cards={page.cards}
+            dateRows={page.dateRows}
+            members={page.members.members}
+            canEdit={page.isAdmin}
+            addDisabled={page.members.isPending}
+            onEdit={page.open}
+            onFix={page.open}
+            onChangeDate={page.changeDateOf}
+            onAddOn={page.addOn}
+          />
+        ) : (
+          <p role="status">{settingsStrings.loading}</p>
+        )}
+      </SettingsLoadGate>
       <MealSlotEditor
         open={editor !== null}
         slot={editor?.item}

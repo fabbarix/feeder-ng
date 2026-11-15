@@ -22,9 +22,9 @@ describe('errorMessage', () => {
     expect(errorMessage(new ApiError(422, 'validation_failed', 'planningHorizonDays: must be 1-28'))).toBe('planningHorizonDays: must be 1-28')
   })
 
-  it('falls back for unknown errors', () => {
-    expect(errorMessage(new Error('boom'))).toMatch(/something went wrong/i)
-    expect(errorMessage('weird')).toMatch(/something went wrong/i)
+  it('falls back for unknown errors (B9-20: the lib/errorCopy fallback, not "Something went wrong")', () => {
+    expect(errorMessage(new Error('boom'))).toBe('Couldn’t save. Your choices are still on the screen.')
+    expect(errorMessage('weird')).toBe('Couldn’t save. Your choices are still on the screen.')
   })
 
   // B5-F1 (b5-sd): the attendance PUT of a started slot answers 409 slot_started; the sentence is Plan's slotStarted in GLOSSARY words.

@@ -9,7 +9,13 @@ import { StockScreen } from './StockScreen'
 
 type Status = 'loading' | 'error' | 'offline' | 'empty' | 'ready'
 const hooks = vi.hoisted(() => ({
-  totals: { data: [] as unknown[], isLoading: false, error: null, status: 'ready' as Status, refetch: vi.fn() },
+  // B9-20 (RES-02): the screen switches on `state`; these tests set `status`, so `state` follows it.
+  totals: {
+    data: [] as unknown[], isLoading: false, error: null, status: 'ready' as Status, refetch: vi.fn(),
+    get state() {
+      return ({ loading: 'loading', error: 'failed', offline: 'offlineUnknown', empty: 'empty', ready: 'ready' } as const)[this.status]
+    },
+  },
   spoiled: { data: [] as unknown[], today: '2026-11-09', isLoading: false, error: null, status: 'empty' as Status, refetch: vi.fn() },
 }))
 vi.mock('../hooks/useStock', () => ({
@@ -21,7 +27,7 @@ vi.mock('../hooks/useStock', () => ({
 // The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list (?view=ingredients).
 vi.mock('../hooks/usePantry', () => ({
   usePantry: () => ({
-    lots: { data: [], today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
+    lots: { data: [], today: '2026-11-09', isLoading: false, error: null, status: 'ready', state: 'ready', refetch: vi.fn() },
     places: [],
     groups: [],
     placeOf: () => null,
@@ -91,11 +97,25 @@ describe('StockScreen two-column layout (L-06)', () => {
     expect(within(aside).getByRole('searchbox', { name: 'Search Stock' })).toBeInTheDocument()
   })
 
-  it('renders no empty aside while Stock loads and nothing is spoiled', () => {
+  // B9-20 (RES-02): while Stock loads the aside holds the filter header, so the list skeleton sits where the list will be
+  // and nothing jumps when it arrives (was: no aside while loading). It is never empty.
+  it('holds the filter header, never an empty aside, while Stock loads and nothing is spoiled', () => {
     hooks.spoiled.data = []
     hooks.spoiled.status = 'empty'
     hooks.totals.status = 'loading'
     view()
-    expect(screen.queryByRole('complementary')).toBeNull()
+    const aside = screen.getByRole('complementary')
+    expect(within(aside).getByRole('searchbox')).toBeInTheDocument()
+  })
+
+  it('renders no aside over a failed or unknown list when nothing is spoiled', () => {
+    hooks.spoiled.data = []
+    hooks.spoiled.status = 'empty'
+    for (const status of ['error', 'offline'] as const) {
+      hooks.totals.status = status
+      const { unmount } = view()
+      expect(screen.queryByRole('complementary')).toBeNull()
+      unmount()
+    }
   })
 })

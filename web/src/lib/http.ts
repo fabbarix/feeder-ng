@@ -19,6 +19,9 @@ export class ApiError extends Error {
   }
 }
 
+/** B9-20 (RES-06): how long a GET may take before it ends in ApiError(0, 'timeout'). Re-exported by `lib/dataState`. */
+export const GET_TIMEOUT_MS = 10_000
+
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 
 export interface HttpClientOptions {
@@ -32,6 +35,8 @@ export interface RequestOptions {
   keepalive?: boolean
   /** aborts the request; an abort with a TimeoutError reason is raised as ApiError(0, 'timeout') */
   signal?: AbortSignal
+  /** B9-20 (RES-06): a GET ends in ApiError(0, 'timeout') after this long; default GET_TIMEOUT_MS, 0 = none. Writes carry none. */
+  timeoutMs?: number
 }
 
 export interface HttpClient {
@@ -58,9 +63,10 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
       headers['Content-Type'] = 'application/json'
       payload = JSON.stringify(body)
     }
+    const signal = requestSignal(method, reqOpts)
     let res: Response
     try {
-      res = await doFetch(baseUrl + path, { method, headers, body: payload, credentials: 'same-origin', signal: reqOpts.signal, ...(reqOpts.keepalive ? { keepalive: true } : {}) })
+      res = await doFetch(baseUrl + path, { method, headers, body: payload, credentials: 'same-origin', signal, ...(reqOpts.keepalive ? { keepalive: true } : {}) })
     } catch (err) {
       if (isTimeoutError(err)) throw new ApiError(0, 'timeout', 'The request timed out')
       throw new ApiError(0, 'network', 'The network is unreachable')
@@ -83,6 +89,15 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
     delete: <T>(path: string, opts?: RequestOptions) => request<T>('DELETE', path, undefined, opts),
     deleteJson: <T>(path: string, body: unknown) => request<T>('DELETE', path, body),
   }
+}
+
+/** A GET carries a timeout (default GET_TIMEOUT_MS, 0 = none) combined with the caller's signal; a write carries only the
+ *  caller's signal, because a slow save may still land. */
+function requestSignal(method: string, reqOpts: RequestOptions): AbortSignal | undefined {
+  const ms = method === 'GET' ? (reqOpts.timeoutMs ?? GET_TIMEOUT_MS) : 0
+  if (!(ms > 0)) return reqOpts.signal
+  const timeout = AbortSignal.timeout(ms)
+  return reqOpts.signal ? AbortSignal.any([reqOpts.signal, timeout]) : timeout
 }
 
 /** The reason of a signal that fired by timeout (AbortSignal.timeout), as fetch rejects with it. */

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, CROP_ASPECTS, Chip, EmptyState, ImagePicker, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, CROP_ASPECTS, Chip, EmptyState, ErrorState, ImagePicker, LoadState, PageHeader, TextField, Tile } from '../../../ui'
 import { IngredientProducts } from '../../products'
 import { IngredientExclusionList } from '../../recipes/components/IngredientExclusionList'
 import { BaseUnitPicker } from '../components/BaseUnitPicker'
@@ -44,16 +44,21 @@ export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
   const ingredient = ing.ingredient
   const breadcrumbs = useBreadcrumbs(ingredient && displayName(ingredient.name))
   if (!ingredient) {
-    if (ing.isLoading) return <p role="status">{strings.loading}</p>
-    if (ing.error instanceof ApiError && ing.error.status === 404) {
-      return (
-        <section>
-          <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+    // B9-20 (RES-02): offline and never loaded is a LoadState; a 404 says so; another failure offers Try again.
+    if (ing.state === 'loading') return <p role="status">{strings.loading}</p>
+    const notFound = ing.error instanceof ApiError && ing.error.status === 404
+    return (
+      <section>
+        <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+        {ing.state === 'offlineUnknown' ? (
+          <LoadState title={words.offlineItemTitle} text={strings.offlineItemText} />
+        ) : notFound ? (
           <EmptyState title={words.notFoundTitle} />
-        </section>
-      )
-    }
-    return <p role="alert">{strings.actionFailed}</p>
+        ) : (
+          <ErrorState message={words.itemError} onRetry={ing.refetch} />
+        )}
+      </section>
+    )
   }
 
   const actualKind = kindOf(ingredient)

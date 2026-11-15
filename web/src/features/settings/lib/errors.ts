@@ -1,3 +1,4 @@
+import { fallbackMessage } from '../../../lib/errorCopy'
 import { ApiError } from '../../../lib/http'
 import { coursesStrings } from '../coursesStrings'
 import { settingsStrings } from '../strings'
@@ -32,7 +33,8 @@ export function errorMessage(err: unknown, slotName?: string): string {
     const known = MESSAGES[err.code]
     if (known) return known
   }
-  return 'Something went wrong. Please try again.'
+  // B9-20 (RES-06): the fallback says the choices are still there, or that Feeder is offline (lib/errorCopy).
+  return fallbackMessage(err)
 }
 
 /** R15: a refused batch edit shows the server's own sentence (it names the clash), else the usual short message. */

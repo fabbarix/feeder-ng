@@ -7,8 +7,8 @@ import { clearCachedMe } from './meCache'
 import type { ShellStatusHook } from './features'
 import { AppShell } from './AppShell'
 import type { NavItem } from './nav'
-import { shellStrings } from './strings'
-import { ME_QUERY_KEY, useMe } from './useMe'
+import { FirstLaunchFailed, FirstLaunchWaiting } from './FirstLaunch'
+import { ME_QUERY_KEY, useMe, useRecoverMeOnline } from './useMe'
 
 export interface AppRootProps {
   navItems?: NavItem[]
@@ -19,6 +19,7 @@ export interface AppRootProps {
 /** Gatekeeper: shows the shell for a signed-in User, and a signed-out page otherwise. */
 export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
   const me = useMe()
+  useRecoverMeOnline(me)
   const queryClient = useQueryClient()
   // The statusHooks list comes from the eager glob, so it is fixed for the app's life: calling the hooks in a loop
   // keeps their order stable from render to render. They run before the early returns below, so every render calls them.
@@ -30,8 +31,11 @@ export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
     pendingAccessRequests += status.pendingAccessRequests ?? 0
   }
 
-  if (me.isPending) return <p role="status">{shellStrings.loading}</p>
-  if (me.isError) return <p role="alert">{shellStrings.loadError}</p>
+  // B9-20: a remembered User opens the shell at once, and a failing /api/me never replaces it (data wins over the error).
+  if (me.data === undefined) {
+    if (me.isError) return <FirstLaunchFailed onRetry={() => void me.refetch()} />
+    return <FirstLaunchWaiting />
+  }
   if (!me.data) return <SignedOut />
 
   const signOut = async () => {

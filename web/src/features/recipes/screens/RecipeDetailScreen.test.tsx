@@ -54,13 +54,13 @@ describe('RecipeDetailScreen: layout', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/recipes/3/edit')
   })
   it('shows the error state with the shared primitive', () => {
-    h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn() }
+    h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn(), state: 'failed' }
     view()
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
   })
   it('the error state keeps a PageHeader, and Try again calls onRetry (refetch)', async () => {
     const refetch = vi.fn()
-    h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x'), refetch }
+    h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x'), refetch, state: 'failed' }
     view()
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))

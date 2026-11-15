@@ -145,6 +145,7 @@ harden native-ui native-ui-multiline 3   # <input> tags split across lines, incl
 harden colour-literals colour-named 5    # named colours in CSS declarations and style props
 harden colour-literals colour-allow 2    # WP3b: file-level allow-colours (entry with reason skips the file; no reason or unlisted still flagged)
 harden glossary glossary-quoting 4       # apostrophes in backtick strings, \' escapes, multi-line templates
+harden sizing sizing-allow 4             # B9-20: selector-level allow-sizing (exact selector with a reason skips; no reason, unlisted or a longer selector still flagged)
 
 # --- an allowlisted entry is what makes the pass fixtures pass ---------------
 for r in class-hooks glossary; do
@@ -158,6 +159,11 @@ run_ui "$FIX/colour-allow/pass" "$(rules_file colour-literals fail)"
 CHECK_UI_ALLOW_DIR="$TMP/noallow" CHECK_UI_OUT="$TMP/out.txt" bash "$SCRIPTS/check-ui.sh" --root "$FIX/colour-allow/pass" --rules "$(rules_file colour-literals fail)" >/dev/null 2>&1
 [ $? -eq 1 ] && ok || bad "colour-allow: without its allowlist the pass fixture must fail"
 grep -Eq '^web/src/features/signin/components/GoogleG\.tsx +#' "$SCRIPTS/check-ui.allow-colours" && ok || bad "check-ui.allow-colours must list the signin Google G with a reason"
+
+# --- B9-20: the sizing allowlist is what makes its pass fixture pass, and the real one names .tile-error with a reason ----
+CHECK_UI_ALLOW_DIR="$TMP/noallow" CHECK_UI_OUT="$TMP/out.txt" bash "$SCRIPTS/check-ui.sh" --root "$FIX/sizing-allow/pass" --rules "$(rules_file sizing fail)" >/dev/null 2>&1
+[ $? -eq 1 ] && ok || bad "sizing-allow: without its allowlist the pass fixture must fail"
+grep -Eq '^\.tile-error +# *[^ ]' "$SCRIPTS/check-ui.allow-sizing" && ok || bad "check-ui.allow-sizing must list .tile-error with a reason"
 
 # --- fail_paths: only violations under the listed prefixes fail -------------
 cp "$(rules_file sizing warn)" "$TMP/rules-fp-elsewhere"

@@ -1,0 +1,4 @@
+/* allowed: the listed selector with a reason */
+.tile-error {
+  min-block-size: 96px;
+}

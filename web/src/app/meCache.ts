@@ -1,3 +1,4 @@
+import { isValidTimeZone } from '../lib/householdDate'
 // The last successful /api/me, kept in localStorage so the shell can open offline (R10). Plain TypeScript, no React.
 import type { Me } from './useMe'
 
@@ -18,7 +19,9 @@ export function readCachedMe(): Me | null {
     ) {
       return null
     }
-    return { id: o.id, email: o.email, displayName: o.displayName, isAdmin: o.isAdmin }
+    const me: Me = { id: o.id, email: o.email, displayName: o.displayName, isAdmin: o.isAdmin }
+    if (isValidTimeZone(o.householdTimeZone)) me.householdTimeZone = o.householdTimeZone
+    return me
   } catch {
     return null
   }
@@ -38,4 +41,9 @@ export function clearCachedMe(): void {
   } catch {
     // nothing to forget
   }
+}
+
+/** B9-20 (RES-05): the Household's IANA zone from the last /api/me, or null. */
+export function readCachedTimeZone(): string | null {
+  return readCachedMe()?.householdTimeZone ?? null
 }

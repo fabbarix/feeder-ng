@@ -1,0 +1,60 @@
+/* B9-20 (RES-02) LoadState: the unknown (offline, never loaded) state. Info tone, never the empty-state art. Tokens only. */
+.load-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+
+.load-state__art {
+  display: grid;
+  place-items: center;
+  inline-size: 96px;
+  block-size: 96px;
+  border-radius: 50%;
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+}
+
+/* The CloudSlash is 48 px in the 96 px circle. */
+.load-state__art svg {
+  inline-size: 48px;
+  block-size: 48px;
+}
+
+.load-state__title {
+  margin: 0;
+  font-size: var(--text-title-2-size);
+  line-height: var(--text-title-2-line);
+  font-weight: var(--text-title-2-weight);
+  color: var(--color-text);
+  max-inline-size: 32ch;
+}
+
+.load-state__text {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  max-inline-size: 40ch;
+}
+
+.load-state__wait {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+}
+
+/* In a tile slot (Today, a detail aside): the same content, tile-shaped. */
+.load-state[data-in='tile'] {
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-outline);
+}

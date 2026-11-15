@@ -1,6 +1,8 @@
 // The Shopping List query with live updates and an offline snapshot (functional spec §9, §10.3). React hook.
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { connectEvents } from '../../../lib/sse'
 import { ApiError } from '../../../lib/http'
 import { appSnapshots } from '../../scan/lib/idbStore'
@@ -36,6 +38,8 @@ export interface UseShoppingListResult {
    * ready = loaded with entries.
    */
   status: 'loading' | 'error' | 'offline' | 'empty' | 'ready'
+  /** B9-20 (RES-02): the shared screen state; offline with no list and no saved copy is offlineUnknown, never an error. */
+  state: ScreenState
   /** refetch now (the ErrorState's "Try again") */
   retry: () => void
 }
@@ -100,7 +104,12 @@ export function useShoppingList(options: UseShoppingListOptions): UseShoppingLis
 
   const data = query.data?.list
   const stale = query.data?.stale ?? false
+  const state = useScreenState(
+    { data, isError: query.isError, fetchStatus: query.fetchStatus },
+    { isEmpty: data !== undefined && data.lines.length === 0 && data.extras.length === 0, hasFilter: false },
+  )
   return {
+    state,
     data,
     isLoading: query.isLoading,
     error: query.error,

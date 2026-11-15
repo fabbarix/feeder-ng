@@ -5,6 +5,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { Button, ListPage, Muted, PageHeader, Sortable, TextField, type SortableRenderContext } from '../../../ui'
 import { CourseRemoveDialog } from '../components/CourseRemoveDialog'
 import { CourseRow } from '../components/CourseRow'
+import { SettingsLoadGate } from '../components/SettingsLoadGate'
 import { coursesStrings as s } from '../coursesStrings'
 import { useCoursesPage } from '../hooks/useCoursesPage'
 import { documentLocale } from '../lib/locale'
@@ -33,10 +34,10 @@ export function CoursesPage(): ReactElement {
     <ListPage header={<PageHeader title={s.title} breadcrumbs={breadcrumbs} />}>
       <Muted>{s.intro}</Muted>
       {!isAdmin && !courses.isPending && !courses.isError ? <Muted>{s.readOnly}</Muted> : null}
-      {courses.isPending ? (
+      {courses.state === 'offlineUnknown' || courses.state === 'failed' ? (
+        <SettingsLoadGate state={courses.state} onRetry={courses.refetch} errorMessage={s.loadFailed} />
+      ) : courses.isPending ? (
         <p role="status">{s.loading}</p>
-      ) : courses.isError ? (
-        <p role="alert">{s.loadFailed}</p>
       ) : (
         <>
           <Sortable<Course>

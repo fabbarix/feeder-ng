@@ -1,4 +1,5 @@
 // Delete / Archive of a Course: what the dialog says and sends. Plain TypeScript, no React.
+import { actionFailed, failureLine } from '../../../lib/errorCopy'
 import { ApiError } from '../../../lib/http'
 import type { CourseChoice, CourseImpact, ImpactMeal, ImpactRule } from '../../../lib/courses'
 import { coursesStrings } from '../coursesStrings'
@@ -94,12 +95,16 @@ export function isPlannedRefusal(err: unknown): boolean {
   return err instanceof ApiError && err.code === 'course_planned'
 }
 
-/** The sentence for a refused Delete or Archive (`course_main`, `course_last`, `validation_failed` on `replacement`); else the generic one. */
-export function removalErrorMessage(err: unknown): string {
+/**
+ * The sentence for a refused Delete or Archive (`course_main`, `course_last`, `validation_failed` on `replacement`); else
+ * one that names what failed and what to do (B9-20, RES-06): "Couldn’t delete Starter. Try again."
+ */
+export function removalErrorMessage(err: unknown, mode: RemovalMode, name: string): string {
   if (err instanceof ApiError) {
     if (err.code === 'course_main') return s.courseMain
     if (err.code === 'course_last') return s.courseLast
     if (err.code === 'validation_failed' && err.details.field === 'replacement') return s.replacementInvalid
   }
-  return coursesStrings.actionFailed
+  const phrase = mode === 'delete' ? coursesStrings.failed.delete(name) : coursesStrings.failed.archive(name)
+  return failureLine(actionFailed(phrase, err))
 }

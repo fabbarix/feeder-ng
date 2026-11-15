@@ -24,11 +24,11 @@ export function useAccessRequestsPage() {
   const approving = list.requests.find((r) => r.id === approvingId) ?? null
   const members = useUnlinkedMembers(approving !== null)
 
-  const attempt = async (action: () => Promise<unknown>) => {
+  const attempt = async (phrase: string, action: () => Promise<unknown>) => {
     try {
       await action()
     } catch (err) {
-      toast.show(answerErrorMessage(err), { status: 'error' })
+      toast.show(answerErrorMessage(err, phrase), { status: 'error' })
     }
   }
 
@@ -42,6 +42,7 @@ export function useAccessRequestsPage() {
   }
   const confirmApprove = async (memberId?: number) => {
     if (approvingId === null) return
+    const phrase = accessStrings.failed.approve(approving?.email ?? '')
     setBusy(true)
     setApproveError(undefined)
     try {
@@ -50,13 +51,13 @@ export function useAccessRequestsPage() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         // Somebody linked that Member meanwhile: refresh the picker and let the approver choose again.
-        setApproveError(answerErrorMessage(err))
+        setApproveError(answerErrorMessage(err, phrase))
         void queryClient.invalidateQueries({ queryKey: [...accessKeys.members] })
       } else if (err instanceof ApiError && err.status === 404) {
         closeApprove()
-        toast.show(answerErrorMessage(err), { status: 'error' })
+        toast.show(answerErrorMessage(err, phrase), { status: 'error' })
       } else {
-        setApproveError(answerErrorMessage(err))
+        setApproveError(answerErrorMessage(err, phrase))
       }
     } finally {
       setBusy(false)
@@ -70,7 +71,7 @@ export function useAccessRequestsPage() {
       confirmLabel: accessStrings.deny,
       tone: 'danger',
     })
-    if (yes) await attempt(() => list.deny(id))
+    if (yes) await attempt(accessStrings.failed.deny(target?.email ?? ''), () => list.deny(id))
   }
 
   return {

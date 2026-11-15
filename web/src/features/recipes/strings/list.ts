@@ -47,8 +47,18 @@ export const recipeListStrings = {
   tagsLabel: 'Tags',
   moreTags: (n: number) => (n === 1 ? '1 more Tag' : `${n} more Tags`),
   showArchived: 'Show archived',
-  empty: 'No Recipes yet. Add your first one.',
-  noMatch: 'No Recipe matches.',
+  /** B9-20 (RES-02): the empty state, with New Recipe and Import Recipes. */
+  empty: 'No Recipes yet',
+  emptyText: 'Add your first one, or import a Recipe File.',
+  importRecipes: 'Import Recipes',
+  /** B9-20 (RES-02): the filtered-empty state, with Show all Recipes (clears the search and the filters). */
+  noMatchFor: (query: string) => `No Recipe matches “${query}”.`,
+  noMatchFilters: 'No Recipe matches these filters.',
+  noMatchText: 'Try another word, or show all Recipes.',
+  showAll: 'Show all Recipes',
+  /** B9-20 (RES-02): offline, and the Recipes were never loaded on this phone. */
+  offlineUnknownTitle: 'Your Recipes aren’t on this phone yet',
+  offlineUnknownText: 'Feeder loads them the first time this phone is online. They’ll appear here as soon as the connection is back.',
   listError: 'The Recipes could not be loaded.',
   totalTime: (t: string) => `Total ${t}`,
   noSteps: 'No Steps',
