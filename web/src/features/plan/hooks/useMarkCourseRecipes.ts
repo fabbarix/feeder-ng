@@ -88,7 +88,8 @@ export function useMarkCourseRecipes(course: MarkCourse): MarkCourseRecipes {
       } else {
         toast.show({ status: 'success', title: words.headline, subline: words.subline })
       }
-      await Promise.all([invalidatePlan(client), client.invalidateQueries({ queryKey: ['recipes'] })])
+      // The sheet closes first; the plan and the lists refresh behind it (the ticked Recipes would otherwise vanish under it).
+      void Promise.all([invalidatePlan(client), client.invalidateQueries({ queryKey: ['recipes'] })])
       return true
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
