@@ -56,6 +56,14 @@ html:has(.sticky-action-bar) .shell-timer {
   }
 }
 
+/* Below 48em a non-modal sheet (the Scan Price keypad) is fixed at the bottom over the page and the bottom bar: the pill would float
+   over its keys and Save (w4a review). It steps aside while that sheet is open; the finish banner still shows. */
+@media (width < 48em) {
+  :root:has(.sheet[data-modal='false'][open]) .shell-timer {
+    display: none;
+  }
+}
+
 /* From 64em: in the top bar (64 px below the top inset), centred in it as the mock's 1440 render draws it (main-session call,
    w4a), 6 px above and below the pill; at 1024 its 24rem cap keeps it clear of the brand and Your menu. No drop shadow: it sits
    on the bar. Toasts no longer need to make room for it. */

@@ -72,6 +72,10 @@ describe('.shell-timer (the pill\'s place)', () => {
     expect(d['margin-inline']).toBe('auto')
   })
 
+  it('below 48em it steps aside while a non-modal sheet (the Price keypad, fixed at the bottom there) is open', () => {
+    expect(at(":root:has(.sheet[data-modal='false'][open]) .shell-timer", ['@media (width < 48em)'])['display']).toBe('none')
+  })
+
   it('the width queries are table widths in em (the breakpoint guard): 64em, nothing in px', () => {
     for (const b of blocks) for (const a of b.atrules) expect(a, a).not.toMatch(/\d+px\)/)
   })
