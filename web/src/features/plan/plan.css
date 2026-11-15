@@ -2,8 +2,8 @@
    the notices. Layout here; every colour, size and gap comes from a theme token. */
 .plan {
   display: grid;
+  /* B9-19: no top padding of its own, so the PageHeader sits at the same height as on every other page. */
   gap: var(--section-gap);
-  padding-top: var(--space-4);
 }
 .plan__note,
 .plan__muted {
