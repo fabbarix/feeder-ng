@@ -118,7 +118,8 @@ export default {
         throw new Error('setup: not inspected: no Share and More buttons (the share sheet stub did not reach the app)')
       }
       await press(`document.querySelector('.allowlist__list [aria-label^="More for"]')`, 'the More button')
-      await until(`!!document.querySelector('[role=menu], [role=dialog]') && [...document.querySelectorAll('[role=menuitem], [role=dialog] button')].some((e) => e.textContent.trim() === 'Copy sign-in message')`, 'the More menu with "Copy sign-in message"')
+      // From 768 px a popover of menuitems; below it the Menu-as-sheet, whose rows are ListRow targets named by aria-label.
+      await until(`!!document.querySelector('[role=menu], [role=dialog], dialog[open]') && [...document.querySelectorAll('[role=menuitem], [role=dialog] button, dialog[open] button')].some((e) => (e.getAttribute('aria-label') || e.textContent).trim() === 'Copy sign-in message')`, 'the More menu with "Copy sign-in message"')
       await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`)
     },
     async accessRequestsRows() {
