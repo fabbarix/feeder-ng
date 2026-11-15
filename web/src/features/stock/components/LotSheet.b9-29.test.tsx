@@ -48,6 +48,13 @@ describe('LotSheet: Move is revealed, not always shown', () => {
     expect(open).toHaveAttribute('aria-expanded', 'false')
     expect(within(dialog).queryByRole('heading', { name: 'Move to' })).toBeNull()
   })
+  it('the Move form opens right under Move…, and Delete comes after it, last in the sheet', async () => {
+    const { dialog } = setup()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Move…' }))
+    const heading = within(dialog).getByRole('heading', { name: 'Move to' })
+    const del = within(dialog).getByRole('button', { name: 'Delete' })
+    expect(heading.compareDocumentPosition(del) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
   it('Move is never disabled; with no place chosen it says what to do and moves nothing', async () => {
     const { dialog, onMove } = setup()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Move…' }))

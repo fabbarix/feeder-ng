@@ -81,6 +81,14 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
   const options = places.filter((p) => p.id !== lot.storagePlaceId).map((p) => ({ value: p.id, label: p.name, meta: strings.kinds[p.kind] }))
   // SAFE-11: Move is offered only when there is somewhere to move to, and its form shows once Move… is pressed.
   const canMove = options.length > 0
+  const deleteButton = onDelete ? (
+    <Button variant="danger-secondary" onClick={() => void askDelete()}>
+      {strings.delete}
+    </Button>
+  ) : null
+  // A form under the action row (Move… open, or a Supply's Used up) puts Delete after it, last in the sheet: a disclosure's form
+  // opens right under its button, never below the destructive row.
+  const deleteLast = (canMove && moving) || (supply && Boolean(onUsedUp))
   return (
     <Stack>
       <p className="lot-sheet__facts">
@@ -96,13 +104,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
       {!canMove && places.length === 0 ? <Muted>{strings.noPlacesHint}</Muted> : null}
       {onEdit || onDelete || canMove ? (
         <FormActions
-          destructive={
-            onDelete ? (
-              <Button variant="danger-secondary" onClick={() => void askDelete()}>
-                {strings.delete}
-              </Button>
-            ) : undefined
-          }
+          destructive={deleteButton && !deleteLast ? deleteButton : undefined}
           secondary={
             canMove ? (
               <Button variant="secondary" aria-expanded={moving} aria-controls={moving ? moveId : undefined} onClick={() => setMoving((m) => !m)}>
@@ -153,6 +155,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
           </form>
         </>
       ) : null}
+      {deleteButton && deleteLast ? <div className="lot-sheet__delete">{deleteButton}</div> : null}
     </Stack>
   )
 }
