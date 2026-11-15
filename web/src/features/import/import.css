@@ -647,7 +647,10 @@
 
 .import-review .list-row:has(.import-row__title:focus-visible),
 .import-review .list-row:has(> .list-row__text .import-row__title:focus) {
-  box-shadow: inset 0 0 0 var(--focus-ring-width) var(--focus-ring-color);
+  /* The one ring (A11Y-02), drawn inside the row with rounded corners as ListRow draws its own target's ring. */
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
+  border-radius: var(--radius-thumb);
 }
 
 .import-review .tile[data-question]:focus {
@@ -779,6 +782,8 @@
   background: var(--color-soft);
   color: var(--color-text);
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
   font-variant-numeric: tabular-nums;
 }
 
