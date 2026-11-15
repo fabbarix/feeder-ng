@@ -291,7 +291,8 @@ const probeSource = (name) => PROBES.find((p) => p.name === name).source
 const layoutProbe = PROBES.find((p) => p.key === null).source
 const cutSelectProbe = probeSource('cut-selects')
 // The scenario setups are scripts/lib/page-layout/scenarios/*.mjs (SETUPS); they reach this tab through helpers.mjs.
-const helpers = installHelpers({ evaluate, sleep, ids })
+// B9-54: the setups may send CDP calls to the current tab (h.cdp: Chrome's network emulation, to take the page offline)
+const helpers = installHelpers({ evaluate, sleep, ids, cdp })
 /** Puts the current tab in a viewport (device metrics, and the safe-area insets of an inset viewport: viewport.mjs). */
 const emulate = async (vp, extra = []) => {
   // B9-03: then a scenario's own CDP calls (scenario.emulate: a text size, say), before the first navigation.

@@ -5,11 +5,14 @@
 let bag = null
 /** The ids file of the seed (live binding: set by installHelpers). */
 export let ids = {}
-/** Called once by the driver: evaluate(expression) runs page code in the current tab; sleep(ms); ids is the seed's ids file. */
+/**
+ * Called once by the driver: evaluate(expression) runs page code in the current tab; sleep(ms); ids is the seed's ids file; B9-54: cdp(method,
+ * params) sends a Chrome DevTools Protocol call to the current tab (h.cdp; absent when the driver has none).
+ */
 export function installHelpers(page) {
   bag = page
   ids = page.ids
-  Object.assign(h, { ids })
+  Object.assign(h, { ids, cdp: page.cdp })
   return h
 }
 /** Runs page code in the current tab (the driver's evaluate). */
