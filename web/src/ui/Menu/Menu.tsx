@@ -116,7 +116,9 @@ function Popover({
     const below = t.bottom + GAP
     const fits = below + m.height <= window.innerHeight - GAP
     const top = fits ? below : Math.max(GAP, t.top - GAP - m.height)
-    const left = Math.min(Math.max(GAP, t.right - m.width), Math.max(GAP, window.innerWidth - m.width - GAP))
+    // End-aligned with the trigger; a trigger near the start edge (the ⋮ first in a FormActions row) gets it start-aligned instead.
+    const endAligned = t.right - m.width
+    const left = Math.min(endAligned >= GAP ? endAligned : Math.max(GAP, t.left), Math.max(GAP, window.innerWidth - m.width - GAP))
     setPlaced({ top, left, placement: fits ? 'below' : 'above' })
   }, [triggerRef])
 

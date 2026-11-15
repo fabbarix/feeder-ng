@@ -12,10 +12,18 @@
   min-inline-size: 0;
 }
 
-/* The ⋮ "More for <label>": the 44 px outlined icon button; it never grows or shrinks. */
+/* The ⋮ "More for <label>": the outlined icon button, as tall as the row's buttons (44 px square); it never grows or shrinks. */
 .form-actions__more {
   display: flex;
   flex: none;
+}
+
+.form-actions__more .icon-button {
+  inline-size: 44px;
+  block-size: 44px;
+  /* R-A: it reads as one of the row's outlined buttons (the IconButton's own 1 px boundary): the same surface fill and corner. */
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
 }
 
 /* Phone: each button starts from its natural width and the row shares what is left, so a label wraps (inside its button) only
