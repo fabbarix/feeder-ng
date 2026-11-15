@@ -159,6 +159,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     ))}
                   </div>
                 ) : null}
+                <div className="step-card__extras">
                 <ul className="step-card__more">
                   {s.uses.map((u, j) => (
                     <UseChip
@@ -185,6 +186,14 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     )}
                   </li>
                 </ul>
+                {showsPhoto ? (
+                  <StepPhoto
+                    imageId={s.image}
+                    onChange={(id) => onChange(setStepImage(steps, i, id))}
+                    onBusyChange={onPhotoBusyChange ? (busy) => onPhotoBusyChange(s.key, busy) : undefined}
+                  />
+                ) : null}
+                </div>
                 {s.uses.map((u, j) =>
                   isOpen(u, j) ? (
                     <UseRow
@@ -199,13 +208,6 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     />
                   ) : null,
                 )}
-                {showsPhoto ? (
-                  <StepPhoto
-                    imageId={s.image}
-                    onChange={(id) => onChange(setStepImage(steps, i, id))}
-                    onBusyChange={onPhotoBusyChange ? (busy) => onPhotoBusyChange(s.key, busy) : undefined}
-                  />
-                ) : null}
                 {errorsFor(i).map((code) => (
                   <p key={code} className="step-card__error">
                     {codeMessage(code)}
