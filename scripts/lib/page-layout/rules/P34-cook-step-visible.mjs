@@ -2,7 +2,7 @@
 // probes/cook-step.mjs on the cook-step-landscape and cook-step-portrait scenarios:
 //   cookStep: null | { innerWidth, innerHeight, text: Box | null, tiles: Box[] }   Box = { x, y, r, b } in px
 // `text` is the FIRST LINE of .cook-step__text (its first client rect). At least 80 % of that line's area must be inside the viewport
-// and outside every Back/Next tile (overlapping tiles count once; the gap of up to 24 px between two tiles of one row is the nav band's). One finding per page; no metrics or no text box: nothing to judge.
+// and outside every box of the sticky nav (the probe's `tiles`: the band, Back and Next, the strip, the held line; overlapping boxes count once; the gap of up to 24 px between two tiles of one row is the nav band's). One finding per page; no metrics or no text box: nothing to judge.
 // Pure, so vitest tests it (web/src/app/pageLayoutRules.b9-40.test.ts).
 const f = (text) => ({ rule: 'P34', message: `P34 ${text}` })
 /** The share of the first line that must be visible. */
