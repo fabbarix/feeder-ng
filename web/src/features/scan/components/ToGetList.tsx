@@ -28,7 +28,7 @@ export function ToGetList({ rows, pendingKeys, onTick, celebration }: ToGetListP
   }
   return (
     <ListGroup label={scanStrings.toGetLabel}>
-      {rows.map(({ entry, cover }) => {
+      {rows.map(({ entry, cover, byHand }) => {
         const busy = pendingKeys.has(entry.key)
         const value = rowValue(entry)
         return (
@@ -39,7 +39,7 @@ export function ToGetList({ rows, pendingKeys, onTick, celebration }: ToGetListP
             busy={busy}
             onActivate={() => onTick(entry)}
             leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={48} />}
-            meta={<CoverMeta size={entry.packLine} cover={busy ? { ...cover, done: true } : cover} />}
+            meta={<CoverMeta size={entry.packLine} cover={busy ? { ...cover, done: true } : cover} byHand={byHand} />}
             value={value.value}
             subValue={value.subValue}
           />

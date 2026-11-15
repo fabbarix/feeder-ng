@@ -25,6 +25,8 @@ export const scanStrings = {
   unknownAtHome: 'Unknown barcode: add it by scanning in a Shop',
   waitingToSync: 'Waiting to sync',
   inStock: (name: string, text: string) => `${name}: ${text} in Stock`,
+  /** B9-41 (SAFE-09): the Stock-take Set total toast */
+  setTo: (name: string, text: string) => `${name} set to ${text}`,
   unreadable: "Couldn't read that, try again",
   undo: 'Undo',
   mute: 'Mute beep',
@@ -126,6 +128,8 @@ export const scanStrings = {
   plusPack: '+1 pack',
   minusPack: '−1 pack',
   setTotal: 'Set total',
+  /** B9-41 (SAFE-09): what the Undo of a Set total names: "Undo set total of Passata" */
+  setTotalUndo: 'set total',
   newTotal: 'New total',
   enterAmount: 'Enter an amount',
   amountNegative: 'The amount cannot be negative',
@@ -139,6 +143,8 @@ export const scanStrings = {
   viewLabel: 'List view',
   scannedListLabel: 'Scanned list',
   toGetLabel: 'To get',
+  /** B9-41 (SSP-11): the second line of a free-text extra in To get */
+  addedByHand: 'Added by hand',
   /** Beta.8: ticking a To get row by hand (the row's accessible name and the failure); B9-34: the toast and Undo are the Shop's. */
   tickLine: (line: string) => `Tick ${line}`,
   tickFailed: (line: string) => `Couldn't tick ${line}. Try again.`,

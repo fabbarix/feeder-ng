@@ -75,13 +75,15 @@ if (!login.ok) {
 const ctx = await seedAll({ api, step, ean13 })
 const { members, ing, shops, recipeId, ingredientId, productId, shopId, toConfirm, sideCourse, longTagRecipe, LONG_TAG, placeIds, longPlaceId } = ctx
 const { supplyId, scanBarcodes, unknownBarcode, assistant } = ctx
+// B9-41: the scan-weighed scenario's Weight Barcode Rule and its code (page-layout-seed/b9-41.mjs).
+const b941 = { weightRuleId: ctx.weightRuleId ?? null, weighedBarcode: ctx.weighedBarcode ?? null }
 
 mkdirSync(dirname(out), { recursive: true })
 // hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.
 const sideCourseId = sideCourse?.id ?? null
 // beta.7: the Supply page, the Scan session's Shop and codes, and whether the assistant is on (the guard's beta.7 scenarios).
 const beta7 = { supplyId, shopName: shops[0]?.name ?? null, scanBarcodes, unknownBarcode, assistant }
-writeFileSync(out, JSON.stringify({ ...beta7, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, longPlaceId }, null, 2) + '\n')
+writeFileSync(out, JSON.stringify({ ...beta7, ...b941, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, longPlaceId }, null, 2) + '\n')
 if (longTagRecipe === null || sideCourseId === null) {
   console.error(`page-layout-seed: the Side Recipe tagged "${LONG_TAG}" was not created; the filtered /recipes scenarios would show no Recipe`)
   process.exit(1)

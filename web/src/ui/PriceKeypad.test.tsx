@@ -525,12 +525,13 @@ describe('PriceKeypad: compact, for a half-height sheet', () => {
     expect(display()).toBeInTheDocument()
   })
 
-  it('puts what the Price implies and the Last-time chip on one line; the default keypad keeps them as rows', () => {
+  // B9-41 (SSP-07): the compact notes stack, one under the other (PriceKeypad.weighed.css.test.ts pins the stack); they were one wrapping line.
+  it('stacks what the Price implies and the Last-time chip in a compact keypad; the default keypad keeps them as rows', () => {
     const css = readUiCss('PriceKeypad.css')
     expect(declarations(css, '.price-keypad__notes')['display']).toBe('contents')
     const compact = declarations(css, ".price-keypad[data-compact='true'] .price-keypad__notes")
-    expect(compact['display']).toBe('flex')
-    expect(compact['flex-wrap']).toBe('wrap')
+    expect(compact['display']).toBe('grid')
+    expect(compact['flex-wrap']).toBeUndefined()
   })
 
   it('keeps the keys at least 44 px high: compact changes only the spacing', () => {
