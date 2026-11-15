@@ -67,6 +67,11 @@ describe('ImportResult', () => {
     })
     expect(screen.getByText('Now a Base recipe')).toBeInTheDocument()
     expect(screen.getByText('Kept as Soup (2)')).toBeInTheDocument()
+    // the key is the file's name (as in the review); the new name is said once, in the state, and the links go to the new Recipe
+    const soup = screen.getByRole('link', { name: /^Soup/ })
+    expect(soup).toHaveAttribute('href', '/recipes/14')
+    expect(soup.closest('li')!.querySelector('.list-row__title')).toHaveTextContent(/^Soup$/)
+    expect(screen.getByRole('link', { name: 'Edit Soup (2)' })).toHaveAttribute('href', '/recipes/14/edit')
   })
   it('lists what else was added as rows: Ingredients created and Unit Conversions added, with names', () => {
     show()

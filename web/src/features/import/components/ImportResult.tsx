@@ -37,12 +37,15 @@ export function ImportResult({ result, plan, onImportMore }: ImportResultProps):
       <ListGroup label={t.importedList}>
         {result.recipes.map((r) => {
           const status = plan.recipes.find((x) => x.index === r.index)
+          // A kept-both Recipe keeps the file's name as its key; its state says the name it was saved under ("Kept as Soup (2)"), as
+          // in the review. Repeating the new name in both made the row three lines tall at 390.
+          const title = status?.action === 'keep_both' ? status.name : r.name
           return (
             <ListRow
               key={r.id}
-              title={r.name}
+              title={title}
               href={`/recipes/${r.id}`}
-              leading={<RecipeThumb name={r.name} size={40} />}
+              leading={<RecipeThumb name={title} size={40} />}
               meta={status ? resultRowMeta(status) : undefined}
               wrapTitle
               value={resultRowState(r, status)}
