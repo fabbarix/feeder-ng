@@ -414,7 +414,51 @@ type Plan struct {
 //     Recipes with decision skip are not checked.
 //   - Warnings carry the image warnings in images.Warnings.
 func BuildPlan(f File, ex Existing, d Decisions, images ImageSet) Plan {
-	return newReview(f, ex, d, images).plan()
+	p := newReview(f, ex, d, images).plan()
+	for i := range p.Recipes {
+		if idx := p.Recipes[i].Index; idx >= 0 && idx < len(f.Recipes) {
+			p.Recipes[i].Preview = previewOf(f.Recipes[idx])
+		}
+	}
+	return p
+}
+
+// previewOf is the read-only view of one Recipe of the file (B9-28, RX-01): its lists are never nil, minutes absent read 0.
+func previewOf(r Recipe) RecipePreview {
+	pv := RecipePreview{
+		Yield:       r.Yield,
+		YieldUnit:   r.YieldUnit,
+		ReadyMeal:   r.ReadyMeal,
+		BaseRecipe:  r.BaseRecipe != nil && *r.BaseRecipe,
+		Courses:     append([]string{}, r.Courses...),
+		Tags:        append([]string{}, r.Tags...),
+		Description: r.Description,
+		Lines:       make([]PreviewLine, 0, len(r.Ingredients)),
+		Steps:       make([]PreviewStep, 0, len(r.Steps)),
+		HasImage:    r.Image != "",
+	}
+	if r.Source != nil && (r.Source.URL != "" || r.Source.Attribution != "") {
+		src := *r.Source
+		pv.Source = &src
+	}
+	for _, l := range r.Ingredients {
+		pl := PreviewLine{Quantity: l.Quantity, Unit: l.Unit, Ingredient: l.Ingredient, Note: l.Note, Optional: l.Optional}
+		if l.Recipe != nil {
+			pl.Recipe = l.Recipe.Name
+		}
+		pv.Lines = append(pv.Lines, pl)
+	}
+	for _, s := range r.Steps {
+		ps := PreviewStep{Text: s.Text, Kind: s.Kind}
+		if s.DurationMinutes != nil {
+			ps.DurationMinutes = *s.DurationMinutes
+		}
+		if s.LeadTimeMinutes != nil {
+			ps.LeadTimeMinutes = *s.LeadTimeMinutes
+		}
+		pv.Steps = append(pv.Steps, ps)
+	}
+	return pv
 }
 
 // NotReadyError is returned by BuildCommit when the Plan still has open answers.
