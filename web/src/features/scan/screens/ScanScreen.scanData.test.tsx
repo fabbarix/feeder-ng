@@ -1,7 +1,7 @@
 // B9-41 (SSP-07, SSP-11, SSP-15; P41): what the Scan screen hands the new-Product sheet for a weighed code and for a weight-style code
 // with no rule, the Price entry of a new weighed Product, To get with manual extras, and the visible titles of the lists. The
 // controller is a fake (scanScreen.testKit.tsx); the sheet is a fake that shows what the screen hands it.
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -100,9 +100,9 @@ describe('ScanScreen: a weight-style code at a Shop with no rule (SSP-15)', () =
     me.isAdmin = true
     open(controllerFake({ flow: hinted() }))
     expect(sheet.props!.weightCodeHint).toMatchObject({ admin: true })
-    sheet.props!.weightCodeHint!.onSetUp()
-    // batch w5a: at its Weight Barcode Rules (the Shop page's section anchor)
-    expect(await screen.findByTestId('where')).toHaveTextContent(/^\/settings\/shops\/2#weight-barcode-rules$/)
+    act(() => sheet.props!.weightCodeHint!.onSetUp())
+    // batch w5a: at its Weight Barcode Rules (the Shop page's section anchor); the router re-renders after the navigation
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/settings\/shops\/2#weight-barcode-rules$/))
   })
 
   it('a User gets the hint without the way in', () => {
