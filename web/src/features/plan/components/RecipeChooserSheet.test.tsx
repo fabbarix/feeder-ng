@@ -33,7 +33,8 @@ describe('RecipeChooserSheet', () => {
   it('a search field narrows the list (no native search input styling)', async () => {
     setup()
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search Recipes' }), 'ra')
-    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ratatouille'])
+    // B9-38: the neutral monogram shows the initial, so the row's title is read on its own
+    expect(screen.getAllByRole('listitem').map((li) => li.querySelector('.list-row__title')?.textContent)).toEqual(['Ratatouille'])
   })
 
   it('says so with no Recipes, and while loading', () => {

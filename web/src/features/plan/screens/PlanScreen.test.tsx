@@ -234,7 +234,7 @@ describe('PlanScreen: Swap', () => {
     const api = mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives, 'PUT /api/plan/2026-11-10/3/1': meal({ recipeId: 21, pinned: true }) })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
-    const dialog = await screen.findByRole('dialog', { name: / Swap Chicken/ })
+    const dialog = await screen.findByRole('dialog', { name: / Swap Stew$/ })
     expect(await within(dialog).findByRole('button', { name: 'Pizza' })).toBeInTheDocument()
     expect(within(dialog).getByRole('list', { name: 'Instead' }).querySelectorAll('li')).toHaveLength(3)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Pizza' }))
@@ -275,7 +275,7 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: /^Choose a Recipe for / }))
-    const dialog = await screen.findByRole('dialog', { name: 'Choose a Recipe' })
+    const dialog = await screen.findByRole('dialog', { name: / Choose a Recipe$/ }) // B9-38: under the context line
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Risotto' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-11/4/1')[0]?.body).toEqual({ recipeId: 32 }))
   })

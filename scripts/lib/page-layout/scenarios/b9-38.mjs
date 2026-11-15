@@ -8,7 +8,8 @@
 //   plan-sheet-swap        /plan, 375, 390 and 1440: Swap from the footer's ⋮: context line, "Now" and "Instead", "Keep it", no Close. P25, P33.
 //   plan-sheet-choose      /plan, 375, 390 and 1440: Choose a Recipe from the footer's ⋮: context line, a search field, one Close. P25, P33.
 //   plan-sheet-choose-ring /plan, 390 and 1440: the same sheet; every control's focus ring is whole and clear of the header (P39; R-C).
-//   plan-sheet-whos-eating /plan, 390 and 844x390: Who's eating from a slot's ⋮: context line, Save for this date in the footer. P25, P29, P33.
+//   plan-sheet-whos-eating /plan, 390 and 844x390: Who's eating from a slot's ⋮: context line, Save (named "Save for this date", user decision)
+//                          in the footer. P25, P29, P33.
 // The sheet probes list these names (probes/sheet-targets.mjs, sheet-body.mjs) and the focus-rings probe lists plan-sheet-choose-ring.
 import { evaluate, press, until } from '../helpers.mjs'
 
@@ -145,7 +146,7 @@ export default {
           if (has) {
             await press(named('document', "Who's eating"), "Who's eating in the slot ⋮")
             await until(`!!(${DIALOG}?.querySelector('.sheet__title')?.textContent.trim() === "Who's eating") && !!${DIALOG}.querySelector('.sheet__footer button')`, "the Who's eating sheet", 8000)
-            const why = await evaluate(`(() => { const d = ${DIALOG}; const c = d.querySelector('.sheet__context')?.textContent.trim() ?? ''; if (!/^[A-Z][a-z]{2} \\d{1,2} [A-Z][a-z]{2} · /.test(c)) return 'the context line is "' + c + '", not "Thu 12 Nov · Dinner"'; const f = [...d.querySelectorAll('.sheet__footer button')].map((b) => b.textContent.trim()); if (!f.includes('Save for this date')) return 'Save for this date is not in the footer: ' + f.join(' | '); return '' })()`)
+            const why = await evaluate(`(() => { const d = ${DIALOG}; const c = d.querySelector('.sheet__context')?.textContent.trim() ?? ''; if (!/^[A-Z][a-z]{2} \\d{1,2} [A-Z][a-z]{2} · /.test(c)) return 'the context line is "' + c + '", not "Thu 12 Nov · Dinner"'; const f = [...d.querySelectorAll('.sheet__footer button')].map((b) => b.getAttribute('aria-label') || b.textContent.trim()); if (!f.includes('Save for this date')) return 'Save for this date is not in the footer: ' + f.join(' | '); return '' })()`)
             if (why) throw new Error(`setup: ${why}`)
             return
           }

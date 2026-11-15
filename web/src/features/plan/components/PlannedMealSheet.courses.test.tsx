@@ -52,7 +52,7 @@ describe('PlannedMealSheet for a Course', () => {
 
   it('shows the Course\'s portions, not the slot\'s or the main Course\'s', () => {
     const h = setup(two(), 2)
-    expect(h.dialog.getByText(/2 portions/)).toBeInTheDocument()
+    expect(h.dialog.getByText(/· 2 portions/)).toBeInTheDocument() // B9-38: the facts line ("Open Recipe" also says the portions)
     expect(h.dialog.queryByText(/4 portions/)).not.toBeInTheDocument()
   })
 

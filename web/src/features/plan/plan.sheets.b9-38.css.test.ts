@@ -31,7 +31,9 @@ describe('Swap and Choose a Recipe rows (PC-10)', () => {
     const blocks = ruleBlocks(css).filter((b) => b.selectors.some((s) => /\.plan-sheet__rows\b.*\.list-row__below/.test(s)))
     expect(blocks.length, 'a `.plan-sheet__rows … .list-row__below` rule').toBeGreaterThan(0)
     const body = blocks.map((b) => b.body).join(';')
-    expect(body).toMatch(/(padding|margin)-inline-start\s*:[^;]*48px/) // the 48 px thumb
+    // the 48 px thumb: a literal, or (plan.round2's tokens-only guard forbids raw px there) the --plan-thumb custom property set to 48px
+    const viaProperty = /--plan-thumb\s*:\s*48px/.test(css)
+    expect(body).toMatch(viaProperty ? /(padding|margin)-inline-start\s*:[^;]*var\(--plan-thumb\)/ : /(padding|margin)-inline-start\s*:[^;]*48px/)
     expect(body).toMatch(/var\(--space-\d\)/) // and its gap
   })
 

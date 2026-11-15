@@ -1,7 +1,8 @@
 // B9-38 (SHORT-02, PC-10, PLAN-13): Who's eating opened from Plan and Today. The title is "Who's eating" under the context line
-// "Thu 12 Nov · Dinner"; the sheet's commit is in its footer, always in reach: "Reset to usual" (outlined; named "Reset to usual
-// Attendance"; disabled with no date override) and "Save for this date" (primary). The sheet keeps its one round Close (no Cancel).
-import { render, screen, within } from '@testing-library/react'
+// "Thu 12 Nov · Dinner"; the sheet's commit is in its footer, always in reach: "Reset" (outlined; named "Reset to usual Attendance";
+// disabled with no date override) and "Save" (primary; named "Save for this date"), one row at every size (user decision, which
+// replaces the visible "Reset to usual" first pinned here). The body says once what Reset does. One round Close (no Cancel).
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { DateAttendance } from '../types'
@@ -34,11 +35,12 @@ describe("Who's eating: the header", () => {
 })
 
 describe("Who's eating: the footer", () => {
-  it('holds Reset to usual (outlined) then Save for this date (primary) in one row; the body has neither', () => {
+  it('holds Reset (outlined) then Save (primary) in one row; the body has neither, and says once what Reset does', () => {
     const { footer, body } = setup()
     expect(footer.querySelectorAll('.form-actions')).toHaveLength(1)
     const buttons = [...footer.querySelectorAll('button')]
-    expect(buttons.map((b) => b.textContent?.trim())).toEqual(['Reset to usual', 'Save for this date'])
+    expect(buttons.map((b) => b.textContent?.trim())).toEqual(['Reset', 'Save'])
+    expect(within(body).getAllByText(/Reset goes back to the usual Attendance\./)).toHaveLength(1)
     expect(within(footer).getByRole('button', { name: 'Reset to usual Attendance' })).toHaveAttribute('data-variant', 'secondary')
     expect(within(footer).getByRole('button', { name: 'Save for this date' })).toHaveAttribute('data-variant', 'primary')
     expect(within(body).queryByRole('button', { name: 'Save for this date' })).toBeNull()
@@ -48,7 +50,7 @@ describe("Who's eating: the footer", () => {
   it('Reset to usual is disabled with no date override and enabled with one', async () => {
     const first = setup()
     expect(within(first.footer).getByRole('button', { name: 'Reset to usual Attendance' })).toBeDisabled()
-    document.body.innerHTML = ''
+    cleanup() // unmount the first sheet (clearing document.body under a mounted portal breaks React's own cleanup)
     const second = setup({ attendance: { ...usual, isOverride: true } })
     const reset = within(second.footer).getByRole('button', { name: 'Reset to usual Attendance' })
     expect(reset).toBeEnabled()
