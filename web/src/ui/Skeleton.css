@@ -79,6 +79,10 @@
   inline-size: 60%;
 }
 
+.skeleton-tile > .skeleton[data-variant='title'] {
+  inline-size: 55%;
+}
+
 .skeleton-tile > .skeleton[data-variant='meta'] {
   inline-size: 7em;
 }

@@ -1,7 +1,7 @@
 import { QueryClientContext } from '@tanstack/react-query'
 import { Component, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { isRouteErrorResponse, useLocation, useNavigate, useRouteError } from 'react-router-dom'
-import { Button, EmptyState } from '../ui'
+import { Button, Cluster, EmptyState } from '../ui'
 import { overlayStrings } from '../ui/overlayStrings'
 import { NotFound } from './NotFound'
 import { routeQueryKeys } from './routeQueryKeys'
@@ -51,7 +51,7 @@ function ErrorPage({ onReset }: { onReset: () => void }) {
         title={shellStrings.errorTitle}
         description={shellStrings.errorText}
         action={
-          <>
+          <Cluster>
             <Button variant="primary" onClick={tryAgain}>
               {overlayStrings.tryAgain}
             </Button>
@@ -64,7 +64,7 @@ function ErrorPage({ onReset }: { onReset: () => void }) {
                 {shellStrings.goToToday}
               </Button>
             )}
-          </>
+          </Cluster>
         }
       />
     </div>

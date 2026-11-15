@@ -55,22 +55,28 @@ class TileBoundary extends Component<InnerProps, { failed: boolean }> {
     this.setState({ failed: false }, () => this.focusHeadingWhenBack())
   }
 
-  /** Focus the tile's first h2/h3 once it renders, so a screen-reader User learns the tile is back. */
+  /**
+   * Focus the tile's first h2/h3 once it renders, so a screen-reader User learns the tile is back. The tile may render its
+   * heading more than once while its data comes back (a loading shape, then the content): while the focused heading is
+   * replaced and focus has not gone anywhere else, the new heading takes it, until FOCUS_WAIT_MS.
+   */
   private focusHeadingWhenBack() {
     this.stopWatch()
     const box = this.box.current
     if (!box || this.state.failed) return
-    const tryFocus = (): boolean => {
+    let focused: HTMLElement | null = null
+    const tryFocus = () => {
+      const active = document.activeElement
+      if (focused?.isConnected) return
+      if (focused && active && active !== document.body && !box.contains(active)) return this.stopWatch() // the User moved on
       const heading = box.querySelector<HTMLElement>('h2, h3')
-      if (!heading) return false
+      if (!heading) return
       if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
       heading.focus()
-      return true
+      focused = heading
     }
-    if (tryFocus()) return
-    const observer = new MutationObserver(() => {
-      if (tryFocus()) this.stopWatch()
-    })
+    tryFocus()
+    const observer = new MutationObserver(tryFocus)
     observer.observe(box, { childList: true, subtree: true })
     this.watch = { observer, timer: setTimeout(() => this.stopWatch(), FOCUS_WAIT_MS) }
   }
