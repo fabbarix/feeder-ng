@@ -25,9 +25,16 @@ export function CouldntCauseRow({ group, onFix }: CouldntCauseRowProps): ReactNo
         <p className="couldnt-cause__meta">{group.canFix ? group.meta : `${group.meta} ${s.couldntAskAdmin}`}</p>
       </div>
       {group.canFix ? (
-        <Button variant="secondary" size="sm" onClick={onFix}>
-          {group.fix.label}
-        </Button>
+        // The row already names the Course ("7 Desserts"), so "Mark Recipes as Dessert" shows as "Mark Recipes" (the mock); the name keeps the Course.
+        group.fix.kind === 'mark' ? (
+          <Button variant="secondary" size="sm" aria-label={group.fix.label} onClick={onFix}>
+            {s.couldntFix.no_course_recipes}
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={onFix}>
+            {group.fix.label}
+          </Button>
+        )
       ) : null}
     </div>
   )
