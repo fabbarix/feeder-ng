@@ -315,6 +315,43 @@
   gap: var(--space-2);
 }
 
+/* B9-40 review (the short-01 tap-zones mock): on Step 1 the Advance Steps are flat rows inside the info tile, not a list card in the
+   tile. No surface, shadow or icon square; the text is body (500, never a bold sentence) in the tile's info colour; Done ends the
+   row; an info-tinted divider between rows. The chip's sheet keeps the ordinary list card. */
+.cook-advance .list-group {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.cook-advance .list-row {
+  padding-inline: 0;
+  padding-block: var(--space-2);
+  row-gap: var(--space-2);
+  min-block-size: 0;
+}
+
+.cook-advance .list-row + .list-row {
+  border-block-start-color: color-mix(in srgb, var(--color-info-fg) 30%, transparent);
+}
+
+.cook-advance .list-row__lead {
+  display: none;
+}
+
+.cook-advance .list-row__title {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: var(--text-body-weight);
+  color: inherit;
+}
+
+/* Done at the end of its row (the row's trailing action), not on a line of its own: on a 375x667 phone two Advance Steps and the held
+   Next line otherwise push the Step text under the sticky nav (P34). */
+.cook-advance .list-row__actions {
+  flex: none;
+}
+
 .cook-advance__heading,
 .cook-timers__heading {
   display: flex;
