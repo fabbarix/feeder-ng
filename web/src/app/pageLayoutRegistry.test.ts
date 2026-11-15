@@ -113,6 +113,7 @@ const ADDED = {
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
   // B9-25: scenarios/b9-25.mjs (order 340): timer-pill and timer-pill-editor (PC-04). No rule number: the setup measures the pill and throws on a finding.
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
+  // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
   // B9-29: scenarios/b9-29.mjs (order 330): pantry-put-away (SSP-10), meta-fit-pantry and meta-fit-supplies (SSP-05, P23 at 1120), text-spacing-pantry (DS-03, DS-10).
   scenarios: [
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
@@ -125,6 +126,7 @@ const ADDED = {
     'recipe-editor-guard', 'recipe-new-empty-save',
     'timer-pill', 'timer-pill-editor',
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
+    'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
   ],
