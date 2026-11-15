@@ -174,8 +174,8 @@ async function todayAfterSwap() {
     const SWAP = `([...document.querySelectorAll('[role="menuitem"]')].filter((e) => e.textContent.trim() === 'Swap')[0] ?? [...document.querySelectorAll('dialog[open] *')].filter((e) => e.children.length === 0 && e.textContent.trim() === 'Swap').map((e) => e.closest('button, a') ?? e.closest('li')?.querySelector('button, a') ?? e)[0])`
     await until(`!!(${SWAP})`, 'the Swap item of the hero menu (TB-10)')
     await press(SWAP, '"Swap"')
-    await until(`!!document.querySelector('dialog[open] [aria-label="Alternatives"] button')`, 'the Alternatives of the Swap sheet')
-    await press(`document.querySelector('dialog[open] [aria-label="Alternatives"] button')`, 'the first Alternative')
+    await until(`!!document.querySelector('dialog[open] [aria-label="Instead"] button')`, 'the Instead list of the Swap sheet')
+    await press(`document.querySelector('dialog[open] [aria-label="Instead"] button')`, 'the first Alternative')
     await until(`!!${TOAST}`, 'the Swap toast', 5000)
     const finding = await evaluate(`(() => {
       const t = ${TOAST}

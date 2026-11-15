@@ -63,13 +63,13 @@ async function planAfterSwap() {
     })()`)
     if (!opened) break
     // The sheet shows alternatives, or says no other Recipe fits ("Keep it").
-    await until(`!!document.querySelector('dialog[open] [aria-label="Alternatives"] button') || [...document.querySelectorAll('dialog[open] button')].some((b) => b.textContent.trim() === 'Keep it')`, 'the Swap sheet')
+    await until(`!!document.querySelector('dialog[open] [aria-label="Instead"] button') || [...document.querySelectorAll('dialog[open] button')].some((b) => b.textContent.trim() === 'Keep it')`, 'the Swap sheet')
     // Swap to a Recipe the plan has on a later day: that later meal is replanned (B9-11, Cool-down), so there is something to say (PC-01).
     const seen = await evaluate(`(async () => {
       const view = await (await fetch('/api/plan')).json()
       const from = window.__b926SwapDay
       const later = new Set(view.slots.filter((s) => from && s.date > from).flatMap((s) => (s.courses ?? []).map((c) => c.meal?.recipeName).filter(Boolean)))
-      const buttons = [...document.querySelectorAll('dialog[open] [aria-label="Alternatives"] button')]
+      const buttons = [...document.querySelectorAll('dialog[open] [aria-label="Instead"] button')]
       const nameOf = (b) => b.getAttribute('aria-label') ?? b.textContent.trim()
       const hit = buttons.find((b) => [...later].some((n) => nameOf(b).includes(n)))
       const info = { from, alternatives: buttons.map((b) => nameOf(b).slice(0, 40)), later: [...later].map((n) => n.slice(0, 30)) }
