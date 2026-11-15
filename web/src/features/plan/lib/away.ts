@@ -146,9 +146,10 @@ export const awayDayModel = (slots: DaySlot[], aways: Away[]): AwayDayModel => {
   const wholeDay = served.length === 0 ? [] : once.filter((a) => served.every((x) => (x.away ?? []).includes(a.memberId)))
   // A day of several Meal Slots says a whole-day Away once, on its line; a day of one Meal Slot also labels that slot.
   const wholeIds = new Set(served.length > 1 ? wholeDay.map((a) => a.memberId) : [])
-  // The portions a Member's absence leaves, Guests aside; said only when every served Meal Slot of the day has the same.
+  // The portions a Member's absence leaves, Guests aside; said only when every served Meal Slot of the day has the same, and never
+  // "0 portions" (B9-55: on a day everyone is away the lines say only who is away).
   const portions = [...new Set(served.map((x) => Math.round((x.portions - (x.guests ?? 0)) * 100) / 100))]
-  const tail = portions.length === 1 ? ` · ${formatPortions(portions[0]!)}` : ''
+  const tail = portions.length === 1 && portions[0] !== 0 ? ` · ${formatPortions(portions[0]!)}` : ''
   const lines = wholeDay.map((a) => ({ memberId: a.memberId, awayId: a.id, text: `${s.allDay(a.memberName)}${tail}` }))
   const slotLabels: AwayDayModel['slotLabels'] = {}
   for (const x of served) {

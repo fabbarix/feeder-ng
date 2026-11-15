@@ -144,6 +144,10 @@ describe('awayDayModel (the day tile)', () => {
     const m = awayDayModel([ps(21, { notServed: true }), ps(22, { away: [2] }), ps(23, { away: [2] })], [ben])
     expect(m.lines.map((l) => l.text)).toEqual(['Ben away all day · 1.75 portions'])
   })
+  it('a day everyone is away: each Member\'s line says only who is away, never "· 0 portions" (B9-55, w6a note 2)', () => {
+    const m = awayDayModel([ps(21, { away: [2, 3], everyoneAway: true, portions: 0 }), ps(23, { away: [2, 3], everyoneAway: true, portions: 0 })], [ben, chiara])
+    expect(m.lines.map((l) => l.text)).toEqual(['Ben away all day', 'Chiara away all day'])
+  })
   it('a slot where everyone is away says "Everyone is away"', () => {
     const m = awayDayModel([ps(23, { away: [2, 3], everyoneAway: true })], [ben, chiara])
     expect(m.slotLabels[23]).toEqual({ text: 'Everyone is away', everyone: true })

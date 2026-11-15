@@ -369,6 +369,8 @@
     --elev-1: none;
     --elev-2: none;
     --elev-3: none;
+    /* B9-55 (w6a note 3): a dialog or sheet backdrop dims a dark page too; the light scrim barely shows on a near-black ground. */
+    --scrim: rgb(0 0 0 / .66);
   }
 }
 
@@ -445,6 +447,8 @@
   --elev-1: none;
   --elev-2: none;
   --elev-3: none;
+  /* B9-55 (w6a note 3): a dialog or sheet backdrop dims a dark page too; the light scrim barely shows on a near-black ground. */
+  --scrim: rgb(0 0 0 / .66);
 }
 
 * {
