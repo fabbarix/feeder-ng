@@ -73,7 +73,7 @@ describe('Today: a Leftover past its Use-by waits for an answer', () => {
     await screen.findByText(QUESTION)
     expect(screen.queryByRole('button', { name: 'Actions for Chilli' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Actions for Soup' })).toBeInTheDocument()
-    expect(screen.getByText('2 portions · Use by Sat')).toBeInTheDocument()
+    expect(screen.getByText('Use by Sat · 2 portions')).toBeInTheDocument()
   })
 
   it('a frozen Leftover that is to answer asks on Today with its Storage Place; a frozen one that is not stays on the Pantry', async () => {

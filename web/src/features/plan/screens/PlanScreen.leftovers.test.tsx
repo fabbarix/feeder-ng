@@ -38,7 +38,7 @@ describe('PlanScreen: Leftovers', () => {
     setup([soup, asked, frozenChilli({ id: 5 })])
     expect(await screen.findByRole('heading', { name: 'Leftovers to use' })).toBeInTheDocument()
     expect(screen.getByText(QUESTION)).toBeInTheDocument()
-    expect(screen.getByText('2 portions · Use by Sat')).toBeInTheDocument()
+    expect(screen.getByText('Use by Sat · 2 portions')).toBeInTheDocument()
     expect(screen.queryByText('Garage Freezer')).toBeNull() // a frozen Leftover that is not to answer lives on the Pantry
   })
 
@@ -184,7 +184,7 @@ describe('PlanScreen: a Leftover a Planned Meal is served from', () => {
       },
     })
     const section = (await screen.findByRole('heading', { name: 'Leftovers to use' })).closest('section') as HTMLElement
-    expect(within(section).getByText('2 portions · Use by Sat')).toBeInTheDocument()
+    expect(within(section).getByText('Use by Sat · 2 portions')).toBeInTheDocument()
     expect(within(section).getByRole('button', { name: 'Actions for Soup' })).toBeInTheDocument()
   })
 })

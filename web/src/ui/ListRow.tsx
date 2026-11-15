@@ -43,6 +43,18 @@ interface ListRowBase {
    * in place but is disabled, so a second tap does nothing and the row keeps its spot in the tab order.
    */
   busy?: boolean
+  /** A11Y-08: ids of elements that also describe the target (merged before the row's own value, sub-value and meta ids). */
+  'aria-describedby'?: string
+  /** DS-10: 2 lets the meta of a navigation row (with `href`) take two lines, then an ellipsis. Ignored on any other row. */
+  metaLines?: 1 | 2
+  /** SSP-05: the short form of `meta`, shown while the row's text column is under 12 rem; the long `meta` stays the accessible text. */
+  metaCompact?: ReactNode
+  /** SET-03: controls that belong to the row but are not an ActionGroup (a Switch, two IconButtons, Deny/Approve). */
+  actions?: ReactNode
+  /** PC-06: a line under the whole row (title and icon set), e.g. the Plan row's chips. Renders nothing when empty. */
+  below?: ReactNode
+  /** RES-03: the row's Tick or Scan is waiting to sync (clock badge, muted meta) or was refused on sync (danger meta, inset bar). */
+  sync?: 'pending' | 'failed'
 }
 
 /**
@@ -72,8 +84,18 @@ export type ListRowProps = ListRowBase &
   )
 
 export interface ListGroupProps {
-  /** Accessible name of the list. */
-  label: string
+  /** Accessible name of the list (assistive technology only). Required unless `title` is given. */
+  label?: string
+  /** SSP-03: a visible group heading (an `h2`); it names the list. */
+  title?: string
+  /** SSP-03: the number in the count chip after the title. */
+  count?: number
+  /** SSP-03: the count spelled out for assistive technology, e.g. `(n) => `${n} Stock Lots``. */
+  countLabel?: (n: number) => string
+  /** SSP-03: a decorative kind icon before the title. */
+  icon?: IconName
+  /** SSP-03: one action at the end of the heading row (e.g. Put away). */
+  action?: ReactNode
   children: ReactNode
 }
 
