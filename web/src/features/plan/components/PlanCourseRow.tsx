@@ -1,10 +1,13 @@
-import type { ReactNode } from 'react'
-import { Chip, IconButton, ListRow } from '../../../ui'
+import { useContext, type ReactNode } from 'react'
+import { Chip, Icon, IconButton, ListRow } from '../../../ui'
+import { ReplanMarksContext } from '../hooks/useReplanReview'
+import { markKey } from '../lib/replan'
 import type { CourseRowModel } from '../lib/courses'
 import type { RowAction } from '../lib/rowActions'
 import type { RowChip } from '../lib/rowChips'
 import { usePlanCourseRow } from '../hooks/usePlanCourseRow'
 import { planStrings as s } from '../strings'
+import './PlanCourseRow.changed.css'
 import type { PlanSlot, SlotKey } from '../types'
 
 export interface PlanCourseRowProps {
@@ -28,6 +31,15 @@ export function PlanCourseRow({ row, slot, onOpen, onSwap, onPin, onUnpin, onCho
   const { course, key, caption } = row
   const meal = course.meal
   const { chips, more, actions, empty } = usePlanCourseRow(row, slot)
+  // B9-26 (PC-01): a row the last edit changed carries data-changed and "was Lentil soup" (part of its accessible name).
+  const was = useContext(ReplanMarksContext)[markKey(key)]
+  const wasMeta = was ? (
+    <span className="plan-row__was">
+      <Icon name="refresh" size={14} />
+      {was}
+    </span>
+  ) : null
+  const meta = wasMeta ? (caption ? <>{caption} · {wasMeta}</> : wasMeta) : (caption ?? undefined)
   const shown: RowChip[] = empty ? (empty.chip ? [empty.chip] : []) : chips
   // Round 2: at most two chips show; the rest collapse into one neutral "+N" chip whose title and name list them.
   const chipLine =
@@ -51,11 +63,13 @@ export function PlanCourseRow({ row, slot, onOpen, onSwap, onPin, onUnpin, onCho
     return (
       <ListRow
         title={meal.recipeName}
+        aria-label={was ? `${meal.recipeName}, ${was}` : undefined}
         onActivate={() => onOpen(key)}
-        meta={caption ?? undefined}
+        meta={meta}
         trailing={trailing}
         wrapTitle
         data-state={meal.state !== 'planned' ? meal.state : undefined}
+        data-changed={was ? '' : undefined}
       >
         {chipLine}
       </ListRow>
@@ -65,11 +79,12 @@ export function PlanCourseRow({ row, slot, onOpen, onSwap, onPin, onUnpin, onCho
   return (
     <ListRow
       title={empty?.title ?? s.nothingPlanned}
-      aria-label={choosable ? s.choose : undefined}
+      aria-label={choosable ? (was ? `${s.choose}, ${was}` : s.choose) : undefined}
       onActivate={choosable ? () => onChoose(key) : undefined}
-      meta={caption ?? undefined}
+      meta={meta}
       wrapTitle
       data-unfilled=""
+      data-changed={was ? '' : undefined}
     >
       {chipLine}
     </ListRow>

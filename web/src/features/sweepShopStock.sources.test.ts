@@ -27,24 +27,20 @@ describe('B9-09: no width query in code (DS-09)', () => {
     expect(screen).not.toMatch(/useBreakpoint|useNarrow|useMediaQuery|matchMedia|innerWidth/)
     expect(screen).not.toMatch(/1280/)
   })
-  // Main session ruling (B9-09): the compact Restock reason keeps today's 420 px, so no supported phone (375 to 414 px) changes what it
-  // shows; useNarrow() (below 23.5 em) would show the full text at 390 px. One named exception in the Shop's own lib, in em.
-  // B9-15: the header chips no longer read any width query: a chip Select shows its shortLabel when its own row has no room.
-  it('Shop: the compact Restock reason reads the Shop\'s one named exception, (width < 26.25em), from lib/compactRows', () => {
-    const hook = code('shop/hooks/useCompactRows.ts')
-    expect(hook).toMatch(/useMediaQuery\(COMPACT_ROWS_QUERY\)/)
-    expect(hook).toMatch(/from '\.\.\/lib\/compactRows'/)
-    expect(hook).not.toMatch(/420|min-width|px/)
-    expect(code('shop/lib/compactRows.ts')).toMatch(/export const COMPACT_ROWS_QUERY = '\(width < 26\.25em\)'/)
+  // Main session ruling (B9-09) was one named exception, (width < 26.25em), in the Shop's lib. B9-34 (SSP-05, main-session ruling) removed it:
+  // a row's compact Restock reason is ListRow's own `metaCompact`, shown by the width of its own text column (a container query).
+  it('Shop: the compact Restock reason reads no viewport width (B9-34: useCompactRows and lib/compactRows are gone)', () => {
+    expect(sources.some((s) => /shop\/(hooks\/useCompactRows|lib\/compactRows)\.ts$/.test(s.file))).toBe(false)
+    expect(grep(/useCompactRows|COMPACT_ROWS_QUERY/)).toEqual([])
   })
   it('Shop: the header chips read no width (B9-15: narrowChips and useNarrowChips are gone; RangePicker and the Shop chip pass shortLabel)', () => {
     expect(sources.some((s) => /narrowChips|useNarrowChips/.test(s.file))).toBe(false)
     expect(code('shop/components/RangePicker.tsx')).not.toMatch(/useMediaQuery|useCompactRows|matchMedia|useNarrow/)
     expect(code('shop/components/RangePicker.tsx')).toMatch(/shortLabel/)
   })
-  it('the only width query string in these sources is that exception (26.25 em, in shop/lib/compactRows.ts)', () => {
+  it('no width query string is left in these sources (B9-34 removed the last exception, shop/lib/compactRows.ts)', () => {
     const found = sources.flatMap((s) => [...s.text.matchAll(/\((?:min-|max-)?width\s*[:<>]=?\s*[\d.]+(?:px|em|rem)\)/g)].map((m) => `${s.file}: ${m[0]}`))
-    expect(found).toEqual(['shop/lib/compactRows.ts: (width < 26.25em)'])
+    expect(found).toEqual([])
   })
   it('Stock: the spoiled tile no longer reads the viewport (its layout is the container query in stock.css)', () => {
     const tile = code('stock/components/SpoiledTile.tsx')

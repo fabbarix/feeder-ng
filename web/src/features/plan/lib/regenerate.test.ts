@@ -38,12 +38,13 @@ describe('regenerateImpact', () => {
 })
 
 describe('Regenerate copy lives in strings.ts', () => {
-  it('planStrings carries the dialog title, the confirm label and both bodies', () => {
+  it('planStrings carries the dialog title, the confirm label, the lead and the note (B9-26: the note is its own line, with the Undo)', () => {
     expect(planStrings.regenerateConfirmTitle).toBe('Regenerate the plan?')
     expect(planStrings.regenerateConfirmLabel).toBe('Regenerate')
     expect(planStrings.regenerateNone).toBe('No Planned Meals will change. Empty Meal Slots may be filled.')
-    expect(planStrings.regenerateCount(1)).toBe('1 unpinned Planned Meal will change. Pinned and Cooked ones stay as they are.')
-    expect(planStrings.regenerateCount(3)).toBe('3 unpinned Planned Meals will change. Pinned and Cooked ones stay as they are.')
+    expect(planStrings.regenerateCount(1)).toBe('1 unpinned Planned Meal will change.')
+    expect(planStrings.regenerateCount(3)).toBe('3 unpinned Planned Meals will change.')
+    expect(planStrings.regenerateNote).toBe('Pinned and Cooked ones stay. You can undo it straight after.')
   })
 
   it('regenerate.ts holds no copy of its own', () => {
@@ -55,20 +56,26 @@ describe('Regenerate copy lives in strings.ts', () => {
   })
 })
 
-describe('regenerateConfirmCopy', () => {
-  it('states how many unpinned Planned Meals will change', () => {
-    expect(regenerateConfirmCopy(5)).toEqual({
+describe('regenerateConfirmCopy (SAFE-07: a lead, a note, and the Bought meals behind a summary)', () => {
+  it('states how many unpinned Planned Meals will change, and that Undo is there straight after', () => {
+    expect(regenerateConfirmCopy(26)).toEqual({
       title: 'Regenerate the plan?',
-      body: '5 unpinned Planned Meals will change. Pinned and Cooked ones stay as they are.',
+      body: '26 unpinned Planned Meals will change.',
+      note: 'Pinned and Cooked ones stay. You can undo it straight after.',
       confirmLabel: 'Regenerate',
     })
   })
 
   it('singular', () => {
-    expect(regenerateConfirmCopy(1).body).toBe('1 unpinned Planned Meal will change. Pinned and Cooked ones stay as they are.')
+    expect(regenerateConfirmCopy(1).body).toBe('1 unpinned Planned Meal will change.')
   })
 
   it('none: says so, empty Meal Slots may still be filled', () => {
     expect(regenerateConfirmCopy(0).body).toBe('No Planned Meals will change. Empty Meal Slots may be filled.')
+  })
+
+  it('the lead is a single paragraph: no second sentence is glued to it', () => {
+    expect(regenerateConfirmCopy(5).body).not.toMatch(/Pinned/)
+    expect(typeof regenerateConfirmCopy(5).body).toBe('string')
   })
 })

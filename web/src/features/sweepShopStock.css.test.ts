@@ -93,7 +93,10 @@ describe('B9-09: one focus ring (A11Y-02): no feature-local ring', () => {
     expect(bad).toEqual([])
   })
   it('no :focus rule hides the ring (outline: none / 0) or draws a box-shadow ring', () => {
-    const bad = focusRules.filter((r) => decl(r, 'outline').some((v) => /^(none|0)\b/.test(v)) || decl(r, 'box-shadow').length > 0).map(where)
+    // B9-34 (R-C+, mocks ssp-01/ssp-18): the one exception is the Shop tick, whose visible 24 px circle takes the ring as its border
+    // (.line-row__tick:focus-visible::before, an accent border on a soft fill); the 44 px button itself draws no outline
+    const ringOnCircle = (r: (typeof focusRules)[number]) => /^\.line-row__tick(\[aria-pressed='true'\])?:focus-visible$/.test(r.selector.trim())
+    const bad = focusRules.filter((r) => !ringOnCircle(r) && (decl(r, 'outline').some((v) => /^(none|0)\b/.test(v)) || decl(r, 'box-shadow').length > 0)).map(where)
     expect(bad).toEqual([])
   })
   it('an outline anywhere in the folders uses the ring tokens (width, offset, colour), never a raw px or the accent', () => {

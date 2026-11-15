@@ -52,7 +52,8 @@ describe('P23 reads every visible meta', () => {
   it('the cut-meta probe no longer looks only inside .shop-lines (except on the routes still pending their owner\'s clean-up)', () => {
     expect(probe().source).toContain(".querySelectorAll('.list-row__meta-text')")
     // w3c: P23 always fails, so only the screens other packages still have to clean keep the old reach, each named with its owner.
-    expect((probe() as unknown as { pendingRoutes: string[] }).pendingRoutes).toEqual(['/settings', '/settings/planning', '/shop', '/scan'])
+    // int1: B9-34 landed and cleaned /shop, so its entry is gone.
+    expect((probe() as unknown as { pendingRoutes: string[] }).pendingRoutes).toEqual(['/settings', '/settings/planning', '/scan'])
     expect(probe().source).toMatch(/pending \? metas\.filter\(\(m\) => m\.closest\('\.shop-lines'\) && m\.closest\('\.list-row__meta\[data-status="info"\]'\)\) : metas/)
   })
   it('it still measures the painted form of a row that has a compact meta', () => {

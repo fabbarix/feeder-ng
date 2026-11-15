@@ -126,18 +126,20 @@ describe('PlanScreen layout (5.2)', () => {
 describe('PlanScreen: Regenerate asks first (2.4)', () => {
   it('states how many unpinned Planned Meals will change, and does nothing on Cancel', async () => {
     phone()
-    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate': undefined })
+    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate': { placed: 2, kept: 0, unfilled: 0, changed: 2, changes: [] } })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
-    expect(dialog).toHaveTextContent('2 unpinned Planned Meals will change. Pinned and Cooked ones stay as they are.')
+    // B9-26 (SAFE-07): the question is a lead and a note (regenerate.test, PlanScreen.undo.test pin the same words).
+    expect(dialog).toHaveTextContent('2 unpinned Planned Meals will change.')
+    expect(dialog).toHaveTextContent('Pinned and Cooked ones stay. You can undo it straight after.')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Regenerate the plan?' })).not.toBeInTheDocument())
     expect(api.callsTo('POST', '/api/plan/regenerate')).toHaveLength(0)
   })
 
   it('posts and reloads the plan once confirmed', async () => {
-    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate': undefined })
+    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate': { placed: 2, kept: 0, unfilled: 0, changed: 2, changes: [] } })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
@@ -232,20 +234,18 @@ describe('PlanScreen: Swap', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
-  it('toasts "Swapped" with Undo, which puts the previous Recipe back and unpins it', async () => {
-    const api = mockApi({
+  // B9-26 (changed on purpose): Swap's Undo is no longer "put the previous Recipe back, then unpin": it is one POST /api/plan/restore with the
+  // server's undoToken (PC-01). The toast and its Undo are covered in PlanScreen.undo.test.tsx.
+  it('toasts "Swapped" with Undo when nothing else changed', async () => {
+    mockApi({
       'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives,
-      'PUT /api/plan/2026-11-10/3/1': meal({ recipeId: 21, pinned: true }),
-      'POST /api/plan/2026-11-10/3/1/unpin': meal({ recipeId: 8 }),
+      'PUT /api/plan/2026-11-10/3/1': { ...meal({ recipeId: 21, pinned: true }), changes: [], undoToken: 'tok-1' },
     })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Pizza' }))
     const toast = await findNotice('status', 'Swapped')
-    await userEvent.click(within(toast).getByRole('button', { name: 'Undo' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-10/3/1')).toHaveLength(2))
-    expect(api.callsTo('PUT', '/api/plan/2026-11-10/3/1')[1]?.body).toEqual({ recipeId: 8 })
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/3/1/unpin')).toHaveLength(1))
+    expect(within(toast).getByRole('button', { name: 'Undo the Swap' })).toBeInTheDocument()
   })
 
   it('"Keep it" closes the sheet and changes nothing', async () => {
@@ -312,7 +312,9 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     await userEvent.click(within(planned).getByRole('button', { name: 'Mark as Cooked' }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Mark as Cooked' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
+    // B9-26: the Cooked toast has its own Dismiss now; press the one inside the shortfall notice.
+    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
+    await userEvent.click(within(notice).getByRole('button', { name: 'Dismiss' }))
     await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
     expect(api.calls.some((c) => c.path.startsWith('/api/stock'))).toBe(false)
   })

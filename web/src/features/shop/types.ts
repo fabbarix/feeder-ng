@@ -8,6 +8,8 @@ export interface PackSuggestion {
   size: number
   count: number
   remainder: number
+  /** B9-23: the Price of a pack the Ingredient was never bought as (the priced fallback); absent or null for a last-bought pack. */
+  price?: { cents: number; date: string; shopId: number } | null
 }
 
 /** B5-SH: a Planned Meal whose slot has passed and that is not marked Cooked or Not cooked yet; one entry per Course. */
@@ -19,6 +21,30 @@ export interface PastPlannedMeal {
   courseName: string
 }
 
+/** B9-23 (SSP-01, RES-03): one thing that put Stock on a ticked Line, oldest first in `LineTick.additions`. */
+export interface TickAddition {
+  /** who ticked it ("Sam"); the viewer's own name when `mine` */
+  who: string
+  mine: boolean
+  by: 'hand' | 'scan'
+  /** Base Units added to Stock; null = ticked without adding */
+  quantity: number | null
+  /** the id the tick was sent with; null for an addition from before the offline queue */
+  clientUuid: string | null
+  /** ISO instant */
+  tickedAt: string
+  /** ISO instant the server got it; null while it only exists on a phone (B9-54) */
+  syncedAt: string | null
+}
+
+/** B9-23: how a Line (or an Ingredient extra) was ticked and what it added to Stock. */
+export interface LineTick {
+  by: 'hand' | 'scan'
+  /** the total added to Stock in Base Units; null = nothing added */
+  added: number | null
+  additions: TickAddition[]
+}
+
 export interface ShoppingLine {
   ingredientId: number
   name: string
@@ -28,6 +54,10 @@ export interface ShoppingLine {
   /** still to buy; 0 for a ticked line that Stock now covers */
   quantity: number
   ticked: boolean
+  /** B9-23 (SSP-02): need that grew after the tick and is not covered yet, in Base Units; absent when 0. */
+  more?: number
+  /** B9-23: how a ticked Line was ticked; null/absent while it is open. */
+  tick?: LineTick | null
   pack: PackSuggestion | null
   /** minor currency units for the suggested packs; null = no Price known ("—") */
   estimatedCostCents: number | null
@@ -50,6 +80,8 @@ export interface ShoppingExtra {
   baseUnit: BaseUnit | null
   quantity: number | null
   ticked: boolean
+  /** B9-23: as ShoppingLine.tick, for a ticked extra. */
+  tick?: LineTick | null
   /** PE: the Ingredient's Picture of an Ingredient extra. */
   imageUrl?: string
   /** H4/H7′: 'supply' for an Ingredient extra of a Supply; null for free text; absent means food. */
@@ -106,6 +138,25 @@ export interface TickResult {
   ticked: boolean
   lotId: number | null
   created: boolean
+  /** B9-23: Base Units this tick added to Stock (0 when none) */
+  added?: number
+  /** B9-23: others who ticked the same Line meanwhile */
+  alsoTickedBy?: { name: string; quantity: number; by: 'hand' | 'scan' }[]
+}
+
+/** B9-23: PATCH /api/shopping/ticks. `quantity` 0 is Take back (the tick stays); `clientUuid` names the addition. */
+export interface ChangeTickInput {
+  ingredientId: number
+  to: string
+  quantity: number
+  shopId?: number | null
+  clientUuid?: string | null
+}
+
+export interface ChangeTickResult {
+  ticked: true
+  lotId: number | null
+  quantity: number
 }
 
 export type ExtraInput = { text: string } | { ingredientId: number; quantity: number }

@@ -139,12 +139,9 @@ export const scanStrings = {
   viewLabel: 'List view',
   scannedListLabel: 'Scanned list',
   toGetLabel: 'To get',
-  /** Beta.8: ticking a To get row by hand (the row's accessible name, the toast, Undo and the failures) */
+  /** Beta.8: ticking a To get row by hand (the row's accessible name and the failure); B9-34: the toast and Undo are the Shop's. */
   tickLine: (line: string) => `Tick ${line}`,
-  lineTicked: (line: string) => `${line} ticked`,
-  undoAction: 'Undo',
   tickFailed: (line: string) => `Couldn't tick ${line}. Try again.`,
-  untickFailed: "Couldn't undo that tick. Try again.",
   nothingToGet: 'Nothing left to get',
   nothingToGetHint: 'Every Line on the Shopping List is ticked.',
   nothingScanned: 'Nothing scanned yet',

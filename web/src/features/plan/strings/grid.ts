@@ -37,8 +37,9 @@ export const gridStrings = {
   regenerating: 'Regenerating…',
   regenerateConfirmTitle: 'Regenerate the plan?',
   regenerateNone: 'No Planned Meals will change. Empty Meal Slots may be filled.',
-  regenerateCount: (n: number) =>
-    `${n} unpinned Planned ${n === 1 ? 'Meal' : 'Meals'} will change. Pinned and Cooked ones stay as they are.`,
+  regenerateCount: (n: number) => `${n} unpinned Planned ${n === 1 ? 'Meal' : 'Meals'} will change.`,
+  /** B9-26 (SAFE-07): the Regenerate question's note, its own line under the lead. */
+  regenerateNote: 'Pinned and Cooked ones stay. You can undo it straight after.',
   regenerateConfirmLabel: 'Regenerate',
   // Why chips (lib/phrase.ts)
   whyIngredientOverlap: (day: string, ingredient: string) => `uses ${day}'s ${ingredient}`,

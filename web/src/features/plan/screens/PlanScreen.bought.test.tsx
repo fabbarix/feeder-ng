@@ -51,20 +51,24 @@ describe('PlanScreen: Bought', () => {
 })
 
 describe('PlanScreen: Regenerate names Bought Planned Meals', () => {
-  it('fetches the dry run when the confirm opens and lists the Bought meals under the count', async () => {
-    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': dryRun, 'POST /api/plan/regenerate': undefined })
+  it('fetches the dry run when the confirm opens and lists the Bought meals as rows behind a summary, under the count (B9-26, SAFE-07)', async () => {
+    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': dryRun, 'POST /api/plan/regenerate': { placed: 2, kept: 0, unfilled: 0, changed: 2, changes: [] } })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
-    await waitFor(() => expect(dialog).toHaveTextContent('Among them, these have Ingredients you already bought:'))
-    expect(dialog).toHaveTextContent('Tue Dinner · Roast chicken (chicken thighs, cream).')
+    await waitFor(() => expect(dialog).toHaveTextContent('1 Bought Planned Meal is replaced'))
+    const row = dialog.querySelector('li.detail-row')!
+    expect(row).toHaveTextContent('Tue Dinner')
+    expect(row).toHaveTextContent('chicken thighs, cream bought')
+    expect(row).toHaveTextContent('Roast chicken')
     expect(dialog).toHaveTextContent('unpinned Planned Meals will change.')
+    expect(dialog).not.toHaveTextContent('Among them')
     expect(api.callsTo('POST', '/api/plan/regenerate?dryRun=1')).toHaveLength(1)
     expect(api.callsTo('POST', '/api/plan/regenerate')).toHaveLength(0) // the dry run writes nothing; the real POST waits for a yes
   })
 
   it('Regenerate in the dialog posts the real route once', async () => {
-    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': dryRun, 'POST /api/plan/regenerate': undefined })
+    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': dryRun, 'POST /api/plan/regenerate': { placed: 2, kept: 0, unfilled: 0, changed: 2, changes: [] } })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
@@ -93,7 +97,7 @@ describe('PlanScreen: Regenerate names Bought Planned Meals', () => {
 describe('PlanScreen: Regenerate waits for the dry run', () => {
   /** Holds the dry-run answer until release() so the waiting state can be seen. */
   function gated() {
-    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': dryRun, 'POST /api/plan/regenerate': undefined })
+    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate?dryRun=1': dryRun, 'POST /api/plan/regenerate': { placed: 2, kept: 0, unfilled: 0, changed: 2, changes: [] } })
     const real = globalThis.fetch
     let release = () => {}
     const gate = new Promise<void>((r) => (release = r))

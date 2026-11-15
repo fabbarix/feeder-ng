@@ -103,8 +103,9 @@ describe('useScanController: the Scanned session', () => {
     await waitFor(() => expect(hook.result.current.scanned.toGetCount).toBe(2))
     const [line] = hook.result.current.scanned.toGet
     await act(() => hook.result.current.toGetTick.tick(lineEntry(line!, 'USD', 'metric')))
-    expect(h.shopApi.tick).toHaveBeenCalledWith(expect.objectContaining({ ingredientId: 2, quantity: 700, to: h.list && (h.list as { to: string }).to, shopId: 1 }))
-    expect(h.toast).toHaveBeenCalledWith('Passata ticked', expect.objectContaining({ actionLabel: 'Undo' }))
+    // B9-34 (SSP 1): one tap ticks the suggested pack (2 × Mutti 700 g), and the toast is the shared Undo toast (useUndoToast)
+    expect(h.shopApi.tick).toHaveBeenCalledWith(expect.objectContaining({ ingredientId: 2, quantity: 1400, to: h.list && (h.list as { to: string }).to, shopId: 1 }))
+    expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Passata ticked', actions: [expect.objectContaining({ label: 'Undo', role: 'undo' })] }))
   })
 
   it('a scan made offline is a waiting row until the sync brings its Result', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeLine, makeList } from '../testData'
-import { listEntries } from './lines'
+import { lineEntry, listEntries } from './lines'
 import { rowMeta } from './rows'
 import { restockText } from './supplies'
 
@@ -31,14 +31,13 @@ describe('a Supply entry carries both texts', () => {
   })
 })
 
-describe('rowMeta(entry, { compact })', () => {
-  const entry = () => listEntries(makeList({ lines: [ml] }), 'metric').open[0]!
-  it('the full reason by default, the short one when compact; the tone stays info', () => {
-    expect(rowMeta(entry())).toEqual({ text: 'Below 1 l · 400 ml in Stock', status: 'info' })
-    expect(rowMeta(entry(), { compact: true })).toEqual({ text: '400 ml in Stock', status: 'info', fullText: 'Below 1 l · 400 ml in Stock' })
+describe('rowMeta (B9-34: no viewport option; the compact reason travels beside the long one)', () => {
+  const entry = () => lineEntry(makeLine({ kind: 'supply', baseUnit: 'ml', restock: { level: 1000, stock: 400 }, need: 1000, available: 400, quantity: 600, pack: null, estimatedCostCents: null }), 'USD', 'metric')
+  it('long text, compact text and the info tone', () => {
+    expect(rowMeta(entry())).toEqual({ text: 'Below 1 l · 400 ml in Stock', compact: '400 ml in Stock', status: 'info' })
   })
-  it('compact leaves the other metas alone (no fullText)', () => {
+  it('the other metas have no compact form', () => {
     const e = { ...entry(), restockText: '', restockCompact: '', hintShort: 'Fri Dinner +2' }
-    expect(rowMeta(e, { compact: true })).toEqual({ text: 'Fri Dinner +2', status: 'info' })
+    expect(rowMeta(e)).toEqual({ text: 'Fri Dinner +2', status: 'info' })
   })
 })

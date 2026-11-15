@@ -41,7 +41,9 @@ describe('ConversionEditor', () => {
     await userEvent.type(screen.getByLabelText(strings.conversionUnitLabel), 'clove')
     await userEvent.type(screen.getByLabelText(strings.conversionAmountLabel('g')), '6')
     await userEvent.click(screen.getByRole('button', { name: strings.addConversion }))
-    expect(screen.getByRole('alert')).toHaveTextContent(strings.errors.unitTaken)
+    // B9-48 (SAFE-04): the message is the Unit field's, not a loose alert (see ConversionEditor.errors.test.tsx).
+    expect(screen.getByLabelText(strings.conversionUnitLabel)).toHaveAccessibleDescription(strings.errors.unitTaken)
+    expect(screen.queryByRole('alert')).toBeNull()
     expect(onAdd).not.toHaveBeenCalled()
   })
   it('lists the conversions as ListRows in a labelled list, with Remove as the trailing button', () => {

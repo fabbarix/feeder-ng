@@ -5,12 +5,15 @@
 // too; below 420 px it is the compact "400 ml/1 l", which the probe measures as painted. B9-29 (SSP-05): every visible row meta is
 // read (the Pantry's status, the Supplies' Restock reason, any list): a meta is never cut, whatever screen it is on.
 // w3c integration: P23 always fails, so the routes whose owners have not cleaned their metas yet keep the old reach (the Shop's info
-// hints only) until that package lands and deletes its entry here: /settings and /settings/planning (B9-51), /shop (B9-34), /scan (B9-41).
-const PENDING_ROUTES = ['/settings', '/settings/planning', '/shop', '/scan']
+// hints only) until that package lands and deletes its entry here: /settings and /settings/planning (B9-51), /scan (B9-41).
+// int1: B9-34 has landed and /shop is clean at every width (1180 included), so /shop gets the full reach.
+const PENDING_ROUTES = ['/settings', '/settings/planning', '/scan']
 const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')
   const out = []
+  // B9-34 (SSP-01) and B9-29: every visible row meta line is read, not only the Shop's info ones: a ticked row's "+500 g in Stock"
+  // (success), "Not added to Stock" and "Scanned · 700 g" (muted), "Added twice · Sam 50 g, you 50 g" are cut like any hint (P23).
   const pending = ${JSON.stringify(PENDING_ROUTES)}.includes(location.pathname)
   const metas = main ? [...main.querySelectorAll('.list-row__meta-text')] : []
   const reach = pending ? metas.filter((m) => m.closest('.shop-lines') && m.closest('.list-row__meta[data-status="info"]')) : metas

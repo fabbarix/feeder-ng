@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
 import { FormActions } from '../../../ui/FormActions'
@@ -6,6 +6,7 @@ import { Segmented } from '../../../ui/fields/Segmented'
 import { NumberField } from '../../../ui/fields/NumberField'
 import { TextField } from '../../../ui/fields/TextField'
 import { fieldStrings } from '../../../ui/fields/strings'
+import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { Select } from '../../../ui/Select/Select'
 import { ingredientPickerOptions } from '../lib/ingredientOptions'
 import { checkExtraDraft, type ExtraDraftError, type ExtraDraftField, type ExtraMode } from '../lib/extraDraft'
@@ -36,7 +37,11 @@ const KIND_OPTIONS = (hasIngredients: boolean) => [
   { value: 'note' as const, label: shopStrings.extraKindNote },
 ]
 
-/** "Add to Shopping List": one choice (an Ingredient with a quantity, or something else), then its fields. Checking is lib/extraDraft's job. */
+/**
+ * "Add to Shopping List": one choice (an Ingredient with a quantity, or something else), then its fields. Checking is lib/extraDraft's job.
+ * SAFE-11: no arbitrary default (the Ingredient reads "Choose an Ingredient", the disabled Quantity says why), Save is always enabled,
+ * and a failed Save puts its error on the field and the focus in it.
+ */
 export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetProps) {
   const formId = useId()
   const hasIngredients = ingredients.length > 0
@@ -47,6 +52,10 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
   const [ingredientId, setIngredientId] = useState<number | null>(null)
   const [quantity, setQuantity] = useState<number | null>(null)
   const [error, setError] = useState<FieldError | null>(null)
+  // SAFE-11 (R4): after a failed Save, the field with the error takes the focus
+  const formRef = useRef<HTMLFormElement>(null)
+  const [submitCount, setSubmitCount] = useState(0)
+  useFocusFirstInvalid(formRef, error ? [error] : null, submitCount)
   const picked = ingredients.find((i) => i.id === ingredientId) ?? null
   const options = useMemo(() => ingredientPickerOptions(ingredients), [ingredients])
   const kinds = useMemo(() => KIND_OPTIONS(hasIngredients), [hasIngredients])
@@ -70,6 +79,7 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
     const result = checkExtraDraft({ mode, text, ingredientId, quantityText: quantity === null ? '' : String(quantity) })
     if (!result.ok) {
       setError({ field: result.field, error: result.error })
+      setSubmitCount((n) => n + 1)
       return
     }
     setError(null)
@@ -96,6 +106,7 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
       }
     >
       <form
+        ref={formRef}
         id={formId}
         className="shop-sheet-form"
         onSubmit={(e) => {
@@ -117,6 +128,7 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
               size="full"
               label={shopStrings.extraIngredient}
               entityName="Ingredient"
+              placeholder={shopStrings.extraChooseIngredient}
               options={options}
               value={ingredientId}
               onChange={(id) => {
@@ -136,6 +148,7 @@ export function ExtraSheet({ open, onClose, ingredients, onSubmit }: ExtraSheetP
               min={0}
               unit={picked?.baseUnit}
               disabled={!picked}
+              helper={picked ? undefined : shopStrings.extraQuantityFirst}
               error={fieldError('quantity')}
             />
           </>

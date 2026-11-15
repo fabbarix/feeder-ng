@@ -51,6 +51,8 @@ export { useStockSheet } from './hooks/useStockSheet'
 // CRS F: the Course-aware Tonight sheets and the Mark all Cooked sheet, shared with Today.
 export { useTonightSheets } from './hooks/useTonightSheets'
 export { PlannedMealSheet } from './components/PlannedMealSheet'
+// B9-26 (PC-01): the What changed sheet, mounted by Today with useTonightSheets(...).review.
+export { ReplanReviewSheet } from './components/ReplanReviewSheet'
 export { SwapSheet } from './components/SwapSheet'
 export { RecipeChooserSheet } from './components/RecipeChooserSheet'
 export { MarkAllCookedSheet } from './components/MarkAllCookedSheet'

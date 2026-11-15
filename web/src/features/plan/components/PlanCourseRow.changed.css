@@ -1,0 +1,27 @@
+/* B9-26 (PC-01): a row the last edit changed, until the Plan is left or Review is opened. An info-tone bar on its start edge
+   (an inset shadow, never a border: nothing moves) and "was Lentil soup" in its meta line. info-fg on surface is 9.0 (light) and
+   10.8 (dark), so the "was" text follows the mock: info-fg at weight 600, with its ArrowsClockwise glyph; it wraps, never cut. */
+.list-row[data-changed] {
+  box-shadow: inset 3px 0 0 var(--color-info-fg);
+  padding-inline-start: var(--space-3);
+}
+
+.plan-row__was {
+  color: var(--color-info-fg);
+  font-weight: 600;
+}
+
+/* Batch w3e (P23 at 1440): a long "was Roasted two-colour cauliflower with …" wraps under the Course instead of ending in an
+   ellipsis; the changed row's meta is the one meta line that may take more lines. */
+.list-row[data-changed] .list-row__meta,
+.list-row[data-changed] .list-row__meta-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.plan-row__was svg {
+  display: inline-block;
+  margin-inline-end: var(--space-1);
+  vertical-align: -0.15em;
+}

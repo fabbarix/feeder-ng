@@ -11,9 +11,9 @@ const row = (name: string) => screen.getByRole('button', { name }).closest('li')
 describe('IngredientList with Supplies', () => {
   it('shows the Base Unit and the Restock level of a Supply', () => {
     render(<IngredientList ingredients={[toiletPaperJSON, { ...dishSoapJSON, restockLevel: null }]} system="metric" onOpen={() => {}} />)
-    expect(row('Toilet paper')).toHaveTextContent('piece · restocks below 6 pieces')
+    expect(row('Toilet paper')).toHaveTextContent('piece · Restocks below 6')
     expect(row('Dish soap')).toHaveTextContent('ml')
-    expect(row('Dish soap')).not.toHaveTextContent(/restock|keeps/)
+    expect(row('Dish soap')).not.toHaveTextContent(/restock|keeps/i)
   })
   it('keeps "g · keeps 30 days" for food', () => {
     render(<IngredientList ingredients={[garlicJSON]} system="metric" onOpen={() => {}} />)

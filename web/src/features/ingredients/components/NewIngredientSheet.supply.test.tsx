@@ -22,8 +22,8 @@ function setup(over: Partial<NewIngredientSheetProps> = {}) {
 }
 const kindGroup = () => screen.getByRole('radiogroup', { name: 'Kind' })
 const name = () => screen.getByLabelText('Name')
-const shelfLife = () => screen.queryByLabelText(/Shelf Life/)
-const restock = () => screen.queryByRole('textbox', { name: /Restock level/ })
+const shelfLife = () => screen.queryByRole('group', { name: 'Shelf Life' }) // B9-48: a Stepper group, not a text field
+const restock = () => screen.queryByRole('spinbutton', { name: /Restock level/ }) // B9-48: "type or step" (user decision)
 
 describe('NewIngredientSheet: the kind choice', () => {
   it('opens on Food with a Segmented Food | Supply, and no Restock level', () => {
@@ -61,7 +61,7 @@ describe('NewIngredientSheet: the kind choice', () => {
     render(<NewIngredientSheet open onClose={vi.fn()} onCreate={vi.fn()} />)
     expect(screen.queryByRole('radiogroup', { name: 'Kind' })).toBeNull()
     expect(screen.getByRole('dialog', { name: 'New Ingredient' })).toBeInTheDocument()
-    expect(screen.getByLabelText(/Shelf Life/)).toBeInTheDocument()
+    expect(shelfLife()).toBeInTheDocument()
   })
   it('the choice starts on the given kind (Scan, Pantry and Shop extras can start on Supply)', () => {
     setup({ kind: 'supply' })
@@ -87,9 +87,9 @@ describe('NewIngredientSheet: the body it sends', () => {
   it('sends kind food and no restockLevel for food', async () => {
     const p = setup()
     await userEvent.type(name(), 'saffron')
-    await userEvent.type(screen.getByLabelText(/Shelf Life/), '90')
+    for (let i = 0; i < 2; i++) await userEvent.click(screen.getByRole('button', { name: 'Increase Shelf Life' }))
     await userEvent.click(screen.getByRole('button', { name: 'Create Ingredient' }))
-    expect(p.onCreate).toHaveBeenCalledWith({ name: 'saffron', baseUnit: 'g', shelfLifeDays: 90, kind: 'food' })
+    expect(p.onCreate).toHaveBeenCalledWith({ name: 'saffron', baseUnit: 'g', shelfLifeDays: 2, kind: 'food' })
   })
   it('sends kind supply, the Restock level and no shelfLifeDays for a Supply', async () => {
     const p = setup()
@@ -109,7 +109,7 @@ describe('NewIngredientSheet: the body it sends', () => {
   it('drops a Shelf Life typed before switching to Supply', async () => {
     const p = setup()
     await userEvent.type(name(), 'candles')
-    await userEvent.type(screen.getByLabelText(/Shelf Life/), '30')
+    await userEvent.click(screen.getByRole('button', { name: 'Increase Shelf Life' }))
     await userEvent.click(within(kindGroup()).getByRole('radio', { name: 'Supply' }))
     await userEvent.click(screen.getByRole('button', { name: /^Create/ }))
     expect(p.onCreate).toHaveBeenCalledWith({ name: 'candles', baseUnit: 'piece', kind: 'supply' })
@@ -129,6 +129,7 @@ describe('NewIngredientSheet: the body it sends', () => {
     const p = setup({ chooseKind: false, kind: 'supply', initialName: 'bin bags', onCreate: vi.fn().mockRejectedValue(new ApiError(422, 'validation_failed', 'x', { reason: 'supply_has_shelf_life' })) })
     await userEvent.click(screen.getByRole('button', { name: 'Create Supply' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('A Supply has no Shelf Life')
+    expect(screen.getByRole('alert')).toHaveClass('form-error') // B9-48 (SAFE-04): the form-level error is the shared FormError
     expect(p.onClose).not.toHaveBeenCalled()
   })
 })

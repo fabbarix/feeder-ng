@@ -1,4 +1,7 @@
+import { useRef } from 'react'
 import { Button, FieldRow, ListGroup, ListRow, TextField } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
+import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { baseUnitLabel, formatConversion, type BaseUnit, type UnitSystem } from '../../../lib/units'
 import { useConversionForm } from '../hooks/useIngredientForms'
 import { strings } from '../strings'
@@ -9,7 +12,8 @@ export interface ConversionEditorProps {
   conversions: readonly Conversion[]
   base: BaseUnit
   system: UnitSystem
-  onAdd: (c: Conversion) => void
+  /** May return a Promise: a rejection shows its words as the form's FormError and keeps what was typed. */
+  onAdd: (c: Conversion) => unknown
   onRemove: (unit: string) => void
   /** BR-D: units set by the Base recipe's Yield (batch, portion): shown read-only with "Set by the Base recipe". */
   lockedUnits?: readonly string[]
@@ -22,6 +26,8 @@ export interface ConversionEditorProps {
  */
 export function ConversionEditor({ conversions, base, system, onAdd, onRemove, lockedUnits = [] }: ConversionEditorProps) {
   const form = useConversionForm(base, conversions.map((c) => c.unit), onAdd)
+  const formRef = useRef<HTMLFormElement>(null)
+  useFocusFirstInvalid(formRef, form.errors, form.submitCount)
   const amountLabel = strings.conversionAmountLabel(baseUnitLabel(base, 'metric'))
 
   return (
@@ -49,19 +55,21 @@ export function ConversionEditor({ conversions, base, system, onAdd, onRemove, l
         </ListGroup>
       )}
       <form
+        ref={formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault()
-          form.submit()
+          void form.submit()
         }}
       >
         <FieldRow align="end">
-          <TextField size="sm" label={strings.conversionUnitLabel} value={form.unit} onChange={form.setUnit} />
-          <TextField size="sm" label={amountLabel} inputMode="decimal" value={form.amount} onChange={form.setAmount} />
+          <TextField size="sm" label={strings.conversionUnitLabel} value={form.unit} onChange={form.setUnit} error={form.errors.unit} autoComplete="off" />
+          <TextField size="sm" label={amountLabel} inputMode="decimal" value={form.amount} onChange={form.setAmount} error={form.errors.amount} autoComplete="off" />
           <Button type="submit" variant="secondary">
             {strings.addConversion}
           </Button>
         </FieldRow>
-        {form.error ? <p role="alert">{form.error}</p> : null}
+        <FormError>{form.failure}</FormError>
       </form>
     </section>
   )

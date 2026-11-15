@@ -19,6 +19,8 @@ vi.mock('../../../ui/Toast', () => ({ useToast: () => ({ show: vi.fn() }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
 
+// B9-34: the ticked Line's sheet shows times in the Household zone, read from /api/me (app/useMe)
+vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 import { ShoppingScreen } from './ShoppingScreen'
 
 function show(list: ShoppingList) {
@@ -50,11 +52,11 @@ describe('ShoppingScreen: rows', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('the tick control still asks "How much?" and does not open the Line sheet', async () => {
+  it('the tick control ticks at once (B9-34) and does not open the Line sheet', async () => {
     show(makeList())
     await userEvent.click(screen.getByRole('button', { name: 'Tick Passata' }))
-    expect(screen.getByRole('dialog', { name: 'Tick Passata' })).toBeInTheDocument()
-    expect(screen.queryByRole('dialog', { name: 'Passata' })).toBeNull()
+    expect(actions.tick).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('there is no ⋮ column: no "Actions for ..." button and no Delete button on any row', () => {

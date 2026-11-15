@@ -1,6 +1,5 @@
 // b5-bow: pure helpers for Bought Planned Meals (beta5-plan 2.4). No React.
 import type { PlanChip } from './chips'
-import { weekdayName } from './phrase'
 import { boughtStrings as b } from '../boughtStrings'
 import type { PlannedMeal, PlanSlot } from '../types'
 
@@ -89,14 +88,5 @@ export function warningLine(warning: MealWarning | null | undefined, ctx: Warnin
       return b.warnArchived
     case 'course_lost':
       return ctx.courseName ? b.warnCourseLost(ctx.courseName) : b.warnCourseLostAny
-  }
-}
-
-/** Regenerate confirm: the intro and one line per Bought meal; null intro and no lines when none. */
-export function regenerateBoughtLines(rows: RegenerateBoughtRow[] | undefined): { intro: string | null; lines: string[] } {
-  if (!rows || rows.length === 0) return { intro: null, lines: [] }
-  return {
-    intro: b.regenerateIntro,
-    lines: rows.map((r) => b.regenerateRow(weekdayName(r.date, 'short'), r.mealSlotName, r.recipeName, r.ingredients.join(', '))),
   }
 }

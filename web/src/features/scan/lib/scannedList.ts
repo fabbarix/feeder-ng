@@ -341,9 +341,9 @@ export function removeTitle(row: ScannedRow): string {
   return scanStrings.removeTitle(row.count, row.name)
 }
 
-/** The Shopping List's Lines not yet scanned: ticked Lines are out, and so is a Line whose scan still waits in the queue. */
+/** The Shopping List's Lines not yet scanned: ticked Lines are out (unless more is needed since the tick, B9-34), and so is a Line whose scan still waits in the queue. */
 export function toGetLines(list: ShoppingList | undefined, rows: ScannedRow[]): ShoppingLine[] {
-  return (list?.lines ?? []).filter((line) => !line.ticked && !rows.some((r) => r.waiting && r.ingredientId === line.ingredientId))
+  return (list?.lines ?? []).filter((line) => (!line.ticked || (line.more ?? 0) > 0) && !rows.some((r) => r.waiting && r.ingredientId === line.ingredientId))
 }
 
 /** Appends a scan. Answers a new array. */

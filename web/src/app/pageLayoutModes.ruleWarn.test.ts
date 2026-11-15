@@ -107,6 +107,8 @@ describe("w2a's drop-in (rulings: P41 on Scan until B9-41; P36 on Your preferenc
       expect(rules.ruleWarnFor(all, 'P13', `/scan#${name}`), name).toBeNull()
     }
     expect(rules.ruleWarnFor(all, 'P41', '/shop')).toBeNull()
+    // batch w3e: B9-34's Shop cards keep their titles over 120 px at 1180x820, so w2c's P40@/shop line is gone
+    expect(rules.ruleWarnFor(all, 'P40', '/shop')).toBeNull()
     expect(rules.modeFor(all, '/scan')).toBe('fail')
     const out = ['scan-scanned-list', 'scan-row-active', 'scan-price-keypad'].map((n) => line(`/scan#${n}`, 'P41', 375)).join('\n')
     expect(rules.countFindings(all, out).fail).toBe(0)

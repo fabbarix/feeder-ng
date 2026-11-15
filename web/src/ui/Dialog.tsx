@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import { ActionSurface } from './lib/actionSurface'
+import { useStackedActions } from './lib/useStackedActions'
 import { inheritScheme, stopReactPropagation } from './lib/portalStop'
 import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
 import { Button, PRIMARY_SCOPE_ATTR } from './Button'
@@ -68,7 +69,10 @@ function DialogSurface({
   const titleId = useId()
   const contextId = useId()
   const anchorRef = useRef<HTMLSpanElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const actionsRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => inheritScheme(anchorRef.current, ref.current), [])
+  useStackedActions(actionsRef, panelRef)
   const { onBackdropClick } = useModalDialog(ref, {
     onClose,
     dismissOnBackdrop,
@@ -96,7 +100,7 @@ function DialogSurface({
       onPointerDown={stopReactPropagation}
       onKeyDown={stopReactPropagation}
     >
-      <div className="dialog__panel">
+      <div ref={panelRef} className="dialog__panel">
         {icon ? (
           <span className="dialog__icon" aria-hidden="true">
             <Icon name={icon} size={24} />
@@ -112,7 +116,7 @@ function DialogSurface({
         </h2>
         {children ? <div className="dialog__body">{children}</div> : null}
         {actions || onCancel ? (
-          <div className="dialog__actions">
+          <div ref={actionsRef} className="dialog__actions">
             <ActionSurface>
               {onCancel ? (
                 <Button variant="secondary" onClick={onCancel} {...cancelProps}>

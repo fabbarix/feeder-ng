@@ -19,6 +19,7 @@ web/src/features/recipes/strings.ts unit  # recipe line unit label and validatio
 web/src/features/scan/strings.ts unit  # pack unit label: measurement unit
 web/src/features/settings/strings.ts unit  # 'Units' setting: metric/imperial measurement units
 web/src/features/shops/strings.ts unit  # value unit label, currency minor unit: measurement unit
+web/src/features/shop/strings.ts unit  # B9-34 (SAFE-11): "the quantity is in its unit": the Ingredient's measurement unit (g, ml, piece)
 
 # "dark mode" (settings:25) is the colour scheme, not Planner Style. Also covers the setting 'Colour mode' (settings:100), same sense.
 web/src/features/settings/strings.ts mode  # dark mode / Colour mode are colour schemes, not Planner Style

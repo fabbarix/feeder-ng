@@ -83,3 +83,36 @@
   font-weight: 600; /* large, never extra-bold */
   font-variant-numeric: tabular-nums;
 }
+
+/* B9-48 "type or step": the value is our own text input inside the Stepper. It reads as a field (outline boundary, field fill),
+   is as tall as the − and + buttons, and holds four digits ("3650") with a 16 px margin each side and room for the caret (batch
+   w3e: at 4.5ch "4000" ran to the edge); "Not set" shows as a muted meta-size placeholder. */
+.stepper__input {
+  box-sizing: border-box;
+  inline-size: calc(4ch + 2 * var(--space-4) + 2px);
+  block-size: 40px;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: var(--color-surface-2);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  color: var(--color-text);
+  font-family: inherit;
+  line-height: 1;
+  appearance: none;
+}
+
+.stepper__input::placeholder {
+  color: var(--color-muted);
+  opacity: 1;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 400;
+}
+
+.stepper__input[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1px var(--status-danger-fg);
+}
+
+.stepper[data-size='sm'] .stepper__input {
+  inline-size: calc(4ch + 2 * var(--space-3) + 2px);
+}
