@@ -32,6 +32,13 @@ const cutMetaProbe = `
     const cut = Math.max(t.scrollWidth - t.clientWidth, right > left ? right - left - box.width : 0)
     if (cut > 0.5) out.push({ sel: t === long ? 'span.list-row__meta-text' : 'span.list-row__meta-compact', label, shown: Math.round(box.width), px: Math.round(cut) })
   }
+  // B9-43 (SSP-04): the notice's title ("Not marked Cooked yet") is the sentence's predicate and is never cut: its own text must fit its box (it
+  // may wrap, never clip). The slots line below it may clamp to two lines, so it is not read.
+  for (const t of (main ? main.querySelectorAll('.shop-notice__title') : [])) {
+    if (t.getClientRects().length === 0) continue
+    const cut = Math.max(t.scrollWidth - t.clientWidth, t.scrollHeight - t.clientHeight)
+    if (cut > 0.5) out.push({ sel: 'p.shop-notice__title', label: t.textContent.trim(), shown: Math.round(t.getBoundingClientRect().width), px: Math.round(cut) })
+  }
   return out
 })()`
 
