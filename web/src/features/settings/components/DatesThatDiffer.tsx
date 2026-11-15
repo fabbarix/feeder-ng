@@ -17,7 +17,7 @@ export function DatesThatDiffer({ rows, members }: DatesThatDifferProps) {
   if (rows.length === 0) return null
   return (
     <Tile as="section" span="full" aria-label={text.datesThatDiffer} overline={text.datesThatDiffer} overlineIcon="plan" className="ms-dates">
-      <DetailList className="ms-dates__list">
+      <DetailList>
         {rows.map((r) => {
           // R-E: the key is the date and the Meal Slot; Not served is the row's state; the other differences are the muted detail.
           const notServed = r.parts.find((p) => p.kind === 'notServed')
@@ -32,7 +32,7 @@ export function DatesThatDiffer({ rows, members }: DatesThatDifferProps) {
                   ? rest.map((p, i) => (
                       <Fragment key={i}>
                         {i > 0 ? ', ' : null}
-                        <span className="ms-date__part" data-kind={p.kind}>
+                        <span data-kind={p.kind}>
                           {datePartText(p, members)}
                         </span>
                       </Fragment>
