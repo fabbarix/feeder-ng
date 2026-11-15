@@ -95,6 +95,20 @@
   color: var(--color-muted);
 }
 
+/* B9-38 review: a disabled item ("Mark as Cooked · from Tue 17") reads as unavailable, not only in a slightly greyer text: its glyph
+   and its tinted square go muted too, and the text is not bold. Additive; the item keeps its row and its accessible state. */
+.menu__item[aria-disabled='true'] > svg,
+.list-row[data-disabled='true'] .list-row__lead {
+  color: var(--color-muted);
+}
+.list-row[data-disabled='true'] .list-row__lead {
+  background: var(--color-surface-2);
+}
+.list-row[data-disabled='true'] .list-row__title {
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
 /* A busy trigger (an item's action waits on a read): the progress cursor and a muted glyph until the read answers. */
 .icon-button[data-busy] {
   cursor: progress;
