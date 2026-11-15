@@ -2,8 +2,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { connectEvents } from '../../../lib/sse'
 
-/** Refetches ['plan'] and the streak when the server publishes on SSE topic `plan` (and after a reconnect); Course changes on `household` refetch the plan. */
-export function usePlanLiveUpdates(): void {
+/**
+ * B9-26 (PC-01): `announce: true` (mounted once per screen: the Plan, Today's Tonight sheets) also shows What changed for another User's edit;
+ * without it the hook only refetches and needs no Toast and no signed-in User. TEST-AUTHOR STUB: only the option is declared.
+ *
+ * Refetches ['plan'] and the streak when the server publishes on SSE topic `plan` (and after a reconnect); Course changes on `household` refetch the plan. */
+export function usePlanLiveUpdates(_options?: { announce?: boolean }): void {
   const client = useQueryClient()
   useEffect(() => {
     if (typeof EventSource === 'undefined') return

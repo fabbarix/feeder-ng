@@ -1,5 +1,6 @@
 import { http } from '../../lib/http'
 import type { RegenerateDryRun } from './lib/bought'
+import type { PlanChange } from './lib/replan'
 import type {
   Alternative,
   CookedAllEntry,
@@ -23,6 +24,31 @@ import type {
   VarietyRule,
 } from './types'
 
+/** B9-11: what every replanning write adds to its answer: the cells it changed beyond its target and the token that undoes it (none when it issued none). */
+export interface ReplanFields {
+  changes?: PlanChange[]
+  undoToken?: string
+}
+/** B9-11: a write on a Planned Meal answers the meal with `changes` and `undoToken`. */
+export type PlanWriteResult = PlannedMeal & ReplanFields & { covered?: number[] }
+/** B9-11: POST /api/plan/regenerate; `changed` is how many Planned Meals changed (no token when it is 0). */
+export interface RegenerateResult extends ReplanFields {
+  placed: number
+  kept: number
+  unfilled: number
+  changed: number
+}
+/** B9-11: POST .../reopen and .../all/reopen: the meals open again and how many Stock Lots were already gone. */
+export interface ReopenResult {
+  meals: PlannedMeal[]
+  stockGone: number
+}
+
+/** TEST-AUTHOR STUB (B9-26): the routes the tests pin; the developer makes them real. */
+const notBuilt = (): never => {
+  throw new Error('B9-26: this plan API call is not built yet')
+}
+
 /** A Planned Meal key is `/api/plan/<date>/<slot>/<course>`: a key without its Course is refused before any request (crs-c3 §1). */
 const slotPath = (key: SlotKey) => {
   if (!Number.isInteger(key.courseId)) throw new Error('A Planned Meal key needs its Course')
@@ -44,15 +70,21 @@ export const planApi = {
   /** CRS G2 (RX): every cell held back by an Exclusion, with who excluded what. Every User may read it. */
   couldntExclusions: () => http.get<{ cells: ExclusionCell[] }>('/api/plan/couldnt-plan/exclusions'),
   leftovers: () => http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers'),
-  regenerate: () => http.post<void>('/api/plan/regenerate'),
+  regenerate: () => http.post<RegenerateResult>('/api/plan/regenerate'),
+  /** B9-11: POST /api/plan/restore { undoToken }: writes the plan back exactly, no replan. 409 `plan_changed`, 404 `not_found`. */
+  restore: (_undoToken: string): Promise<{ changes: PlanChange[] }> => notBuilt(),
+  /** B9-11: POST .../{courseId}/reopen: Cooked or Not cooked taken back (every Course of the same Mark all). 409 `leftover_used`, `reopen_window_over`. */
+  reopen: (_key: SlotKey): Promise<ReopenResult> => notBuilt(),
+  /** B9-11: POST .../all/reopen: every marked Course of the slot occurrence. */
+  reopenAll: (_slot: SlotDayKey): Promise<ReopenResult> => notBuilt(),
   /** B5-BOW: what Regenerate would replace, with the Bought Planned Meals named (POST ?dryRun=1; writes nothing). */
   regenerateDryRun: () => http.post<RegenerateDryRun>('/api/plan/regenerate?dryRun=1'),
   setMeal: (key: SlotKey, recipeId: number, batches?: number) =>
-    http.put<PlannedMeal>(slotPath(key), batches === undefined ? { recipeId } : { recipeId, batches }),
+    http.put<PlanWriteResult>(slotPath(key), batches === undefined ? { recipeId } : { recipeId, batches }),
   /** B5-LOW: pins a Leftover (not taken out of the Freezer) to the Planned Meal of a Course; `{ leftoverId }` instead of a Recipe. */
-  pickLeftover: (key: SlotKey, leftoverId: number) => http.put<PlannedMeal>(slotPath(key), { leftoverId }),
-  confirm: (key: SlotKey) => http.post<PlannedMeal>(`${slotPath(key)}/confirm`),
-  unpin: (key: SlotKey) => http.post<PlannedMeal>(`${slotPath(key)}/unpin`),
+  pickLeftover: (key: SlotKey, leftoverId: number) => http.put<PlanWriteResult>(slotPath(key), { leftoverId }),
+  confirm: (key: SlotKey) => http.post<PlanWriteResult>(`${slotPath(key)}/confirm`),
+  unpin: (key: SlotKey) => http.post<PlanWriteResult>(`${slotPath(key)}/unpin`),
   alternatives: (key: SlotKey) => http.get<{ alternatives: Alternative[] }>(`${slotPath(key)}/alternatives`),
   cookPreview: (key: SlotKey) => http.get<CookPreview>(`${slotPath(key)}/cook`),
   cooked: (key: SlotKey, leftoverPortions?: number) =>

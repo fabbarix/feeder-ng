@@ -8,8 +8,11 @@ export interface UsePlanActions {
   /** Redoes the unpinned Planned Meals; resolves true when the plan was regenerated. */
   regenerate: () => Promise<boolean>
   regenerating: boolean
-  /** Sets the Recipe of a slot (and pins it, on the server). Resolves true on success. */
-  setMeal: (key: SlotKey, recipeId: number) => Promise<boolean>
+  /**
+   * Sets the Recipe of a slot (and pins it, on the server). Resolves true on success. B9-26 (PC-01): `kind` words the "What changed" toast
+   * ('swap': "Swapped Tue Breakfast"; 'choose', the default: "Recipe chosen for Tue Breakfast"). TEST-AUTHOR STUB: only the parameter is declared.
+   */
+  setMeal: (key: SlotKey, recipeId: number, kind?: 'swap' | 'choose') => Promise<boolean>
   /** Pin the Planned Meal (POST .../confirm on the server; the UI word is Pin). */
   pin: (key: SlotKey) => Promise<boolean>
   unpin: (key: SlotKey) => Promise<boolean>
@@ -55,7 +58,7 @@ export function usePlanActions(): UsePlanActions {
   return {
     regenerate,
     regenerating,
-    setMeal: (key, recipeId) => run(() => planApi.setMeal(key, recipeId)),
+    setMeal: (key, recipeId, _kind) => run(() => planApi.setMeal(key, recipeId)),
     pin: (key) => run(() => planApi.confirm(key)),
     unpin: (key) => run(() => planApi.unpin(key)),
     restore: (key, recipeId, pinned) =>

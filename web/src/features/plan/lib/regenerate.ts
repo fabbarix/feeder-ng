@@ -11,7 +11,12 @@ export function regenerateImpact(slots: PlanSlot[], today: string): number {
 
 export interface RegenerateConfirmCopy {
   title: string
+  /** The lead: the count (one paragraph). */
   body: string
+  /** B9-26 (SAFE-07): "Pinned and Cooked ones stay. You can undo it straight after." (ConfirmOptions.note). */
+  note?: string
+  /** B9-26 (SAFE-07): the Bought Planned Meals behind a one-line summary, as rows (ConfirmOptions.details). Absent when none is Bought. */
+  details?: { summary: string; rows: { key: string; state?: string; detail?: string }[] }
   confirmLabel: string
 }
 

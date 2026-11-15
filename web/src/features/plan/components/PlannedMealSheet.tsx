@@ -41,6 +41,15 @@ export interface PlannedMealSheetProps {
   onReviewVarietyRules?: () => void
   /** B5-LOW: the "From Mon's Chilli" link of a meal served from a Leftover opens that Leftover (its id). */
   onOpenLeftover?: (leftoverId: number) => void
+  /**
+   * B9-26 (SAFE-03). TEST-AUTHOR STUB: declared, not drawn. The Household's IANA zone, for the time of day of "Marked Cooked today at 08:40"
+   * (left out when absent); the Undo actions of a Cooked or Not cooked meal (`meal.resolution`); `offline` hides them.
+   */
+  timeZone?: string
+  offline?: boolean
+  onUndoCooked?: (key: SlotKey) => void
+  onUndoNotCooked?: (key: SlotKey) => void
+  onCookedAfterAll?: (key: SlotKey) => void
 }
 
 /**
