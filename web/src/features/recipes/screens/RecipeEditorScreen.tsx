@@ -8,6 +8,7 @@ import {
   ConfirmDialog,
   DraftNotice,
   FormActions,
+  Icon,
   PageHeader,
   Skeleton,
   Sortable,
@@ -322,7 +323,8 @@ export function RecipeEditorScreen(): ReactNode {
             <h2 id="recipe-section-ingredients-title">{recipeStrings.ingredients}</h2>
             {editor.errors.lines ? (
               <p id="recipe-lines-error" className="ui-field__error">
-                {codeMessage(editor.errors.lines)}
+                <Icon name="error" size={14} />
+                <span>{codeMessage(editor.errors.lines)}</span>
               </p>
             ) : null}
             {draft.lines.length === 0 ? <p>{recipeStrings.lines.none}</p> : null}
