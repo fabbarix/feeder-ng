@@ -116,3 +116,24 @@ describe("w2a's drop-in (rulings: P36 on Your preferences until B9-19, P41 on Sc
     expect(rules.countFindings(all, line('/scan#scan-scanned-list', 'P1', 375)).fail).toBe(1)
   })
 })
+
+describe("w3c's drop-in (P40 on the Shop at 1180 px until B9-34)", () => {
+  const dir = resolve(cwd, '../scripts/check-page-layout.modes.d')
+  const own = readFileSync(resolve(dir, '40-w3c-warn'), 'utf8')
+  const base = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
+  const all = `${base}\n${readdirSync(dir)
+    .filter((n) => !n.startsWith('.'))
+    .sort()
+    .map((n) => readFileSync(resolve(dir, n), 'utf8'))
+    .join('\n')}`
+  it('is the one line P40@/shop until B9-34, and no whole route', () => {
+    expect(rules.parseModes(own).errors).toEqual([])
+    expect(rules.parseModes(own).ruleWarn).toEqual([{ rule: 'P40', pattern: '/shop', until: 'B9-34' }])
+    expect(own).not.toMatch(/^\s*(warn_routes|fail_routes|default|width)\b/m)
+  })
+  it('leaves /shop in fail mode for every other rule', () => {
+    expect(rules.ruleWarnFor(all, 'P40', '/shop')).toMatchObject({ rule: 'P40', pattern: '/shop', until: 'B9-34' })
+    expect(rules.ruleWarnFor(all, 'P1', '/shop')).toBeNull()
+    expect(rules.modeFor(all, '/shop')).toBe('fail')
+  })
+})

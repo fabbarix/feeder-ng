@@ -1,0 +1,4 @@
+# w3c integration (found by the full profile only: 1180x820 is not in quick, and w2a and w2b ran quick): /shop's row titles are
+# 115 px wide at 1180 px (P40, by mode, a rule of B9-13). Not from w3c's packages; B9-34 rebuilds the Shop rows (SSP-05) and deletes
+# this line, and with it this file, when /shop is clean.
+P40@/shop = warn until B9-34
