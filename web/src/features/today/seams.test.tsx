@@ -22,6 +22,8 @@ vi.mock('../plan', () => ({
 vi.mock('../stock', () => ({
   useSpoiledLots: () => ({ data: [], today: '2026-11-09', isLoading: false, status: 'ready', throwOut: vi.fn(), keep: vi.fn(), refetch: vi.fn() }),
   useStockTotals: () => h.totals,
+  // B9-44 (TB-11): Use soon rows name their Lot, so the seam reads the Lots too.
+  useAllLots: () => ({ data: [], isLoading: false, status: 'ready', refetch: vi.fn() }),
 }))
 vi.mock('../shop', () => ({ ShoppingScreen: () => null }))
 vi.mock('../scan', () => ({ useScanSessionActive: () => false }))

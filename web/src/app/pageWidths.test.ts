@@ -7,7 +7,7 @@ const concrete = (p: string) => p.replace(/:[a-zA-Z]+/g, '7')
 
 describe('pageWidthFor: the per-route width table', () => {
   it.each([
-    ['/', 'wide'],
+    ['/', 'default'], // B9-44 (TB-03, L-01, changed on purpose): Today is the default width; its grid is by container (ADR 0026)
     ['/pantry', 'default'],
     ['/recipes/7', 'default'],
     ['/recipes/7/edit', 'default'],

@@ -1,5 +1,7 @@
+import type { ReactElement } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { slot } from '../test-utils'
 import type { Leftover } from '../types'
@@ -42,6 +44,9 @@ describe('ToConfirmTile', () => {
   })
 })
 
+// B9-44: the header has the Pantry link, so the tile needs a router.
+const renderTile = (ui: ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>)
+
 describe('LeftoversTile', () => {
   const leftovers: Leftover[] = [
     { id: 1, recipeId: 1, recipeName: 'Chicken', portions: 2, cookedOn: '2026-11-08', useBy: '2026-11-09', fromDate: '2026-11-08', fromMealSlotId: 2 },
@@ -49,43 +54,38 @@ describe('LeftoversTile', () => {
   ]
 
   it('is a half status tile in the Leftover colour, one row per Leftover with portions and Use-by as meta', () => {
-    const { container } = render(<LeftoversTile leftovers={leftovers} today="2026-11-09" />)
+    const { container } = renderTile(<LeftoversTile leftovers={leftovers} today="2026-11-09" />)
     expect(container.querySelector('[data-variant="status"][data-status="leftover"]')).not.toBeNull()
-    expect(screen.getByRole('heading', { name: 'Leftovers to use' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Leftovers' })).toBeInTheDocument()
     expect(screen.getByText('Chicken')).toBeInTheDocument()
     expect(screen.getByText('Use by today · 2 portions')).toBeInTheDocument()
     expect(screen.getByText('Use by Thu · 3 portions')).toBeInTheDocument()
   })
 
   it('N2: the tile carries the plan-leftovers class, which lays the rows out as a stacked list', () => {
-    const { container } = render(<LeftoversTile leftovers={leftovers} today="2026-11-09" />)
+    const { container } = renderTile(<LeftoversTile leftovers={leftovers} today="2026-11-09" />)
     expect(container.querySelector('.plan-leftovers[data-status="leftover"]')).not.toBeNull()
     expect(container.querySelectorAll('.plan-leftovers .list-row')).toHaveLength(2)
   })
 
   it('N2: the rows are rendered without the lead icon (the tile overline carries it), freeing the half-width cell', () => {
-    const { container } = render(<LeftoversTile leftovers={leftovers} today="2026-11-09" />)
+    const { container } = renderTile(<LeftoversTile leftovers={leftovers} today="2026-11-09" />)
     expect(container.querySelectorAll('.plan-leftovers .list-row')).toHaveLength(2)
     expect(container.querySelector('.plan-leftovers .list-row__lead')).toBeNull()
     expect(container.querySelector('.plan-leftovers .list-row__leading')).toBeNull()
   })
 
   it('lists the soonest Use-by first', () => {
-    render(<LeftoversTile leftovers={[...leftovers].reverse()} today="2026-11-09" />)
+    renderTile(<LeftoversTile leftovers={[...leftovers].reverse()} today="2026-11-09" />)
     const rows = screen.getAllByRole('listitem').map((li) => li.textContent ?? '')
     expect(rows[0]).toContain('Chicken')
     expect(rows[1]).toContain('Stew')
   })
 
-  it('the whole tile opens the Plan when asked to', async () => {
-    const onOpen = vi.fn()
-    render(<LeftoversTile leftovers={leftovers} today="2026-11-09" onOpen={onOpen} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Leftovers to use' }))
-    expect(onOpen).toHaveBeenCalledTimes(1)
-  })
+  // B9-44 (TB-11, removed on purpose): the tile-wide stretch to the Plan is gone (LeftoversTile.tb11.test.tsx).
 
   it('renders nothing without Leftovers', () => {
-    const { container } = render(<LeftoversTile leftovers={[]} today="2026-11-09" />)
+    const { container } = renderTile(<LeftoversTile leftovers={[]} today="2026-11-09" />)
     expect(container).toBeEmptyDOMElement()
   })
 })

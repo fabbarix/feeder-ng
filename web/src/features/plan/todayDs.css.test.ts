@@ -12,11 +12,7 @@ const rulesFor = (pred: (s: string) => boolean) => blocks.filter((b) => b.select
 const bodyOf = (selector: string) => rulesFor((s) => s === selector).map((b) => b.body).join(';')
 
 describe('plan.css: To confirm (one row per Meal Slot)', () => {
-  it('the title row has an info-tone badge', () => {
-    const d = declarations(css, ".to-confirm__badge[data-tone='info']")
-    expect(d['background']).toBe('var(--color-info-bg)')
-    expect(d['color']).toBe('var(--color-info-fg)')
-  })
+  // B9-44 (TB-09, removed on purpose): .to-confirm__badge is gone; TileHeader draws the info badge.
 
   it('the day + slot badge is a 4.5 rem neutral box (surface-2), the date badge of the system', () => {
     const d = declarations(css, '.to-confirm__when')

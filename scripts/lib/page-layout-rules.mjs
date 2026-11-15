@@ -12,7 +12,7 @@ export { RULES, RESERVED, ALWAYS_FAIL, PROBES, DARK_PROBES, SCENARIOS, SETUPS, e
 
 /** [route pattern, width kind]; ":id" is resolved with resolveRoute(). Must equal web/src/app/pageWidths.ts (contract test). */
 export const ROUTES = [
-  ['/', 'wide'], ['/plan', 'wide'], ['/plan/couldnt-plan/excluded', 'default'], ['/shop', 'wide'], ['/scan', 'narrow'], ['/pantry', 'default'],
+  ['/', 'default'], ['/plan', 'wide'], ['/plan/couldnt-plan/excluded', 'default'], ['/shop', 'wide'], ['/scan', 'narrow'], ['/pantry', 'default'],
   ['/recipes', 'wide'], ['/recipes/:id', 'default'], ['/recipes/:id/edit', 'default'], ['/recipes/new', 'default'],
   ['/recipes/import', 'narrow'], ['/recipes/export', 'narrow'], ['/ingredients', 'narrow'], ['/ingredients/:id', 'narrow'],
   ['/supplies', 'narrow'], ['/supplies/:id', 'narrow'], ['/scan/receipt', 'narrow'], ['/scan/receipt/review', 'narrow'],

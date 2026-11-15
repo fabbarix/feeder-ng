@@ -28,7 +28,8 @@ describe('CouldntPlanNotice: one tile', () => {
     expect(tile).toHaveAttribute('data-variant', 'status')
     expect(tile).toHaveAttribute('data-status', 'info')
     expect(container.querySelector('[data-status="danger"], [data-status="spoil"]')).toBeNull()
-    expect(within(tile).getByText("Couldn't plan", { selector: '.tile__overline' })).toBeInTheDocument()
+    // B9-44 (TB-09, changed on purpose): the title is TileHeader's h2, no longer an overline.
+    expect(within(tile).getByRole('heading', { level: 2, name: "Couldn't plan" })).toBeInTheDocument()
   })
 
   it('renders nothing when everything was planned', () => {
@@ -89,13 +90,13 @@ describe('CouldntPlanNotice: one tile', () => {
 })
 
 describe('"Show which meals"', () => {
-  it('is a secondary button in the tile header (next to the overline), offered once whatever the causes', async () => {
+  it('is a secondary button in the tile header (the TileHeader action), offered once whatever the causes', async () => {
     const onShowMeals = vi.fn()
     view({ slots: both, onShowMeals })
     const tile = screen.getByRole('region', { name: "Couldn't plan" })
     const button = within(tile).getByRole('button', { name: 'Show which meals' })
     expect(button).toHaveAttribute('data-variant', 'secondary')
-    expect(button.closest('.couldnt-head')).not.toBeNull()
+    expect(button.closest('.tile-header__action')).not.toBeNull()
     await userEvent.click(button)
     expect(onShowMeals).toHaveBeenCalledTimes(1)
   })

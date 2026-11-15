@@ -8,7 +8,7 @@ import { notServedToday } from '../plan/lib/slotDate'
 import type { HeroAction, HeroDay } from '../plan'
 import type { Leftover, PlanEntry, PlanSlot } from '../plan/types'
 import { useSpoiledLots, useStockTotals } from '../stock'
-import type { StockLot } from '../stock/types'
+import type { StockLot, WasteRecord } from '../stock/types'
 import { ShoppingScreen } from '../shop'
 import { useSoonItems } from './lib/useSoon'
 import type { UseSoonItem } from './types'
@@ -41,6 +41,13 @@ export interface TodayStock {
   failed?: boolean
 }
 
+export interface SpoiledCalls {
+  throwOut: (lotId: number) => Promise<WasteRecord>
+  keep: (lotId: number, goodUntil?: string) => Promise<StockLot>
+  undoThrowOut: (wasteId: number) => Promise<unknown>
+  undoKeep: (lotId: number, goesOff: string | null) => Promise<unknown>
+}
+
 /** Everything the Today tiles display, read from the owning features. */
 export interface TodayTileData {
   /** The clock the hero is judged by (B9-39: useHeroClock, so the hero moves on at the slot time without a reload). */
@@ -66,6 +73,11 @@ export interface TodayTileData {
   useSoon: UseSoonItem[]
   throwOut: (lotId: number) => Promise<void>
   keep: (lotId: number) => Promise<void>
+  /**
+   * B9-44 (SAFE-09, SSP-17): the Pantry's calls, with their Undo calls, for useSpoiledFlow: throwOut resolves with the waste record, keep (no date =
+   * good until today, a date = Change) with the kept Lot. `throwOut` and `keep` above stay for the callers that only need to act.
+   */
+  spoiledCalls?: SpoiledCalls
   planLoading: boolean
   stockLoading: boolean
   /** The plan or stock behind the tiles could not be loaded and nothing is held, online (a server error). */

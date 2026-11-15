@@ -69,9 +69,10 @@ describe('ToConfirmTile: one row per Meal Slot', () => {
     const { container } = setup([manicotti(), entry(1, 'Main', 'Soup', { date: '2026-11-10', mealSlotId: 1, name: 'Lunch' })])
     const heading = screen.getByRole('heading', { name: 'To confirm' })
     expect(heading.closest('[data-span]')).toHaveAttribute('data-span', 'full')
-    expect(container.querySelector('.to-confirm__badge')).toHaveAttribute('data-tone', 'info')
-    expect(container.querySelector('.to-confirm__badge svg')).toBeInTheDocument()
-    expect(container.querySelector('.to-confirm__count')).toHaveTextContent('2')
+    // B9-44 (TB-09, changed on purpose): the title row is the shared TileHeader (ToConfirmTile.tb09.test.tsx).
+    expect(container.querySelector('.tile-header__badge')).toHaveAttribute('data-tone', 'info')
+    expect(container.querySelector('.tile-header__badge svg')).toBeInTheDocument()
+    expect(container.querySelector('.tile-header .chip[data-kind="count"]')).toHaveTextContent('2')
   })
 
   it('renders nothing when there is nothing to confirm', () => {
@@ -149,9 +150,10 @@ describe('ToConfirmTile: the row is the container of its ActionGroup', () => {
 
   it('the count is a pill with an accessible name', () => {
     const { container } = setup([manicotti(), entry(1, 'Main', 'Soup', { date: '2026-11-10', mealSlotId: 1, name: 'Lunch' })])
-    const count = container.querySelector('.to-confirm__count')!
+    // B9-44 (TB-09, changed on purpose): the count is TileHeader's count Chip, round, named "<n> items".
+    const count = container.querySelector('.tile-header .chip[data-kind="count"]')!
     expect(count).toHaveTextContent('2')
-    expect(count).toHaveAttribute('data-shape', 'pill')
+    expect(count).toHaveAccessibleName('2 items')
   })
 })
 

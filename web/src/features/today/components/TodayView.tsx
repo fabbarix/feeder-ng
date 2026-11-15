@@ -12,7 +12,7 @@ export interface TodayViewProps {
   /** One element per tile id (built by TodayScreen from the owning features' components). */
   tiles: Partial<Record<TileId, ReactNode>>
   /** The Shopping List screen, shown instead of the grid while a scan session is active. */
-  shopping: ReactNode
+  shopping?: ReactNode
   /** Where the empty state's button goes. */
   onOpenPlan: () => void
   /** Where the error's Try again goes. */

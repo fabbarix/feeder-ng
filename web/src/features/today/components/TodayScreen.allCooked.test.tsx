@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { createElement } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { findNotice, noticeWith, findToast } from '../../../test/notices'
+import { findToast } from '../../../test/notices'
 import { allCookedResult, courseMeal, courseSlot, mockApi, planCourse, renderWithProviders, slot } from '../../plan/test-utils'
 import type { CookPreview, PlanSlot } from '../../plan/types'
 import { TodayScreen } from './TodayScreen'
@@ -87,25 +87,40 @@ describe.each([
     expect(toast.querySelector('.toast__body')).toHaveTextContent('Roast chicken: 2 portions planned for Thu Lunch. Green beans: 1 portion kept as a Leftover, good until Fri.')
   })
 
-  it('shows the Stock shortfall with Correct Stock and Dismiss', async () => {
-    const api = await open()
+  // B9-45 (PC-02, waits for it; B9-44 wires it on Today): ONE info notice for every short Ingredient, with DetailList rows, no alert; Correct
+  // Stock is ONE sheet with a Stepper per Ingredient (every row starts at 0, g by 10) and one Save.
+  const shortNotice = async () => (await screen.findByText('Stock was short for chicken thighs')).closest('.shortfall-notice') as HTMLElement
+
+  it('shows ONE shortfall notice (placement list) with a row per Ingredient, not an alert, and no duplicate in the sheets', async () => {
+    await open()
     await confirmAll()
-    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
-    expect(notice).toHaveTextContent('Stock shows only 300 g chicken thighs, the recipe uses 400 g')
-    await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
-    const correct = await screen.findByRole('dialog', { name: 'How much chicken thighs do you have?' })
-    const input = within(correct).getByRole('spinbutton', { name: 'Total in Stock' })
-    await userEvent.clear(input)
-    await userEvent.type(input, '250')
-    await userEvent.click(within(correct).getByRole('button', { name: 'Set total' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 }))
+    const notice = await shortNotice()
+    expect(notice).toHaveAttribute('data-status', 'info')
+    expect(notice).toHaveAttribute('role', 'status')
+    expect(within(notice).getByText('chicken thighs')).toBeInTheDocument()
+    expect(within(notice).getByText('The Recipe used 400 g · Stock showed 300 g')).toBeInTheDocument()
+    expect(notice.querySelector('.shortfall-notice__subline')).toHaveTextContent(/Stock stays where it is/)
+    expect(document.querySelectorAll('.shortfall-notice')).toHaveLength(1)
+    expect(document.querySelector('[role="alert"]:not(.toast-live)')).toBeNull()
   })
 
-  it('Dismiss removes the shortfall', async () => {
+  it('Correct Stock opens the one sheet; Save writes the typed total and settles the notice', async () => {
     const api = await open()
     await confirmAll()
-    await userEvent.click(within(await findNotice('alert', 'Stock shows only 300 g chicken thighs')).getByRole('button', { name: 'Dismiss' }))
-    await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
+    await userEvent.click(within(await shortNotice()).getByRole('button', { name: 'Correct Stock' }))
+    const correct = await screen.findByRole('dialog', { name: /Correct Stock/ })
+    const stepper = within(correct).getByRole('group', { name: 'chicken thighs left now' })
+    for (let n = 0; n < 25; n++) await userEvent.click(within(stepper).getByRole('button', { name: /^Increase/ }))
+    await userEvent.click(within(correct).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 }))
+    await waitFor(() => expect(document.querySelector('.shortfall-notice')).toBeNull())
+  })
+
+  it('Dismiss removes the shortfall and writes nothing', async () => {
+    const api = await open()
+    await confirmAll()
+    await userEvent.click(within(await shortNotice()).getByRole('button', { name: 'Dismiss' }))
+    await waitFor(() => expect(document.querySelector('.shortfall-notice')).toBeNull())
     expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')).toHaveLength(0)
   })
 })
