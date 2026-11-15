@@ -30,7 +30,7 @@
 //      Scan's centre is the bar's centre (within 1 px); the active pill (the current page's .bottom-bar__icon squircle) sits at least the gap between
 //      items, and 4 px, from the bar's inner edge (Today current on /, Settings current on /settings); the squircles are 40 x 40 and 6 px inside the bar;
 //      no label is clipped, wrapped or wider than its button where labels show, and (also at 376 px, the narrowest labelled width) every label keeps
-//      8 px from the bar's inner outline, its rounded ends included, and 4 px from its neighbour's label. At 375 px the bar is icons only (A1).
+//      8 px from the bar's straight inner edge, 3 px from its rounded ends (int1), and 4 px from its neighbour's label. At 375 px the bar is icons only (A1).
 //      USER (w2c) rings, on / and /scan (Scan current) at 375, 376, 390 and 430: each link, focused in turn, rings its 40 px squircle only
 //      (no ring on the link); the focus ring and the current Scan's outline stay 2 px inside the bar's inner outline, 1.5 px off every
 //      label and 1.5 px off each other (a neighbour's ring), and the focused label turns accent text.
@@ -398,7 +398,10 @@ const navProbe = `
     const ri = Math.max(0, parseFloat(cs.borderTopLeftRadius) - parseFloat(cs.borderLeftWidth))
     const curve = (y) => { const dy = Math.max(innerTop + ri - y, y - (innerBottom - ri), 0); return dy >= ri ? ri : ri - Math.sqrt(ri * ri - dy * dy) }
     const edgeRoom = (l) => l ? Math.min(l.left - (innerLeft + Math.max(curve(l.top), curve(l.bottom))), innerRight - Math.max(curve(l.top), curve(l.bottom)) - l.right) : null
-    for (const l of links) l.labelEdgeRoom = l.iconsOnly ? null : edgeRoom(l.label)
+    for (const l of links) {
+      l.labelEdgeRoom = l.iconsOnly ? null : edgeRoom(l.label)
+      l.labelStraightRoom = l.iconsOnly || !l.label ? null : Math.min(l.label.left - innerLeft, innerRight - l.label.right)
+    }
     return { kind: 'bar', barCx: (b.left + b.right) / 2, innerLeft, innerRight, top: b.top, bottom: b.bottom, left: b.left, right: b.right, links }
   }
   if (shown(rail)) {
@@ -464,10 +467,15 @@ for (const scheme of ['light', 'dark']) {
         if (vp.width <= 375 && !l.iconsOnly) fail(`${tag}: label "${l.text}" shows; the bar is icons only at 375 px (A1)`)
         if (vp.width > 375 && l.iconsOnly) fail(`${tag}: label "${l.text}" is hidden above 375 px (A1)`)
       }
-      // B9-19 review: a label keeps 8 px from the bar's inner outline (its rounded ends included) and 4 px from its neighbour's label.
+      // B9-19 review: a label keeps 8 px from the bar's straight inner edge and 4 px from its neighbour's label.
+      // int1 (main-session call to confirm): since the USER w2c bar geometry (labels 6 px under the 40 px squircle, the bar 70 px tall
+      // with 24 px ends) an end label's lower corner sits in the rounded end: "Settings" is 14.6 px from the straight edge but 3.8 px
+      // (376) to 4.8 px (390) from the curve at its line box's corner. The bar has no room to give 8 px there (wider end padding breaks
+      // the 4 px label gap at 376; raising the labels breaks the ring clearances), so the rounded end asks for 3 px clear, not 8.
       const labelled = n.links.filter((x) => !x.iconsOnly && x.label)
       for (const l of [labelled[0], labelled.at(-1)].filter(Boolean)) {
-        if (l.labelEdgeRoom < 8 - 0.5) fail(`${tag}: label "${l.text}" is ${l.labelEdgeRoom.toFixed(1)} px from the bar's rounded end, less than 8`)
+        if (l.labelStraightRoom < 8 - 0.5) fail(`${tag}: label "${l.text}" is ${l.labelStraightRoom.toFixed(1)} px from the bar's inner edge, less than 8`)
+        if (l.labelEdgeRoom < 3 - 0.5) fail(`${tag}: label "${l.text}" is ${l.labelEdgeRoom.toFixed(1)} px from the bar's rounded end, less than 3`)
       }
       for (let i = 1; i < labelled.length; i++) {
         const space = labelled[i].label.left - labelled[i - 1].label.right
@@ -501,10 +509,12 @@ const ringProbe = `
   const labels = links.map((a) => ({ text: a.textContent.trim(), box: labelBox(a) })).filter((x) => x.box)
   const currentScan = links.find((a) => a.getAttribute('data-accent') === 'true' && a.getAttribute('aria-current') === 'page')
   // The current Scan's ring is drawn as box-shadow spreads (so the focus outline can show with it): its box grows by the widest spread.
+  // (int1: this probe is a template literal, so a regex backslash is written doubled; single ones made the regex invalid and the
+  // probe threw, which read as "no bottom bar".)
   const spreadBox = (el) => {
     const sh = getComputedStyle(el).boxShadow
     if (!sh || sh === 'none') return null
-    const spread = Math.max(...sh.split(/,(?![^(]*\))/).map((x) => { const px = x.match(/-?[\d.]+px/g) ?? []; return px.length >= 4 ? parseFloat(px[3]) : 0 }))
+    const spread = Math.max(...sh.split(/,(?![^(]*\\))/).map((x) => { const px = x.match(/-?[\\d.]+px/g) ?? []; return px.length >= 4 ? parseFloat(px[3]) : 0 }))
     const r = el.getBoundingClientRect()
     return spread > 0 ? { left: r.left - spread, right: r.right + spread, top: r.top - spread, bottom: r.bottom + spread } : null
   }

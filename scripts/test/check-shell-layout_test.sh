@@ -2,7 +2,7 @@
 # R2-L: scripts/check-shell-layout.mjs covers the wide screens and the rail contrast (L-04, P7). Source-level checks: the script needs Chrome.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-F="$ROOT/scripts/check-shell-layout.mjs"
+F="${SHELL_LAYOUT_F:-$ROOT/scripts/check-shell-layout.mjs}"  # SHELL_LAYOUT_F: the guard to read (a test of this test)
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS + 1)); }
 bad() { FAIL=$((FAIL + 1)); printf 'FAIL: %s\n' "$1"; }
@@ -76,6 +76,18 @@ has "from the label .*less than 1.5" "a ring touching a label must fail"
 has "from the current Scan outline, less than 1.5" "a focus ring touching the current Scan's outline must fail"
 has "inside the bar's inner outline, less than 2" "a ring touching the bar border must fail"
 node --check "$F" 2>/dev/null && ok || bad "check-shell-layout.mjs must be valid"
+# int1: the in-page probes are template literals, so a single backslash in a regex is lost (the ring probe threw a SyntaxError in Chrome,
+# which read as "no bottom bar"). Each probe, as the page receives it, must parse.
+node -e '
+const src = require("fs").readFileSync(process.argv[1], "utf8")
+const names = [...src.matchAll(/^const (\w+Probe) = `/gm)].map((m) => m[1])
+if (!names.length) { console.error("no probes found"); process.exit(1) }
+const vm = require("vm")
+for (const n of names) {
+  const text = vm.runInNewContext(src.match(new RegExp("^const " + n + " = (`[\\s\\S]*?`)\\n", "m"))[1].replace(/\$\{[^}]*\}/g, "0"))
+  try { new Function("return " + text) } catch (e) { console.error(n + ": " + e.message); process.exit(1) }
+}' "$F" && ok || bad "every in-page probe must parse as the page receives it (a regex backslash in a template literal is written doubled)"
+has "rounded end, less than 3" "an end label inside 3 px of the bar's rounded end must fail (int1)"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
