@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Icon } from '../Icon'
 import { IconButton } from '../IconButton'
-import { addMonths, monthMatrix, moveIso, parseIsoDate, toIsoDate } from './calendar'
+import { addMonths, monthMatrix, moveIso, parseIsoDate, rangeMark, toIsoDate } from './calendar'
 import { describedBy, FieldFrame, useFieldIds } from './FieldFrame'
 import type { FieldProps, FieldSizeProps } from './Field'
 import { floatingPopoverAttr, useFloatingPopover } from '../lib/useFloatingPopover'
@@ -19,6 +19,9 @@ export interface DateFieldProps extends FieldProps, FieldSizeProps {
   today?: string
   /** Default en-GB. */
   locale?: string
+  /** PC-08: the first day of a range ending at `value` (an Away period). Days before it cannot be chosen; it and the days up to the
+   * value are marked; the calendar opens on it while there is no value. */
+  rangeStart?: string
 }
 
 const todayIso = () => {
@@ -36,7 +39,7 @@ function localDate(iso: string): Date {
  * A field showing the date, opening a non-modal calendar popover: Monday-first grid, arrows by day and week, PageUp/PageDown
  * by month, Enter or Space selects, Escape closes and returns focus to the trigger. Days outside min/max are disabled.
  */
-export function DateField({ size = 'md', label, helper, error, disabled, required, value, onChange, min, max, today, locale = 'en-GB' }: DateFieldProps) {
+export function DateField({ size = 'md', label, helper, error, disabled, required, value, onChange, min, max, today, locale = 'en-GB', rangeStart }: DateFieldProps) {
   const ids = useFieldIds()
   const [open, setOpen] = useState(false)
   const [focusIso, setFocusIso] = useState(value || today || todayIso())
@@ -55,7 +58,7 @@ export function DateField({ size = 'md', label, helper, error, disabled, require
   const monthName = useMemo(() => new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }), [locale])
 
   const openCalendar = () => {
-    const start = value || todayValue
+    const start = value || rangeStart || todayValue
     setFocusIso(start)
     setView(viewOf(start))
     setFocusTick((t) => t + 1)
@@ -123,7 +126,7 @@ export function DateField({ size = 'md', label, helper, error, disabled, require
     onChange(iso)
     close(true)
   }
-  const isDisabled = (iso: string) => (min !== undefined && iso < min) || (max !== undefined && iso > max)
+  const isDisabled = (iso: string) => (min !== undefined && iso < min) || (max !== undefined && iso > max) || (rangeStart !== undefined && iso < rangeStart)
 
   const weeks = monthMatrix(view.year, view.month)
   const headingId = `${ids.labelId}-month`
@@ -183,12 +186,15 @@ export function DateField({ size = 'md', label, helper, error, disabled, require
                       {week.map((day) => {
                         const selected = day.iso === value
                         const disabledDay = isDisabled(day.iso)
+                        const mark = rangeMark(day.iso, rangeStart, value)
                         return (
                           <td key={day.iso} role="gridcell" aria-selected={selected ? 'true' : 'false'}>
                             <button
                               type="button"
                               data-iso={day.iso}
-                              aria-label={longDay.format(localDate(day.iso))}
+                              aria-label={longDay.format(localDate(day.iso)) + (mark === 'start' ? fieldStrings.rangeFirstDay : mark === 'in' ? fieldStrings.inRange : '')}
+                              data-range-start={mark === 'start' ? '' : undefined}
+                              data-in-range={mark === 'in' ? '' : undefined}
                               aria-current={day.iso === todayValue ? 'date' : undefined}
                               aria-disabled={disabledDay || undefined}
                               data-outside={day.inMonth ? undefined : 'true'}
