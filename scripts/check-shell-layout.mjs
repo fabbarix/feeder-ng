@@ -3,7 +3,7 @@
 //   pnpm -C web dev --port 5199 &            (start it detached, log to build/)
 //   node scripts/check-shell-layout.mjs --url http://localhost:5199 [--chrome /usr/bin/google-chrome]
 // It drives Chrome over the DevTools protocol (no extra dependency; Node 22+ has WebSocket), fakes GET /api/me so the shell renders,
-// and for every route at 390, 820, 1280, 1440, 1920 and 2560 px wide asserts:
+// and for every route at 375, 390, 430, 820, 1024, 1280, 1440, 1920 and 2560 px wide asserts:
 //   1. document.documentElement.scrollWidth <= clientWidth (= innerWidth without a scrollbar): no sideways scroll;
 //   2. scrolled to the end, the last element of the page ends above the nav (bottom bar < 1024, none hidden behind it);
 //   3. /board and /cook/* have no nav and their <main> spans the viewport width (>= 900: the old 220 px column is gone);
@@ -15,16 +15,19 @@
 //  10. (ordinary routes) at >= 1440 every .side-rail__link sits inside the rail (left > 0, right < rail right) and its labels do not overflow (scrollWidth <= clientWidth);
 //   8. (on /) the open avatar menu popover lies fully inside the viewport;
 //  11. (ordinary routes) at >= 1024 the current rail item (aria-current) has a label contrast of at least 4.5:1 against its own background (L-04: Scan was 1.31:1).
-//  12. (phone, < 1024) the seven-button bottom bar (PN, nav-even): every button is at least 44 x 44 px; Scan centred on the bar (within 1 px); no label is
-//      truncated (.bottom-bar__label scrollWidth <= clientWidth, one line); the bar sits inside the viewport with its safe-area insets; /pantry shows Pantry as current.
-//  13. (phone, < 1024, /recipes/new) QA-4: the sticky action bar sits flush on the bottom bar: its bottom edge is within 1 px of the bar's top edge,
-//      at 360 and 390 px, with the page scrolled to the top and to the end (no strip of page content between them).
+//  12. (phone, < 1024) the seven-button bottom bar (PN, nav-even, R-F): every button is at least 44 x 44 px; Scan centred on the bar (within 1 px); no label is
+//      truncated (.bottom-bar__label scrollWidth <= clientWidth, one line) where labels show (icons only at 375 px, amendment A1: the label is visually
+//      hidden there and stays the link's name); the current page's and Scan's .bottom-bar__icon squircles are 40 x 40 and at least 6 px inside the bar;
+//      the bar sits inside the viewport with its safe-area insets; /pantry shows Pantry as current.
+//  13. (phone, < 1024, /recipes/new) QA-4, SHORT-04: the sticky action bar floats --bar-gap (12 px) above the bottom bar: its bottom edge is within 1 px
+//      of 12 px above the bar's top edge, at 375 and 390 px, with the page scrolled to the top and to the end (one gap, the same as under the bottom bar).
 //  14. (phone, < 1024, /recipes/new) FU-1: with a toast raised, the .toast-region's bottom edge is at or above the sticky action bar's top edge
-//      (1 px tolerance), at 360 and 390 px, scrolled to the end where the bar sits on the bottom bar. A toast never covers Save.
-//  15. (nav-even, / and /settings, in light and dark) the seven-slot bottom bar (Today, Plan, Pantry | Scan | Shop, Recipes, Settings), at 360, 390 and 820 px:
+//      (1 px tolerance), at 375 and 390 px, scrolled to the end where the bar sits above the bottom bar. A toast never covers Save.
+//  15. (nav-even, / and /settings, in light and dark) the seven-slot bottom bar (Today, Plan, Pantry | Scan | Shop, Recipes, Settings), at 375, 390 and 820 px:
 //      every slot has the same width (the centre-to-centre distance of neighbours is equal, within 1 px; no slot is narrower than 44 px);
-//      Scan's centre is the bar's centre (within 1 px); the active pill's inset from the bar's inner edge is at least the gap between items
-//      (Today current on /, Settings current on /settings); no label is clipped, wrapped or wider than its button, at 360 px with seven buttons.
+//      Scan's centre is the bar's centre (within 1 px); the active pill (the current page's .bottom-bar__icon squircle) sits at least the gap between
+//      items, and 4 px, from the bar's inner edge (Today current on /, Settings current on /settings); the squircles are 40 x 40 and 6 px inside the bar;
+//      no label is clipped, wrapped or wider than its button where labels show. At 375 px the bar is icons only (A1): every label is visually hidden.
 //      At 1024 and 1280 px (side rail) the bottom bar is hidden and the rail shows seven links of one size (within 1 px), all inside the rail.
 //  16. (phone, 390 and 412 px, dev route /_editor-fixture) hotfix 4.2: the photo editor, hosted inside a Tile as in the Read step, on a generated
 //      2268x3226 picture: the eight crop handles sit within 3 px of the crop box's corners and edge middles (whole picture and an inset crop),
@@ -42,7 +45,7 @@ const arg = (name, fallback) => {
 const base = arg('url', 'http://localhost:5173').replace(/\/$/, '')
 const chromeBin = arg('chrome', process.env.CHROME ?? 'google-chrome')
 const VIEWPORTS = [
-  { width: 360, height: 800, mobile: true },
+  { width: 375, height: 800, mobile: true },
   { width: 390, height: 844, mobile: true },
   { width: 430, height: 932, mobile: true },
   { width: 820, height: 1180, mobile: false },
@@ -177,9 +180,12 @@ const page = `
       const r = a.getBoundingClientRect()
       const label = a.querySelector('.bottom-bar__label')
       const lr = label ? label.getBoundingClientRect() : null
-      return { text: a.textContent.trim(), w: r.width, h: r.height, cx: r.left + r.width / 2, lsw: label ? label.scrollWidth : 0, lcw: label ? label.clientWidth : 0, lh: lr ? lr.height : 0, fs: label ? parseFloat(getComputedStyle(label).fontSize) : 0, scan: a.getAttribute('data-accent') === 'true' }
+      const icon = a.querySelector('.bottom-bar__icon')
+      const ib = icon ? icon.getBoundingClientRect() : null
+      const hidden = !!label && getComputedStyle(label).clipPath !== 'none'
+      return { text: a.textContent.trim(), w: r.width, h: r.height, cx: r.left + r.width / 2, lsw: label ? label.scrollWidth : 0, lcw: label ? label.clientWidth : 0, lh: lr ? lr.height : 0, fs: label ? parseFloat(getComputedStyle(label).fontSize) : 0, scan: a.getAttribute('data-accent') === 'true', current: a.getAttribute('aria-current') === 'page', iconsOnly: hidden, icon: ib ? { left: ib.left, right: ib.right, top: ib.top, bottom: ib.bottom, w: ib.width, h: ib.height } : null }
     }) : [],
-    barBox: bar && visible(bar) ? (() => { const r = bar.getBoundingClientRect(); return { left: r.left, right: r.right, cx: (r.left + r.right) / 2, vw: document.documentElement.clientWidth } })() : null,
+    barBox: bar && visible(bar) ? (() => { const r = bar.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, cx: (r.left + r.right) / 2, vw: document.documentElement.clientWidth } })() : null,
     railRight: rail && visible(rail) ? Math.round(rail.getBoundingClientRect().right) : null,
     devErrorPage: /Unexpected Application Error|Hey developer/.test(document.body.innerText),
   }
@@ -241,8 +247,19 @@ for (const vp of VIEWPORTS) {
       if (scan && Math.abs(scan.cx - m.barBox.cx) > 1) fail(`${tag}: Scan is not centred on the bar (centre ${scan.cx.toFixed(1)}, bar centre ${m.barBox.cx.toFixed(1)})`)
       for (const l of m.barLinks) {
         if (l.w < 44 || l.h < 44) fail(`${tag}: bar button "${l.text}" is ${l.w.toFixed(0)}x${l.h.toFixed(0)}, below the 44 px target`)
-        if (l.lsw > l.lcw) fail(`${tag}: bar label "${l.text}" is truncated (scrollWidth ${l.lsw} > clientWidth ${l.lcw})`)
-        if (l.fs && l.lh > l.fs * 1.5) fail(`${tag}: bar label "${l.text}" wraps onto more than one line`)
+        // Icons only at 375 px (A1): the label is visually hidden (1 px, clipped) and is the link's name, so it is not measured.
+        if (vp.width <= 375 && !l.iconsOnly) fail(`${tag}: bar label "${l.text}" shows at ${vp.width} px; the bar is icons only at 375 px and below (A1)`)
+        if (vp.width > 375 && l.iconsOnly) fail(`${tag}: bar label "${l.text}" is hidden at ${vp.width} px; above 375 px the bar shows icon and label (A1)`)
+        if (!l.iconsOnly && l.lsw > l.lcw) fail(`${tag}: bar label "${l.text}" is truncated (scrollWidth ${l.lsw} > clientWidth ${l.lcw})`)
+        if (!l.iconsOnly && l.fs && l.lh > l.fs * 1.5) fail(`${tag}: bar label "${l.text}" wraps onto more than one line`)
+        // R-F: the current page's and Scan's .bottom-bar__icon squircles are 40 x 40 and at least 6 px inside the bar.
+        if ((l.current || l.scan) && l.icon) {
+          const i = l.icon, b = m.barBox
+          const room = Math.min(i.left - b.left, b.right - i.right, i.top - b.top, b.bottom - i.bottom)
+          if (Math.abs(i.w - 40) > 0.5 || Math.abs(i.h - 40) > 0.5) fail(`${tag}: the squircle of "${l.text}" is ${i.w.toFixed(1)}x${i.h.toFixed(1)}, not 40 x 40 (R-F)`)
+          if (room < 6 - 0.5) fail(`${tag}: the squircle of "${l.text}" is only ${room.toFixed(1)} px inside the bar (R-F: at least 6)`)
+        }
+        if ((l.current || l.scan) && !l.icon) fail(`${tag}: "${l.text}" has no .bottom-bar__icon squircle (R-F)`)
       }
       if (m.barBox.left < 0 || m.barBox.right > m.barBox.vw) fail(`${tag}: bottom bar (${m.barBox.left.toFixed(0)}-${m.barBox.right.toFixed(0)}) leaves the viewport (safe-area insets)`)
     }
@@ -254,15 +271,20 @@ for (const vp of VIEWPORTS) {
   }
 }
 
-// Rule 13 (QA-4): the sticky action bar and the bottom bar leave no gap.
+// Rule 13 (QA-4, SHORT-04): the sticky action bar floats --bar-gap above the bottom bar (one gap, as under the bottom bar).
 const gapProbe = `
 (async () => {
   await new Promise((r) => setTimeout(r, 300))
   const bar = document.querySelector('.sticky-action-bar')
   const nav = document.querySelector('nav.bottom-bar')
   if (!bar || !nav) return null
+  const probe = document.createElement('div')
+  probe.style.cssText = 'position:absolute;visibility:hidden;block-size:var(--bar-gap)'
+  document.body.appendChild(probe)
+  const want = probe.getBoundingClientRect().height
+  probe.remove()
   const at = (y) => { window.scrollTo(0, y); const b = bar.getBoundingClientRect(), n = nav.getBoundingClientRect(); return Math.round((n.top - b.bottom) * 10) / 10 }
-  return { top: at(0), end: at(document.documentElement.scrollHeight) }
+  return { want, top: at(0), end: at(document.documentElement.scrollHeight) }
 })()`
 for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
   await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: true })
@@ -271,7 +293,7 @@ for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
   const g = await evaluate(gapProbe).catch(() => null)
   const tag = `${vp.width}px /recipes/new`
   if (!g) fail(`${tag}: no .sticky-action-bar or bottom bar to measure`)
-  else for (const [where, gap] of Object.entries(g)) if (Math.abs(gap) > 1) fail(`${tag}: ${gap}px between the action bar and the bottom bar (scrolled to ${where})`)
+  else for (const [where, gap] of Object.entries(g)) if (where !== 'want' && Math.abs(gap - g.want) > 1) fail(`${tag}: ${gap}px between the action bar and the bottom bar, not the ${g.want}px --bar-gap (scrolled to ${where})`)
 }
 
 // Rule 14 (FU-1): a toast raised on the page lies above the sticky action bar. The toast is put into the live region the way
@@ -321,13 +343,15 @@ const navProbe = `
       const label = a.querySelector('.bottom-bar__label')
       const lb = label ? label.getBoundingClientRect() : null
       const ab = a.getBoundingClientRect()
+      const icon = a.querySelector('.bottom-bar__icon')
       return {
         text: a.textContent.trim(), ...box(a), scan: a.getAttribute('data-accent') === 'true', current: a.getAttribute('aria-current') === 'page',
         labelOut: lb ? Math.max(ab.left - lb.left, lb.right - ab.right, 0) : 0, labelH: lb ? lb.height : 0, fs: label ? parseFloat(getComputedStyle(label).fontSize) : 0,
-        sw: label ? label.scrollWidth : 0, cw: label ? label.clientWidth : 0,
+        sw: label ? label.scrollWidth : 0, cw: label ? label.clientWidth : 0, iconsOnly: !!label && getComputedStyle(label).clipPath !== 'none',
+        icon: icon ? box(icon) : null,
       }
     })
-    return { kind: 'bar', barCx: (b.left + b.right) / 2, innerLeft, innerRight, links }
+    return { kind: 'bar', barCx: (b.left + b.right) / 2, innerLeft, innerRight, top: b.top, bottom: b.bottom, left: b.left, right: b.right, links }
   }
   if (shown(rail)) {
     const r = rail.getBoundingClientRect()
@@ -337,7 +361,7 @@ const navProbe = `
 })()`
 for (const scheme of ['light', 'dark']) {
   await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
-  for (const vp of VIEWPORTS.filter((v) => [360, 390, 820, 1024, 1280].includes(v.width))) {
+  for (const vp of VIEWPORTS.filter((v) => [375, 390, 820, 1024, 1280].includes(v.width))) {
     await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
     for (const route of ['/', '/settings']) {
       const tag = `${vp.width}px ${route} (${scheme}) nav-even`
@@ -370,12 +394,26 @@ for (const scheme of ['light', 'dark']) {
       for (let i = 1; i < n.links.length; i++) if (!n.links[i].scan && !n.links[i - 1].scan) gap = Math.max(gap, n.links[i].left - n.links[i - 1].right)
       const cur = n.links.find((l) => l.current)
       if (!cur) fail(`${tag}: no current button`)
+      else if (!cur.icon) fail(`${tag}: the current button "${cur.text}" has no .bottom-bar__icon squircle (R-F)`)
       else {
-        const inset = cur.text === n.links[0].text ? cur.left - n.innerLeft : cur.text === n.links[6].text ? n.innerRight - cur.right : null
+        // R-F: the active pill is the current page's 40 px squircle (.bottom-bar__icon), not the link, which is the whole track.
+        const pill = cur.icon
+        const inset = cur.text === n.links[0].text ? pill.left - n.innerLeft : cur.text === n.links[6].text ? n.innerRight - pill.right : null
         if (inset !== null && inset < gap - 0.5) fail(`${tag}: the active pill "${cur.text}" is ${inset.toFixed(1)} px from the bar edge, less than the ${gap.toFixed(1)} px gap between items`)
         if (inset !== null && inset < 4) fail(`${tag}: the active pill "${cur.text}" is only ${inset.toFixed(1)} px from the bar edge`)
       }
+      for (const l of n.links.filter((x) => (x.current || x.scan) && x.icon)) {
+        const i = l.icon
+        const room = Math.min(i.left - n.left, n.right - i.right, i.top - n.top, n.bottom - i.bottom)
+        if (Math.abs(i.w - 40) > 0.5 || Math.abs(i.h - 40) > 0.5) fail(`${tag}: the squircle of "${l.text}" is ${i.w.toFixed(1)}x${i.h.toFixed(1)}, not 40 x 40 (R-F)`)
+        if (room < 6 - 0.5) fail(`${tag}: the squircle of "${l.text}" is ${room.toFixed(1)} px inside the bar, less than 6 (R-F)`)
+      }
+      // Icons only at 375 px (A1): every label is visually hidden there; above 375 px every label shows.
       for (const l of n.links) {
+        if (vp.width <= 375 && !l.iconsOnly) fail(`${tag}: label "${l.text}" shows; the bar is icons only at 375 px (A1)`)
+        if (vp.width > 375 && l.iconsOnly) fail(`${tag}: label "${l.text}" is hidden above 375 px (A1)`)
+      }
+      for (const l of n.links.filter((x) => !x.iconsOnly)) {
         if (l.labelOut > 0.5) fail(`${tag}: label "${l.text}" sticks out of its button by ${l.labelOut.toFixed(1)} px (clipped)`)
         if (l.sw > l.cw + 0.5 && l.cw > 0) fail(`${tag}: label "${l.text}" is truncated (scrollWidth ${l.sw} > clientWidth ${l.cw})`)
         if (l.fs && l.labelH > l.fs * 1.5) fail(`${tag}: label "${l.text}" wraps onto more than one line`)
