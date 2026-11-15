@@ -103,7 +103,6 @@ const ADDED = {
   // sheet) is held until B9-30 builds the sheet's Product Select (B9_15_DEFERRED); B9-30 adds its name here.
   // B9-10: scenarios/recipe-editor.mjs (order 40): the Recipe editor with the 36-character Tag (DS-04).
   // B9-14: scenarios/b9-14.mjs (order 310): the sheet scenarios of P25 and P33 and the sheet page of P39.
-  // B9-36: scenarios/b9-36.mjs (order 330): preferences-preview.
   // B9-16: scenarios/b9-16.mjs (order 310, after b9-14 by file name): P36's touch-targets-controls and the household-errors check.
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
   // B9-42: scenarios/b9-42.mjs (order 320, after b9-18 by file name): the Meal Slots cards, editor, Remove confirm, Removed tile, Change a date.
@@ -111,6 +110,7 @@ const ADDED = {
   // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-36: scenarios/b9-36.mjs (order 330): preferences-preview (SAFE-08).
   // B9-52: scenarios/b9-52.mjs (order 330): allowlist-actions, allowlist-share and access-requests-rows (SET-03, SET-12).
+  // B9-51: scenarios/b9-51.mjs (order 340): tags-rows (SET-11), assistant-bar (SHORT-06), toast-over-preferences-bar, planning-cooking-times (PC-14, A2, SAFE-04).
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   scenarios: [
@@ -122,6 +122,7 @@ const ADDED = {
     'recipe-editor-guard', 'recipe-new-empty-save',
     'preferences-preview',
     'allowlist-actions', 'allowlist-share', 'access-requests-rows',
+    'tags-rows', 'assistant-bar', 'toast-over-preferences-bar', 'planning-cooking-times',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
   ],

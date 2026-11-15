@@ -1,4 +1,4 @@
-import { Chip, IconButton, Muted, Select, Tile } from '../../../ui'
+import { FieldRow, IconButton, Muted, Select, Tile } from '../../../ui'
 import { raIcons } from '../icons'
 import type { ModelOption } from '../lib/modelOptions'
 import { raStrings } from '../strings'
@@ -20,29 +20,27 @@ export interface ModelTileProps {
   onRefresh: () => void
 }
 
-/** The model Select (price Chip as leading glyph), Refresh models and the notices around them. `id="model"` is the refusal link target. */
+/**
+ * The model Select and Refresh models in one FieldRow (SET-14f), and the notices around them. The price tier is in each option's
+ * meta line ("$ · Fastest · …"), explained once by the field's helper "Price per 1M tokens". `id="model"` is the refusal link target.
+ */
 export function ModelTile({ value, options, error, notice, failedMessage, disabled, canRefresh, createLabel, onChange, onCreate, onRefresh }: ModelTileProps) {
-  const withBadges = options.map((o) => ({
-    ...o,
-    leading: o.priceTier ? <Chip kind={o.warning ? 'status' : 'tag'} status={o.warning ? 'spoil' : undefined}>{o.priceTier}</Chip> : undefined,
-  }))
   return (
     <Tile as="section" id="model" aria-label={raStrings.model} span="full">
-      <div className="ra__field-row">
-        <div className="ra__field-grow">
-          <Select
-            label={raStrings.model}
-            value={value === '' ? null : value}
-            options={withBadges}
-            error={error}
-            disabled={disabled}
-            onChange={onChange}
-            onCreate={onCreate}
-            createLabel={createLabel}
-          />
-        </div>
+      <FieldRow align="end" className="ra__model-row">
+        <Select
+          label={raStrings.model}
+          helper={raStrings.modelPriceHelper}
+          value={value === '' ? null : value}
+          options={options}
+          error={error}
+          disabled={disabled}
+          onChange={onChange}
+          onCreate={onCreate}
+          createLabel={createLabel}
+        />
         <IconButton icon={raIcons.refresh} label={raStrings.refreshModels} disabled={!canRefresh} onClick={onRefresh} />
-      </div>
+      </FieldRow>
       {notice ? <Muted>{notice}</Muted> : null}
       {failedMessage ? <Muted>{failedMessage}</Muted> : null}
     </Tile>

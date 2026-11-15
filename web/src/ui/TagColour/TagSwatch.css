@@ -1,0 +1,22 @@
+/* TagSwatch (SET-11): the leading 40 px square of a Tags row. The Tag's own colour pair (the chip's, already contrast-tested);
+   without a known colour it is the neutral square. Tokens only. */
+.tag-lead {
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  flex: none;
+  border-radius: var(--radius-thumb);
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+}
+.tag-lead[data-tag-colour='tomato'] { background: var(--tag-tomato-bg); color: var(--tag-tomato-fg); }
+.tag-lead[data-tag-colour='apricot'] { background: var(--tag-apricot-bg); color: var(--tag-apricot-fg); }
+.tag-lead[data-tag-colour='mustard'] { background: var(--tag-mustard-bg); color: var(--tag-mustard-fg); }
+.tag-lead[data-tag-colour='olive'] { background: var(--tag-olive-bg); color: var(--tag-olive-fg); }
+.tag-lead[data-tag-colour='sage'] { background: var(--tag-sage-bg); color: var(--tag-sage-fg); }
+.tag-lead[data-tag-colour='teal'] { background: var(--tag-teal-bg); color: var(--tag-teal-fg); }
+.tag-lead[data-tag-colour='sky'] { background: var(--tag-sky-bg); color: var(--tag-sky-fg); }
+.tag-lead[data-tag-colour='blue'] { background: var(--tag-blue-bg); color: var(--tag-blue-fg); }
+.tag-lead[data-tag-colour='plum'] { background: var(--tag-plum-bg); color: var(--tag-plum-fg); }
+.tag-lead[data-tag-colour='rose'] { background: var(--tag-rose-bg); color: var(--tag-rose-fg); }

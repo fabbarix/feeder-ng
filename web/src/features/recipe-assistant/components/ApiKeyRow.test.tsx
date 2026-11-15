@@ -17,6 +17,15 @@ describe('ApiKeyRow saved', () => {
     expect(screen.getByRole('button', { name: 'Replace' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument()
   })
+  // B9-51 (P40): "Key saved" was 79 px wide because Replace and Remove sat beside it; they take the row's actions slot (SET-03), which wraps under the text on a phone.
+  it('Replace and Remove are in the row\'s actions slot, not its trailing value, so the title keeps its width', () => {
+    const { container } = render(<ApiKeyRow {...base} state={state} />)
+    const actions = container.querySelector('.list-row__actions')!
+    expect(actions).not.toBeNull()
+    expect(actions).toContainElement(screen.getByRole('button', { name: 'Replace' }))
+    expect(actions).toContainElement(screen.getByRole('button', { name: 'Remove' }))
+    expect(container.querySelector('.list-row__trailing')).toBeNull()
+  })
   it('has no text input: the key is never shown or editable here', () => {
     const { container } = render(<ApiKeyRow {...base} state={state} />)
     expect(container.querySelector('input')).toBeNull()

@@ -6,6 +6,9 @@ import { PlanningRulesScreen } from './PlanningRulesScreen'
 import { findNotice } from '../../../test/notices'
 
 const base = {
+  // B9-51: the Cooking times tile reads the Household settings and who is signed in.
+  'GET /api/me': { id: 1, email: 'admin@example.test', displayName: 'Admin', isAdmin: true },
+  'GET /api/household/settings': { timeZone: 'UTC', timeZoneConfigured: true, planningHorizonDays: 7, defaultCooldownDays: 7, defaultLeftoverUseByDays: 3, quietHours: { start: '22:00', end: '07:00' }, plannerStyle: 0.5, location: null, currency: 'EUR', earliestStart: '06:30', latestStart: '22:00' },
   'GET /api/slot-rules': [{ id: 9, mealSlotId: 5, tag: 'pizza' }],
   'GET /api/variety-rules': [{ tag: 'fish', maxPerWeek: 2, notConsecutiveDays: false }],
   'GET /api/meal-slots': [{ id: 5, weekday: 5, name: 'Dinner', time: '19:00' }],
@@ -61,7 +64,7 @@ describe('PlanningRulesScreen', () => {
     const api = mockApi({ ...base, 'DELETE /api/slot-rules/9': undefined })
     renderWithProviders(<PlanningRulesScreen />)
     const list = within(await screen.findByRole('list', { name: 'Slot Rules' }))
-    await userEvent.click(await list.findByRole('button', { name: 'Remove' }))
+    await userEvent.click(await list.findByRole('button', { name: 'Remove Slot Rule Friday Dinner = Pizza' }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/slot-rules/9')).toHaveLength(1))
   })
 

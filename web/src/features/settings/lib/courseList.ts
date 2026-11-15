@@ -11,9 +11,15 @@ export interface CourseAction {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-/** "12 Recipes · 5 Meal Slots" (singular for 1, zeros shown); an unknown count is left out; '' when both are unknown. */
-export function courseMeta(course: Pick<Course, 'recipeCount' | 'mealSlotCount'>): string {
-  const parts: string[] = []
+/** SET-14c: the main Course says so at the start of its meta, instead of a "Main" badge (GLOSSARY: main Course). */
+const MAIN_COURSE = 'main Course'
+
+/**
+ * "12 Recipes · 5 Meal Slots" (singular for 1, zeros shown); an unknown count is left out; '' when both are unknown.
+ * The main Course starts with "main Course" (SET-14c): "main Course · 12 Recipes · 5 Meal Slots", or "main Course" alone.
+ */
+export function courseMeta(course: Pick<Course, 'recipeCount' | 'mealSlotCount'> & { main?: boolean }): string {
+  const parts: string[] = course.main ? [MAIN_COURSE] : []
   if (course.recipeCount !== undefined) parts.push(plural(course.recipeCount, 'Recipe', 'Recipes'))
   if (course.mealSlotCount !== undefined) parts.push(plural(course.mealSlotCount, 'Meal Slot', 'Meal Slots'))
   return parts.join(' · ')

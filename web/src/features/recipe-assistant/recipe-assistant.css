@@ -15,22 +15,13 @@
   justify-content: space-between;
   gap: var(--space-2);
 }
-.ra__field-row {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-2);
-}
-.ra__field-grow {
-  flex: 1;
-  min-inline-size: 0;
-}
 .ra__line {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin: 0;
 }
-/* A11Y-02: Replace and Remove stand 8 px apart, so their focus rings never touch (the row's trailing gap is 4 px). */
+/* A11Y-02: Replace and Remove stand 8 px apart, so their focus rings never touch. They sit in the row's actions slot (B9-51, P40). */
 .ra__key-actions {
   display: flex;
   align-items: center;
@@ -65,4 +56,19 @@
 .ra__link {
   color: inherit;
   text-decoration: underline;
+}
+/* SET-14f: the Model Select is as wide as its size allows (never grown past it), shrinking on a phone so Refresh models stays beside
+   it; Refresh models sits right after it, level with the Select's control (not with its
+   helper, which the end alignment would otherwise line it up with): below the label and the frame's gap (--space-1), centred on
+   the 48 px trigger (another --space-1 above the 40 px button). */
+.ra__model-row {
+  flex-wrap: nowrap;
+}
+.ra__model-row > .ui-field {
+  flex: 0 1 var(--field-control-max, 100%);
+  min-inline-size: 0;
+}
+.ra__model-row > .icon-button {
+  align-self: flex-start;
+  margin-block-start: calc(var(--text-meta-line) + var(--space-1) + var(--space-1));
 }

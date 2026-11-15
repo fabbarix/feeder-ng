@@ -16,6 +16,13 @@ async function pick(field: string, option: string | RegExp) {
   await userEvent.click(await screen.findByRole('option', { name: option }))
 }
 
+/** SAFE-04: the control is aria-invalid and its description (aria-describedby) holds the message. */
+function expectFieldError(name: string, message: string) {
+  const control = screen.getByRole(name === 'At most per week' ? 'spinbutton' : 'combobox', { name })
+  expect(control).toHaveAttribute('aria-invalid', 'true')
+  expect(control).toHaveAccessibleDescription(expect.stringContaining(message))
+}
+
 describe('RulesEditors use no native controls', () => {
   it('has no <select>, no text/number/checkbox <input> of its own (the primitives own those)', () => {
     const { container } = render(
@@ -38,7 +45,8 @@ describe('SlotRulesEditor', () => {
     const list = within(screen.getByRole('list', { name: 'Slot Rules' }))
     expect(list.getByText('Friday Dinner')).toBeInTheDocument()
     expect(list.getByText('pizza')).toBeInTheDocument() // the Tag pill (TG-PW), not "Tag: pizza"
-    await userEvent.click(list.getByRole('button', { name: 'Remove' }))
+    // B9-51 (SAFE-02): the button says what it removes, so a list of Remove buttons is not a list of the same name.
+    await userEvent.click(list.getByRole('button', { name: 'Remove Slot Rule Friday Dinner = pizza' }))
     expect(onRemove).toHaveBeenCalledWith(9)
   })
 
@@ -51,7 +59,7 @@ describe('SlotRulesEditor', () => {
     const onAdd = vi.fn()
     render(<SlotRulesEditor rules={[]} mealSlots={mealSlots} recipes={recipes} tags={tags} onAdd={onAdd} onRemove={() => {}} error={null} />)
     await pick('Meal Slot', /Dinner/)
-    await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Tag' }))
     await pick('Tag', /pizza/)
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
     expect(onAdd).toHaveBeenCalledWith({ mealSlotId: 5, tag: 'pizza' })
@@ -59,7 +67,7 @@ describe('SlotRulesEditor', () => {
 
   it('the Tag cannot be typed: there is no text field for it', async () => {
     render(<SlotRulesEditor rules={[]} mealSlots={mealSlots} recipes={recipes} tags={tags} onAdd={() => {}} onRemove={() => {}} error={null} />)
-    await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Tag' }))
     expect(screen.getByRole('combobox', { name: 'Tag' })).toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: 'Tag' })).not.toBeInTheDocument()
   })
@@ -67,7 +75,7 @@ describe('SlotRulesEditor', () => {
   it('adds a rule fixing a Meal Slot to a Recipe (the default kind)', async () => {
     const onAdd = vi.fn()
     render(<SlotRulesEditor rules={[]} mealSlots={mealSlots} recipes={recipes} tags={tags} onAdd={onAdd} onRemove={() => {}} error={null} />)
-    expect(screen.getByRole('radio', { name: 'a Recipe' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Recipe' })).toBeChecked()
     await pick('Meal Slot', /Lunch/)
     await pick('Recipe', /Curry/)
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
@@ -77,10 +85,12 @@ describe('SlotRulesEditor', () => {
   it('asks for a Tag before adding', async () => {
     const onAdd = vi.fn()
     render(<SlotRulesEditor rules={[]} mealSlots={mealSlots} recipes={recipes} tags={tags} onAdd={onAdd} onRemove={() => {}} error={null} />)
-    await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Tag' }))
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
     expect(onAdd).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose a Tag.')
+    // B9-51 (SAFE-04): the message sits under the Tag field and the field is invalid; it is not an alert.
+    expectFieldError('Tag', 'Choose the Tag this Meal Slot always gets.')
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('shows a server error', () => {
@@ -96,7 +106,7 @@ describe('VarietyRulesEditor', () => {
     const list = within(screen.getByRole('list', { name: 'Variety Rules' }))
     expect(list.getByText('fish')).toBeInTheDocument()
     expect(list.getByText('At most 2 a week, not on consecutive days')).toBeInTheDocument()
-    await userEvent.click(list.getByRole('button', { name: 'Remove' }))
+    await userEvent.click(list.getByRole('button', { name: 'Remove Variety Rule for fish' }))
     expect(onRemove).toHaveBeenCalledWith('fish')
   })
 
@@ -148,7 +158,8 @@ describe('VarietyRulesEditor', () => {
     await userEvent.clear(screen.getByRole('spinbutton', { name: 'At most per week' })) // empty = no cap
     await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
     expect(onSave).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose a weekly limit or not on consecutive days.')
+    expectFieldError('At most per week', 'Choose a weekly limit or not on consecutive days.')
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('asks for a Tag first', async () => {
@@ -156,7 +167,8 @@ describe('VarietyRulesEditor', () => {
     render(<VarietyRulesEditor rules={[]} tags={tags} onSave={onSave} onRemove={() => {}} error={null} />)
     await userEvent.click(screen.getByRole('button', { name: 'Save Variety Rule' }))
     expect(onSave).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose a Tag.')
+    expectFieldError('Tag', 'Choose a Tag for the rule.')
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('with no Tags yet it says where they come from', () => {
