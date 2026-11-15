@@ -19,6 +19,8 @@ const KEYS = [
   'plannerStyleBetween', 'member', 'slot', 'attendance', 'allowlistPanel', 'prefs',
   // B9-20 (RES-02): the LoadState of a Settings list.
   'offline',
+  // B9-42 (SAFE-02, SET-15): the Remove Meal Slot confirm and toasts, and the Removed Meal Slots tile.
+  'removal', 'removed',
 ]
 // `courses` holds the Courses page strings, which are not keys of settingsStrings (coursesStrings is its own object).
 const parts = {

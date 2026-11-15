@@ -1,7 +1,9 @@
 // Probe "sheet-targets" (in-page, B9-14; P25, DS-01 and DS-02). It fills ONE key, sheetMetrics = { sheetTargets, sheetOverlaps, barLabels }:
 //   sheetTargets: [{ sel, w, h, hitW, hitH }]       the visible controls of the open modal sheet or dialog; w x h is the border box,
 //                                                   hitW x hitH its box united with its ::after box (the 40 px Close has 52), as P36
-//   sheetOverlaps: [{ a, b }]                        two of them whose hit boxes overlap by more than 1 px on both axes (nested pairs skipped)
+//   sheetOverlaps: [{ a, b }]                        two of them whose hit boxes overlap by more than 1 px on both axes (nested pairs skipped;
+//                                                   each box clipped by its scrolling ancestors in the dialog, so a control scrolled under
+//                                                   the sticky footer is not counted; one clipped away entirely is no target)
 //   barLabels: [{ text, box }]                       the bottom bar's visible labels (the DS-02 half of P25); box = { x, y, r, b }
 // Only on the scenarios below (an opt-in list: the rule is always-fail, so a package adds its scenario name here when its sheets are
 // converted; the other sheets of the app keep their findings out of the always-fail set until then).
@@ -32,7 +34,23 @@ const source = `
     }
     // A Stepper's value (a span role=spinbutton) takes the keyboard, not a tap: its ± buttons are the pointer targets.
     const pointerTarget = (e) => !(e.getAttribute('role') === 'spinbutton' && e.tagName !== 'INPUT')
-    const all = [...dialog.querySelectorAll(CONTROLS)].filter((e) => pointerTarget(e) && (!e.disabled && visible(e) && e.tabIndex >= 0 || (e.matches('.list-row__target') && visible(e)))).slice(0, 80).map(hit)
+    // A sheet's body scrolls under its sticky footer: a control scrolled out of the body is not tappable there, so each hit box is
+    // clipped by its overflow-clipping ancestors inside the dialog (their padding boxes), and a target clipped away entirely is left out.
+    // Sizes are still judged on the whole hit box (a control half scrolled away is not a small target); overlaps on the clipped one.
+    const clip = (t) => {
+      let box = { ...t.box }
+      for (let a = t.el.parentElement; a && dialog.contains(a); a = a.parentElement) {
+        const cs = getComputedStyle(a)
+        if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue
+        const r = a.getBoundingClientRect()
+        const p = { x: r.left + a.clientLeft, y: r.top + a.clientTop, r: r.left + a.clientLeft + a.clientWidth, b: r.top + a.clientTop + a.clientHeight }
+        if (cs.overflowX !== 'visible') box = { ...box, x: Math.max(box.x, p.x), r: Math.min(box.r, p.r) }
+        if (cs.overflowY !== 'visible') box = { ...box, y: Math.max(box.y, p.y), b: Math.min(box.b, p.b) }
+        if (a === dialog) break
+      }
+      return { ...t, box, shown: box.r - box.x > 1 && box.b - box.y > 1 }
+    }
+    const all = [...dialog.querySelectorAll(CONTROLS)].filter((e) => pointerTarget(e) && (!e.disabled && visible(e) && e.tabIndex >= 0 || (e.matches('.list-row__target') && visible(e)))).slice(0, 80).map(hit).map(clip).filter((t) => t.shown)
     for (const t of all) out.sheetTargets.push({ sel: sel(t.el), w: Math.round(t.w * 10) / 10, h: Math.round(t.h * 10) / 10, hitW: Math.round(t.hitW * 10) / 10, hitH: Math.round(t.hitH * 10) / 10 })
     for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
       const a = all[i], b = all[j]
@@ -55,6 +73,6 @@ export default {
   key: 'sheetMetrics',
   order: 200,
   soft: true,
-  scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'bottom-bar'],
+  scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'bottom-bar', 'plan-sheet-actions', 'plan-sheet-mark-cooked', 'plan-sheet-swap', 'plan-sheet-choose', 'plan-sheet-whos-eating'],
   source,
 }

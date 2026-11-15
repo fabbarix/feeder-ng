@@ -123,7 +123,7 @@ describe('MealSlotsPage: Date Attendance Courses', () => {
     })
     renderWithProviders(<MealSlotsPage />)
     await openNextDinnerDate()
-    const dialog = await screen.findByRole('dialog', { name: 'Dinner on 2026-11-10' })
+    const dialog = await screen.findByRole('dialog', { name: 'Dinner on Tue 10 Nov' })
     const side = await within(dialog).findByRole('group', { name: 'Side' })
     await userEvent.click(within(side).getByRole('button', { name: 'Marco' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save for this date' }))

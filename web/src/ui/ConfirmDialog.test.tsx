@@ -152,3 +152,27 @@ describe('ConfirmDialog: body line breaks', () => {
     expect(declarations(readUiCss('ConfirmDialog.css'), '.confirm-dialog__lead')['white-space']).toBe('pre-line')
   })
 })
+
+describe('controlled extras (additive, B9-42): children, confirmDisabled, busy', () => {
+  const props = { open: true, title: 'Delete Side?', body: 'Side is on 8 Recipes.', confirmLabel: 'Delete Course', tone: 'danger' as const }
+  it('draws children after the lead and before the groups', () => {
+    render(
+      <ConfirmDialog {...props} groups={[{ label: 'Goes', rows: [{ key: 'Roast potatoes' }] }]} onConfirm={() => {}} onCancel={() => {}}>
+        <p>Pick a replacement</p>
+      </ConfirmDialog>,
+    )
+    const lead = screen.getByText('Side is on 8 Recipes.')
+    const extra = screen.getByText('Pick a replacement')
+    const row = screen.getByText('Roast potatoes')
+    expect(lead.compareDocumentPosition(extra) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(extra.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+  it('confirmDisabled disables only the confirm; busy disables both and Cancel keeps focus first', () => {
+    const { rerender } = render(<ConfirmDialog {...props} confirmDisabled onConfirm={() => {}} onCancel={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Delete Course' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
+    rerender(<ConfirmDialog {...props} busy onConfirm={() => {}} onCancel={() => {}} />)
+    expect(screen.getByRole('button', { name: /Delete Course/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+  })
+})

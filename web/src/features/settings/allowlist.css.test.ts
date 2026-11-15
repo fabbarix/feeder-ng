@@ -103,11 +103,21 @@ describe('settings.css: Allowlist at phone width', () => {
     expect(ruleIn(phoneBlock(), '.allowlist__add > .allowlist__button')).toEqual({})
   })
 
-  it('on a phone the row title wraps (the email stays readable) and the row grows with it', () => {
-    expect(ruleIn(phoneBlock(), '.allowlist__list .list-row__title')['white-space']).toBe('normal')
-    expect(ruleIn(phoneBlock(), '.allowlist__list .list-row__title')['overflow-wrap']).toBe('anywhere')
+  // B9-52 (SET-03): the Allowlist uses ListRow's `actions` slot and `wrapTitle`; the email wraps only at "@" and "." (<wbr>), ends in an
+  // ellipsis after two lines, and never breaks mid-word, so the old phone override that did (`overflow-wrap: anywhere`) is gone.
+  it('on a phone the row grows with its two-line title (auto height, a minimum) but the title no longer breaks anywhere', () => {
     const row = ruleIn(phoneBlock(), '.allowlist__list .list-row[data-height]')
-    expect(row['block-size']).toBe('auto')
-    expect(row['min-block-size']).toBeTruthy()
+    expect(row['block-size'] ?? 'auto').toBe('auto')
+    expect(ruleIn(phoneBlock(), '.allowlist__list .list-row__title')['overflow-wrap']).toBeUndefined()
+  })
+
+  it('nothing in settings.css wraps mid-word (the check-ui word-break rule): no overflow-wrap anywhere/break-word, word-break break-all, hyphens auto', () => {
+    expect(css).not.toMatch(/(overflow-wrap|word-wrap)\s*:\s*(anywhere|break-word)/)
+    expect(css).not.toMatch(/word-break\s*:\s*(break-all|break-word)/)
+    expect(css).not.toMatch(/hyphens\s*:\s*auto/)
+  })
+
+  it('the switch and the icon buttons keep 8 px between them (--space-2)', () => {
+    expect(rule('.allowlist__actions').gap).toBe('var(--space-2)')
   })
 })

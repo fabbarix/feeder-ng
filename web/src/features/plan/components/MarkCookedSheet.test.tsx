@@ -1,9 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 import { meal, noUsedFrom } from '../test-utils'
 import type { CookPreview } from '../types'
 import { MarkCookedSheet } from './MarkCookedSheet'
+
+afterEach(() => vi.unstubAllGlobals())
 
 const preview: CookPreview = {
   meal: meal({ recipeName: 'Chicken', batches: 1 }), fresh: true, batches: 1, yield: 4, portionsNeeded: 2,
@@ -72,20 +75,23 @@ describe('MarkCookedSheet', () => {
     expect(screen.queryByRole('button', { name: 'No Leftover' })).not.toBeInTheDocument()
   })
 
-  it('confirming and "Not cooked" report to the caller', async () => {
+  it('confirming reports to the caller; "Not cooked" is an item of the footer\'s ⋮ "More for Chicken" (B9-38, SHORT-02)', async () => {
+    stubViewportWidth(1024)
     const h = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Mark as Cooked' }))
     expect(h.onConfirm).toHaveBeenCalledTimes(1)
-    const not = screen.getByRole('button', { name: 'Not cooked' })
-    expect(not).toHaveAttribute('data-variant', 'secondary')
-    await userEvent.click(not)
+    expect(screen.queryByRole('button', { name: 'Not cooked' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'More for Chicken' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Not cooked' }))
     expect(h.onNotCooked).toHaveBeenCalledTimes(1)
   })
 
-  it('shows a save error and disables the buttons while busy', () => {
+  it('shows a save error and disables the buttons and the ⋮ items while busy', async () => {
+    stubViewportWidth(1024)
     setup({ error: 'That could not be saved. Nothing was changed.', busy: true })
     expect(screen.getByRole('alert')).toHaveTextContent('That could not be saved. Nothing was changed.')
     expect(screen.getByRole('button', { name: 'Mark as Cooked' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Not cooked' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'More for Chicken' }))
+    expect(screen.getByRole('menuitem', { name: 'Not cooked' })).toHaveAttribute('aria-disabled', 'true')
   })
 })

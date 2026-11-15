@@ -90,11 +90,13 @@ describe('MealSlotEditor, editing: apply to several days (R15)', () => {
     expect(onApply).not.toHaveBeenCalled()
   })
 
-  it('still offers "Change a date" and "Remove Meal Slot"', async () => {
+  // SHORT-02 (B9-42): both are items of the footer's ⋮ now, not buttons of their own.
+  it('still offers "Change a date" and "Remove Meal Slot", in the ⋮', async () => {
     const onDelete = vi.fn()
     edit({ onDelete, onChangeDate: () => {} })
-    expect(screen.getByRole('button', { name: 'Change a date' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Remove Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'More for Dinner' }))
+    expect(await screen.findByRole('menuitem', { name: 'Change a date' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove Meal Slot' }))
     expect(onDelete).toHaveBeenCalled()
   })
 
@@ -121,7 +123,7 @@ describe('MealSlotEditor, adding: weekday chips instead of the Weekdays dropdown
     await userEvent.click(screen.getByRole('button', { name: 'Weekend' }))
     await userEvent.type(screen.getByLabelText('Name'), 'Brunch')
     await typeTime('1100')
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     expect(onSave).toHaveBeenCalledWith([
       expect.objectContaining({ weekday: 6, name: 'Brunch', time: '11:00' }),
       expect.objectContaining({ weekday: 7, name: 'Brunch', time: '11:00' }),
@@ -133,7 +135,7 @@ describe('MealSlotEditor, adding: weekday chips instead of the Weekdays dropdown
     render(<MealSlotEditor open members={members} onSave={onSave} onClose={() => {}} />)
     await userEvent.type(screen.getByLabelText('Name'), 'Brunch')
     await typeTime('1100')
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     expect(screen.getByRole('alert')).toHaveTextContent(/at least one weekday/i)
     expect(onSave).not.toHaveBeenCalled()
   })

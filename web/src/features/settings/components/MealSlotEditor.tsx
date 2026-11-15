@@ -1,8 +1,11 @@
+import { useId, useRef } from 'react'
 import type { CourseChoice } from '../../../lib/courses'
-import { BottomSheet, Button, Chip, FieldRow, FormActions, TimeField, TextField, WeekdayPicker } from '../../../ui'
+import { BottomSheet, Chip, FieldRow, Menu, TimeField, TextField, WeekdayPicker, type MenuEntry } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
+import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { useSlotForm } from '../hooks/useSlotForm'
 import { documentLocale } from '../lib/locale'
-import { sameDays } from '../lib/multiDay'
+import { matchingSlots, sameDays } from '../lib/multiDay'
 import { settingsStrings } from '../strings'
 import type { MealSlot, MealSlotInput, Member, SlotBatchRequest, SlotBatchResult } from '../types'
 import { coursesStrings } from '../coursesStrings'
@@ -26,124 +29,132 @@ export interface MealSlotEditorProps {
   slots?: MealSlot[]
   onApply?: (request: SlotBatchRequest) => void | Promise<void>
   weekStart?: 1 | 6 | 7
+  /** SET-14h, editing: the weekdays "Apply to" starts with (a card: every day of the name); absent, the slot's own day. */
+  initialWeekdays?: number[]
   /** CRS D2: the household's active Courses (household order). Given, the editor shows the Courses field; absent or empty, it does not. */
   courses?: CourseChoice[]
   /** CRS D2, editing: a dry run of the batch (`dryRun: true`), asked while the Admin takes Courses off, to name what goes. */
   onPreview?: (request: SlotBatchRequest) => Promise<SlotBatchResult>
   locale?: string
-  onDelete?: () => void | Promise<void>
-  /** Editing only: opens the one-date Attendance for this slot ("Change a date"). */
+  /**
+   * Editing only: "Remove Meal Slot" in the ⋮ (danger tone), given the weekdays ticked in the sheet at that moment (B9-42: Remove
+   * acts on them, like Save). The page asks the confirm; unsaved edits are dropped with the sheet, the confirm is the question.
+   */
+  onDelete?: (weekdays: number[]) => void | Promise<void>
+  /** Editing only: "Change a date" in the ⋮, the one-date Attendance for this slot. */
   onChangeDate?: () => void
   onClose: () => void
 }
 
 const text = settingsStrings.slot
 
-/** A BottomSheet "Add Meal Slot" / "Edit Meal Slot". Adding: "Days" chips; editing: "Apply to" chips (the same name on the
- *  other days gets the same change, one save), quick picks, Name, Usual time, AttendanceEditor and a "What will change" summary. */
+/**
+ * A BottomSheet "Add Meal Slot" / "Edit Meal Slot". Adding: "Days" chips; editing: "Apply to" chips (the same name on the
+ * other days gets the same change, one save), quick picks, Name, Usual time, AttendanceEditor and a "What will change" summary.
+ * SHORT-02 / R-B: the footer is one row, [⋮ "More for Dinner"] [Cancel] [Save Meal Slot] (adding: [Cancel] [Add Meal Slot]), and the
+ * header has no Close. Unsaved changes make every way out ask "Discard changes?" first (the sheet's own question).
+ */
 export function MealSlotEditor({ open, slot, onClose, ...rest }: MealSlotEditorProps) {
-  return (
-    <BottomSheet open={open} onClose={onClose} title={slot ? text.editTitle : text.addTitle}>
-      {/* Keyed on whether the household has Courses, not on how many: a live Course added elsewhere must not discard an open draft. */}
-      <SlotForm key={`${slot?.id ?? 'new'}|${(rest.courses?.length ?? 0) > 0 ? 'courses' : 'none'}`} slot={slot} {...rest} />
-    </BottomSheet>
-  )
+  return open ? <EditorSheet slot={slot} onClose={onClose} {...rest} /> : null
 }
 
-type FormProps = Omit<MealSlotEditorProps, 'open' | 'onClose'>
+type SheetProps = Omit<MealSlotEditorProps, 'open'>
 
-function SlotForm({ slot, members, defaultWeekdays, defaultName, saving, error, onSave, slots, onApply, weekStart, courses, onPreview, locale = documentLocale(), onDelete, onChangeDate }: FormProps) {
-  const { draft, set, weekdays, setWeekdays, picks, summary, problem, submit, coursesError, removal } = useSlotForm({
+/** Keyed on the slot and on whether the household has Courses, not on how many: a live Course added elsewhere must not drop an open draft. */
+function EditorSheet(props: SheetProps) {
+  return <SlotSheet key={`${props.slot?.id ?? 'new'}|${(props.courses?.length ?? 0) > 0 ? 'courses' : 'none'}`} {...props} />
+}
+
+function SlotSheet({ slot, members, defaultWeekdays, defaultName, saving, error, onSave, slots, onApply, weekStart, initialWeekdays, courses, onPreview, locale = documentLocale(), onDelete, onChangeDate, onClose }: SheetProps) {
+  const formId = useId()
+  const formRef = useRef<HTMLFormElement>(null)
+  const { draft, set, weekdays, setWeekdays, picks, summary, problem, submit, coursesError, removal, dirty, submitCount } = useSlotForm({
     slot,
     members,
     defaultWeekdays,
     defaultName,
     slots,
+    initialWeekdays,
     courses,
     onPreview,
     locale,
     onSave,
     onApply,
   })
+  useFocusFirstInvalid(formRef, problem && problem.field !== 'form' ? { [problem.field]: problem.message } : null, submitCount)
   const showCourses = courses !== undefined && courses.length > 0
+  const fieldError = (field: 'weekdays' | 'name' | 'time') => (problem?.field === field ? problem.message : undefined)
   const formProblem = problem?.field === 'form' ? problem.message : undefined
   const shownError = formProblem ?? error
+  const name = (slot?.name ?? '').trim()
+
+  const more: MenuEntry[] = []
+  if (slot && onChangeDate) more.push({ id: 'change-date', label: text.changeDateButton, onSelect: onChangeDate })
+  // Remove needs at least one ticked day the name runs on.
+  const removable = slot ? matchingSlots(slots ?? [slot], slot.name, weekdays).matched.length > 0 : false
+  if (slot && onDelete) more.push({ id: 'remove', label: text.remove, tone: 'danger', disabled: saving || !removable, onSelect: () => void onDelete([...weekdays]) })
 
   return (
-    <form className="settings__stack" onSubmit={submit} noValidate>
-      <WeekdayPicker
-        label={slot ? text.applyTo : text.days}
-        value={weekdays}
-        onChange={setWeekdays}
-        weekStart={weekStart}
-        locale={locale}
-        error={problem?.field === 'weekdays' ? problem.message : undefined}
-      />
-      <div className="meal-slot-quickpicks">
-        {picks.map((pick) => (
-          <Chip key={pick.id} kind="filter" selected={sameDays(weekdays, pick.days)} onClick={() => setWeekdays(pick.days)}>
-            {pick.label}
-          </Chip>
-        ))}
-      </div>
-      <FieldRow>
-        <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
-        <TimeField size="sm" label={text.time} value={draft.time} onChange={(time) => set({ time })} />
-      </FieldRow>
-      <AttendanceEditor members={members} value={draft.attendance} onChange={(attendance) => set({ attendance })} />
-      {showCourses && draft.courses ? (
-        <SlotCoursesField
-          courses={courses}
-          members={members}
-          attendance={draft.attendance}
-          value={draft.courses}
-          onChange={(next) => set({ courses: next })}
-          error={coursesError}
+    <BottomSheet
+      open
+      onClose={onClose}
+      onCancel={onClose}
+      cancelLabel={text.cancel}
+      confirmDismiss={dirty}
+      title={slot ? text.editTitle : text.addTitle}
+      more={more.length > 0 ? <Menu label={text.moreFor(name)} items={more} /> : undefined}
+      submit={{ label: slot ? text.save : text.addSave, form: formId, loading: saving }}
+    >
+      <form ref={formRef} id={formId} className="settings__stack" onSubmit={submit} noValidate>
+        <WeekdayPicker
+          label={slot ? text.applyTo : text.days}
+          value={weekdays}
+          onChange={setWeekdays}
+          weekStart={weekStart}
+          locale={locale}
+          error={fieldError('weekdays')}
         />
-      ) : null}
-      {summary ? (
-        <ul className="meal-slot-summary" role="list" aria-label={text.willChange} aria-live="polite">
-          {summary.update ? <li>{summary.update}</li> : null}
-          {summary.skipped.map((line) => (
-            <li key={line} className="meal-slot-summary__skipped">
-              {line}
-            </li>
+        <div className="meal-slot-quickpicks">
+          {picks.map((pick) => (
+            <Chip key={pick.id} kind="filter" selected={sameDays(weekdays, pick.days)} onClick={() => setWeekdays(pick.days)}>
+              {pick.label}
+            </Chip>
           ))}
-          {removal.lines?.lines.map((line) => <li key={line}>{line}</li>)}
-          {removal.lines && removal.lines.pinned.length > 0 ? <li className="meal-slot-summary__pinned">{coursesStrings.slot.pinnedHeading}</li> : null}
-          {removal.lines?.pinned.map((line) => (
-            <li key={`pinned-${line}`}>{line}</li>
-          ))}
-          {removal.status === 'loading' ? <li>{coursesStrings.slot.previewLoading}</li> : null}
-          {removal.status === 'error' ? <li>{coursesStrings.slot.previewFailed}</li> : null}
-        </ul>
-      ) : null}
-      {shownError ? (
-        <p role="alert" className="settings__error">
-          {shownError}
-        </p>
-      ) : null}
-      <FormActions
-        primary={
-          <Button type="submit" loading={saving}>
-            {text.save}
-          </Button>
-        }
-        tertiary={
-          slot && onChangeDate ? (
-            <Button variant="secondary" onClick={onChangeDate}>
-              {text.changeDateButton}
-            </Button>
-          ) : undefined
-        }
-        destructive={
-          slot && onDelete ? (
-            <Button variant="danger-secondary" disabled={saving} onClick={() => void onDelete()}>
-              {text.remove}
-            </Button>
-          ) : undefined
-        }
-      />
-    </form>
+        </div>
+        <FieldRow>
+          <TextField label={text.name} value={draft.name} onChange={(next) => set({ name: next })} error={fieldError('name')} />
+          <TimeField size="sm" label={text.time} value={draft.time} onChange={(time) => set({ time })} error={fieldError('time')} />
+        </FieldRow>
+        <AttendanceEditor members={members} value={draft.attendance} onChange={(attendance) => set({ attendance })} />
+        {showCourses && draft.courses ? (
+          <SlotCoursesField
+            courses={courses}
+            members={members}
+            attendance={draft.attendance}
+            value={draft.courses}
+            onChange={(next) => set({ courses: next })}
+            error={coursesError}
+          />
+        ) : null}
+        {summary ? (
+          <ul className="meal-slot-summary" role="list" aria-label={text.willChange} aria-live="polite">
+            {summary.update ? <li>{summary.update}</li> : null}
+            {summary.skipped.map((line) => (
+              <li key={line} className="meal-slot-summary__skipped">
+                {line}
+              </li>
+            ))}
+            {removal.lines?.lines.map((line) => <li key={line}>{line}</li>)}
+            {removal.lines && removal.lines.pinned.length > 0 ? <li className="meal-slot-summary__pinned">{coursesStrings.slot.pinnedHeading}</li> : null}
+            {removal.lines?.pinned.map((line) => (
+              <li key={`pinned-${line}`}>{line}</li>
+            ))}
+            {removal.status === 'loading' ? <li>{coursesStrings.slot.previewLoading}</li> : null}
+            {removal.status === 'error' ? <li>{coursesStrings.slot.previewFailed}</li> : null}
+          </ul>
+        ) : null}
+        <FormError>{shownError}</FormError>
+      </form>
+    </BottomSheet>
   )
 }

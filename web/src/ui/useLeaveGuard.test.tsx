@@ -23,8 +23,8 @@ import { useLeaveGuard } from './useLeaveGuard'
 
 afterEach(() => vi.restoreAllMocks())
 
-function Editor({ dirty, isNew, what = 'Pasta al pomodoro', onDiscard, onGuard, plainTitle }: { dirty: boolean; isNew?: boolean; what?: string; onDiscard?: () => void; onGuard?: (g: ReturnType<typeof useLeaveGuard>) => void; plainTitle?: boolean }) {
-  const guard = useLeaveGuard(dirty, { what, isNew, onDiscard })
+function Editor({ dirty, isNew, what = 'Pasta al pomodoro', onDiscard, onGuard, plainTitle, lead, note }: { dirty: boolean; isNew?: boolean; what?: string; onDiscard?: () => void; onGuard?: (g: ReturnType<typeof useLeaveGuard>) => void; plainTitle?: boolean; lead?: string; note?: string }) {
+  const guard = useLeaveGuard(dirty, { what, isNew, onDiscard, lead, note })
   onGuard?.(guard)
   const navigate = useNavigate()
   return (
@@ -83,6 +83,16 @@ describe('while dirty: the dialog', () => {
     expect(router.state.location.pathname).toBe('/recipes/7/edit')
     expect(d).toHaveTextContent('Your changes to Pasta al pomodoro are not saved.')
     expect(d).toHaveTextContent('If you leave, they are lost.')
+  })
+
+  it('B9-36: a caller may give its own lead and note (decision SAFE 6: "Dark is only a preview.")', async () => {
+    mount({ dirty: true, what: 'your preferences', lead: 'Dark is only a preview.', note: 'If you leave, Feeder goes back to System.' })
+    await userEvent.click(screen.getByRole('link', { name: 'Plan' }))
+    const d = await screen.findByRole('dialog', { name: 'Leave without saving?' })
+    expect(d).toHaveTextContent('Dark is only a preview.')
+    expect(d).toHaveTextContent('If you leave, Feeder goes back to System.')
+    expect(d).not.toHaveTextContent('Your changes to')
+    expect(d).not.toHaveTextContent('they are lost')
   })
 
   it('a new record: "This new Recipe is not saved." and "If you leave, it is lost."', async () => {

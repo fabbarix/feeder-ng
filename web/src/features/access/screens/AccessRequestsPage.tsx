@@ -1,5 +1,5 @@
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { ListGroup, ListRow, PageHeader, Tile } from '../../../ui'
+import { ListGroup, ListRow, Muted, PageHeader } from '../../../ui'
 import { AccessRequestList } from '../components/AccessRequestList'
 import { ApproveSheet } from '../components/ApproveSheet'
 import { useAccessRequestsPage } from '../hooks/useAccessRequestsPage'
@@ -13,14 +13,14 @@ export function AccessRequestsPage() {
   return (
     <div className="access">
       <PageHeader title={accessStrings.title} breadcrumbs={useBreadcrumbs()} />
-      <Tile as="section" span="full" aria-label={accessStrings.title}>
+      <section aria-label={accessStrings.title}>
         <AccessRequestList requests={page.requests} now={page.now} onApprove={page.approve} onDeny={page.deny} />
-      </Tile>
+      </section>
       <ApproveSheet {...page.approveSheet} />
       <section className="access__stack">
         <h2 className="access__overline">{accessStrings.history}</h2>
         {page.events.length === 0 ? (
-          <p className="access__muted">{accessStrings.historyEmpty}</p>
+          <Muted>{accessStrings.historyEmpty}</Muted>
         ) : (
           <div className="access__list">
             <ListGroup label={accessStrings.history}>

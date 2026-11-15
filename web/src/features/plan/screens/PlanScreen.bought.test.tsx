@@ -24,7 +24,7 @@ const dryRun = {
 const tile = async (name: string) => ((await screen.findByRole('heading', { name: name === 'Today' ? /· Today$/ : name === 'Tomorrow' ? /· Tomorrow$/ : name })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
   await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(`^${recipe}$`) }))
-  return screen.findByRole('dialog', { name: recipe })
+  return screen.findByRole('dialog', { name: new RegExp(` ${recipe}$`) }) // B9-38: the context line is part of the name
 }
 
 describe('PlanScreen: Bought', () => {

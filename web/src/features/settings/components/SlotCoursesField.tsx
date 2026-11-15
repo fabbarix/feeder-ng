@@ -3,7 +3,7 @@
 import type { CourseChoice } from '../../../lib/courses'
 import { CoursePicker, Muted, Switch } from '../../../ui'
 import { coursesStrings } from '../coursesStrings'
-import { attendeesOf, withCourseIds, withEater, withOptional } from '../lib/slotCourses'
+import { attendeesOf, slotCourseMeta, withCourseIds, withEater, withOptional } from '../lib/slotCourses'
 import type { AttendanceEntry, Member, SlotCourseInput } from '../types'
 import { CourseEaters } from './CourseEaters'
 
@@ -33,6 +33,10 @@ export function SlotCoursesField({ courses, members, attendance, value, onChange
       helper={s.optionalHelper}
       error={error}
       disabled={disabled}
+      renderRowMeta={({ course }) => {
+        const row = value.find((c) => c.id === course.id)
+        return row ? slotCourseMeta(row, attendees) : null
+      }}
       renderRowExtras={({ course }) => {
         const row = value.find((c) => c.id === course.id)
         if (!row) return null
@@ -56,6 +60,7 @@ export function SlotCoursesField({ courses, members, attendance, value, onChange
                   members={attendees}
                   optOutMemberIds={row.optOutMemberIds}
                   disabled={disabled}
+                  summary={false}
                   onChange={(memberId, eats) => onChange(withEater(value, course.id, memberId, eats))}
                 />
               )}

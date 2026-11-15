@@ -12,6 +12,9 @@ export const settingsSlotsStrings = {
     editButton: 'Edit',
     changeDateButton: 'Change a date',
     empty: 'No Meal Slots yet',
+    /** B9-20 (RES-02, RES-06): offline with nothing loaded, and a failed read. */
+    offlineTitle: 'Your Meal Slots aren\u2019t on this phone yet',
+    loadError: 'Meal Slots could not be loaded. Try again in a moment.',
     emptyHint: 'Add the Meal Slots the Household eats at, such as Tuesday Dinner.',
     addTitle: 'Add Meal Slot',
     editTitle: 'Edit Meal Slot',
@@ -70,23 +73,81 @@ export const settingsSlotsStrings = {
     name: 'Name',
     time: 'Usual time',
     save: 'Save Meal Slot',
+    /** SET-10: the add sheet's primary reads like its title. */
+    addSave: 'Add Meal Slot',
+    cancel: 'Cancel',
+    moreFor: (name: string) => `More for ${name}`,
     remove: 'Remove Meal Slot',
+  },
+
+  /** SAFE-02 (Remove Meal Slot): the confirm, its rows and the Undo toast. */
+  removal: {
+    /** `where` is "" (every day the name runs), " on Monday" (one day) or " on Mon, Tue and Wed" (some of its days). */
+    title: (name: string, where: string) => `Remove ${name}${where}?`,
+    onDays: (days: string) => ` on ${days}`,
+    lead: (name: string) => `${name} stays on the other days.`,
+    confirm: 'Remove Meal Slot',
+    goes: 'Goes',
+    stays: 'Stays',
+    plannedMeals: 'Planned Meals',
+    slotRule: 'Slot Rule',
+    slotRules: 'Slot Rules',
+    toConfirm: 'To confirm',
+    cookedHistory: 'Cooked history',
+    kept: 'Kept',
+    keptDetail: 'Last cooked and Cool-down don\u2019t change',
+    fromToday: (first: string, last: string) => `From today, ${first} to ${last}`,
+    from: (first: string, last: string) => `From ${first} to ${last}`,
+    today: (day: string) => `Today, ${day}`,
+    ruleStops: (rules: string, many: boolean) => `${rules} ${many ? 'stop' : 'stops'} applying`,
+    rule: (slot: string, what: string) => `${slot} = ${what}`,
+    removed: (name: string, where: string) => `${name}${where} removed`,
+    undoLabel: (name: string, where: string) => `Undo: put back ${name}${where}`,
+    back: (name: string, where: string) => `${name}${where} is back`,
+    impactFailed: 'Couldn\u2019t check what removing it would change. Try again in a moment.',
+    putBackRefused: (name: string) => `${name} was not put back`,
+    nameTaken: 'Rename or remove that Meal Slot first.',
+  },
+
+  /** SET-15: the Removed Meal Slots tile. */
+  removed: {
+    title: 'Removed Meal Slots',
+    note: 'Their Cooked meals stay in the history, so Last cooked and Cool-down still count them.',
+    countLabel: (n: number) => (n === 1 ? '1 removed Meal Slot' : `${n} removed Meal Slots`),
+    rowTitle: (name: string, days: string) => `${name} \u00b7 ${days}`,
+    detail: (time: string, date: string) => `${time} \u00b7 removed ${date}`,
+    cooked: (n: number) => `${n} Cooked`,
+    notCooked: (n: number) => `${n} Not cooked`,
+    putBack: (title: string) => `Put back ${title}`,
+    putBackButton: 'Put back',
+    range: (first: string, last: string) => `${first} to ${last}`,
+    back: (name: string) => `${name} is back`,
   },
 
   attendance: {
     portionFactorFor: (name: string) => `Portion Factor for ${name}`,
+    /** SET-10: in place of the stepper for a Member who does not attend. */
+    notEating: 'Not eating',
     portionsNeeded: (text: string) => `Portions needed: ${text}`,
     noMembers: 'Add Members first, then choose who attends.',
     dateTitle: (slot: string, date: string) => `${slot} on ${date}`,
     date: 'Date',
     thisDateOnly: 'These changes affect only this date.',
+    /** The footer's accessible names; the visible labels are the short ones (the title already names the date). */
     saveDate: 'Save for this date',
     resetDate: 'Reset to usual Attendance',
+    /** User ruling (B9-42 follow-up): short visible labels, so the footer is one row at every size, 375 px included. */
+    saveDateShort: 'Save',
+    resetDateShort: 'Reset',
+    /** What Reset does, said once in the body. */
+    resetHelper: 'Reset goes back to the usual Attendance.',
     // B5-F1: Guests, the portions preview, the emptied date
     guests: 'Guests',
     guestsHelper: 'Each Guest eats one standard portion of every Course.',
     portionsPreview: (n: string) => (n === '1' ? '1 portion of each Course' : `${n} portions of each Course`),
     emptiedNote: 'Nobody is eating, so this date is Not served.',
-    whosEatingTitle: (slot: string, day: string) => `Who's eating ${slot} on ${day}`,
+    /** B9-38 (SHORT-02, PC-10): the title from Plan and Today, under the context line "Thu 12 Nov · Dinner". */
+    whosEatingTitle: "Who's eating",
+    whosEatingContext: (day: string, slot: string) => `${day} · ${slot}`,
   },
 }

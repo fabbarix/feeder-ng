@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, type RenderResult } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, RouterProvider, createMemoryRouter, type RouteObject } from 'react-router-dom'
 import { vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { screen, within } from '@testing-library/react'
@@ -58,6 +58,21 @@ export function renderWithProviders(ui: ReactElement, route = '/'): RenderResult
   )
 }
 
+/** B9-36: like renderWithProviders, but in a DATA router (useLeaveGuard needs one). `route` is where `ui` lives; `others` are the places it can leave to. */
+export function renderWithDataRouter(ui: ReactElement, route = '/', others: RouteObject[] = [{ path: '/plan', element: <h1>Plan page</h1> }]) {
+  const router = createMemoryRouter([{ path: route, element: ui }, ...others], { initialEntries: [route] })
+  const result = render(
+    <QueryClientProvider client={newQueryClient()}>
+      <ToastProvider>
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
+      </ToastProvider>
+    </QueryClientProvider>,
+  )
+  return { ...result, router }
+}
+
 export const ADMIN_ME = { id: 1, email: 'admin@example.test', displayName: 'Admin', isAdmin: true }
 export const USER_ME = { id: 2, email: 'user@example.test', displayName: 'User', isAdmin: false }
 
@@ -86,12 +101,14 @@ export function openOptionNames(): string[] {
     })
 }
 
-/** renderHook wrapper for page hooks: Query, Toast and Router providers. */
+/** renderHook wrapper for page hooks: Query, Toast, Confirm and Router providers. */
 export function routerWrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={newQueryClient()}>
       <ToastProvider>
-        <MemoryRouter>{children}</MemoryRouter>
+        <ConfirmProvider>
+          <MemoryRouter>{children}</MemoryRouter>
+        </ConfirmProvider>
       </ToastProvider>
     </QueryClientProvider>
   )

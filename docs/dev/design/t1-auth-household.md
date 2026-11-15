@@ -86,7 +86,7 @@ Admin: `GET|POST /api/allowlist`, `PATCH|DELETE /api/allowlist/{id}`, `PUT /api/
 User: `GET /api/household/settings`, `GET /api/members`, `GET /api/meal-slots`, `GET|PUT|DELETE /api/meal-slots/{id}/attendance?date=YYYY-MM-DD`, `GET|PUT /api/me/preferences`.
 (The allowlist list is Admin-only, as it exposes everyone's e-mail.)
 
-- Allowlist user: `{id,email,displayName,isAdmin}`. `POST {email,displayName?,isAdmin?}` -> 201. `PATCH {isAdmin}` -> 200.
+- Allowlist user: `{id,email,displayName,isAdmin,signedIn}` (`signedIn`, B9-52: a session was ever started for them; `users.signed_in_at`, migration 1579). `POST {email,displayName?,isAdmin?}` -> 201. `PATCH {isAdmin}` -> 200.
 - Settings: `{timeZone,timeZoneConfigured,planningHorizonDays,defaultCooldownDays,defaultLeftoverUseByDays,quietHours:{start,end},plannerStyle,location:null|{city}|{latitude,longitude},currency}`; `PUT` takes the same fields (without `timeZoneConfigured`, which becomes true).
 - Member: `{id,name,colour,avatar,portionFactor,userId}`; `PUT /members/{id}/user {userId|null}`.
 - Meal Slot: `{id,weekday,name,time,attendance:[{memberId,portionFactorOverride|null}],portionsNeeded}` (sorted weekday, time, name).

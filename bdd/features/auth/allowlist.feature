@@ -92,3 +92,15 @@ Feature: Allowlist management
     Then the response status is 409
     And the error code is "last_admin"
     And there is exactly 1 Admin
+
+  # B9-52 (SET-03): the Allowlist shows a User's name once they have signed in, and "Not signed in yet" until then.
+  Scenario: The allowlist says who has signed in
+    Given a running Feeder
+    And "cook@example.test" is on the allowlist
+    And "nonna@example.test" is on the allowlist
+    And I am signed in as "cook@example.test"
+    And I am signed in as the Admin
+    When I GET "/api/allowlist"
+    Then the response status is 200
+    And the allowlist entry for "cook@example.test" has signedIn true
+    And the allowlist entry for "nonna@example.test" has signedIn false

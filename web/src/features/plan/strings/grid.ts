@@ -32,7 +32,6 @@ export const gridStrings = {
   servedFromLeftoverUnknown: 'Leftover',
   batches: (n: number) => (n === 1 ? '1 Batch' : `${n} Batches`),
   portionsNeeded: (n: number) => (n === 1 ? '1 portion' : `${n} portions`),
-  extraPortions: (n: number) => `+${n} portion Leftover`,
   // Regenerate (lib/regenerate)
   regenerating: 'Regenerating…',
   regenerateConfirmTitle: 'Regenerate the plan?',

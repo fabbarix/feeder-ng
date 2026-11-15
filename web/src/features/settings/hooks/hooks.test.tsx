@@ -102,17 +102,21 @@ describe('useMealSlots', () => {
       'GET /api/meal-slots': [dinner],
       'POST /api/meal-slots': { status: 201, json: { ...dinner, id: 2 } },
       'PATCH /api/meal-slots/1': dinner,
-      'DELETE /api/meal-slots/1': { status: 204 },
+      'POST /api/meal-slots/remove': { status: 204 },
+      'POST /api/meal-slots/restore': { slots: [dinner] },
     })
     const { result } = renderHook(() => useMealSlots(), { wrapper })
     await waitFor(() => expect(result.current.slots).toHaveLength(1))
     const input = { weekday: 4, name: 'Dinner', time: '19:00', attendance: [] }
     await act(() => result.current.create(input))
     await act(() => result.current.update(1, input))
-    await act(() => result.current.remove(1))
+    // B9-42: Remove and Undo are one call each for any number of days.
+    await act(() => result.current.removeMany([1]))
+    expect(await result.current.restoreMany([1])).toEqual([dinner])
     expect(api.callsTo('POST', '/api/meal-slots')[0]!.body).toEqual(input)
     expect(api.callsTo('PATCH', '/api/meal-slots/1')).toHaveLength(1)
-    expect(api.callsTo('DELETE', '/api/meal-slots/1')).toHaveLength(1)
+    expect(api.callsTo('POST', '/api/meal-slots/remove')[0]!.body).toEqual({ ids: [1] })
+    expect(api.callsTo('POST', '/api/meal-slots/restore')[0]!.body).toEqual({ ids: [1] })
   })
 })
 

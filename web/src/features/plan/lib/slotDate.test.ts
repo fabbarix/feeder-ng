@@ -132,8 +132,8 @@ describe('the time of a date', () => {
   })
 
   it('the dialog: title, field caption, helper, and Back to the usual time only when the date has its own', () => {
-    expect(timeDialogCopy(thu({ time: '20:15', usualTime: '19:30' }))).toEqual({ title: 'Time for Thu Dinner', label: 'Time', helper: 'Usually 19:30', back: 'Back to 19:30' })
-    expect(timeDialogCopy(thu({ time: '19:30', usualTime: '19:30' }))).toEqual({ title: 'Time for Thu Dinner', label: 'Time', helper: 'Usually 19:30', back: null })
+    expect(timeDialogCopy(thu({ time: '20:15', usualTime: '19:30' }))).toEqual({ title: 'Time for Thu 12 Dinner', label: 'Time', helper: 'Usually 19:30', back: 'Back to 19:30' })
+    expect(timeDialogCopy(thu({ time: '19:30', usualTime: '19:30' }))).toEqual({ title: 'Time for Thu 12 Dinner', label: 'Time', helper: 'Usually 19:30', back: null })
   })
 
   it('Save needs a whole HH:MM that differs from the time the slot has', () => {

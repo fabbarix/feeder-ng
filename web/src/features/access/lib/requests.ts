@@ -1,4 +1,5 @@
 // Pure helpers for Access Requests. Plain TypeScript, no React.
+import { accessStrings } from '../strings'
 import type { AccessRequest } from './../types'
 
 const HOUR_MS = 3_600_000
@@ -39,4 +40,28 @@ export function elapsedSince(iso: string, now: Date): Elapsed {
   if (ms < HOUR_MS) return { unit: 'minutes', n: Math.floor(ms / 60_000) }
   if (ms < DAY_MS) return { unit: 'hours', n: Math.floor(ms / HOUR_MS) }
   return { unit: 'days', n: Math.floor(ms / DAY_MS) }
+}
+
+/** "just now", "5 minutes ago", "1 hour ago", "2 days ago". */
+export function agoText(iso: string, now: Date): string {
+  const e = elapsedSince(iso, now)
+  switch (e.unit) {
+    case 'now':
+      return accessStrings.ago.justNow
+    case 'minutes':
+      return accessStrings.ago.minutes(e.n)
+    case 'hours':
+      return accessStrings.ago.hours(e.n)
+    case 'days':
+      return accessStrings.ago.days(e.n)
+  }
+}
+
+/** With this many days left or fewer, a request's state takes the warn tone. */
+export const SOON_DAYS = 2
+
+/** SET-12: the state column of a request row: "12 days left", with "asked 2 days ago" under it; `soon` at 2 days left or fewer. */
+export function requestWhen(r: AccessRequest, now: Date): { value: string; subValue: string; soon: boolean } {
+  const left = daysLeft(r.expiresAt, now)
+  return { value: accessStrings.daysLeft(left), subValue: accessStrings.asked(agoText(r.requestedAt, now)), soon: left <= SOON_DAYS }
 }

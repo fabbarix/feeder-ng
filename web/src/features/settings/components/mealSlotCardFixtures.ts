@@ -22,10 +22,10 @@ export const dinnerSlot = (weekday: number, over: Partial<MealSlot> = {}): MealS
 const dinnerCells: WeekCell[] = [1, 2, 3, 4, 5, 6, 7].map((weekday) => {
   const slot =
     weekday === 3 ? dinnerSlot(3, { attendance: [everyone[1]!] }) : weekday === 5 ? dinnerSlot(5, { time: '20:00', courses: [main] }) : dinnerSlot(weekday)
-  return { weekday, state: 'runs', slot, time: slot.time, differs: weekday === 3 || weekday === 5 }
+  return { weekday, state: 'runs', slot, time: slot.time, differs: weekday === 3 || weekday === 5, timeDiffers: weekday === 5 }
 })
 
-/** Dinner: every day at 19:30 with Main and Side; Wednesday is Fabio only; Friday is at 20:00 and serves Main only. */
+/** Dinner (SET-08: never a full-width card): every day at 19:30 with Main and Side; Wednesday is Fabio only; Friday is at 20:00 and serves Main only. */
 export const dinnerCard: MealSlotCard = {
   key: 'dinner',
   name: 'Dinner',
@@ -41,7 +41,7 @@ export const dinnerCard: MealSlotCard = {
     { weekday: 3, slot: dinnerCells[2]!.state === 'runs' ? dinnerCells[2]!.slot : dinnerSlot(3), attendance: { state: 'some', memberIds: [2] } },
     { weekday: 5, slot: dinnerCells[4]!.state === 'runs' ? dinnerCells[4]!.slot : dinnerSlot(5), time: '20:00', courses: [{ id: 1, name: 'Main', optional: false, eaters: null }] },
   ],
-  span: 'full',
+  span: 'half',
   editSlot: dinnerSlot(1),
   next: { slot: dinnerSlot(1), date: '2026-11-09' },
 }
@@ -60,7 +60,7 @@ export const lunchCard: MealSlotCard = {
     { id: 1, name: 'Main', optional: false, eaters: null },
     { id: 4, name: 'Dessert', optional: true, eaters: [1] },
   ],
-  week: [1, 2, 3, 4, 5, 6].map((weekday): WeekCell => ({ weekday, state: 'free' })).concat([{ weekday: 7, state: 'runs', slot: sundayLunch, time: '13:00', differs: false } as never]),
+  week: [1, 2, 3, 4, 5, 6].map((weekday): WeekCell => ({ weekday, state: 'free' })).concat([{ weekday: 7, state: 'runs', slot: sundayLunch, time: '13:00', differs: false, timeDiffers: false } as never]),
   differences: [],
   span: 'half',
   editSlot: sundayLunch,

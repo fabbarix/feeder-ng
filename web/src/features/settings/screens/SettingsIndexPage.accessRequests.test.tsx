@@ -1,5 +1,5 @@
 // A1 phase 2: the Settings index has a "Sign-in requests" row (Household group, every User) that leads to
-// /settings/access-requests and carries the pending count: the meta line and an AccessBadge ("3 sign-in requests waiting").
+// /settings/access-requests and carries the pending count: an aria-hidden AccessBadge, and the count in the link's name (TB-15e).
 // The count comes from the access feature's useAccessBadge (GET /api/access-requests), so a plain User gets it too.
 import { screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -34,7 +34,11 @@ describe('SettingsIndexPage: Sign-in requests row', () => {
     renderWithProviders(<SettingsIndexPage />, '/settings')
     const link = await screen.findByRole('link', { name: 'Sign-in requests, 3 waiting' })
     const row = link.closest('li')!
-    expect(within(row).getByRole('img', { name: '3 sign-in requests waiting' })).toBeInTheDocument()
+    // TB-15e (B9-52): the badge is decoration (aria-hidden, no role, no label); the link's own name carries the count.
+    const badge = within(row).getByText('3')
+    expect(badge).toHaveAttribute('aria-hidden', 'true')
+    expect(within(row).queryByRole('img')).toBeNull()
+    expect(link).toHaveAccessibleName('Sign-in requests, 3 waiting')
     expect(within(row).queryByText('3 waiting')).toBeNull() // no second display of the count in the meta
     expect(row.textContent?.match(/3/g)).toHaveLength(1)
   })

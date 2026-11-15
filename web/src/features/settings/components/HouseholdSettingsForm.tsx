@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from 'react'
-import { Button, FieldRow, FormActions, NumberField, TextField, TimeField } from '../../../ui'
+import { useRef, useState, type FormEvent } from 'react'
+import { Button, CurrencySelect, FieldRow, FormActions, Icon, NumberField, TextField, TimeField, TimeZoneSelect } from '../../../ui'
+import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { draftFromSettings, settingsFromDraft, validateSettings, type SettingsDraft } from '../lib/settingsForm'
+import { clockIn, timeZoneChanged } from '../lib/timezone'
 import { settingsStrings } from '../strings'
 import type { HouseholdSettings, SettingsInput } from '../types'
 import { PlannerStyleSlider } from './PlannerStyleSlider'
@@ -18,11 +20,16 @@ export interface HouseholdSettingsFormProps {
 
 const text = settingsStrings.form
 
-/** Time zone, the day counts (NumberFields bounded in the field: Planning Horizon 1-28, Cool-down 0-365, Leftover Use-by 1-14, Frozen Use-by 1-365),
+/** B9-36 (SET-07): Time zone and Currency are the crafted searchable Selects; after an invalid save focus goes to the first invalid field.
+ *  Earliest start and Latest start are not here (Planning rules, B9-51): the save leaves them out, so the server keeps them.
+ *  Time zone, the day counts (NumberFields bounded in the field: Planning Horizon 1-28, Cool-down 0-365, Leftover Use-by 1-14, Frozen Use-by 1-365),
  *  quiet hours (two TimeFields), Planner Style, Location (its helper says why coordinates matter) and Currency. */
 export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZone, onSave }: HouseholdSettingsFormProps) {
   const [draft, setDraft] = useState<SettingsDraft>(() => draftFromSettings(value, suggestedTimeZone))
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitCount, setSubmitCount] = useState(0)
+  const formRef = useRef<HTMLFormElement>(null)
+  useFocusFirstInvalid(formRef, errors, submitCount)
   const fromBrowser = !value.timeZoneConfigured && Boolean(suggestedTimeZone) && draft.timeZone === suggestedTimeZone
   const set = (patch: Partial<SettingsDraft>) => setDraft((d) => ({ ...d, ...patch }))
   /** NumberField gives null for an empty field; the draft keeps NaN so validateSettings reports it. */
@@ -33,21 +40,31 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
     e.preventDefault()
     const found = validateSettings(draft)
     setErrors(found)
+    setSubmitCount((n) => n + 1)
     if (Object.keys(found).length === 0) void onSave(settingsFromDraft(draft))
   }
 
   const readOnly = !canEdit
+  const zoneHelper = [text.timeZoneHelper(clockIn(draft.timeZone)), fromBrowser ? text.timeZoneFromBrowser : null].filter(Boolean).join(' ')
   return (
-    <form className="settings__stack" onSubmit={submit} noValidate>
-      <TextField
-        size="md"
-        label={text.timeZone}
-        value={draft.timeZone}
-        disabled={readOnly}
-        error={errors.timeZone}
-        helper={fromBrowser ? text.timeZoneFromBrowser : undefined}
-        onChange={(timeZone) => set({ timeZone })}
-      />
+    <form ref={formRef} className="settings__stack" onSubmit={submit} noValidate>
+      <div className="settings__field-with-notice">
+        <TimeZoneSelect
+          size="md"
+          label={text.timeZone}
+          value={draft.timeZone}
+          disabled={readOnly}
+          error={errors.timeZone}
+          helper={zoneHelper}
+          onChange={(timeZone) => set({ timeZone })}
+        />
+        {canEdit && timeZoneChanged(value.timeZone, draft.timeZone) ? (
+          <p className="settings__notice" data-tone="info" role="status">
+            <Icon name="info" size={16} />
+            <span>{text.timeZoneChanged}</span>
+          </p>
+        ) : null}
+      </div>
       <FieldRow>
         <NumberField
           size="xs"
@@ -115,7 +132,7 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
         helper={text.locationHint}
         onChange={(locationText) => set({ locationText })}
       />
-      <TextField size="xs" label={text.currency} value={draft.currency} disabled={readOnly} error={errors.currency} onChange={(currency) => set({ currency })} />
+      <CurrencySelect size="sm" label={text.currency} value={draft.currency} disabled={readOnly} error={errors.currency} onChange={(currency) => set({ currency })} />
       {canEdit ? (
         <FormActions
           primary={

@@ -15,7 +15,11 @@ import './Menu.css'
 /** One choice of a Menu. `href` makes it a link; `checked` makes it a checkable item (menuitemcheckbox). */
 export interface MenuItem {
   id: string
+  /** The item's words and accessible name. */
   label: string
+  /** Additive (B9-52): what is shown instead of `label` where part of it must wrap its own way (an email that breaks only at
+   *  "@" and "."); `label` stays the accessible name. */
+  labelNode?: ReactNode
   icon?: IconName
   tone?: 'danger'
   href?: string
@@ -33,8 +37,8 @@ export interface MenuProps {
   label: string
   /** Trigger glyph. Default `more`. */
   icon?: IconName
-  /** Title of the sheet below 768 px. Default: `label`. */
-  title?: string
+  /** Title of the sheet below 768 px. Default: `label`. A node (additive, B9-52) wraps its own way; the list is then named by `label`. */
+  title?: ReactNode
   items: MenuEntry[]
   /** The trigger's size, as an IconButton's: `compact` (32 px visual) for a slot header inside a day tile; a row's ⋮ matches its icon buttons; the hero's matches its actions. Default `md`. Ignored with a text `trigger`. */
   size?: IconButtonProps['size']
@@ -44,6 +48,9 @@ export interface MenuProps {
   initialFocusId?: string
   /** An item's action is waiting on a read before it can show (Delete Ingredient's impact read): the trigger is aria-busy and its glyph muted. */
   busy?: boolean
+  /** B9-52: the icon trigger shows `label` as its tooltip (`title`), as a row's other IconButtons do (the Allowlist's ⋮). Off by
+   *  default: some rows forbid tooltips (IngredientLineRow). */
+  triggerTitle?: boolean
 }
 
 const GAP = 8
@@ -56,7 +63,7 @@ interface Placed {
 }
 
 /** G-01: a popover anchored to its IconButton from 768 px; a BottomSheet of rows below. */
-export function Menu({ label, icon = 'more', title, size = 'md', items, trigger, initialFocusId, busy }: MenuProps) {
+export function Menu({ label, icon = 'more', title, size = 'md', items, trigger, initialFocusId, busy, triggerTitle }: MenuProps) {
   const wide = useBreakpoint('md')
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -85,6 +92,7 @@ export function Menu({ label, icon = 'more', title, size = 'md', items, trigger,
           ref={triggerRef}
           icon={icon}
           label={label}
+          title={triggerTitle ? label : undefined}
           size={size}
           aria-haspopup="menu"
           aria-expanded={open}
@@ -94,7 +102,7 @@ export function Menu({ label, icon = 'more', title, size = 'md', items, trigger,
         />
       )}
       {open && wide ? <Popover label={label} items={items} triggerRef={triggerRef} onClose={close} initialFocusId={initialFocusId} /> : null}
-      {open && !wide ? <Sheet title={title ?? label} items={items} onClose={close} /> : null}
+      {open && !wide ? <Sheet title={title ?? label} label={label} items={items} onClose={close} /> : null}
     </>
   )
 }
@@ -200,6 +208,7 @@ function Popover({
 function PopoverItem({ item, onSelect }: { item: MenuItem; onSelect: (item: MenuItem, link: boolean) => void }) {
   const common = {
     className: 'menu__item',
+    'aria-label': item.labelNode !== undefined ? item.label : undefined,
     'data-tone': item.tone,
     'aria-disabled': item.disabled ? (true as const) : undefined,
     'data-item-id': item.id,
@@ -208,7 +217,7 @@ function PopoverItem({ item, onSelect }: { item: MenuItem; onSelect: (item: Menu
   const body: ReactNode = (
     <>
       {item.icon ? <Icon name={item.icon} size={20} /> : null}
-      <span>{item.label}</span>
+      <span>{item.labelNode ?? item.label}</span>
       {item.checked ? <Icon name="tick" size={20} className="menu__check" /> : null}
     </>
   )
@@ -242,7 +251,7 @@ function PopoverItem({ item, onSelect }: { item: MenuItem; onSelect: (item: Menu
   )
 }
 
-function Sheet({ title, items, onClose }: { title: string; items: MenuEntry[]; onClose: () => void }) {
+function Sheet({ title, label, items, onClose }: { title: ReactNode; label: string; items: MenuEntry[]; onClose: () => void }) {
   const titleId = useId()
   const run = (item: MenuItem) => {
     onClose()
@@ -252,7 +261,7 @@ function Sheet({ title, items, onClose }: { title: string; items: MenuEntry[]; o
     <BottomSheet open onClose={onClose} title={title}>
       {/* A link row navigates on its own; the sheet closes with it. */}
       <div onClick={(e) => (e.target as HTMLElement).closest('a') && onClose()} data-menu-sheet={titleId}>
-        <ListGroup label={title}>
+        <ListGroup label={typeof title === 'string' ? title : label}>
           {items.map((entry, i) => {
             if (isSeparator(entry)) return <li key={`sep-${i}`} role="separator" className="menu-sheet__divider" />
             const tone = entry.tone
@@ -267,11 +276,12 @@ function Sheet({ title, items, onClose }: { title: string; items: MenuEntry[]; o
                 </li>
               )
             }
-            if (entry.href !== undefined && !entry.disabled) return <ListRow key={entry.id} title={entry.label} icon={entry.icon} href={entry.href} {...state} />
+            if (entry.href !== undefined && !entry.disabled) return <ListRow key={entry.id} title={entry.labelNode ?? entry.label} aria-label={entry.label} icon={entry.icon} href={entry.href} {...state} />
             return (
               <ListRow
                 key={entry.id}
-                title={entry.label}
+                title={entry.labelNode ?? entry.label}
+                aria-label={entry.label}
                 icon={entry.icon}
                 onActivate={entry.disabled ? undefined : () => run(entry)}
                 {...state}

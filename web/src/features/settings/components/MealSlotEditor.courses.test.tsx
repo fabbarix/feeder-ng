@@ -51,7 +51,7 @@ describe('MealSlotEditor Courses: adding', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Dessert' }))
     await userEvent.click(within(row('Dessert')).getByRole('switch', { name: 'Optional: Dessert' }))
     await userEvent.click(within(within(row('Dessert')).getByRole('group', { name: 'Who eats Dessert' })).getByRole('button', { name: 'Sam' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     const courses = [
       { id: 1, optional: false, optOutMemberIds: [] },
       { id: 2, optional: false, optOutMemberIds: [] },
@@ -64,7 +64,7 @@ describe('MealSlotEditor Courses: adding', () => {
     const { onSave } = add()
     await fillNewSlot()
     await userEvent.click(screen.getByRole('button', { name: 'Remove Main' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     expect(onSave).not.toHaveBeenCalled()
     expect(screen.getAllByRole('alert').map((a) => a.textContent)).toEqual(['Choose at least one Course'])
   })
@@ -73,7 +73,7 @@ describe('MealSlotEditor Courses: adding', () => {
     const { onSave } = add()
     await fillNewSlot()
     await userEvent.click(within(row('Main')).getByRole('switch', { name: 'Optional: Main' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     expect(onSave).not.toHaveBeenCalled()
     expect(screen.getByRole('alert')).toHaveTextContent('Keep at least one Course that is not optional')
   })
@@ -83,7 +83,7 @@ describe('MealSlotEditor Courses: adding', () => {
     await fillNewSlot()
     await userEvent.click(screen.getByRole('button', { name: 'Side' }))
     await userEvent.click(within(row('Main')).getByRole('switch', { name: 'Optional: Main' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     expect(onSave).toHaveBeenCalledWith([expect.objectContaining({ courses: [{ id: 1, optional: true, optOutMemberIds: [] }, { id: 2, optional: false, optOutMemberIds: [] }] })])
   })
 
@@ -100,7 +100,7 @@ describe('MealSlotEditor Courses: editing', () => {
     expect(rowNames()).toEqual(['Main', 'Side', 'Dessert'])
     expect(within(row('Dessert')).getByRole('switch', { name: 'Optional: Dessert' })).toHaveAttribute('aria-checked', 'true')
     expect(within(row('Dessert')).getByRole('button', { name: 'Sam' })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByText('Dessert · without Sam')).toBeInTheDocument()
+    expect(within(row('Dessert')).getByText('Sam does not eat it')).toBeInTheDocument()
   })
 
   it('does not send the Courses when only another field changed', async () => {

@@ -81,7 +81,8 @@ describe('a Not cooked meal', () => {
     expect(dialog().getByText('Marked Not cooked today at 08:40 by Anna.')).toBeInTheDocument()
     expect(dialog().getByText('Cooked after all? Mark it now and Feeder takes the Stock it used. Undo Not cooked puts it back in To confirm.')).toBeInTheDocument()
     const names = dialog().getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent).filter((n) => n !== 'Close')
-    expect(names).toEqual(['Cooked after all', 'Undo Not cooked'])
+    // B9-38 (SHORT-02): the footer is one FormActions row, whose DOM order puts the primary last.
+    expect(names).toEqual(['Undo Not cooked', 'Cooked after all'])
     expect(dialog().getByRole('button', { name: 'Cooked after all' })).toHaveAttribute('data-variant', 'primary')
     expect(dialog().getByRole('button', { name: 'Undo Not cooked' })).toHaveAttribute('data-variant', 'secondary')
   })

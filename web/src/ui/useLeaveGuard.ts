@@ -13,6 +13,10 @@ export interface LeaveGuardOptions {
   isNew?: boolean
   /** Runs when Discard changes is chosen, before the navigation continues (drops the reload draft). */
   onDiscard?: () => void
+  /** B9-36 (decision SAFE 6): a lead of the caller's own ("Dark is only a preview.") in place of "Your changes to <what> are not saved." */
+  lead?: string
+  /** B9-36: a note of the caller's own ("If you leave, Feeder goes back to System.") in place of "If you leave, they are lost." */
+  note?: string
 }
 
 export interface LeaveGuard {
@@ -33,11 +37,11 @@ export const leaveGuardStrings = {
 } as const
 
 /** The leave dialog's options. Pure. */
-export function leaveDialog(what: string, isNew = false): ConfirmOptions {
+export function leaveDialog(what: string, isNew = false, copy: { lead?: string; note?: string } = {}): ConfirmOptions {
   return {
     title: leaveGuardStrings.title,
-    body: isNew ? leaveGuardStrings.leadNew(what) : leaveGuardStrings.lead(what),
-    note: isNew ? leaveGuardStrings.noteNew : leaveGuardStrings.note,
+    body: copy.lead ?? (isNew ? leaveGuardStrings.leadNew(what) : leaveGuardStrings.lead(what)),
+    note: copy.note ?? (isNew ? leaveGuardStrings.noteNew : leaveGuardStrings.note),
     tone: 'danger',
     // the safe-01 mock draws the circled exclamation (WarningCircle, icon 'error'), not the trash of a delete
     icon: 'error',
@@ -67,7 +71,7 @@ function pageTitle(): HTMLElement | null {
   return h1
 }
 
-export function useLeaveGuard(dirty: boolean, { what, isNew, onDiscard }: LeaveGuardOptions): LeaveGuard {
+export function useLeaveGuard(dirty: boolean, { what, isNew, onDiscard, lead, note }: LeaveGuardOptions): LeaveGuard {
   const confirmApi = useConfirm()
   useReportUnsavedChanges(dirty) // B9-31: every guarded editor holds the "new version" prompt while dirty
   const dirtyRef = useRef(dirty)
@@ -75,11 +79,11 @@ export function useLeaveGuard(dirty: boolean, { what, isNew, onDiscard }: LeaveG
   const asking = useRef(false)
   // What had focus just before the pointer or key that started the exit (a click moves focus to the control it pressed).
   const focusBefore = useRef<Element | null>(null)
-  const latest = useRef({ what, isNew, onDiscard })
+  const latest = useRef({ what, isNew, onDiscard, lead, note })
 
   useEffect(() => {
     dirtyRef.current = dirty
-    latest.current = { what, isNew, onDiscard }
+    latest.current = { what, isNew, onDiscard, lead, note }
   })
 
   useEffect(() => {
@@ -106,8 +110,8 @@ export function useLeaveGuard(dirty: boolean, { what, isNew, onDiscard }: LeaveG
     const target = returnTarget(focusBefore.current)
     // The dialog gives focus back to what had it when it opened: put focus on the return target first.
     if (target && document.activeElement !== target) target.focus({ preventScroll: true })
-    const { what: w, isNew: n, onDiscard: discard } = latest.current
-    const leave = await confirmApi.confirm(leaveDialog(w, n))
+    const { what: w, isNew: n, onDiscard: discard, lead: l, note: o } = latest.current
+    const leave = await confirmApi.confirm(leaveDialog(w, n, { lead: l, note: o }))
     if (leave) discard?.()
     return leave
   }, [confirmApi])

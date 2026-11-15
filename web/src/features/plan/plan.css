@@ -534,12 +534,95 @@
   line-height: var(--text-body-strong-line);
   font-weight: 700;
 }
-.plan-sheet__actions {
+
+/* B9-38 (PC-09): the start note of a meal that would start outside the cooking times or on an earlier day. */
+.plan-sheet__start-note {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+/* B9-38 (PC-09): a Cooked meal's Leftover, a leftover-tone block with Had it, Freeze it and its ⋮ (R-A: outlined, surface fill). */
+.plan-sheet__leftover {
   display: grid;
-  width: 100%;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: stretch;
   gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-tile-sm);
+  background: var(--status-leftover-bg);
+  color: var(--status-leftover-fg);
+  border: 1px solid var(--status-leftover-fg);
+}
+.plan-sheet__leftover-title,
+.plan-sheet__leftover-detail {
+  margin: 0;
+}
+.plan-sheet__leftover-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.plan-sheet__leftover-detail {
+  font-variant-numeric: tabular-nums;
+}
+.plan-sheet__leftover-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+.plan-sheet__leftover-actions > .button:only-of-type {
+  grid-column: span 2;
+}
+.plan-sheet__leftover .button[data-variant='secondary'],
+.plan-sheet__leftover .icon-button {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+
+/* B9-38 (PC-05, PC-09): "Open Recipe", a link row. */
+.plan-sheet__links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* B9-38 (PC-10): Swap's "Now" and "Instead" and Choose a Recipe's groups: a muted label over each list, the chips under a row lined
+   up with its text (past the 48 px monogram and the row's gap), the note at the end. */
+.plan-sheet__group {
+  display: grid;
+  gap: var(--space-1);
+}
+.plan-sheet__label {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.plan-sheet__rows {
+  --plan-thumb: 48px;
+}
+.plan-sheet__rows .list-row:has(.recipe-thumb) > .list-row__below {
+  padding-inline-start: calc(var(--plan-thumb) + var(--space-3));
+}
+.plan-sheet__rows .list-row__value {
+  white-space: nowrap;
+  color: var(--color-accent-text);
+}
+.plan-sheet__note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-muted);
+}
+.plan-sheet__note > svg {
+  flex: none;
+  margin-block-start: calc((var(--text-body-line) - var(--space-4)) / 2);
+}
+.plan-sheet__chooser .plan-sheet__search {
+  min-inline-size: 0;
 }
 
 .plan-form {

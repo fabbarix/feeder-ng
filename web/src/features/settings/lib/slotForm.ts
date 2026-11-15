@@ -1,5 +1,6 @@
 import type { CourseChoice } from '../../../lib/courses'
 import type { MealSlot, MealSlotInput, Member, SlotCourseInput } from '../types'
+import type { MealSlotCard } from './mealSlotCards'
 import { newSlotCourses, slotCourseInputs } from './slotCourses'
 
 /**
@@ -29,10 +30,12 @@ export function slotDraft(slot?: MealSlot, members: Member[] = [], courses?: rea
 
 const copyCourse = (c: SlotCourseInput): SlotCourseInput => ({ ...c, optOutMemberIds: [...c.optOutMemberIds] })
 
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
+
 /** The first thing wrong with the draft, or null. */
 export function slotProblem(draft: MealSlotInput): string | null {
   if (draft.name.trim() === '') return 'Enter a name for the Meal Slot.'
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.time)) return 'Enter the usual time for the Meal Slot.'
+  if (!TIME.test(draft.time)) return 'Enter the usual time for the Meal Slot.'
   return null
 }
 
@@ -79,4 +82,49 @@ export async function createSlotsSequentially(
     }
   }
   return { created }
+}
+
+/** Where the Meal Slot sheet starts when editing: the slot it opens on and the weekdays "Apply to" has chosen. */
+export interface SlotFormStart {
+  slot: MealSlot
+  weekdays: number[]
+}
+
+/** SET-14h (decision SET 5): "Edit <name>" on a card starts with every day the name runs chosen, so a time change applies to all of them. */
+export function slotFormFromCard(card: MealSlotCard): SlotFormStart {
+  return { slot: card.editSlot, weekdays: [...card.days] }
+}
+
+/** A day cell of the week strip or a "Differs on" row: that day only (spec r15). */
+export function slotFormFromCell(slot: MealSlot): SlotFormStart {
+  return { slot, weekdays: [slot.weekday] }
+}
+
+interface FormSnapshot {
+  draft: MealSlotInput
+  weekdays: number[]
+}
+
+/** The parts of a form that count as a change: the trimmed name, the time, the Attendance, the Courses and the set of weekdays. */
+function formKey(form: FormSnapshot): string {
+  const { draft } = form
+  return JSON.stringify([
+    draft.name.trim(),
+    draft.time,
+    draft.attendance.map((a) => [a.memberId, a.portionFactorOverride]),
+    (draft.courses ?? []).map((c) => [c.id, c.optional, [...c.optOutMemberIds].sort((a, b) => a - b)]),
+    [...new Set(form.weekdays)].sort((a, b) => a - b),
+  ])
+}
+
+/** A11Y / SHORT-02: true when the sheet holds changes the Admin has not saved (the sheet then asks before it closes on Cancel, Esc or the scrim). */
+export function slotFormDirty(start: FormSnapshot, now: FormSnapshot): boolean {
+  return formKey(start) !== formKey(now)
+}
+
+/** B9-16 `focusFirstInvalid`: which field the first problem belongs to, so the sheet can mark it `aria-invalid` and focus it. Null when the draft is fine. */
+export function slotProblemField(draft: MealSlotInput): 'name' | 'time' | null {
+  if (draft.name.trim() === '') return 'name'
+  if (!TIME.test(draft.time)) return 'time'
+  return null
 }

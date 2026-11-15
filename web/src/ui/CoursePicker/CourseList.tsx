@@ -11,12 +11,13 @@ export interface CourseListProps {
   rows: readonly CourseChoice[]
   disabled?: boolean
   renderRowExtras?: (row: { course: CourseChoice; index: number; count: number }) => ReactNode
+  renderRowMeta?: (row: { course: CourseChoice; index: number; count: number }) => string | null
   onReorder: (from: number, to: number) => void
   onMove: (index: number, delta: -1 | 1) => void
   onRemove: (id: number) => void
 }
 
-export function CourseList({ label, rows, disabled, renderRowExtras, onReorder, onMove, onRemove }: CourseListProps) {
+export function CourseList({ label, rows, disabled, renderRowExtras, renderRowMeta, onReorder, onMove, onRemove }: CourseListProps) {
   const count = rows.length
   return (
     <Sortable<CourseChoice>
@@ -35,6 +36,7 @@ export function CourseList({ label, rows, disabled, renderRowExtras, onReorder, 
           count={count}
           disabled={disabled}
           extras={renderRowExtras?.({ course, index: ctx.index, count })}
+          meta={renderRowMeta?.({ course, index: ctx.index, count })}
           onMove={(delta) => onMove(ctx.index, delta)}
           onRemove={() => onRemove(course.id)}
         />

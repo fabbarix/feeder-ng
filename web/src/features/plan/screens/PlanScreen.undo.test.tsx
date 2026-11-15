@@ -234,7 +234,7 @@ describe('PlanScreen: Undo from the Planned Meal sheet of a Cooked meal (SAFE-03
   const openCooked = async () => {
     const tile = await dayTile(/^Sat 14/)
     await userEvent.click(within(rowOf(tile, 'Slow cooker beef and barley stew')).getByRole('button', { name: /^Slow cooker beef and barley stew$/ }))
-    return screen.findByRole('dialog', { name: 'Slow cooker beef and barley stew' })
+    return screen.findByRole('dialog', { name: / Slow cooker beef and barley stew$/ })
   }
 
   it('says how it was marked in the Household zone and offers Undo Cooked', async () => {
@@ -251,7 +251,7 @@ describe('PlanScreen: Undo from the Planned Meal sheet of a Cooked meal (SAFE-03
     await userEvent.click(within(await openCooked()).getByRole('button', { name: 'Undo Cooked' }))
     expect(await findToastWith('Sat Breakfast is back in To confirm')).toBeTruthy()
     expect(api.callsTo('POST', '/api/plan/2026-11-14/1/1/reopen')).toHaveLength(1)
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Slow cooker beef and barley stew' })).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: / Slow cooker beef and barley stew$/ })).toBeNull())
   })
 
   it('a refused Undo Cooked says "Nothing was undone" and the reason', async () => {

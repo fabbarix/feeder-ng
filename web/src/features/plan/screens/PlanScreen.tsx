@@ -144,6 +144,9 @@ export function PlanScreen(): ReactNode {
           onUndoCooked={s.resolvedUndo.onUndoCooked}
           onUndoNotCooked={s.resolvedUndo.onUndoNotCooked}
           onCookedAfterAll={s.resolvedUndo.onCookedAfterAll}
+          onNotCooked={s.notCookedFromSheet}
+          leftover={s.plannedLeftover}
+          onLeftoverAction={s.leftoverAction}
         />
       ) : null}
       <ReplanReviewSheet controller={s.review} />
@@ -170,6 +173,7 @@ export function PlanScreen(): ReactNode {
         isLoading={s.alternatives.isLoading}
         onPick={(id) => void s.pickAlternative(id)}
         bought={s.swapBought}
+        courseId={s.swapCourseId}
       />
       <RecipeChooserSheet
         open={s.chooseOpen}
@@ -179,6 +183,9 @@ export function PlanScreen(): ReactNode {
         onPick={(id) => void s.pickRecipe(id)}
         frozenLeftovers={s.leftovers.leftovers}
         onPickLeftover={(id) => void s.pickLeftover(id)}
+        slot={s.chooseSlot}
+        courseId={s.chooseCourseId}
+        onPickOther={(id) => void s.pickOtherRecipe(id)}
       />
     </div>
   )

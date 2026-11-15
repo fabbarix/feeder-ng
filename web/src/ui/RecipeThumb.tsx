@@ -18,6 +18,8 @@ export interface RecipeThumbProps {
   label?: string
   /** The generated tile's initial. Default true; a Select option passes false so its text is the Recipe name alone. */
   initial?: boolean
+  /** B9-38 (PC-16 8): `neutral` is the neutral monogram (surface-2 with a muted letter, the initial only, no Tag icon); sets `data-tone="neutral"` like Avatar. A photo wins. */
+  tone?: 'neutral'
 }
 
 const TAG_ICON_SIZE: Record<RecipeThumbSize, 16 | 20 | 24 | 28> = { 40: 16, 48: 20, 72: 24, hero: 28 }
@@ -26,7 +28,7 @@ const TAG_ICON_SIZE: Record<RecipeThumbSize, 16 | 20 | 24 | 28> = { 40: 16, 48: 
  * A photo (`object-fit: cover`) or, without a photo or when it fails to load, the generated tile:
  * soft fill, Tag icon at 40 % in accent-text, and the initial. Generated tiles carry data-generated and data-tag-icon.
  */
-export function RecipeThumb({ name, photoUrl, tags, size = 48, label, initial = true }: RecipeThumbProps) {
+export function RecipeThumb({ name, photoUrl, tags, size = 48, label, initial = true, tone }: RecipeThumbProps) {
   const [failedUrl, setFailedUrl] = useState<string>()
   if (photoUrl && failedUrl !== photoUrl) {
     return (
@@ -37,6 +39,13 @@ export function RecipeThumb({ name, photoUrl, tags, size = 48, label, initial = 
   }
   const icon: IconName = tagIcon(tags?.[0])
   const a11y = label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': 'true' as const }
+  if (tone === 'neutral') {
+    return (
+      <span className="recipe-thumb" data-size={size} data-generated="" data-tone="neutral" {...a11y}>
+        <span className="recipe-thumb__initial">{recipeInitial(name)}</span>
+      </span>
+    )
+  }
   return (
     <span className="recipe-thumb" data-size={size} data-generated="" data-tag-icon={icon} {...a11y}>
       <span className="recipe-thumb__icon" aria-hidden="true">

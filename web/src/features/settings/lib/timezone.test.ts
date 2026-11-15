@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { browserTimeZone, isValidTimeZone, needsTimeZoneSetup } from './timezone'
+import { browserTimeZone, clockIn, isValidTimeZone, needsTimeZoneSetup, timeZoneChanged } from './timezone'
 
 describe('browserTimeZone', () => {
   it('reads the zone from Intl', () => {
@@ -33,5 +33,20 @@ describe('needsTimeZoneSetup', () => {
     expect(needsTimeZoneSetup({ timeZoneConfigured: false }, true)).toBe(true)
     expect(needsTimeZoneSetup({ timeZoneConfigured: false }, false)).toBe(false)
     expect(needsTimeZoneSetup({ timeZoneConfigured: true }, true)).toBe(false)
+  })
+})
+
+describe('clockIn and timeZoneChanged (B9-36, SET-07)', () => {
+  it('reads the time of day in the zone, 24 h', () => {
+    const at = new Date('2026-11-14T20:14:00Z')
+    expect(clockIn('Europe/Rome', at)).toBe('21:14')
+    expect(clockIn('UTC', at)).toBe('20:14')
+  })
+  it('is null for an unknown zone', () => {
+    expect(clockIn('Nowhere/Atlantis')).toBeNull()
+  })
+  it('a chosen zone differs from the stored one', () => {
+    expect(timeZoneChanged('Europe/Rome', 'Europe/Rome')).toBe(false)
+    expect(timeZoneChanged('Europe/Rome', 'Europe/London')).toBe(true)
   })
 })

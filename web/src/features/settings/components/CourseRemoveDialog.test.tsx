@@ -68,8 +68,11 @@ describe('CourseRemoveDialog: Delete', () => {
     const d = dialog('Delete Side?')
     const meals = within(within(d).getByRole('list', { name: 'Planned Meals that go, from today on' })).getAllByRole('listitem')
     expect(meals).toHaveLength(2)
-    expect(meals[0]).toHaveTextContent('Roast potatoes · Dinner · Thu 12 Nov')
-    expect(meals[1]).toHaveTextContent('Green salad · Dinner · Tue 10 Nov')
+    // R-E rows (batch review): the Recipe is the key, Pinned the state, the Meal Slot and date the muted detail.
+    expect(meals[0]!.querySelector('.detail-row__label')).toHaveTextContent('Roast potatoes')
+    expect(meals[0]!.querySelector('.detail-row__detail')).toHaveTextContent('Dinner · Thu 12 Nov')
+    expect(meals[1]!.querySelector('.detail-row__label')).toHaveTextContent('Green salad')
+    expect(meals[1]!.querySelector('.detail-row__detail')).toHaveTextContent('Dinner · Tue 10 Nov')
     expect(meals[0]).toHaveTextContent('Pinned')
     expect(meals[1]).not.toHaveTextContent('Pinned')
     const rules = within(within(d).getByRole('list', { name: 'Slot Rules that go' })).getAllByRole('listitem')

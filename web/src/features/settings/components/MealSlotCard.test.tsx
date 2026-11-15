@@ -6,7 +6,7 @@ import { MealSlotCard } from './MealSlotCard'
 import { dinnerCard, fabioOnlyCard, lunchCard, nobodyCard, sixMembers, twoMembers } from './mealSlotCardFixtures'
 
 function setup(card = dinnerCard, over: Partial<React.ComponentProps<typeof MealSlotCard>> = {}) {
-  const props = { card, members: twoMembers, canEdit: true, locale: 'en', onEdit: vi.fn(), onFix: vi.fn(), onChangeDate: vi.fn(), onAddOn: vi.fn(), ...over }
+  const props = { card, members: twoMembers, canEdit: true, locale: 'en', onEdit: vi.fn(), onEditCard: vi.fn(), onFix: vi.fn(), onChangeDate: vi.fn(), onAddOn: vi.fn(), ...over }
   render(<MealSlotCard {...props} />)
   return { props, region: screen.getByRole('region', { name: card.name }) }
 }
@@ -51,11 +51,11 @@ describe('MealSlotCard: anatomy', () => {
 })
 
 describe('MealSlotCard: the 7-day strip', () => {
-  it('is a group of seven days with the time on the days it runs', () => {
+  it('is a group of seven days that prints a time only on the day that differs (SET-08)', () => {
     const { region } = setup()
     const strip = within(region).getByRole('group', { name: 'Dinner by weekday' })
     expect(within(strip).getByText('20:00')).toBeInTheDocument()
-    expect(within(strip).getAllByText('19:30')).toHaveLength(6)
+    expect(within(strip).queryByText('19:30')).toBeNull()
   })
   it('an Admin taps a day to edit that Meal Slot', async () => {
     const { props, region } = setup()
@@ -96,10 +96,12 @@ describe('MealSlotCard: "Differs on"', () => {
 })
 
 describe('MealSlotCard: footer buttons and "Nobody attending"', () => {
-  it('"Edit Dinner" (Admin) edits the card\'s usual slot', async () => {
+  // SET-14h (decision SET 5): the card's own Edit hands over the whole card, so the sheet can start with every day of the name.
+  it('"Edit Dinner" (Admin) hands over the whole card, not one day', async () => {
     const { props, region } = setup()
     await userEvent.click(within(region).getByRole('button', { name: 'Edit Dinner' }))
-    expect(props.onEdit).toHaveBeenCalledWith(dinnerCard.editSlot)
+    expect(props.onEditCard).toHaveBeenCalledWith(dinnerCard)
+    expect(props.onEdit).not.toHaveBeenCalled()
   })
   it('"Change a date" hands over the whole card', async () => {
     const { props, region } = setup()
@@ -150,5 +152,26 @@ describe('MealSlotCard: six Members', () => {
     expect(within(list).getAllByRole('img')).toHaveLength(4)
     expect(within(list).getByText('+1')).toBeInTheDocument()
     expect(within(region).getByText('Mia, Fabio, Sam, Pia, Nonna only')).toBeInTheDocument()
+  })
+})
+
+// SET-08: both foot actions are outlined secondary buttons (R-A), at a touch size; the card is a container so its strip can react to its own width.
+describe('MealSlotCard: foot buttons and card width (SET-08)', () => {
+  it('"Edit Dinner" and "Change a date" are both secondary buttons, not bare text', () => {
+    const { region } = setup()
+    expect(within(region).getByRole('button', { name: 'Edit Dinner' })).toHaveAttribute('data-variant', 'secondary')
+    expect(within(region).getByRole('button', { name: 'Change a date for Dinner' })).toHaveAttribute('data-variant', 'secondary')
+  })
+  it('neither is a small button: both take the default (touch-sized) height', () => {
+    const { region } = setup()
+    for (const name of ['Edit Dinner', 'Change a date for Dinner']) expect(within(region).getByRole('button', { name })).not.toHaveAttribute('data-size', 'sm')
+  })
+  it('never spans the whole row, even for a name that runs every day', () => {
+    const { region } = setup()
+    expect(region).not.toHaveAttribute('data-span', 'full')
+  })
+  it('the usual-time clock is its own element, so the weight rule can reach it', () => {
+    const { region } = setup()
+    expect(within(region).getByTestId('usual-time')).toHaveClass('ms-card__clock')
   })
 })

@@ -244,3 +244,25 @@ describe('a body that loads after the sheet opened', () => {
     expect(close).toHaveFocus()
   })
 })
+
+describe('more (B9-42): the leading footer slot', () => {
+  it('sits first in the footer, before the sheet’s own Cancel and the submit, and the header has no Close', () => {
+    render(
+      <BottomSheet open onClose={() => {}} onCancel={() => {}} title="Edit" more={<Button variant="secondary">More</Button>} submit={{ label: 'Save', form: 'f' }}>
+        <form id="f" />
+      </BottomSheet>,
+    )
+    const footer = screen.getByRole('dialog').querySelector('.sheet__footer') as HTMLElement
+    expect(within(footer).getAllByRole('button').map((b) => b.textContent)).toEqual(['More', 'Cancel', 'Save'])
+    expect(footer.querySelector('.sheet__more')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
+  })
+  it('alone it still makes a footer', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="T" more={<Button>M</Button>}>
+        body
+      </BottomSheet>,
+    )
+    expect(screen.getByRole('dialog').querySelector('.sheet__footer .sheet__more')).not.toBeNull()
+  })
+})

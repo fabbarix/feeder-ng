@@ -52,6 +52,13 @@ export interface ConfirmDialogProps extends ConfirmOptions {
   onConfirm: () => void
   onCancel: () => void
   onAlternate?: () => void
+  // Controlled use only (additive, B9-42): a confirm that needs a choice first (a replacement Course) and reports its state.
+  /** The confirm button cannot be pressed yet (the impact is loading or failed). */
+  confirmDisabled?: boolean
+  /** The confirm is in flight: its button shows the spinner and both buttons are disabled. */
+  busy?: boolean
+  /** Extra content after the lead and before the groups: a field the decision needs, a status line, a refusal. */
+  children?: ReactNode
 }
 
 export type ConfirmChoice = 'confirm' | 'alternate' | 'cancel'
@@ -84,6 +91,9 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   onAlternate,
+  confirmDisabled,
+  busy,
+  children,
 }: ConfirmDialogProps): ReactNode {
   const danger = tone === 'danger'
   const focusConfirm = focus === 'confirm' && !danger
@@ -98,15 +108,15 @@ export function ConfirmDialog({
       dismissOnBackdrop={!danger}
       onCancel={onCancel}
       cancelLabel={cancelLabel}
-      cancelProps={{ 'data-autofocus': !focusConfirm || undefined }}
+      cancelProps={{ 'data-autofocus': !focusConfirm || undefined, disabled: busy || undefined }}
       actions={
         <>
           {alternateLabel ? (
-            <Button variant="secondary" onClick={onAlternate}>
+            <Button variant="secondary" onClick={onAlternate} disabled={busy || undefined}>
               {alternateLabel}
             </Button>
           ) : null}
-          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} data-autofocus={focusConfirm || undefined}>
+          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} disabled={confirmDisabled || busy || undefined} loading={busy || undefined} data-autofocus={focusConfirm || undefined}>
             {confirmLabel}
           </Button>
         </>
@@ -117,6 +127,7 @@ export function ConfirmDialog({
           {paragraph}
         </p>
       ))}
+      {children}
       {groups?.filter((g) => g.rows.length > 0).map((g, i) => <ConfirmGroupView key={`${i}-${g.label}`} group={g} />)}
       {note ? <p className="confirm-dialog__note">{note}</p> : null}
       {details && details.rows.length > 0 ? (
