@@ -59,3 +59,10 @@ export const imagePickerStrings = {
     failed: 'The image could not be added. Try again.',
   } satisfies Record<ImageProblemCode, string>,
 }
+
+/**
+ * B9-37: the add / replace / remove words. A host that names its picture passes the GLOSSARY noun ("Photo" for a Recipe, a Step or a
+ * Member; "Picture" for an Ingredient or a Product); without one the picker says "image" as before.
+ */
+export const pictureActionLabels = (noun?: string): { add: string; replace: string; remove: string } =>
+  noun ? { add: `Add ${noun}`, replace: `Replace ${noun}`, remove: `Remove ${noun}` } : { add: imagePickerStrings.addImage, replace: imagePickerStrings.replaceImage, remove: imagePickerStrings.removeImage }

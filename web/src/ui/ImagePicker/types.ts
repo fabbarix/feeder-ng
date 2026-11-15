@@ -51,6 +51,8 @@ export type RawImage =
 interface ImagePickerCommon {
   /** The visible heading and the accessible name of the group, e.g. "Recipe photo". */
   label: string
+  /** B9-37: the GLOSSARY noun of the picture ("Photo", "Picture") for Add / Replace / Remove; default "image". */
+  noun?: string
   helper?: string
   /** The host shows its own heading above (e.g. a Tile's h2): keep the label as the group's accessible name but hide it visually. */
   hideLabel?: boolean

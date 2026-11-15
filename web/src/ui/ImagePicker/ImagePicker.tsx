@@ -11,7 +11,7 @@ import { PreviewPane } from './components/PreviewPane'
 import { SourceActions } from './components/SourceActions'
 import { useImagePicker } from './hooks/useImagePicker'
 import { ACCEPT } from './lib/limits'
-import { imagePickerStrings as t, limitHelperFor } from './strings'
+import { imagePickerStrings as t, limitHelperFor, pictureActionLabels } from './strings'
 import type { ImagePickerProps } from './types'
 import './ImagePicker.css'
 
@@ -29,6 +29,7 @@ export function ImagePicker(props: ImagePickerProps) {
   const errorId = useId()
   const size = props.size ?? 'hero'
   const helper = props.helper ?? limitHelperFor(p.maxBytes)
+  const words = pictureActionLabels(props.noun)
   const editing = p.cropSession.phase === 'ready'
   const statusText = p.loadingCrop ? t.cropLoading : PHASE_TEXT[p.phase]
   const fieldOnly = p.linkPanelOpen // the link problem is shown on its field, the alert below is then only for screen readers
@@ -77,7 +78,7 @@ export function ImagePicker(props: ImagePickerProps) {
                 </Button>
               ) : null}
               <Button variant="secondary" icon="delete" disabled={p.locked} onClick={p.remove}>
-                {t.removeImage}
+                {words.remove}
               </Button>
             </div>
           ) : null}
@@ -85,8 +86,8 @@ export function ImagePicker(props: ImagePickerProps) {
           {p.sources.includes('file') ? (
             <div onDropCapture={() => (p.dropped.current = true)}>
               <FileDrop
-                label={p.hasValue ? t.replaceImage : t.addImage}
-                buttonLabel={p.hasValue ? `${t.replaceImage}: choose a file or drop it here` : undefined}
+                label={p.hasValue ? words.replace : words.add}
+                buttonLabel={p.hasValue ? `${words.replace}: choose a file or drop it here` : undefined}
                 accept={ACCEPT}
                 disabled={p.locked}
                 onFiles={p.onFiles}

@@ -14,7 +14,7 @@ export interface StepPhotoProps {
 export function StepPhoto({ imageId, onChange, onBusyChange }: StepPhotoProps): ReactNode {
   return (
     <div className="step-card__photo">
-      <ImagePicker hideLabel label={recipeStrings.steps.image} value={imageId} onChange={onChange} onBusyChange={onBusyChange} size={72} aspect={CROP_ASPECTS.landscape} />
+      <ImagePicker hideLabel label={recipeStrings.steps.image} noun={recipeStrings.photo} value={imageId} onChange={onChange} onBusyChange={onBusyChange} size={72} aspect={CROP_ASPECTS.landscape} />
     </div>
   )
 }

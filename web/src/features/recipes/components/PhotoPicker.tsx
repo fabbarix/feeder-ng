@@ -39,7 +39,7 @@ export function PhotoPicker({ value, onChange, onBusyChange }: PhotoPickerProps)
       </button>
       <BottomSheet open={open} onClose={close} title={recipeStrings.photo}>
         <div className="photo-picker">
-          <ImagePicker hideLabel label={recipeStrings.photo} value={value} onChange={onChange} onBusyChange={busyChange} aspect={CROP_ASPECTS.landscape} size="hero" />
+          <ImagePicker hideLabel label={recipeStrings.photo} noun={recipeStrings.photo} value={value} onChange={onChange} onBusyChange={busyChange} aspect={CROP_ASPECTS.landscape} size="hero" />
         </div>
       </BottomSheet>
     </>
