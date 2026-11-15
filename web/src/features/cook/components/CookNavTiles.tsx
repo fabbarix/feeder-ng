@@ -21,6 +21,8 @@ export interface CookNavTilesProps {
   onLeave?: () => void
   /** B9-40: the label of onLeave, default "Back to Plan" (the origin's name when the cook did not come from the Plan). */
   leaveLabel?: string
+  /** B9-45 (PC-05), not built: the label of Next, "Start cooking" on Get ready (default "Next"). */
+  nextLabel?: string
   /** B9-40 (PC-03): the timer strip, first in the sticky nav (it spans both columns). */
   children?: ReactNode
 }
