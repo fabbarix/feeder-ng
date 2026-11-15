@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { admin, cook } from './fixtures'
@@ -13,9 +13,11 @@ function setup(over: Partial<React.ComponentProps<typeof AllowlistPanel>> = {}) 
   }
   render(
     <MemoryRouter>
-      <ConfirmProvider>
-        <AllowlistPanel {...props} />
-      </ConfirmProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AllowlistPanel {...props} />
+        </ConfirmProvider>
+      </ToastProvider>
     </MemoryRouter>,
   )
   return props
@@ -100,6 +102,6 @@ describe('AllowlistPanel', () => {
 
   it('shows a server error', () => {
     setup({ error: 'There must always be at least one Admin.' })
-    expect(screen.getByRole('alert')).toHaveTextContent(/at least one Admin/)
+    expect(screen.getByText(/at least one Admin/).closest('[role="alert"]')).toHaveClass('form-error') // B9-52: <FormError>
   })
 })

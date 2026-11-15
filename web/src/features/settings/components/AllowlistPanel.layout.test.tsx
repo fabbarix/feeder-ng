@@ -10,7 +10,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { memberEmailProblem } from '../lib/memberForm'
 import { admin, cook } from './fixtures'
 import { AllowlistPanel, type AllowlistPanelProps } from './AllowlistPanel'
@@ -19,9 +19,11 @@ function setup(over: Partial<AllowlistPanelProps> = {}) {
   const props: AllowlistPanelProps = { users: [admin, cook], currentUserId: 1, onAdd: vi.fn().mockResolvedValue(undefined), onSetAdmin: vi.fn(), onRemove: vi.fn(), ...over }
   const view = render(
     <MemoryRouter>
-      <ConfirmProvider>
-        <AllowlistPanel {...props} />
-      </ConfirmProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AllowlistPanel {...props} />
+        </ConfirmProvider>
+      </ToastProvider>
     </MemoryRouter>,
   )
   return { props, ...view }
@@ -59,7 +61,9 @@ describe('AllowlistPanel: add form', () => {
 
   it('a general error stays a separate alert and does not mark the field', () => {
     setup({ error: 'The Household needs at least one Admin.' })
-    expect(screen.getByRole('alert')).toHaveTextContent(/at least one Admin/)
+    // B9-52: the panel's one alert is a <FormError> (the ToastProvider's own live region is not it)
+    const alert = screen.getByText(/at least one Admin/).closest('[role="alert"]')!
+    expect(alert).toHaveClass('form-error')
     expect(screen.getByLabelText('Email to allow')).not.toHaveAttribute('aria-invalid')
   })
 
@@ -87,7 +91,7 @@ describe('AllowlistPanel: rows', () => {
     expect(within(row).queryByRole('checkbox')).toBeNull()
   })
 
-  it('Remove is an icon button named "Remove <email>" with no visible text', () => {
+  it('Remove is an icon button named "Remove <email>" with no visible text (no share sheet: it sits beside Copy)', () => {
     setup()
     const row = screen.getByText('cook@example.test').closest('li')!
     const remove = within(row).getByRole('button', { name: 'Remove cook@example.test' })
@@ -108,13 +112,16 @@ describe('AllowlistPanel: rows', () => {
     expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('Last Admin')).toBeInTheDocument()
   })
 
-  it('the row has one controls wrapper that cannot shrink away (.allowlist__actions)', () => {
+  it('the row has one controls wrapper that cannot shrink away (.allowlist__actions), in the ListRow actions slot (B9-52)', () => {
     setup()
     const row = screen.getByText('cook@example.test').closest('li')!
     const actions = row.querySelector('.allowlist__actions')!
     expect(actions).not.toBeNull()
+    expect(actions.closest('.list-row__actions')).not.toBeNull()
+    expect(actions.closest('.list-row__trailing')).toBeNull()
+    expect(row).toHaveAttribute('data-actions', 'true')
     expect(within(actions as HTMLElement).getAllByRole('switch')).toHaveLength(1)
-    expect(within(actions as HTMLElement).getAllByRole('button')).toHaveLength(1) // Remove
+    expect(within(actions as HTMLElement).getAllByRole('button')).toHaveLength(2) // Copy sign-in message, Remove
   })
 })
 
