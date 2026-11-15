@@ -26,6 +26,10 @@ export interface LineSheetProps {
   timeZone?: string | null
   /** B9-34: Take back one addition of this ticked entry (hand additions only; anyone's) */
   onTakeBack?: (entry: ListEntry, addition: TickAddition) => void
+  /** B9-43 (SSP-13): the Shop the estimate is at ("Estimated at Coop"); null/omitted for Any Shop ("Estimated") */
+  shopName?: string | null
+  /** B9-43 (SSP-13): "Change the Price" opens the Price sheet of the Line's Product; the sheet stays open under it */
+  onChangePrice?: (entry: ListEntry) => void
 }
 
 const labels: Record<Exclude<LineAction, 'delete'>, string> = {
@@ -34,6 +38,7 @@ const labels: Record<Exclude<LineAction, 'delete'>, string> = {
   'needed-after-all': shopStrings.neededAfterAll,
   'change-amount': shopStrings.changeAmount,
   'untick': '',
+  'get-something-else': shopStrings.getSomethingElse,
 }
 
 const actionIcons: Partial<Record<LineAction, IconName>> = { 'change-amount': 'edit', untick: 'undo' }

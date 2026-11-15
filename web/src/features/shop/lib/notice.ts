@@ -12,7 +12,11 @@ export interface NoticeSegment {
 }
 
 export interface UnconfirmedNotice {
-  /** "Tue and Wed Dinner aren't marked Cooked yet" */
+  /** B9-43 (SSP-04): the predicate first: "Not marked Cooked yet" */
+  title: string
+  /** B9-43: the slots, plain segments (none `strong`): "Sat Breakfast, Sat Lunch and Sat Dinner", "… and 2 more" */
+  slots: NoticeSegment[]
+  /** @deprecated B9-43 retires `text` and `segments` (the sentence is the title plus the slots) */
   text: string
   segments: NoticeSegment[]
   /** how many open Lines include unconfirmed past meals */
@@ -65,5 +69,5 @@ export function unconfirmedNotice(list: ShoppingList): UnconfirmedNotice | null 
   const distinctSlots = new Set(meals.map((m) => `${m.date}|${m.mealSlotId}`)).size
   segments.push({ text: `${more > 0 ? shopStrings.andMore(more) : ''}${distinctSlots > 1 ? shopStrings.arent : shopStrings.isnt}` })
 
-  return { text: segments.map((s) => s.text).join(''), segments, count: open.length, markIt }
+  return { title: '', slots: [], text: segments.map((s) => s.text).join(''), segments, count: open.length, markIt }
 }

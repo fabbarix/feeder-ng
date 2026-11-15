@@ -84,8 +84,8 @@ describe('lineActions of a ticked Line (SSP-18)', () => {
     expect(lineActions(extraEntry(makeExtra({ ticked: true, tick: makeTick({ added: null, additions: [makeAddition({ quantity: null })] }) }), 'metric'), 'ticked')).toEqual(['change-amount', 'untick', 'delete'])
   })
 
-  it('open and Not needed Lines are as before', () => {
-    expect(lineActions(lineEntry(makeGarlic(), 'USD', 'metric'), 'open')).toEqual(['not-needed'])
+  it('open Lines add Get something else… (B9-43); Not needed Lines are as before', () => {
+    expect(lineActions(lineEntry(makeGarlic(), 'USD', 'metric'), 'open')).toEqual(['get-something-else', 'not-needed'])
     expect(lineActions(lineEntry(makeGarlic(), 'USD', 'metric'), 'not-needed')).toEqual(['needed-after-all'])
   })
 

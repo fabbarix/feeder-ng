@@ -17,6 +17,8 @@ export interface ShopSummary {
   meta: string
   /** the estimated total and what it is priced at; null when nothing is priced (no "$0.00", no dash) */
   estimated: { text: string; caption: string } | null
+  /** B9-43 (SSP-09): every Line is ticked (the server's `complete`): the Scan button becomes secondary with the caption "Every Line is ticked" */
+  complete: boolean
   /** how many Lines have no Price yet; null when all have one */
   unpriced: { count: number; text: string } | null
 }
@@ -41,6 +43,7 @@ export function shopSummary(list: ShoppingList, shopName: string | null): ShopSu
     ticked,
     total,
     percent: total > 0 ? Math.min(100, Math.max(0, (ticked / total) * 100)) : 0,
+    complete: false,
     leftOf: shopStrings.leftOf(total),
     meta: `${shopStrings.tickedCount(ticked)} · ${untilText(list.today, list.to)}`,
     estimated:

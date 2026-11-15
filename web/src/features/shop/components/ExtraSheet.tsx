@@ -19,6 +19,8 @@ export interface ExtraSheetProps {
   /** the Ingredients to pick from for an Ingredient extra; baseUnit is the unit the quantity is in */
   ingredients: { id: number; name: string; baseUnit: string }[]
   onSubmit: (input: ExtraInput) => void
+  /** B9-43 (SSP-14): "Get something else…" opens the sheet on an Ingredient extra with the Ingredient select open */
+  autoOpenIngredient?: boolean
 }
 
 interface FieldError {

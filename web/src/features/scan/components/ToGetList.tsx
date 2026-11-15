@@ -8,6 +8,7 @@ import type { ListEntry } from '../../shop/lib/lines'
 import { rowValue } from '../../shop/lib/rows'
 import type { ToGetRow } from '../lib/toGet'
 import { scanStrings } from '../strings'
+import type { CelebrationTileProps } from '../../shop/components/CelebrationTile'
 import { CoverMeta } from './CoverMeta'
 
 export interface ToGetListProps {
@@ -15,6 +16,8 @@ export interface ToGetListProps {
   /** the keys of the rows whose tick is in flight */
   pendingKeys: ReadonlySet<string>
   onTick: (entry: ListEntry) => void
+  /** B9-43 (SSP-09): with nothing left to get, the Shop's "Shopping List complete" tile (the same CelebrationTile); omitted = the plain empty state */
+  celebration?: CelebrationTileProps | null
 }
 
 export function ToGetList({ rows, pendingKeys, onTick }: ToGetListProps) {

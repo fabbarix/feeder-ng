@@ -12,6 +12,8 @@ export interface LineSheetHandlers {
   /** B9-34 (SSP-18): the ticked sheet's Change amount and Untick */
   onChangeAmount?: (entry: ListEntry) => void
   onUntick?: (entry: ListEntry) => void
+  /** B9-43 (SSP-14): "Get something else…" */
+  onGetSomethingElse?: (entry: ListEntry) => void
 }
 
 export interface LineSheetController {

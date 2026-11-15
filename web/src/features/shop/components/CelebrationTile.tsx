@@ -8,6 +8,14 @@ import type { ShoppingSummary } from '../types'
 export interface CelebrationTileProps {
   summary: ShoppingSummary
   currency: string
+  /** B9-43 (SSP-09): the Shop the list is priced at ("Spent at Coop"); null for Any Shop ("Spent") */
+  shopName?: string | null
+  /** B9-43: how many of this list's Stock Lots are Not sorted (hooks/useUnsortedFromList); 0 = none */
+  unsorted?: number
+  /** B9-43: this phone has a Scan session and the Recipe Assistant can read a receipt */
+  canReadReceipt?: boolean
+  onPutAway?: () => void
+  onReadReceipt?: () => void
 }
 
 /**

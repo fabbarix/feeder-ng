@@ -145,6 +145,8 @@ export const shopStrings = {
   tickedNote: 'Take back removes what is left of that Stock Lot. Untick takes back every addition.',
   takenBackMine: (amount: string, name: string) => `Your ${amount} of ${name} was taken back from Stock`,
   takenBackOf: (who: string, amount: string, name: string) => `${who}'s ${amount} of ${name} was taken back from Stock`,
+  // B9-43 (SSP-14): a placeholder the developer replaces with the full copy set (the tests pin the words)
+  getSomethingElse: 'Get something else…',
   // H7′: the Supplies group (the Restock reason's "x of y" is lib/amountOf amountOfText, b8-polish)
   supplies: 'Supplies',
 }

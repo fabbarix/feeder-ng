@@ -70,3 +70,27 @@ export function makeGarlic(over: Partial<ShoppingLine> = {}): ShoppingLine {
     ...over,
   }
 }
+
+/**
+ * B9-43 (SSP-13, SSP-14): SSP-13's Onion: 94 pieces to get, never bought, so its pack is the priced fallback (16 x Onion pack of 6 pieces at
+ * $2.99, priced 14 Nov at Coop (shop 1), $47.84 for the Line), for three Planned Meals.
+ */
+export function makeOnion(over: Partial<ShoppingLine> = {}): ShoppingLine {
+  return {
+    ingredientId: 5,
+    name: 'onion',
+    baseUnit: 'piece',
+    need: 94,
+    available: 0,
+    quantity: 94,
+    ticked: false,
+    pack: { productId: 21, name: 'Onion pack', size: 6, count: 16, remainder: 2, bought: false, price: { cents: 299, date: '2026-11-14', shopId: 1 } },
+    estimatedCostCents: 4784,
+    plannedMeals: [
+      { date: '2026-11-21', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Main', recipeName: 'French onion soup' },
+      { date: '2026-11-16', mealSlotId: 2, mealSlotName: 'Lunch', courseName: 'Main', recipeName: 'Onion and potato frittata' },
+      { date: '2026-11-18', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Main', recipeName: 'Roast chicken' },
+    ],
+    ...over,
+  }
+}
