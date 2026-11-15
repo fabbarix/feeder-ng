@@ -104,6 +104,12 @@ describe('evaluateMetrics', () => {
     expect(run(ok({ dialog: { x: 420, w: 600, vw: 1440 } }))).toEqual([])
     expect(run(ok({ dialog: { x: 0, w: 390, vw: 390 }, vw: 390, scrollW: 390, clientW: 390 }), 390)).not.toContain('P8')
   })
+  it('P8 on a short viewport (SHORT-02): the centred sheet may be min(640, vw - 48) wide; wider, or off-centre, still fails', () => {
+    expect(run(ok({ dialog: { x: 102, w: 640, vw: 844, vh: 390 } }), 844)).not.toContain('P8')
+    expect(run(ok({ dialog: { x: 92, w: 660, vw: 844, vh: 390 } }), 844)).toContain('P8')
+    expect(run(ok({ dialog: { x: 0, w: 640, vw: 844, vh: 390 } }), 844)).toContain('P8')
+    expect(run(ok({ dialog: { x: 102, w: 640, vw: 844, vh: 1180 } }), 844)).toContain('P8')
+  })
   it('P9 the shell must mark the route with the width the table gives it (data-page-width), at every viewport', () => {
     expect(run(ok({ pageWidthAttr: null }))).toContain('P9')
     expect(run(ok({ pageWidthAttr: 'wide' }))).toContain('P9')
