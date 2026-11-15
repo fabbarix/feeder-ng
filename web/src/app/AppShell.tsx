@@ -10,6 +10,7 @@ import type { NavItem } from './nav'
 import { MENU_NAV, PRIMARY_NAV, RAIL_NAV, sortByOrder } from './nav'
 import { isCurrentNav } from './navCurrent'
 import { ShellStatus } from './ShellStatus'
+import { ShellTimerAlert, ShellTimers } from './ShellTimers'
 import { shellStrings } from './strings'
 import { YourMenu } from './YourMenu'
 import './shell.css'
@@ -25,6 +26,8 @@ export interface AppShellProps {
   pendingAccessRequests?: number
 }
 
+/** The receipt screens (chromeless, under /scan/receipt). Cook Mode and the board show timers themselves. */
+const isReceiptScreen = (pathname: string) => /^\/scan\/receipt(\/|$)/.test(pathname)
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
 export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
@@ -44,6 +47,8 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
             </PageErrorBoundary>
           </PageWidthProvider>
         </main>
+        {/* PC-04: a timer can finish while the cook is on a receipt screen: the finish banner shows there (no pill: Save is there). */}
+        {isReceiptScreen(pathname) ? <ShellTimerAlert /> : null}
       </div>
     )
   }
@@ -61,6 +66,8 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
           onSignOut={onSignOut}
         />
       </header>
+      {/* PC-04: the timer pill, finish banner and Timers sheet, mounted once for the framed pages (one poll, one alarm). */}
+      <ShellTimers />
       <div className="app-status">
         <ShellStatus pendingScans={pendingScans} />
       </div>

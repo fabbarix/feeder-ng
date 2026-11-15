@@ -1,39 +1,45 @@
+// B9-40 (PC-03, SHORT-01): the timers of Cook Mode as a strip of ui/TimerPill. Pause or Resume is the pill's one control; a tap opens the timer's
+// sheet (Add 1 minute, Cancel timer: components/CookTimerSheet). Rewritten from the TimerTile-and-Cancel-button tests of beta.8.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { TimerItem } from '../hooks/useTimers'
 import type { CookTimer } from '../types'
-import { CookTimerStrip } from './CookTimerStrip'
+import { CookTimerStrip, type CookTimerStripProps } from './CookTimerStrip'
 
 const HERE = 'recipe:12'
 
 function item(id: number, state: CookTimer['state'], seconds: number, label = `Timer ${id}`, scope: string | null = HERE): TimerItem {
-  return { seconds, timer: { id, scope, step: null, label, durationSeconds: 600, state, remainingSeconds: seconds, endsAt: null, startedAt: '2026-11-09T18:00:00Z' } }
+  return { seconds, timer: { id, scope, step: id, label, durationSeconds: 600, state, remainingSeconds: seconds, endsAt: null, startedAt: '2026-11-09T18:00:00Z' } }
 }
 
-function strip(items: TimerItem[]) {
-  const handlers = { onPause: vi.fn(), onResume: vi.fn(), onCancel: vi.fn() }
-  render(<CookTimerStrip scope={HERE} items={items} {...handlers} />)
-  return handlers
+function strip(items: TimerItem[], extra: Partial<CookTimerStripProps> = {}) {
+  const handlers = { onPause: vi.fn(), onResume: vi.fn(), onOpenTimer: vi.fn(), onShowAll: vi.fn() }
+  const view = render(<CookTimerStrip scope={HERE} items={items} {...handlers} {...extra} />)
+  return { ...handlers, ...view }
 }
 
-describe('CookTimerStrip', () => {
-  it('shows every timer as a TimerTile with its time left', () => {
-    strip([item(1, 'running', 125, 'Eggs'), item(2, 'paused', 30, 'Rice')])
-    expect(screen.getByRole('timer', { name: 'Eggs' })).toHaveTextContent('2:05')
-    expect(screen.getByRole('timer', { name: 'Eggs' })).toHaveAttribute('data-state', 'running')
+describe('CookTimerStrip (PC-03)', () => {
+  it('shows every timer as a pill, a timer named by its sentence-case label without "Step n:", with its time left', () => {
+    strip([item(1, 'running', 125, 'Step 1: pre-heat the oven'), item(2, 'paused', 30, 'Rice')])
+    expect(screen.getByRole('timer', { name: 'Pre-heat the oven' })).toHaveTextContent('2:05')
+    expect(screen.getByRole('timer', { name: 'Pre-heat the oven' })).toHaveAttribute('data-state', 'running')
     expect(screen.getByRole('timer', { name: 'Rice' })).toHaveAttribute('data-state', 'paused')
   })
 
-  it('keeps tiles as non-interactive timers: tapping one calls no handler', async () => {
-    const h = strip([item(1, 'running', 60, 'Eggs')])
-    await userEvent.click(screen.getByRole('timer', { name: 'Eggs' }))
-    expect(h.onPause).not.toHaveBeenCalled()
-    expect(h.onResume).not.toHaveBeenCalled()
-    expect(h.onCancel).not.toHaveBeenCalled()
+  it('is one region named "Timers" with no heading of its own (a strip, not a list of tiles)', () => {
+    strip([item(1, 'running', 60, 'Eggs')])
+    const region = screen.getByRole('region', { name: 'Timers' })
+    expect(within(region).getByRole('timer', { name: 'Eggs' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument()
   })
 
-  it('B14: each TimerTile has its own Pause, Resume, Cancel or Dismiss control, named after its timer (icon buttons)', async () => {
+  it('renders nothing without timers (no strip, no empty heading)', () => {
+    const { container } = strip([])
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('a running pill has Pause and a paused one Resume, named after the timer; a finished one has neither', async () => {
     const h = strip([item(1, 'running', 60, 'Eggs'), item(2, 'paused', 30, 'Rice'), item(3, 'finished', 0, 'Pasta')])
     const eggs = within(screen.getByRole('timer', { name: 'Eggs' }))
     const rice = within(screen.getByRole('timer', { name: 'Rice' }))
@@ -42,64 +48,82 @@ describe('CookTimerStrip', () => {
     expect(h.onPause).toHaveBeenCalledWith(1)
     await userEvent.click(rice.getByRole('button', { name: 'Resume Rice' }))
     expect(h.onResume).toHaveBeenCalledWith(2)
-    await userEvent.click(eggs.getByRole('button', { name: 'Cancel Eggs' }))
-    expect(h.onCancel).toHaveBeenCalledWith(1)
-    await userEvent.click(rice.getByRole('button', { name: 'Cancel Rice' }))
-    expect(h.onCancel).toHaveBeenCalledWith(2)
-    await userEvent.click(pasta.getByRole('button', { name: 'Dismiss Pasta' }))
-    expect(h.onCancel).toHaveBeenCalledWith(3)
+    expect(pasta.queryByRole('button', { name: /^(Pause|Resume) / })).not.toBeInTheDocument()
   })
 
-  it('QA: no aria text is printed as visible text (no "Cancel timer Eggs" label on screen)', () => {
-    strip([item(1, 'running', 60, 'Eggs'), item(2, 'paused', 30, 'Rice')])
-    expect(screen.queryByText(/Cancel timer/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/^Pause /)).not.toBeInTheDocument()
-    screen.getAllByRole('button').forEach((b) => expect(b).toHaveClass('icon-button'))
+  it('a pill has no Cancel and no Dismiss control: stopping a timer is in its sheet', () => {
+    strip([item(1, 'running', 60, 'Eggs'), item(2, 'paused', 30, 'Rice'), item(3, 'finished', 0, 'Pasta')])
+    expect(screen.queryByRole('button', { name: /^(Cancel|Dismiss) / })).not.toBeInTheDocument()
   })
 
-  it('offers only the controls that fit the state', () => {
-    strip([item(1, 'running', 60, 'Eggs'), item(3, 'finished', 0, 'Pasta')])
-    const eggs = within(screen.getByRole('timer', { name: 'Eggs' }))
-    const pasta = within(screen.getByRole('timer', { name: 'Pasta' }))
-    expect(eggs.queryByRole('button', { name: 'Resume Eggs' })).not.toBeInTheDocument()
-    expect(pasta.queryByRole('button', { name: 'Pause Pasta' })).not.toBeInTheDocument()
-    expect(pasta.queryByRole('button', { name: 'Cancel Pasta' })).not.toBeInTheDocument()
-    expect(eggs.queryByRole('button', { name: 'Dismiss Eggs' })).not.toBeInTheDocument()
+  it('a tap on a pill opens that timer: the strip reports its id', async () => {
+    const h = strip([item(1, 'running', 60, 'Eggs'), item(2, 'running', 90, 'Rice')])
+    await userEvent.click(within(screen.getByRole('timer', { name: 'Rice' })).getByRole('button', { name: /^Timer: Rice/ }))
+    expect(h.onOpenTimer).toHaveBeenCalledWith(2)
   })
 
-  it('B14: timers of other Steps or Recipes are listed apart under "Other timers", with where they belong', () => {
-    strip([item(1, 'running', 60, 'Step 2: Simmer', HERE), item(2, 'running', 90, 'Step 1: Boil', 'meal:2026-11-10/3'), item(3, 'running', 20, 'Eggs', null)])
-    const here = screen.getByRole('region', { name: 'Timers' })
-    const other = screen.getByRole('region', { name: 'Other timers' })
-    expect(within(here).getByRole('timer', { name: 'Step 2: Simmer' })).toBeInTheDocument()
-    expect(within(other).getByRole('timer', { name: 'Step 1: Boil' })).toBeInTheDocument()
-    expect(within(other).getByRole('timer', { name: 'Eggs' })).toBeInTheDocument()
-    expect(within(other).getByText('Tue Planned Meal')).toBeInTheDocument()
+  it('Pause is a 40 px circular icon button inside the pill (its 44 px target comes from the pill\'s CSS)', () => {
+    strip([item(1, 'running', 60, 'Eggs')])
+    const pause = screen.getByRole('button', { name: 'Pause Eggs' })
+    expect(pause).toHaveClass('icon-button')
+    expect(pause).toHaveAttribute('data-shape', 'circle')
   })
 
-  it('R10: another Cook\'s timer shows its Recipe name when the server sent it', () => {
-    const named = item(2, 'running', 90, 'Step 1: Boil', 'meal:2026-11-10/3')
-    named.timer.recipeName = 'Roast chicken'
-    strip([item(1, 'running', 60, 'Step 2: Simmer', HERE), named])
-    const other = screen.getByRole('region', { name: 'Other timers' })
-    expect(within(other).getByText('Roast chicken')).toBeInTheDocument()
-    expect(within(other).queryByText('Tue Planned Meal')).not.toBeInTheDocument()
-  })
-
-  it('B14: with no timer for this scope the others still show', () => {
-    strip([item(2, 'running', 90, 'Step 1: Boil', 'meal:2026-11-10/3')])
-    expect(screen.queryByRole('region', { name: 'Timers' })).not.toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Other timers' })).toBeInTheDocument()
-  })
-
-  it('announces a finished timer', () => {
+  it('a finished pill is the finished state, whose time reads "finished" (no extra status line)', () => {
     strip([item(3, 'finished', 0, 'Pasta')])
-    expect(screen.getByText('Pasta is ready')).toBeInTheDocument()
+    expect(screen.getByRole('timer', { name: 'Pasta' })).toHaveAttribute('data-state', 'finished')
+    expect(screen.getByRole('timer', { name: 'Pasta' })).toHaveTextContent(/finished/i)
+    expect(screen.queryByText('Pasta is ready')).not.toBeInTheDocument()
   })
+})
 
-  it('renders nothing without timers', () => {
-    const { container } = render(<CookTimerStrip scope={HERE} items={[]} onPause={() => {}} onResume={() => {}} onCancel={() => {}} />)
-    expect(container).toBeEmptyDOMElement()
+describe('Scenario: The timer that holds Next is visible with the Step (the strip puts it first and marks it)', () => {
+  it('the timers that hold Next come first, then this scope\'s, then the others', () => {
+    strip(
+      [item(1, 'running', 60, 'Other', 'meal:2026-11-10/3/1'), item(2, 'running', 90, 'Here', HERE), item(3, 'running', 120, 'Holds', HERE)],
+      { holdingIds: [3] },
+    )
+    expect(screen.getAllByRole('timer').map((t) => t.getAttribute('aria-label'))).toEqual(['Holds', 'Here', 'Other'])
+  })
+  it('the holding pill carries the gate mark (the accent boundary), and only it', () => {
+    strip([item(2, 'running', 90, 'Here'), item(3, 'running', 120, 'Holds')], { holdingIds: [3] })
+    expect(screen.getByRole('timer', { name: 'Holds' })).toHaveAttribute('data-gate')
+    expect(screen.getByRole('timer', { name: 'Here' })).not.toHaveAttribute('data-gate')
+  })
+  it('with the timeline\'s `belongs`, every timer of the slot\'s Courses counts as here', () => {
+    strip([item(1, 'running', 60, 'Side', 'meal:2026-11-10/4/2'), item(2, 'running', 90, 'Elsewhere', 'recipe:99')], { scope: 'meal:2026-11-10/4/1', belongs: (s) => s !== null && s.startsWith('meal:2026-11-10/4') })
+    expect(screen.getAllByRole('timer').map((t) => t.getAttribute('aria-label'))).toEqual(['Side', 'Elsewhere'])
+  })
+})
+
+describe('Scenario: With three timers running in phone landscape, the strip shows whole pills and a "+1" that opens all timers', () => {
+  const three = () => [item(1, 'running', 163, 'Pre-heat the oven'), item(2, 'running', 680, 'Simmer the rice'), item(3, 'running', 900, 'Rest the meat')]
+  it('shows only two whole pills; the last carries a "1 more timer. Show all timers" button', async () => {
+    const h = strip(three(), { maxPills: 2 })
+    expect(screen.getAllByRole('timer')).toHaveLength(2)
+    expect(screen.queryByRole('timer', { name: 'Rest the meat' })).not.toBeInTheDocument()
+    const last = screen.getByRole('timer', { name: 'Simmer the rice' })
+    await userEvent.click(within(last).getByRole('button', { name: '1 more timer. Show all timers' }))
+    expect(h.onShowAll).toHaveBeenCalledTimes(1)
+    expect(screen.getAllByRole('button', { name: /more timer/ })).toHaveLength(1)
+  })
+  it('one pill of three says "2 more timers"', () => {
+    strip(three(), { maxPills: 1 })
+    expect(screen.getAllByRole('timer')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: '2 more timers. Show all timers' })).toBeInTheDocument()
+  })
+  it('with one timer there is no "+N"; with no limit all are shown with no "+N"', () => {
+    strip([item(1, 'running', 60, 'Eggs')], { maxPills: 1 })
+    expect(screen.queryByRole('button', { name: /more timer/ })).not.toBeInTheDocument()
+  })
+  it('no limit (portrait): every pill, no "+N"', () => {
+    strip(three())
+    expect(screen.getAllByRole('timer')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: /more timer/ })).not.toBeInTheDocument()
+  })
+  it('the pills are ordered by urgency before the cut: the holding timer is never hidden behind "+N"', () => {
+    strip(three(), { maxPills: 2, holdingIds: [3] })
+    expect(screen.getAllByRole('timer').map((t) => t.getAttribute('aria-label'))).toEqual(['Rest the meat', 'Pre-heat the oven'])
   })
 })
 
@@ -109,6 +133,5 @@ describe('CookTimerStrip: Base recipe timers', () => {
     strip([item(1, 'running', 600, 'Béchamel: Simmer the sauce'), item(2, 'running', 120, 'Béchamel · Roux: Rest the roux')])
     expect(screen.getByRole('timer', { name: 'Béchamel: Simmer the sauce' })).toHaveTextContent('10:00')
     expect(screen.getByRole('timer', { name: 'Béchamel · Roux: Rest the roux' })).toHaveTextContent('2:00')
-    expect(screen.getAllByRole('button', { name: /Béchamel: Simmer the sauce/ }).length).toBeGreaterThan(0)
   })
 })

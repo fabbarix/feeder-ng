@@ -1,5 +1,6 @@
 // What Cook Mode says about Advance Steps. Plain TypeScript, no React.
 import type { AdvanceItem } from '../types'
+import { advanceChipLabel } from './advanceChip'
 
 export interface AdvanceSummary {
   done: AdvanceItem[]
@@ -34,4 +35,15 @@ export function formatLeadTime(minutes: number): string {
 export function advanceOnScreen(summary: AdvanceSummary, stepIndex: number): AdvanceSummary {
   if (stepIndex !== 0) return { done: [], pending: [] }
   return summary
+}
+
+/**
+ * PC-03: the one info line of the Advance Steps on a Step after the first; '' when there are none. Anything still to do is
+ * what the line says; otherwise one done Advance Step names itself and several are counted.
+ */
+export function advanceLine(summary: AdvanceSummary): string {
+  if (summary.pending.length > 0) return advanceChipLabel(summary.pending.length)
+  if (summary.done.length === 1) return `Advance Step done: ${summary.done[0]!.text}`
+  if (summary.done.length > 1) return `${summary.done.length} Advance Steps done`
+  return ''
 }

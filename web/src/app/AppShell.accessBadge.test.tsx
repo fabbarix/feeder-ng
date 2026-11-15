@@ -1,9 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { AppShell } from './AppShell'
 import { buildRoutes } from './features'
+
+// B9-25 (PC-04): the shell's timer pill polls the household's timers through react-query; the shell tests have no QueryClient (AppShell.timers.test.tsx covers it).
+vi.mock('./ShellTimers', () => ({ ShellTimers: () => null, ShellTimerAlert: () => null }))
 
 // A1: the shell shows how many sign-in requests wait, on the avatar button and again inside the menu.
 function setup(extra: Record<string, unknown>) {

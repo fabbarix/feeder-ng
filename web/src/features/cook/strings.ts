@@ -1,10 +1,12 @@
 // English UI strings for Cook Mode (glossary words only).
+import { shortTimerLabel } from './lib/steps'
+
 export const cookStrings = {
   title: 'Cook Mode',
   back: 'Back',
   next: 'Next',
   /** Next is held while a Step the next one waits for still has its timer counting down. */
-  nextHeld: (label: string, time: string) => `Next waits for ${label}: ${time} left. Cancel its timer to go on now.`,
+  nextHeld: (label: string, time: string) => `Next waits for ${shortTimerLabel(label)}: ${time} left. Cancel that timer to go on now.`,
   nextHeldMany: (count: number, time: string) => `Next waits for ${count} timers: ${time} left. Cancel them to go on now.`,
   markAsCooked: 'Mark as Cooked',
   done: 'Back to Recipe',
@@ -55,4 +57,26 @@ export const cookStrings = {
   /** "Béchamel from Stock": a Base recipe Stock covers, whose Steps are left out. */
   coveredFromStock: (text: string) => `${text} from Stock`,
   coveredHeading: 'Already in Stock',
+  // B9-40 (PC-03, PC-12, PC-15, PC-16, SHORT-01, A11Y-01)
+  ingredients: 'Ingredients',
+  /** A11Y-01: the document title while Cook Mode loads, and with its h1 ("Cook Mode · Roast chicken"); the shell adds " · Feeder". */
+  documentTitle: 'Cook Mode',
+  enlargePhoto: 'Enlarge the photo',
+  photoTitle: (n: number) => `Step ${n} photo`,
+  close: 'Close',
+  /** PC-16 item 4: the planned clock time of a timeline Step. */
+  startAt: (clock: string) => `Start at ${clock}`,
+  backToPlan: 'Back to Plan',
+  timersAndIngredients: 'Timers and Ingredients',
+  addMinute: 'Add 1 minute',
+  timerCancelled: 'Timer cancelled',
+  timerActionFailed: 'That did not work. Try again.',
+  addMinuteFailed: 'The minute was not added',
+  addMinuteKept: (name: string, time: string) => `${name} goes on with ${time} left.`,
+  timerLost: (name: string) => `${name} stopped`,
+  timerLostDetail: (time: string) => `It could not be started again. Start it again with ${time} left.`,
+  restart: 'Restart',
+  timerDone: 'Ready',
+  reheatTime: 'Reheat time',
+  leftoverFrom: (from: string) => `Leftover from ${from}`,
 } as const

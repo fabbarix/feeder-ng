@@ -23,16 +23,18 @@ import { createWebAudioAlarm } from '../adapters/alarm'
 import { BaseCoveredLines } from '../components/BaseCoveredLines'
 import { CookNavTiles } from '../components/CookNavTiles'
 import { CookedConfirmation } from '../components/CookedConfirmation'
-import { CookTimerStrip } from '../components/CookTimerStrip'
+import { CookTimers, CookTimerSheets } from '../components/CookTimers'
 import { CookTopRow } from '../components/CookTopRow'
 import { CourseFilterChips } from '../components/CourseFilterChips'
 import { CourseMenu } from '../components/CourseMenu'
 import { StepTile } from '../components/StepTile'
 import { TimelineAdvanceTile } from '../components/TimelineAdvanceTile'
 import { useCoachMark } from '../hooks/useCoachMark'
+import { useCookTimerPanel } from '../hooks/useCookTimerPanel'
 import { useCookTimeline } from '../hooks/useCookTimeline'
 import { useFormatUse } from '../hooks/useFormatUse'
 import { useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
+import { futureLine } from '../lib/future'
 import { sameScope } from '../lib/scope'
 import {
   allMode as isAllMode,
@@ -47,7 +49,8 @@ import {
 import type { VoiceCommand } from '../lib/voice'
 import { cookStrings } from '../strings'
 import type { CookTimelineTarget } from '../types'
-import { EmptyState, Button, useBreakpoint } from '../../../ui'
+import { EmptyState, Button } from '../../../ui'
+import { useDocumentTitle } from '../../../ui/lib/useDocumentTitle'
 import '../cook.css'
 
 /** The plan key of one Course of the slot (crs-c3: every key names its Course). */
@@ -56,8 +59,8 @@ export const courseKeyOf = (target: CookTimelineTarget, courseId: number): SlotK
 export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): ReactNode {
   const navigate = useNavigate()
   const client = useQueryClient()
-  const tl = useCookTimeline(target)
   const plan = usePlan()
+  const tl = useCookTimeline(target, plan.today)
   const view = tl.view
   const slotKey: SlotDayKey = { date: target.date, mealSlotId: target.mealSlotId }
   const open = tl.unresolved
@@ -80,8 +83,10 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
   useWakeLock(wake)
   useTimerAlarm(tl.timers.timers, alarm)
   const [voiceOn, setVoiceOn] = useVoicePreference()
-  const tapZones = useBreakpoint('md')
   const [coachOn, dismissCoach] = useCoachMark()
+  const panel = useCookTimerPanel(tl.timers, tl.gate.holdingIds)
+  const titleText = view ? headerTitle(view, several, plan.today) : undefined
+  useDocumentTitle([cookStrings.documentTitle, titleText])
   const formatUse = useFormatUse()
   const finish = () => navigate('/')
 
@@ -151,52 +156,60 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
     isLast && markable
       ? () => (allModeOn ? allCooked.open(slotKey, open.map((c) => c.courseId)) : setMarkCourse(pickMarkTarget(allModeOn, current?.courseId ?? null, open)))
       : undefined
-  const advanceShown = tl.nav.index === 0 && tl.filter === 'all' ? tl.advance : []
+  const future = futureLine(target.date, plan.today)
+  const belongs = (timerScope: string | null) => (view ? view.courses.some((c) => sameScope(timerScope, c.scope)) : false)
+  const timerProps = { panel, scope: tl.item?.scope ?? '', items: tl.timers.items, holdingIds: tl.gate.holdingIds, belongs }
 
   return (
-    <div className="cook-screen">
-      <CookTopRow number={tl.step?.number ?? 0} of={tl.step?.of ?? 0} speechSupported={speech.supported} voiceOn={voiceOn} onVoiceChange={setVoiceOn} onExit={finish} />
-      <header className="cook-screen__header">
-        <h1 className="cook-screen__title">{headerTitle(view, several)}</h1>
-        {several ? <CourseMenu entries={tl.courseMenu} onCooked={(c) => setMarkCourse(c)} onNotCooked={(c) => void skipCourse(c)} /> : null}
-      </header>
-      <CourseFilterChips chips={tl.chips} selected={tl.filter} onSelect={tl.setFilter} />
-      <TimelineAdvanceTile groups={advanceShown} onMarkDone={(scope, step) => void tl.markAdvanceDone(scope, step)} />
-      {tl.step ? (
-        <StepTile
-          key={`${tl.item?.courseId}-${tl.step.index}-${tl.step.number}`}
-          step={tl.step}
-          formatUse={formatUse}
-          tapZones={tapZones}
-          coachMark={tapZones && coachOn}
-          onCoachDismiss={dismissCoach}
+    <div className="cook-screen" data-layout={panel.short ? 'short' : panel.rail ? 'rail' : 'strip'}>
+      <div className="cook-main">
+        <CookTopRow speechSupported={speech.supported} voiceOn={voiceOn} onVoiceChange={setVoiceOn} onExit={finish} />
+        <header className="cook-screen__header">
+          <h1 className="cook-screen__title">{titleText}</h1>
+          {several ? <CourseMenu entries={tl.courseMenu} onCooked={(c) => setMarkCourse(c)} onNotCooked={(c) => void skipCourse(c)} /> : null}
+          <CourseFilterChips chips={tl.chips} selected={tl.filter} onSelect={tl.setFilter} />
+        </header>
+        <TimelineAdvanceTile
+          groups={tl.filter === 'all' || panel.short ? tl.advance : []}
+          compact={panel.short}
+          collapsed={tl.nav.index > 0}
+          onMarkDone={(scope, step) => void tl.markAdvanceDone(scope, step)}
+        />
+        {tl.step ? (
+          <StepTile
+            key={`${tl.item?.courseId}-${tl.step.index}-${tl.step.number}`}
+            step={tl.step}
+            formatUse={formatUse}
+            tapZones
+            coachMark={coachOn}
+            onCoachDismiss={dismissCoach}
+            onBack={tl.back}
+            onNext={tl.gate.next}
+            caption={several ? tl.caption : null}
+            clock={several ? tl.clock : null}
+            ready={tl.ready}
+          >
+            <BaseCoveredLines lines={tl.covered} />
+          </StepTile>
+        ) : (
+          <p className="cook-screen__empty">{cookStrings.noSteps}</p>
+        )}
+        <CookNavTiles
+          isFirst={tl.isFirst}
+          isLast={isLast}
           onBack={tl.back}
           onNext={tl.gate.next}
-          caption={several ? tl.caption : null}
-          clock={several ? tl.clock : null}
-          ready={tl.ready}
-        />
-      ) : (
-        <p className="cook-screen__empty">{cookStrings.noSteps}</p>
-      )}
-      <BaseCoveredLines lines={tl.covered} />
-      <CookTimerStrip
-        scope={tl.item?.scope ?? ''}
-        items={tl.timers.items}
-        belongs={(timerScope) => (view ? view.courses.some((c) => sameScope(timerScope, c.scope)) : false)}
-        onPause={(id) => void tl.timers.pause(id)}
-        onResume={(id) => void tl.timers.resume(id)}
-        onCancel={(id) => void tl.timers.cancel(id)}
-      />
-      <CookNavTiles
-        isFirst={tl.isFirst}
-        isLast={isLast}
-        onBack={tl.back}
-        onNext={tl.gate.next}
-        heldText={tl.gate.heldText}
-        onMarkCooked={onMarkCooked}
-        markLabel={allModeOn ? cookStrings.markAllCooked : undefined}
-      />
+          heldText={tl.gate.heldText}
+          futureLine={future}
+          onLeave={future ? () => navigate('/plan') : undefined}
+          onMarkCooked={onMarkCooked}
+          markLabel={allModeOn ? cookStrings.markAllCooked : undefined}
+        >
+          <CookTimers {...timerProps} placement="strip" />
+        </CookNavTiles>
+      </div>
+      <CookTimers {...timerProps} placement="rail" />
+      <CookTimerSheets {...timerProps} />
       <MarkCookedSheet
         open={markCourse !== null}
         onClose={() => setMarkCourse(null)}

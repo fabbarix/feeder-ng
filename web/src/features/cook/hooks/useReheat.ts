@@ -22,6 +22,10 @@ export interface UseReheat {
   resume: () => Promise<void>
   /** Cancels the timer (it is deleted). */
   cancel: () => Promise<void>
+  /** B9-40 (PC-15): the timer has run out; Mark as Cooked becomes the screen's primary and Start timer reads "Restart". */
+  finished: boolean
+  /** B9-40 (PC-15): clears a finished timer and starts a new one of the same length. */
+  restart: () => Promise<void>
 }
 
 /** Reheat's timer state for one Planned Meal (R12). Composes useTimers() and lib/reheat; renders nothing. */
@@ -33,6 +37,7 @@ export function useReheat(key: SlotKey, portions: number, reheatMinutes?: number
   const [starting, setStarting] = useState(false)
   const startingRef = useRef(false)
   const secondsLeft = timer ? (timers.items.find((i) => i.timer.id === timer.id)?.seconds ?? 0) : 0
+  const finished = timer !== null && (timer.state === 'finished' || (timer.state === 'running' && secondsLeft <= 0))
 
   // A failed action is reported to the caller (a toast), never left as an unhandled rejection.
   const guarded = async (run: () => Promise<unknown>) => {
@@ -65,5 +70,21 @@ export function useReheat(key: SlotKey, portions: number, reheatMinutes?: number
     pause: () => guarded(async () => timer && timers.pause(timer.id)),
     resume: () => guarded(async () => timer && timers.resume(timer.id)),
     cancel: () => guarded(async () => timer && timers.cancel(timer.id)),
+    finished,
+    restart: async () => {
+      if (!timer || startingRef.current) return
+      const length = timer.durationSeconds
+      startingRef.current = true
+      setStarting(true)
+      try {
+        await guarded(async () => {
+          await timers.cancel(timer.id)
+          await timers.start({ scope, label: REHEAT_LABEL, durationSeconds: length })
+        })
+      } finally {
+        startingRef.current = false
+        setStarting(false)
+      }
+    },
   }
 }

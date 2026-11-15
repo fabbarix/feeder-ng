@@ -14,3 +14,12 @@ afterEach(() => {
     // no storage in this environment
   }
 })
+// B9-25 (PC-04): Cook Mode resumes at the last Step, kept per device in localStorage (feeder.cook.resume.<scope>); a Step one test
+// saved must not move the next test's Cook Mode off its first Step.
+afterEach(() => {
+  try {
+    for (const key of Object.keys(localStorage)) if (key.startsWith('feeder.cook.resume.')) localStorage.removeItem(key)
+  } catch {
+    // no storage in this environment
+  }
+})

@@ -95,8 +95,8 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35.
-  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P39', 'P40', 'P41', 'P43'],
+  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35; B9-40 P34.
+  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P34', 'P35', 'P36', 'P39', 'P40', 'P41', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning, and shop-barcode-sheet (the Add Shop Barcode sheet,
@@ -111,16 +111,20 @@ const ADDED = {
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
+  // B9-25: scenarios/b9-25.mjs (order 340): timer-pill and timer-pill-editor (PC-04). No rule number: the setup measures the pill and throws on a finding.
+  // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
   // B9-29: scenarios/b9-29.mjs (order 330): pantry-put-away (SSP-10), meta-fit-pantry and meta-fit-supplies (SSP-05, P23 at 1120), text-spacing-pantry (DS-03, DS-10).
   scenarios: [
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
     'planning-recipe-select', 'shop-barcode-sheet', 'toast-pricing', 'toast-over-bar',
+    'plan-after-swap', 'regenerate', 'to-confirm-not-cooked',
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
     'pantry-put-away', 'meta-fit-pantry', 'meta-fit-supplies', 'text-spacing-pantry',
     'shop-page', 'shop-delete-confirm', 'product-page', 'products-new-product',
     'recipe-editor-guard', 'recipe-new-empty-save',
-    'plan-after-swap', 'regenerate', 'to-confirm-not-cooked',
+    'timer-pill', 'timer-pill-editor',
+    'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
   ],
@@ -248,7 +252,7 @@ describe('a package adds its own files and edits no shared one', () => {
       expect(api.RULES.map((r) => r.id)).toContain('P37')
       expect(api.ALWAYS_FAIL).toContain('P37')
       expect(api.RESERVED.map((r) => r.id)).not.toContain('P37')
-      expect(api.RESERVED.map((r) => r.id)).toContain('P34')
+      expect(api.RESERVED.map((r) => r.id)).toContain('P38')
       expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P37'])
       expect(api.evaluateMetrics(metrics, ctx)).toEqual([])
     } finally {

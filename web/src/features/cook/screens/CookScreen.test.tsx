@@ -185,6 +185,8 @@ describe('CookScreen: timers (B14)', () => {
     endsAt: '2026-11-09T12:10:00Z', startedAt: '2026-11-09T12:00:00Z', ...over,
   })
 
+  // B9-40 (PC-03): one "Timers" region for every timer (this scope's and the household's others, this scope's first); Pause on the tile or
+  // pill, Cancel in the timer's sheet.
   it('shows this scope\'s timers and the household\'s other running timers, with pause and cancel', async () => {
     const api = mockApi({
       ...mealRoutes,
@@ -193,12 +195,13 @@ describe('CookScreen: timers (B14)', () => {
       'DELETE /api/cook/timers/1': undefined,
     })
     renderMeal()
-    expect(await screen.findByRole('region', { name: 'Timers' })).toBeInTheDocument()
-    const other = await screen.findByRole('region', { name: 'Other timers' })
-    expect(within(other).getByRole('timer', { name: 'Step 1: Boil rice' })).toBeInTheDocument()
-    await userEvent.click(within(within(other).getByRole('timer', { name: 'Step 1: Boil rice' })).getByRole('button', { name: 'Pause Step 1: Boil rice' }))
+    const region = await screen.findByRole('region', { name: 'Timers' })
+    expect(screen.queryByRole('region', { name: 'Other timers' })).not.toBeInTheDocument()
+    expect(within(region).getAllByRole('timer').map((x) => x.getAttribute('aria-label'))).toEqual(['Simmer', 'Boil rice'])
+    await userEvent.click(within(within(region).getByRole('timer', { name: 'Boil rice' })).getByRole('button', { name: 'Pause Boil rice' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/cook/timers/2/pause')).toHaveLength(1))
-    await userEvent.click(within(screen.getByRole('timer', { name: 'Step 3: Simmer' })).getByRole('button', { name: 'Cancel Step 3: Simmer' }))
+    await userEvent.click(within(within(region).getByRole('timer', { name: 'Simmer' })).getByRole('button', { name: 'Options for Simmer' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel timer' }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/cook/timers/1')).toHaveLength(1))
   })
 })
