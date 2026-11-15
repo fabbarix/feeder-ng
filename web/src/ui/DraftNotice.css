@@ -1,5 +1,27 @@
-/* DraftNotice (B9-18, SAFE-01): an info status Tile with a body-strong title, a meta line and a wrapping row of outline buttons.
-   Tokens only. */
+/* DraftNotice (B9-18, SAFE-01): an info status Tile. The history icon (20 px) in its own column, a body-strong title and a meta line
+   beside it, and a wrapping row of outline buttons under the text; when the notice is wide (34rem) the buttons move to the end of
+   the row. Tokens only. The notice is its own size container, so the layout follows the notice, not the viewport. */
+.draft-notice {
+  container-type: inline-size;
+}
+
+.draft-notice__body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: var(--space-2);
+  align-items: start;
+}
+
+/* the 20 px icon steps 2 px down beside the title, as the safe-01 mock places it */
+.draft-notice__body > svg {
+  margin-block-start: var(--space-half);
+}
+
+.draft-notice__text {
+  min-inline-size: 0;
+}
+
 .draft-notice__title {
   margin: 0;
   font-size: var(--text-body-strong-size);
@@ -14,8 +36,24 @@
 }
 
 .draft-notice__actions {
+  grid-column: 2;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-block-start: var(--space-2);
+}
+
+@container (min-width: 34rem) {
+  .draft-notice__body {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .draft-notice__body > svg {
+    margin-block-start: 0;
+  }
+
+  .draft-notice__actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
 }

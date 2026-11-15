@@ -74,6 +74,7 @@ Decisions: slash pairs in the plan become separate names; "on/off" pairs become 
 | chevron | `CaretRight` |
 | copy | `Copy` |
 | undo | `ArrowCounterClockwise` |
+| history | `ClockCounterClockwise` (B9-18: the DraftNotice of a reload draft) |
 | import | `DownloadSimple` |
 | export | `UploadSimple` |
 | agentPrompt | `Robot` |

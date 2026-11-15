@@ -2,7 +2,8 @@
 //
 // API pinned here:
 //   <DraftNotice title: string  meta?: string  actions: { label: string; onClick: () => void; ariaLabel?: string }[] />
-//   An info status Tile (variant status, status info, span full): role="status" labelled by its title; it never takes focus; the actions are
+//   An info status Tile (variant status, status info, span full): role="status" labelled by its title, led by the decorative history
+//   icon (the safe-01 mock); it never takes focus; the actions are
 //   outline (secondary) buttons, size sm, in the order given; at most two actions (a third is a programming error and is not drawn).
 //   The words come from lib/drafts/draftCopy.ts (draftCopy.test.ts), so Recipe editor, Import Review and Receipt review agree.
 import { render, screen, within } from '@testing-library/react'
@@ -55,9 +56,16 @@ describe('DraftNotice', () => {
     expect(document.querySelector('.draft-notice__meta')).toBeNull()
   })
 
-  it('draws no icon of its own and no bullet list', () => {
+  // Main-session ruling (B9-18 review): the approved safe-01 mock draws the history icon, so the notice has it (decorative).
+  it('draws the history icon, decorative, before the title, and no bullet list', () => {
     render(<DraftNotice {...props} actions={[]} />)
-    expect(screen.getByRole('status').querySelector('ul, li')).toBeNull()
+    const region = screen.getByRole('status')
+    const icons = region.querySelectorAll('svg')
+    expect(icons).toHaveLength(1)
+    expect(icons[0]).toHaveAttribute('aria-hidden', 'true')
+    expect(icons[0]!.compareDocumentPosition(region.querySelector('.draft-notice__title')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(region).toHaveAccessibleName('Your unsaved changes are back')
+    expect(region.querySelector('ul, li')).toBeNull()
   })
 
   it('the stylesheet: title is body-strong, meta is meta; actions are a wrapping row with a gap (no tertiary text button)', () => {
