@@ -41,6 +41,20 @@ describe('Step text (PC-03: Medium at every size; a long Step uses a smaller rol
   })
 })
 
+describe('the tap-zone chevrons never touch the Step text (B9-40 review, 390 px with a 50-word Step)', () => {
+  const ZONED = '.cook-step:has(.cook-step__zone) > .cook-step__text'
+  const USES = '.cook-step:has(.cook-step__zone) > .cook-step__uses'
+  it('with zones the text and the Uses line keep the room of the 28 px chevron and its inset beyond the tile padding', () => {
+    expect(css('.cook-step')['--cook-zone-glyph']).toBe('1.75rem')
+    expect(css(ZONED)['padding-inline']).toBe('max(0rem, calc(var(--space-half) + var(--cook-zone-glyph) + var(--space-1) - var(--tile-pad)))')
+    expect(css(USES)['padding-inline']).toBe(css(ZONED)['padding-inline'])
+  })
+  it('short landscape draws no chevrons, so it keeps no room', () => {
+    expect(css(ZONED, SHORT)['padding-inline']).toBe('0')
+    expect(css(USES, SHORT)['padding-inline']).toBe('0')
+  })
+})
+
 describe('Step photo (PC-03: capped, so Back and Next stay on screen)', () => {
   it('is at most min(32dvh, 22rem), and min(40dvh, 26rem) from 64 em', () => {
     expect(css('.cook-step__image')['max-block-size']).toBe('min(32dvh, 22rem)')

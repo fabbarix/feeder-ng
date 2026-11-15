@@ -82,6 +82,18 @@
   line-height: var(--text-title-2-line);
 }
 
+/* B9-40 review: the tap-zone chevrons (28 px, --space-half in from the tile's edge) reach past the tile padding, so with zones the Step
+   text and its Uses line keep clear of both: never a chevron on the end of a text line (390 px, a 50-word Step). The room shrinks as
+   the tile padding grows. */
+.cook-step {
+  --cook-zone-glyph: 1.75rem;
+}
+
+.cook-step:has(.cook-step__zone) > .cook-step__text,
+.cook-step:has(.cook-step__zone) > .cook-step__uses {
+  padding-inline: max(0rem, calc(var(--space-half) + var(--cook-zone-glyph) + var(--space-1) - var(--tile-pad)));
+}
+
 /* The Step count leads the overline in sentence case ("Step 2 of 5 · Active · 2 min"), never upper case. */
 .cook-step > .tile__overline {
   text-transform: none;
@@ -713,6 +725,12 @@
   /* the side columns are the visible Back and Next; the tap-zone chevrons would sit on the text (the zones still work) */
   .cook-step__zone {
     display: none;
+  }
+
+  /* no chevrons drawn, so no room kept for them */
+  .cook-step:has(.cook-step__zone) > .cook-step__text,
+  .cook-step:has(.cook-step__zone) > .cook-step__uses {
+    padding-inline: 0;
   }
 
   .cook-nav {
