@@ -1,5 +1,5 @@
 // B9-45 (PC-05): the Ingredient list of "Get ready", scaled to what is cooked. Plain TypeScript, no React.
-import { formatLineQuantity, type UnitSystem } from '../../../lib/units'
+import { formatLineQuantity, formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { RecipeLine } from '../../recipes/types'
 import type { StockLot } from '../../stock/types'
 
@@ -52,7 +52,9 @@ const portionsText = (n: number): string => (n === 1 ? '1 portion' : `${num(n)} 
 export function readyRows(source: ReadySource, ctx: ReadyContext, keyPrefix = ''): ReadyRow[] {
   return source.lines.map((line, i) => {
     const name = line.ingredient ?? line.baseRecipe?.name ?? ''
-    const amount = formatLineQuantity(line.quantity * source.batches, line.unit, ctx.system).trim()
+    const qty = line.quantity * source.batches
+    // a counted amount reads "6 pieces", "1 piece" (formatQuantity), never the line form "6 piece"
+    const amount = (line.unit.trim().toLowerCase() === 'piece' ? formatQuantity(qty, 'piece', ctx.system) : formatLineQuantity(qty, line.unit, ctx.system)).trim()
     const where = line.ingredientId ? soonestPlace(ctx.lots, line.ingredientId, ctx.places) : null
     const place = line.optional ? (where ? `${where} · optional` : 'optional') : where
     return { key: `${keyPrefix}${i}:${line.ingredientId}`, ingredientId: line.ingredientId, name, amount, place, optional: line.optional }

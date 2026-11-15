@@ -21,6 +21,11 @@ const roast: ReadySource = {
 }
 
 describe('readyRows', () => {
+  it('a counted amount is plural: "6 pieces", "1 piece" (B9-45 review)', () => {
+    const src: ReadySource = { ...roast, lines: [line(6, 'Red pepper', 3, 'piece'), line(7, 'Lemon', 1, 'piece')] }
+    expect(readyRows({ ...src, batches: 2 }, ctx).map((r) => r.amount)).toEqual(['6 pieces', '2 pieces'])
+    expect(readyRows(src, ctx).map((r) => r.amount)).toEqual(['3 pieces', '1 piece'])
+  })
   it('is one row per line in the Recipe\'s order: name, amount, Storage Place of the soonest Lot', () => {
     expect(readyRows(roast, ctx).map((r) => [r.name, r.amount, r.place])).toEqual([
       ['Chicken', '1.2 kg', 'Fridge'],
