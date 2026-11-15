@@ -25,7 +25,9 @@ const source = `
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2
       return { el: e, r, w: r.width, h: r.height, hitW: w, hitH: h, box: { x: cx - w / 2, y: cy - h / 2, r: cx + w / 2, b: cy + h / 2 } }
     }
-    const all = [...dialog.querySelectorAll(CONTROLS)].filter((e) => !e.disabled && visible(e) && e.tabIndex >= 0 || (e.matches('.list-row__target') && visible(e))).slice(0, 80).map(hit)
+    // A Stepper's value (a span role=spinbutton) takes the keyboard, not a tap: its ± buttons are the pointer targets.
+    const pointerTarget = (e) => !(e.getAttribute('role') === 'spinbutton' && e.tagName !== 'INPUT')
+    const all = [...dialog.querySelectorAll(CONTROLS)].filter((e) => pointerTarget(e) && (!e.disabled && visible(e) && e.tabIndex >= 0 || (e.matches('.list-row__target') && visible(e)))).slice(0, 80).map(hit)
     for (const t of all) out.sheetTargets.push({ sel: sel(t.el), w: Math.round(t.w * 10) / 10, h: Math.round(t.h * 10) / 10, hitW: Math.round(t.hitW * 10) / 10, hitH: Math.round(t.hitH * 10) / 10 })
     for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
       const a = all[i], b = all[j]

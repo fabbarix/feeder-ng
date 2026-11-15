@@ -110,6 +110,8 @@ describe('probes and scenarios', () => {
     expect(probe('sheet-targets')?.key).toBe('sheetMetrics')
     expect(probe('sheet-body')?.key).toBe('sheetBody')
     for (const n of ['sheet-targets', 'sheet-body']) expect(() => new Function(`return ${probe(n)!.source}`), n).not.toThrow()
+    // A Stepper's value span (role=spinbutton) is a keyboard stop, not a pointer target: its ± buttons are.
+    expect(probe('sheet-targets')!.source).toMatch(/spinbutton/)
   })
   it('the sheet probes run on the sheet scenarios', () => {
     expect(probe('sheet-body')?.scenarios).toEqual(expect.arrayContaining(['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400']))
@@ -140,6 +142,8 @@ describe('probes and scenarios', () => {
   it('P39 runs on the sheet scenario: the focus-rings probe lists it, and it measures an open dialog', () => {
     expect(probe('focus-rings')?.scenarios).toContain('focus-ring-room-sheet')
     expect(probe('focus-rings')?.source).toMatch(/dialog\[open\]/)
+    // A control in an open modal is in the top layer, over the page's bottom bar: only bars inside its dialog count.
+    expect(probe('focus-rings')?.source).toMatch(/modal\.contains\(b\)/)
   })
   it('P18 is extended to sheet and dialog bodies: the clipped-rings probe reads the open modal body', () => {
     const src = probe('clipped-rings')!.source
