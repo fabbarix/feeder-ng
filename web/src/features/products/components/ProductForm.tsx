@@ -53,6 +53,7 @@ export function ProductForm({ ingredientId, ingredientName, baseUnit, ingredient
               const picked = ingredients?.find((i) => i.id === id)
               if (picked) form.chooseIngredient({ id: picked.id, name: picked.name, baseUnit: picked.baseUnit })
             }}
+            placeholder={strings.chooseIngredient}
             error={form.errors.ingredient}
           />
         ) : null}

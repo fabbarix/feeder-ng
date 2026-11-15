@@ -92,6 +92,7 @@ export const strings = {
   productPickerHint: 'Search Products',
   rulePrefix: (prefix: string) => `Prefix ${prefix}`,
   chooseProduct: 'Choose a Product.',
+  chooseProductPlaceholder: 'Choose a Product',
   errBarcode: 'That is not a readable barcode.',
   errItemCode: (n: number) => `The item code is ${n} digits.`,
   deleteShopBarcode: (label: string) => `Delete Shop Barcode ${label}`,

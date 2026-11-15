@@ -32,6 +32,7 @@ export const strings = {
   packSizeLabelPlain: 'Pack size',
   ingredientLabel: 'Ingredient',
   errIngredient: 'Choose an Ingredient.',
+  chooseIngredient: 'Choose an Ingredient',
   barcodeLabel: 'Barcode',
   barcodeOptional: 'Optional',
   cancel: 'Cancel',

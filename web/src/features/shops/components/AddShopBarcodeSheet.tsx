@@ -71,6 +71,7 @@ function AddShopBarcodeOpen({ shop, rules, currency, soldAtProductIds = NONE, on
             shop={shop}
             value={form.values.productId}
             onChange={(productId) => form.set({ productId })}
+            placeholder={strings.chooseProductPlaceholder}
             error={form.errors.productId}
           />
         )}
