@@ -142,8 +142,10 @@ export default {
     async removeConfirm() {
       await openEditDinner()
       await press(`document.querySelector('dialog.sheet[open] button[aria-label="More for Dinner"]')`, 'the sheet\'s ⋮ "More for Dinner"')
-      await until(`!!document.querySelector('[role=menuitem]')`, 'the ⋮ menu')
-      await press(`[...document.querySelectorAll('[role=menuitem]')].find((i) => i.textContent.trim() === 'Remove Meal Slot')`, '"Remove Meal Slot" in the menu')
+      // The ⋮ is a popover of menuitems from 768 px and a sheet of rows (each a stretched button) below it.
+      const item = `[...document.querySelectorAll('[role=menuitem], dialog[open] .list-row button')].find((i) => i.textContent.trim() === 'Remove Meal Slot')`
+      await until(`!!(${item})`, 'the ⋮ menu')
+      await press(item, '"Remove Meal Slot" in the menu')
       await until(`[...document.querySelectorAll('dialog[open] h2')].some((h) => /^Remove .+ on \\w+\\?$/.test(h.textContent.trim()))`, 'the Remove confirm')
       const bad = await evaluate(`(() => {
         const out = []

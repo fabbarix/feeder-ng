@@ -71,7 +71,6 @@
 
 .course-picker__name {
   min-inline-size: 0;
-  overflow-wrap: anywhere;
   font-size: var(--text-body-strong-size);
   font-weight: var(--text-body-strong-weight);
   line-height: var(--text-body-strong-line);

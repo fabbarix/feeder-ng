@@ -92,7 +92,7 @@ function MealSlotsSkeleton() {
     <SkeletonGroup label={settingsStrings.loading}>
       <BentoGrid min="wide">
         {[0, 1].map((i) => (
-          <SkeletonTile key={i} className="ms-card-skeleton">
+          <SkeletonTile key={i}>
             <SkeletonBlock variant="title" />
             <SkeletonBlock variant="meta" />
             <SkeletonBlock variant="row" />

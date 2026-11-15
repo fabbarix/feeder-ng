@@ -101,13 +101,14 @@
   min-inline-size: 0;
 }
 
-/* Two lines at most, so one long word can never widen the row or push the stepper onto a line of nobody's. */
+/* Two lines at most, wrapped at a word and ending in an ellipsis, so one long name can never widen the row or push the stepper
+   onto a line of nobody's (system.md 3: never broken mid-word). */
 .attendance__name {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
   min-inline-size: 0;
   font-size: var(--text-body-strong-size);
   font-weight: var(--text-body-strong-weight);
