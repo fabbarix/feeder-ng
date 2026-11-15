@@ -213,6 +213,9 @@ type recipeJSON struct {
 	UpdatedAt         string        `json:"updatedAt"`
 	// LastCookedOn: see summaryJSON. Filled by GET /api/recipes/{id} only; null on the write responses.
 	LastCookedOn *string `json:"lastCookedOn"`
+	// Deletable (SAFE-05): false when Delete would refuse (planned before, or a Base recipe in use). Filled by GET /api/recipes/{id} only.
+	// STUB (B9-27 test author): the developer fills it from Store.Deletable.
+	Deletable bool `json:"deletable"`
 	// Base recipes (§10): the kind, the Yield's unit (null for a plannable Recipe), its Ingredient, the Recipes that
 	// call for it, and the Ingredients inside it.
 	BaseRecipe       bool         `json:"baseRecipe"`
@@ -232,8 +235,10 @@ type summaryJSON struct {
 	Archived       bool     `json:"archived"`
 	TotalMinutes   int      `json:"totalMinutes"`
 	AdvanceMinutes int      `json:"advanceMinutes"`
-	CourseIDs      []int64  `json:"courseIds"`
-	WholeMeal      bool     `json:"wholeMeal"`
+	// StepCount (RX-07): how many Steps the Recipe has. STUB (B9-27 test author): the developer fills it from Summary.StepCount.
+	StepCount int     `json:"stepCount"`
+	CourseIDs []int64 `json:"courseIds"`
+	WholeMeal bool    `json:"wholeMeal"`
 	// LastCookedOn is the latest date a Cooked fresh Planned Meal of the Recipe had, null when it was never cooked.
 	LastCookedOn *string `json:"lastCookedOn"`
 	BaseRecipe   bool    `json:"baseRecipe"`

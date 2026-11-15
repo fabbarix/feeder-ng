@@ -626,6 +626,8 @@ type Summary struct {
 	TotalMinutes   int
 	AdvanceMinutes int
 	ReheatMinutes  int // 0 = none (R12)
+	// StepCount is the number of Steps the Recipe has (RX-07: "2 Steps, none timed" is not "No Steps").
+	StepCount int
 
 	// CooldownDays and LeftoverUseByDays are the Recipe's own overrides (nil = the Household default), so the planner
 	// reads them from the list without composing the Recipe.
