@@ -24,4 +24,14 @@ describe('ui barrel (R15)', () => {
     const picker = await import('./ImagePicker')
     expect(picker.ImageFileInput).toBe(ui.ImageFileInput)
   })
+
+  it('exports B9-18\'s Undo toast, leave guard and draft notice, with their constants and types, so screens import them from ui', () => {
+    for (const fn of [ui.useUndoToast, ui.undoRefusal, ui.useLeaveGuard, ui.leaveDialog, ui.DraftNotice]) expect(typeof fn).toBe('function')
+    expect(ui.UNDO_DURATION_MS).toBe(8000)
+    expect(ui.RESUME_MIN_MS).toBe(2000)
+    expect(typeof ui.undoStrings).toBe('object')
+    expect(typeof ui.leaveGuardStrings).toBe('object')
+    const types: [ui.ToastActionContext?, ui.ToastApi?, ui.ToastHandle?, ui.ConfirmGroup?, ui.ConfirmRow?, ui.DraftNoticeProps?, ui.DraftNoticeAction?, ui.LeaveGuard?, ui.LeaveGuardOptions?, ui.UndoRefusal?, ui.UndoToastApi?, ui.UndoToastInput?] = []
+    expect(types).toHaveLength(0)
+  })
 })
