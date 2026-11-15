@@ -32,9 +32,10 @@ export function usePlanScreen() {
   const plan = usePlan()
   // w4d review (CLS): the tiles above the week (Couldn't plan, Leftovers to use) wait until both the plan and the Leftovers are in,
   // so they and the week appear together where the skeleton was, never pushing it down while it shows. The same query as the
-  // Leftover flow's (deduplicated by React Query); only a first read in flight holds it (failed or offline, it does not).
+  // Leftover flow's (deduplicated by React Query); only a first read in flight holds it, and only once the plan is in online (failed or offline, nothing waits).
   const leftoversRead = useQuery({ queryKey: leftoverKeys.list, queryFn: leftoversApi.list })
-  const topReady = plan.state !== 'loading' && !(leftoversRead.isPending && leftoversRead.fetchStatus === 'fetching')
+  const leftoversFirstRead = leftoversRead.isPending && leftoversRead.fetchStatus === 'fetching'
+  const topReady = plan.state !== 'loading' && !((plan.state === 'ready' || plan.state === 'empty') && leftoversFirstRead)
   const actions = usePlanActions()
   const flow = useCookFlow()
   // B9-26 (PC-01): another User's edit is announced on the Plan; `review` is the What changed sheet and the marked rows.
