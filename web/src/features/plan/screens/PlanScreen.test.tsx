@@ -39,14 +39,18 @@ const openSheet = async (day: string, recipe: string) => {
 }
 
 describe('PlanScreen load failure', () => {
-  afterEach(() => onlineManager.setOnline(true))
+  afterEach(() => {
+    vi.restoreAllMocks()
+    onlineManager.setOnline(true)
+  })
 
-  it('offline with nothing held shows the error state with Try again, never the empty state', async () => {
+  it('offline with nothing held shows the LoadState, never the empty state or a Try again that cannot work (B9-20, RES-02)', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
     onlineManager.setOnline(false)
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
-    expect(await screen.findByText('The plan could not be loaded.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'The plan isn’t on this phone yet' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
     expect(screen.queryByText(/nothing planned/i)).toBeNull()
   })
 

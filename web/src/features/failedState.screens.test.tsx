@@ -1,5 +1,4 @@
-import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { act, fireEvent, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { advance, mountScreen, serverDown } from '../test/offlineHarness'
 import { RecipesScreen } from './recipes/screens/RecipesScreen'
@@ -44,7 +43,7 @@ describe('a 500 shows the error state with Try again within 2 s (one retry after
     mountScreen(<RecipesScreen />, '/recipes')
     await advance(1900)
     vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response('[]', { status: 200 }))))
-    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole('button', { name: 'Try again' }))
+    act(() => void fireEvent.click(screen.getByRole('button', { name: 'Try again' })))
     await advance(200)
     expect(screen.queryByText('The Recipes could not be loaded.')).toBeNull()
     expect(screen.getByRole('heading', { name: 'No Recipes yet' })).toBeInTheDocument()

@@ -9,7 +9,13 @@ import { StockScreen } from './StockScreen'
 
 type Status = 'loading' | 'error' | 'offline' | 'empty' | 'ready'
 const hooks = vi.hoisted(() => ({
-  totals: { data: [] as unknown[], isLoading: false, error: null, status: 'ready' as Status, refetch: vi.fn() },
+  // B9-20 (RES-02): the screen switches on `state`; these tests set `status`, so `state` follows it.
+  totals: {
+    data: [] as unknown[], isLoading: false, error: null, status: 'ready' as Status, refetch: vi.fn(),
+    get state() {
+      return ({ loading: 'loading', error: 'failed', offline: 'offlineUnknown', empty: 'empty', ready: 'ready' } as const)[this.status]
+    },
+  },
   spoiled: { data: [] as unknown[], today: '2026-11-09', isLoading: false, error: null, status: 'empty' as Status, refetch: vi.fn() },
 }))
 vi.mock('../hooks/useStock', () => ({

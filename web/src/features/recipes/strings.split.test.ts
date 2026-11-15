@@ -11,12 +11,15 @@ import { recipeEditorStrings } from './strings/editor'
 // The top-level keys of recipeStrings at the start of B9-10 (nothing may be lost or renamed by the split).
 const KEYS = [
   'units', 'title', 'newRecipe', 'editRecipe', 'search', 'allTags', 'sort', 'filters', 'cookedLabel', 'tagsLabel', 'newTag', 'moreTags', 'showArchived', 'empty',
-  'noMatch', 'loading', 'loadError', 'listError', 'totalTime', 'noSteps', 'advanceChip', 'advanceWord', 'yieldLabel', 'readyMeal', 'archived', 'archive',
+  'loading', 'loadError', 'listError', 'totalTime', 'noSteps', 'advanceChip', 'advanceWord', 'yieldLabel', 'readyMeal', 'archived', 'archive',
   'unarchive', 'delete', 'deleteDialog', 'inUse', 'baseRecipe', 'more', 'portionsPerBatch', 'totalMetric', 'aheadMetric', 'cook', 'overflow', 'deleteBlocked',
   'edit', 'save', 'saving', 'cancel', 'ingredients', 'stepsTitle', 'photo', 'optional', 'sections', 'editorActions', 'favourite', 'dislike', 'exclusion',
   'preferences', 'preferencesFor', 'preferencesLoadError', 'memberColumn', 'you', 'noMembers', 'addMembers', 'askAdmin', 'viaNote', 'excludedVia', 'via',
   'alsoVia', 'stateToggle', 'saveFailed', 'exclusionSaveFailed', 'members', 'excludesToggle', 'unitConversion', 'fields', 'lines', 'quickCreate',
   'readyMealIngredient', 'steps', 'generic', 'checkFields', 'codes',
+  // B9-20 (RES-02): the seven-state copy. 'noMatch' ("No Recipe matches.") became noMatchFor / noMatchFilters.
+  'emptyText', 'importRecipes', 'noMatchFor', 'noMatchFilters', 'noMatchText', 'showAll', 'offlineUnknownTitle', 'offlineUnknownText',
+  'detailOfflineTitle', 'detailOfflineText',
 ]
 
 const parts = { list: recipeListStrings, detail: recipeDetailStrings, editor: recipeEditorStrings } as Record<string, Record<string, unknown>>

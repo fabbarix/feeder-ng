@@ -10,7 +10,9 @@ const create = vi.fn().mockResolvedValue({})
 vi.mock('../hooks/useIngredients', () => ({
   useIngredients: (query: string) => {
     state.query = query
-    return { ingredients: state.ingredients, isEmpty: state.isEmpty, isLoading: state.isLoading, error: null, create }
+    // B9-20 (RES-02): the screen switches on `state`; it follows the fields these tests set.
+    const screenState = state.isLoading ? 'loading' : state.ingredients.length > 0 ? 'ready' : state.isEmpty ? 'empty' : 'filteredEmpty'
+    return { state: screenState, ingredients: state.ingredients, isEmpty: state.isEmpty, isLoading: state.isLoading, error: null, refetch: vi.fn(), create }
   },
 }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))

@@ -92,22 +92,23 @@ describe('RecipesScreen', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/recipes/2')
   })
 
-  it('shows the empty state with a New Recipe action, the no-match text, and the error state', () => {
-    state.result = { recipes: [], tags: [], isLoading: false, isEmpty: true, error: null }
+  it('shows the empty state with a New Recipe action, the no-match text, and the error state (B9-20: by `state`)', async () => {
+    state.result = { recipes: [], tags: [], isLoading: false, isEmpty: true, error: null, state: 'empty' }
     const { unmount } = view()
-    expect(screen.getByText('No Recipes yet. Add your first one.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'No Recipes yet' })).toBeInTheDocument()
     unmount()
-    state.result = { recipes: [], tags: [], isLoading: false, isEmpty: false, error: null }
+    state.result = { recipes: [], tags: [], isLoading: false, isEmpty: false, error: null, state: 'filteredEmpty' }
     const second = view()
-    expect(screen.getByText('No Recipe matches.')).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('searchbox'), 'x')
+    expect(screen.getByText('No Recipe matches “x”.')).toBeInTheDocument()
     second.unmount()
-    state.result = { recipes: [], tags: [], isLoading: false, isEmpty: false, error: new Error('x') }
+    state.result = { recipes: [], tags: [], isLoading: false, isEmpty: false, error: new Error('x'), state: 'failed' }
     view()
     expect(screen.getByRole('alert')).toHaveTextContent('The Recipes could not be loaded.')
   })
 
   it('shows a Skeleton, not bare text, while loading', async () => {
-    state.result = { recipes: [], tags: [], isLoading: true, isEmpty: false, error: null }
+    state.result = { recipes: [], tags: [], isLoading: true, isEmpty: false, error: null, state: 'loading' }
     view()
     expect(screen.queryByText('Loading…')).toBeNull()
     expect(await screen.findByRole('status', {}, { timeout: 1500 })).toHaveAttribute('aria-busy', 'true')
