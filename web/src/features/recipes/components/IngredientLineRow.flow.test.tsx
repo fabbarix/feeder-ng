@@ -80,8 +80,9 @@ describe('the ⋮ menu of a line (RX-02)', () => {
   it('Move up is off on the first line, Move down on the last', async () => {
     view(props({ index: 0, count: 1 }))
     const menu = await openMenu()
-    expect(within(menu).getByRole('menuitem', { name: 'Move ingredient up' })).toBeDisabled()
-    expect(within(menu).getByRole('menuitem', { name: 'Move ingredient down' })).toBeDisabled()
+    // The shared Menu keeps an off item focusable and says it with aria-disabled (as the other Menu tests check), not `disabled`.
+    expect(within(menu).getByRole('menuitem', { name: 'Move ingredient up' })).toHaveAttribute('aria-disabled', 'true')
+    expect(within(menu).getByRole('menuitem', { name: 'Move ingredient down' })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('Remove in the menu calls onRemove (a phone has no trash button beside the ⋮)', async () => {

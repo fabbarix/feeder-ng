@@ -1,6 +1,6 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import type { SortableItemProps } from '../../../ui'
-import { Button, Chip, IconButton, IngredientSelect, Menu, TextField, UnitSelect } from '../../../ui'
+import { Button, Checkbox, Chip, IconButton, IngredientSelect, Menu, TextField, UnitSelect } from '../../../ui'
 import { BaseRecipeBadge } from './BaseRecipeBadge'
 import { NeededAtMenu } from './NeededAtMenu'
 import type { DraftErrors, LineDraft } from '../lib/draft'
@@ -47,6 +47,11 @@ export interface IngredientLineRowProps {
   onLinkToBase?: () => void
   /** BR-D: "Use as a plain Ingredient" in the actions menu of a Base recipe line. Without it the item is absent. */
   onUseAsPlain?: () => void
+  /**
+   * B9-37 (RX-02): Enter in the last field of the last line: the Note, or the Quantity while the Note is hidden (a phone line without a
+   * Note). The screen adds a line and puts the cursor in its picker. Without it Enter does nothing special.
+   */
+  onEnterLast?: () => void
 }
 
 /** The row's class names with the one the sortable adds. */
@@ -71,9 +76,11 @@ const moveItems = (index: number, count: number | undefined, onMove: ((delta: -1
 const fieldError = (errors: DraftErrors, key: string) => (errors[key] ? codeMessage(errors[key]) : undefined)
 
 /**
- * One ingredient line of the editor: Ingredient (IngredientSelect), Quantity (text, so "1 1/2" stays typeable), Unit
- * (UnitSelect with the Ingredient's units and a typed custom unit), Note and remove; one row from 900 px. "Optional" is a checkable item of the actions Menu and shows as a tag chip in the Ingredient cell. A unit the
- * Ingredient does not know yet says that Feeder will ask for its Unit Conversion on save. Renders and calls back only.
+ * One ingredient line of the editor (RX-02, RX-10): the drag handle and Ingredient (IngredientSelect), Quantity (text, so "1 1/2" stays
+ * typeable), Unit (UnitSelect with the Ingredient's units and a typed custom unit), Note, the Optional checkbox, then the ⋮ (Move up,
+ * Move down, Add note, the Base recipe link, Remove) and the trash. One row from a 42 rem lines box; on a phone the CSS lays it out in
+ * two rows and hides the Note until the line has one (`data-has-note`) and the trash (Remove is in the ⋮). A unit the Ingredient does
+ * not know yet says that Feeder will ask for its Unit Conversion on save. Renders and calls back only.
  */
 export function IngredientLineRow({
   line,
@@ -99,9 +106,19 @@ export function IngredientLineRow({
   onNeededAt,
   onLinkToBase,
   onUseAsPlain,
+  onEnterLast,
 }: IngredientLineRowProps): ReactNode {
   const amountRef = useRef<HTMLDivElement>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
+  const noteRef = useRef<HTMLDivElement>(null)
+  // "Add note" shows the Note of a line that has none (a phone hides it until then) and puts the cursor in it.
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [focusNote, setFocusNote] = useState(false)
+  useEffect(() => {
+    if (!focusNote) return
+    noteRef.current?.querySelector<HTMLInputElement>('input')?.focus()
+    setFocusNote(false)
+  }, [focusNote])
   useEffect(() => {
     if (!focusIngredient) return
     pickerRef.current?.querySelector<HTMLElement>('[role="combobox"], input, button')?.focus()
@@ -109,7 +126,9 @@ export function IngredientLineRow({
   }, [focusIngredient, onIngredientFocused])
   useEffect(() => {
     if (!focusAmount) return
-    amountRef.current?.querySelector<HTMLInputElement>('input')?.focus()
+    const input = amountRef.current?.querySelector<HTMLInputElement>('input')
+    input?.focus()
+    input?.select()
     onAmountFocused?.()
   }, [focusAmount, onAmountFocused])
 
@@ -131,12 +150,24 @@ export function IngredientLineRow({
   const asks = needsConversion(line.unit, ingredient)
   const who = (line.ingredientName || ingredient?.name || '').trim() || recipeStrings.lines.lineLabel(index + 1)
   const isBase = (line.baseRecipeId ?? null) !== null
+  const hasNote = line.note.trim() !== '' || noteOpen
   const linkItems = [
     ...(onLinkToBase && !isBase && line.ingredientId !== null ? [{ id: 'link', label: recipeStrings.baseRecipe.linkAction, icon: 'cook' as const, onSelect: onLinkToBase }] : []),
     ...(onUseAsPlain && isBase ? [{ id: 'plain', label: recipeStrings.baseRecipe.plainAction, icon: 'cook' as const, onSelect: onUseAsPlain }] : []),
   ]
+  const noteItems = hasNote
+    ? []
+    : [{ id: 'note', label: recipeStrings.lines.addNote, icon: 'edit' as const, onSelect: () => (setNoteOpen(true), setFocusNote(true)) }]
+  // Enter in the last field of the last line: the Note, or the Quantity while the CSS hides the Note (a phone line without one).
+  const noteHidden = () => (noteRef.current ? getComputedStyle(noteRef.current).display === 'none' : false)
+  const enter = (field: 'quantity' | 'note') => (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || !onEnterLast) return
+    if (field === 'quantity' && !noteHidden()) return
+    e.preventDefault()
+    onEnterLast()
+  }
   return (
-    <li {...itemProps} className={rowClass('line-row', itemProps)}>
+    <li {...itemProps} className={rowClass('line-row', itemProps)} data-has-note={hasNote ? 'true' : 'false'}>
       <div className="line-row__ingredient">
         {handle ? <div className="line-row__handle">{handle}</div> : null}
         <div ref={pickerRef} className="line-row__ingredient-body">
@@ -153,7 +184,6 @@ export function IngredientLineRow({
               if (picked) onPick(picked)
             }}
           />
-          {line.optional ? <Chip kind="tag">{recipeStrings.lines.optional}</Chip> : null}
           {isBase ? <BaseRecipeBadge /> : null}
         </div>
         {isBase && steps && onNeededAt ? (
@@ -171,10 +201,12 @@ export function IngredientLineRow({
           size="xs"
           label={recipeStrings.lines.quantity}
           inputMode="decimal"
+          enterKeyHint={onEnterLast ? 'next' : undefined}
           helper={line.auto && line.quantity.trim() === '' && line.ingredientId !== null ? recipeStrings.lines.packSizeHint : undefined}
           value={line.quantity}
           error={fieldError(errors, `lines.${index}.quantity`)}
           onChange={(quantity) => onChange({ quantity })}
+          onKeyDown={enter('quantity')}
         />
       </div>
       <div className="line-row__unit">
@@ -191,13 +223,15 @@ export function IngredientLineRow({
         />
       </div>
       {asks ? <p className="line-row__hint">{recipeStrings.lines.unitNeedsConversion(line.unit)}</p> : null}
-      <div className="line-row__note">
-        <TextField
-          size="full"
-          label={recipeStrings.lines.note}
-          placeholder="note"
-          value={line.note}
-          onChange={(note) => onChange({ note })}
+      <div ref={noteRef} className="line-row__note">
+        <TextField size="full" label={recipeStrings.lines.note} placeholder="note" value={line.note} onChange={(note) => onChange({ note })} onKeyDown={enter('note')} />
+      </div>
+      <div className="line-row__optional">
+        <Checkbox
+          label={recipeStrings.lines.optional}
+          ariaLabel={recipeStrings.lines.optionalLine(who)}
+          checked={line.optional}
+          onChange={(optional) => onChange({ optional })}
         />
       </div>
       <div className="line-row__remove">
@@ -205,16 +239,14 @@ export function IngredientLineRow({
           label={recipeStrings.lines.actions(who)}
           items={[
             ...moveItems(index, count, onMove),
+            ...noteItems,
             ...linkItems,
-            {
-              id: 'optional',
-              label: recipeStrings.lines.optional,
-              checked: line.optional,
-              onSelect: () => onChange({ optional: !line.optional }),
-            },
+            { id: 'remove', label: recipeStrings.lines.removeLine(who), icon: 'delete' as const, onSelect: onRemove },
           ]}
         />
-        <IconButton icon="delete" label={recipeStrings.lines.removeLine(who)} onClick={onRemove} />
+        <span className="line-row__trash">
+          <IconButton icon="delete" label={recipeStrings.lines.removeLine(who)} onClick={onRemove} />
+        </span>
       </div>
     </li>
   )

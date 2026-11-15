@@ -146,6 +146,7 @@ export const recipeEditorStrings = {
     down: 'Move ingredient down',
     optional: 'Optional',
     optionalLine: (name: string) => `Optional: ${name}`,
+    addNote: 'Add note',
     lineLabel: (n: number) => `line ${n}`,
     none: 'No ingredients yet.',
     packSizeHint: 'Enter the pack size.',
