@@ -141,13 +141,16 @@ export function restartInput(timer: CookTimer, seconds: number): StartTimerInput
 }
 
 /**
- * The order of Cook Mode's timers (PC-03): the ones that hold Next first, then this scope's (or, on the timeline, every one that
+ * The order of Cook Mode's timers (PC-03): finished ones (ringing) first, then the ones that hold Next, then this scope's (or, on the timeline, every one that
  * `belongs`), then the others. Does not mutate.
  */
-export function cookTimerOrder<T extends { timer: CookTimer }>(items: T[], scope: string, holdingIds: number[] = [], belongs?: (timerScope: string | null) => boolean): T[] {
+export function cookTimerOrder<T extends { timer: CookTimer; seconds?: number }>(items: T[], scope: string, holdingIds: number[] = [], belongs?: (timerScope: string | null) => boolean): T[] {
   const here = belongs ? items.filter((i) => belongs(i.timer.scope)) : items.filter((i) => i.timer.scope === scope)
   const elsewhere = belongs ? items.filter((i) => !belongs(i.timer.scope)) : items.filter((i) => i.timer.scope !== scope)
-  return stripOrder([...here, ...elsewhere], holdingIds)
+  const ordered = stripOrder([...here, ...elsewhere], holdingIds)
+  // B9-40 review (PC-03: by urgency): a finished timer is ringing, so it leads, wherever it belongs; never off the end of the strip
+  const done = (i: T) => i.timer.state === 'finished' || (i.seconds !== undefined && i.seconds <= 0)
+  return [...ordered.filter(done), ...ordered.filter((i) => !done(i))]
 }
 
 /**
