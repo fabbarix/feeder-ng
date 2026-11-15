@@ -15,10 +15,16 @@ import './CourseRow.css'
 /** `cooked` is a loose Mark as Cooked icon; `more` puts Mark as Cooked in the row's ⋮ (DS-TODAY hero). */
 export type CourseAction = 'swap' | 'pin' | 'cooked' | 'more'
 
+/** B9-39 (TB-10): where the Planned Meal sheet opens: a why chip opens it at "Why this Recipe", that reason highlighted. */
+export interface PlannedMealOpenAt {
+  section: 'why'
+  reason: string
+}
+
 /** What a Course row can do; every handler gets the key of that Course's Planned Meal (courseId included). */
 export interface CourseRowHandlers {
-  /** The Recipe name is a button that opens the Planned Meal sheet of the Course. */
-  onOpen: (key: SlotKey) => void
+  /** The Recipe name is a button that opens the Planned Meal sheet of the Course; the hero's why chips also say where (`at`). */
+  onOpen: (key: SlotKey, at?: PlannedMealOpenAt) => void
   onSwap?: (key: SlotKey) => void
   onPin?: (key: SlotKey) => void
   onUnpin?: (key: SlotKey) => void
