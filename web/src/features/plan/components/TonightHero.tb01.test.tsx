@@ -125,7 +125,7 @@ describe('the hero\'s section is named by its Recipe (TB-01 accessibility)', () 
   })
 })
 
-describe('the start chip of an overnight start (A2): info "Start Mon 21:30"', () => {
+describe('the start chip of an overnight start (A2): info "Start Tue 21:30"', () => {
   const tomorrow = (m: Partial<ReturnType<typeof meal>>) =>
     slot({ date: '2026-11-11', at: '2026-11-11T07:00:00Z', time: '07:00', name: 'Breakfast', meal: meal({ date: '2026-11-11', recipeName: 'Overnight oats', cookMinutes: 60, ...m }) })
 

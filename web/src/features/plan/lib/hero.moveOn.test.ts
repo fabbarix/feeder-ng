@@ -4,7 +4,10 @@
 // Mock: docs/design/ui-review-3/mocks/tb-01-hero-timeline.html. A day with Breakfast 08:30, Lunch 13:00 and Dinner 19:00 (a 6 h Recipe, start 13:00).
 import { describe, expect, it } from 'vitest'
 import { courseMeal, courseSlot, meal, planCourse, slot } from '../test-utils'
-import type { PlanSlot } from '../types'
+import type { PlanSlot, PlannedMeal } from '../types'
+
+/** A slot's own fields and the `meal` shorthand of test-utils slot(). */
+type Over = Partial<PlanSlot> & { meal?: PlannedMeal | null }
 import { heroEyebrow, heroHint, heroNextChange, heroSelection, justServed, withJustServed } from './hero'
 
 const today = '2026-11-10'
@@ -12,12 +15,12 @@ const tomorrow = '2026-11-11'
 const at = (date: string, time: string) => `${date}T${time}:00Z`
 const clock = (time: string, date = today) => new Date(`${date}T${time}:00Z`)
 
-const breakfast = (date = today, over: Partial<PlanSlot> = {}) =>
+const breakfast = (date = today, over: Over = {}) =>
   slot({ date, mealSlotId: 1, name: 'Breakfast', time: '08:30', at: at(date, '08:30'), meal: meal({ date, mealSlotId: 1, recipeName: 'Porridge' }), ...over })
-const lunch = (date = today, over: Partial<PlanSlot> = {}) =>
+const lunch = (date = today, over: Over = {}) =>
   slot({ date, mealSlotId: 2, name: 'Lunch', time: '13:00', at: at(date, '13:00'), meal: meal({ date, mealSlotId: 2, recipeName: 'Lentil soup' }), ...over })
 const stew = 'Slow cooker beef and barley stew'
-const dinner = (date = today, over: Partial<PlanSlot> = {}) =>
+const dinner = (date = today, over: Over = {}) =>
   slot({
     date, mealSlotId: 3, name: 'Dinner', time: '19:00', at: at(date, '19:00'), startBy: '13:00', cookMinutes: 360,
     meal: meal({ date, mealSlotId: 3, recipeName: stew, cookMinutes: 360, startBy: '13:00' }), ...over,

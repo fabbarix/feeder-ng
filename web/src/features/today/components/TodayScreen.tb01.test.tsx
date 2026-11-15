@@ -2,8 +2,9 @@
 // that moves into To confirm is announced politely (and takes no focus), and a Swap from the hero says what changed.
 // 2026-11-10 is a Tuesday. The seams are mocked as in TodayScreen.hero.test.tsx; `justServed` is the seam's new field.
 import { act, screen, waitFor, within } from '@testing-library/react'
+import { useQueryClient } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
-import { createElement, useReducer } from 'react'
+import { createElement, useEffect, useReducer } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { favourite, meal, mockApi, renderWithProviders, slot } from '../../plan/test-utils'
@@ -23,6 +24,10 @@ const dinner = () =>
 const lunch = () =>
   slot({ date: '2026-11-10', mealSlotId: 1, name: 'Lunch', time: '13:00', at: '2026-11-10T13:00:00Z', courseId: 1, courseName: 'Main', meal: meal({ mealSlotId: 1, recipeName: 'Lentil soup' }) })
 
+const laterLunch = () =>
+  slot({ date: '2026-11-11', mealSlotId: 1, name: 'Lunch', time: '13:00', at: '2026-11-11T13:00:00Z', meal: meal({ date: '2026-11-11', mealSlotId: 1, recipeId: 3, recipeName: 'Lentil soup' }) })
+const laterChange = { date: '2026-11-11', mealSlotId: 1, courseId: 1, before: { recipeId: 3, recipeName: 'Lentil soup', servedFromLeftover: false }, after: { recipeId: 4, recipeName: 'Roast chicken', servedFromLeftover: false }, why: [] }
+
 vi.mock('../seams', () => ({
   useScanSessionActive: () => false,
   useTodayPlan: () => ({ today: '2026-11-10', hasNextMeal: true, toConfirm: h.toConfirm.length, couldntPlan: 0, leftovers: 0, loading: false }),
@@ -38,7 +43,12 @@ vi.mock('../seams', () => ({
 let bump = () => {}
 function TodayAgain() {
   const [, force] = useReducer((n: number) => n + 1, 0)
+  const client = useQueryClient()
   bump = force
+  // What the real seam would have cached: the What changed words name the meals from the plan view.
+  useEffect(() => {
+    client.setQueryData(['plan', 'view'], { today: '2026-11-10', horizonDays: 7, updating: false, slots: [dinner(), laterLunch()] })
+  }, [client])
   return <TodayScreen />
 }
 const routed = (
@@ -125,6 +135,30 @@ describe('Today: the hero\'s ⋮ (TB-10)', () => {
     expect(within(toast).getByRole('button', { name: /^Undo/ })).toBeInTheDocument()
     expect(toast.querySelector('.toast__title svg')).toBeNull() // a success toast has no icon
     expect(screen.queryByText('Recipe screen')).not.toBeInTheDocument() // Today is never left
+  })
+})
+
+describe('Today after a Swap that changes another meal (B9-26 PC-01 on Today: useTonightSheets().review)', () => {
+  it('the toast offers Review and Undo; Review opens "What changed" over Today, and Keep the changes closes it', async () => {
+    const api = mockApi({ ...base, 'PUT /api/plan/2026-11-10/2/1': { ...meal({ recipeName: 'Pizza', pinned: true }), changes: [laterChange], undoToken: 'tok-9' } })
+    renderWithProviders(routed, '/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Dinner actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Swap' }))
+    await userEvent.click(await screen.findByRole('button', { name: /Pizza/ }))
+    const toast = await waitFor(() => {
+      const t = document.querySelector('.toast')
+      if (!t) throw new Error('no toast yet')
+      return t as HTMLElement
+    })
+    expect(toast).toHaveTextContent(/Swapped/)
+    expect(within(toast).getByRole('button', { name: /^Undo/ })).toBeInTheDocument()
+    await userEvent.click(within(toast).getByRole('button', { name: /^Review/ }))
+    const sheet = await screen.findByRole('dialog', { name: /What changed/ })
+    expect(within(sheet).getByText(/Roast chicken/)).toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Keep the changes' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /What changed/ })).toBeNull())
+    expect(api.calls.filter((c) => c.method !== 'GET' && c.method !== 'PUT')).toHaveLength(0)
+    expect(screen.queryByText('Recipe screen')).not.toBeInTheDocument()
   })
 })
 
