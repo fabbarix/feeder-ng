@@ -510,7 +510,8 @@ describe('the keypad drops the Added toast of its own Scan (SSP-12)', () => {
   it('startPriceEntry() with no key (the next row without a Price) drops it when that row is the scanned one', async () => {
     const h = setup()
     await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
-    await scanCode(h)
+    // Toilet paper has no Price (passata's lastPriceCents prices its row, so no keypad would open for it): its row is the next.
+    await scanCode(h, '8000500310434')
     const handle = h.deps.announceAdded.mock.results.at(-1)!.value as { dismiss: ReturnType<typeof vi.fn> }
     act(() => flow(h).startPriceEntry())
     expect(handle.dismiss).toHaveBeenCalledTimes(1)
