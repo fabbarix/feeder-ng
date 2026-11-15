@@ -139,6 +139,12 @@
   color: var(--status-warn-fg);
 }
 
+/* A chip on its own line in a tile (the Overdue chip above an Advance Step) keeps its natural width: the tile's column would
+   stretch it into a bar. */
+.tile > .chip {
+  align-self: flex-start;
+}
+
 /* Media tile: photo header at 16:9, the text below keeps the tile padding. */
 .tile[data-variant='media'] {
   padding: 0 0 var(--tile-pad);
