@@ -34,7 +34,7 @@
 .colour-swatch--custom {
   display: grid;
   place-items: center;
-  border: 1.5px dashed var(--color-outline);
+  border: var(--field-border-width) dashed var(--color-outline);
   background: var(--color-surface-2);
 }
 
@@ -57,5 +57,10 @@
     content: '';
     position: absolute;
     inset: -2px;
+  }
+
+  /* The custom swatch's dashed border is inside its 40 px, so its ::after (placed from the padding edge) reaches past it too. */
+  .colour-swatch--custom::after {
+    inset: calc(-2px - var(--field-border-width));
   }
 }
