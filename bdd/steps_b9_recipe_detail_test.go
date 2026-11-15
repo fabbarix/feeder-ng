@@ -1,6 +1,7 @@
 package bdd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/cucumber/godog"
@@ -29,5 +30,19 @@ func b9RecipeDetailSteps(sc *godog.ScenarioContext, w *World) {
 			return nil
 		}
 		return fmt.Errorf("no Recipe %q in the list; body: %s", name, w.Last.Body)
+	})
+
+	// Ruling 3: a Recipe that calls for a Base recipe, so the Base recipe is in use and its detail says why it can't go.
+	sc.Step(`^I create the Recipe "([^"]*)" calling for (\d+) g of the Base recipe "([^"]*)"$`, func(name string, grams int, base string) error {
+		body := fmt.Sprintf(`{"name": %q, "yield": 4, "lines": [{"baseRecipeId": %v, "quantity": %d, "unit": "g"}]}`, name, w.Vars["recipe:"+base], grams)
+		w.Last = w.Client.Do("POST", "/api/recipes", []byte(body))
+		var v struct {
+			ID int64 `json:"id"`
+		}
+		if w.Last.Status != 201 || json.Unmarshal(w.Last.Body, &v) != nil {
+			return fmt.Errorf("create %q = %d %s", name, w.Last.Status, w.Last.Body)
+		}
+		w.Vars["recipe:"+name] = v.ID
+		return nil
 	})
 }

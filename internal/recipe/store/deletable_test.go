@@ -134,3 +134,31 @@ func TestListSummariesCarryTheStepCount(t *testing.T) {
 		t.Fatalf("the fixture: untimed Steps have no total (got %d)", salad.Timing.TotalMinutes)
 	}
 }
+
+// Ruling 3 (main session): the detail gives the reason beside `deletable`, so a Base recipe in use gets its own copy.
+func TestDeleteBlockerNamesWhyDeleteWouldRefuse(t *testing.T) {
+	f := newBaseFixture(t)
+	bech := f.createBase(t, baseIn("Béchamel", 1, "l"))
+	if b, err := f.s.DeleteBlocker(ctx, bech.ID); err != nil || b != store.DeleteAllowed {
+		t.Fatalf("an unused Base recipe: DeleteBlocker = %q, %v; want \"\", nil", b, err)
+	}
+	lasagne := f.createPlain(t, plainIn("Lasagne", callFor(bech, 500, "ml")))
+	if b, err := f.s.DeleteBlocker(ctx, bech.ID); err != nil || b != store.DeleteBlockedInUse {
+		t.Errorf("a Base recipe in use: DeleteBlocker = %q, %v; want in_use", b, err)
+	}
+	if b, err := f.s.DeleteBlocker(ctx, lasagne.ID); err != nil || b != store.DeleteAllowed {
+		t.Errorf("the caller, never planned: DeleteBlocker = %q, %v; want \"\"", b, err)
+	}
+	// Planned wins over in use, as Delete checks it first.
+	store.RegisterPlannedChecker("delete blocker test", planned{bech.ID: true, lasagne.ID: true})
+	t.Cleanup(func() { store.DefaultPlannedCheckers.Unregister("delete blocker test") })
+	if b, _ := f.s.DeleteBlocker(ctx, bech.ID); b != store.DeleteBlockedPlanned {
+		t.Errorf("a planned Base recipe in use: DeleteBlocker = %q, want planned (Delete answers ErrAlreadyPlanned first)", b)
+	}
+	if b, _ := f.s.DeleteBlocker(ctx, lasagne.ID); b != store.DeleteBlockedPlanned {
+		t.Errorf("a planned Recipe: DeleteBlocker = %q, want planned", b)
+	}
+	if _, err := f.s.DeleteBlocker(ctx, 999); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("DeleteBlocker(999) = %v, want ErrNotFound", err)
+	}
+}

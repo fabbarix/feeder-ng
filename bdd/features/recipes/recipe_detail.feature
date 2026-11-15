@@ -87,4 +87,30 @@ Feature: The Recipe detail
     When I list the Recipes
     Then the listed Recipe "Green salad" has "stepCount" "2"
     And the listed Recipe "Green salad" has "totalMinutes" "0"
-    And the listed Recipe "Pancakes" has "stepCount" "0"
+    And the listed Recipe "Pancakes" has "stepCount" "1"
+
+  Scenario: The detail says why a Recipe can't be deleted
+    Given the Recipe "Pancakes" has been planned
+    When I open the Recipe "Pancakes"
+    Then the Recipe JSON "deleteBlockedBy" is "planned"
+    When I open the Recipe "Waffles"
+    Then the response JSON has no field "deleteBlockedBy"
+
+  Scenario: A Base recipe that Recipes call for can't be deleted because it is in use
+    When I create a Recipe with JSON:
+      """
+      {
+        "name": "Pizza dough", "yield": 800, "yieldUnit": "g", "baseRecipe": true,
+        "lines": [{"ingredientId": <id:flour>, "quantity": 800, "unit": "g"}]
+      }
+      """
+    And I open the Recipe "Pizza dough"
+    Then the Recipe JSON "deletable" is "true"
+    And the response JSON has no field "deleteBlockedBy"
+    When I create the Recipe "Margherita" calling for 300 g of the Base recipe "Pizza dough"
+    And I open the Recipe "Pizza dough"
+    Then the Recipe JSON "deletable" is "false"
+    And the Recipe JSON "deleteBlockedBy" is "in_use"
+    And the Recipe JSON "usedBy.0.name" is "Margherita"
+    When I delete the Recipe "Pizza dough"
+    Then the response status is 409

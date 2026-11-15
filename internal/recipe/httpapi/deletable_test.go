@@ -64,3 +64,15 @@ func TestListRowsCarryAStepCountAsANumber(t *testing.T) {
 		t.Errorf("stepCount = %q (present %v), want the key with 0 for a Recipe without Steps", v, ok)
 	}
 }
+
+func TestDetailSaysAPlannedRecipeIsBlockedBecauseItWasPlanned(t *testing.T) {
+	f := newLC(t, []string{"Borscht", "Chilli"}, nil)
+	store.RegisterPlannedChecker("httpapi blocked test", plannedIDs{f.ids["Chilli"]: true})
+	t.Cleanup(func() { store.DefaultPlannedCheckers.Unregister("httpapi blocked test") })
+	if got := f.detail(t, "Chilli")["deleteBlockedBy"]; string(got) != `"planned"` {
+		t.Errorf("planned Recipe: deleteBlockedBy = %s, want \"planned\"", got)
+	}
+	if got, ok := f.detail(t, "Borscht")["deleteBlockedBy"]; ok {
+		t.Errorf("a deletable Recipe: deleteBlockedBy = %s, want the key absent", got)
+	}
+}
