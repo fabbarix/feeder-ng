@@ -6,7 +6,7 @@ import { EmptyState } from '../../../ui/EmptyState'
 import { ListGroup, ListRow } from '../../../ui/ListRow'
 import { Thumb } from '../../../ui/Thumb'
 import type { ListEntry } from '../../shop/lib/lines'
-import { rowValue } from '../../shop/lib/rows'
+import { rowNames, rowValue } from '../../shop/lib/rows'
 import type { ToGetRow } from '../lib/toGet'
 import { scanStrings } from '../strings'
 import { CelebrationTile, type CelebrationTileProps } from '../../shop/components/CelebrationTile'
@@ -26,6 +26,8 @@ export function ToGetList({ rows, pendingKeys, onTick, celebration }: ToGetListP
     if (celebration) return <CelebrationTile {...celebration} />
     return <EmptyState title={scanStrings.nothingToGet} description={scanStrings.nothingToGetHint} icon="success" />
   }
+  // batch w5a (P38): a Line and its "more since your tick" row, or a Line and an Ingredient extra, are told apart by name
+  const names = rowNames(rows.map((r) => r.entry))
   return (
     <ListGroup label={scanStrings.toGetLabel}>
       {rows.map(({ entry, cover, byHand }) => {
@@ -35,7 +37,7 @@ export function ToGetList({ rows, pendingKeys, onTick, celebration }: ToGetListP
           <ListRow
             key={entry.key}
             title={entry.title}
-            aria-label={scanStrings.tickLine(entry.title)}
+            aria-label={scanStrings.tickLine(names.get(entry.key) ?? entry.title)}
             busy={busy}
             onActivate={() => onTick(entry)}
             leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={48} />}

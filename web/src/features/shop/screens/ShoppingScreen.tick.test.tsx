@@ -95,7 +95,8 @@ describe('ShoppingScreen: more since your tick (SSP-02)', () => {
   it('Garlic is in Ticked ("+500 g in Stock") and again in To get with "More since your tick"', () => {
     show(grown())
     const open = within(screen.getByRole('list', { name: 'To get' }))
-    expect(open.getByRole('button', { name: 'Garlic' })).toHaveAccessibleDescription(/500 g.*more since your tick/i)
+    // batch w5a (P38): the open row is named apart from the ticked Garlic ("500 g more of Garlic")
+    expect(open.getByRole('button', { name: '500 g more of Garlic' })).toHaveAccessibleDescription(/500 g.*more since your tick/i)
     const ticked = within(screen.getByRole('list', { name: 'Ticked' }))
     expect(ticked.getByRole('button', { name: 'Tick Garlic', pressed: true })).toBeInTheDocument()
     expect(ticked.getByText('+500 g in Stock')).toBeInTheDocument()
@@ -103,7 +104,7 @@ describe('ShoppingScreen: more since your tick (SSP-02)', () => {
 
   it('ticking the open row ticks the difference', async () => {
     show(grown())
-    await userEvent.click(within(screen.getByRole('list', { name: 'To get' })).getByRole('button', { name: 'Tick Garlic' }))
+    await userEvent.click(within(screen.getByRole('list', { name: 'To get' })).getByRole('button', { name: 'Tick 500 g more of Garlic' }))
     expect(actions.tick).toHaveBeenCalledWith(expect.objectContaining({ ingredientId: 9, quantity: 500 }))
   })
 })

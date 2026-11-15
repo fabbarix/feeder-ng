@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { Icon } from '../../../ui/Icon'
-import { makeLine } from '../../shop/testData'
+import { makeExtra, makeLine } from '../../shop/testData'
 import { toGetRows, type ToGetRow } from '../lib/toGet'
 import { ToGetList, type ToGetListProps } from './ToGetList'
 
@@ -169,5 +169,14 @@ describe('ToGetList: the complete tile as the empty state (SSP-09)', () => {
   it('shows the list, not the tile, while rows are left', () => {
     setup({ celebration })
     expect(screen.queryByText('Shopping List complete')).toBeNull()
+  })
+})
+
+describe('ToGetList: every button has its own name (P38, batch w5a)', () => {
+  it('a Line and an Ingredient extra of the same Ingredient are told apart', () => {
+    const extra = makeExtra({ id: 9, text: null, ingredientId: 2, name: 'Passata', baseUnit: 'g', quantity: 200 })
+    setup({ rows: toGetRows([passata], [], 'USD', 'metric', [extra]) })
+    const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? '')
+    expect(names).toEqual(['Tick Passata', 'Tick the extra 200 g of Passata'])
   })
 })

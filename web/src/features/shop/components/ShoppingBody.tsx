@@ -11,7 +11,7 @@ import { EmptyState } from '../../../ui/EmptyState'
 import { ListGroup } from '../../../ui/ListRow'
 import { useShopSummary } from '../hooks/useShopSummary'
 import { listEntries, notNeededEntries, type ListEntry } from '../lib/lines'
-import type { RowGroup } from '../lib/rows'
+import { rowNames, type RowGroup } from '../lib/rows'
 import { splitSupplies } from '../lib/supplies'
 import { shopStrings } from '../strings'
 import type { ShoppingList } from '../types'
@@ -80,6 +80,9 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
   const { open, ticked } = listEntries(list, system)
   const { food, supplies } = splitSupplies(open)
   const notNeeded = notNeededEntries(list, system)
+  // batch w5a (P38): two rows of one title on the page (a Line and its "more since your tick" row, a Line and an Ingredient extra) get
+  // names that tell them apart
+  const names = rowNames([...open, ...ticked, ...notNeeded])
   const empty = open.length === 0 && ticked.length === 0
   return (
     <>
@@ -96,7 +99,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
             <div className="shop-lines">
               <ListGroup label={shopStrings.toGet}>
                 {food.map((entry) => (
-                  <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} />
+                  <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} name={names.get(entry.key)} />
                 ))}
               </ListGroup>
             </div>
@@ -112,7 +115,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
             <div className="shop-lines">
               <ListGroup label={shopStrings.supplies}>
                 {supplies.map((entry) => (
-                  <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} />
+                  <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} name={names.get(entry.key)} />
                 ))}
               </ListGroup>
             </div>
@@ -128,14 +131,14 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
             <div className="shop-lines">
               <ListGroup label={shopStrings.ticked}>
                 {ticked.map((entry) => (
-                  <LineRow key={entry.key} entry={entry} group="ticked" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} />
+                  <LineRow key={entry.key} entry={entry} group="ticked" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} name={names.get(entry.key)} />
                 ))}
               </ListGroup>
             </div>
           </section>
         ) : null}
       </KeptGroup>
-      <NotNeededGroup entries={notNeeded} onOpen={onOpenLine} />
+      <NotNeededGroup entries={notNeeded} onOpen={onOpenLine} names={names} />
     </>
   )
 }

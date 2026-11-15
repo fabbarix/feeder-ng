@@ -18,9 +18,11 @@ export interface LineRowProps {
   onOpen: (entry: ListEntry, group: RowGroup) => void
   /** B9-34: this row's tick is in flight (aria-busy and aria-disabled; it stays focusable) */
   pending?: boolean
+  /** batch w5a (P38): the row's name when its title is not unique on the page (lib/rows rowNames); default the title */
+  name?: string
 }
 
-export function LineRow({ entry, group, onTick, onUntick, onOpen, pending }: LineRowProps) {
+export function LineRow({ entry, group, onTick, onUntick, onOpen, pending, name = entry.title }: LineRowProps) {
   const ticked = group === 'ticked'
   const meta = rowMeta(entry)
   const { value, subValue } = rowValue(entry)
@@ -31,7 +33,7 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, pending }: Lin
       <button
         type="button"
         className="line-row__tick"
-        aria-label={shopStrings.tickTitle(entry.title)}
+        aria-label={shopStrings.tickTitle(name)}
         aria-pressed={ticked}
         aria-busy={pending ? true : undefined}
         aria-disabled={pending ? true : undefined}
@@ -47,6 +49,7 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, pending }: Lin
   return (
     <ListRow
       title={entry.title}
+      aria-label={name !== entry.title ? name : undefined}
       onActivate={() => onOpen(entry, group)}
       haspopup="dialog"
       data-state={group}

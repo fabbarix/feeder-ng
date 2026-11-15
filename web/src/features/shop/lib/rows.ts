@@ -133,3 +133,22 @@ export function lineActions(entry: ListEntry, group: RowGroup): LineAction[] {
   }
   return out
 }
+
+/**
+ * Batch w5a (P38: every button on a page has its own accessible name): what a row is called, in its tick ("Tick …") and its target.
+ * A row is called by its title, except where two rows on the page would share it: then the "more since your tick" row is
+ * "750 g more of Chestnut mushrooms" and an Ingredient extra is "the extra 200 g of Chestnut mushrooms"; the plain Line keeps its title.
+ * Returns the names by entry key.
+ */
+export function rowNames(entries: readonly ListEntry[]): Map<string, string> {
+  const count = new Map<string, number>()
+  for (const e of entries) count.set(e.title, (count.get(e.title) ?? 0) + 1)
+  const names = new Map<string, string>()
+  for (const e of entries) {
+    if ((count.get(e.title) ?? 0) < 2) names.set(e.key, e.title)
+    else if (e.moreSince) names.set(e.key, shopStrings.moreOf(e.quantityText, e.title))
+    else if (e.kind === 'extra') names.set(e.key, shopStrings.extraOf(e.quantityText, e.title))
+    else names.set(e.key, e.title)
+  }
+  return names
+}

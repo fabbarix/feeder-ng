@@ -57,6 +57,9 @@ export const shopStrings = {
   extraChooseIngredient: 'Choose an Ingredient',
   howMuch: 'How much?',
   tickTitle: (name: string) => `Tick ${name}`,
+  /** batch w5a (P38): a row's name when another row on the page has the same title */
+  moreOf: (quantity: string, name: string) => (quantity ? `${quantity} more of ${name}` : `more of ${name}`),
+  extraOf: (quantity: string, name: string) => (quantity ? `the extra ${quantity} of ${name}` : `the extra ${name}`),
   tickSave: 'Tick and add to Stock',
   tickOnly: 'Tick without adding',
   untick: (name: string) => `Untick ${name}`,
