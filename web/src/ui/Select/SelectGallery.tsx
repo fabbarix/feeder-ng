@@ -24,12 +24,14 @@ const RECIPES: RecipeChoice[] = [
   { id: 9, name: 'Mushroom risotto', tags: ['Vegetarian'], totalMinutes: 40 },
   { id: 10, name: 'Beef stew', tags: ['Winter', 'Family'], totalMinutes: 150 },
 ]
+const minutes = (id: number) => RECIPES.find((r) => r.id === id)?.totalMinutes ?? Number.MAX_SAFE_INTEGER
 const TAGS = ['Quick', 'Family', 'Weekend', 'Vegetarian', 'Pasta', 'Fish', 'Roast', 'Winter']
 const OPTIONS: SelectOption<number>[] = recipeOptions(RECIPES).map((o, i) => ({ ...o, group: i % 3 === 2 ? 'Sides' : 'Mains' }))
 const FILTERS: SelectFilter<number>[] = TAGS.map((t) => ({ id: t, label: t, predicate: (o) => (o.keywords ?? []).includes(t) }))
 const SORTS: SelectSort<number>[] = [
   { id: 'name', label: 'Name', compare: (a, b) => a.label.localeCompare(b.label) },
-  { id: 'meta', label: 'Time', compare: (a, b) => (a.meta ?? '').localeCompare(b.meta ?? '') },
+  // By the total time itself, not its text ("1 h 15 min" after "45 min"); a Ready Meal or an untimed Recipe last.
+  { id: 'time', label: 'Time', compare: (a, b) => minutes(a.value) - minutes(b.value) },
 ]
 const RANGES = [
   { value: 'fri', label: 'Until Friday 20 November', shortLabel: 'Fri 20' },
