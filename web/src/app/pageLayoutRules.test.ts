@@ -28,7 +28,7 @@ interface Metrics {
   fields: { label: string; type: string; short: boolean; segment: boolean; size: string; w: number; long?: boolean; inline?: boolean }[]
   bars: { cls: string; x: number; r: number; bgAlpha: number }[]
   railContrast: number | null
-  dialog: { x: number; w: number; vw: number } | null
+  dialog: { x: number; w: number; vw: number; vh?: number } | null
 }
 const ok = (over: Partial<Metrics> = {}): Metrics => ({
   vw: 1440, scrollW: 1440, clientW: 1440, over: [], content: { x: 480, r: 1200 }, railR: 240, container: { x: 440, r: 1240 },
