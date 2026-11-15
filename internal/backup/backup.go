@@ -302,6 +302,6 @@ const PreSnapshot1550File = "feeder-pre-1550.db"
 // docs/dev/design/b8-snap.md). SnapshotNamed already accepts it; List and Prune never see it.
 const PreSnapshot1560File = "feeder-pre-1560.db"
 
-// PreSnapshot1570File is the name of the snapshot taken before the beta.9 migrations 1570 to 1578
+// PreSnapshot1570File is the name of the snapshot taken before the beta.9 migrations 1570 to 1579
 // (docs/dev/design/b9-snap.md). SnapshotNamed already accepts it; List and Prune never see it.
 const PreSnapshot1570File = "feeder-pre-1570.db"
