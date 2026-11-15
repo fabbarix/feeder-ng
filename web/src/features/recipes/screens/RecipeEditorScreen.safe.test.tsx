@@ -186,7 +186,8 @@ describe('A reload brings unsaved changes back with a notice', () => {
     await drafts.store.put('recipe', KEY, { draft: kept(), baseUpdatedAt: STORED.updatedAt, savedAt: Date.now() - 60_000 })
     mount()
     await ready('Roast tray, my way')
-    expect(unsaved()).toBe('true')
+    // The dirty flag is set by an effect after the restored draft renders: waited for, not read at once (it failed under load).
+    await waitFor(() => expect(unsaved()).toBe('true'))
     await userEvent.click(screen.getByRole('link', { name: 'Plan' }))
     expect(await screen.findByRole('dialog', { name: 'Leave without saving?' })).toBeInTheDocument()
   })
