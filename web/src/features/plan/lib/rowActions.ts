@@ -25,3 +25,28 @@ export function slotHead(slot: PlanSlot, today: string, hasDateActions: boolean)
     menu: slotMenu(slot, today, hasDateActions) !== null,
   }
 }
+
+// B9-38 (PC-09, SHORT-02): the footer of the Planned Meal sheet.
+export type SheetActionId = 'cook' | 'reheat' | 'markCooked' | 'notCooked' | 'swap' | 'pin' | 'unpin' | 'choose' | 'undoCooked' | 'cookedAfterAll' | 'undoNotCooked'
+
+export interface SheetAction {
+  id: SheetActionId
+  /** A ⋮ item that cannot be used yet (Mark as Cooked on a future date). */
+  disabled?: boolean
+  /** Why it is disabled, as the item's trailing words: "from Mon 16". */
+  note?: string
+}
+
+export interface SheetActionSet {
+  /** The one primary Button of the footer; null when the state has none. */
+  primary: SheetAction | null
+  /** The one outlined secondary Button; null when the state has none. */
+  secondary: SheetAction | null
+  /** The items of the footer's ⋮ "More for <Sun Dinner>", in order. */
+  more: SheetAction[]
+}
+
+/** What the Planned Meal sheet's footer offers for a meal on `date` (household dates). Never more than a primary and a secondary button. */
+export function sheetActions(_meal: PlannedMeal, _ctx: { date: string; today: string; offline?: boolean }): SheetActionSet {
+  throw new Error('sheetActions: not implemented (B9-38)')
+}

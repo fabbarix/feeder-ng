@@ -33,3 +33,12 @@ export function alternativeNote(alternative: Alternative, ctx: PhraseContext): s
   }
   return phraseAll(alternative.why, ctx)[0]
 }
+
+/**
+ * B9-38 (PC-10): Choose a Recipe's groups for a Course. A Course other than the main one splits the Recipes into those marked with
+ * it ("Marked as Dessert") and the others ("Other Recipes", each with the info chip "Not marked as Dessert"); the main Course is one
+ * group (`marked` holds every Recipe, `other` is empty). Each group keeps the order it was given.
+ */
+export function chooseGroups(_recipes: RecipeChoice[], _course: { id: number; main: boolean }): { marked: RecipeChoice[]; other: RecipeChoice[] } {
+  throw new Error('chooseGroups: not implemented (B9-38)')
+}

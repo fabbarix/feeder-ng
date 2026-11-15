@@ -138,3 +138,12 @@ export function daySpans(count: number, columns: number): number[] {
   const rest = count - full
   return Array.from({ length: Math.max(0, count) }, (_, i) => (i < full ? GRID_TRACKS / cols : GRID_TRACKS / rest))
 }
+
+/**
+ * B9-38 (PC-10): the context line above a sheet opened from a meal: "Tue 17 · Breakfast · Main" (Swap, Choose a Recipe) or
+ * "Sun 15 · Dinner 19:00 · Side" (the Planned Meal sheet, which passes the slot's `time`). The short weekday and the day of the
+ * month, never an ISO date. `courseName` is left out when the caller does not pass one.
+ */
+export function slotContext(_p: { date: string; slotName: string; time?: string; courseName?: string }): string {
+  throw new Error('slotContext: not implemented (B9-38)')
+}
