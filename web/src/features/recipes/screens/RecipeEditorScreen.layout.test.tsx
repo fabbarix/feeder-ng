@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Page } from '../../../ui'
 import { flour, garlic } from '../fixtures.test-helper'
@@ -16,12 +16,12 @@ vi.mock('../hooks/useIngredientRefs', () => ({
 }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter, safeEditorFields } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const view = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={['/recipes/new']}>
-        <Routes>
+      <EditorRouter initialEntries={['/recipes/new']}>
           <Route
             path="/recipes/new"
             element={
@@ -30,13 +30,13 @@ const view = () =>
               </Page>
             }
           />
-        </Routes>
-      </MemoryRouter>
+      </EditorRouter>
     </QueryClientProvider>,
   )
 
 beforeEach(() => {
   h.editor = {
+    ...safeEditorFields(),
     draft: {
       ...emptyDraft(), name: 'Aioli',
       lines: [{ key: 'l1', ingredientId: 7, ingredientName: 'garlic', quantity: '3', unit: 'clove', optional: false, note: '' }],

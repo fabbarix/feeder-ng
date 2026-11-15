@@ -1,8 +1,14 @@
 // Recipes strings, editor area (WP-RX-0): the Recipe editor, its fields, lines, Steps, Base recipes and error codes.
 // Glossary terms only (Recipe, Yield, Ready Meal, Step, Advance Step, Tag, Favourite, Dislike, Exclusion, Unit Conversion, Member,
 // Cool-down, Use-by). Re-exported as part of recipeStrings by ../strings.ts.
+const capitalised = (name: string) => name.charAt(0).toUpperCase() + name.slice(1)
+const lineThing = (name: string, n: number) => (name.trim() ? `${capitalised(name.trim())} line` : `Line ${n}`)
+const useThing = (name: string) => (name.trim() ? `${capitalised(name.trim())} use` : 'Ingredient use')
+
 export const recipeEditorStrings = {
   editRecipe: 'Edit Recipe',
+  /** The leave and discard dialogs' word for a Recipe not saved yet ("This new Recipe is not saved."). */
+  recipeNoun: 'Recipe',
   newTag: 'New',
   /** BR-D: the Base recipe copy (design §13): the switch, the Yield, the picker, Needed at, the list kind, the link flows. */
   baseRecipe: {
@@ -148,6 +154,17 @@ export const recipeEditorStrings = {
     usesLine: (parts: string) => `Uses ${parts}`,
     stepNumber: (n: number) => `Step ${n}`,
     empty: 'No Steps. A Recipe can be made without them.',
+  },
+  /** B9-31 (SAFE-10): the Undo toasts of a removal. A name is capitalised; a line with no Ingredient is "Line 3". */
+  removed: {
+    step: (n: number) => `Step ${n} removed`,
+    line: (name: string, n: number) => `${lineThing(name, n)} removed`,
+    use: (name: string, step: number) => `${useThing(name)} removed from Step ${step}`,
+    undo: {
+      step: (n: number) => `Undo: put Step ${n} back`,
+      line: (name: string, n: number) => `Undo: put ${lineThing(name, n)} back`,
+      use: (name: string, _step?: number) => `Undo: put ${useThing(name)} back`,
+    },
   },
   generic: 'The Recipe could not be saved.',
   checkFields: 'Check the fields marked above.',

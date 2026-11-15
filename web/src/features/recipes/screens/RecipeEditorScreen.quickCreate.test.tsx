@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { Route, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
 import { ingredientsApi } from '../../ingredients/api'
@@ -20,6 +20,7 @@ vi.mock('../api', () => ({
 vi.mock('../../ingredients/api', () => ({ ingredientsApi: { create: vi.fn(), search: vi.fn() } }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const rApi = vi.mocked(recipesApi)
 const iApi = vi.mocked(ingredientsApi)
@@ -32,13 +33,11 @@ const Where = () => <p data-testid="where">{useLocation().pathname}</p>
 function view(path = '/recipes/new') {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
+      <EditorRouter initialEntries={[path]}>
           <Route path="/recipes/new" element={<><RecipeEditorScreen /><Where /></>} />
           <Route path="/recipes/:id/edit" element={<><RecipeEditorScreen /><Where /></>} />
           <Route path="*" element={<Where />} />
-        </Routes>
-      </MemoryRouter>
+      </EditorRouter>
     </QueryClientProvider>,
   )
 }
@@ -194,7 +193,8 @@ describe('Ready Meal creates its Ingredient', () => {
     await userEvent.type(recipeName(), 'Fish pie pack')
     await tickReadyMeal()
     await userEvent.click(screen.getByRole('button', { name: recipeStrings.save }))
-    const alert = await screen.findByRole('alert')
+    // B9-31: the save error is the form's FormError; the ToastProvider's empty alert region is not it.
+    const alert = await waitFor(() => screen.getAllByRole('alert').find((el) => !el.classList.contains('toast-live'))!)
     expect(alert).toHaveTextContent("An Ingredient with this Recipe's name was just added. Save again.")
     expect(alert).not.toHaveTextContent(recipeStrings.generic)
   })
