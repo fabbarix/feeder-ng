@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { Button, Icon, Tile } from '../../../ui'
+import { importStrings as s } from '../strings'
 
 export interface ImportReviewNoticeProps {
   /** Recipes the import will save (not skipped). */
@@ -12,7 +14,36 @@ export interface ImportReviewNoticeProps {
   onGoToFirst: () => void
 }
 
-/** B9-28 (RX-01): stub, not built yet. See ImportReviewNotice.test.tsx. */
-export function ImportReviewNotice(_props: ImportReviewNoticeProps): ReactNode {
-  return null
+const t = s.reviewRows
+
+/**
+ * B9-28 (RX-01): the notice at the top of Import Review, a status. With questions open it is info-toned and offers "Go to the first
+ * question"; with none it says the import is ready (success); with every Recipe skipped it says so.
+ */
+export function ImportReviewNotice({ recipes, ingredients, questions, allSkipped, onGoToFirst }: ImportReviewNoticeProps): ReactNode {
+  const open = questions > 0
+  const counts = t.noticeCounts(recipes, ingredients)
+  return (
+    <Tile as="section" variant="status" status={open ? 'info' : 'success'} className="import-notice" role="status">
+      <p className="import-notice__text">
+        <Icon name={open ? 'info' : 'success'} size={20} />
+        <span>
+          {allSkipped ? (
+            t.allSkipped
+          ) : open ? (
+            <>
+              {counts}. <strong>{t.questionsToAnswer(questions)}</strong> {t.beforeImporting}
+            </>
+          ) : (
+            `${counts}, ${t.readyToImport}`
+          )}
+        </span>
+      </p>
+      {open && !allSkipped ? (
+        <Button variant="secondary" size="sm" onClick={onGoToFirst}>
+          {t.goToFirst}
+        </Button>
+      ) : null}
+    </Tile>
+  )
 }

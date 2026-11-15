@@ -35,11 +35,6 @@
   overflow-wrap: anywhere;
 }
 
-.import-review__empty {
-  margin: 0;
-  color: var(--color-muted);
-}
-
 .import-chips {
   display: flex;
   flex-wrap: wrap;
@@ -70,19 +65,6 @@
   white-space: normal;
   overflow-wrap: anywhere;
   line-height: var(--text-label-line);
-}
-
-/* The Confirm bar's "N things left to answer" sits before the actions inside the shared StickyActionBar. */
-.import-confirm__open {
-  margin: 0 0 var(--space-2);
-  color: var(--color-muted);
-}
-
-.import-done {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
 }
 
 .export-picker {
@@ -483,4 +465,432 @@
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
+}
+
+/* ---- B9-28: the two paths (RX-11), Import Review's rows (RX-01, RX-12), the Import actions bar, the result, Export's bar (RX-15). ---- */
+
+/* RX-11: two choices, stacked below 45 em and side by side from 45 em. No step numbers. */
+.import-start {
+  display: grid;
+  gap: var(--bento-gap);
+  align-items: start;
+  min-inline-size: 0;
+}
+
+@media (width >= 45em) {
+  .import-start {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.import-path {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.import-path h2 {
+  margin: 0;
+}
+
+.import-path__meta {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+}
+
+/* The Recipe File's drop zone: "Choose a file" on one line with its icon; its frame label repeats the overline, so it is read only. */
+.recipe-file-tile .ui-field__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.recipe-file-tile .file-drop {
+  grid-auto-flow: column;
+  justify-content: start;
+  align-items: center;
+  padding: var(--space-4);
+  border-radius: var(--radius-tile-sm);
+}
+
+/* R-A: "Choose a file" is an outlined button like every action of the tile. */
+.recipe-file-tile .file-drop__button {
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  color: var(--color-text);
+}
+
+/* A touch screen has no drag and drop: the zone is just the button. */
+@media (pointer: coarse) {
+  .recipe-file-tile .file-drop {
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .recipe-file-tile .file-drop + .ui-field__helper {
+    display: none;
+  }
+}
+
+.import-path__paste {
+  align-self: flex-start;
+}
+
+.import-path__paste-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.import-path__paste-panel .ui-field {
+  align-self: stretch;
+}
+
+.import-path__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-line);
+}
+
+/* RX-01: the notice, then the tiles of the review. */
+.import-review__start:focus {
+  outline: none;
+}
+
+.import-notice {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.import-notice__text {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.import-notice__text > svg {
+  flex: none;
+  margin-block-start: 2px;
+}
+
+.import-tile-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+.import-tile-head h2 {
+  margin: 0;
+}
+
+.import-tile-head__meta {
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-preview,
+.ingredient-matches,
+.import-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+/* A question reached by "Go to the first question" or "Next question" clears the sticky bar, and its row shows where focus is. */
+.import-review [tabindex='-1'] {
+  scroll-margin-block: var(--space-4) calc(var(--sticky-bar-clearance, var(--row-min)) + var(--space-4));
+  outline: none;
+}
+
+.import-review .list-row:has(.import-row__title:focus-visible),
+.import-review .list-row:has(> .list-row__text .import-row__title:focus) {
+  box-shadow: inset 0 0 0 var(--focus-ring-width) var(--focus-ring-color);
+}
+
+.import-review .tile[data-question]:focus {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* R-E rows: the state at the row's end in body-strong; a question's state is info-toned text, never a chip. */
+.import-row__state {
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.import-row__state[data-tone='info'] {
+  color: var(--color-info-fg);
+}
+
+.import-review .list-row__trailing,
+.import-result .list-row__trailing {
+  gap: var(--space-2);
+}
+
+/* Long Recipe names wrap (to two lines) instead of being cut. */
+.recipe-preview .list-row__title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* The answers and the panel of a row sit under its text, past the 40 px picture; on a phone they take the row's width. */
+.import-review .list-row__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-inline-start: calc(40px + var(--space-3));
+  padding-block-end: var(--space-3);
+}
+
+.import-review .list-row__footer:empty {
+  display: none;
+}
+
+.import-row__answers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* Replace, Keep both and Skip are one choice: it never wraps. */
+.import-row__choices {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+
+.import-row__choices .choice-chip {
+  white-space: nowrap;
+}
+
+.import-row__unit,
+.import-row__new-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.recipe-preview__expand svg {
+  transform: rotate(90deg);
+}
+
+.recipe-preview__expand[aria-expanded='true'] svg {
+  transform: rotate(-90deg);
+}
+
+/* The read-only panel of a Recipe row: Ingredients and Steps as R-E rows, then one meta line. */
+.recipe-preview__panel {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.recipe-preview__heading {
+  margin: var(--space-2) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+}
+
+.recipe-preview__step {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.recipe-preview__step-number {
+  flex: none;
+  min-inline-size: var(--space-4);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Step rule: the Step text is body weight 500, never bold. */
+.recipe-preview__step-text {
+  min-inline-size: 0;
+  font-weight: 500;
+}
+
+.recipe-preview__facts {
+  margin: var(--space-2) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  overflow-wrap: anywhere;
+}
+
+/* RX-12: the closing "5 match your Ingredients" row: a success CheckCircle and an outlined 40 px caret. */
+.ingredient-matches__exact-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  color: var(--status-success-fg);
+}
+
+.import-caret {
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  color: var(--color-text);
+}
+
+.import-caret svg {
+  transform: rotate(90deg);
+}
+
+.list-row[data-expanded='true'] .import-caret svg {
+  transform: rotate(-90deg);
+}
+
+.ingredient-matches__exact {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The Import actions bar: one row at every width. The meta shrinks; the buttons keep their size. */
+.import-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-3);
+  inline-size: 100%;
+}
+
+.import-bar__meta {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+}
+
+.import-bar .button {
+  flex: none;
+}
+
+/* Below 600 px "Next question" is a 44 px icon-only button; its label stays its accessible name. A row's answers and panel take the
+   row's width. */
+@media (width < 37.5em) {
+  .import-review .list-row__footer {
+    padding-inline-start: 0;
+  }
+
+  .import-bar__next {
+    inline-size: 44px;
+    min-inline-size: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .import-bar__next-label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* The result: the success heading, the rows, "Also added", the actions. */
+.import-result__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--status-success-fg);
+}
+
+.import-result__head h2 {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.import-result__subhead {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+}
+
+.import-result__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* RX-15: the Export bar, always there: the count, then the download. */
+.export-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+}
+
+.export-bar__meta {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+}
+
+.export-bar .form-actions {
+  flex: none;
+  inline-size: auto;
+}
+
+.export-bar .form-actions .button {
+  inline-size: auto;
+}
+
+.export-picker__none {
+  margin: 0;
+  color: var(--color-muted);
 }
