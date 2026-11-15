@@ -18,6 +18,8 @@ export interface UseTickFlowOptions {
   system: UnitSystem
   /** the Undo toast's duration; omitted = the Undo default (8 s). Scan passes 5000. */
   durationMs?: number
+  /** A11Y-07: a tick was undone (its row comes back): the screen puts the focus back on that row's tick. */
+  onUndone?: (entry: ListEntry) => void
 }
 
 export interface TickFlow {
@@ -36,7 +38,7 @@ export interface TickFlow {
   untick(entry: ListEntry): Promise<void>
 }
 
-export function useTickFlow({ to, shopId, system, durationMs }: UseTickFlowOptions): TickFlow {
+export function useTickFlow({ to, shopId, system, durationMs, onUndone }: UseTickFlowOptions): TickFlow {
   const actions = useShoppingActions()
   const undoToast = useUndoToast()
   const inFlight = useRef(new Set<string>())
@@ -91,9 +93,10 @@ export function useTickFlow({ to, shopId, system, durationMs }: UseTickFlowOptio
       const added = result.added ?? 0
       const undo = async () => {
         // the More row's tick is taken off as if never made, so the More comes back (a PATCH to 0 would keep it covered)
-        if (entry.moreSince) return actions.untickAddition(clientUuid)
-        if (plan.kind === 'line') return actions.untick(plan.request.ingredientId, end)
-        return actions.untickExtra(plan.request.extraId)
+        if (entry.moreSince) await actions.untickAddition(clientUuid)
+        else if (plan.kind === 'line') await actions.untick(plan.request.ingredientId, end)
+        else await actions.untickExtra(plan.request.extraId)
+        onUndone?.(entry)
       }
       undoToast.show({
         headline: shopStrings.tickedToast(entry.title),
@@ -103,7 +106,7 @@ export function useTickFlow({ to, shopId, system, durationMs }: UseTickFlowOptio
         ...(durationMs !== undefined ? { durationMs } : {}),
       })
     },
-    [to, shopId, busy, send, setAddition, actions, undoToast, amount, durationMs],
+    [to, shopId, busy, send, actions, undoToast, amount, durationMs, onUndone],
   )
 
   const change = useCallback(

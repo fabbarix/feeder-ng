@@ -53,7 +53,11 @@ export function ShoppingScreen() {
   // B9-34: times of ticks are the Household's; while its zone is unknown no time is shown (never the device's).
   const timeZone = useMe().data?.householdTimeZone ?? null
   // B9-34 (SSP-01): one tap ticks; the toast offers Change and Undo; the ticked sheet's Take back, Change amount and Untick.
-  const flow = useTickFlow({ to: data?.to, shopId: choice.shopId, system })
+  // A11Y-07: after an Undo the restored row's tick takes the focus back
+  const [restoreFocusKey, setRestoreFocusKey] = useState<string | null>(null)
+  const onUndone = useCallback((entry: ListEntry) => setRestoreFocusKey(entry.key), [])
+  const onFocusRestored = useCallback(() => setRestoreFocusKey(null), [])
+  const flow = useTickFlow({ to: data?.to, shopId: choice.shopId, system, onUndone })
 
   // B9-20 (RES-06): a failed action is a toast that names it ("Couldn’t mark Passata Not needed"), with Try again running
   // the same action; a refusal with its own message is that one line. The inline ErrorState is for load failures only.
@@ -179,6 +183,8 @@ export function ShoppingScreen() {
           onScan={() => navigate('/scan')}
           onMarkIt={(slot) => navigate(markSlotPath(slot))}
           pendingKeys={flow.pendingKeys}
+          restoreFocusKey={restoreFocusKey}
+          onFocusRestored={onFocusRestored}
         />
       ) : null}
       <LineSheet

@@ -16,6 +16,10 @@ describe('lineEntry: what a tap sends and what a tick says', () => {
     })
   })
 
+  it('"What the Line needed" of an open Line is what is still to get (its Stock already counted), not the whole need', () => {
+    expect(lineEntry(makeGarlic({ need: 1350, available: 650, quantity: 700, pack: null }), 'USD', 'metric')).toMatchObject({ need: 700, defaultAmount: 700 })
+  })
+
   it('without a pack the default amount is what is still to get and there is no pack choice', () => {
     expect(lineEntry(makeGarlic({ pack: null }), 'USD', 'metric')).toMatchObject({ defaultAmount: 150, packChoice: null })
   })

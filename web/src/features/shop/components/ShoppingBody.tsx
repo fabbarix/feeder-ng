@@ -4,7 +4,7 @@
 // B9-34 (A11Y-07): each list keeps the focus of a row that leaves it (a tick, an untick, Not needed): the next row's tick, else the
 // previous one's, else a section heading (ui/lib/useFocusKeeper). Each group sits in a wrapper that stays mounted (display: contents) so
 // the keeper still sees the last row leave.
-import { useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { useFocusKeeper } from '../../../ui/lib/useFocusKeeper'
 import { EmptyState } from '../../../ui/EmptyState'
 import { ListGroup } from '../../../ui/ListRow'
@@ -34,6 +34,23 @@ export interface ShoppingBodyProps {
   onMarkIt?: (slot: { date: string; mealSlotId: number }) => void
   /** B9-34: the keys of the rows whose tick is in flight (their tick is busy) */
   pendingKeys?: ReadonlySet<string>
+  /**
+   * B9-34 (A11Y-07): the key of a row whose tick takes the focus when it is (back) among the open rows, after an Undo; the focus moves only when it
+   * was lost (on <body>), in a toast or on another row, never from a place the person chose. `onFocusRestored` clears it.
+   */
+  restoreFocusKey?: string | null
+  onFocusRestored?: () => void
+}
+
+function useRestoreFocus(key: string | null | undefined, list: ShoppingList, done: (() => void) | undefined) {
+  useEffect(() => {
+    if (!key) return
+    const tick = document.querySelector<HTMLElement>(`.shop-lines .list-row[data-state="open"][data-focus-key="${CSS.escape(key)}"] .line-row__tick`)
+    if (!tick) return
+    const active = document.activeElement
+    if (!active || active === document.body || active.closest('.toast, .shop-lines')) tick.focus()
+    done?.()
+  }, [key, list, done])
 }
 
 /** A group's stable wrapper with its focus keeper; the heading is its own, else the first section heading left on the page. */
@@ -52,7 +69,8 @@ function KeptGroup({ children }: { children: ReactNode }) {
   )
 }
 
-export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenLine, onScan, onMarkIt, pendingKeys }: ShoppingBodyProps) {
+export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenLine, onScan, onMarkIt, pendingKeys, restoreFocusKey, onFocusRestored }: ShoppingBodyProps) {
+  useRestoreFocus(restoreFocusKey, list, onFocusRestored)
   const { summary, notice } = useShopSummary(list, shopName)
   const suppliesTitleId = useId()
   const { open, ticked } = listEntries(list, system)

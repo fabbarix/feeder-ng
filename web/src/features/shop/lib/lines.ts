@@ -54,8 +54,8 @@ export interface ListEntry {
    */
   defaultAmount?: number
   /**
-   * B9-34: what the Line needed in total (the server's `need`); for the Change sheet's "What the Line needed". An Ingredient extra's own
-   * quantity; 0 for free text.
+   * B9-34: the Change sheet's "What the Line needed": an open Line's quantity still to get (what one tap would have had to cover), a
+   * ticked Line's need (the server's `need`: its quantity left is 0). An Ingredient extra's own quantity; 0 for free text.
    */
   need?: number
   /** B9-34: the suggested pack as the Change sheet's chip says it ("1 × Garlic organic pack", 500 g each pack); null without one. */
@@ -104,7 +104,8 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     restockCompact:
       line.kind === 'supply' && line.restock && !line.ticked ? restockText(line.restock, line.baseUnit, system, { compact: true }) : '',
     defaultAmount: defaultTickAmount(line),
-    need: line.need,
+    // "What the Line needed" (the Change sheet): what was still to get when it was ticked; a ticked Line, the server's need
+    need: line.ticked ? line.need : line.quantity,
     packChoice: line.pack ? { count: line.pack.count, name: line.pack.name, size: line.pack.size } : null,
     tick: line.tick ?? null,
     tickMeta: line.ticked ? tickedMeta(line.tick, line.baseUnit, system) : null,

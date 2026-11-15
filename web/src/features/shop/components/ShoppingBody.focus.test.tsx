@@ -2,7 +2,7 @@
 // the next row's tick in the same list, else the previous row's, else a heading (never <body>). The lists are ListGroups that keep focus
 // through useFocusKeeper (ui/lib), each row marked data-focus-key by LineRow.
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { makeLine, makeList, makeTick } from '../testData'
 import { ShoppingBody } from './ShoppingBody'
 
@@ -58,5 +58,26 @@ describe('ShoppingBody: focus after a row leaves To get', () => {
     update([ticked(1, 'Dill'), line(2, 'Rice')])
     await Promise.resolve()
     expect(screen.getByRole('button', { name: 'Scan' })).toHaveFocus()
+  })
+})
+
+describe('ShoppingBody: focus back on a row after an Undo (A11Y-07)', () => {
+  it('the row named by restoreFocusKey takes the focus on its tick once it is back, and the screen is told', async () => {
+    const onFocusRestored = vi.fn()
+    const lines = [line(1, 'Dill'), line(2, 'Rice')]
+    const view = render(<ShoppingBody {...base} list={makeList({ lines: [ticked(1, 'Dill'), line(2, 'Rice')] })} restoreFocusKey="line:1" onFocusRestored={onFocusRestored} />)
+    expect(onFocusRestored).not.toHaveBeenCalled() // Dill is not open yet
+    view.rerender(<ShoppingBody {...base} list={makeList({ lines })} restoreFocusKey="line:1" onFocusRestored={onFocusRestored} />)
+    expect(tick('Dill')).toHaveFocus()
+    expect(onFocusRestored).toHaveBeenCalledOnce()
+  })
+
+  it('never takes the focus from a place the person chose (outside the lists and the toast)', () => {
+    const onFocusRestored = vi.fn()
+    const view = render(<ShoppingBody {...base} list={makeList({ lines: [line(1, 'Dill')] })} />)
+    screen.getByRole('button', { name: 'Scan' }).focus()
+    view.rerender(<ShoppingBody {...base} list={makeList({ lines: [line(1, 'Dill'), line(3, 'Salt')] })} restoreFocusKey="line:3" onFocusRestored={onFocusRestored} />)
+    expect(screen.getByRole('button', { name: 'Scan' })).toHaveFocus()
+    expect(onFocusRestored).toHaveBeenCalledOnce()
   })
 })

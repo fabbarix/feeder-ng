@@ -152,6 +152,18 @@ describe('useTickFlow: Undo', () => {
     expect(actions.untickAddition).toHaveBeenCalledExactlyOnceWith(sent.clientUuid)
   })
 
+  it('a done Undo tells the screen which row came back (A11Y-07: its tick takes the focus); a refused one does not', async () => {
+    const onUndone = vi.fn()
+    const { result } = setup({ onUndone })
+    await act(() => result.current.tick(garlic))
+    await act(() => shown().undo({ focusWasInToast: true }))
+    expect(onUndone).toHaveBeenCalledExactlyOnceWith(garlic)
+    actions.untick.mockRejectedValueOnce(new ApiError(409, 'not_undoable', 'x'))
+    await act(() => result.current.tick(garlic))
+    await expect(shown().undo({ focusWasInToast: true })).rejects.toBeInstanceOf(ApiError)
+    expect(onUndone).toHaveBeenCalledOnce()
+  })
+
   it('a refused Undo rejects, so the Undo toast shows "Nothing was undone" with the reason', async () => {
     actions.untick.mockRejectedValue(new ApiError(409, 'not_undoable', 'x'))
     const { result } = setup()
