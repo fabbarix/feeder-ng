@@ -4,6 +4,9 @@
 :root {
   --field-pad-inline: var(--space-3);
   --field-border-width: 1.5px;
+  /* A disabled field control (Field, DateField, Select, TimeField): no fill, a faint outline (w6a). */
+  --field-disabled-bg: transparent;
+  --field-disabled-border: color-mix(in srgb, var(--color-outline) 40%, transparent);
   --field-size-xs: 112px;
   --field-size-sm: 168px;
   --field-size-md: 320px;
@@ -155,6 +158,15 @@ legend.ui-field__label {
   color: var(--color-muted);
 }
 
+/* w6a (B9-46 follow-up): a disabled field reads as not editable at a glance: no fill and a faint outline, the same in every field
+   (Field, DateField, Select, TimeField), not only paler text. Only when its entry is disabled: a stepper at its minimum (a disabled −)
+   is still a field. */
+.ui-field__control:has(:is(input, textarea, [role='spinbutton']):disabled) {
+  color: var(--color-muted);
+  background: var(--field-disabled-bg);
+  border-color: var(--field-disabled-border);
+}
+
 .ui-field__control:has(:disabled) .ui-field__input {
   color: var(--color-muted);
 }
@@ -163,7 +175,9 @@ legend.ui-field__label {
   color: var(--color-muted);
 }
 
-.ui-field:has(.ui-field__control:has(:disabled)) .ui-field__label {
+.ui-field:has(.ui-field__control:has(:disabled)) .ui-field__label,
+.ui-field:has(.date-field__trigger:disabled) .ui-field__label,
+.ui-field:has(.select__trigger:disabled) .ui-field__label {
   color: var(--color-muted);
 }
 

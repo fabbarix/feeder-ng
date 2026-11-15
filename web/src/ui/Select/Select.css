@@ -38,6 +38,8 @@
 
 .select__trigger:disabled {
   color: var(--color-muted);
+  background: var(--field-disabled-bg);
+  border-color: var(--field-disabled-border);
   cursor: default;
 }
 
