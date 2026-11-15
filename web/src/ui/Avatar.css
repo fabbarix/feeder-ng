@@ -29,3 +29,9 @@
 .avatar[data-coloured='true'] {
   box-shadow: 0 0 0 2px var(--avatar-colour);
 }
+
+/* SET-12: a person who is not a Member (a sign-in request) gets a neutral monogram: muted on surface-2 (5.93:1 light, 7.49:1 dark). */
+.avatar[data-tone='neutral'] {
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+}

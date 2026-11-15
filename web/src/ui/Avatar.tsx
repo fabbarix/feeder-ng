@@ -15,16 +15,16 @@ export interface AvatarProps {
 }
 
 /** A person's picture; when there is none, or it fails to load, the emoji (`glyph`) or their initials. A new address gets a new try. */
-export function Avatar({ name, imageUrl, size = 'md', colour, glyph }: AvatarProps) {
+export function Avatar({ name, imageUrl, size = 'md', colour, glyph, tone }: AvatarProps) {
   // The colour is data: it goes in a custom property, and the stylesheet draws it as a ring.
   const [failed, setFailed] = useState('')
   const ring = colour ? ({ '--avatar-colour': colour } as CSSProperties) : undefined
   const coloured = colour ? 'true' : undefined
   if (imageUrl && failed !== imageUrl) {
-    return <img className="avatar" data-size={size} data-coloured={coloured} style={ring} src={imageUrl} alt={name} onError={() => setFailed(imageUrl)} />
+    return <img className="avatar" data-size={size} data-coloured={coloured} data-tone={tone} style={ring} src={imageUrl} alt={name} onError={() => setFailed(imageUrl)} />
   }
   return (
-    <span className="avatar" data-size={size} data-coloured={coloured} style={ring} role="img" aria-label={name}>
+    <span className="avatar" data-size={size} data-coloured={coloured} data-tone={tone} style={ring} role="img" aria-label={name}>
       {glyph || initials(name)}
     </span>
   )
