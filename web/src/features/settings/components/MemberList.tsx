@@ -1,5 +1,6 @@
 import { Button, EmptyState, ListGroup, ListRow } from '../../../ui'
 import { settingsStrings } from '../strings'
+import type { Away } from '../../plan/types'
 import type { Member } from '../types'
 import { MemberAvatar } from './MemberAvatar'
 import '../settings.css'
@@ -11,6 +12,9 @@ export interface MemberListProps {
   linkedUserNames?: Record<number, string>
   onAdd: () => void
   onEdit: (member: Member) => void
+  /** B9-46 (SET-16): each Member's running and coming Aways (soonest first), by Member id, and the Household's today. */
+  aways?: Record<number, Away[]>
+  today?: string
 }
 
 const text = settingsStrings.member

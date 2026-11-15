@@ -34,6 +34,8 @@ export interface DateAttendancePanelProps {
   onClose: () => void
   /** Passed to the Attendance rows (B9-46's "Eats here anyway" for a Member who is away), rendered under the Member's name. */
   memberExtra?: AttendanceEditorProps['memberExtra']
+  /** B9-46 (PC-08): "Someone away for more days? Add an Away" under the Members; the button calls this. Absent: no such line. */
+  onAddAway?: () => void
   locale?: string
 }
 

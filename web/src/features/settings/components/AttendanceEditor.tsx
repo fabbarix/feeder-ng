@@ -3,7 +3,7 @@ import { Checkbox, Muted, Stepper } from '../../../ui'
 import { MemberAvatar } from './MemberAvatar'
 import { effectiveFactor, formatPortionsNeeded, MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP, portionsNeeded, withFactor } from '../lib/portions'
 import { settingsStrings } from '../strings'
-import type { AttendanceEntry, Member } from '../types'
+import type { AttendanceEntry, DateAway, Member } from '../types'
 import '../settings.css'
 
 export interface AttendanceEditorProps {
@@ -12,6 +12,8 @@ export interface AttendanceEditorProps {
   onChange: (next: AttendanceEntry[]) => void
   /** B9-46 plugs the Away "Eats here anyway" control in here: rendered in the Member's row, under the name. */
   memberExtra?: (member: Member, entry: AttendanceEntry | undefined) => ReactNode
+  /** B9-46 (PC-08): the Members an Away covers here: their row reads "Away Tue 17 – Thu 19" with an "<Name> eats here anyway" switch. */
+  away?: DateAway[]
 }
 
 const text = settingsStrings.attendance

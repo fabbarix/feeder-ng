@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Tile } from '../../../ui'
 import type { DayGroup } from '../lib/days'
+import type { Away } from '../types'
 import type { MealTileProps } from './MealTile'
 import { MealTile } from './MealTile'
 import '../plan.css'
@@ -11,6 +12,10 @@ export interface DayTileProps extends Omit<MealTileProps, 'slot'> {
   span?: number
   /** B9-32: the day has the whole row: its Meal Slots lie side by side (data-row). */
   wholeRow?: boolean
+  /** B9-46 (PC-08): the plan's Aways (GET /api/plan `away`): the day's Away lines and the slots' "Ben away" labels read them. */
+  aways?: Away[]
+  /** B9-46: the day's Away line opens that Away. */
+  onAway?: (away: Away) => void
 }
 
 /**
