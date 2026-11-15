@@ -56,7 +56,7 @@ describe('DS-02 / R-F: one squircle system in the bottom bar', () => {
       expect(d['inline-size'], sel).toBe('100%')
       expect(d['block-size'], sel).toBe('auto')
       expect(d['min-width'], sel).toBe('0')
-      expect(d['gap'], sel).toBe('2px')
+      expect(d['gap'], sel).toBe('var(--space-half)') // 2 px (DS-11: tokens, never raw px)
       expect(d['background'], sel).toBe('none')
       expect(d['box-shadow'], sel).toBe('none')
       expect(d['border-radius'], sel).toBe('var(--radius-button)')
@@ -114,7 +114,7 @@ describe('A1: icons only at 375 px and below (width < 23.5em)', () => {
     const d = at('.bottom-bar', [NARROW])
     expect(d['left']).toBe('calc(var(--space-1) + env(safe-area-inset-left, 0px))')
     expect(d['right']).toBe('calc(var(--space-1) + env(safe-area-inset-right, 0px))')
-    expect(d['padding-inline']).toBe('6px')
+    expect(d['padding-inline']).toBe('calc(var(--space-1) + var(--space-half))') // 6 px (DS-11)
     expect(d['column-gap']).toBe('0')
   })
 
@@ -134,7 +134,7 @@ describe('SHORT-04: short narrow, a phone window under 500 px tall and under 600
   it('the bar is 52 px tall with an 8 px inset, 6 px of inline padding and no gap', () => {
     expect(at(':root', SHORT_NARROW)).toMatchObject({ '--nav-height': '52px', '--nav-inset': '8px' })
     const d = at('.bottom-bar', SHORT_NARROW)
-    expect(d['padding-inline']).toBe('6px')
+    expect(d['padding-inline']).toBe('calc(var(--space-1) + var(--space-half))') // 6 px (DS-11)
     expect(d['column-gap']).toBe('0')
   })
 
@@ -208,14 +208,14 @@ describe('SHORT-04 / SHORT 1: a 64 px compact rail in phone landscape (height < 
     const pill = at('.side-rail__pill', COMPACT)
     expect(pill['width'] ?? pill['inline-size']).toBe('44px')
     expect(pill['height'] ?? pill['block-size']).toBe('26px')
-    expect(pill['border-radius']).toBe('13px')
+    expect(pill['border-radius']).toBe('var(--radius-pill)') // 13 px on the 26 px box (DS-11)
     expect(at(".side-rail__link[aria-current='page'] .side-rail__pill", COMPACT)['background']).toBe('var(--color-soft)')
   })
 
   it('Scan is a 56 x 44 rounded rectangle (radius 14; 56 x 40 under 360 px tall) in the accent fill, never stretched, and has no ring when current', () => {
     const scan = at(".side-rail__link[data-accent='true']", COMPACT)
     expect(scan['background']).toBe('var(--color-accent)')
-    expect(scan['border-radius']).toBe('14px')
+    expect(scan['border-radius']).toBe('var(--radius-control)') // 14 px (DS-11)
     expect(scan['width'] ?? scan['inline-size']).toBe('56px')
     expect(scan['height'] ?? scan['block-size']).toBe('44px')
     const short = at(".side-rail__link[data-accent='true']", [...COMPACT, '(max-height: 359px)'])

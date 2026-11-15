@@ -277,11 +277,19 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
   const tracks = () => (bar()['grid-template-columns'] ?? '').trim()
   const spaceTokens = () => {
     const root = declarations(readStylesCss().replace(/\/\*[\s\S]*?\*\//g, ''), ':root')
-    return (v: string | undefined): number => {
-      const raw = (v ?? '0').trim()
+    // DS-11: lengths are tokens, so a value is var(--space-N), a px length, 0, or a calc() sum of those
+    // (calc(var(--space-1) + var(--space-half)) is 6 px). Anything else is NaN, so a geometry test fails rather than passes on it.
+    const term = (raw: string): number => {
       const t = /^var\((--space-(?:\d+|half))\)$/.exec(raw) // B9-07 (DS-11): --space-half is the 2 px micro gap
       if (t) return Number.parseFloat(root[t[1]!] ?? 'NaN')
-      return /^0(px)?$/.test(raw) ? 0 : Number.parseFloat(raw)
+      if (/^0(px)?$/.test(raw)) return 0
+      return /^-?\d+(\.\d+)?px$/.test(raw) ? Number.parseFloat(raw) : Number.NaN
+    }
+    return (v: string | undefined): number => {
+      const raw = (v ?? '0').trim()
+      const sum = /^calc\((.*)\)$/.exec(raw)
+      if (!sum) return term(raw)
+      return sum[1]!.split(/\s+\+\s+/).reduce((total, part) => total + term(part.trim()), 0)
     }
   }
   /** The horizontal padding: padding-inline, else the padding shorthand's second (or only) value. */
@@ -307,6 +315,7 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     const pad = narrow ? px(narrowPx('padding-inline') ?? padInline()) : px(padInline())
     const gap = narrow ? px(narrowPx('column-gap') ?? gapOf()) : px(gapOf())
     const side = narrow ? px(/^calc\((var\(--space-\d\))/.exec(narrowPx('left') ?? '')?.[1] ?? '12px') : 12
+    expect(Number.isFinite(pad) && Number.isFinite(gap), `padding ${pad} and gap ${gap} resolve to px`).toBe(true)
     const barW = Math.min(viewport - 2 * side, 480)
     const inner = barW - 2 - 2 * pad // 1 px border each side
     const slot = (inner - 6 * gap) / 7
