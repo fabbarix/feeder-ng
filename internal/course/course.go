@@ -28,7 +28,7 @@ var (
 	ErrPlanned     = errors.New("course: a Planned Meal or Leftover uses it; archive it")      // 409 course_planned
 	ErrArchived    = errors.New("course: the Course is archived")                              // main on an archived Course: 422
 	ErrReplacement = errors.New("course: replacement missing, archived, or the Course itself") // 422, field replacement
-	ErrRecipeIDs   = errors.New("course: give one or more known Recipes")                    // 422 validation_failed, field recipeIds
+	ErrRecipeIDs   = errors.New("course: give one or more known Recipes")                      // 422 validation_failed, field recipeIds
 )
 
 // Course is one Course of the Household.
