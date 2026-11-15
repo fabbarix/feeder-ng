@@ -27,6 +27,12 @@
   container-type: inline-size;
   gap: var(--space-2);
 }
+/* w6a (B9-44's TileHeader on this tile): with "Show which meals" beside it, the title takes a second line rather than an ellipsis
+   ("Couldn't pl…" at 390 on the Plan), as Today's tile titles do (B9-44, ruling 7: nothing is cut). */
+.plan-couldnt .tile-header > .section-title {
+  white-space: normal;
+  text-wrap: balance;
+}
 .couldnt-cause {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
