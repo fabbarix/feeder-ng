@@ -88,7 +88,7 @@
    is as tall as the − and + buttons, and holds four digits ("3650"); "Not set" shows as a muted meta-size placeholder. */
 .stepper__input {
   box-sizing: border-box;
-  inline-size: calc(4ch + 2 * var(--space-2));
+  inline-size: calc(4.5ch + 2 * var(--space-3));
   block-size: 40px;
   padding: 0 var(--space-1);
   border: 0;
@@ -112,5 +112,5 @@
 }
 
 .stepper[data-size='sm'] .stepper__input {
-  inline-size: calc(4ch + 2 * var(--space-1));
+  inline-size: calc(4.5ch + 2 * var(--space-2));
 }

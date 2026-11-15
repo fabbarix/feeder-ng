@@ -1,5 +1,5 @@
 import { useId, useRef, type ReactNode } from 'react'
-import { Button, EditableStepper, FormActions, Tile, useToast } from '../../../ui'
+import { Button, EditableStepper, FormActions, Icon, Tile, useToast } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
 import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { baseUnitLabel, type UnitSystem } from '../../../lib/units'
@@ -180,7 +180,8 @@ function KeepingRow({ id, label, hint, error, children }: KeepingRowProps) {
       <div className="kp-row__ctrl">{children(labelId, describedBy)}</div>
       {error ? (
         <p id={errorId} className="ui-field__error kp-row__error">
-          {error}
+          <Icon name="error" size={14} />
+          <span>{error}</span>
         </p>
       ) : null}
     </div>

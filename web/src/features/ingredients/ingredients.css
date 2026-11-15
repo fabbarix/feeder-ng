@@ -124,6 +124,7 @@
    own width, was a viewport below 560 px; 34 rem is a 576 px viewport less the page gutters). */
 .ingredient__tiles {
   container: ingredient-tiles / inline-size;
+  margin-block-start: var(--space-4);
 }
 
 @container ingredient-tiles (width < 34rem) {
