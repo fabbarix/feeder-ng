@@ -77,8 +77,10 @@ function ProductPage({ product, p, breadcrumbs }: { product: ProductDetail; p: R
           <>
             <Link className="text-link" to={`/ingredients/${product.ingredientId}`}>
               {displayName(product.ingredientName)}
-            </Link>{' '}
-            <span className="product-header__pack">· {strings.packPill(formatPackSize(product.packSize, product.baseUnit, system))}</span>
+            </Link>
+            {/* The separator stays on the link's line, so a long Ingredient name never leaves a line starting with "·". */}
+            {'\u00a0· '}
+            <span className="product-header__pack">{strings.packPill(formatPackSize(product.packSize, product.baseUnit, system))}</span>
           </>
         }
         actions={
