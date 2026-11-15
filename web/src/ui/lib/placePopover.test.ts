@@ -43,4 +43,22 @@ describe('placePopover', () => {
   it('honours custom gap and margin', () => {
     expect(placePopover({ anchor, size: { width: 100, height: 100 }, viewport, gap: 10, margin: 16 })).toMatchObject({ top: 158, maxHeight: 768 - 148 - 10 - 16 })
   })
+
+  it('b9-w2b: a floor (the bottom bar top, 1112 at 834×1194) is the bottom of the room below', () => {
+    const vp = { width: 834, height: 1194 }
+    const a = { top: 1018, left: 40, right: 400, bottom: 1066 }
+    // Without the floor it fits below and ends at 1130, under the bar.
+    expect(placePopover({ anchor: a, size: { width: 360, height: 60 }, viewport: vp }).placement).toBe('below')
+    const placed = placePopover({ anchor: a, size: { width: 360, height: 60 }, viewport: vp, floor: 1112 })
+    expect(placed.placement).toBe('above')
+    expect(placed.top + 60).toBeLessThanOrEqual(1018)
+    // Below and capped: its maxHeight stops a margin above the floor.
+    const high = { top: 300, left: 40, right: 400, bottom: 348 }
+    const capped = placePopover({ anchor: high, size: { width: 360, height: 900 }, viewport: vp, floor: 1112 })
+    expect(capped).toEqual({ top: 352, left: 40, maxHeight: 1112 - 348 - 4 - 8, placement: 'below' })
+  })
+
+  it('b9-w2b: a floor below the viewport bottom is the viewport bottom', () => {
+    expect(placePopover({ anchor, size: { width: 360, height: 300 }, viewport, floor: 5000 }).maxHeight).toBe(608)
+  })
 })

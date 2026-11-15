@@ -232,6 +232,30 @@ describe('Menu: placement of the popover (inside the viewport at 768 and 1024)',
   })
 })
 
+describe('Menu: never under the floating bottom bar (b9-w2b)', () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} }) as DOMRect
+  it('flips above a trigger whose menu would reach the bar top (1112 at 834×1194)', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 834 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1194 })
+    const nav = document.createElement('nav')
+    nav.className = 'bottom-bar'
+    document.body.append(nav)
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('role') === 'menu') return rect(0, 0, 240, 120)
+      if (this.getAttribute('aria-haspopup') === 'menu') return rect(700, 980, 40, 40)
+      if (this.classList.contains('bottom-bar')) return rect(12, 1112, 810, 70)
+      return rect(0, 0, 0, 0)
+    })
+    view()
+    const menu = await open()
+    // Below it would end at 1028 + 120 = 1148, under the bar's top.
+    expect(menu).toHaveAttribute('data-placement', 'above')
+    expect(Number.parseFloat(menu.style.top) + 120).toBeLessThanOrEqual(980)
+    nav.remove()
+  })
+})
+
 describe('Menu: a ⋮ at the start of a centred dialog opens inside it (B9-14 review)', () => {
   const rect = (left: number, top: number, width: number, height: number) =>
     ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} }) as DOMRect
