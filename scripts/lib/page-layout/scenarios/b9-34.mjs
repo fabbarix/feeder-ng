@@ -1,9 +1,8 @@
 // B9-34 (SSP-01, SSP-02, SSP-18, A11Y-07; plan sections 6 and 9): the scenarios of the Shop's ticking.
-//   shop-ticked            /shop with ticked Lines of every kind the seed has (a hand tick that added Stock, one that added none; a Scan tick and
-//                          a "more since your tick" row when the seed has them): P23 reads every row's one meta line (probes/cut-meta.mjs is
-//                          widened by this package to all `.shop-lines .list-row__meta`, not only the info ones), at 375, 390, 834 and 1440
-//                          (the Shop's two-column card grid, SSP-05). The setup throws when there is no ticked row, so a run on an
-//                          unseeded server does not pass empty.
+//   shop-ticked            /shop with ticked Lines of every kind (a hand tick that added Stock, one that added none, a Scan's tick) and a
+//                          "more since your tick" row: P23 reads every row's one meta line (probes/cut-meta.mjs is widened by this package to
+//                          every visible `.list-row__meta-text`, not only the info ones), at 375, 390, 834 and 1440 (the Shop's card grid,
+//                          SSP-05). The setup throws when a kind is missing, so a run on an unseeded server does not pass empty.
 //   shop-focus-after-tick  /shop: the first open row's tick is focused and pressed with the keyboard (Enter); focus must land on the next
 //                          row's tick (A11Y-07), never <body>; then Undo in the toast (Ctrl+Z is the toast's key) puts the row back and
 //                          focus returns to that row's tick. The setup throws when focus rests on <body>, so the run fails with the reason.
@@ -23,9 +22,15 @@ export default {
   setups: {
     async shopTicked() {
       await until(`${TICKED_META} >= 1`, 'a ticked Line with a meta line in the Ticked group (the seed ticks two Lines: shop-ticked needs a seeded server)')
-      // the success meta and the muted one are both there when the seed made both kinds
-      const kinds = await evaluate(`[...document.querySelectorAll('.shop-ticked .list-row__meta')].map((m) => m.dataset.status || 'muted')`)
-      if (!kinds.includes('success')) throw new Error('setup: not inspected: no hand tick that added Stock ("+… in Stock") in the Ticked group')
+      // the seed makes every kind: a hand tick that added Stock (success), one without Stock and a Scan's (muted), and a More row in To get
+      const texts = await evaluate(`[...document.querySelectorAll('.shop-ticked .list-row__meta')].map((m) => (m.dataset.status || 'muted') + ' ' + m.querySelector('.list-row__meta-text').textContent)`)
+      const missing = [
+        [/^success /, 'a hand tick that added Stock ("+… in Stock" or "Added twice · …")'],
+        [/^muted Not added to Stock/, 'a tick without Stock ("Not added to Stock")'],
+        [/^muted Scanned/, 'a Scan\'s tick ("Scanned · …")'],
+      ].filter(([re]) => !texts.some((t) => re.test(t))).map(([, what]) => what)
+      if (!(await evaluate(`!!document.querySelector('.shop-open .list-row[data-focus-key^="more:"] .list-row__meta[data-status="info"]')`))) missing.push('a "More since your tick" row in To get')
+      if (missing.length > 0) throw new Error(`setup: not inspected: the seed has no ${missing.join(', no ')}`)
     },
     async shopFocusAfterTick() {
       await until(`document.querySelectorAll('.shop-open .list-row .line-row__tick').length >= 2`, 'at least two open rows with a tick')
@@ -36,6 +41,8 @@ export default {
       await evaluate(`${first}.focus()`)
       await press(first, `the first tick (${firstName}) with the keyboard`)
       await until(`!!document.querySelector('.toast')`, 'the tick toast', 4000)
+      // the toast shows as soon as the tick is answered; the row leaves To get when the list refreshes (a moment later): wait for that
+      await until(`!document.querySelector('.shop-open .line-row__tick[aria-label=' + ${JSON.stringify(JSON.stringify(firstName))} + ']')`, `"${firstName}" leaving To get`, 4000)
       await until(`document.activeElement && document.activeElement !== document.body`, 'focus off <body> after the tick', 2000).catch(() => {
         throw new Error(`setup: A11Y-07: after ticking "${firstName}" focus is on <body>; it must go to the next row's tick ("${name}")`)
       })

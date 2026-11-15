@@ -49,7 +49,8 @@ describe('rowMeta keeps the other metas, and the compact Restock reason is the r
 
   it('the unconfirmed-meals hint and the pack line are as before', () => {
     expect(rowMeta({ ...lineEntry(makeLine(), 'USD', 'metric'), hintShort: 'Fri Dinner +2' })).toEqual({ text: 'Fri Dinner +2', status: 'info' })
-    expect(rowMeta(lineEntry(makeLine(), 'USD', 'metric'))).toEqual({ text: '2 × Mutti 700 g' })
+    // B9-34 (SSP-05, P23 on every meta): the pack line's compact form keeps the count and size, so a long Product name is never cut
+    expect(rowMeta(lineEntry(makeLine(), 'USD', 'metric'))).toEqual({ text: '2 × Mutti 700 g', compact: '2 × 700 g' })
   })
 })
 

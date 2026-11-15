@@ -22,6 +22,11 @@ export interface ListEntry {
   quantityText: string
   /** the muted pack line ("2 × Mutti 700 g"); "" when there is no pack suggestion or the entry is ticked (WP7) */
   packLine: string
+  /**
+   * B9-34 (SSP-05, P23): the pack line's compact form for a narrow text column: the count and the pack size ("2 × 700 g"), so a long
+   * Product name is never what a card row cuts; "" with no pack line.
+   */
+  packCompact?: string
   /** "$3.18"; null when the Line has no Price (nothing is shown, never a dash) or where no estimate applies (extras, ticked lines) */
   estimatedCost: string | null
   ticked: boolean
@@ -94,6 +99,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     // round 2: a ticked Line keeps the quantity it needed (the server's need), muted by the stylesheet
     quantityText: formatQuantity(line.ticked ? line.need : line.quantity, line.baseUnit, system),
     packLine: line.ticked || !line.pack ? '' : `${line.pack.count} × ${line.pack.name}`,
+    packCompact: line.ticked || !line.pack ? '' : `${line.pack.count} × ${formatQuantity(line.pack.size, line.baseUnit, system)}`,
     estimatedCost: priceText(line.estimatedCostCents, currency),
     ticked: line.ticked,
     quantity: line.ticked ? 0 : line.quantity,

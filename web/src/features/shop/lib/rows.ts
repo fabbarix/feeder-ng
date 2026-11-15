@@ -66,7 +66,7 @@ export function slotsLabel(meals: PastPlannedMeal[] | undefined, withCourses = t
  * - a "more since your tick" row: "More since your tick" (compact "More needed"), info;
  * - a ticked row: what the tick did to Stock (lib/tickAmount tickedMeta), success when it added Stock, else muted;
  * - a Supply's Restock reason ("Below 1 l · 400 ml in Stock", compact "400 ml in Stock"), info;
- * - the unconfirmed past meals ("Tue Dinner +1"), info; else the pack line.
+ * - the unconfirmed past meals ("Tue Dinner +1"), info; else the pack line ("2 × Mutti 700 g", compact "2 × 700 g").
  */
 export function rowMeta(entry: ListEntry): RowMeta {
   if (entry.moreSince) return { text: shopStrings.moreSince, compact: shopStrings.moreSinceCompact, status: 'info', icon: 'moreSince' }
@@ -83,7 +83,8 @@ export function rowMeta(entry: ListEntry): RowMeta {
     return { text: entry.restockText, ...(entry.restockCompact ? { compact: entry.restockCompact } : {}), status: 'info' }
   }
   if (entry.hintShort) return { text: entry.hintShort, status: 'info' }
-  return { text: entry.packLine }
+  // SSP-05: a narrow card keeps the pack count and size, not a cut Product name
+  return { text: entry.packLine, ...(entry.packLine && entry.packCompact && entry.packCompact !== entry.packLine ? { compact: entry.packCompact } : {}) }
 }
 
 /** The value column: the quantity, and the estimated cost under it when there is a Price. Nothing for free text or a ticked Line. */

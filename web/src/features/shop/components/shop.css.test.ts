@@ -95,10 +95,11 @@ describe('shop.css: one list on a phone, a 2-column card grid from 48em (768 px)
     expect(outsideMedia.replace(/\s+/g, ' ')).not.toMatch(/\.shop-lines[^{]*\{[^}]*grid-template-columns/)
   })
 
-  it('from 768 px the list is auto-fill tracks of --tile-min-card (2 columns at 768, 834, 1024), spaced by --bento-gap', () => {
+  // B9-34 (SSP-05): the card grid takes the row minimum, --tile-min-row (21.5 rem), so a card row is never narrower than a phone row
+  it('from 768 px the list is auto-fill tracks of --tile-min-row (2 columns at 768, 834, 1024, 1120), spaced by --bento-gap', () => {
     const m = media(/min-width:\s*48em/)
     expect(m).toMatch(/\.shop-lines \.list-group__list\s*\{[^}]*display:\s*grid/)
-    expect(m).toMatch(/grid-template-columns:\s*repeat\(auto-fill, minmax\(min\(var\(--tile-min-card\), 100%\), 1fr\)\)/)
+    expect(m).toMatch(/grid-template-columns:\s*repeat\(auto-fill, minmax\(min\(var\(--tile-min-row\), 100%\), 1fr\)\)/)
     expect(m).toMatch(/gap:\s*var\(--bento-gap\)/)
   })
 

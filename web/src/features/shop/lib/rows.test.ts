@@ -43,8 +43,8 @@ describe('lineEntry: the short hint', () => {
 })
 
 describe('rowMeta: one line, tone-able', () => {
-  it('a Line with a pack suggestion shows the pack, untoned', () => {
-    expect(rowMeta(plain)).toEqual({ text: '2 × Mutti 700 g' })
+  it('a Line with a pack suggestion shows the pack, untoned (B9-34: with "2 × 700 g" as its compact form for a narrow row)', () => {
+    expect(rowMeta(plain)).toEqual({ text: '2 × Mutti 700 g', compact: '2 × 700 g' })
   })
   it('a Line with unconfirmed past meals shows the short info marker instead (info tone)', () => {
     expect(rowMeta(hinted)).toEqual({ text: 'Tue Dinner', status: 'info' })
