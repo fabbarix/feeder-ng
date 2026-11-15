@@ -7,7 +7,7 @@ import { householdSettings } from './fixtures'
 import { HouseholdSettingsForm } from './HouseholdSettingsForm'
 
 const value = { ...householdSettings, frozenUseByDays: 90 } as HouseholdSettings
-const field = () => screen.getByLabelText('Default Frozen Use-by (days)')
+const field = () => screen.getByLabelText('Default Frozen Use‑by (days)')
 
 describe('HouseholdSettingsForm: Frozen Use-by', () => {
   it('shows the current default, bounded 1 to 365 in the field itself', () => {

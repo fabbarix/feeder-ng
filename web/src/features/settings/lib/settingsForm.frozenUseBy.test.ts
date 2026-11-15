@@ -13,10 +13,10 @@ describe('settings form: Frozen Use-by', () => {
     expect(settingsFromDraft({ ...d, frozenUseByDays: 120 }).frozenUseByDays).toBe(120)
   })
   it.each([0, 366])('rejects %s as out of range', (n) => {
-    expect(validateSettings({ ...draftFromSettings(settings), frozenUseByDays: n }).frozenUseByDays).toBe('Default Frozen Use-by must be between 1 and 365.')
+    expect(validateSettings({ ...draftFromSettings(settings), frozenUseByDays: n }).frozenUseByDays).toBe('Default Frozen Use‑by must be between 1 and 365.')
   })
   it.each([1.5, Number.NaN])('rejects %s as not whole days', (n) => {
-    expect(validateSettings({ ...draftFromSettings(settings), frozenUseByDays: n }).frozenUseByDays).toBe('Default Frozen Use-by must be a whole number of days.')
+    expect(validateSettings({ ...draftFromSettings(settings), frozenUseByDays: n }).frozenUseByDays).toBe('Default Frozen Use‑by must be a whole number of days.')
   })
   it.each([1, 90, 365])('accepts %s', (n) => {
     expect(validateSettings({ ...draftFromSettings(settings), frozenUseByDays: n }).frozenUseByDays).toBeUndefined()
