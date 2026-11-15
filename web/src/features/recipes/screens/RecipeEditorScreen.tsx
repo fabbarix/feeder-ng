@@ -3,7 +3,23 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
 import { useCourses } from '../../../lib/courses/useCourses'
-import { Button, ConfirmDialog, FormActions, PageHeader, Skeleton, Sortable, StickyActionBar, Tile } from '../../../ui'
+import {
+  Button,
+  ConfirmDialog,
+  DraftNotice,
+  FormActions,
+  Icon,
+  PageHeader,
+  Skeleton,
+  Sortable,
+  StickyActionBar,
+  Tile,
+  useConfirm,
+  useLeaveGuard,
+  useUndoToast,
+} from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
+import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { KindChange } from '../components/KindChange'
 import { EditorLineLinkSession } from '../components/EditorLineLinkSession'
 import { UnitConversionPrompt } from '../components/UnitConversionPrompt'
@@ -24,6 +40,9 @@ import { StepsEditor } from '../components/StepsEditor'
 import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useQuickCreateIngredient } from '../hooks/useQuickCreateIngredient'
 import { useRecipeEditor } from '../hooks/useRecipeEditor'
+import { useRecipeDraft } from '../hooks/useRecipeDraft'
+import { useRemovalFocus } from '../hooks/useRemovalFocus'
+import { discardDialog, editorExitRoute } from '../lib/editorExit'
 import type { RecipeDraft } from '../lib/draft'
 import { pickCourseIds } from '../lib/recipeCourses'
 import { codeMessage, recipeStrings } from '../strings'
@@ -43,6 +62,9 @@ const SECTIONS = [
  * Routes /recipes/new and /recipes/:id/edit: one centred 840 px column of section cards (Details, Photo, Ingredients,
  * Steps) with a section index beside it from 1280 px, and a StickyActionBar with Cancel and Save Recipe. An unknown unit opens the inline Unit Conversion
  * prompt; saving then goes on from where it stopped.
+ * B9-31: the editor keeps work. While dirty every in-app exit asks "Leave without saving?" (useLeaveGuard); a reload draft covers a
+ * reload or a crash (useRecipeDraft, with its DraftNotice); Cancel goes to a known route and asks "Discard your changes?" while dirty;
+ * removing a Step, line or use offers Undo; a failed Save focuses the first invalid field (SAFE-04).
  */
 export function RecipeEditorScreen(): ReactNode {
   const navigate = useNavigate()
@@ -61,6 +83,9 @@ export function RecipeEditorScreen(): ReactNode {
   const byId = useMemo(() => new Map(ingredients.map((i) => [i.id, i] as const)), [ingredients])
   const { choices: courses } = useCourses()
   const editor = useRecipeEditor(recipeId, ingredients, courses)
+  const isNew = recipeId === undefined
+  // The leave and discard dialogs name the STORED Recipe ("Your changes to Roast tray"), not the name being typed.
+  const what = editor.storedName ?? recipeStrings.recipeNoun
   const quick = useQuickCreateIngredient({
     pick: (lineKey, ingredient) => {
       setMade((list) => [...list.filter((i) => i.id !== ingredient.id), ingredient])
@@ -92,19 +117,48 @@ export function RecipeEditorScreen(): ReactNode {
   const kindBusy = useRef(false)
   const kindDone = useRef(false)
 
+  // SAFE-01: an upload in progress counts as unsaved (the guard asks), but only the draft itself is kept for a reload.
+  const dirty = editor.dirty || busyPickers.size > 0
+  const keeper = useRecipeDraft({
+    recipeId,
+    ready: editor.ready,
+    draft: editor.draft,
+    dirty: editor.dirty,
+    storedUpdatedAt: editor.storedUpdatedAt,
+    what,
+    restore: editor.restoreDraft,
+    reset: editor.resetDraft,
+  })
+  const guard = useLeaveGuard(dirty, { what, isNew, onDiscard: () => void keeper.forget() })
+  const confirmApi = useConfirm()
+  const undoToast = useUndoToast()
+  const formRef = useRef<HTMLElement>(null)
+  const focusAfter = useRemovalFocus(formRef)
+  // SAFE-04: grows after every Save the editor answered (client check or server), so focus goes to the first invalid field.
+  const [submits, setSubmits] = useState(0)
+  useFocusFirstInvalid(formRef, editor.errors, submits)
+
   const crumbs = useBreadcrumbs(editor.draft?.name)
   if (editor.isLoading) return <Skeleton variant="tile" count={3} />
   const draft = editor.draft
   const setDraft = (change: (d: RecipeDraft) => RecipeDraft) => editor.setDraft(change)
 
+  // Save, the rename answer and the link sheet leave through the guard's bypass: the editor is clean by then, but the guard learns
+  // it only on the next render.
+  const go = (to: string, replace = false) => guard.bypass(() => navigate(to, replace ? { replace: true } : undefined))
+
   const finish = (saved: { id: number; name?: string; baseRecipe?: boolean; baseIngredientId?: number } | null) => {
-    if (!saved) return
+    if (!saved) {
+      setSubmits((n) => n + 1)
+      return
+    }
+    void keeper.forget()
     // A renamed Ready Meal: ask about its Ingredient before leaving the editor.
     if (editor.renameOffer) setAsking(saved)
     // BR-D: a Base recipe offers the bulk link first (its sheet closes into the Base recipe).
     else if (draft.baseRecipe && saved.baseRecipe !== false && saved.baseIngredientId !== undefined && baseUnitOfYield(draft.yieldUnit ?? '') !== null)
       setLinkSheet({ id: saved.id, name: saved.name ?? draft.name, ingredientId: saved.baseIngredientId })
-    else navigate(`/recipes/${saved.id}`)
+    else go(`/recipes/${saved.id}`)
   }
 
   const answerRename = async (rename: boolean) => {
@@ -118,7 +172,7 @@ export function RecipeEditorScreen(): ReactNode {
         setSaveError(recipeStrings.readyMealIngredient.renameFailed)
       }
     }
-    navigate(`/recipes/${saved.id}`)
+    go(`/recipes/${saved.id}`)
   }
   // The Courses picker says the new list; its change is applied to the latest draft (lib/recipeCourses.pickCourseIds).
   const changeDetails = (patch: Partial<RecipeDraft>) =>
@@ -157,7 +211,68 @@ export function RecipeEditorScreen(): ReactNode {
       finish(await editor.save())
     } catch (err) {
       failed(err)
+      setSubmits((n) => n + 1)
     }
+  }
+
+  // SAFE-06: Cancel discards on purpose, so it asks its own question (never the leave dialog too) and goes to a known route.
+  const cancel = async () => {
+    if (dirty) {
+      if (!(await confirmApi.confirm(discardDialog(what, isNew)))) return
+      await keeper.forget()
+    }
+    go(editorExitRoute(recipeId), true)
+  }
+
+  // SAFE-10: a removal acts at once and offers Undo; focus moves to what took the removed row's place.
+  const lineName = (key: string) => {
+    const line = draft.lines.find((l) => l.key === key)
+    return (line?.ingredientName || (line?.ingredientId === null || line?.ingredientId === undefined ? '' : byId.get(line.ingredientId)?.name) || '').trim()
+  }
+  const removeLine = (key: string) => {
+    const index = draft.lines.findIndex((l) => l.key === key)
+    const name = lineName(key)
+    const restore = editor.removeLine(key)
+    if (!restore) return
+    focusAfter({ kind: 'line', index })
+    undoToast.show({
+      headline: recipeStrings.removed.line(name, index + 1),
+      undoAriaLabel: recipeStrings.removed.undo.line(name, index + 1),
+      undo: () => {
+        restore()
+        focusAfter({ kind: 'line', index })
+      },
+    })
+  }
+  const removeStep = (index: number) => {
+    const restore = editor.removeStep(index)
+    if (!restore) return
+    focusAfter({ kind: 'step', index })
+    undoToast.show({
+      headline: recipeStrings.removed.step(index + 1),
+      undoAriaLabel: recipeStrings.removed.undo.step(index + 1),
+      undo: () => {
+        restore()
+        focusAfter({ kind: 'step', index })
+      },
+    })
+  }
+  const removeUse = (stepIndex: number, useIndex: number) => {
+    const step = draft.steps[stepIndex]
+    const use = step?.uses[useIndex]
+    if (!step || !use) return
+    const name = (use.ingredientName || (use.ingredientId === null ? '' : byId.get(use.ingredientId)?.name) || '').trim()
+    const restore = editor.removeUse(stepIndex, useIndex)
+    if (!restore) return
+    focusAfter({ kind: 'use', stepKey: step.key, index: useIndex })
+    undoToast.show({
+      headline: recipeStrings.removed.use(name, stepIndex + 1),
+      undoAriaLabel: recipeStrings.removed.undo.use(name, stepIndex + 1),
+      undo: () => {
+        restore()
+        focusAfter({ kind: 'use', stepKey: step.key, index: useIndex })
+      },
+    })
   }
 
   const answer = async (toBase: number) => {
@@ -166,6 +281,7 @@ export function RecipeEditorScreen(): ReactNode {
       finish(await editor.answerUnitPrompt(toBase))
     } catch (err) {
       failed(err)
+      setSubmits((n) => n + 1)
     }
   }
 
@@ -175,8 +291,9 @@ export function RecipeEditorScreen(): ReactNode {
     <>
       <div className="recipe-editor-layout">
         <RecipeSectionIndex sections={SECTIONS} />
-        <section className="recipe-editor">
+        <section className="recipe-editor" ref={formRef}>
           <PageHeader title={recipeId === undefined ? recipeStrings.newRecipe : recipeStrings.editRecipe} breadcrumbs={crumbs} />
+          {keeper.notice ? <DraftNotice {...keeper.notice} /> : null}
           <Tile as="section" id="recipe-section-details" className="recipe-editor__section" aria-labelledby="recipe-section-details-title">
             <h2 id="recipe-section-details-title">{recipeStrings.fields.details}</h2>
             <RecipeDetailsFields
@@ -204,7 +321,12 @@ export function RecipeEditorScreen(): ReactNode {
             aria-labelledby="recipe-section-ingredients-title"
           >
             <h2 id="recipe-section-ingredients-title">{recipeStrings.ingredients}</h2>
-            {editor.errors.lines ? <p role="alert">{codeMessage(editor.errors.lines)}</p> : null}
+            {editor.errors.lines ? (
+              <p id="recipe-lines-error" className="ui-field__error">
+                <Icon name="error" size={14} />
+                <span>{codeMessage(editor.errors.lines)}</span>
+              </p>
+            ) : null}
             {draft.lines.length === 0 ? <p>{recipeStrings.lines.none}</p> : null}
             <div className="recipe-editor__lines-box">
               {draft.lines.length > 0 ? (
@@ -244,7 +366,7 @@ export function RecipeEditorScreen(): ReactNode {
                     onNeededAt={(step) => editor.updateLine(line.key, { neededAtStep: neededAtOverride(step, line.neededAtDefault ?? null) })}
                     onLinkToBase={line.ingredientId !== null && (line.baseRecipeId ?? null) === null ? () => setSession({ kind: 'picker', key: line.key }) : undefined}
                     onUseAsPlain={() => setSession({ kind: 'plain', key: line.key })}
-                    onRemove={() => editor.removeLine(line.key)}
+                    onRemove={() => removeLine(line.key)}
                     onQuickCreate={(query) => quick.open({ lineKey: line.key, query, unit: line.unit })}
                     quickCreateDisabledReason={quick.disabledReason}
                     focusAmount={quick.focusLineKey === line.key}
@@ -258,6 +380,8 @@ export function RecipeEditorScreen(): ReactNode {
             <Button
               variant="secondary"
               icon="add"
+              data-invalid-target={editor.errors.lines ? '' : undefined}
+              aria-describedby={editor.errors.lines ? 'recipe-lines-error' : undefined}
               onClick={() => {
                 editor.addLine()
                 setAddedLine(true)
@@ -270,9 +394,10 @@ export function RecipeEditorScreen(): ReactNode {
             <h2 id="recipe-section-steps-title">{recipeStrings.stepsTitle}</h2>
             <StepsEditor steps={draft.steps} errors={editor.errors} onChange={editor.setSteps} ingredients={ingredients}
               onPhotoBusyChange={(key, busy) => setPickerBusy(`step:${key}`, busy)}
+              onRemoveStep={removeStep}
+              onRemoveUse={removeUse}
             />
           </Tile>
-          {saveError ? <p role="alert">{saveError}</p> : null}
           {kindRequest ? (
             <KindChange
               recipeId={recipeId}
@@ -283,7 +408,7 @@ export function RecipeEditorScreen(): ReactNode {
               onResult={kindResult}
             />
           ) : null}
-          {editor.refusal ? <p role="alert">{editor.refusal}</p> : Object.keys(editor.errors).length > 0 ? <p role="alert">{recipeStrings.checkFields}</p> : null}
+          <FormError>{saveError ?? editor.refusal}</FormError>
           {session && lineByKey(session.key) ? (
             <EditorLineLinkSession
               recipeId={recipeId}
@@ -309,7 +434,7 @@ export function RecipeEditorScreen(): ReactNode {
             <LinkCandidatesSheet
               open
               baseRecipe={{ id: linkSheet.id, name: linkSheet.name, ingredientId: linkSheet.ingredientId }}
-              onClose={() => navigate(`/recipes/${linkSheet.id}`)}
+              onClose={() => go(`/recipes/${linkSheet.id}`)}
             />
           ) : null}
           <NewIngredientSheet
@@ -356,7 +481,7 @@ export function RecipeEditorScreen(): ReactNode {
       <StickyActionBar label={recipeStrings.editorActions} column="form">
         <FormActions
           tertiary={
-            <Button variant="secondary" onClick={() => navigate(-1)}>
+            <Button variant="secondary" onClick={() => void cancel()}>
               {recipeStrings.cancel}
             </Button>
           }

@@ -398,11 +398,6 @@
   color: var(--color-muted);
 }
 
-.step-card__after {
-  display: grid;
-  gap: var(--space-2);
-}
-
 .step-card__uses {
   display: flex;
   flex-wrap: wrap;
@@ -441,6 +436,8 @@
   min-inline-size: 0;
 }
 
+/* B9-31 (user ruling): a Step's text is set at the Step weight (500) in the editor too, never bold. Type only; no layout. */
+.step-card textarea { font-weight: var(--text-step-weight); }
 .step-card__error {
   margin: 0;
   padding: 0;

@@ -5,3 +5,4 @@
 web/src/ui/Gallery.tsx   # the primitives Gallery shows every tone as a specimen, spoil and danger included
 web/src/ui/GalleryOverlays.tsx   # the Gallery's overlay specimens show the danger confirm dialogs (a loss)
 web/src/features/import/components/StartOverButton.tsx   # the Start over confirm loses every answer given so far: a destructive confirm keeps its danger tone (main-session ruling, B9-28)
+web/src/features/recipes/lib/editorExit.ts   # B9-31: "Discard your changes?" is a destructive confirm (the changes are lost), danger as R1 and the safe-06 mock draw it

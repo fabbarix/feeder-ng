@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { Route, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flour, garlic } from '../fixtures.test-helper'
 import { emptyDraft } from '../lib/draft'
@@ -17,22 +17,22 @@ vi.mock('../../../ui', async (orig) => ({
 }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter, safeEditorFields } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const Where = () => <p data-testid="where">{useLocation().pathname}</p>
 const view = (path = '/recipes/new') =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
+      <EditorRouter initialEntries={[path]}>
           <Route path="/recipes/new" element={<RecipeEditorScreen />} />
           <Route path="*" element={<Where />} />
-        </Routes>
-      </MemoryRouter>
+      </EditorRouter>
     </QueryClientProvider>,
   )
 
 beforeEach(() => {
   h.editor = {
+    ...safeEditorFields(),
     draft: {
       ...emptyDraft(), name: 'Aioli',
       lines: [{ key: 'l1', ingredientId: 7, ingredientName: 'garlic', quantity: '3', unit: 'clove', optional: false, note: '' }],
@@ -71,7 +71,8 @@ describe('RecipeEditorScreen', () => {
   })
 
   it('opens the inline Unit Conversion prompt when the server asks, and answers it', async () => {
-    h.editor = { ...h.editor, unitPrompt: { field: 'lines[0].unit', lineIndex: 0, useRef: null, ingredientId: 7, ingredientName: 'garlic', unit: 'head', baseUnit: 'g' } }
+    h.editor = {
+    ...safeEditorFields(), ...h.editor, unitPrompt: { field: 'lines[0].unit', lineIndex: 0, useRef: null, ingredientId: 7, ingredientName: 'garlic', unit: 'head', baseUnit: 'g' } }
     view()
     expect(screen.getByRole('dialog', { name: 'Unit Conversion needed' })).toBeInTheDocument()
     await userEvent.type(screen.getByRole('spinbutton', { name: 'Amount in g' }), '50')
@@ -81,10 +82,12 @@ describe('RecipeEditorScreen', () => {
   })
 
   it('shows the Skeleton while an existing Recipe loads', async () => {
-    h.editor = { ...h.editor, isLoading: true }
+    h.editor = { ...safeEditorFields(), ...h.editor, isLoading: true }
     view()
     expect(screen.queryByText('Loading…')).toBeNull()
-    expect(await screen.findByRole('status', {}, { timeout: 1500 })).toHaveAttribute('aria-busy', 'true')
+    // B9-31: the ToastProvider (the screen now shows Undo toasts) adds its own status live region; the Skeleton is the busy one.
+    const statuses = await screen.findAllByRole('status', {}, { timeout: 1500 })
+    expect(statuses.filter((el) => !el.classList.contains('toast-live'))[0]).toHaveAttribute('aria-busy', 'true')
   })
 
   it('has an image picker for the Recipe and one for each Step', () => {
