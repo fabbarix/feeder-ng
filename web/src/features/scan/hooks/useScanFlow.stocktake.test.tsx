@@ -1,4 +1,5 @@
-// WP7 (QA): every Stock-take outcome is a toast, not an inline banner.
+// WP7 (QA): every Stock-take outcome is a toast, not an inline banner. B9-41 (SAFE-09): the toast of a done action has Undo (here through
+// `notify`, the flow's fallback without an announceAdded dep; useScanFlow.stocktakeUndo.test.tsx has the Undo toast itself).
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { parse } from '../lib/barcode'
@@ -44,17 +45,17 @@ describe('useScanFlow Stock-take toasts', () => {
   it('-1 pack says what the Stock is now', async () => {
     const { hook, notify } = await setup(vi.fn(async (op: Op) => applied(op.clientUuid, 700)))
     await act(() => hook.result.current.stockTakeAction('minus_pack'))
-    expect(notify).toHaveBeenCalledWith('−1 pack: Passata, 700 g in Stock', 'success')
+    expect(notify).toHaveBeenCalledWith('−1 pack of Passata: 700 g in Stock', 'success', expect.objectContaining({ actionLabel: 'Undo' }))
     expect(hook.result.current.banner).toBeNull()
   })
 
   it('+1 pack and Set total too', async () => {
     const { hook, notify } = await setup(vi.fn(async (op: Op) => applied(op.clientUuid, 1500)))
     await act(() => hook.result.current.stockTakeAction('plus_pack'))
-    expect(notify).toHaveBeenLastCalledWith('+1 pack: Passata, 1.5 kg in Stock', 'success')
+    expect(notify).toHaveBeenLastCalledWith('+1 pack of Passata: 1.5 kg in Stock', 'success', expect.objectContaining({ actionLabel: 'Undo' }))
     await act(async () => hook.result.current.onScan(parse('8000500310427', 'ean_13')))
     await act(() => hook.result.current.stockTakeAction('set_total', 1500))
-    expect(notify).toHaveBeenLastCalledWith('Passata: 1.5 kg in Stock', 'success')
+    expect(notify).toHaveBeenLastCalledWith('Passata set to 1.5 kg', 'success', expect.objectContaining({ actionLabel: 'Undo' }))
   })
 
   it('offline: a neutral "Waiting to sync" toast', async () => {
