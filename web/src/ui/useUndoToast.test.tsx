@@ -15,8 +15,10 @@
 //     durationMs?: number               default 8000 (UNDO); Scan passes 5000
 //   }
 //   The toast has no status icon (R-D+), carries the Undo as the action with role 'undo', and has the round Dismiss.
-//   A refused Undo shows a sticky error toast: headline "That could not be undone", body = the reason, nothing else to press but Dismiss.
-//   undoRefusal(error): { headline: string; body: string }   pure; exported for tests and for screens that word their own failures
+//   A refused Undo shows a sticky error toast: headline "Nothing was undone" with the error icon in its line, subline = the reason,
+//   nothing else to press but Dismiss (main-session ruling 1: the approved PC-01 mock, shots/pc-01-after-toasts-*).
+//   undoRefusal(error): { headline: string; subline: string; body (deprecated, = subline) }   pure; exported for tests and for screens
+//   that word their own failures
 // Reasons by ApiError.code: plan_changed "The plan has changed since." | leftover_used "Some of the Leftover has been used." |
 //   reopen_window_over, window_over, undo_window_over "It is too late to undo it." | not_undoable "It cannot be undone." |
 //   not_found "It was already undone." | email_taken "That email is already used by someone else." | anything else "Nothing changed."
@@ -159,7 +161,7 @@ describe('after Undo', () => {
     expect(toast()).toBeNull()
   })
 
-  it('a refused Undo (409 plan_changed) shows an error toast: icon in the headline line, "That could not be undone", the reason, and it stays', async () => {
+  it('a refused Undo (409 plan_changed) shows an error toast: icon in the headline line, "Nothing was undone", the reason as the subline, and it stays', async () => {
     const { user } = await open({
       headline: 'Plan regenerated: 18 Planned Meals changed',
       undo: async () => {
@@ -168,15 +170,16 @@ describe('after Undo', () => {
       restored: 'Plan is back',
     })
     await user.click(screen.getByRole('button', { name: /^Undo/ }))
-    await waitFor(() => expect(screen.getByText('That could not be undone')).toBeInTheDocument())
-    const t = screen.getByText('That could not be undone').closest('.toast') as HTMLElement
+    await waitFor(() => expect(screen.getByText('Nothing was undone')).toBeInTheDocument())
+    const t = screen.getByText('Nothing was undone').closest('.toast') as HTMLElement
     expect(t).toHaveAttribute('data-status', 'error')
     expect(t.querySelector('.toast__title svg')).not.toBeNull()
-    expect(t.querySelector('.toast__body')).toHaveTextContent('The plan has changed since.')
+    expect(t.querySelector('.toast__subline')).toHaveTextContent('The plan has changed since.')
+    expect(t.querySelector('.toast__body')).toBeNull()
     expect(within(t).queryByRole('button', { name: /Undo/ })).toBeNull()
-    expect(screen.getByRole('alert')).toHaveTextContent('That could not be undone The plan has changed since.')
+    expect(screen.getByRole('alert')).toHaveTextContent('Nothing was undone The plan has changed since.')
     tick(120_000)
-    expect(screen.getByText('That could not be undone')).toBeInTheDocument()
+    expect(screen.getByText('Nothing was undone')).toBeInTheDocument()
     expect(screen.queryByText('Plan is back')).toBeNull()
   })
 
@@ -193,12 +196,12 @@ describe('after Undo', () => {
 })
 
 describe('undoRefusal (pure)', () => {
-  const reason = (code: string, status = 409) => undoRefusal(new ApiError(status, code, 'x')).body
+  const reason = (code: string, status = 409) => undoRefusal(new ApiError(status, code, 'x')).subline
 
-  it('the headline is always "That could not be undone"', () => {
-    expect(undoRefusal(new ApiError(409, 'plan_changed', 'x')).headline).toBe('That could not be undone')
-    expect(undoRefusal(new Error('boom')).headline).toBe('That could not be undone')
-    expect(undoRefusal('weird').headline).toBe('That could not be undone')
+  it('the headline is always "Nothing was undone" (PC-01 mock)', () => {
+    expect(undoRefusal(new ApiError(409, 'plan_changed', 'x')).headline).toBe('Nothing was undone')
+    expect(undoRefusal(new Error('boom')).headline).toBe('Nothing was undone')
+    expect(undoRefusal('weird').headline).toBe('Nothing was undone')
   })
 
   it.each([
@@ -219,7 +222,7 @@ describe('undoRefusal (pure)', () => {
 
   it('an unknown code, a network failure or a plain Error says only that nothing changed', () => {
     expect(reason('who_knows')).toBe('Nothing changed.')
-    expect(undoRefusal(new TypeError('Failed to fetch')).body).toBe('Nothing changed.')
-    expect(undoRefusal(undefined).body).toBe('Nothing changed.')
+    expect(undoRefusal(new TypeError('Failed to fetch')).subline).toBe('Nothing changed.')
+    expect(undoRefusal(undefined).subline).toBe('Nothing changed.')
   })
 })
