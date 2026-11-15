@@ -77,7 +77,7 @@ describe('Today: the hero opens the Planned Meal sheet (TB-10)', () => {
     mockApi(base)
     renderWithProviders(routed, '/')
     await userEvent.click(await screen.findByRole('button', { name: 'Chicken & leek pie' }))
-    expect(await screen.findByRole('dialog', { name: 'Chicken & leek pie' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: /Chicken & leek pie$/ })).toBeInTheDocument()
   })
 
   it('a why chip opens it too, and closing the sheet puts focus back on the chip that opened it', async () => {
@@ -85,7 +85,7 @@ describe('Today: the hero opens the Planned Meal sheet (TB-10)', () => {
     renderWithProviders(routed, '/')
     const chip = await screen.findByRole('button', { name: "Why: Anna's favourite. Open the Planned Meal" })
     await userEvent.click(chip)
-    const sheet = await screen.findByRole('dialog', { name: 'Chicken & leek pie' })
+    const sheet = await screen.findByRole('dialog', { name: /Chicken & leek pie$/ })
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(sheet).not.toBeInTheDocument())
     expect(chip).toHaveFocus()
@@ -122,7 +122,7 @@ describe('Today: the hero\'s ⋮ (TB-10)', () => {
     const api = mockApi({ ...base, 'PUT /api/plan/2026-11-10/2/1': { ...meal({ recipeName: 'Pizza', pinned: true }), covered: [], changes: [], undoToken: 'tok' } })
     await open()
     await userEvent.click(screen.getByRole('menuitem', { name: 'Swap' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Swap for…' })
+    const sheet = await screen.findByRole('dialog', { name: /Swap Chicken & leek pie$/ })
     await userEvent.click(await within(sheet).findByRole('button', { name: /Pizza/ }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-10/2/1')).toHaveLength(1))
     expect(api.callsTo('PUT', '/api/plan/2026-11-10/2/1')[0]!.body).toMatchObject({ recipeId: 21 })
