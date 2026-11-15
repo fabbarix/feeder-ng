@@ -64,6 +64,16 @@ describe('useScanFlow: a new weighed Product (SSP-07)', () => {
     act(() => hook.result.current.startPriceEntry('new:uuid-1'))
     expect(hook.result.current.pricing).toEqual({ key: 'new:uuid-1' })
   })
+
+  // B9-41 developer: the keypad opens on `new:<uuid>` before the Scanned list has the row, so its Added toast is dropped by that key.
+  it('the keypad of the new row drops the row\'s Added toast at once (SSP-12), though the list has no row for it yet', async () => {
+    const dismiss = vi.fn()
+    const { hook } = setup([rule], { announceAdded: vi.fn(() => ({ id: 1, dismiss })) })
+    await read(hook, '2100009005001')
+    await act(() => hook.result.current.saveUnknown({ ...emptyForm(), ingredient: { id: 5, name: 'Cheese', baseUnit: 'g' }, productName: 'Loose cheese' }))
+    act(() => hook.result.current.startPriceEntry('new:uuid-1'))
+    expect(dismiss).toHaveBeenCalledOnce()
+  })
 })
 
 describe('useScanFlow: a weight-style code with no Weight Barcode Rule (SSP-15)', () => {

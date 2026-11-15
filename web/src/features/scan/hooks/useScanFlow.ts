@@ -9,7 +9,7 @@ import type { Feedback } from '../lib/feedback'
 import { archivedOwnerId, type ArchivedProduct } from '../lib/archivedProduct'
 import { planScan, applyAskedWeight, type ScanPlan } from '../lib/resolveScan'
 import { stockTakeMessage, stockTakeUndoLabel } from '../lib/stockTakeToast'
-import { toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
+import { newRowKey, toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
 import { entryPrice, planPriceEntry, type PriceEntry, type PriceIntent, type PriceLine } from '../lib/priceEntry'
 import { buildScannedRows, displayOrder, nextWithoutPrice, repriceEntries, rowByKey, type PriceUpdate, type ScannedRow } from '../lib/scannedList'
@@ -227,8 +227,10 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   /** SSP-12: the Price entry opens on `key`: the "Added" toast of that row's last Scan is dropped (the outlined row confirms it). */
   const dropAddedFor = (key: string) => {
     const last = lastAdded.current
-    const row = last ? rowByKey(depsRef.current.session?.rows ?? [], key) : undefined
-    if (!last || !row?.clientUuids.includes(last.clientUuid)) return
+    if (!last) return
+    // B9-41 (SSP-07): a new Product's row is asked for by `new:<uuid>` right after its save, before the Scanned list has its row.
+    const row = rowByKey(depsRef.current.session?.rows ?? [], key)
+    if (key !== newRowKey(last.clientUuid) && !row?.clientUuids.includes(last.clientUuid)) return
     lastAdded.current = null
     last.handle?.dismiss()
   }
