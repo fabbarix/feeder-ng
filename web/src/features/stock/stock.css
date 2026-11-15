@@ -176,3 +176,12 @@
   font-size: var(--text-body-strong-size);
   line-height: var(--text-body-strong-line);
 }
+
+/* B9-29 (SHORT-07, stock part): in a short viewport (phone landscape) the Pantry Filters sheet scrolls as one; the Storage Place list
+   inside it drops its own cap and inner scroll, so no list scrolls inside a scrolling sheet. */
+@media (max-height: 499px) {
+  .filter-panel.pantry-filters__panel .filter-panel__list [role='listbox'] {
+    max-block-size: none;
+    overflow: visible;
+  }
+}

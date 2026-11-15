@@ -174,7 +174,6 @@ export const stockStrings = {
     goodUntilToday: 'Good until today',
     goodUntil: (day: string) => `Good until ${day}`,
     change: 'Change',
-    changeLabel: (name: string) => `Change the date ${name} is good until`,
   },
   /** B9-29 (SAFE-11): Add a Stock Lot never assumes the Ingredient. */
   addLot: {
@@ -185,4 +184,8 @@ export const stockStrings = {
   /** B9-29 (SAFE-11): the Lot sheet's Move is a disclosure. */
   moveDisclosure: 'Move…',
   movePlaceNeeded: 'Choose where to move it.',
+  /** B9-29 (SAFE-09): Throw out acts at once, with Undo. "500 g Flour thrown out". */
+  thrownOut: (amount: string, name: string) => `${amount} ${name} thrown out`,
+  /** B9-29 (SSP-03): a Storage Place group that holds only frozen Leftovers counts them. */
+  leftoverCount: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
 }

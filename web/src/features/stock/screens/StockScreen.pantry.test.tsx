@@ -72,7 +72,8 @@ describe('Pantry list', () => {
     expect(group(/^Garage Freezer/)).toBeInTheDocument()
     await userEvent.click(kind('Freezer'))
     await userEvent.click(within(panel()).getByRole('option', { name: /Not sorted/ }))
-    expect(screen.getAllByRole('list').filter((l) => l.getAttribute('aria-label')?.includes('Stock Lot'))).toHaveLength(1)
+    // B9-29 (SSP-03): a group is a titled section now, not a list named by its aria-label.
+    expect(document.querySelectorAll('section.list-group-section')).toHaveLength(1)
     expect(screen.getByText('Feta')).toBeInTheDocument()
     await userEvent.click(within(panel()).getByRole('option', { name: /Not sorted/ }))
     await closeFilters()

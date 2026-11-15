@@ -70,7 +70,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-const headings = () => screen.getAllByRole('heading', { level: 2 }).filter((h) => h.classList.contains('list-group__title'))
+const headings = () => screen.queryAllByRole('heading', { level: 2 }).filter((h) => h.classList.contains('list-group__title'))
 const section = (name: string) => headings().find((h) => h.querySelector('.list-group__name')?.textContent === name)!.closest('section') as HTMLElement
 
 describe('SSP-03: every Storage Place group has a visible title', () => {
