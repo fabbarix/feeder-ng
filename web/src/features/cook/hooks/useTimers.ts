@@ -28,6 +28,11 @@ export interface UseTimersOptions {
   now?: () => number
   /** How often the countdown re-renders; default 1000 ms. */
   tickMs?: number
+  /**
+   * Ask the server again every this many ms (PC-04: the shell polls every 15 s, besides the live events). Default: no polling
+   * (Cook Mode refetches on live events and after its own actions). STUB: not applied yet.
+   */
+  pollMs?: number
 }
 
 const TIMERS_KEY = ['cook', 'timers'] as const

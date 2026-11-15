@@ -36,6 +36,8 @@ export interface UseCookSession {
   /** The Planned Meal for T11's Mark as Cooked sheet; null for a Recipe scope. */
   markCookedKey: { date: string; mealSlotId: number; courseId: number } | null
   scope: string
+  /** Forget the resume Step (Cooked). STUB: does nothing yet. */
+  clearResume(): void
 }
 
 const VIEW_KEY = ['cook', 'view'] as const
@@ -135,5 +137,6 @@ export function useCookSession(source: CookSource): UseCookSession {
     isLast: isLast(nav),
     markCookedKey: view?.meal && source.kind === 'meal' ? { date: view.meal.date, mealSlotId: view.meal.mealSlotId, courseId: source.courseId } : null,
     scope,
+    clearResume: () => {},
   }
 }

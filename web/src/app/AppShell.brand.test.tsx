@@ -3,6 +3,9 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AppShell } from './AppShell'
 
+// B9-25 (PC-04): the shell's timer pill polls the household's timers through react-query; the shell tests have no QueryClient (AppShell.timers.test.tsx covers it).
+vi.mock('./ShellTimers', () => ({ ShellTimers: () => null }))
+
 vi.mock('./ShellStatus', () => ({ ShellStatus: () => null }))
 
 // b8-shop: the "Feeder" wordmark is in the top bar at every width (CSS no longer hides it on a phone), with the brand mark before it.
