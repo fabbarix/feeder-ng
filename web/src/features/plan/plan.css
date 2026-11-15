@@ -746,3 +746,150 @@
   font-size: var(--text-body-size);
   line-height: var(--text-body-line);
 }
+
+/* ======== B9-46 (PC-08): Away ======== */
+/* A whole-day Away under the day's name: "Ben away all day · 1.75 portions", a 44 px button in the info tone. It never cuts: at
+   375 a long name wraps to a second line (main-session ruling 7). */
+.plan-day__away {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  inline-size: 100%;
+  min-block-size: var(--target-min);
+  margin-block-start: calc(-1 * var(--space-2));
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-info-fg);
+  font-family: inherit;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: 600;
+  text-align: start;
+  white-space: normal;
+  cursor: pointer;
+}
+.plan-day__away > svg {
+  flex: none;
+}
+.plan-day__away-text {
+  min-width: 0;
+}
+.plan-day__away:disabled {
+  cursor: default;
+}
+.plan-day[data-row='true'] .plan-day__away {
+  grid-column: 1 / -1;
+}
+/* A part-day Away in the slot header ("Ben away"), or the info chip "Everyone is away": it shrinks (and may be cut) before the
+   name and the time do; the header never wraps. */
+.plan-slot-head__away {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-start: var(--space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 600;
+  color: var(--color-info-fg);
+}
+.plan-slot-head__away[data-everyone='true'] {
+  display: inline-flex;
+  overflow: visible;
+}
+
+/* The Away sheet: Who, then First day / From and Last day / Through (side by side from 600 px), No last day yet, What changes. */
+.away-sheet {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.away-sheet__who {
+  display: grid;
+  gap: var(--space-2);
+}
+.away-sheet__label {
+  font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+}
+.away-sheet__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.away-sheet__pill {
+  display: inline-flex;
+  min-block-size: var(--target-min);
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.away-sheet__pill .member-pill {
+  min-block-size: var(--target-min);
+  padding-inline-end: var(--space-3);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+.away-sheet__pill[aria-checked='true'] .member-pill {
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+.away-sheet__when {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+@media (min-width: 37.5em) {
+  .away-sheet__when {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .away-sheet__when[data-one='true'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.away-sheet__end {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+/* Each field takes its whole column (size="full"); a select's value stays on one line. */
+.away-sheet [role='combobox'] {
+  white-space: nowrap;
+}
+/* What changes: the shared Disclosure in the info tone; its summary row is the toggle, the rows sit on surface. */
+.away-sheet__changes .disclosure {
+  padding: 0;
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+  box-shadow: inset 0 0 0 1px var(--color-info-fg);
+}
+.away-sheet__changes .disclosure__button {
+  min-block-size: calc(var(--target-min) + var(--space-1));
+  padding-inline: var(--space-3) var(--space-1);
+  border-radius: var(--radius-tile-sm);
+}
+.away-sheet__changes .disclosure__title {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: 600;
+}
+.away-sheet__changes .disclosure__body {
+  gap: var(--space-2);
+  padding: 0 var(--space-1) var(--space-1);
+}
+.away-sheet__note {
+  margin: 0;
+  padding-inline: var(--space-2);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-info-fg);
+}

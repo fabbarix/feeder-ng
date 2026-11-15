@@ -23,7 +23,8 @@ export interface PlanChange {
   why: Why[]
 }
 
-export type ReplanKind = 'swap' | 'choose' | 'pin' | 'unpin' | 'regenerate'
+/** B9-46: 'away' is an Away write (its own toast; only Review's words use the kind). */
+export type ReplanKind = 'swap' | 'choose' | 'pin' | 'unpin' | 'regenerate' | 'away'
 
 /** Who made a write, as the plan event names them. */
 export interface PlanActor {
@@ -120,7 +121,7 @@ function changesBody(changes: PlanChange[], slots: PlanSlot[]): string {
  * The toast after a write of the signed-in User; null when it has nothing to say (Pin or Unpin that changed nothing else).
  * `target` is the edited Planned Meal (Regenerate has none).
  */
-export function replanToast(src: { kind: ReplanKind; target?: SlotKey; changes: PlanChange[]; slots: PlanSlot[]; changed?: number }): ReplanToast | null {
+export function replanToast(src: { kind: Exclude<ReplanKind, 'away'>; target?: SlotKey; changes: PlanChange[]; slots: PlanSlot[]; changed?: number }): ReplanToast | null {
   const { kind, target, changes, slots } = src
   const edit = u.editNoun[kind]
   if (kind === 'regenerate') {

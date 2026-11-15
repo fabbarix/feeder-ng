@@ -62,7 +62,7 @@ export function usePlanScreen() {
   const notCooked = useNotCooked()
   const allCooked = useAllCookedFlow()
   const confirm = useConfirm()
-  const slotDate = useSlotDate(plan.slots)
+  const slotDate = useSlotDate(plan.slots, { away: true })
   const leftoverFlow = useLeftoverFlow(plan.today)
   const pick = usePickLeftover()
   useMarkSlotRoute({ flow, allCooked })

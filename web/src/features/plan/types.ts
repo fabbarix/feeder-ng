@@ -239,6 +239,58 @@ export interface PlanView {
   /** True while the planner is catching up with a change; the screen shows a small "Updating" note. */
   updating: boolean
   slots: PlanSlot[]
+  /** B9-24 / B9-46: the Aways that touch the plan's days (running or coming; GET /api/plan). */
+  away?: Away[]
+}
+
+/** B9-24 (PC-08): a Member's Away as the API sends it. A null slot is the whole day; `through` null is "No last day yet". */
+export interface Away {
+  id: number
+  memberId: number
+  memberName: string
+  from: string
+  fromMealSlotId: number | null
+  through: string | null
+  throughMealSlotId: number | null
+  started: boolean
+}
+
+/** The dry run of an Away write (`?dryRun=1`): what the Away changes, by day, before it is saved. */
+export interface AwayPreviewSlot {
+  mealSlotId: number
+  mealSlotName: string
+  time: string
+  portionsBefore: number
+  portionsAfter: number
+  /** The portions differ. */
+  changes: boolean
+  /** A PATCH gives this Meal Slot back to the Member. */
+  back: boolean
+}
+export interface AwayPreview {
+  slotsWithout: number
+  mealsChanged: number
+  days: { date: string; slots: AwayPreviewSlot[] }[]
+  /** The first day past the plan from which the planner plans without the Member; null when the Away stays inside the plan. */
+  beyondHorizon: string | null
+}
+
+/** A Meal Slot of the Household as the Away sheet needs it (Settings' MealSlot fits). `weekday` is ISO, 1 Monday to 7 Sunday. */
+export interface AwaySlotRef {
+  id: number
+  weekday: number
+  name: string
+  time: string
+}
+
+/** The Away sheet's form. A null slot is the whole day; `noLastDay` hides Last day and Through. */
+export interface AwayDraft {
+  memberId: number | null
+  from: string
+  fromMealSlotId: number | null
+  through: string
+  throughMealSlotId: number | null
+  noLastDay: boolean
 }
 
 /** The key of one Planned Meal: its Meal Slot, its date and its Course (the real id, the main Course included). */
@@ -422,4 +474,6 @@ export interface SlotDateActions {
   onNotServed: (slot: SlotDayKey) => void
   onTime: (slot: SlotDayKey) => void
   onPlanAgain: (slot: SlotDayKey) => void
+  /** B9-46: "Someone is away…" in the slot's ⋮ opens the Away sheet from this Meal Slot. */
+  onAway?: (slot: SlotDayKey) => void
 }

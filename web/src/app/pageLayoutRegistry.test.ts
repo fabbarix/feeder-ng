@@ -126,6 +126,7 @@ const ADDED = {
   // the seed step page-layout-seed/recipe-detail.mjs gives the seeded Recipe its lede, Source, eight Tags and an untimed Step.
   // B9-41: scenarios/b9-41.mjs (order 341): scan-weighed (SSP-07, SSP-20: the weighed header, the keypad on per kg, the focused key's ring).
   // B9-44: scenarios/b9-44.mjs (order 344): today-advance (TB-02), today-grid (TB-03, TB-09, TB-11, with the resize walk), today-shopping (TB-12), today-cls and plan-cls (RES-05).
+  // B9-46: scenarios/b9-46.mjs (order 346): plan-away, away-sheet, away-sheet-open, whos-eating-away and member-away (PC-08, SET-16).
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
   // B9-43: scenarios/b9-43.mjs (order 350, after b9-40 by file name): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete and shop-complete-restore (SSP-04, 09, 13, 14).
   // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
@@ -156,6 +157,7 @@ const ADDED = {
     'recipe-detail-cook', 'recipe-detail-phone',
     'scan-weighed',
     'today-advance', 'today-grid', 'today-shopping', 'today-cls', 'plan-cls',
+    'plan-away', 'away-sheet', 'away-sheet-open', 'whos-eating-away', 'member-away',
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
     'shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete', 'shop-complete-restore',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',

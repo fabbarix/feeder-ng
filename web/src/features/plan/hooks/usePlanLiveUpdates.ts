@@ -56,6 +56,11 @@ export function usePlanLiveUpdates(options?: { announce?: boolean }): void {
     const offHousehold = connection.subscribe('household', (data?: unknown) => {
       const changed = (data as { changed?: unknown } | undefined)?.changed
       if (changed === 'courses' || changed === 'mealSlots' || changed === 'attendance' || changed === 'slotDates') void client.invalidateQueries({ queryKey: ['plan'] })
+      // B9-46 (PC-08): an Away written elsewhere replanned the days it covers, and changed the Member's Aways.
+      if (changed === 'away') {
+        void client.invalidateQueries({ queryKey: ['plan'] })
+        void client.invalidateQueries({ queryKey: ['household', 'away'] })
+      }
     })
     // A Tag renamed on another device (topic tags) changes the names in the why chips.
     const offTags = connection.subscribe('tags', () => void client.invalidateQueries({ queryKey: ['tags'] }))

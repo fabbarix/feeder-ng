@@ -6,6 +6,7 @@ import { timeCaption } from '../lib/slotDate'
 import { slotIcon } from '../lib/hero'
 import { slotHead } from '../lib/rowActions'
 import type { PlanSlot, SlotDateActions, SlotDayKey, SlotKey } from '../types'
+import { SlotAwayLabel } from './SlotAwayLabel'
 import { SlotMenu } from './SlotMenu'
 
 export interface SlotHeaderProps {
@@ -16,10 +17,12 @@ export interface SlotHeaderProps {
   onNotCookedSlot: (slot: SlotDayKey) => void
   onAddCourse: (key: SlotKey) => void
   dateActions?: SlotDateActions
+  /** B9-46 (PC-08): "Ben away" (info text) or the info chip "Everyone is away", after the time. */
+  awayLabel?: { text: string; everyone: boolean }
 }
 
 /** The Meal Slot header row of a day tile: icon and full name (never cut), the time, then the slot's actions (Cook, ⋮) grouped at the end. */
-export function SlotHeader({ slot, today, onCook, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions }: SlotHeaderProps): ReactNode {
+export function SlotHeader({ slot, today, onCook, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions, awayLabel }: SlotHeaderProps): ReactNode {
   const head = slotHead(slot, today, dateActions !== undefined)
   const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
   const day = dayLabel(slot.date)
@@ -28,6 +31,7 @@ export function SlotHeader({ slot, today, onCook, onMarkAllCooked, onNotCookedSl
       <span className="plan-slot-head__label">
         <Icon name={slotIcon(slot.name)} size={16} />
         <span className="plan-slot-head__name">{slot.name}</span>
+        {awayLabel ? <SlotAwayLabel text={awayLabel.text} everyone={awayLabel.everyone} /> : null}
       </span>
       <span className="plan-slot-head__time">{timeCaption(slot) ?? slot.time}</span>
       {head.cook || head.menu ? (
