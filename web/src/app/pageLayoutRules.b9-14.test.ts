@@ -7,7 +7,7 @@
 //   scripts/lib/page-layout/probes/clipped-rings.mjs      (B9-03's, extended here) P18's targets include the controls of an open modal's body
 //   scripts/lib/page-layout/probes/focus-rings.mjs        (B9-07's, one name added) P39 also runs on focus-ring-room-sheet
 //   scripts/lib/page-layout/scenarios/b9-14.mjs           order 310: leftover-menu-sheet, sheet-planned-meal, sheet-add-member, sheet-short-landscape, sheet-zoom-400, focus-ring-room-sheet
-//   scripts/test/fixtures/page-layout-seed/b9-14.mjs      a Leftover for leftover-menu-sheet
+//   (no seed drop-in: the leftover-menu-sheet setup makes its own Leftover and undoes it; Today's default state is the seed's)
 import { describe, expect, it } from 'vitest'
 
 const nodeModule = 'node:module'
@@ -15,7 +15,7 @@ const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { cre
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
 const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
+const { readFileSync, existsSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string; existsSync: (p: string) => boolean }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const req = createRequire(resolve(cwd, 'package.json'))
 const api = req(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
@@ -167,9 +167,13 @@ describe('probes and scenarios', () => {
     expect(src).toMatch(/dialog\[open\]:modal/)
     expect(src).toMatch(/\.sheet__body, \.dialog__body/)
   })
-  it('the seed drop-in exists, with an order from 100 up', () => {
-    const seed = read('scripts/test/fixtures/page-layout-seed/b9-14.mjs')
-    expect(seed).toMatch(/export const order = \d{3}/)
-    expect(seed).toMatch(/export async function seed\(/)
+  // Ruling 4 (B9-14 review): the seed is not changed (a seeded Leftover changed Today for every other scenario); the
+  // leftover-menu-sheet setup makes its own Leftover (Cooked with 2 portions) and the next b9-14 setup undoes it (reopen).
+  it('no seed drop-in: the leftover-menu-sheet setup makes its Leftover and a later setup undoes it', () => {
+    expect(existsSync(resolve(cwd, '..', 'scripts/test/fixtures/page-layout-seed/b9-14.mjs'))).toBe(false)
+    const src = read('scripts/lib/page-layout/scenarios/b9-14.mjs')
+    expect(src).toMatch(/leftoverPortions: 2/)
+    expect(src).toMatch(/\/reopen'/)
+    expect(src.match(/await restoreToday\(\)/g)?.length).toBeGreaterThanOrEqual(2)
   })
 })

@@ -1,5 +1,6 @@
 // B9-14 (plan section 9; DS-01, SHORT-02, SHORT-07, A11Y-02): the sheet scenarios of P25, P33 and the sheet half of P39.
-//   leftover-menu-sheet       Today's Leftover ⋮ opens the Menu sheet (DS-01), at 375 and 390; P25 and P33.
+//   leftover-menu-sheet       Today's Leftover ⋮ opens the Menu sheet (DS-01), at 375 and 390; P25 and P33. Its setup makes the Leftover
+//                             and the next b9-14 setup undoes it: Today's default state (the seed) is unchanged for other scenarios.
 //   sheet-planned-meal        /plan: a Planned Meal sheet, portrait and phone landscape (844x390); P25 and P33.
 //   sheet-add-member          /settings/members: the Add Member form sheet, portrait, with the keyboard up (390x400) and at 1440; P25 and P33.
 //   sheet-short-landscape     the same Add Member sheet at 667x375 and 844x390 with the safe-area insets; P33.
@@ -15,6 +16,16 @@ const TOUCH = [
   { method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } },
 ]
 const dialogOpen = `!!document.querySelector('dialog.sheet[open]')`
+/** The Course leftoverMenuSheet marked Cooked for its Leftover ({ date, mealSlotId, courseId }), until restoreToday undoes it. */
+let cookedForLeftover = null
+/** Undoes leftoverMenuSheet's Cooked (Undo of Cooked, POST .../reopen: the Leftover goes and the Course is to confirm again). */
+async function restoreToday() {
+  if (!cookedForLeftover) return
+  const c = cookedForLeftover
+  cookedForLeftover = null
+  const ok = await evaluate(`fetch('/api/plan/${c.date}/${c.mealSlotId}/${c.courseId}/reopen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.ok)`)
+  if (!ok) throw new Error(`setup: the Leftover of leftover-menu-sheet (${c.date}/${c.mealSlotId}/${c.courseId}) could not be undone; Today is left changed`)
+}
 async function openAddMember() {
   await until(`!!document.querySelector('main') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Members page')
   await press(byText('main button', 'Add Member'), '"Add Member"')
@@ -32,15 +43,33 @@ export default {
     { name: 'focus-ring-room-sheet', route: '/settings/members', start: '/settings/members', setup: 'addMemberSheet', widths: [390, 1440], rules: ['P39'] },
   ],
   setups: {
-    // The Leftovers to use tile needs a Leftover: the seed (scripts/test/fixtures/page-layout-seed/b9-14.mjs) cooks one. Without it the
-    // setup throws and the scenario reports "not inspected" instead of passing on an empty page.
+    // The Leftovers to use tile needs a Leftover. The setup makes its own and the next b9-14 setup undoes it (restoreToday), so the
+    // seed and Today's default state stay as the other packages' scenarios see them (review ruling 4): the first Course the plan lists
+    // as to confirm is marked Cooked with 2 Leftover portions, through the page's own session, unless a Leftover is already there (the
+    // second width and the dark pass replay this setup). Without a Leftover the setup throws: "not inspected", never a pass on an
+    // empty page.
     async leftoverMenuSheet() {
-      await until(`!!document.querySelector('main button[aria-label^="Actions for"]')`, 'a Leftover row with its ⋮ ("Actions for <Recipe>") on Today; the b9-14 seed cooks one')
+      await until(`!!document.querySelector('main .bento-grid') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Today grid')
+      const made = await evaluate(`(async () => {
+        const json = async (r) => (r.ok ? r.json() : null)
+        const have = await json(await fetch('/api/plan/leftovers'))
+        if ((have?.leftovers ?? []).length > 0) return null
+        const first = ((await json(await fetch('/api/plan/to-confirm')))?.slots ?? []).find((x) => x.courseId != null)
+        if (!first) return null
+        const r = await fetch('/api/plan/' + first.date + '/' + first.mealSlotId + '/' + first.courseId + '/cooked', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ leftoverPortions: 2 }) })
+        return r.ok ? { date: first.date, mealSlotId: first.mealSlotId, courseId: first.courseId } : null
+      })()`)
+      if (made) {
+        cookedForLeftover = made
+        await evaluate('location.reload()')
+      }
+      await until(`!!document.querySelector('main button[aria-label^="Actions for"]')`, 'a Leftover row with its ⋮ ("Actions for <Recipe>") on Today')
       await press(`document.querySelector('main button[aria-label^="Actions for"]')`, 'the Leftover ⋮')
       await until(dialogOpen, 'the Leftover Menu sheet')
     },
     // A Planned Meal sheet: the first Course row of /plan whose press opens a sheet.
     async plannedMealSheet() {
+      await restoreToday()
       await until(`document.querySelectorAll('main .list-row__target').length > 0 && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Plan rows')
       const n = await evaluate(`Math.min(12, document.querySelectorAll('main .list-row__target').length)`)
       for (let i = 0; i < n; i++) {
@@ -50,6 +79,7 @@ export default {
       throw new Error('setup: no Plan row opened a Planned Meal sheet')
     },
     async addMemberSheet() {
+      await restoreToday()
       await openAddMember()
     },
   },
