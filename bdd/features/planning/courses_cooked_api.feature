@@ -1,4 +1,4 @@
-@crs-c2
+@crs-c2 @area-planning
 Feature: Cooked and Not cooked per Course, and for the whole slot
   Each Course is marked Cooked or Not cooked on its own, deducts its own Stock and records its own Leftover (spec 8).
   Mark all Cooked and Not cooked: whole slot are new paths under .../all/; the old per-slot paths keep their old meaning

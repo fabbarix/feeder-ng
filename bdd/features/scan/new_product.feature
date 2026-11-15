@@ -1,3 +1,4 @@
+@area-scan
 Feature: A new Product from the Scan screen (scan redesign, SR6)
   An unknown barcode opens the short "What is this?" sheet. Saving it sends one scan Op, shop_unknown: a Line picked from
   the list gives the Ingredient or Supply it is of, and "Something else" names a new one. The pack size is the one thing

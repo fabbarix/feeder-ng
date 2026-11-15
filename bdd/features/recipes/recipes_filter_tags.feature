@@ -1,3 +1,4 @@
+@area-recipes
 Feature: Filter Recipes by several Tags
   The Recipes list can be narrowed by more than one Tag. A Recipe has to carry every selected Tag (like combining filter
   sections, each Tag narrows the list). One Tag works as before. (docs/design/recipes-filter.md, docs/dev/design/b8-recipes.md)

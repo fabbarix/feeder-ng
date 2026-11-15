@@ -1,3 +1,4 @@
+@area-import-export
 Feature: Exporting Recipes as a Recipe File
   Pick Recipes (or all of them) and download a .feeder.json file with images embedded and
   a definition for every Ingredient used.

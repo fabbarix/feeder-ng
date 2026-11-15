@@ -1,4 +1,5 @@
 # language: en
+@area-import-export
 Feature: Import Review decisions for Base recipes (beta.6, BR-C, docs/dev/design/base-recipes.md section 11.3)
   A line that calls for another recipe gets a tile in Import Review, and nothing is linked silently: each tile is
   answered, and Confirm saves every answer in one transaction. These scenarios drive the API only. A tile is

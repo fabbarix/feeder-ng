@@ -1,4 +1,4 @@
-@br-g
+@br-g @area-cook-board
 Feature: The Courses of a slot share the jar in Cook Mode, as Mark all Cooked does (beta.6, docs/dev/design/base-recipes.md section 9)
   Lasagne (Main) and Spinach bake (Side) each call for 500 g of Béchamel, one Batch each, and the Pantry holds one jar of
   600 g. Cook Mode gives the jar to the Main, which comes first in the slot's order; the Side finds 100 g, so it makes its

@@ -38,7 +38,7 @@ l_build=$(grep -n 'step "vite build"' "$CH" | cut -d: -f1); l_pl=$(grep -n 'chec
 
 # --- modes file and the guard files
 M="$ROOT/scripts/check-page-layout.modes"
-grep -Eq '^default=warn$' "$M" 2>/dev/null && ok || bad "check-page-layout.modes must start in warn mode (default=warn)"
+grep -Eq '^default=fail$' "$M" 2>/dev/null && ok || bad "check-page-layout.modes ships in its release state (default=fail, B9-55)"
 [ -f "$ROOT/scripts/check-page-layout.mjs" ] && ok || bad "scripts/check-page-layout.mjs (the CDP driver) is missing"
 node --check "$ROOT/scripts/check-page-layout.mjs" 2>/dev/null && ok || bad "check-page-layout.mjs must parse"
 grep -q 'lib/page-layout-rules.mjs' "$ROOT/scripts/check-page-layout.mjs" 2>/dev/null && ok || bad "the driver must import the pure rules module"

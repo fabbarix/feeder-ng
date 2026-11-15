@@ -1,3 +1,4 @@
+@area-images
 Feature: Adding an image from a link, and cleaning up images that were never saved
   Every image field (Recipe photos, Step photos, later Ingredient images) takes its picture from one place on
   the server. Pasting a link makes Feeder download the picture itself, with the same limits and WebP

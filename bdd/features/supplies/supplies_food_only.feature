@@ -1,3 +1,4 @@
+@area-supplies
 Feature: Food-only paths refuse a Supply
   A Supply is an Ingredient of kind supply that is never food. The server refuses it wherever only food belongs, not only
   the screens: a Recipe line, a Ready Meal's or Base recipe's Ingredient, a Base recipe link, an Exclusion, and an Import

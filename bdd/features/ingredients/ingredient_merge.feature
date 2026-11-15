@@ -1,3 +1,4 @@
+@area-ingredients
 Feature: Merging Ingredients
   Two Ingredients that turn out to be the same can be merged. Everything that pointed
   at the first now points at the second, their Unit Conversions combine, and anything

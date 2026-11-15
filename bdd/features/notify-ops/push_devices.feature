@@ -1,3 +1,4 @@
+@area-notify-ops
 Feature: Push devices
   Each User opts in per device and per notification type (spec §12). The Feeder
   generates its own VAPID keys on first start, so no Google setup is needed.

@@ -1,3 +1,4 @@
+@area-notify-ops
 Feature: Reminders for a dinner with several Courses
   Advance Step reminders are per Course. Start cooking and Confirm Cooked are one reminder per Meal Slot:
   Start cooking falls at the start of the slot's cooking timeline, Confirm Cooked 2 hours after the slot time.

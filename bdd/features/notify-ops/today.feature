@@ -1,3 +1,4 @@
+@area-notify-ops
 Feature: Today screen data
   Today shows the zero-waste streak and the Advance Steps due today. Every
   other tile comes from Planning and Stock.

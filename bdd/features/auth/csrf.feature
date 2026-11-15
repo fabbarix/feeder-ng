@@ -1,3 +1,4 @@
+@area-auth
 Feature: Cross-site write protection
   State-changing API requests must be JSON, and a browser request from
   another origin is refused, so another website cannot act as a signed-in User.

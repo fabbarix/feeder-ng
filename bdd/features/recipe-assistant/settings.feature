@@ -1,3 +1,4 @@
+@area-recipe-assistant
 Feature: Recipe Assistant settings
   Admins turn the Recipe Assistant on, give it a base URL, a model and an API key. The key is encrypted under the
   server's secret key, never shown again, and bound to the address it was saved for.

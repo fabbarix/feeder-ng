@@ -1,3 +1,4 @@
+@area-ingredients
 Feature: Finding Ingredients
   Search gives the exact match first, then fuzzy suggestions. Import Review and the
   "what is this?" sheet use it to avoid duplicate Ingredients.

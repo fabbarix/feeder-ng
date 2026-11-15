@@ -1,4 +1,4 @@
-@b9-scan-data
+@b9-scan-data @area-scan
 Feature: Scan data: weighed codes and codes of a Shop without a rule (B9-41: SSP-07, SSP-15)
   The API half of two Scan screen flows. A new weighed Product is priced per kg from the keypad, and the server keeps the
   Price per kg with the Price. A code that looks like a weighed-goods code (in-store prefix 20 to 29) at a Shop with no

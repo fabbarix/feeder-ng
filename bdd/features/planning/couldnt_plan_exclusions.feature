@@ -1,4 +1,4 @@
-@crs-crx
+@crs-crx @area-planning
 Feature: Review Exclusions says which Exclusions left a Course empty
   When every Recipe of a Course is excluded for someone who eats it, Couldn't plan files the Course under Excluded.
   GET /api/plan/couldnt-plan/exclusions names the Exclusions behind each such Course: who excludes what, and which

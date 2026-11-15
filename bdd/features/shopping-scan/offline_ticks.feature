@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Ticks made offline sync with the Scans (beta.9, RES-03)
   A tick by hand made offline is queued like a Scan and sent with it, in the order it was made. A retried sync never adds
   a second Stock Lot. A queued tick that syncs after someone else ticked the Line always adds its own Stock Lot, and the

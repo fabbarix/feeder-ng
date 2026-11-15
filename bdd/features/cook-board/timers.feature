@@ -1,3 +1,4 @@
+@area-cook-board
 Feature: Cook Mode timers
   Timers are kept on the server and computed from their start time, so the phone
   and the tablet show the same timers. A Passive Step starts one when reached.

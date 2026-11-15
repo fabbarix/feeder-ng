@@ -1,3 +1,4 @@
+@area-planning
 Feature: Reheat a Planned Meal served from a Leftover
   Today's hero offers Reheat (not Cook) for a Planned Meal served from a Leftover. Reheat opens a
   Reheat screen with a reheating timer scoped to that Planned Meal; a Leftover meal has no Steps,

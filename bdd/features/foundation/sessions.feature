@@ -1,3 +1,4 @@
+@area-foundation
 Feature: Sessions
   A User stays signed in with a 30-day sliding session cookie. Signing out,
   or being removed from the allowlist, ends the session at once.

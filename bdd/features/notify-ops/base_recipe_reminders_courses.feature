@@ -1,4 +1,4 @@
-@br-g
+@br-g @area-notify-ops
 Feature: Start cooking counts the Base recipe of the Course that does not get the jar (beta.6, docs/dev/design/base-recipes.md section 9)
   Lasagne (Main) and Spinach bake (Side) each call for 500 g of Béchamel and the Pantry holds one jar of 600 g. The Main
   gets the jar; the Side makes its Béchamel, so the slot's timeline takes 55 minutes: Start cooking at 18:05 Rome time for a

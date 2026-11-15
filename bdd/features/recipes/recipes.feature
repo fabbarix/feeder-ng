@@ -1,3 +1,4 @@
+@area-recipes
 Feature: Recipes
   A Recipe has a Yield, ingredient lines for one Batch, optional timed Steps and
   Tags that the household defines by using them. Total time is the critical path

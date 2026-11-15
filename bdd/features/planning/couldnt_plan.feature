@@ -1,3 +1,4 @@
+@area-planning
 Feature: Couldn't plan, and attendance that defaults to everyone
   Meal Slots created without naming who attends are planned for everyone. When a slot still
   cannot be planned the planner's reasons are unchanged: no_attendance and no_candidates (with

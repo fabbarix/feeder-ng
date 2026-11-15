@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Prices by Shop
   A Shop's page lists the latest Price of each Product recorded there, read in one request by Shop. It needs no Shop
   Barcode: a Price is recorded when a receipt is read or when a Price is added on a Product (SET-02).

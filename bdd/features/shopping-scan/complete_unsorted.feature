@@ -1,4 +1,4 @@
-@b9-shop-line-sheet
+@b9-shop-line-sheet @area-shopping-scan
 Feature: A complete Shopping List knows which of its Stock Lots are Not sorted (beta.9, B9-43, SSP-09, API half)
   The "Shopping List complete" tile offers "Put away N Stock Lots" when some Stock Lots this shop added are Not sorted
   into a Storage Place. What the tile draws is UI; what it counts is the Stock the shop leaves behind: a first purchase

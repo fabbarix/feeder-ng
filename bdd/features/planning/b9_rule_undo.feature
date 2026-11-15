@@ -1,4 +1,4 @@
-@b9 @b951
+@b9 @b951 @area-planning
 Feature: A removed planning rule can be put back
   Removing a Slot Rule or a Variety Rule in Settings acts at once and offers Undo. The Undo is no server feature of its own: the app
   puts the rule back with the inverse call (SAFE-02, "Light removals"). These scenarios pin that this inverse is available and gives

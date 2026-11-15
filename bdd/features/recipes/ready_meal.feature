@@ -1,3 +1,4 @@
+@area-recipes
 Feature: A Ready Meal and its Ingredient
   A Ready Meal is a Recipe made from exactly one Ingredient, a bought pack. Feeder keeps an Ingredient with the
   Recipe's name so the pack can be stocked and bought. Saving a Ready Meal without a line makes the line:

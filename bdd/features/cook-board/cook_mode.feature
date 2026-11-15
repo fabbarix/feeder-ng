@@ -1,3 +1,4 @@
+@area-cook-board
 Feature: Cook Mode
   Cook Mode opens for a Planned Meal or for a Recipe with a chosen Batch count.
   Steps come one at a time with their uses scaled to the Batches; Advance Steps

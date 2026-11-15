@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Shopping List
   The Shopping List holds the Ingredients and quantities still needed for uncooked Planned Meals from now up to
   a chosen date, less Stock, plus manual extras. Monday 2026-11-09 12:00 UTC; dinners are at 19:00 and the

@@ -1,3 +1,4 @@
+@area-recipes
 Feature: A Recipe's reheat time
   A Recipe may carry an optional reheat time in whole minutes (1 to 30). Reheat uses it as the default
   timer for a Leftover of that Recipe; without it Reheat falls back to its formula. Blank means "not set".

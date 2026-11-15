@@ -1,3 +1,4 @@
+@area-recipes
 Feature: Favourites, Dislikes and Exclusions
   Each Member has at most one state per Recipe (Favourite, Dislike or
   Exclusion) and can exclude Ingredients. A User edits their linked Member's

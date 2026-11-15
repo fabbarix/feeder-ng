@@ -1,3 +1,4 @@
+@area-planning
 Feature: Cooked, Not cooked and Leftovers
   Mark as Cooked proposes the Leftover portions (Batches x Yield - portions needed), deducts
   Stock, records the actual Leftover with its Use-by and replans. Not cooked skips the meal.

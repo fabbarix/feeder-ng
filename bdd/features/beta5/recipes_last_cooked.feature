@@ -1,4 +1,4 @@
-@b5-r
+@b5-r @area-recipes
 Feature: Recipes sorted by last cooked
   The Recipe list and detail say when a Recipe was last Cooked: the latest date of a Cooked, fresh Planned Meal of that
   Recipe, in any Course. A meal served from a Leftover does not count (nothing was cooked), and the Planned Meal's

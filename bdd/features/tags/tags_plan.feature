@@ -1,4 +1,4 @@
-@tg-api
+@tg-api @area-tags
 Feature: Tag changes replan as a rule edit does
   A rename, merge or delete that moves or removes a Slot Rule or Variety Rule updates the plan as a rule edit
   does (spec 4.1, 7.1): unpinned Planned Meals are replanned, Pinned ones stay.

@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Scanning in a Shop
   A resolved barcode adds a Stock Lot, records the Product as sold at the Shop and a purchase, reduces the
   matching Shopping List line (ticking it at zero) and prefills the Price. Undo reverses it. The list line here

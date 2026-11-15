@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Prices
   A Price is what a Product cost at a Shop on a date, in the minor unit of the Household's
   currency. The latest one prefills the next scan.

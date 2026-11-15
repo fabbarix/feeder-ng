@@ -1,3 +1,4 @@
+@area-household
 Feature: Meal Slots
   Meal Slots are defined per weekday with a name, a usual time and a default
   Attendance. Portions needed is the sum of the attending Members' Portion Factors.

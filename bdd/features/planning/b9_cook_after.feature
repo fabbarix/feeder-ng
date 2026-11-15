@@ -1,4 +1,4 @@
-@b9-cook-after
+@b9-cook-after @area-planning
 Feature: Freeze keeps no stranded portion (beta.9, PC-13)
   The Freeze sheet offers every spare portion in steps of a quarter, so a Leftover of 1.25 portions freezes as 1.25 and never leaves
   0.25 behind. The server takes any amount up to what is left. (The Cooked confirmation, Get ready and the merged Leftover rows are

@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Shops
   Every User can see the Household's Shops, add one and save where it is (its Shop Location).
   Only the Admin renames or deletes a Shop.

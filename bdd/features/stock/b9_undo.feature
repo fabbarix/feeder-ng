@@ -1,4 +1,4 @@
-@b9-stock-undo
+@b9-stock-undo @area-stock
 Feature: Stock Undo, Keep with a date and Put away (beta.9, B9-05)
   Throw out can be undone on the day it was done: the Stock Lot comes back with its id and dates and the waste
   record goes. Keep makes a spoiled Stock Lot "Good until today" in one tap, or until a later date the User picks.

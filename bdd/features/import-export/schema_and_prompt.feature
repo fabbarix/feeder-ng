@@ -1,3 +1,4 @@
+@area-import-export
 Feature: Published Recipe File schema and Agent Prompt
   The running app serves the Recipe File schema, and "Copy Agent Prompt" copies the
   template with the schema and an example inlined.

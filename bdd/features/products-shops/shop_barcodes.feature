@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Shop Barcodes
   A Shop Barcode identifies a Product only within one Shop: an own-label code, or the item
   code of a Weight Barcode Rule. Any User can add them (the scan sheet does).

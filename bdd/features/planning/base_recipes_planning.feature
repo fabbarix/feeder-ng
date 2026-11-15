@@ -1,4 +1,4 @@
-@br-f
+@br-f @area-planning
 Feature: Planning with Base recipes (beta.6, docs/dev/design/base-recipes.md section 5)
   A Base recipe is never planned. A Recipe that calls for one is planned from the Ingredients inside it, at any depth: an
   Exclusion of milk inside Béchamel, or of Béchamel itself, rules Lasagne out, and Review Exclusions names it. A Base

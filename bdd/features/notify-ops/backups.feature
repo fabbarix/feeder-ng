@@ -1,3 +1,4 @@
+@area-notify-ops
 Feature: Backups
   The Feeder keeps SQLite snapshots in /data/backups (ADR 0004). An Admin can
   list them and take one now; the nightly job (02:30 household time) uses the

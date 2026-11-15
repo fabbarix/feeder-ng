@@ -1,5 +1,5 @@
 # language: en
-@b8-base
+@b8-base @area-import-export
 Feature: The take-over ask counts the lines that will use the Base recipe too (beta.8, docs/dev/design/b8-base.md section 1)
   When Import Review asks whether a new Base recipe takes over a plain Ingredient of its name, the ask carries `keptLines`: how
   many other lines of the file stay Ingredient lines (a line kept as an Ingredient, or a line no tile asks about) and so use

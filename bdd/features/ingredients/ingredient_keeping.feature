@@ -1,4 +1,4 @@
-@keeping
+@keeping @area-ingredients
 Feature: Keeping an Ingredient, in one save
   The Ingredient page keeps Shelf Life and Frozen Shelf Life behind one "Save changes" and Rename in a sheet (SET-05). The page sends
   all the values in one PATCH, so the API takes them together and answers once. (The browser half of these scenarios is vitest:

@@ -1,3 +1,4 @@
+@area-import-export
 Feature: Import Review
   Importing never writes directly. A file is validated, its Ingredients and units are
   matched, Recipe conflicts are answered, images are resolved, and Confirm saves all in one go.

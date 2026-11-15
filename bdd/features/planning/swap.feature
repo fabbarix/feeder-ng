@@ -1,3 +1,4 @@
+@area-planning
 Feature: Swap, set and confirm
   Swap shows the top 3 alternatives under the same scoring, each with why chips. Choosing
   one pins it and replans the downstream unpinned slots. Setting or confirming a meal pins it too.

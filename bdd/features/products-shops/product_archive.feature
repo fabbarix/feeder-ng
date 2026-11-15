@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Archiving Products
   A bought Product cannot be deleted, but it can be archived and later unarchived.
   An archived Product is left out of lists and pickers, is not matched by scans, is

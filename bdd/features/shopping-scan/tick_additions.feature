@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: A tick by hand adds Stock, covers an amount and can be ticked twice (beta.9, SSP-01, SSP-02, RES-03)
   A tick by hand puts the last-bought pack, or the Line's need when no pack is known, into Stock in one tap, with Undo and
   Change. A tick covers an amount: need that grows after a tick reappears in To get as "More since your tick". A Line

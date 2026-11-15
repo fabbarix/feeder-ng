@@ -1,4 +1,4 @@
-@br-g
+@br-g @area-notify-ops
 Feature: Start cooking counts the time of the Base recipes (beta.6, docs/dev/design/base-recipes.md section 9)
   The Start cooking reminder falls at the slot time minus the cooking timeline, which now includes the Steps of the Base
   recipes a Recipe calls for; a jar that covers one takes its time out again. The Advance Steps of a Base recipe get their

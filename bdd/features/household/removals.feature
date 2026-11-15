@@ -1,4 +1,4 @@
-@removals
+@removals @area-household
 Feature: Removing a Member or a Meal Slot can be undone and keeps the history
   Removing a Member asks first and says what goes with them, and Undo puts them back with the same id. Removing a
   Meal Slot keeps its Cooked and Not cooked meals, so Last cooked and Cool-down do not change; the Admin can put the

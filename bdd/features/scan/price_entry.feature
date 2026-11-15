@@ -1,3 +1,4 @@
+@area-scan
 Feature: Price entry from the Scanned list (scan redesign, SR6)
   A row is priced from the keypad: one Price for every scan of the row, per pack, or per kg for a Product in g or ml. A
   Price the server refuses changes nothing. A phone that is offline sends the Price with the scan, and a replay sends

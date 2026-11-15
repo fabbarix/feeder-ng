@@ -1,3 +1,4 @@
+@area-planning
 Feature: A Bought Planned Meal does not move when another meal is swapped (beta.9, PC-01)
   A Swap or a Choose changes only what it breaks. A Planned Meal that a purchase from the Shopping List was bought for stays
   where it is, whatever another meal does, and the answer to the Swap does not list it as changed. Monday 2026-11-09

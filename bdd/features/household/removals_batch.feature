@@ -1,4 +1,4 @@
-@removals
+@removals @area-household
 Feature: Removing a Meal Slot on several days is one step, and so is putting it back
   In the Edit Meal Slot sheet, Remove acts on the days chosen in the sheet: the Admin removes Dinner on every day it
   runs in one go, and one Undo puts every day back. Either all of the days go, or none do; either all come back, or

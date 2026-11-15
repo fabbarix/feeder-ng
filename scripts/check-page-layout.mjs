@@ -3,6 +3,7 @@
 // which builds and starts a worktree-unique server, seeds it and maps the findings to warn/fail per route.
 //   node scripts/check-page-layout.mjs --url http://127.0.0.1:<port> [--profile quick|full] [--ids build/page-layout-ids.json]
 //                                      [--chrome /usr/bin/google-chrome] [--email admin@example.test] [--scenario NAME[,NAME]]
+//                                      [--routes PATTERN[,PATTERN]]
 // --url is required (no default port), so two worktrees can never probe each other's server by accident.
 // --scenario (B9-03) runs only the named scenarios (and the resize walk of a named one), no route table: a package's targeted run. An
 // unknown name is a usage error (exit 2) before Chrome starts.
@@ -50,6 +51,18 @@ try {
   console.error(`check-page-layout: ${e.message}`)
   process.exit(2)
 }
+// --routes PATTERN[,PATTERN] (the changed mode): only these patterns of the route table (exact ROUTES patterns). Without --scenario no
+// scenario runs; with --scenario, the named ones.
+const routesArg = process.argv.includes('--routes') ? arg('routes', '') : null
+if (routesArg !== null) {
+  const unknown = routesArg.split(',').filter((r) => r && !ROUTES.some(([p]) => p === r))
+  if (unknown.length) {
+    console.error(`check-page-layout: unknown route ${unknown.join(', ')} (--routes takes patterns of ROUTES)`)
+    process.exit(2)
+  }
+  if (scenarioArg === null) RUN_SCENARIOS = []
+}
+const RUN_ROUTES = routesArg !== null ? ROUTES.filter(([p]) => routesArg.split(',').includes(p)) : scenarioArg !== null ? [] : ROUTES
 const chromeBin = arg('chrome', process.env.CHROME ?? 'google-chrome')
 const email = arg('email', 'admin@example.test')
 const idsPath = arg('ids', 'build/page-layout-ids.json')
@@ -404,7 +417,7 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
 
 for (const vp of VIEWPORTS) {
   // --scenario: the named scenarios only, no route table.
-  for (const [pattern, kind] of scenarioArg ? [] : ROUTES) {
+  for (const [pattern, kind] of RUN_ROUTES) {
     if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(pattern)) continue
     await probePage(vp, resolveRoute(pattern, ids), pattern, kind, false)
   }

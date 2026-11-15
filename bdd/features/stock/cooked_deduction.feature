@@ -1,3 +1,4 @@
+@area-stock
 Feature: Stock when a meal is Cooked
   Marking a Planned Meal Cooked deducts Stock (ADR 0003). It never blocks. If Stock
   is short it warns, and if the warning is dismissed Stock floors at 0.

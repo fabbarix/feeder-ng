@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Shopping List: Not needed, and past meals still to confirm (beta.5, plan 2.5)
   A User can take a line off the list for the current range because nothing needs buying: it is Not needed, it adds no
   Stock and is not a purchase. Not needed belongs to one range, like a tick. A Planned Meal whose slot has passed and

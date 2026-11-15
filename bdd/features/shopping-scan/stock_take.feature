@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Stock-take scanning
   The same scanner without a Shop. Each scan opens a sheet with +1 pack, -1 pack and Set total. It never touches
   the Shopping List and only global barcodes apply.

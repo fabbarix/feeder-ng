@@ -1,3 +1,4 @@
+@area-planning
 Feature: Slot Rules and Variety Rules
   A Slot Rule fixes a Meal Slot to a Recipe or a Tag. A Variety Rule limits how often a
   Tag appears (per ISO week, and/or never on consecutive days). Any signed-in User may

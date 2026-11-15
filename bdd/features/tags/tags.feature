@@ -1,4 +1,4 @@
-@tg-api
+@tg-api @area-tags
 Feature: Manage Tags
   Any User, not only an Admin, adds, renames, recolours, merges and deletes Tags (spec 4.1 and 17, ADR 0010).
   Slot Rules and Variety Rules name a Tag by its key and follow a rename or merge in the same transaction.

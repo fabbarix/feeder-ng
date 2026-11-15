@@ -1,4 +1,4 @@
-@b5-st
+@b5-st @area-stock
 Feature: Edit and delete a Stock Lot
   A User corrects a Stock Lot by hand: its quantity, Bought on and Good until. Changing Bought on suggests Good until
   again from the Shelf Life where the Lot is (the frozen Shelf Life in a Freezer) unless Good until is changed in the

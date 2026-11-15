@@ -1,3 +1,4 @@
+@area-planning
 Feature: When the planner runs
   The planner fills the Planning Horizon every night at 03:00 (household time), straight
   after a change that invalidates the plan, and on demand with Regenerate. It never

@@ -1,3 +1,4 @@
+@area-recipes
 Feature: Recipe units and Unit Conversions
   An ingredient line's unit must convert to the Ingredient's Base Unit. An
   unknown unit is answered with the details the editor needs to prompt for a

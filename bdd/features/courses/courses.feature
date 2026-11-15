@@ -1,4 +1,4 @@
-@crs-c1
+@crs-c1 @area-courses
 Feature: The Household's Courses
   A Course is one part of what a Meal Slot serves (ADR 0008, spec 3.1). Every User reads the list; the Admin adds,
   renames, reorders, makes one main, archives and deletes. A new install starts with Main, Side, Starter and Dessert.

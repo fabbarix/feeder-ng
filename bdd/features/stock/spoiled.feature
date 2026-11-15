@@ -1,3 +1,4 @@
+@area-stock
 Feature: Spoiled Stock Lots
   Stock Lots past their go-off date are listed as spoiled ("Throw out or keep?").
   Throw out removes the lot and records the waste. Keep makes the lot good until

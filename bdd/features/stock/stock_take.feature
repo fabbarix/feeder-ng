@@ -1,3 +1,4 @@
+@area-stock
 Feature: Stock-take
   A Stock-take sets an Ingredient's total. A decrease removes quantity from the
   soonest-to-spoil Stock Lots first. An increase adds a new Stock Lot dated today.

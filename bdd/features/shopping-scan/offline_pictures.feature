@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Product pictures on scans: merges and the offline queue
   A merged unknown-barcode scan gives its Picture to the existing Product when that Product has none, and never replaces
   one. A phone that filled in the "what is this?" form offline uploads the Picture first and then syncs the scan with

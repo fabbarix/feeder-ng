@@ -1,4 +1,4 @@
-@crs-c1
+@crs-c1 @area-courses
 Feature: Course Attendance for one date
   The Date Attendance sheet shows, per Course of the Meal Slot, who eats it that day (ADR 0008 point 8, spec 3.1).
   Changing it records that Course's opt-outs for that date, which replace its usual ones.

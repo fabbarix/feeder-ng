@@ -1,3 +1,4 @@
+@area-import-export
 Feature: Ready Meals in Import Review
   Import Review applies the same Ready Meal rule as the Recipe editor: a Ready Meal whose one line is named like
   the Recipe needs no Ingredient definition. An Ingredient with that name is used, otherwise a piece Ingredient is

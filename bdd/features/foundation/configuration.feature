@@ -1,3 +1,4 @@
+@area-foundation
 Feature: Start-up configuration
   The Feeder refuses to start without an Admin email, because nobody could
   ever sign in.

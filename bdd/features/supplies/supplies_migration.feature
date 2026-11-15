@@ -1,3 +1,4 @@
+@area-supplies
 Feature: Migration 1550 and its snapshot (Supplies, H8)
   Migration 1550 adds the kind and the Restock level to Ingredients and nothing else. Every Ingredient that was there
   before is food with no Restock level, and its Products, Prices and Stock stay as they were. The snapshot Feeder takes

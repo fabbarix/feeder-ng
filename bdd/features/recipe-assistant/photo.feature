@@ -1,3 +1,4 @@
+@area-recipe-assistant
 Feature: Reading a recipe from photos
   One to four photos (data URLs or https addresses) of a cookbook page or a handwritten card. The photos that were
   read can be kept as the Recipe photo, only if the User chooses one in Import Review.

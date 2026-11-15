@@ -1,3 +1,4 @@
+@area-household
 Feature: Household settings
   Only the Admin edits the Household's settings; every User reads them.
 

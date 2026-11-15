@@ -1,4 +1,4 @@
-@b5-sd
+@b5-sd @area-planning
 Feature: A Meal Slot on one date: Not served, Time today, Guests (beta.5, plan 2.1 and 2.2, ADR 0014)
   Any User may mark a Meal Slot Not served on a date, give it its own time, and say how many Guests eat. The planner
   follows: a Not served slot is left empty with no Couldn't plan warning, the date's time reaches the plan and the

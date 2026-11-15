@@ -1,3 +1,4 @@
+@area-stock
 Feature: Pantry: Storage Places
   The Household keeps its Stock in Storage Places (Kitchen Pantry, Garage Fridge, Garage Freezer, ...), each a
   pantry, a fridge or a freezer. A new Stock Lot goes where its Ingredient was last put, else to the default Storage

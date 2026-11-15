@@ -1,3 +1,4 @@
+@area-supplies
 Feature: Restock Lines for Supplies
   A Supply with a Restock level asks for itself on the Shopping List when its Stock falls below the level: the Line is the
   level less Stock, as packs of the Product last bought. It does not depend on the plan or the range. A Supply Line is

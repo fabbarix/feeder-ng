@@ -1,3 +1,4 @@
+@area-receipt
 Feature: Reading a receipt
   At the end of a shop a User photographs the Receipt. Feeder sends up to 4 photos and today's Scanned list to the
   assistant the Admin configured for the Recipe Assistant, and shows what the assistant read as proposals. Only today's

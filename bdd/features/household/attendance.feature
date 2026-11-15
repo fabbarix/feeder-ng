@@ -1,3 +1,4 @@
+@area-household
 Feature: Attendance for a particular date
   A one-off change ("Sam is away Thursday") edits that date's Attendance
   only; the Meal Slot's usual Attendance and other dates stay as they were.

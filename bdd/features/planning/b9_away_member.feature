@@ -1,4 +1,4 @@
-@away
+@away @area-planning
 Feature: A Member's Aways on the Members list and in the Member sheet (SET-16)
   The Members list names each Member's next Away and the Member sheet lists them, soonest first, with the first Meal Slot an Away
   misses. An Away that has ended is not listed. The wording and the rows are covered by the web tests of the Away UI package

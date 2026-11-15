@@ -1,4 +1,4 @@
-@pc04
+@pc04 @area-cook-board
 Feature: Timers outside Cook Mode (PC-04)
   The household's timers live on the server, not on the screen that started them. Every screen of the app, and every device,
   reads the same list, so the shell can show the soonest timer and alert when one finishes. (The pill, the banner and the

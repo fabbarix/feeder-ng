@@ -1,3 +1,4 @@
+@area-recipes
 Feature: Recipe images
   Uploaded photos are re-encoded to WebP with the longest side at most 1600 px
   and served only to signed-in Users.

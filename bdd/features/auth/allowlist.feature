@@ -1,3 +1,4 @@
+@area-auth
 Feature: Allowlist management
   The Admin decides who may sign in. Removing a User ends their sessions at
   once, and the last Admin can never be removed.

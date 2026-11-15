@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Meals waiting in To confirm still count towards the Shopping List
   A Planned Meal whose slot has passed but that nobody confirmed (Cooked) or skipped waits in To confirm. Its Stock
   is used only when it is confirmed, so until then its Ingredients stay on the Shopping List. Monday 2026-11-09

@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Products and the Ingredient they supply
   Products are referenced by their Ingredient: merging Ingredients moves them, and an Ingredient
   with Products keeps its Base Unit.

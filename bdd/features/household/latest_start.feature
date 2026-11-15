@@ -1,4 +1,4 @@
-@b9
+@b9 @area-household
 Feature: A long Recipe can be started the evening before
   Beside the Earliest start the Household has a Latest start, 22:00 until an Admin changes it or turns it Off. The
   planner may pick a Recipe whose cooking starts on an earlier day than the meal, as long as the start is between the

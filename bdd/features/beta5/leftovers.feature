@@ -1,4 +1,4 @@
-@b5-lo
+@b5-lo @area-stock
 Feature: Leftovers by hand: Had it, Threw it out, Freeze it, Take out, and asking before waste (beta.5, plan 2.3, ADR 0012)
   A User records what happened to a Leftover: Had it (portions had outside the plan, not waste), Threw it out (waste dated
   the day it happened), Freeze it (to a Freezer, with a Frozen Use-by) and Take out. Feeder no longer throws a Leftover

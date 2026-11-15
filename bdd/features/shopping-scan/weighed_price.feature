@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: A weighed barcode is priced by weight
   Scanning a weight-valued barcode (Weight Barcode Rule 21) charges the decoded weight at the Product's price
   per kg, rounded half up to the cent, never the pack Price. A price-valued barcode keeps the price it carries.

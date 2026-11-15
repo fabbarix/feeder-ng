@@ -1,3 +1,4 @@
+@area-planning
 Feature: Reheat uses the Recipe's reheat time
   A Planned Meal served from a Leftover carries its Recipe's reheat time, so the Reheat screen starts its timer
   at that time. Without a reheat time on the Recipe the screen falls back to its formula (2 minutes for one portion,

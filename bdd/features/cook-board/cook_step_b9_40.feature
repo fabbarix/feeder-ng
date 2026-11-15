@@ -1,4 +1,4 @@
-@b9-40
+@b9-40 @area-cook-board
 Feature: Cook Mode Step, API half (B9-40)
   The Step layout, the timer strip, the held line, the tap zones and Reheat are screen behaviour, covered by the web unit tests and the page-layout
   scenarios. These scenarios are the API they stand on: the timeline of a meal that is not due yet opens (so the cook can prep a day ahead) but cannot be

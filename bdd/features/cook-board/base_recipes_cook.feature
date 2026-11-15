@@ -1,4 +1,4 @@
-@br-g
+@br-g @area-cook-board
 Feature: Cook Mode walks the Steps of the Base recipes a Recipe calls for (beta.6, docs/dev/design/base-recipes.md section 9)
   A Base recipe's Steps are part of the cooking timeline, labelled with its name, and end before the Step that uses it. A
   jar in the Pantry that covers the Base recipe hides its Steps. Béchamel yields 1000 g; Lasagne calls for 500 g of it, one

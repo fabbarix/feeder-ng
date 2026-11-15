@@ -1,4 +1,4 @@
-@b9-38
+@b9-38 @area-planning
 Feature: Choosing a Recipe not marked for the Course (B9-38, PC-10)
   Choose a Recipe for a Course other than the main one lists "Other Recipes": Recipes not marked with that Course. Picking
   one marks it with the Course and sets it there in one write, so the plan PUT takes `markCourse: true`. Without it the

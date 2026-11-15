@@ -1,3 +1,4 @@
+@area-import-export
 Feature: The reheat time in a Recipe File
   `reheatMinutes` is an optional, backwards compatible field of Recipe File v1: files without it stay valid, and
   a Recipe's reheat time survives an export and an import.

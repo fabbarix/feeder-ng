@@ -1,4 +1,4 @@
-@b9
+@b9 @area-notify-ops
 Feature: Advance Steps due in the next 24 hours
   Today lists every Advance Step that is not done and due within the next 24 hours, from the same source as the
   board and the push, so a Step done on the board leaves Today. Today is Monday 2026-11-09, 12:00 UTC.

@@ -1,4 +1,4 @@
-@crs-c2
+@crs-c2 @area-planning
 Feature: The plan API per Course
   A Meal Slot serves ordered Courses and each is its own Planned Meal (ADR 0008, spec 7.5 and 16). GET /api/plan lists
   the Courses of every slot; Set, Pin, Swap, Cooked and Not cooked work on one Course. The course-less routes are gone

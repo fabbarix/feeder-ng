@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Catalogue impact reads
   Delete Shop and Delete Ingredient confirm with what goes (SAFE-02). The impact reads count it without changing
   anything.

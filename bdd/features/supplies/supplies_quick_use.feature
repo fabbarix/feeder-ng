@@ -1,3 +1,4 @@
+@area-supplies
 Feature: Quick Use of a Supply
   The Supplies list shows each Supply's Stock and lets the User take some of it out with one tap. Use takes from the Supply's
   Lots, oldest purchased first. It is Used up, never waste: no waste record, no Throw out, and the zero-waste streak does not

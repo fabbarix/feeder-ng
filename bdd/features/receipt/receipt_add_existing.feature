@@ -1,4 +1,4 @@
-@b9-receipt
+@b9-receipt @area-receipt
 Feature: A receipt line that is already a Product is not made a second time (B9-50, SSP-08)
   The review's Add… offers the Products whose name matches the line. Using one sends the Add with that Product's id: the apply
   makes no Product and no Ingredient, scans the Product at the receipt's Price, and puts it back with the rest if a later step fails.

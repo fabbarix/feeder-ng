@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Catalog and barcode resolution
   The Catalog is what the phone caches for one Shop (or for home). Resolution at a Shop
   goes: that Shop's Shop Barcode, that Shop's Weight Barcode Rules, global barcode, unknown.

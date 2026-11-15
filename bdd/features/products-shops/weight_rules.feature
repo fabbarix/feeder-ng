@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Weight Barcode Rules
   A Shop's Weight Barcode Rules say how to read the Product and the weight or price
   from its variable-weight barcodes. The Admin manages them; every User can read them.

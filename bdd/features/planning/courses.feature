@@ -1,3 +1,4 @@
+@area-planning
 Feature: Planning with Courses
   A Meal Slot serves one or more Courses and the planner plans one Planned Meal for each (ADR 0008). A Whole meal in
   the main Course covers the others, an optional Course is left empty when nothing fits, and a Member who does not eat

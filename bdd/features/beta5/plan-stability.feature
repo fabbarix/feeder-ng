@@ -1,4 +1,4 @@
-@b5-bo
+@b5-bo @area-planning
 Feature: Plan stability: Bought Planned Meals (beta.5, plan 2.4, ADR 0013)
   A Planned Meal is Bought once a purchase from the Shopping List (a Scan in Shop mode that matched a line, or a Tick by
   hand that adds a Lot) covered part of one of its required Ingredient lines. Automatic replans leave a Bought Planned

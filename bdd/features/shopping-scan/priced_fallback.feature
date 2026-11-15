@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Shopping List estimate before a first purchase
   With no purchase, a Line's pack suggestion and estimate use the Ingredient's priced Product at the selected Shop,
   else at any Shop: the most recent Price (decision SSP 5, SSP-13). Monday 2026-11-09 12:00 UTC.

@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: What a Shopping List Line is for
   Each open Line says which Planned Meals it is for, by date, Meal Slot and Recipe (SSP-14). Monday 2026-11-09.
 

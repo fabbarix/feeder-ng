@@ -1,3 +1,4 @@
+@area-planning
 Feature: What changed, and Undo of a Swap, of Cooked, of Not cooked and of Regenerate
   Every write that can replan says which other meals it changed and gives an undo token. One restore puts the plan back
   while nothing else has written since. Cooked and Not cooked can be taken back until the end of the household day

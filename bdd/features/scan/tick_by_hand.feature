@@ -1,3 +1,4 @@
+@area-scan
 Feature: Tick a Shopping List Line by hand while scanning (beta.8, scan)
   On the Scan screen the To get tab ticks a Line by hand: the tick is the same call as on the Shop screen, with the
   Line's remaining quantity, and its Undo is the Shop screen's untick. These scenarios pin the API the To get row

@@ -1,4 +1,4 @@
-@tg-r
+@tg-r @area-planning
 Feature: A rule names a Tag that exists
   A new Slot Rule or Variety Rule must name a Tag the household has (ADR 0010, spec 17): a rule naming no Tag
   would be invisible on the Tags page and would never follow a rename. Recipe Slot Rules are unaffected and rules

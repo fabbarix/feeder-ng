@@ -1,4 +1,4 @@
-@br-g
+@br-g @area-planning
 Feature: Mark all Cooked shares one jar across the Courses (beta.6, docs/dev/design/base-recipes.md section 8)
   A Main and a Side that both call for Béchamel are cooked from the same jar: the Main (first in the slot's order) takes what
   it needs, the Side takes what is left and makes the rest. The C2 household: Monday 2026-11-09 12:00 UTC, a Dinner at 19:00

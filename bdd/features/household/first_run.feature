@@ -1,4 +1,4 @@
-@b9
+@b9 @area-household
 Feature: First run: Meal Slots in one go, the hidden checklist, and the Household's time zone
   The first-run checklist on Today creates the Meal Slots of a new Household in one request, hides itself when the
   Admin says so, and the shell learns the Household's time zone from the current User. Today is Monday 2026-11-09.

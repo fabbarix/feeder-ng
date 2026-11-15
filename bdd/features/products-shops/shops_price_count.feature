@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: The Shops list counts each Shop's Prices
   Every Shop of the list carries `priceCount`, the number of Products with a Price recorded there, so the Shops list shows
   "12 Prices · Location saved" in one request (SET-14b).

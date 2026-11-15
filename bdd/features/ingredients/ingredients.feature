@@ -1,3 +1,4 @@
+@area-ingredients
 Feature: Ingredients
   The Household keeps a list of Ingredients. Each has a name (unique once case and
   spacing are ignored), a Base Unit, Unit Conversions and an optional Shelf Life.

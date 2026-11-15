@@ -1,3 +1,4 @@
+@area-foundation
 Feature: Health and unknown routes
   A running Feeder reports that it is healthy, and unknown API routes
   answer with the JSON error shape instead of the web app.

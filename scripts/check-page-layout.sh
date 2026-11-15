@@ -11,6 +11,8 @@
 #   PAGE_LAYOUT=full scripts/check-page-layout.sh    nine viewports (release QA; scripts/lib/page-layout-rules.mjs PROFILES)
 #   scripts/check-page-layout.sh --scenario NAME[,NAME]   only those scenarios (scripts/lib/page-layout/scenarios/), no route table:
 #                                                 a package's targeted run. The driver refuses an unknown name (exit 2).
+#   scripts/check-page-layout.sh --routes PATTERN[,PATTERN]   only those route-table patterns (with --scenario: and those scenarios)
+#   scripts/check-page-layout.sh --changed-since REF  only the routes and scenarios the changes since REF can affect (the changed mode)
 #   PAGE_LAYOUT=skip ...                          do nothing
 #   scripts/check-page-layout.sh --print-port [--root DIR]    the port this worktree uses (20000 + cksum(DIR) % 20000)
 #   scripts/check-page-layout.sh --mode-of ROUTE              warn|fail for a route
@@ -55,11 +57,47 @@ while [ $# -gt 0 ]; do
       fi
       GUARD_ARGS+=(--scenario "$2")
       shift 2 ;;
+    --routes)
+      if [ $# -lt 2 ] || [ "${2#--}" != "$2" ]; then
+        echo "check-page-layout.sh: usage: --routes PATTERN[,PATTERN] (route patterns of ROUTES)" >&2
+        exit 2
+      fi
+      GUARD_ARGS+=(--routes "$2")
+      shift 2 ;;
+    --changed-since)
+      if [ $# -lt 2 ] || [ -z "$2" ]; then
+        echo "check-page-layout.sh: usage: --changed-since GIT_REF" >&2
+        exit 2
+      fi
+      CHANGED_SINCE="$2"
+      shift 2 ;;
     *)
-      echo "check-page-layout.sh: usage: check-page-layout.sh [--scenario NAME[,NAME]] | --print-port [--root DIR] | --mode-of ROUTE (unknown argument $1)" >&2
+      echo "check-page-layout.sh: usage: check-page-layout.sh [--scenario NAME[,NAME]] [--routes PATTERN[,PATTERN]] [--changed-since REF] | --print-port [--root DIR] | --mode-of ROUTE (unknown argument $1)" >&2
       exit 2 ;;
   esac
 done
+
+# --changed-since REF: the routes and scenarios the files changed since REF can affect (scripts/lib/check-plan.mjs --layout): every
+# route when the guard, its seed or a shared web folder changed; nothing to do when no change reaches a page.
+if [ -n "${CHANGED_SINCE:-}" ]; then
+  if ! SEL="$(node "$ROOT/scripts/lib/check-plan.mjs" --since "$CHANGED_SINCE" --layout)"; then
+    echo "page layout guard FAILED: cannot plan the changes since $CHANGED_SINCE"
+    exit 1
+  fi
+  SEL_ROUTES="$(sed -n 's/^routes=//p' <<<"$SEL")"
+  SEL_SCENARIOS="$(sed -n 's/^scenarios=//p' <<<"$SEL")"
+  if [ "$SEL_ROUTES" != all ]; then
+    if [ -z "$SEL_ROUTES" ] && [ -z "$SEL_SCENARIOS" ]; then
+      echo "page layout guard: nothing to do (no change since $CHANGED_SINCE reaches a page)"
+      exit 0
+    fi
+    echo "page layout guard: changed since $CHANGED_SINCE: routes ${SEL_ROUTES:-none}; scenarios ${SEL_SCENARIOS:-none}"
+    GUARD_ARGS+=(--routes "$SEL_ROUTES")
+    [ -n "$SEL_SCENARIOS" ] && GUARD_ARGS+=(--scenario "$SEL_SCENARIOS")
+  else
+    echo "page layout guard: changed since $CHANGED_SINCE: every route"
+  fi
+fi
 
 MODE="${PAGE_LAYOUT:-quick}"
 if [ "$MODE" = skip ]; then

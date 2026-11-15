@@ -1,3 +1,4 @@
+@area-recipes
 Feature: Archiving and deleting Recipes
   Archived Recipes are kept for history but hidden from the default list (and,
   later, from planning). A Recipe can only be deleted for good if it was never

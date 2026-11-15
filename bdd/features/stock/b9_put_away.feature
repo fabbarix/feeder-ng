@@ -1,4 +1,4 @@
-@b9-stock-undo
+@b9-stock-undo @area-stock
 Feature: Put away a whole shop at once (beta.9, B9-05, SSP-10)
   Not sorted Stock Lots are moved into Storage Places in one request that applies all of it or none. Each move
   remembers where the Ingredient was last put, as a single move does. A Stock Lot somebody sorted meanwhile is left

@@ -1,3 +1,4 @@
+@area-scan
 Feature: The Scanned list (scan redesign, SR6)
   The Scanned list on the Scan screen is a list of rows, one per Product at this Shop. What a row says comes from the
   scans: how much of its Line the scans cover (the "x of y" tick), what was spent, and whether the Product is a Supply.

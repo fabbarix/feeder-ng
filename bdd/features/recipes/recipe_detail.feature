@@ -1,3 +1,4 @@
+@area-recipes
 Feature: The Recipe detail
   The Recipe's own page says what it holds: its description and Source, the Yield with its unit, how many Steps there are
   (a Step without a Duration is not "No Steps"), and whether the Recipe can be deleted at all.

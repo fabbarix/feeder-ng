@@ -1,3 +1,4 @@
+@area-household
 Feature: Member photos
   A Member's avatar is a photo, an emoji or their initials, in that order of preference. The Admin picks
   one in the Member sheet; a photo is added with the shared image picker, which uploads it first, and the

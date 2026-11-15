@@ -1,3 +1,4 @@
+@area-foundation
 Feature: First Admin seeding
   FEEDER_ADMIN_EMAIL puts the first Admin on the allowlist when the
   Feeder starts, so someone can always sign in.

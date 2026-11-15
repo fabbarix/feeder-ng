@@ -1,4 +1,4 @@
-@b5-ufr
+@b5-ufr @area-stock
 Feature: Used from: Mark as Cooked takes from the Lots the User picks (beta.5, ADR 0011)
   Without a pick, Cooked deducts from the Stock Lot that goes off soonest, as before. On the Mark as Cooked sheet and
   the Mark all Cooked sheet (per Course) the User may say which Lots, and how much of each, were really used: the

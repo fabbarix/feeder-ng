@@ -1,3 +1,4 @@
+@area-household
 Feature: Members
   A Member is a person who eats from the plan. Each has a default Portion
   Factor from 0.25 to 3 in steps of 0.25. A Member may be linked to a User.

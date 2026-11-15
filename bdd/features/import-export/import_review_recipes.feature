@@ -1,3 +1,4 @@
+@area-import-export
 Feature: Import Review lists the Recipes it imports
   The review is read-only: it shows each Recipe of the file with its Yield, Ingredients and Steps before anything is saved.
   Corrections are made with Edit on the imported Recipe afterwards (decision RX 3). The result names the Recipes it made.

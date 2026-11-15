@@ -1,3 +1,4 @@
+@area-planning
 Feature: Marking Recipes with a Course from the Plan (B9-32, PC-07)
   When the planner could not fill a Course because no Recipe is marked with it, "Mark Recipes as Dessert" marks
   Recipes right on the Plan. One call adds the Course to each Recipe, replans once and says what changed, so the

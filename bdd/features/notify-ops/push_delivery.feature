@@ -1,3 +1,4 @@
+@area-notify-ops
 Feature: Push delivery
   Due notifications go to every device opted in to that type, once each. Quiet
   hours (22:00 to 07:00 here) hold them back until the window ends, except

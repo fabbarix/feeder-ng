@@ -1,3 +1,4 @@
+@area-cook-board
 Feature: Kitchen board
   The kitchen board (tablet, /board) refreshes live. It goes dark at local sunset
   and light at sunrise from the household Location; with no coordinates it uses

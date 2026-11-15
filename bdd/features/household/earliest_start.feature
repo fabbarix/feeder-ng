@@ -1,4 +1,4 @@
-@b9
+@b9 @area-household
 Feature: The plan never asks me to start cooking before my earliest start
   The Household has an Earliest start, 06:30 until an Admin changes it or turns it Off. The planner does not plan a
   Recipe in a Meal Slot when cooking would have to start before it. Advance Steps the day before are not affected,

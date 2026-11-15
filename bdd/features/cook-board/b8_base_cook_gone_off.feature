@@ -1,4 +1,4 @@
-@br-g @b8-base
+@br-g @b8-base @area-cook-board
 Feature: Cook Mode ignores a jar that has gone off by the meal date (beta.8, docs/dev/design/b8-base.md section 2)
   The Shopping List draws only Stock Lots that have not gone off by the meal's date, so a gone-off jar of Béchamel does not
   cover the Lasagne and the list asks you to buy for it. Cook Mode counts Stock the same way: a jar that has gone off does

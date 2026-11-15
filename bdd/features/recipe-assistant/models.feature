@@ -1,3 +1,4 @@
+@area-recipe-assistant
 Feature: Recipe Assistant models and connection test
   The model list comes from the Anthropic Models API (filtered to models that can produce structured output) with a
   curated catalogue as fallback. The saved key is only ever sent to the saved origin, on every route.

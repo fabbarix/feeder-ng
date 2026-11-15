@@ -1,4 +1,4 @@
-@b8-undo
+@b8-undo @area-scan
 Feature: Undo of a tick takes back the Stock it added (beta.8, undo)
   Undo of a tick by hand, on the Shop screen's untick and on the Scan screen's To get toast alike, puts the Line back
   to get and takes back the Stock Lot the tick added, as Undo of a Scan does (ADR 0019, amending ADR 0013). It takes

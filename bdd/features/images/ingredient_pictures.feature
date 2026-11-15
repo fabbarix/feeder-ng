@@ -1,3 +1,4 @@
+@area-images
 Feature: Ingredient pictures
   An Ingredient may have one picture, so a person standing in the pantry or the shop can tell "plain flour"
   from "strong flour" at a glance. The picture is added with the shared image picker: the editor uploads it

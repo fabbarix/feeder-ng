@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Typed Product barcode check
   A typed Product barcode made only of digits must be 8, 12, 13 or 14 digits long with a valid check digit; a code with
   letters stays accepted (decision SET 1). The server refuses what the form would (SET-04).

@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Products
   A Product is a specific purchasable pack that supplies one Ingredient. It has a pack
   size in the Ingredient's Base Unit, optional global barcodes, and the Shops known to sell it.

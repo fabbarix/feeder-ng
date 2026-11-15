@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Two shoppers
   Two people shopping the same list see each other's ticks within about a second: every write publishes a
   Shopping List event before it answers, and a second client's list already shows the change.

@@ -1,3 +1,4 @@
+@area-household
 Feature: Attendance defaults to everyone
   A new Meal Slot includes every current Member as attending and a new Member is added to every
   existing Meal Slot, so a Household never has to tick everybody in; people opt out. An explicit

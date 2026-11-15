@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Offline scans and sync
   Scans made offline are queued on the phone with a client UUID and a timestamp, and applied in order when it is
   back online. The server is idempotent on the UUID. Forms filled offline are created on sync; a second creation of

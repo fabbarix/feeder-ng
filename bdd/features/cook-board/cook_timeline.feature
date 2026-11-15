@@ -1,4 +1,4 @@
-@crs-c2
+@crs-c2 @area-cook-board
 Feature: The cooking timeline of a Meal Slot
   Cook Mode for a slot interleaves the Steps of every fresh Course and the Reheat of every Leftover Course so that one cook
   never has two Active Steps at once and everything is ready together (spec 11, ADR 0008 point 9). One Course on its

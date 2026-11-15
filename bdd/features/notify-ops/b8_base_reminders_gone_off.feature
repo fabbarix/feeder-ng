@@ -1,4 +1,4 @@
-@br-g @b8-base
+@br-g @b8-base @area-notify-ops
 Feature: Start cooking counts a gone-off jar like Cook Mode (beta.8, docs/dev/design/b8-base.md section 2)
   The notification facts apply Stock like Cook Mode, and Cook Mode ignores a Lot that has gone off by the meal date. Dinner
   is at 19:00 Rome time on Monday 2026-11-09: 40 minutes for the Lasagne alone, 65 with Béchamel's 25.

@@ -1,3 +1,4 @@
+@area-planning
 Feature: A Slot Rule reserves its Recipe
   The planner keeps the Recipe a Slot Rule names for the rule's slot and does not place it on
   earlier days where its Cool-down would then leave the rule's slot empty (spec §7.2).

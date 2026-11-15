@@ -1,3 +1,4 @@
+@area-scan
 Feature: The Scanned list's Price edits (scan redesign API, SR1)
   On the redesigned Scan screen a row groups every scan of one Product at this Shop. Pricing the row is one request,
   PATCH /api/scan/prices, which gives each of its scans the Price. A Product in g or ml can also be priced per kg or

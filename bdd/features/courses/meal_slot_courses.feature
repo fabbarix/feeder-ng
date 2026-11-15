@@ -1,4 +1,4 @@
-@crs-c1
+@crs-c1 @area-courses
 Feature: Courses on a Meal Slot
   A Meal Slot serves an ordered list of Courses. Each is required or optional, and Members may opt out of it
   (ADR 0008 points 7 and 8, spec 3.1). The Admin edits them; editing several weekdays at once can preview what goes.

@@ -1,3 +1,4 @@
+@area-household
 Feature: Edit a Meal Slot on several days
   Editing a Meal Slot can apply to several weekdays at once. It changes the Meal Slot with the same name on
   each chosen weekday; a chosen weekday without one is skipped and reported. The whole edit is atomic.

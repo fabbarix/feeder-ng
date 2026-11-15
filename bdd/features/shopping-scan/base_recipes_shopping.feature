@@ -1,4 +1,4 @@
-@br-f
+@br-f @area-shopping-scan
 Feature: Shopping List with Stock first for Base recipes (beta.6, docs/dev/design/base-recipes.md section 7)
   A jar of Béchamel in the Pantry covers part of what Lasagne needs; only the Ingredients of the rest go on the list, and the
   Base recipe is never a line itself, unless it is empty. Monday 2026-11-09 12:00 UTC; Dinner is at 19:00 every day and the

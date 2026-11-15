@@ -1,3 +1,4 @@
+@area-household
 Feature: Per-User preferences
   Each User chooses light, dark or system mode, an accent colour, and metric
   (the default) or imperial display. There is no secondary colour.

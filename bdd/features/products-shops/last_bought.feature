@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: The Product last bought for an Ingredient
   The planner and the Shopping List suggest packs of the Product last bought for an
   Ingredient, at the chosen Shop if known. A Price alone is not a purchase.

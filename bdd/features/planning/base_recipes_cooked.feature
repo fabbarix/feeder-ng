@@ -1,4 +1,4 @@
-@br-g
+@br-g @area-planning
 Feature: Cooked with Base recipes takes the jar first (beta.6, docs/dev/design/base-recipes.md section 8)
   Marking a Recipe Cooked uses the Stock of its Base recipe first, and only the part that Stock does not cover is made from
   the Base recipe's own Ingredients. Used from lists the jar like any other Ingredient. Monday 2026-11-09 12:00 UTC; Dinner

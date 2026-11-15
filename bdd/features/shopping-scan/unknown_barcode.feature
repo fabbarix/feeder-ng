@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: Unknown barcodes
   The "what is this?" sheet creates the Product (and a Shop Barcode when it is Shop-only) and then proceeds as for
   a resolved barcode. A weighed code with an unknown item code asks only for the Ingredient and the Product name.

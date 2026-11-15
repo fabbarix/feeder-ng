@@ -1,3 +1,4 @@
+@area-stock
 Feature: Stock Lots
   Stock is a set of Stock Lots. Each holds an Ingredient, a quantity in Base Units,
   a purchase date and a go-off date (purchase date plus Shelf Life, or none).

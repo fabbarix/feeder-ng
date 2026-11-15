@@ -1,3 +1,4 @@
+@area-shopping-scan
 Feature: The Price behind a priced fallback travels with the pack (beta.9, SSP-13, B9-23)
   A Line whose pack is the priced fallback (nothing bought yet) says which Price its estimate used, so the Line sheet can
   say "$4.50 a pack, 2 Nov, not bought here yet" without another read. A Product that was bought carries no Price on the

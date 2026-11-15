@@ -1,4 +1,4 @@
-@away
+@away @area-planning
 Feature: A Member who is away for days (Away)
   An Away belongs to a Member: a first day and, when known, a last day. The planner leaves the Member out of Attendance
   on those dates, also past the Planning Horizon, and a write that adds, changes or ends one says what it changed and can

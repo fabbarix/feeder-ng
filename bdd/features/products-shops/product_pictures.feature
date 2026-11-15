@@ -1,3 +1,4 @@
+@area-products-shops
 Feature: Product pictures
   A Product may have one Picture, so a person in the shop can tell "Mutti passata" from "own-brand passata" at a
   glance. The Picture is added with the shared image picker: the editor uploads it first and then saves the Product

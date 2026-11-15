@@ -1,3 +1,4 @@
+@area-recipe-assistant
 Feature: Reading a recipe from a page or from text
   A User gives a web page address or pasted text. The server fetches and prepares the source, a model turns it into a
   Recipe File, and the result opens a normal Import Review. Nothing is saved until the User confirms.

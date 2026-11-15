@@ -1,4 +1,4 @@
-@crs-c1
+@crs-c1 @area-courses
 Feature: Courses and Whole meal on a Recipe
   A Recipe is marked with one or more Courses and may be a Whole meal (spec 3.1, 4).
 
