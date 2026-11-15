@@ -1,0 +1,64 @@
+/* ConfirmDialog (B9-18, SAFE R1, R-E): a title, a lead, rows and a note, never a wall of paragraphs. Tokens only.
+   Lead: the first body paragraph, body size at weight 600. Groups: a small uppercase label over DetailList rows. Note: one
+   muted meta line. Details: a 32 px summary row with its own chevron over the same rows, closed by default. */
+.confirm-dialog__lead {
+  margin: 0;
+  /* a multi-line lead keeps its line breaks, as .confirm-dialog__body does (Dialog.css) */
+  white-space: pre-line;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.confirm-dialog__group {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.confirm-dialog__note {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.confirm-dialog__details {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.confirm-dialog__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--space-8);
+  list-style: none;
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.confirm-dialog__summary::-webkit-details-marker {
+  display: none;
+}
+
+.confirm-dialog__summary > svg {
+  flex: none;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.confirm-dialog__details[open] > .confirm-dialog__summary > svg {
+  transform: rotate(90deg);
+}
+
+.confirm-dialog__details > .detail-list {
+  margin-block-start: var(--space-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-dialog__summary > svg {
+    transition: none;
+  }
+}

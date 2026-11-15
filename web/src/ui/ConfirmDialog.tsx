@@ -1,7 +1,24 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Button } from './Button'
+import { DetailList, DetailRow } from './DetailList'
 import { Dialog } from './Dialog'
+import { Icon } from './Icon'
+import { Overline } from './Overline'
 import { overlayStrings } from './overlayStrings'
+import './ConfirmDialog.css'
+
+/** An R-E DetailRow: the key (body-strong), the state at the row's end, a muted detail under them. */
+export interface ConfirmRow {
+  key: string
+  state?: string
+  detail?: string
+}
+
+/** "Goes", "Stays", "Goes with Sam": a small uppercase label over DetailList rows. A group with no rows is not drawn. */
+export interface ConfirmGroup {
+  label: string
+  rows: ConfirmRow[]
+}
 
 export interface ConfirmOptions {
   title: string
@@ -10,10 +27,21 @@ export interface ConfirmOptions {
   confirmLabel: string
   /** Default 'Cancel'. */
   cancelLabel?: string
-  /** `danger`: destructive icon, initial focus on Cancel, backdrop does not dismiss. */
+  /** `danger`: destructive icon, backdrop does not dismiss. */
   tone?: 'default' | 'danger'
   /** Optional middle choice, e.g. "Archive instead". Only `choose()` can return it. */
   alternateLabel?: string
+  /** SAFE R1: what goes and what stays, as labelled DetailList rows after the body (R-E: rows, never bullet sentences). */
+  groups?: ConfirmGroup[]
+  /** A longer set behind a one-line summary, closed by default. */
+  details?: { summary: string; rows: ConfirmRow[] }
+  /** One muted meta line last ("You can undo it straight after."). */
+  note?: string
+  /**
+   * Which button has focus on open. Default 'cancel' in every tone: the safe button. 'confirm' only for a routine question that
+   * loses nothing ("Mark as Cooked?"); a danger confirm ignores it.
+   */
+  focus?: 'cancel' | 'confirm'
 }
 
 export interface ConfirmDialogProps extends ConfirmOptions {
@@ -32,9 +60,30 @@ export interface ConfirmApi {
   choose: (options: ConfirmOptions) => Promise<ConfirmChoice>
 }
 
-/** Controlled confirmation built on Dialog. Danger confirms focus Cancel and ignore the backdrop; Escape always cancels. */
-export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel = overlayStrings.cancel, tone = 'default', alternateLabel, onConfirm, onCancel, onAlternate }: ConfirmDialogProps): ReactNode {
+/**
+ * Controlled confirmation built on Dialog. The safe button (Cancel, outline) has focus on open unless `focus: 'confirm'` on a
+ * non-danger confirm; danger confirms ignore the backdrop; Escape always cancels. No Close (R-B). The body's first paragraph
+ * is the lead line; groups, the note and the details follow it.
+ */
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel,
+  cancelLabel = overlayStrings.cancel,
+  tone = 'default',
+  alternateLabel,
+  groups,
+  details,
+  note,
+  focus = 'cancel',
+  onConfirm,
+  onCancel,
+  onAlternate,
+}: ConfirmDialogProps): ReactNode {
   const danger = tone === 'danger'
+  const focusConfirm = focus === 'confirm' && !danger
+  const paragraphs = Array.isArray(body) ? body : body ? [body] : []
   return (
     <Dialog
       open={open}
@@ -45,7 +94,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel = o
       dismissOnBackdrop={!danger}
       onCancel={onCancel}
       cancelLabel={cancelLabel}
-      cancelProps={{ 'data-autofocus': danger || undefined }}
+      cancelProps={{ 'data-autofocus': !focusConfirm || undefined }}
       actions={
         <>
           {alternateLabel ? (
@@ -53,22 +102,57 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel = o
               {alternateLabel}
             </Button>
           ) : null}
-          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} data-autofocus={!danger || undefined}>
+          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} data-autofocus={focusConfirm || undefined}>
             {confirmLabel}
           </Button>
         </>
       }
     >
-      {Array.isArray(body)
-        ? body.map((paragraph, i) => (
-            <p key={i} className="confirm-dialog__body">
-              {paragraph}
-            </p>
-          ))
-        : body
-          ? <p className="confirm-dialog__body">{body}</p>
-          : null}
+      {paragraphs.map((paragraph, i) => (
+        <p key={i} className={i === 0 ? 'confirm-dialog__lead' : 'confirm-dialog__body'}>
+          {paragraph}
+        </p>
+      ))}
+      {groups?.filter((g) => g.rows.length > 0).map((g, i) => <ConfirmGroupView key={`${i}-${g.label}`} group={g} />)}
+      {note ? <p className="confirm-dialog__note">{note}</p> : null}
+      {details && details.rows.length > 0 ? (
+        <details className="confirm-dialog__details">
+          <summary className="confirm-dialog__summary">
+            <Icon name="chevron" size={16} />
+            {details.summary}
+          </summary>
+          <ConfirmRows rows={details.rows} />
+        </details>
+      ) : null}
     </Dialog>
+  )
+}
+
+function ConfirmRows({ rows }: { rows: ConfirmRow[] }) {
+  return (
+    <DetailList className="confirm-dialog__rows">
+      {rows.map((row, i) => (
+        <DetailRow key={`${i}-${row.key}`} label={row.key} state={row.state} detail={row.detail} />
+      ))}
+    </DetailList>
+  )
+}
+
+/** A labelled group: the label names its list for a screen reader ("Goes with Sam, list, 3 items"). */
+function ConfirmGroupView({ group }: { group: ConfirmGroup }) {
+  const id = useId()
+  const ref = useRef<HTMLDivElement>(null)
+  // DetailList takes no aria props (B9-01's primitive), so the group names its own list once it is in the DOM.
+  useLayoutEffect(() => {
+    ref.current?.querySelector(':scope > .detail-list')?.setAttribute('aria-labelledby', id)
+  }, [id])
+  return (
+    <div ref={ref} className="confirm-dialog__group">
+      <Overline id={id} className="confirm-dialog__label">
+        {group.label}
+      </Overline>
+      <ConfirmRows rows={group.rows} />
+    </div>
   )
 }
 
