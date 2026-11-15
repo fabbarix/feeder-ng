@@ -95,3 +95,12 @@ describe("PC-07: the compact Couldn't plan tile", () => {
     expect(bodyOf('.couldnt-head')).toMatch(/justify-content\s*:\s*space-between/)
   })
 })
+
+describe('DS-06: Plan tones in plan.css', () => {
+  it('the rule warning of a Pinned or Bought meal (a rule that needs a decision) is the warn foreground, not spoil', () => {
+    expect(d('.rule-warning-line')['color']).toBe('var(--status-warn-fg)')
+  })
+  it('no spoil or danger status token is left in plan.css (food going off is not a Plan matter)', () => {
+    expect(css).not.toMatch(/--status-(spoil|danger)/)
+  })
+})
