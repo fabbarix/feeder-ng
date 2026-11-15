@@ -1,5 +1,0 @@
-# w2c integration: one per-rule warn line, nothing broader; the owning package deletes it when its route is clean.
-#   /shop: P40 at 1180x820 (full profile) only: with the page's scrollbar the three-column Shop list leaves each .list-row__title 115 px
-#          (under 120). Not from w2c's packages (it shows whenever the Shop page is tall enough to scroll at 1180); B9-34 (shop
-#          ticking) rebuilds these rows.
-P40@/shop = warn until B9-34

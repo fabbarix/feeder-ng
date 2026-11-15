@@ -209,6 +209,10 @@
     overflow: hidden;
     /* b8-shop: the card's text column gets room for the Shop hint ("Tue Dinner +1") */
     --row-value-min: var(--row-value-narrow);
+    /* Batch w3e (P40 at 1180x820): a card is at most a few rem over --tile-min-row, so it takes the narrow list's spacing (8 px gaps,
+       12 px padding); with the page's scrollbar the title then keeps more than 120 px beside the tick, the picture and the value. */
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
   }
 
   .shop-lines .list-row + .list-row {
