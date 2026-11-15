@@ -14,6 +14,8 @@ import { evaluate, js, press, until } from '../helpers.mjs'
 
 const ready = `!!document.querySelector('main') && !document.querySelector('[aria-busy="true"], .skeleton') && !!document.querySelector('main .ms-card')`
 const dialogOpen = `!!document.querySelector('dialog[open]')`
+// A sheet rises and a dialog fades in: measure only once nothing animates any more (the guard does not ask for reduced motion).
+const settled = `document.getAnimations().every((a) => a.playState !== 'running')`
 const fail = (what, bad) => {
   throw new Error(`setup: ${what}: ${js(bad)}`)
 }
@@ -25,6 +27,7 @@ async function openEditDinner() {
   await openCards()
   await press(`[...document.querySelectorAll('main .ms-card')].find((c) => c.getAttribute('aria-label') === 'Dinner')?.querySelector('.ms-card__foot button')`, '"Edit Dinner"')
   await until(`!!document.querySelector('dialog.sheet[open] .course-picker__row')`, 'the Edit Meal Slot sheet with its Course rows')
+  await until(settled, 'the sheet to finish rising')
 }
 
 export default {
@@ -143,10 +146,11 @@ export default {
       await openEditDinner()
       await press(`document.querySelector('dialog.sheet[open] button[aria-label="More for Dinner"]')`, 'the sheet\'s ⋮ "More for Dinner"')
       // The ⋮ is a popover of menuitems from 768 px and a sheet of rows (each a stretched button) below it.
-      const item = `[...document.querySelectorAll('[role=menuitem], dialog[open] .list-row button')].find((i) => i.textContent.trim() === 'Remove Meal Slot')`
+      const item = `[...document.querySelectorAll('[role=menuitem], dialog[open] .list-row__target')].find((i) => (i.getAttribute('aria-label') || i.textContent).trim() === 'Remove Meal Slot')`
       await until(`!!(${item})`, 'the ⋮ menu')
       await press(item, '"Remove Meal Slot" in the menu')
       await until(`[...document.querySelectorAll('dialog[open] h2')].some((h) => /^Remove .+ on \\w+\\?$/.test(h.textContent.trim()))`, 'the Remove confirm')
+      await until(settled, 'the confirm to finish opening')
       const bad = await evaluate(`(() => {
         const out = []
         const d = [...document.querySelectorAll('dialog[open]')].find((x) => /^Remove /.test(x.querySelector('h2')?.textContent ?? ''))
@@ -183,6 +187,7 @@ export default {
       await openCards()
       await press(`document.querySelector('main .ms-card .ms-card__foot button:last-of-type')`, '"Change a date"')
       await until(dialogOpen, 'the Change a date sheet')
+      await until(settled, 'the sheet to finish rising')
       const bad = await evaluate(`(() => new Promise((res) => setTimeout(() => {
         const out = []
         const d = document.querySelector('dialog[open]')
@@ -190,7 +195,12 @@ export default {
         if (!/ on (Mon|Tue|Wed|Thu|Fri|Sat|Sun) \\d{1,2} [A-Z][a-z]{2}$/.test(title)) out.push('the title is "' + title + '", not "<Slot> on Sat 14 Nov"')
         const a = document.activeElement
         if (!a || a === document.body || !d.contains(a)) out.push('focus is not inside the sheet')
-        else if (!/^Date/.test(a.getAttribute('aria-label') ?? a.textContent.trim())) out.push('focus is on ' + (a.getAttribute('aria-label') ?? a.textContent.trim()) + ', not the Date field')
+        else {
+          // The Date trigger is named by its field label (aria-labelledby), its text is the date itself.
+          const by = (a.getAttribute('aria-labelledby') ?? '').split(/\\s+/).map((id) => document.getElementById(id)?.textContent.trim() ?? '').join(' ').trim()
+          const name = a.getAttribute('aria-label') || by || a.textContent.trim()
+          if (!/^Date/.test(name)) out.push('focus is on ' + name + ', not the Date field')
+        }
         if (d.querySelectorAll('[aria-label="Close"]').length !== 1) out.push('not exactly one Close')
         const reset = [...d.querySelectorAll('button')].find((b) => /Reset to usual/.test(b.textContent))
         if (reset && reset.getAttribute('data-variant') !== 'secondary') out.push('Reset is not an outlined secondary button')

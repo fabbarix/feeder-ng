@@ -121,6 +121,11 @@
   justify-self: end;
 }
 
+/* Every row's stepper is as wide as the widest Portion Factor ("0.75"), so the − and + line up down the list. */
+.attendance__step .stepper__value {
+  min-inline-size: 4ch;
+}
+
 .attendance__off {
   grid-area: step;
   justify-self: end;
