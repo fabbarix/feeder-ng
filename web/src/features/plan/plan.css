@@ -375,6 +375,8 @@
 }
 .plan-row__chips .chip[data-kind='count'] {
   flex: none;
+  /* VC6: the line's min-inline-size 0 must not squash "+2" into a 23 by 26 near-circle: one digit is a 26 px circle (ui/Chip). */
+  min-inline-size: 1.625rem;
 }
 /* Only a cut line ends its lone chip in an ellipsis. */
 .plan-row__chips[data-cut='true'] .chip__label {
