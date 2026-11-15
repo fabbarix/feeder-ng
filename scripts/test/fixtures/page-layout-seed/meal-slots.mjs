@@ -34,7 +34,8 @@ export async function seed(ctx) {
   if (slotId && main && ctx.recipeId) {
     const base = `/api/plan/${today.date}/${slotId}/${main.id}`
     await step('plan today\'s Snack', 'PUT', base, { recipeId: ctx.recipeId })
-    await step('cook today\'s Snack', 'POST', `${base}/cooked`, {})
+    // No Leftover: the Snack's history is all the tile needs, and a Leftover would change Today for every other scenario.
+    await step('cook today\'s Snack', 'POST', `${base}/cooked`, { leftoverPortions: 0 })
   } else {
     console.error(`page-layout-seed: meal-slots: no Snack today (${today.date}), no main Course or no Recipe, so no Cooked history`)
   }
