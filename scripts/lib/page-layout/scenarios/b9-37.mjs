@@ -3,8 +3,8 @@
 // wrong page); the ordinary page rules then run on the page it leaves.
 //   recipe-editor-flow            /recipes/:id/edit at 375, 834, 1440 ("RX height budget"): the five sections in order, Description and source and
 //                                 Planning closed, the Ingredients heading within the first screen at 375, a line one row of at most 64 px from 42 rem of
-//                                 list width (at most 140 px, 190 with a Note, below it), a Step at most 250 px from 42 rem and 280 px below (340 with
-//                                 uses or a Photo), no drop zone in a Step without a Photo, the Kind Segmented with its three options, an Optional
+//                                 list width (at most 140 px, 190 with a Note, below it), a Step at most 250 px from 42 rem and 340 px below (400 with
+//                                 an open use or a Photo; the main session's call: the approved mock's phone Step is about 318 px), no drop zone in a Step without a Photo, the Kind Segmented with its three options, an Optional
 //                                 checkbox on every line, the caption "Ingredient" clear of the drag handle, the Save bar on the form column (to 1 px)
 //                                 and 12 px (--bar-gap) above the bottom bar where there is one (SHORT-08), the line's actions and the Tag chip's remove inside
 //                                 their containers (R-C+).
@@ -95,7 +95,7 @@ export default {
         for (const [i, c] of [...document.querySelectorAll('.step-card')].entries()) {
           const h = c.getBoundingClientRect().height
           const extras = !!c.querySelector('.use-row, img')
-          const max = wide ? 250 : extras ? 340 : 280
+          const max = wide ? 250 : extras ? 400 : 340 // a phone Step: the mock's ~318 px with its labels (main-session call, w4b)
           if (h > max) bad.push('Step ' + (i + 1) + ' is ' + Math.round(h) + ' px (max ' + max + ')')
           if (!c.querySelector('img') && c.querySelector('.file-drop, input[type="file"]')) bad.push('Step ' + (i + 1) + ' draws a drop zone without a Photo')
         }
