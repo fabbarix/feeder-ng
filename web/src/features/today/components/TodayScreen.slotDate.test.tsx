@@ -40,12 +40,13 @@ const dinner = (over: Partial<PlanSlot> = {}): PlanSlot =>
 const routed = <Routes><Route path="/" element={<TodayScreen />} /></Routes>
 
 describe('Today: the Tonight tile\'s menu', () => {
-  it('a one-Course slot has Who\'s eating, Time today and Not served', async () => {
+  // B9-39 (TB-10): the hero's ⋮ leads with the meal's own actions (Swap, Pin, Open Recipe), then the slot's.
+  it('a one-Course slot has Swap, Pin, Open Recipe, then Who\'s eating, Time today and Not served', async () => {
     h.nextSlot = dinner()
     mockApi(base)
     renderWithProviders(routed, '/')
     await userEvent.click(await screen.findByRole('button', { name: 'Dinner actions' }))
-    expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual(["Who's eating", 'Time today', 'Not served'])
+    expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual(['Swap', 'Pin', 'Open Recipe', "Who's eating", 'Time today', 'Not served'])
   })
 
   it('Time today saves the date\'s time', async () => {

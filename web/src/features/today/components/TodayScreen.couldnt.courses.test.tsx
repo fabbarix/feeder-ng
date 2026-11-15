@@ -71,12 +71,13 @@ describe('Today: Couldn\'t plan per Course', () => {
     expect(await screen.findByText('at /plan/couldnt-plan/excluded')).toBeInTheDocument()
   })
 
-  it('Today has no "Show which meals" (its sheet is the Plan\'s) and no list of lines', async () => {
+  // B9-39 (main-session call): Today's compact tile has "Show which meals" too, opening the Plan's sheet; still no list of lines in it.
+  it('Today has "Show which meals" (the Plan\'s sheet) and no list of lines in the tile', async () => {
     load(cells, week)
     setup()
-    await screen.findByRole('group', { name: '2 Sides' })
-    expect(screen.queryByRole('button', { name: 'Show which meals' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    const group = await screen.findByRole('group', { name: '2 Sides' })
+    expect(screen.getByRole('button', { name: 'Show which meals' })).toBeInTheDocument()
+    expect(within(group.closest('section') as HTMLElement).queryByRole('list')).not.toBeInTheDocument()
   })
 
   it('No Recipes for this Course: "Mark Recipes as Dessert" opens the Recipes list of Recipes not marked as Dessert', async () => {
