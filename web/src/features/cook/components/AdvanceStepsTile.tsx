@@ -8,6 +8,10 @@ export interface AdvanceStepsTileProps {
   summary: AdvanceSummary
   /** Marks the Advance Step with this Recipe Step index as done. */
   onMarkDone: (stepIndex: number) => void
+  /** B9-40 (SHORT-01): short landscape shows a chip that opens the Advance Steps in a sheet, not the tile. */
+  compact?: boolean
+  /** B9-40 (PC-03): on a Step after the first the Advance Steps are one info line. */
+  collapsed?: boolean
 }
 
 /**

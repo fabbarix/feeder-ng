@@ -35,3 +35,8 @@ export function advanceOnScreen(summary: AdvanceSummary, stepIndex: number): Adv
   if (stepIndex !== 0) return { done: [], pending: [] }
   return summary
 }
+
+/** B9-40 stub (PC-03): the one info line of the Advance Steps on a Step after the first; '' when there are none. */
+export function advanceLine(_summary: AdvanceSummary): string {
+  return ''
+}

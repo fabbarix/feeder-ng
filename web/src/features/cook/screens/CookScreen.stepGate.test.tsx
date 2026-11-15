@@ -63,8 +63,8 @@ describe('CookScreen: Next waits for the Steps the next Step depends on', () => 
     expect(await screen.findByText('Pre-heat the oven')).toBeInTheDocument()
     const next = await screen.findByRole('button', { name: 'Next' })
     await waitFor(() => expect(next).toBeDisabled())
-    expect(screen.getByText(/Next waits for Step 1 · Pre-heat the oven: 4:1\d left\. Cancel its timer to go on now\./)).toBeInTheDocument()
-    expect(next).toHaveAccessibleDescription(/Next waits for Step 1 · Pre-heat the oven/)
+    expect(screen.getByText(/Next waits for the oven: 4:1\d left\. Cancel that timer to go on now\./)).toBeInTheDocument()
+    expect(next).toHaveAccessibleDescription(/Next waits for the oven/)
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel Step 1 · Pre-heat the oven' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled())

@@ -5,8 +5,10 @@ import { VoiceToggle } from './VoiceToggle'
 
 export interface CookTopRowProps {
   /** Step number and count of the cooking sequence (Advance Steps excluded), shown as the pill "Step 1 of 5". */
-  number: number
-  of: number
+  number?: number
+  of?: number
+  /** B9-40 (PC-03): opens the Ingredients list; the Ingredients button is drawn only with it. */
+  onIngredients?: () => void
   speechSupported: boolean
   voiceOn: boolean
   onVoiceChange: (on: boolean) => void
@@ -18,7 +20,7 @@ export interface CookTopRowProps {
  * (onExit), the "Step n of N" pill (a `Chip` kind state, role status so a Step change is announced), and the
  * voice `VoiceToggle` IconButton at the end. With no Steps (number 0) the pill is left out. Renders only.
  */
-export function CookTopRow({ number, of, speechSupported, voiceOn, onVoiceChange, onExit }: CookTopRowProps): ReactNode {
+export function CookTopRow({ number = 0, of = 0, speechSupported, voiceOn, onVoiceChange, onExit }: CookTopRowProps): ReactNode {
   return (
     <div className="cook-top">
       <Button variant="secondary" size="md" icon="exit" onClick={onExit}>

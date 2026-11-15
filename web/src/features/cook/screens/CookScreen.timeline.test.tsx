@@ -158,7 +158,7 @@ describe('CookScreen: Next waits only for the next item\'s own Course', () => {
     await screen.findByRole('article', { name: 'Step 3 of 4' })
     const next = screen.getByRole('button', { name: 'Next' })
     await waitFor(() => expect(next).toBeDisabled())
-    expect(screen.getByText(/Next waits for Green beans · Simmer the beans: 4:\d\d left/)).toBeInTheDocument()
+    expect(screen.getByText(/Next waits for the beans: 4:\d\d left/)).toBeInTheDocument()
   })
 
   it('another Course\'s timer does not hold: a Step never waits for a Step of another Course', async () => {
@@ -260,6 +260,6 @@ describe('CookScreen with ONE Course (regression guards: nothing changes)', () =
     setup({ view: sideOnly(), timers: [timer({ id: 2, scope: SIDE_SCOPE, step: 0 })] })
     await screen.findByRole('article', { name: 'Step 1 of 2' })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled())
-    expect(screen.getByText(/Next waits for Green beans · Simmer the beans/)).toBeInTheDocument()
+    expect(screen.getByText(/Next waits for the beans/)).toBeInTheDocument()
   })
 })

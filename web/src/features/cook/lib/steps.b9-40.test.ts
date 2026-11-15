@@ -89,6 +89,10 @@ describe('shortTimerLabel (PC-16 item 2: the held line names the timer once, wit
     expect(shortTimerLabel('Step 4: Simmer the rice')).toBe('the rice')
     expect(shortTimerLabel('Roast the chicken for 40 minutes')).toBe('the chicken')
   })
+  it('a timeline label "<Recipe> · <Step text>" and a "Step 1 · …" label are judged by the text after the last " · "', () => {
+    expect(shortTimerLabel('Green beans · Simmer the beans')).toBe('the beans')
+    expect(shortTimerLabel('Step 1 · Pre-heat the oven')).toBe('the oven')
+  })
   it('a label with no article after its first word keeps every word, in lower case', () => {
     expect(shortTimerLabel('Step 2: Rest')).toBe('rest')
     expect(shortTimerLabel('Eggs')).toBe('eggs')

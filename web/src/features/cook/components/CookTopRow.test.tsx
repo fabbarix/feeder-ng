@@ -13,23 +13,11 @@ describe('CookTopRow (2.7)', () => {
     expect(onExit).toHaveBeenCalledTimes(1)
   })
 
-  it('shows the Step pill, announced as a status', () => {
+  // B9-40 (PC-03): the Step count moved into the Step tile's overline; the top row has no Step pill and no status of its own.
+  it('has no Step pill: the count lives in the Step tile\'s overline', () => {
     render(<CookTopRow {...base} number={2} of={5} />)
-    expect(screen.getByRole('status')).toHaveTextContent('Step 2 of 5')
-  })
-
-  // R11b N9: indigo (the Pinned state chip) means Pinned; the progress pill is a neutral tag.
-  it('the Step pill is not the Pinned chip: a neutral tag chip, no status colour', () => {
-    render(<CookTopRow {...base} number={2} of={5} />)
-    const chip = screen.getByRole('status').querySelector('.chip')!
-    expect(chip).not.toHaveAttribute('data-status', 'pinned')
-    expect(chip).not.toHaveAttribute('data-kind', 'state')
-    expect(chip).toHaveAttribute('data-kind', 'tag')
-  })
-
-  it('leaves the pill out when there are no Steps', () => {
-    render(<CookTopRow {...base} number={0} of={0} />)
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText('Step 2 of 5')).not.toBeInTheDocument()
   })
 
   it('has the voice switch as an icon button, not a chip', async () => {

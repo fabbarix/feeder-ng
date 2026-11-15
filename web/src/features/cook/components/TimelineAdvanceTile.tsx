@@ -9,6 +9,8 @@ export interface TimelineAdvanceTileProps {
   groups: AdvanceGroup[]
   /** The Advance Step's own scope and Recipe Step index. */
   onMarkDone: (scope: string, step: number) => void
+  /** B9-40 (SHORT-01): the chip and sheet of short landscape. */
+  compact?: boolean
 }
 
 /**
