@@ -62,7 +62,7 @@ describe('CouldntPlanTile: every Side excluded', () => {
     const { container } = renderNotice(slots)
     const tile = container.querySelector('[data-cause="excluded"]')!
     expect(tile).toHaveAttribute('data-couldnt-tone', 'warn')
-    expect(tile).toHaveAttribute('data-status', 'spoil')
+    expect(tile).toHaveAttribute('data-status', 'warn')
   })
 })
 

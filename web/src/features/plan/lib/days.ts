@@ -115,3 +115,14 @@ export function heroMeal(slots: PlanSlot[], now: Date): PlanSlot | null {
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
   return open[0] ?? null
 }
+
+// B9-32 (PC-11): the week grid's columns and spans. STUBS: the test author's, to be replaced by the developer.
+/** Columns of the week grid for a container `px` wide: min(4, floor((px + gap) / (21 rem + gap))), at least 1. */
+export function gridColumns(_containerPx: number, _opts?: { remPx?: number; gapPx?: number }): number {
+  throw new Error('B9-32: gridColumns is not built yet')
+}
+
+/** The span (of 12 tracks) of each of `count` days in `columns` columns; the days of an incomplete last row share it. */
+export function daySpans(_count: number, _columns: number): number[] {
+  throw new Error('B9-32: daySpans is not built yet')
+}

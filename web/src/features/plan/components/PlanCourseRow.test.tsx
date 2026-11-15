@@ -156,7 +156,7 @@ describe('PlanCourseRow: an empty Course', () => {
     expect(li.querySelector('.list-row__title')).toHaveTextContent('Every Recipe is excluded.')
     const chip = li.querySelector('.plan-row__chips .chip')!
     expect(chip).toHaveTextContent('Not planned')
-    expect(chip).toHaveAttribute('data-status', 'spoil') // a rule conflict: amber, never danger
+    expect(chip).toHaveAttribute('data-status', 'warn') // a rule conflict: amber, never danger
     expect(li.querySelectorAll('.list-row__text > *').length).toBeLessThanOrEqual(3) // title, meta, chip line
   })
 

@@ -101,7 +101,7 @@ describe('CouldntPlanTile: one compact tile per cause', () => {
     const tile = container.querySelector('[data-cause="advance_step"]') as HTMLElement
     expect(tile).toHaveAttribute('data-couldnt-tone', 'warn')
     expect(tile).toHaveAttribute('data-variant', 'status')
-    expect(tile).toHaveAttribute('data-status', 'spoil')
+    expect(tile).toHaveAttribute('data-status', 'warn')
   })
 
   it('is a wide tile in the grid: two columns', () => {

@@ -18,6 +18,18 @@ export interface RowChip {
   outline?: boolean
   icon?: IconName
   label: string
+  /** B9-32: the chip's tooltip and accessible description when its label is short ("Start Tue 21:30"). */
+  title?: string
+}
+
+/** B9-32 (A2, PC-14): what a row needs to decide whether to show a start chip. */
+export interface StartContext {
+  /** The slot's `at` (RFC 3339): the start chips are hidden once it has passed. */
+  slotAt: string
+  /** The instant "now" (ms). */
+  now: number
+  /** Everyone is away at this slot: nobody cooks, so no start chip. */
+  everyoneAway?: boolean
 }
 
 /** The glyph of each why code (a neutral why chip always has one). */
@@ -60,7 +72,7 @@ function whyChip(why: Why, ctx: PhraseContext): RowChip {
  * What a row says about its meal, most important first: state (Pinned, Cooked, Not cooked), Leftover from, Leftover for,
  * the whole-meal chip, then the why chips, the relaxed ones last (ADR 0009). No duplicate labels; 'best_available' never.
  */
-export function rowChips(meal: PlannedMeal, ctx: PhraseContext, whole?: PlanChip | null): RowChip[] {
+export function rowChips(meal: PlannedMeal, ctx: PhraseContext, whole?: PlanChip | null, _start?: StartContext): RowChip[] {
   const leftoverFor: RowChip[] = []
   const positive: RowChip[] = []
   const relaxed: RowChip[] = []
@@ -127,4 +139,17 @@ export function capChips(chips: RowChip[], limit: number = ROW_CHIP_LIMIT): { sh
     shown: chips.slice(0, limit),
     more: { label: `+${hidden.length}`, title: hidden.map((c) => c.label).join(', '), count: hidden.length },
   }
+}
+
+/** B9-32 (PC-06): the result of fitting a row's chips into its chip line. */
+export interface FitResult {
+  shown: RowChip[]
+  more: ChipMore | null
+  /** Only a lone chip wider than the whole line is cut (it ends in an ellipsis). */
+  cut: boolean
+}
+
+/** STUB (test author): see lib/rowChips.fit.test.ts. */
+export function fitChips(_chips: RowChip[], _widths: number[], _available: number, _opts?: { gap?: number; moreWidth?: number }): FitResult {
+  throw new Error('B9-32: fitChips is not built yet')
 }

@@ -82,7 +82,7 @@ describe('PlanScreen: Couldn\'t plan', () => {
     const notice = await screen.findByRole('group', { name: "Couldn't plan" })
     expect(within(notice).getAllByRole('region')).toHaveLength(2)
     expect(notice.querySelector('[data-status="danger"]')).toBeNull()
-    expect(notice.querySelector('[data-cause="advance_step"][data-status="spoil"]')).not.toBeNull()
+    expect(notice.querySelector('[data-cause="advance_step"][data-status="warn"]')).not.toBeNull()
   })
 
   it('in the 7-column week the chip is still there', async () => {

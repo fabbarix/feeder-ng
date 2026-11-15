@@ -143,7 +143,7 @@ describe('MealTile (on a day tile)', () => {
     expect(block).not.toBeNull()
     const chip = within(block).getByText('Not planned').closest('.chip')!
     expect(chip).toHaveAttribute('data-kind', 'status')
-    expect(chip).toHaveAttribute('data-status', 'spoil') // warn: a rule conflict
+    expect(chip).toHaveAttribute('data-status', 'warn') // warn: a rule conflict
     expect(block.querySelector('[data-status="danger"]')).toBeNull()
     expect(screen.getByText('Every Recipe is excluded.')).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't plan Thursday dinner/)).not.toBeInTheDocument()

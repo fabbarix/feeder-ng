@@ -55,7 +55,7 @@ describe('PlanScreen: Couldn\'t plan per Course', () => {
     renderPlan()
     const today = await tileOf('Today')
     const side = courseRow(today, 'Side')
-    expect(within(side).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'spoil')
+    expect(within(side).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'warn')
     expect(within(side).getByText('Every Recipe is excluded.')).toBeInTheDocument()
     expect(within(courseRow(today, 'Main')).queryByText('Not planned')).not.toBeInTheDocument()
     expect(within(await tileOf('Thursday')).queryByText('Not planned')).not.toBeInTheDocument()

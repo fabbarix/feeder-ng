@@ -22,7 +22,7 @@ function rowFor(side: PlanCourse, compact = false) {
 describe('CourseRow: an unplanned Course says why', () => {
   it('Excluded: an amber chip and the short reason', () => {
     const { item } = rowFor(empty(2, 'Side', EXCLUDED))
-    expect(within(item).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'spoil')
+    expect(within(item).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'warn')
     expect(within(item).getByText('Every Recipe is excluded.')).toBeInTheDocument()
   })
 
