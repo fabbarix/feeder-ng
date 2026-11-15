@@ -50,9 +50,44 @@
   color: var(--color-accent-text);
 }
 
-/* A why chip on a hero follows the hero's colour, in light and dark alike. */
+/* B9-17 (TB-05): the hero follows the NEAREST scheme scope, not only the root's: a Gallery panel (or any subtree) that sets its own
+   data-scheme paints its own hero. These tie with the root rules above (0,4,0) and come later, so inside a scope they win; on a page
+   with no scope below the root they never match. */
+:root [data-scheme='dark'] .tile[data-variant='hero'] {
+  background: var(--color-soft-strong);
+  color: var(--color-text);
+  --focus-ring-color: var(--color-text);
+}
+
+:root [data-scheme='dark'] .tile[data-variant='hero'] .button[data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+:root [data-scheme='light'] .tile[data-variant='hero'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  --focus-ring-color: var(--color-on-accent);
+}
+
+:root [data-scheme='light'] .tile[data-variant='hero'] .button[data-variant='primary'] {
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+}
+
+/* A why chip on a hero follows the hero's colour, in light and dark alike. 11 % is the highest tint that keeps its label at 4.5:1
+   on every accent preset in both schemes (TB-05 drew 14 %: 4.25:1 on the light Basil hero; theme/contrast.tiles.test.ts). That fill
+   is only 1.2 to 1.3:1 against the hero, so a 1 px currentColor boundary (2.0 to 2.5:1) keeps it a contained shape, never loose text;
+   the boundary sits outside the label, so the label's 4.5:1 is unchanged. */
 .tile[data-variant='hero'] .chip[data-kind='why'] {
-  background: color-mix(in srgb, currentColor 14%, transparent);
+  background: color-mix(in srgb, currentColor 11%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
+  color: inherit;
+}
+
+/* Its icon is the hero's colour too: Chip.css paints a why chip's icon in --color-accent-text, which on the light (accent) hero is a
+   dark accent on the accent (about 1.5:1, the glyph all but gone). */
+.tile[data-variant='hero'] .chip[data-kind='why'] svg {
   color: inherit;
 }
 
@@ -104,6 +139,19 @@
   border: 1px solid var(--color-info-fg);
   background: var(--color-info-bg);
   color: var(--color-info-fg);
+}
+
+/* DS-06: warn, a rule or a setting that needs a decision (mustard, fixed). */
+.tile[data-variant='status'][data-status='warn'] {
+  border: 1px solid var(--status-warn-fg);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
+}
+
+/* A chip on its own line in a tile (the Overdue chip above an Advance Step) keeps its natural width: the tile's column would
+   stretch it into a bar. */
+.tile > .chip {
+  align-self: flex-start;
 }
 
 /* Media tile: photo header at 16:9, the text below keeps the tile padding. */

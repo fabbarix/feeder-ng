@@ -16,6 +16,7 @@ import { BarcodeIcon } from '@phosphor-icons/react/dist/csr/Barcode'
 import { BasketIcon } from '@phosphor-icons/react/dist/csr/Basket'
 import { BackspaceIcon } from '@phosphor-icons/react/dist/csr/Backspace'
 import { BellIcon } from '@phosphor-icons/react/dist/csr/Bell'
+import { BellRingingIcon } from '@phosphor-icons/react/dist/csr/BellRinging'
 import { BirdIcon } from '@phosphor-icons/react/dist/csr/Bird'
 import { BookOpenTextIcon } from '@phosphor-icons/react/dist/csr/BookOpenText'
 import { BowlFoodIcon } from '@phosphor-icons/react/dist/csr/BowlFood'
@@ -62,6 +63,7 @@ import { HouseLineIcon } from '@phosphor-icons/react/dist/csr/HouseLine'
 import { ImagesIcon } from '@phosphor-icons/react/dist/csr/Images'
 import { InfoIcon } from '@phosphor-icons/react/dist/csr/Info'
 import { KeyIcon } from '@phosphor-icons/react/dist/csr/Key'
+import { KeyboardIcon } from '@phosphor-icons/react/dist/csr/Keyboard'
 import { KnifeIcon } from '@phosphor-icons/react/dist/csr/Knife'
 import { LeafIcon } from '@phosphor-icons/react/dist/csr/Leaf'
 import { LinkSimpleIcon } from '@phosphor-icons/react/dist/csr/LinkSimple'
@@ -258,6 +260,9 @@ export const icons = {
   question: QuestionIcon, // an unknown barcode (same glyph as unknownBarcode)
   shoppingCart: ShoppingCartIcon, // a cart, not the shop basket
   guests: UserPlusIcon, // a guest added to the table (not the Members glyph)
+  // B9-17: the finished Timer pill (PC-04) and Scan's Type a barcode (SSP-06)
+  bellRinging: BellRingingIcon,
+  typeBarcode: KeyboardIcon,
 } as const
 
 export type IconName = keyof typeof icons

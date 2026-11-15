@@ -16,10 +16,13 @@ export type TileTone = LegacyTileTone
 /** The primary target of a clickable Tile. `label` is its accessible name (required). */
 export type TileStretched = { label: string } & ({ href: string; onActivate?: never } | { onActivate: () => void; href?: never })
 
+/** The tones a status tile has (B9-17, DS-06): every ChipStatus but `neutral`, which is a state chip only and has no tile look. */
+export type TileStatus = Exclude<ChipStatus, 'neutral'>
+
 export interface TileProps extends Omit<HTMLAttributes<HTMLElement>, 'onClick'> {
   /** Default `surface`. `status` needs `status`. */
   variant?: TileVariant
-  status?: ChipStatus
+  status?: TileStatus
   /** Grid columns taken; `full` = whole row. Default 1. */
   span?: TileSpan
   /** Grid rows taken (board only). */
@@ -102,6 +105,7 @@ export function Tile({
 
   return (
     <Tag
+      data-size={size}
       {...rest}
       className={['tile', className].filter(Boolean).join(' ')}
       data-variant={resolved.variant}
@@ -109,7 +113,6 @@ export function Tile({
       data-span={resolved.span}
       data-row-span={rowSpan}
       data-tone={tone}
-      data-size={size}
       data-primary-scope=""
       role={onClick ? (rest.role ?? 'button') : rest.role}
       tabIndex={onClick ? 0 : rest.tabIndex}

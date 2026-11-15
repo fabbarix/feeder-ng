@@ -39,11 +39,9 @@ describe('WP3b #9 (DS-A, ADR 0016): the week is a BentoGrid by minimum tile widt
 })
 
 describe('WP3b #10: why chip and primary Button on the accent hero (plan 4.3, 5.1)', () => {
-  it('a why chip on a hero Tile uses surface fill and accent text', () => {
-    expect(declarations(readUiCss('Chip.css'), ".tile[data-variant='hero'] .chip[data-kind='why']")).toMatchObject({
-      background: 'var(--color-surface)',
-      color: 'var(--color-accent-text)',
-    })
+  it('a why chip on a hero Tile follows the hero: Tile.css tints currentColor and Chip.css has no second rule (B9-17, TB-05; it was a surface chip in Chip.css)', () => {
+    expect(declarations(readUiCss('Tile.css'), ".tile[data-variant='hero'] .chip[data-kind='why']")).toMatchObject({ color: 'inherit' })
+    expect(() => declarations(readUiCss('Chip.css'), ".tile[data-variant='hero'] .chip[data-kind='why']")).toThrow()
   })
   it('a primary Button on a hero Tile uses surface fill and accent text', () => {
     expect(declarations(readUiCss('Button.css'), ".tile[data-variant='hero'] .button[data-variant='primary']")).toMatchObject({

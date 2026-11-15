@@ -187,9 +187,9 @@ describe('ring colour on an accent container (A11Y-02, A11Y-03, TB-05)', () => {
     expect(val(cook, 'color')).toBe('var(--color-on-accent)')
   })
 
-  it('a why chip on a hero follows the hero colour: a 14 % tint of currentColor, text inherited', () => {
+  it('a why chip on a hero follows the hero colour: a tint of currentColor (at most 14 %; B9-17 set 11 %, the highest at 4.5:1 for every preset, see theme/contrast.tiles.test.ts), text inherited', () => {
     const why = tile.filter((b) => q(b.selector) === ".tile[data-variant='hero'] .chip[data-kind='why']")
-    expect(val(why, 'background')).toBe('color-mix(in srgb, currentColor 14%, transparent)')
+    expect(val(why, 'background')).toMatch(/^color-mix\(in srgb, currentColor (\d|1[0-4])%, transparent\)$/)
     expect(val(why, 'color')).toBe('inherit')
   })
 

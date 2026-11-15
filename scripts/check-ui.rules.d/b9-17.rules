@@ -1,0 +1,3 @@
+# B9-17 (plan section 9, rule 20, DS-06): status-tone warns until B9-55 flips it to fail. The feature packages convert their own
+# spoil and danger sites to warn, info or neutral (or list a food or loss file in scripts/check-ui.allow-tones) before then.
+status-tone=warn

@@ -7,15 +7,21 @@ import './Chip.css'
 
 export type ChipKind = 'why' | 'state' | 'status' | 'tag' | 'filter' | 'count'
 /** Fixed status palette (plan 3.1): `--status-<name>-fg|bg|solid`. */
-export type ChipStatus = 'leftover' | 'spoil' | 'danger' | 'success' | 'pinned' | 'info'
+export type ChipStatus = 'leftover' | 'spoil' | 'danger' | 'success' | 'pinned' | 'info' | 'warn' | 'neutral'
 /** @deprecated use `kind` (+ `status`). */
 export type ChipTone = LegacyChipTone
 
 export interface ChipProps {
   /** Default `tag`; a clickable chip without a kind is a `filter`. */
   kind?: ChipKind
-  /** Colour of `state` and `status` chips. */
+  /** Colour of `state` and `status` chips. `neutral` is only for `kind="state"`. */
   status?: ChipStatus
+  /** B9-17 (TB-03): `button` renders a button for a chip that is not a filter; it needs `onClick` or `onRemove`. Default: a span, or a button when clickable. */
+  as?: 'span' | 'button'
+  /** B9-17 (DS-06): the Overdue info chip, a ring in the info colour. Only with `status="info"`. */
+  overdue?: boolean
+  /** B9-17: never shrink below the whole text (still capped at 100% of the line). */
+  whole?: boolean
   /** An outlined status chip (system.md 6): "Leftover for" is `kind="status" status="leftover" outline`. */
   outline?: boolean
   /** @deprecated use `kind` (+ `status`). */
@@ -49,6 +55,14 @@ const DEFAULT_ICON: Partial<Record<ChipStatus, { state: IconName; status: IconNa
   danger: { state: 'notCooked', status: 'spoiled' },
   leftover: { state: 'leftover', status: 'leftover' },
   spoil: { state: 'goesOff', status: 'goesOff' },
+  // DS-06: warn is never the only cue, so a warn chip always carries the Warning glyph. neutral has no default (the caller passes one).
+  warn: { state: 'warning', status: 'warning' },
+}
+
+/** VC6: how many digits a count chip shows ("+2" is one, "12" two): one is a circle, more a pill wide enough to read as one. */
+function countDigits(children: ReactNode): number {
+  if (Array.isArray(children)) return children.reduce<number>((n, c) => n + countDigits(c as ReactNode), 0) // `+{n}` is ['+', n]
+  return typeof children === 'string' || typeof children === 'number' ? (String(children).match(/\d/g) ?? []).length : 0
 }
 
 /** The icon a status shows by default (a `state` chip's glyph; the status chip and ListRow meta use the same). */
@@ -64,14 +78,24 @@ function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
  * A chip carries meaning, never a raw fact (docs/design/ui-fix-plan.md 4.3). Clickable chips render a button;
  * a filter chip shows aria-pressed and a Check while selected.
  */
-export function Chip({ kind, status, outline, tone, icon, selected, disabled, tagColour, onClick, onRemove, removeLabel, label, title, 'aria-describedby': describedBy, children }: ChipProps) {
+export function Chip({ kind, status, as, overdue, whole, outline, tone, icon, selected, disabled, tagColour, onClick, onRemove, removeLabel, label, title, 'aria-describedby': describedBy, children }: ChipProps) {
   const resolved = resolveChip({ kind, status, tone, clickable: Boolean(onClick) })
   let finalKind = resolved.kind
   if ((finalKind === 'state' || finalKind === 'status') && !resolved.status) {
     if (import.meta.env.DEV) console.warn(`Chip kind "${finalKind}" needs a status; rendering it as a tag.`)
     finalKind = 'tag'
   }
+  // DS-06: neutral (a record, "Not cooked") is a state chip only; a neutral status chip has no look, so it falls back to the tag.
+  if (finalKind === 'status' && resolved.status === 'neutral') {
+    if (import.meta.env.DEV) console.warn('Chip status "neutral" is only for kind="state"; rendering it as a tag.')
+    finalKind = 'tag'
+  }
   const finalStatus = finalKind === 'state' || finalKind === 'status' ? resolved.status : undefined
+  // DS-06: the Overdue ring belongs to the info tone only (lateness is never red, peach or mustard).
+  const isOverdue = Boolean(overdue) && finalStatus === 'info'
+  if (overdue && !isOverdue && import.meta.env.DEV) console.warn('Chip `overdue` is only for status="info"; ignoring it.')
+  // TB-03: as="button" needs something to do; a button that does nothing is a trap, so it stays a span.
+  if (as === 'button' && !onClick && !onRemove && import.meta.env.DEV) console.warn('Chip as="button" needs onClick or onRemove; rendering a span.')
 
   // spec 4.1: a Tag colour tints a tag chip, and a filter chip only while it is selected; an unknown id is neutral.
   const tagged = (finalKind === 'tag' || finalKind === 'filter') && isTagColour(tagColour) ? tagColour : undefined
@@ -99,6 +123,9 @@ export function Chip({ kind, status, outline, tone, icon, selected, disabled, ta
     'data-tone': tone,
     'data-tag-colour': tagged,
     'data-outline': outline ? 'true' : undefined,
+    'data-overdue': isOverdue ? 'true' : undefined,
+    'data-whole': whole ? 'true' : undefined,
+    'data-wide': finalKind === 'count' && countDigits(children) > 1 ? 'true' : undefined,
     title: title ?? (typeof children === 'string' ? children : label),
   }
 

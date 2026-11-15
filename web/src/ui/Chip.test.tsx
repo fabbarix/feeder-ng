@@ -100,10 +100,10 @@ describe('Chip kinds map to tokens (plan 4.3)', () => {
     expect(d).toMatchObject({ background: 'var(--color-surface)', color: 'var(--color-text)' })
     expect(d.border).toBe('1px solid var(--color-outline)')
   })
-  it('filter on: accent / on-accent', () => {
+  it('filter on: the A11Y-06 selected look, selected-bg / selected-fg (B9-17; it was the accent solid)', () => {
     expect(declarations(css, ".chip[data-kind='filter'][aria-pressed='true']")).toMatchObject({
-      background: 'var(--color-accent)',
-      color: 'var(--color-on-accent)',
+      background: 'var(--selected-bg)',
+      color: 'var(--selected-fg)',
     })
   })
   it.each(['state', 'status'] as const)('%s: the status container / status fg, for every status', (kind) => {

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { BentoGrid } from './BentoGrid'
 import { Button, PRIMARY_SCOPE_ATTR, type ButtonVariant } from './Button'
-import { Chip, type ChipStatus } from './Chip'
+import { Chip } from './Chip'
 import { CloseButton } from './CloseButton'
 import { DetailList, DetailRow, type DetailTone } from './DetailList'
 import { EmptyState } from './EmptyState'
@@ -39,8 +39,10 @@ import { RecipeThumb } from './RecipeThumb'
 import { SectionTitle } from './SectionTitle'
 import { Cluster, Stack } from './Stack'
 import { TileHeader } from './TileHeader'
-import { Tile, TileMetric } from './Tile'
+import { Tile, TileMetric, type TileStatus } from './Tile'
 import { TimerTile } from './TimerTile'
+import { TimerPill } from './TimerPill'
+import { ViewfinderStrip } from './ViewfinderStrip'
 import { WhyChip } from './WhyChip'
 import { OverlayGalleryGroups } from './GalleryOverlays'
 import { RowsGalleryGroup } from './GalleryRows'
@@ -53,7 +55,7 @@ import './Gallery.css'
  */
 const noop = () => {}
 const VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'danger', 'danger-secondary']
-const STATUSES: ChipStatus[] = ['leftover', 'spoil', 'danger', 'success', 'pinned']
+const STATUSES: TileStatus[] = ['leftover', 'spoil', 'danger', 'success', 'pinned']
 
 function Cell({ caption, children }: { caption: string; children: ReactNode }) {
   return (
@@ -435,6 +437,161 @@ function TimerGroup() {
   )
 }
 
+// ---- B9-17: tones, chips and timers (DS-06, DS-04, PC-03, PC-04, SSP-06, TB-05). One block; nothing else in this file is B9-17's.
+const LONG_TAG = 'HEARTY HOMEMADE MUSHROOM WELLINGTONS'
+
+function TonesChipsTimersGroup() {
+  return (
+    <Group name="Tones, chips and timers">
+      <Cell caption="tile warn (a decision)">
+        <Tile variant="status" status="warn" overline="Couldn't plan" overlineIcon="warning">
+          <p>Every Recipe is excluded for someone who eats it</p>
+        </Tile>
+      </Cell>
+      <Cell caption="tile info (Advance Steps)">
+        <Tile variant="status" status="info" overline="Advance Steps" overlineIcon="advanceStep">
+          <Chip kind="status" status="info" overdue icon="advanceStep">
+            Overdue
+          </Chip>
+          <p>Marinate the chicken</p>
+        </Tile>
+      </Cell>
+      <Cell caption="chips warn, info, neutral, overdue">
+        <Cluster>
+          <Chip kind="status" status="warn">Held: outside cooking times</Chip>
+          <Chip kind="status" status="info">Start Tue 21:30</Chip>
+          <Chip kind="state" status="warn">Rule conflict</Chip>
+          <Chip kind="state" status="neutral" icon="notCooked">
+            Not cooked
+          </Chip>
+          <Chip kind="status" status="info" overdue icon="advanceStep">
+            Overdue
+          </Chip>
+        </Cluster>
+      </Cell>
+      <Cell caption="count chips (round)">
+        <Cluster>
+          <Chip kind="count">3</Chip>
+          <Chip kind="count">+2</Chip>
+          <Chip kind="count">12</Chip>
+          <Chip kind="count">128</Chip>
+        </Cluster>
+      </Cell>
+      <Cell caption="long Tag ends in an ellipsis; whole is never cut">
+        <div className="gallery__stack" style={{ inlineSize: "15rem" }}>
+          <Chip kind="tag" onRemove={noop} removeLabel={`Remove Tag ${LONG_TAG}`}>
+            {LONG_TAG}
+          </Chip>
+          <Cluster>
+            <Chip kind="status" status="leftover" outline whole>
+              Leftover for Fri
+            </Chip>
+            <Chip kind="tag">{LONG_TAG}</Chip>
+          </Cluster>
+        </div>
+      </Cell>
+      <Cell caption="chip buttons and the selected filter">
+        <Cluster>
+          <Chip as="button" kind="why" icon="leftover" onClick={noop}>
+            Uses Beef by Tue
+          </Chip>
+          <Chip kind="filter" selected onClick={noop}>
+            Fish
+          </Chip>
+          <Chip kind="filter" selected tagColour="apricot" onClick={noop}>
+            Spicy
+          </Chip>
+          <Chip kind="filter" tagColour="apricot" onClick={noop}>
+            Mild
+          </Chip>
+          <Chip kind="filter" onClick={noop}>
+            Meat
+          </Chip>
+        </Cluster>
+      </Cell>
+      <Cell caption="TimerTile md (running, place)">
+        <div className="gallery__stack">
+          <TimerTile
+            size="md"
+            label="Pre-heat the oven to 220 °C and put the tray in"
+            place="Step 1 · Roast chicken with rice"
+            seconds={163}
+            running
+            onToggle={noop}
+            onMore={noop}
+          />
+        </div>
+      </Cell>
+      <Cell caption="TimerTile md (paused, overdue)">
+        <div className="gallery__stack">
+          <TimerTile size="md" label="Rice" place="Step 2" seconds={420} onToggle={noop} onMore={noop} />
+          <TimerTile size="md" label="Rest the meat" seconds={-42} running onDismiss={noop} />
+        </div>
+      </Cell>
+      <Cell caption="TimerTile compact">
+        <TimerTile density="compact" label="Pasta" seconds={300} totalSeconds={600} running />
+      </Cell>
+      <Cell caption="TimerPill running, paused, finished, gate">
+        <div className="gallery__stack">
+          <TimerPill label="Roast the chicken" seconds={18 * 60 + 42} more={1} onOpen={noop} />
+          <TimerPill label="Rice" seconds={420} running={false} onOpen={noop} onToggle={noop} />
+          <TimerPill label="Roast the chicken" seconds={0} more={2} onOpen={noop} />
+          <TimerPill label="Simmer the sauce until it thickens" seconds={95} gate onOpen={noop} onToggle={noop} />
+        </div>
+      </Cell>
+      <Cell caption="camera bar">
+        <div className="gallery__stack">
+          <ViewfinderStrip
+            size="bar"
+            status="No camera on this device"
+            action={
+              <Button size="sm" variant="secondary" onClick={noop}>
+                Try again
+              </Button>
+            }
+          />
+        </div>
+      </Cell>
+      <Cell caption="tiles spoil, danger, warn, info (one row)">
+        <Cluster>
+          <Chip kind="status" status="spoil">Use soon</Chip>
+          <Chip kind="status" status="danger">Went off</Chip>
+          <Chip kind="status" status="warn">Rule conflict</Chip>
+          <Chip kind="status" status="info">To confirm</Chip>
+        </Cluster>
+      </Cell>
+      <Cell caption="MemberPill chosen and not chosen">
+        <Cluster>
+          <MemberPill name="Anna" colour={memberColour(51, 102, 204)} selected />
+          <MemberPill name="Sam" colour={memberColour(129, 178, 154)} selected={false} />
+        </Cluster>
+      </Cell>
+      <Cell caption="hero and its why chips (this panel's scheme)">
+        <div className="gallery__stack">
+          <Tile variant="hero" overline="Tonight">
+            <h4>Lasagne</h4>
+            <Cluster>
+              <Chip as="button" kind="why" icon="leftover" onClick={noop}>
+                Uses Beef by Tue
+              </Chip>
+              <Chip kind="why" icon="favourite">
+                Anna's favourite
+              </Chip>
+              <Chip kind="why" icon="why">
+                Again soon: also on Sat
+              </Chip>
+            </Cluster>
+            <Button variant="primary" onClick={noop}>
+              Cook
+            </Button>
+          </Tile>
+        </div>
+      </Cell>
+    </Group>
+  )
+}
+// ---- end B9-17
+
 function EmptyStateGroup() {
   return (
     <Group name="EmptyState">
@@ -815,6 +972,7 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <RecipeThumbGroup />
       <ProgressGroup />
       <TimerGroup />
+      <TonesChipsTimersGroup />
       <EmptyStateGroup />
       <FieldSizesGroup />
       <FieldRowGroup />
