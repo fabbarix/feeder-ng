@@ -41,6 +41,7 @@ import { useScanController, type ScanController } from '../hooks/useScanControll
 import { useScanSession } from '../hooks/useScanSessionActive'
 import { useScrollAboveSheet } from '../hooks/useScrollAboveSheet'
 import { useTypedEntry } from '../hooks/useTypedEntry'
+import { useNewProductHints } from '../hooks/useNewProductHints'
 import { useScanReceipt } from '../hooks/useScanReceipt'
 import { ReadReceiptFooter } from '../../receipt/components/ReadReceiptFooter'
 import { receiptStrings } from '../../receipt/strings'
@@ -50,7 +51,7 @@ import { getLastShopId, setLastShopId } from '../lib/lastShop'
 import type { ListView } from '../lib/listView'
 import { priceContext } from '../lib/priceContext'
 import type { PriceEntry, PriceIntent } from '../lib/priceEntry'
-import { rowByKey, type ScannedRow } from '../lib/scannedList'
+import { rowByKey, toGetExtras, type ScannedRow } from '../lib/scannedList'
 import { scanStrings } from '../strings'
 import { TickChangeSheet } from '../../shop/components/TickChangeSheet'
 import '../scan.css'
@@ -187,6 +188,8 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   const [priceFailure, setPriceFailure] = useState<PriceFailure | null>(null)
   // Receipt reading (beta.7): the Scanned list's last row, the session the receipt routes read, an apply's results.
   const receipt = useScanReceipt({ shopId: isShop && shop ? shop.id : null, scanned, online: c.online, pendingScans: c.pendingCount, refreshLive: c.refreshLive })
+  // B9-41 (SSP-07, SSP-15): the weighed header and the weighed-goods hint of the new-Product sheet.
+  const newProductHints = useNewProductHints(sheet, shop)
 
   // The Price entry's row. A new Product's row is asked for by its `new:<uuid>` key and found by its scan once the
   // server's Result has re-keyed it to the Product id.
@@ -255,7 +258,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           entryKey={flow.pricing?.key}
           shopName={shopName}
           currency={c.currency}
-          {...priceContext(productOf(pricingRow))}
+          {...priceContext(productOf(pricingRow), pricingRow)}
           weighed={pricingRow.weighed ? (pricingRow.weight ?? undefined) : undefined}
           initialPerKgCents={pricingRow.perKgCents}
           hasNext={scanned.nextUnpriced(pricingRow.key) !== null}
@@ -307,7 +310,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onRemove={(key) => void flow.removeRow(key)}
           footer={
             receipt ? (
-              <ListGroup label={receiptStrings.footerGroup}>
+              <ListGroup title={receiptStrings.footerGroup}>
                 <ReadReceiptFooter {...receipt} />
               </ListGroup>
             ) : undefined
@@ -315,7 +318,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
         />
       ) : (
         <ToGetList
-          rows={toGetRows(scanned.toGet, scanned.rows, c.currency, c.system)}
+          rows={toGetRows(scanned.toGet, scanned.rows, c.currency, c.system, toGetExtras(c.list))}
           pendingKeys={c.toGetTick.pendingKeys}
           onTick={(entry) => void c.toGetTick.tick(entry)}
         />
@@ -384,6 +387,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onSave={(values) => flow.saveUnknown(values)}
           // The new row says Add price, and the keypad opens on it at once (13.5, mockup 10).
           onAdded={(rowKey) => flow.startPriceEntry(rowKey)}
+          {...newProductHints.props}
         />
       ) : null}
       {sheet?.kind === 'ask_weight' ? (
@@ -416,6 +420,8 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onCreateNew={flow.createNewInstead}
         />
       ) : null}
+      {/* B9-41 (SSP-15): asks for the User's role while the weighed-goods hint shows */}
+      {newProductHints.probe}
       {/* B9-34 (SSP-01): Change in a To get tick's toast opens the Shop's Change sheet */}
       {c.toGetTick.flow ? <TickChangeSheet flow={c.toGetTick.flow} system={c.system} /> : null}
     </section>

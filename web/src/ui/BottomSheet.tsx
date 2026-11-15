@@ -57,6 +57,8 @@ export interface BottomSheetProps {
   submit?: SheetSubmit
   /** 'half': about half the viewport high on a phone, the body scrolling inside (a keypad beside a list). Default 'auto'. */
   size?: 'auto' | 'half'
+  /** B9-41: the ids of the body's elements that describe the sheet (its `aria-describedby`), first one first. */
+  describedBy?: string
 }
 
 /**
@@ -84,6 +86,7 @@ function SheetSurface({
   confirmDismiss = false,
   submit,
   size = 'auto',
+  describedBy,
 }: Omit<BottomSheetProps, 'open'>) {
   const ref = useRef<HTMLDialogElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -126,6 +129,7 @@ function SheetSurface({
       data-modal={modal ? undefined : 'false'}
       data-size={size === 'auto' ? undefined : size}
       aria-labelledby={context ? `${contextId} ${titleId}` : titleId}
+      aria-describedby={describedBy || undefined}
       {...{ [PRIMARY_SCOPE_ATTR]: '' }}
       onClick={(e: MouseEvent<HTMLDialogElement>) => {
         onBackdropClick(e)

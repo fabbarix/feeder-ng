@@ -37,11 +37,16 @@ export interface NewProductFormOptions {
   onAdded?: (rowKey: string, clientUuid: string) => void
   /** what the form opens with (a receipt line's Add…): the Ingredient, the name, the pack size and the scope */
   initial?: NewProductInitial
+  /** B9-41 (SSP-07): a weighed code with a rule: the Lines in g come first */
+  gramsFirst?: boolean
+  /** B9-41 (SSP-15): the scope the form starts on when `initial` gives none (an in-store code: This Shop only). Default Any Shop. */
+  defaultScope?: BarcodeScope
 }
 
 export function useNewProductForm(o: NewProductFormOptions) {
   const weighed = o.mode !== 'pack'
-  const lines = useMemo(() => lineChips(o.lines), [o.lines])
+  const gramsFirst = o.gramsFirst ?? false
+  const lines = useMemo(() => lineChips(o.lines, undefined, { gramsFirst }), [o.lines, gramsFirst])
   const noLines = lines.chips.length + lines.more.length === 0
 
   const init = o.initial
@@ -54,7 +59,7 @@ export function useNewProductForm(o: NewProductFormOptions) {
   const [pack, setPack] = useState<PackSelection>(() => (init?.ingredient ? initialPackSelection(init.ingredient, o.products, init) : noPackSelection('g')))
   const [typedName, setTypedName] = useState<string | null>(init?.productName?.trim() ? init.productName : null)
   const [renaming, setRenaming] = useState(false)
-  const [scope, setScope] = useState<BarcodeScope>(init?.scope ?? 'global')
+  const [scope, setScope] = useState<BarcodeScope>(init?.scope ?? o.defaultScope ?? 'global')
   const [weightText, setWeightText] = useState('')
   const [attempts, setAttempts] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -152,12 +157,16 @@ export function useNewProductForm(o: NewProductFormOptions) {
     }
   }
 
+  const showLines = !formOpen && line === null
+  const showKind = formOpen && line === null
   return {
     weighed,
+    /** A11Y-07: changes when the sheet changes step (the Line chips, all of them, What it is, a picked Line); focus then goes to its heading */
+    stepKey: showLines ? (moreOpen ? 'lines-all' : 'lines') : showKind ? 'kind' : `line:${line?.ingredientId ?? ''}`,
     lines,
     noLines,
-    showLines: !formOpen && line === null,
-    showKind: formOpen && line === null,
+    showLines,
+    showKind,
     moreOpen,
     expandLines: () => setMoreOpen(true),
     openSomethingElse: () => setSomethingElse(true),

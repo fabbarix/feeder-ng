@@ -8,9 +8,18 @@ export interface PriceContext {
   last: { cents: number; date: string } | null
 }
 
-/** The context of a row's Product; a Product the phone does not know (a queued scan that creates one) has neither. */
-export function priceContext(product?: OfflineProduct): PriceContext {
-  if (!product) return { last: null }
+/** B9-41 (SSP-07): the pack a new weighed Product's row prices against until the phone knows the Product: 1 kg (1 l), so per kg is on. */
+const WEIGHED_FALLBACK = 1000
+
+/**
+ * The context of a row's Product; a Product the phone does not know (a queued scan that creates one) has neither, except a weighed row
+ * in g or ml (B9-41, SSP-07): it gets a 1 kg (1 l) pack, so its keypad opens on per kg.
+ */
+export function priceContext(product?: OfflineProduct, row?: { weighed: boolean; baseUnit: string }): PriceContext {
+  if (!product) {
+    if (row?.weighed && (row.baseUnit === 'g' || row.baseUnit === 'ml')) return { pack: { amount: WEIGHED_FALLBACK, unit: row.baseUnit }, last: null }
+    return { last: null }
+  }
   const context: PriceContext = { pack: { amount: product.packSize, unit: product.baseUnit }, last: null }
   if (product.lastPriceCents != null && product.lastPriceDate) context.last = { cents: product.lastPriceCents, date: product.lastPriceDate }
   return context

@@ -23,7 +23,6 @@
   color: var(--color-text);
 }
 
-.new-product__barcode,
 .new-product__hint {
   margin: 0;
   font-size: var(--text-meta-size);
@@ -50,13 +49,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-}
-
-.new-product__eyebrow p {
-  margin: 0;
-  font-size: var(--text-body-strong-size);
-  line-height: var(--text-body-strong-line);
-  font-weight: var(--text-body-strong-weight);
 }
 
 .new-product__guard {
@@ -131,4 +123,70 @@
   background: var(--color-primary-container);
   border-color: var(--color-primary-container);
   color: var(--color-on-primary-container);
+}
+
+/* B9-41 (SSP-07, SSP-20): the code line: the code as printed (or the weight) after its icon, in tabular figures. */
+.new-product__code {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.new-product__code > svg {
+  flex: none;
+}
+
+.new-product__code-digits {
+  color: var(--color-text);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* B9-41 (SSP-15): the weighed-goods tile: the icon, then the title, the text and the way in. */
+.weight-code-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.weight-code-note > svg {
+  margin-block-start: var(--space-half);
+}
+
+.weight-code-note__title {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.weight-code-note__text {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.weight-code-note__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+/* A11Y-07: a step heading takes the focus from the program (tabIndex -1) and draws no ring. */
+.new-product__form [data-step-heading]:focus {
+  outline: none;
+}
+
+.new-product__eyebrow-title {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
 }

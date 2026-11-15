@@ -6,10 +6,23 @@ import { scanStrings } from './strings'
 export const newProductStrings = {
   title: 'What is this?',
   barcodeNotKnown: (code: string) => `${code} · not in Feeder yet`,
+  /** B9-41 (SSP-20): what follows the code as printed on the barcode line */
+  notKnownSuffix: ' · not in Feeder yet',
+  /** B9-41 (SSP-07): the header line of a weighed code: "312 g · weighed at Coop · item 012300" */
+  weighedAt: (weight: string, shop: string, itemCode: string) => `${weight} · weighed at ${shop} · item ${itemCode}`,
+  /** B9-41 (SSP-15): the info tile of an in-store code at a Shop with no Weight Barcode Rule */
+  weightCode: {
+    title: (shop: string) => `This looks like a ${shop} code for weighed goods`,
+    text: (shop: string) => `${shop} has no Weight Barcode Rule, so every weighed pack would become a Product of its own.`,
+    setUp: 'Set up the rule',
+    askAdmin: 'Ask the Admin to set one up.',
+  },
 
   // Step 1: Which Line is it?
   whichLine: 'Which Line is it?',
   whichLineHint: 'Picking a Line sets what it is and ticks it. Lines you still need are listed first.',
+  /** B9-41 (SSP-07): a weighed code lists the Lines in g first */
+  whichLineHintWeighed: 'Lines in grams are listed first.',
   restock: 'Restock',
   somethingElse: 'Something else',
   moreLines: 'More Lines',

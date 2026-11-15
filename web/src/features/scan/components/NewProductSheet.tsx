@@ -1,6 +1,7 @@
 // The short new-Product sheet for an unknown barcode (SR5, shop-scan-proposals 13.5): Which Line is it?, Ingredient | Supply, pack chips,
 // an optional Picture from the phone's own camera, a summary line, Add. It replaced UnknownBarcodeSheet (beta.7). The sheet only opens the form;
 // the form's state and steps live in hooks/useNewProductForm.
+import { useId } from 'react'
 import { BottomSheet } from '../../../ui'
 import type { LineCandidate } from '../lib/lineChoice'
 import type { PackProduct } from '../lib/packChips'
@@ -74,9 +75,13 @@ export interface NewProductSheetProps {
 }
 
 export function NewProductSheet(props: NewProductSheetProps) {
+  const describeIds = { note: useId(), code: useId() }
+  // B9-41: the hint tile is the sheet's first description, then the code line (SSP-07, SSP-15).
+  const hasCode = props.weighed !== undefined || (Boolean(props.barcode) && !props.noBarcode)
+  const describedBy = [props.weightCodeHint ? describeIds.note : null, hasCode ? describeIds.code : null].filter(Boolean).join(' ')
   return (
-    <BottomSheet open={props.open} onClose={props.onClose} title={newProductStrings.title}>
-      {props.open ? <NewProductForm {...props} /> : null}
+    <BottomSheet open={props.open} onClose={props.onClose} title={newProductStrings.title} describedBy={describedBy}>
+      {props.open ? <NewProductForm {...props} describeIds={describeIds} /> : null}
     </BottomSheet>
   )
 }

@@ -3,6 +3,3 @@
 #   /settings/preferences: P36 (by mode), the touch-targets-controls scenario. B9-17's chip passes; the Your menu button (40x40) in
 #            the page header is fixed by B9-19.
 P36@/settings/preferences = warn until B9-19
-#   /scan: P41 (by mode), the scan-scanned-list, scan-row-active and scan-price-keypad scenarios. The "Scanned list" and "Receipt"
-#            groups are named only by aria-label; B9-41 (scan-data) gives them visible ListGroup titles when it rebuilds those lists.
-P41@/scan = warn until B9-41
