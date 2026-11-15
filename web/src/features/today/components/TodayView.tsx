@@ -2,7 +2,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { TileErrorBoundary } from '../../../app/TileErrorBoundary'
 import { Button, EmptyState, ErrorState, LoadState, PageHeader } from '../../../ui'
 import { SkeletonBlock } from '../../../ui/Skeleton'
-import { halfTiles } from '../lib/halves'
+import { halfTiles, topAreas } from '../lib/halves'
 import type { RememberedLayout } from '../lib/layoutMemory'
 import { tileQueryKeys, tileTitle } from '../lib/tiles'
 import { todayStrings as s } from '../strings'
@@ -78,6 +78,12 @@ export function TodayView({
   const shown = holding ? all.filter((id) => TOP.includes(id)) : all
   const aside = (layout.aside ?? []).filter((id) => shown.includes(id))
   const halves = halfTiles(shown, { setupCompact: layout.setupCompact === true })
+  // w6a (B9-44, TB-03/TB-12, TB-06): the rows the three-track areas need, from the tiles actually drawn (the skeleton's while the plan loads),
+  // so a Shopping tile or the full checklist leads above the hero, and a missing hero or To confirm leaves no empty row.
+  const top = topAreas(
+    planLoading ? (remembered ?? FIRST_LAUNCH).tiles.map((t) => t.id) : shown,
+    !planLoading && layout.setupCompact === true,
+  )
   const slot = (id: TileId) => (
     <div
       key={id}
@@ -110,7 +116,8 @@ export function TodayView({
         aria-label={s.gridLabel}
         data-halves-odd={!planLoading && halves.two.length % 2 === 1 ? 'true' : undefined}
         data-halves-3-rest={planLoading ? undefined : String(halves.three.length % 3)}
-        data-setup={!planLoading && shown.includes('setup') && layout.setupCompact !== true ? 'full' : undefined}
+        data-head={top.head}
+        data-lead={top.lead}
       >
         {planLoading ? (
           <TodaySkeleton remembered={remembered ?? FIRST_LAUNCH} />

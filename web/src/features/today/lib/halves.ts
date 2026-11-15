@@ -23,3 +23,15 @@ export function halfTiles(shown: TileId[], options: { setupCompact?: boolean } =
   const alone2 = options.setupCompact === true && shown.includes('setup') && shown.includes('toConfirm') ? (['setup'] as TileId[]) : []
   return { two: halves.filter((id) => !alone2.includes(id)), three: halves.filter((id) => !IN_ASIDE.includes(id)), alone2 }
 }
+
+/**
+ * The three-track areas (ADR 0026): `head` says which of the hero and To confirm are drawn ('hc', 'h', 'c' or 'none'), `lead` how many full rows
+ * come before them (the Shopping tile, then the full setup checklist; the compact one follows the hero as a half tile).
+ */
+export function topAreas(ids: readonly TileId[], setupCompact: boolean): { head: 'hc' | 'h' | 'c' | 'none'; lead: '0' | '1' | '2' } {
+  const hero = ids.includes('nextMeal')
+  const confirm = ids.includes('toConfirm')
+  const head = hero && confirm ? 'hc' : hero ? 'h' : confirm ? 'c' : 'none'
+  const lead = Number(ids.includes('shopping')) + Number(ids.includes('setup') && !setupCompact)
+  return { head, lead: String(lead) as '0' | '1' | '2' }
+}
