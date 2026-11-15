@@ -98,7 +98,33 @@ export default defineConfig({
     precompress(),
   ],
   server: { proxy: { '/api': 'http://localhost:8080' } },
-  build: { outDir: 'dist', emptyOutDir: false },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: false,
+    // B9-59 (RES-04, route splitting): the routes load on demand (app/lazyScreen.tsx), and these two keep what Today does not
+    // use out of the entry chunk.
+    rolldownOptions: {
+      treeshake: {
+        // The app's own modules have no side effects but their stylesheet: one whose exports nothing uses (a ui/index.ts
+        // re-export, say) is left out with its CSS. A module that is used keeps all its statements, side effects included.
+        // Packages keep their own say (package.json sideEffects).
+        moduleSideEffects: (id: string, external: boolean) => external || /\.css($|\?)/.test(id) || !/[\\/]web[\\/]src[\\/]/.test(id),
+      },
+      // app/features.ts imports only `routes`, `navItems` and `useShellStatus` from each feature's index.ts (named globs, so
+      // the rest of what an index.ts exports is not pulled into the entry). A feature without navItems or useShellStatus
+      // gets undefined for it. tsc still rejects a missing export anywhere in the source, so this hides no real one.
+      shimMissingExports: true,
+      output: {
+        // Everything Today's first paint imports statically goes into one chunk beside the entry, rather than a hundred
+        // small shared chunks: one request on a slow line, and it compresses better as one.
+        codeSplitting: { groups: [{ name: 'app', tags: ['$initial'] }] },
+      },
+      onLog(level, log, handler) {
+        if (log.code === 'SHIMMED_EXPORT' && /features[\\/][^\\/]+[\\/]index\.ts/.test(log.message) && /"(navItems|useShellStatus)"/.test(log.message)) return
+        handler(level, log)
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

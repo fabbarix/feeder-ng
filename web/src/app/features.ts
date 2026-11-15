@@ -65,9 +65,23 @@ export function buildRoutes(modules: Record<string, FeatureModule>): RouteObject
   return [...routes, ...aliases, ...placeholders, { path: '*', element: createElement(NotFound) }]
 }
 
-/** The discovered feature modules, keyed by file path. */
+/**
+ * The discovered feature modules, keyed by file path. B9-59: only the three names the shell reads are imported (named
+ * imports, not each module's namespace), so the rest a feature's index.ts exports for other features stays out of the
+ * entry chunk unless something there uses it.
+ */
 export function discoverFeatures(): Record<string, FeatureModule> {
-  return import.meta.glob('../features/*/index.ts', { eager: true }) as Record<string, FeatureModule>
+  const routes = import.meta.glob<RouteObject[]>('../features/*/index.ts', { eager: true, import: 'routes' })
+  const navItems = import.meta.glob<NavItem[] | undefined>('../features/*/index.ts', { eager: true, import: 'navItems' })
+  const statusHooks = import.meta.glob<ShellStatusHook | undefined>('../features/*/index.ts', { eager: true, import: 'useShellStatus' })
+  const modules: Record<string, FeatureModule> = {}
+  for (const key of Object.keys(routes)) {
+    const mod: FeatureModule = { routes: routes[key] ?? [] }
+    if (navItems[key] !== undefined) mod.navItems = navItems[key]
+    if (statusHooks[key] !== undefined) mod.useShellStatus = statusHooks[key]
+    modules[key] = mod
+  }
+  return modules
 }
 
 export function loadFeatures(): CollectedFeatures {
