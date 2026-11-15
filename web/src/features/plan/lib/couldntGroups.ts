@@ -12,6 +12,8 @@ export type Cause =
   | 'slot_rule'
   | 'excluded'
   | 'advance_step'
+  /** B9-32 (PC-14, A2): every Recipe would start outside the cooking times (`eliminated.tooEarly`). */
+  | 'too_early'
   | 'no_fit'
 
 /** info = setup is missing; warn = a rule conflict. Never danger: nothing is on fire. */
@@ -58,7 +60,7 @@ export interface CauseGroup {
 }
 
 /** Display order: setup gaps first, then rule conflicts. */
-const ORDER: Cause[] = ['nobody_attending', 'no_recipes', 'no_course_recipes', 'slot_rule', 'excluded', 'advance_step', 'no_fit']
+const ORDER: Cause[] = ['nobody_attending', 'no_recipes', 'no_course_recipes', 'slot_rule', 'excluded', 'advance_step', 'too_early', 'no_fit']
 
 /** Where a cause's fix goes; `first` is the earliest cell of the group. */
 type FixFor = (label: string, first: PlanEntry | undefined) => FixAction
@@ -77,13 +79,14 @@ const META: Record<Cause, { tone: Tone; icon: IconName; fix: FixFor }> = {
     icon: 'recipes',
     fix: (label, first) =>
       first && first.courseId !== undefined && first.courseName
-        ? { kind: 'link', label: s.markRecipesAs(first.courseName), to: `/recipes?notCourse=${first.courseId}` }
+        ? { kind: 'mark', label: s.markRecipesAs(first.courseName), courseId: first.courseId, courseName: first.courseName }
         : { kind: 'link', label, to: '/recipes' },
   },
   slot_rule: { tone: 'warn', icon: 'slotRule', fix: (label) => ({ kind: 'link', label, to: '/settings/planning' }) },
   // CRS G2: open to every User (preferences are not Admin-only), so never "Ask an Admin".
   excluded: { tone: 'warn', icon: 'exclusion', fix: (label) => ({ kind: 'link', label, to: '/plan/couldnt-plan/excluded' }) },
   advance_step: { tone: 'warn', icon: 'advanceStep', fix: (label) => ({ kind: 'choose', label }) },
+  too_early: { tone: 'warn', icon: 'timer', fix: (label) => ({ kind: 'choose', label }) },
   no_fit: { tone: 'warn', icon: 'info', fix: (label) => ({ kind: 'choose', label }) },
 }
 
@@ -106,7 +109,8 @@ export function causeOf(slot: Pick<PlanEntry, 'unfilled'>): Cause {
   if (e.considered === 0) return 'no_recipes'
   // The filter that removed the most options; a tie goes to Exclusion.
   if (e.exclusion > 0 && e.exclusion >= e.advanceStep) return 'excluded'
-  if (e.advanceStep > 0) return 'advance_step'
+  if (e.advanceStep > 0 && e.advanceStep >= (e.tooEarly ?? 0)) return 'advance_step'
+  if ((e.tooEarly ?? 0) > 0) return 'too_early'
   return 'no_fit'
 }
 
@@ -206,8 +210,8 @@ export function groupByCause(slots: PlanEntry[], all: PlanEntry[] = slots): Caus
       slots: list,
       items: cause === 'excluded' ? items.map((i) => ({ ...i, to: `/plan/couldnt-plan/excluded#${i.id}` })) : items,
       headline: `${s.couldntHeadline(count, noun)} ${textOf(cause, list, count)}`,
-      title: '',
-      meta: '',
+      title: `${count} ${noun}`,
+      meta: textOf(cause, list, count),
       hint: s.couldntHint[cause],
       tone: meta.tone,
       icon: meta.icon,
@@ -231,14 +235,14 @@ export function slotLine(slot: PlanEntry): string {
 }
 
 export interface ToneStyle {
-  tile: { variant: 'status'; status: 'info' | 'spoil' }
-  chip: { kind: 'status'; status: 'info' | 'spoil' }
+  tile: { variant: 'status'; status: 'info' | 'warn' }
+  chip: { kind: 'status'; status: 'info' | 'warn' }
 }
 
-/** Existing tokens only: info is the blue status tile and chip, warn the amber status. */
+/** DS-06: info is the blue status tile and chip, warn the warn (mustard) status; never spoil or danger. */
 export function toneStyle(tone: Tone): ToneStyle {
   if (tone === 'info') return { tile: { variant: 'status', status: 'info' }, chip: { kind: 'status', status: 'info' } }
-  return { tile: { variant: 'status', status: 'spoil' }, chip: { kind: 'status', status: 'spoil' } }
+  return { tile: { variant: 'status', status: 'warn' }, chip: { kind: 'status', status: 'warn' } }
 }
 
 /**
@@ -267,7 +271,8 @@ function isEntry(slot: PlanSlot | PlanEntry): slot is PlanEntry {
   return (slot as PlanEntry).courseId !== undefined
 }
 
-/** B9-32 (PC-07): the short cause an unfilled Course row names in its one chip ("No Dessert Recipes", "Excluded"). STUB. */
-export function shortCause(_cause: Cause, _courseName?: string | null): string {
-  throw new Error('B9-32: shortCause is not built yet')
+/** B9-32 (PC-07): the short cause an unfilled Course row names in its one chip ("No Dessert Recipes", "Excluded"). */
+export function shortCause(cause: Cause, courseName?: string | null): string {
+  if (cause === 'no_course_recipes') return courseName ? s.causeChipCourse(courseName) : s.causeChip.no_course_recipes
+  return s.causeChip[cause]
 }

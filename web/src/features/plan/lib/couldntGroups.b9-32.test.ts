@@ -61,3 +61,15 @@ describe('B9-32 keeps the cause rules (unfilled() fixture sanity)', () => {
     expect(groupsOf([dinner('2026-11-10', [planned(1, 'Main'), empty(2, 'Side', unfilled('no_candidates', { considered: 3, exclusion: 3 }))])])[0]!.cause).toBe('excluded')
   })
 })
+
+describe('PC-14 / A2: a Course no Recipe can start within the cooking times', () => {
+  it('is the too_early cause, a warn rule conflict, with the chip "Outside your cooking times" and Choose a Recipe as the fix', () => {
+    const slots = [dinner('2026-11-10', [planned(1, 'Main'), empty(2, 'Side', unfilled('no_candidates', { considered: 3, tooEarly: 3 }))])]
+    const [g] = groupsOf(slots)
+    expect(g!.cause).toBe('too_early')
+    expect(g!.tone).toBe('warn')
+    expect(g!.meta).toBe('Every Recipe would start outside your cooking times.')
+    expect(g!.fix).toEqual({ kind: 'choose', label: 'Choose a Recipe' })
+    expect(shortCause('too_early', 'Side')).toBe('Outside your cooking times')
+  })
+})

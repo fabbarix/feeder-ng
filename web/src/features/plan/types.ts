@@ -99,6 +99,8 @@ export interface Eliminations {
   coolDown: number
   varietyRule: number
   advanceStep: number
+  /** B9-12 / B9-58: Recipes whose start would be outside the cooking times. */
+  tooEarly?: number
 }
 
 export interface Unfilled {

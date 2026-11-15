@@ -30,8 +30,9 @@ describe('causeOf: the new cause, and the two that are gone', () => {
 })
 
 describe('the causes that are gone have no copy left', () => {
-  const keys = ['advance_step', 'excluded', 'no_course_recipes', 'no_fit', 'no_recipes', 'nobody_attending', 'slot_rule']
-  it.each(['couldntCauseText', 'couldntHint', 'couldntShort', 'couldntFix'] as const)('%s has exactly the seven causes', (name) => {
+  // B9-32 (PC-14, A2): too_early is the eighth cause (eliminated.tooEarly); the removed ones stay gone.
+  const keys = ['advance_step', 'excluded', 'no_course_recipes', 'no_fit', 'no_recipes', 'nobody_attending', 'slot_rule', 'too_early']
+  it.each(['couldntCauseText', 'couldntHint', 'couldntShort', 'couldntFix'] as const)('%s has exactly the eight causes', (name) => {
     expect(Object.keys(planStrings[name]).sort()).toEqual(keys)
   })
   it('no Cool-down or Variety Rule sentence is left for the single-line reason either', () => {

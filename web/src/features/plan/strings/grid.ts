@@ -73,6 +73,7 @@ export const gridStrings = {
     slot_rule: 'Nothing that matches its Slot Rule is available.',
     excluded: 'Every Recipe is excluded for someone who eats it.',
     advance_step: 'Every Recipe needs an Advance Step that is already too late.',
+    too_early: 'Every Recipe would start outside your cooking times.',
     no_fit: 'No Recipe fits.',
   },
   couldntHint: {
@@ -82,6 +83,7 @@ export const gridStrings = {
     slot_rule: 'A Slot Rule asks for a Recipe or Tag that cannot be used here. Loosen the rule, or choose a Recipe yourself.',
     excluded: 'Someone who eats there cannot have any of your Recipes. Exclusions are set on each Recipe and its Ingredients.',
     advance_step: 'Each Recipe needs preparing ahead and the time has gone. Choose a quicker Recipe for these Meal Slots.',
+    too_early: 'Cooking any of your Recipes would have to start outside your cooking times (Earliest start and Latest start in Planning rules). Choose a quicker Recipe for these Meal Slots.',
     no_fit: 'The planner found nothing that suits these Meal Slots. Choose a Recipe yourself.',
   },
   couldntShort: {
@@ -91,8 +93,21 @@ export const gridStrings = {
     slot_rule: "Its Slot Rule can't be met.",
     excluded: 'Every Recipe is excluded.',
     advance_step: 'Too late for an Advance Step.',
+    too_early: 'Starts outside your cooking times.',
     no_fit: 'No Recipe fits.',
   },
+  /** B9-32 (PC-07): the one chip of an unfilled Course row (lib/couldntGroups.ts shortCause). */
+  causeChip: {
+    nobody_attending: 'Nobody attending',
+    no_recipes: 'No Recipes',
+    no_course_recipes: 'No Recipes for this Course',
+    slot_rule: 'Slot Rule unmet',
+    excluded: 'Excluded',
+    advance_step: 'Too late for its Advance Step',
+    too_early: 'Outside your cooking times',
+    no_fit: 'No Recipe fits',
+  },
+  causeChipCourse: (course: string) => `No ${course} Recipes`,
   couldntFix: {
     nobody_attending: 'Choose who attends',
     no_recipes: 'Add Recipes',
@@ -101,6 +116,7 @@ export const gridStrings = {
     slot_rule: 'Review Slot Rules',
     excluded: 'Review Exclusions',
     advance_step: 'Choose a Recipe',
+    too_early: 'Choose a Recipe',
     no_fit: 'Choose a Recipe',
   },
   /** CRS G2: the Review Exclusions page (lib/couldntExclusions.ts, the Tiles, the screen). */
@@ -163,5 +179,16 @@ export const gridStrings = {
   allCookedShort: 'All Cooked',
   notCookedSlot: 'Not cooked: whole slot',
   slotActions: (slot: string) => `${slot} actions`,
+  // B9-32 (A11Y-08): row action names (lib/actionNames.ts); `when` is "Sun 15 Breakfast".
+  actionSwap: (recipe: string, when: string) => `Swap ${recipe}, ${when}`,
+  actionPin: (recipe: string, when: string) => `Pin ${recipe}, ${when}`,
+  actionChoose: (course: string, when: string) => `Choose a Recipe for ${course}, ${when}`,
+  actionCook: (when: string) => `Cook ${when}`,
+  actionMore: (when: string) => `More for ${when}`,
+  // B9-32 (A2, PC-14): the start chips (lib/rowChips.ts).
+  startChip: (time: string) => `Start ${time}`,
+  startChipDay: (weekday: string, time: string) => `Start ${weekday} ${time}`,
+  startEarlierTitle: (weekday: string, time: string) => `Start cooking on ${weekday} at ${time}`,
+  startOutsideTitle: 'Cooking would start outside your cooking times',
   courseLeftoverLabel: (course: string) => `${course} Leftover portions`,
 } as const
