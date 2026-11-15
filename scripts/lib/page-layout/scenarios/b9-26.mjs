@@ -4,7 +4,7 @@
 //   plan-after-swap        /plan, 390 and 1440: Swap a Recipe until another meal changes. The toast has a headline, a subline and two
 //                          bordered buttons (Review, Undo); a success toast has no status svg; every [data-changed] row has a "was" text.
 //   regenerate             /plan, 390 and 1440: Regenerate opens its question with the outline Cancel focused.
-//   to-confirm-not-cooked  /, 390 and 1440: Not cooked from a To confirm row's menu shows, within 500 ms, a .toast with Undo and no
+//   to-confirm-not-cooked  /, 390 and 1440: Not cooked from a To confirm row's menu shows, within 1500 ms (the limit includes the POST …/not-cooked round trip), a .toast with Undo and no
 //                          icon before its message. The Course it marked is reopened by the next setup, so the seed stays as it was.
 import { evaluate, press, until } from '../helpers.mjs'
 
@@ -132,7 +132,7 @@ async function toConfirmNotCooked() {
   await until(`!!(${NOT_COOKED})`, 'the Not cooked menu item')
   await press(NOT_COOKED, '"Not cooked"')
   marked.push(target)
-  await until(`!!${TOAST}`, 'a toast within 500 ms of Not cooked', 500)
+  await until(`!!${TOAST}`, 'a toast within 1500 ms of Not cooked (server round trip included)', 1500)
   const finding = await evaluate(`(() => {
     const t = ${TOAST}
     if (![...t.querySelectorAll('button')].some((b) => /^Undo/.test(b.getAttribute('aria-label') ?? b.textContent.trim()))) return 'the toast has no Undo'
