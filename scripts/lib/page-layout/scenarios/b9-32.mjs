@@ -11,7 +11,7 @@
 //                  - Today's tile is the first day tile.
 //   plan-couldnt   /plan at 375, 390 and 1440 with Dessert unplannable (the Dessert Recipe is archived and the plan regenerated; undone at the end):
 //                  the Couldn't plan tile is ONE region, the first .plan-day starts inside the first viewport (PC-07), the unfilled Dessert rows are
-//                  titled "Not planned" and no more than 3 other rows share a title, "Mark Recipes as Dessert" opens the sheet ON the Plan.
+//                  that carry a cause chip are titled "Not planned" (a past empty row reads "Nothing planned") and no more than 3 other rows share a title, "Mark Recipes as Dessert" opens the sheet ON the Plan.
 import { evaluate, js, press, until } from '../helpers.mjs'
 
 const PLAN_READY = `!!document.querySelector('main .plan article') && !document.querySelector('[aria-busy="true"], .skeleton')`
@@ -156,17 +156,17 @@ async function planCouldnt() {
         const first = document.querySelector('.plan-day')
         if (!first) return 'no day tile'
         if (first.getBoundingClientRect().top >= innerHeight) return 'the first day tile starts at y ' + Math.round(first.getBoundingClientRect().top) + ', below the first viewport (' + innerHeight + ') (PC-07)'
-        const unfilled = [...document.querySelectorAll('.plan-day .list-row[data-unfilled]')]
-        if (unfilled.length === 0) return 'no unfilled Dessert row'
+        // Only a row that carries a cause chip is "Not planned"; an empty row with no cause (a past slot) reads "Nothing planned".
+        const unfilled = [...document.querySelectorAll('.plan-day .list-row[data-unfilled]')].filter((r) => r.querySelector('.plan-row__chips .chip'))
+        if (unfilled.length === 0) return 'no unfilled row with a cause chip (the Dessert rows)'
         const bad = unfilled.find((r) => r.querySelector('.list-row__title')?.textContent.trim() !== 'Not planned')
-        if (bad) return 'an unfilled row is titled "' + bad.querySelector('.list-row__title')?.textContent.trim() + '", not "Not planned"'
+        if (bad) return 'an unfilled row with a cause chip is titled "' + bad.querySelector('.list-row__title')?.textContent.trim() + '", not "Not planned"'
+        if (!unfilled.some((r) => /^No Dessert Recipes$/.test(r.querySelector('.plan-row__chips .chip')?.textContent.trim() ?? ''))) return 'no unfilled row names its cause "No Dessert Recipes"'
         // The same sentence is never the title of many rows (unfilled rows say "Not planned" and name the cause in a chip).
         const titles = new Map()
         for (const r of document.querySelectorAll('.plan-day .list-row:not([data-unfilled]) .list-row__title')) titles.set(r.textContent.trim(), (titles.get(r.textContent.trim()) ?? 0) + 1)
         const repeated = [...titles].find(([, n]) => n > 3)
         if (repeated) return 'more than 3 rows share the title "' + repeated[0] + '" (' + repeated[1] + ')'
-        const chips = unfilled.map((r) => r.querySelector('.plan-row__chips .chip')?.textContent.trim())
-        if (chips.some((c) => !c)) return 'an unfilled row has no cause chip'
         return ''
       })()`)
       if (finding) throw new Error(`setup: not inspected: ${finding}`)
