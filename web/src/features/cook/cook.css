@@ -83,14 +83,13 @@
 }
 
 /* B9-40 review: the tap-zone chevrons (28 px, --space-half in from the tile's edge) reach past the tile padding, so with zones the Step
-   text and its Uses line keep clear of both: never a chevron on the end of a text line (390 px, a 50-word Step). The room shrinks as
-   the tile padding grows. */
+   tile's text (overline, Step text, Uses and the other lines; not the photo or the coach mark) keeps clear of both, so no chevron
+   touches a text line (390 px, a 50-word Step) and the lines stay aligned with each other. The room shrinks as the tile padding grows. */
 .cook-step {
   --cook-zone-glyph: 1.75rem;
 }
 
-.cook-step:has(.cook-step__zone) > .cook-step__text,
-.cook-step:has(.cook-step__zone) > .cook-step__uses {
+.cook-step:has(.cook-step__zone) > :not(.cook-step__photo):not(.cook-step__zone):not(.cook-step__coach) {
   padding-inline: max(0rem, calc(var(--space-half) + var(--cook-zone-glyph) + var(--space-1) - var(--tile-pad)));
 }
 
@@ -728,8 +727,7 @@
   }
 
   /* no chevrons drawn, so no room kept for them */
-  .cook-step:has(.cook-step__zone) > .cook-step__text,
-  .cook-step:has(.cook-step__zone) > .cook-step__uses {
+  .cook-step:has(.cook-step__zone) > :not(.cook-step__photo):not(.cook-step__zone):not(.cook-step__coach) {
     padding-inline: 0;
   }
 
