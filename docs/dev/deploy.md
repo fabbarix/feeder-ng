@@ -33,6 +33,7 @@ Third-party licences: the image carries [THIRD_PARTY_NOTICES.md](../../THIRD_PAR
 | `1.0.0-beta.9` | tag `v1.0.0-beta.9` | prerelease: the ninth beta; never `latest`, `1.0` or `1` |
 | `1.0.0-beta.9.1` | tag `v1.0.0-beta.9.1` | prerelease: beta.9 rebuilt so it publishes (the `v1.0.0-beta.9` tag published nothing); never `latest`, `1.0` or `1` |
 | `1.0.0-beta.10` | tag `v1.0.0-beta.10` | prerelease: the tenth beta; never `latest`, `1.0` or `1` |
+| `1.0.0-beta.10.1` | tag `v1.0.0-beta.10.1` | prerelease: beta.10 rebuilt so it publishes (the `v1.0.0-beta.10` tag published nothing); never `latest`, `1.0` or `1` |
 | `1.0.0-dev` | tag `v1.0.0-dev` | earlier prerelease; never `latest` |
 | `1.0.0`, `1.0`, `1` | tag `v1.0.0` | exact version, latest patch of 1.0, latest 1.x (no `1` tag for 0.x) |
 | `latest` | a `v*` tag without a `-` prerelease suffix | latest stable release; does not exist until the first stable tag |
@@ -167,7 +168,7 @@ The image is distroless (no shell), so there is no `HEALTHCHECK`; let the proxy 
 The chart is public too, published as an OCI artifact; installing it needs no login:
 
 ```sh
-helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.10 \
+helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.10.1 \
   --namespace feeder --create-namespace \
   --set adminEmail=you@example.com \
   --set baseUrl=https://feeder.example.com \
@@ -184,7 +185,7 @@ The chart version equals the release (`v1.0.0-beta.9` publishes chart `1.0.0-bet
   ```sh
   kubectl -n feeder create secret generic feeder-google \
     --from-literal=client-id=... --from-literal=client-secret=...
-  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.10 --namespace feeder --reset-then-reuse-values \
+  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.10.1 --namespace feeder --reset-then-reuse-values \
     --set google.existingSecret=feeder-google
   ```
 
@@ -417,7 +418,7 @@ chown 65532:65532 /srv/feeder/feeder.db
 ### Upgrading from 1.0.0-beta.9.1 to 1.0.0-beta.10
 
 1. Back up as usual.
-2. Upgrade: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.10 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart. No new migration, configuration, Helm value or secret, and no API change.
+2. Upgrade: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.10.1 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart. No new migration, configuration, Helm value or secret, and no API change.
 3. The app reloads once for the new version. Nothing else changes for your data.
 
 ### Upgrading from 1.0.0-beta.8 to 1.0.0-beta.9
@@ -425,7 +426,7 @@ chown 65532:65532 /srv/feeder/feeder.db
 This release adds Undo across Feeder, What changed on the Plan, Away for Members, overnight starts, Ticks that work offline, and rebuilt Today, Kitchen board and Settings screens. It starts from 1.0.0-beta.8; from 1.0.0-beta.7.x read [Upgrading from 1.0.0-beta.7.x to 1.0.0-beta.8](#upgrading-from-100-beta7x-to-100-beta8) first (both snapshots are taken in one start, see step 8).
 
 1. Take a backup first (Admin: `POST /api/admin/backups`, or copy `/data/backups` and `/data/images`). Migrations run at start and are forward-only.
-2. Upgrade. Kubernetes: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.10 --namespace feeder --reset-then-reuse-values`. Docker or compose: pull the new image and restart. **There is no new configuration:** no new environment variable, Helm value or secret.
+2. Upgrade. Kubernetes: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.10.1 --namespace feeder --reset-then-reuse-values`. Docker or compose: pull the new image and restart. **There is no new configuration:** no new environment variable, Helm value or secret.
 3. Ten migrations run on the first start:
 
    | Migration | What it changes |

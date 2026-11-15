@@ -217,8 +217,10 @@ sandbox() { # name rules-file
   local d="$TMP/repo-$1"
   mkdir -p "$d/scripts" "$d/web"
   cp "$SCRIPTS/check.sh" "$SCRIPTS/check-ui.sh" "$d/scripts/"
-  # B9-03: check-ui.sh loads check-ui.d/* and check-ui.rules.d/* beside it, so the throwaway repo carries the real ones
-  for dir in check-ui.d check-ui.rules.d; do [ -d "$SCRIPTS/$dir" ] && cp -r "$SCRIPTS/$dir" "$d/scripts/$dir"; done
+  # B9-03: check-ui.sh loads check-ui.d/* beside it, so the throwaway repo carries the real rule scripts. It does not
+  # carry check-ui.rules.d/*: those drop-ins set modes (B9-55 sets every rule to fail), and this test is about the
+  # mode the given rules file sets.
+  [ -d "$SCRIPTS/check-ui.d" ] && cp -r "$SCRIPTS/check-ui.d" "$d/scripts/check-ui.d"
   cp "$2" "$d/scripts/check-ui.rules"
   cp -r "$FIX/sizing/fail/web/src" "$d/web/src"
   echo "$d"

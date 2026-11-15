@@ -4,6 +4,14 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.10.1] - 2026-11-15
+
+The 1.0.0-beta.10 release, published. The `v1.0.0-beta.10` tag produced no image and no chart: one of the release checks still expected a UI rule that only warns, and since 1.0.0-beta.10 every rule fails. Everything listed under 1.0.0-beta.10 below is in this release.
+
+### Fixed
+
+- The release checks pass with every UI rule failing, so the image and chart are published.
+
 ## [1.0.0-beta.10] - 2026-11-15
 
 The accessibility finish: Feeder works with high contrast colours, reads amounts out in full, uses calmer colours for things that are not a loss, and every screen now meets every layout check at every width from 375 px.
