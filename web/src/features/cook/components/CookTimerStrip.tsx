@@ -38,7 +38,7 @@ export function CookTimerStrip({ scope, items, onPause, onResume, onCancel, belo
   const { here, elsewhere } = belongs
     ? { here: items.filter((i) => belongs(i.timer.scope)), elsewhere: items.filter((i) => !belongs(i.timer.scope)) }
     : partitionByScope(items, scope)
-  const handlers = { onPause, onResume, onCancel: onCancel ?? (() => {}) }
+  const handlers = { onPause, onResume, onCancel }
   return (
     <>
       {here.length > 0 ? <TimerGroup label={cookStrings.timersRegion} items={here} scope={scope} {...handlers} /> : null}
@@ -70,8 +70,8 @@ function TimerGroup({ label, items, scope, showPlace, onPause, onResume, onCance
             : actions.includes('resume')
               ? () => onResume(id)
               : undefined
-          const onCancelTimer = actions.includes('cancel') ? () => onCancel(id) : undefined
-          const onDismissTimer = actions.includes('dismiss') ? () => onCancel(id) : undefined
+          const onCancelTimer = actions.includes('cancel') ? () => onCancel?.(id) : undefined
+          const onDismissTimer = actions.includes('dismiss') ? () => onCancel?.(id) : undefined
           return (
             <li key={id} className="cook-timers__item">
               <TimerTile

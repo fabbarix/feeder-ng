@@ -150,4 +150,12 @@ describe('Advance Steps on the timeline (DS 3)', () => {
     await screen.findByRole('article', { name: 'Step 1 of 4' })
     expect(document.querySelector('.cook-advance')).toHaveAttribute('data-status', 'info')
   })
+  it('on the next item the Advance Steps are one info line', async () => {
+    setup({ view: timelineView({ advance: [adv] }) })
+    await screen.findByRole('article', { name: 'Step 1 of 4' })
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await screen.findByRole('article', { name: 'Step 2 of 4' })
+    expect(document.querySelector('.cook-advance')).toBeNull()
+    expect(document.querySelector('.cook-advance-line')).toHaveTextContent('1 Advance Step to do')
+  })
 })

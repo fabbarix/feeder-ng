@@ -107,6 +107,17 @@ describe('TimelineAdvanceTile (the Timeline uses the same tone and chip)', () =>
     const { container } = render(<TimelineAdvanceTile groups={[group([tl()])]} onMarkDone={() => {}} />)
     expect(container.querySelector('.cook-advance')).toHaveAttribute('data-status', 'info')
   })
+  it('collapsed: one info line over the Advance Steps of every Course, as the Recipe screen has', () => {
+    const { container, rerender } = render(<TimelineAdvanceTile collapsed groups={[group([tl(), tl({ step: 2, done: true, doneAt: 'x' })]), { ...group([tl({ courseId: 2, step: 1, text: 'Make the stock' })]), courseId: 2, courseName: 'Side' }]} onMarkDone={() => {}} />)
+    expect(container.querySelector('.cook-advance-line')).toHaveTextContent('2 Advance Steps to do')
+    expect(container.querySelector('.cook-advance-line')).toHaveAttribute('data-status', 'info')
+    expect(container.querySelector('.tile')).toBeNull()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    rerender(<TimelineAdvanceTile collapsed groups={[group([tl({ done: true, doneAt: 'x' })])]} onMarkDone={() => {}} />)
+    expect(container.querySelector('.cook-advance-line')).toHaveTextContent('Advance Step done: Marinate the chicken')
+    rerender(<TimelineAdvanceTile collapsed groups={[]} onMarkDone={() => {}} />)
+    expect(container).toBeEmptyDOMElement()
+  })
   it('compact: the chip counts the undone Advance Steps of every Course and its sheet marks one done with its own scope', async () => {
     const onMarkDone = vi.fn()
     render(<TimelineAdvanceTile compact groups={[group([tl(), tl({ step: 2, text: 'Soak the beans', done: true, doneAt: 'x' })]), { ...group([tl({ courseId: 2, scope: 'meal:2026-11-10/4/2', step: 1, text: 'Make the stock' })]), courseId: 2, courseName: 'Side' }]} onMarkDone={onMarkDone} />)

@@ -11,6 +11,8 @@ export interface TimelineAdvanceTileProps {
   onMarkDone: (scope: string, step: number) => void
   /** B9-40 (SHORT-01): the chip and sheet of short landscape. */
   compact?: boolean
+  /** B9-40 (PC-03): on an item after the first the Advance Steps of every Course are one info line (lib/advance advanceLine over all of them). */
+  collapsed?: boolean
 }
 
 /**
