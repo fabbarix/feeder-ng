@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { AppShell } from './AppShell'
 
 vi.mock('./ShellStatus', () => ({ ShellStatus: () => <div data-testid="shell-status" /> }))
+// int1: AppShell mounts the shell timers since B9-25 (they read the timers through react-query): mocked, as every AppShell test does.
+vi.mock('./ShellTimers', () => ({ ShellTimers: () => null }))
 
 function setup(onNavIntent?: (path: string) => void) {
   const router = createMemoryRouter(

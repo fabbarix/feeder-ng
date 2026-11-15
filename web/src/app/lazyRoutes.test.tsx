@@ -12,6 +12,8 @@ import { retryFailedChunks } from './routeChunks'
 import { resetStaleBuild } from './staleChunk'
 
 vi.mock('./ShellStatus', () => ({ ShellStatus: () => <div data-testid="shell-status" /> }))
+// int1: AppShell mounts the shell timers since B9-25 (they read the timers through react-query): mocked, as every AppShell test does.
+vi.mock('./ShellTimers', () => ({ ShellTimers: () => null }))
 
 beforeEach(() => vi.spyOn(console, 'error').mockImplementation(() => {}))
 afterEach(() => {
