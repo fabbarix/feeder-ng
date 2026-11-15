@@ -1,5 +1,7 @@
 // Typed calls for the household, allowlist and preference endpoints.
 import { http } from '../../lib/http'
+import type { RemovedMealSlotGroup } from './lib/removedMealSlots'
+import type { MealSlotImpact } from './lib/slotRemoval'
 import type {
   AllowedUser,
   AttendanceEntry,
@@ -30,7 +32,14 @@ export const settingsApi = {
   createMealSlot: (body: MealSlotInput) => http.post<MealSlot>('/api/meal-slots', body),
   updateMealSlot: (id: number, body: MealSlotInput) => http.patch<MealSlot>(`/api/meal-slots/${id}`, body),
   batchUpdateMealSlots: (body: SlotBatchRequest) => http.patch<SlotBatchResult>('/api/meal-slots/batch', body),
-  deleteMealSlot: (id: number) => http.delete<void>(`/api/meal-slots/${id}`),
+  /** SAFE-02: what removing this Meal Slot takes away (Planned Meals, Slot Rules, To confirm) and the Cooked meals it keeps. */
+  mealSlotImpact: (id: number) => http.get<MealSlotImpact>(`/api/meal-slots/${id}/impact`),
+  /** SAFE-02 / B9-42: a soft removal (the Cooked history stays) of one or several Meal Slots in one call, all or nothing (204); 404 `not_found` or 409 `meal_slot_removed` name the id. */
+  removeMealSlots: (ids: number[]) => http.post<void>('/api/meal-slots/remove', { ids }),
+  /** B9-42: one Undo or Put back for several Meal Slots, all or nothing; 409 `meal_slot_name_taken` names the days. */
+  restoreMealSlots: (ids: number[]) => http.post<{ slots: MealSlot[] }>('/api/meal-slots/restore', { ids }),
+  /** SET-15: the removed Meal Slots that kept Cooked history, one row per name removed at once, newest first. */
+  listRemovedMealSlots: () => http.get<RemovedMealSlotGroup[]>('/api/meal-slots?removed=with-history'),
   getAttendance: (slotId: number, date: string) =>
     http.get<DateAttendance>(`/api/meal-slots/${slotId}/attendance?date=${date}`),
   /**

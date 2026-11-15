@@ -101,12 +101,14 @@ export function openOptionNames(): string[] {
     })
 }
 
-/** renderHook wrapper for page hooks: Query, Toast and Router providers. */
+/** renderHook wrapper for page hooks: Query, Toast, Confirm and Router providers. */
 export function routerWrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={newQueryClient()}>
       <ToastProvider>
-        <MemoryRouter>{children}</MemoryRouter>
+        <ConfirmProvider>
+          <MemoryRouter>{children}</MemoryRouter>
+        </ConfirmProvider>
       </ToastProvider>
     </QueryClientProvider>
   )

@@ -20,7 +20,7 @@ function setup(over: Partial<React.ComponentProps<typeof DateAttendancePanel>> =
 describe('DateAttendancePanel', () => {
   it('is titled with the slot and date and starts from the date\'s Attendance', () => {
     setup()
-    expect(screen.getByRole('dialog', { name: 'Dinner on 2026-11-12' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Dinner on Thu 12 Nov' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Portions needed: 2.5')
     expect(screen.getByText(/only this date/i)).toBeInTheDocument()
   })

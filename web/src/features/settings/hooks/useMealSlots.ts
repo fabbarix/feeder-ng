@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useScreenState } from '../../../app/useScreenState'
 import type { ScreenState } from '../../../lib/dataState'
 import { settingsApi } from '../api'
+import type { RemovedMealSlotGroup } from '../lib/removedMealSlots'
+import type { MealSlotImpact } from '../lib/slotRemoval'
 import type { MealSlot, MealSlotInput, SlotBatchRequest, SlotBatchResult } from '../types'
 import { settingsKeys } from './queryKeys'
 
@@ -15,7 +17,14 @@ export interface MealSlotsState {
   isError: boolean
   create: (input: MealSlotInput) => Promise<MealSlot>
   update: (id: number, input: MealSlotInput) => Promise<MealSlot>
-  remove: (id: number) => Promise<void>
+  /** SAFE-02: what removing the Meal Slot takes away, read before the confirm. */
+  impact: (id: number) => Promise<MealSlotImpact>
+  /** B9-42: Remove on several days, one call, all or nothing. */
+  removeMany: (ids: number[]) => Promise<void>
+  /** B9-42: one Undo or Put back for several Meal Slots, one call, all or nothing. */
+  restoreMany: (ids: number[]) => Promise<MealSlot[]>
+  /** SET-15: the removed Meal Slots that kept Cooked history ([] until loaded or when the read fails). */
+  removed: RemovedMealSlotGroup[]
   /** R15: edit every Meal Slot with the same name on several weekdays in one call. */
   batchUpdate: (request: SlotBatchRequest) => Promise<SlotBatchResult>
   /** CRS D2: PATCH the batch request as given (`useSlotPreview` sets `dryRun: true`): nothing is written and nothing is refetched; the answer has `removes`. */
@@ -24,6 +33,7 @@ export interface MealSlotsState {
 }
 
 const NO_SLOTS: MealSlot[] = []
+const NO_REMOVED: RemovedMealSlotGroup[] = []
 
 export function useMealSlots(): MealSlotsState {
   const queryClient = useQueryClient()
@@ -35,7 +45,10 @@ export function useMealSlots(): MealSlotsState {
     onSuccess: refresh,
   })
   const batch = useMutation({ mutationFn: settingsApi.batchUpdateMealSlots, onSuccess: refresh })
-  const remove = useMutation({ mutationFn: settingsApi.deleteMealSlot, onSuccess: refresh })
+  const removeMany = useMutation({ mutationFn: settingsApi.removeMealSlots, onSuccess: refresh })
+  const restoreMany = useMutation({ mutationFn: async (ids: number[]) => (await settingsApi.restoreMealSlots(ids)).slots, onSuccess: refresh })
+  // SET-15: a tile of its own; a failed read only leaves the tile out (the cards are the page).
+  const removed = useQuery({ queryKey: settingsKeys.removedSlots, queryFn: settingsApi.listRemovedMealSlots })
   const state = useScreenState(query, { isEmpty: query.data?.length === 0, hasFilter: false })
   return {
     state,
@@ -45,9 +58,12 @@ export function useMealSlots(): MealSlotsState {
     isError: query.isError,
     create: create.mutateAsync,
     update: (id, input) => update.mutateAsync({ id, input }),
-    remove: remove.mutateAsync,
+    impact: (id) => settingsApi.mealSlotImpact(id),
+    removeMany: removeMany.mutateAsync,
+    restoreMany: restoreMany.mutateAsync,
+    removed: removed.data ?? NO_REMOVED,
     batchUpdate: batch.mutateAsync,
     preview: (request) => settingsApi.batchUpdateMealSlots(request),
-    saving: create.isPending || update.isPending || remove.isPending || batch.isPending,
+    saving: create.isPending || update.isPending || removeMany.isPending || batch.isPending,
   }
 }

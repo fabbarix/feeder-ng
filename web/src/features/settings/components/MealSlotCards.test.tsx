@@ -5,7 +5,7 @@ import { MealSlotCards } from './MealSlotCards'
 import { dateRows, dinnerCard, lunchCard, twoMembers } from './mealSlotCardFixtures'
 
 function setup(over: Partial<React.ComponentProps<typeof MealSlotCards>> = {}) {
-  const props = { cards: [lunchCard, dinnerCard], dateRows, members: twoMembers, canEdit: true, locale: 'en', onEdit: vi.fn(), onFix: vi.fn(), onChangeDate: vi.fn(), onAddOn: vi.fn(), ...over }
+  const props = { cards: [lunchCard, dinnerCard], dateRows, members: twoMembers, canEdit: true, locale: 'en', onEdit: vi.fn(), onEditCard: vi.fn(), onFix: vi.fn(), onChangeDate: vi.fn(), onAddOn: vi.fn(), ...over }
   render(<MealSlotCards {...props} />)
   return props
 }
@@ -25,17 +25,18 @@ describe('MealSlotCards', () => {
     expect(screen.queryByRole('region', { name: 'Dates that differ' })).toBeNull()
     expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Lunch', 'Dinner'])
   })
-  it('gives a full-span card the whole row and a half card one column (Bento sizing)', () => {
-    setup()
-    expect(screen.getByRole('region', { name: 'Dinner' })).toHaveAttribute('data-span', 'full')
-    expect(screen.getByRole('region', { name: 'Lunch' })).not.toHaveAttribute('data-span', 'full')
+  // SET-08: two to a row from 1024 px: the grid's minimum tile is "wide" (28 rem) and no card spans the whole row.
+  it('lays the cards on a "wide" Bento grid (two-up from two 28 rem tracks) and no card spans the row', () => {
+    const { container } = render(<MealSlotCards cards={[lunchCard, dinnerCard]} dateRows={[]} members={twoMembers} canEdit locale="en" onEdit={vi.fn()} onEditCard={vi.fn()} onFix={vi.fn()} onChangeDate={vi.fn()} onAddOn={vi.fn()} />)
+    expect(container.querySelector('.bento-grid')).toHaveAttribute('data-min', 'wide')
+    for (const r of screen.getAllByRole('region')) expect(r).not.toHaveAttribute('data-span', 'full')
   })
   it('routes the card callbacks', async () => {
     const props = setup()
     await userEvent.click(within(screen.getByRole('region', { name: 'Lunch' })).getByRole('button', { name: 'Change a date for Lunch' }))
     expect(props.onChangeDate).toHaveBeenCalledWith(lunchCard)
     await userEvent.click(within(screen.getByRole('region', { name: 'Dinner' })).getByRole('button', { name: 'Edit Dinner' }))
-    expect(props.onEdit).toHaveBeenCalledWith(dinnerCard.editSlot)
+    expect(props.onEditCard).toHaveBeenCalledWith(dinnerCard)
   })
   it('scales to five cards: five regions plus the dates tile when it has rows', () => {
     const five = ['A', 'B', 'C', 'D', 'E'].map((n) => ({ ...dinnerCard, key: n.toLowerCase(), name: n }))

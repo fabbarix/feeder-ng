@@ -48,3 +48,8 @@ export function useStickyBarClearance(ref: RefObject<HTMLElement | null>): void 
     }
   }, [ref])
 }
+
+/** STUB (B9-19 test author): the developer implements this (see StickyActionBar.focus.test.tsx). */
+export function ringCrossesBarTop(_a: { frameBottom: number; barTop: number; ring?: number }): boolean {
+  return false
+}

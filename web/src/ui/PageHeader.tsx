@@ -12,6 +12,8 @@ export interface PageHeaderProps {
   leading?: ReactNode
   /** Right-aligned actions (IconButtons, one Button). */
   actions?: ReactNode
+  /** STUB (B9-19): the document title when it must differ from the h1 text. */
+  documentTitle?: string
 }
 
 /** The title row of a screen: `<header>` with the h1, an optional subtitle, leading node and actions. */

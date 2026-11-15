@@ -1,9 +1,12 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
 import { combineScreenStates } from '../../../lib/dataState'
-import { useToast } from '../../../ui'
+import { undoStrings, useConfirm, useToast, useUndoToast } from '../../../ui'
 import { resultMessage } from '../lib/multiDay'
-import { createSlotsSequentially } from '../lib/slotForm'
+import { createSlotsSequentially, slotFormFromCard, slotFormFromCell } from '../lib/slotForm'
+import { slotAnchorId } from '../lib/slotAnchor'
+import type { RemovedRow } from '../lib/removedMealSlots'
+import { mergeImpacts, nameTakenRefusal, putBackRefusedHeadline, removalTarget, removedHeadline, removeGroups, removeLead, removeTitle, restoredHeadline, undoRemoveLabel } from '../lib/slotRemoval'
 import { documentLocale } from '../lib/locale'
 import { batchErrorMessage, errorMessage } from '../lib/errors'
 import { nextDateForWeekday, todayIso, weekdayName } from '../lib/weekdays'
@@ -21,6 +24,8 @@ import { useMembers } from './useMembers'
 /** An open MealSlot sheet: adding (optionally on some weekdays) or editing one slot. */
 interface SlotEditor {
   item?: MealSlot
+  /** SET-14h, editing: the weekdays "Apply to" starts with (a card: every day of the name; a strip cell: that day). */
+  initialWeekdays?: number[]
   defaultWeekdays?: number[]
   defaultName?: string
 }
@@ -29,6 +34,8 @@ interface SlotEditor {
 export function useMealSlotsPage() {
   useHouseholdLiveUpdates()
   const toast = useToast()
+  const undoToast = useUndoToast()
+  const confirmer = useConfirm()
   const isAdmin = Boolean(useMe().data?.isAdmin)
   const members = useMembers()
   const slots = useMealSlots()
@@ -40,6 +47,17 @@ export function useMealSlotsPage() {
   /** Weekdays already saved from the open add sheet: a retry after a partial save does not create them again. */
   const savedWeekdays = useRef<number[]>([])
   const attendance = useAttendance(dateEditor?.slot.id ?? null, dateEditor?.date ?? null)
+  /** SET-15: the key of the removed row being put back. */
+  const [busyKey, setBusyKey] = useState<string | null>(null)
+  /** A Meal Slot to focus once its card shows it (after Undo or Put back). */
+  const [focusSlotId, setFocusSlotId] = useState<number | null>(null)
+  useEffect(() => {
+    if (focusSlotId === null) return
+    const el = document.getElementById(slotAnchorId(focusSlotId))
+    if (!el) return
+    setFocusSlotId(null)
+    el.focus()
+  }, [focusSlotId, slots.slots])
 
   const openDate = (slot: MealSlot) => setDateEditor({ slot, date: nextDateForWeekday(slot.weekday, todayIso()) })
 
@@ -47,7 +65,8 @@ export function useMealSlotsPage() {
   const open = (slot: MealSlot) => {
     if (isAdmin) {
       setError(undefined)
-      setEditor({ item: slot })
+      const start = slotFormFromCell(slot)
+      setEditor({ item: start.slot, initialWeekdays: start.weekdays })
     } else {
       openDate(slot)
     }
@@ -85,15 +104,78 @@ export function useMealSlotsPage() {
     setError(settingsStrings.slot.partialSave(savedWeekdays.current.length, inputs.length, weekdayName(result.failedWeekday), reason))
   }
 
-  const remove = async () => {
+  /** A refused restore: a taken name gets the server's sentence and what to do (ruling 3); anything else the usual words. */
+  const showRefusal = (headline: string, err: unknown) => {
+    const taken = nameTakenRefusal(err)
+    if (taken) toast.show({ status: 'warning', title: headline, subline: taken.subline, body: taken.body, sticky: true })
+    else toast.show(errorMessage(err), { status: 'error' })
+  }
+
+  /**
+   * SAFE-02 (decisions SAFE 4 and 7) and the B9-42 ruling: Remove acts on the days ticked in the sheet. Read what goes on each
+   * (merged into one confirm), ask with the rows (Goes, Stays), remove them in one call, then one Undo toast that puts them all
+   * back in one call. The page words its own refusal for a taken name, so "… is back" follows only a real restore. Unsaved edits
+   * in the sheet go with it: the confirm is the question.
+   */
+  const remove = async (weekdays: number[]) => {
     const editing = editor?.item
     if (!editing) return
+    const locale = documentLocale()
+    const target = removalTarget(editing, weekdays, slots.slots)
+    const ids = target.slots.map((s) => s.id)
+    if (ids.length === 0) return
+    let impact
     try {
-      await slots.remove(editing.id)
-      setError(undefined)
-      setEditor(null)
+      impact = mergeImpacts(await Promise.all(ids.map((id) => slots.impact(id))))
+    } catch {
+      toast.show(settingsStrings.removal.impactFailed, { status: 'error' })
+      return
+    }
+    const ok = await confirmer.confirm({
+      title: removeTitle(target, locale),
+      body: removeLead(target),
+      groups: removeGroups(impact, { today: todayIso(), locale }),
+      confirmLabel: settingsStrings.removal.confirm,
+      tone: 'danger',
+    })
+    if (!ok) return
+    try {
+      await slots.removeMany(ids)
     } catch (err) {
       setError(errorMessage(err))
+      return
+    }
+    setError(undefined)
+    setEditor(null)
+    undoToast.show({
+      headline: removedHeadline(target, locale),
+      undoAriaLabel: undoRemoveLabel(target, locale),
+      undo: async () => {
+        try {
+          await slots.restoreMany(ids)
+        } catch (err) {
+          if (!nameTakenRefusal(err)) throw err // useUndoToast says "Nothing was undone" with its own reason
+          showRefusal(undoStrings.refusedHeadline, err)
+          return
+        }
+        toast.show({ status: 'success', title: restoredHeadline(target, locale) })
+        setFocusSlotId(ids[0]!)
+      },
+    })
+  }
+
+  /** SET-15: puts back every Meal Slot of the row in one call, all or nothing; then focus goes to the card. */
+  const putBack = async (row: RemovedRow) => {
+    if (busyKey !== null) return
+    setBusyKey(row.key)
+    try {
+      await slots.restoreMany(row.ids)
+      toast.show({ status: 'success', title: settingsStrings.removed.back(row.name) })
+      setFocusSlotId(row.ids[0] ?? null)
+    } catch (err) {
+      showRefusal(putBackRefusedHeadline(row.name), err)
+    } finally {
+      setBusyKey(null)
     }
   }
 
@@ -147,7 +229,12 @@ export function useMealSlotsPage() {
     cards,
     /** MS: the read-only "Dates that differ" rows. */
     dateRows,
-    /** MS: "Edit <name>" opens the sheet on the card's usual slot (an Admin). */
+    /** SET-14h: "Edit <name>" opens the sheet on the card's usual slot with every day of the name chosen (an Admin). */
+    editCard: (card: MealSlotCard) => {
+      setError(undefined)
+      const start = slotFormFromCard(card)
+      setEditor({ item: start.slot, initialWeekdays: start.weekdays })
+    },
     /** MS: "Change a date for <name>" opens the one-date Attendance on the card's next run (any User). */
     changeDateOf,
     members,
@@ -173,6 +260,10 @@ export function useMealSlotsPage() {
     save,
     apply,
     remove,
+    /** SET-15: the removed Meal Slots with Cooked history, and Put back (an Admin). */
+    removed: slots.removed,
+    putBack,
+    busyKey,
     dateChange: (date: string) => setDateEditor((d) => (d ? { ...d, date } : d)),
     closeDate: () => setDateEditor(null),
     saveDate,
