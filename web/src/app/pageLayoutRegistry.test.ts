@@ -95,11 +95,12 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  rules: ['P26', 'P27', 'P29', 'P30', 'P39'],
+  rules: ['P26', 'P27', 'P29', 'P30', 'P39', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-10: scenarios/recipe-editor.mjs (order 40): the Recipe editor with the 36-character Tag (DS-04).
-  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields'],
+  // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
+  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'toast-pricing', 'toast-over-bar'],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {
@@ -272,10 +273,12 @@ describe('a package adds its own files and edits no shared one', () => {
     const s = scratchLib()
     try {
       put(s.dir, 'page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'zzDemo', dark: true, source: '[]' }\n")
-      put(s.dir, 'page-layout/rules/P43-demo.mjs', "export default { id: 'P43', title: 'demo', always: true, evaluate: () => [], evaluateDark: (dm) => (dm.zzDemo ?? []).map((x) => ({ rule: 'P43', message: `P43 ${x} (dark scheme)` })) }\n")
+      // the demo takes a reserved always-fail number no package has added yet (B9-18: P43 is taken now)
+      const id = facade.RESERVED.find((r) => r.mode === 'always')!.id
+      put(s.dir, `page-layout/rules/${id}-demo.mjs`, `export default { id: '${id}', title: 'demo', always: true, evaluate: () => [], evaluateDark: (dm) => (dm.zzDemo ?? []).map((x) => ({ rule: '${id}', message: '${id} ' + x + ' (dark scheme)' })) }\n`)
       const api = load(s.dir)
       expect(api.DARK_PROBES.map((p) => p.name)).toEqual(['buttons', 'action-boundary', 'zz-demo'])
-      expect(api.evaluateDarkMetrics({ zzDemo: ['weak'] }, ctx).map((f) => f.message)).toEqual(['P43 weak (dark scheme)'])
+      expect(api.evaluateDarkMetrics({ zzDemo: ['weak'] }, ctx).map((f) => f.message)).toEqual([`${id} weak (dark scheme)`])
     } finally {
       s.done()
     }
