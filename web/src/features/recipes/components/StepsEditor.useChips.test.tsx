@@ -90,6 +90,23 @@ describe('pressing a use chip opens its fields under the chips', () => {
     expect(within(card(1)).getByRole('button', { name: '3 clove Garlic' })).toHaveFocus()
   })
 
+  it('Escape in a field closes the row and gives the chip the focus back (w4b review)', async () => {
+    render(<Harness initial={[step({ uses: [use()] })]} />)
+    await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))
+    await userEvent.click(within(card(1)).getByRole('textbox', { name: 'Quantity used' }))
+    await userEvent.keyboard('{Escape}')
+    expect(within(card(1)).queryByRole('textbox', { name: 'Quantity used' })).toBeNull()
+    expect(within(card(1)).getByRole('button', { name: '2 clove Garlic' })).toHaveFocus()
+  })
+
+  it('the open row comes right after the chip row, before a Photo, so the chip and its fields stay together (w4b review)', async () => {
+    render(<Harness initial={[step({ uses: [use()], image: 'img1' })]} />)
+    await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))
+    const row = card(1).querySelector('.use-row')!
+    expect(row.parentElement).toBe(card(1).querySelector('.step-card__extras'))
+    expect(row.previousElementSibling?.matches('.step-card__photo, .step-card__more')).toBe(true)
+  })
+
   it('leaving the row closes it', async () => {
     render(<Harness initial={[step({ uses: [use()] })]} />)
     await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))

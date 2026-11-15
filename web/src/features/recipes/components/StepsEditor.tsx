@@ -186,28 +186,29 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     )}
                   </li>
                 </ul>
-                {showsPhoto ? (
-                  <StepPhoto
-                    imageId={s.image}
-                    onChange={(id) => onChange(setStepImage(steps, i, id))}
-                    onBusyChange={onPhotoBusyChange ? (busy) => onPhotoBusyChange(s.key, busy) : undefined}
-                  />
-                ) : null}
-                </div>
-                {s.uses.map((u, j) =>
-                  isOpen(u, j) ? (
-                    <UseRow
-                      key={u.key}
-                      use={u}
-                      ingredients={ingredients}
-                      errors={errors}
-                      index={{ step: i, use: j }}
-                      onPick={(ing) => pickUse(i, j, ing)}
-                      onChange={(change) => patchUse(i, j, change)}
-                      onClose={(refocus) => closeUse(u.key, refocus)}
+                  {showsPhoto ? (
+                    <StepPhoto
+                      imageId={s.image}
+                      onChange={(id) => onChange(setStepImage(steps, i, id))}
+                      onBusyChange={onPhotoBusyChange ? (busy) => onPhotoBusyChange(s.key, busy) : undefined}
                     />
-                  ) : null,
-                )}
+                  ) : null}
+                  {/* The open use's fields sit right under the chip row (CSS order puts them before a phone's Photo). */}
+                  {s.uses.map((u, j) =>
+                    isOpen(u, j) ? (
+                      <UseRow
+                        key={u.key}
+                        use={u}
+                        ingredients={ingredients}
+                        errors={errors}
+                        index={{ step: i, use: j }}
+                        onPick={(ing) => pickUse(i, j, ing)}
+                        onChange={(change) => patchUse(i, j, change)}
+                        onClose={(refocus) => closeUse(u.key, refocus)}
+                      />
+                    ) : null,
+                  )}
+                </div>
                 {errorsFor(i).map((code) => (
                   <p key={code} className="step-card__error">
                     {codeMessage(code)}
@@ -281,7 +282,9 @@ function UseRow({ use, ingredients, errors, index, onPick, onChange, onClose }: 
     if (!staysWithRow(e.currentTarget, e.relatedTarget)) onClose(false)
   }
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
+    // Enter in a field, or Escape that no open list inside the row took for itself, closes the row and gives the chip the cursor back.
+    const listOpen = e.target instanceof Element && e.target.getAttribute('aria-expanded') === 'true'
+    if ((e.key === 'Enter' && e.target instanceof HTMLInputElement) || (e.key === 'Escape' && !e.defaultPrevented && !listOpen)) {
       e.preventDefault()
       onClose(true)
     }
