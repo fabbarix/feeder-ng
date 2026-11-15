@@ -25,11 +25,11 @@ describe('TickSheet (change): the question and what the tick added', () => {
     expect(dialog()).toBeInTheDocument()
   })
 
-  it('one R-E row: "Added when you ticked it", "+500 g", "Ticked at 10:12 · Not sorted"', () => {
+  it('one R-E row: "Added when you ticked it", "+500 g", "Ticked at 10:12"', () => {
     setup()
     const row = within(dialog()).getByText('Added when you ticked it').closest('li')!
     expect(row).toHaveTextContent('+500 g')
-    expect(row).toHaveTextContent('Ticked at 10:12 · Not sorted')
+    expect(row).toHaveTextContent('Ticked at 10:12')
     expect(row.closest('.detail-list')).not.toBeNull()
   })
 

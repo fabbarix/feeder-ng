@@ -17,7 +17,7 @@ describe('TickChangeSheet: the Household zone', () => {
   it('shows the time of the tick in the zone /api/me gives (Rome is an hour ahead in November)', () => {
     me.useMe.mockReturnValue({ data: { householdTimeZone: 'Europe/Rome' } })
     render(<TickChangeSheet flow={flow({ entry: garlic, added: 500, tickedAt: '2026-11-14T10:12:00Z', clientUuid: 'u-1' })} system="metric" />)
-    expect(screen.getByText('Ticked at 11:12 · Not sorted')).toBeInTheDocument()
+    expect(screen.getByText('Ticked at 11:12')).toBeInTheDocument()
   })
 
   it('never calls useMe while closed', () => {

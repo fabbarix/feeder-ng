@@ -48,14 +48,14 @@ describe('LineSheet, ticked: the state line', () => {
 })
 
 describe('LineSheet, ticked: the additions (R-E rows)', () => {
-  it('a list named "Added to Stock": key = who ("You"), state = "+500 g", detail = "Ticked at 10:12 · Not sorted"', () => {
+  it('a list named "Added to Stock": key = who ("You"), state = "+500 g", detail = "Ticked at 10:12"', () => {
     setup()
     const list = within(dialog()).getByRole('list', { name: 'Added to Stock' })
     const item = within(list).getAllByRole('listitem')
     expect(item).toHaveLength(1)
     expect(item[0]).toHaveTextContent('You')
     expect(item[0]).toHaveTextContent('+500 g')
-    expect(item[0]).toHaveTextContent('Ticked at 10:12 · Not sorted')
+    expect(item[0]).toHaveTextContent('Ticked at 10:12')
   })
 
   it('two additions: both rows, oldest first, each with its Take back named for its amount ("Take back your 50 g", "Take back Sam\'s 50 g")', () => {
@@ -91,7 +91,7 @@ describe('LineSheet, ticked: the additions (R-E rows)', () => {
 
   it('the times follow the Household zone', () => {
     setup(entryOf(), { timeZone: 'Europe/Rome' })
-    expect(within(dialog()).getByText('Ticked at 11:12 · Not sorted')).toBeInTheDocument()
+    expect(within(dialog()).getByText('Ticked at 11:12')).toBeInTheDocument()
   })
 })
 

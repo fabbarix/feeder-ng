@@ -113,7 +113,7 @@ describe('ShoppingScreen: the ticked Line\'s sheet (SSP-18)', () => {
     show(tickedList())
     const sheet = await openSheet()
     expect(within(sheet).getByText('Ticked · 500 g added to Stock')).toBeInTheDocument()
-    expect(within(sheet).getByText('Ticked at 10:12 · Not sorted')).toBeInTheDocument()
+    expect(within(sheet).getByText('Ticked at 10:12')).toBeInTheDocument()
     expect(within(sheet).getByRole('button', { name: 'Untick Garlic' })).toBeInTheDocument()
   })
 
@@ -138,7 +138,7 @@ describe('ShoppingScreen: the ticked Line\'s sheet (SSP-18)', () => {
     const sheet = await openSheet()
     await userEvent.click(within(sheet).getByRole('button', { name: 'Change amount' }))
     const change = await screen.findByRole('dialog', { name: 'Garlic: how much?' })
-    expect(within(change).getByText('Ticked at 10:12 · Not sorted')).toBeInTheDocument()
+    expect(within(change).getByText('Ticked at 10:12')).toBeInTheDocument()
     await userEvent.click(within(change).getByRole('button', { name: 'Tick without adding' }))
     expect(actions.changeTick).toHaveBeenCalledExactlyOnceWith({ ingredientId: 9, to: '2026-11-15', quantity: 0, shopId: 1, clientUuid: 'u-1' })
   })

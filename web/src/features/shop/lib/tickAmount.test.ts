@@ -125,12 +125,17 @@ describe('changeTargetOf: which addition Change acts on (SSP-01: the viewer\'s o
 
 describe('additionDetail: the time of an addition, in the Household zone, 24 hours (SSP-18)', () => {
   const at = '2026-11-14T10:12:00Z'
-  it('a hand addition: "Ticked at 10:12 · Not sorted" (a tick\'s Stock Lot starts unsorted)', () => {
-    expect(additionDetail(makeAddition({ tickedAt: at }), 'UTC')).toBe('Ticked at 10:12 · Not sorted')
+  it('a hand addition: "Ticked at 10:12", with no Storage Place (the list does not say where the Lot is, and it may be put away since: main-session ruling)', () => {
+    expect(additionDetail(makeAddition({ tickedAt: at }), 'UTC')).toBe('Ticked at 10:12')
+    expect(additionDetail(makeAddition({ tickedAt: at }), 'UTC')).not.toMatch(/Not sorted/)
+  })
+  it('while the Household zone is unknown there is no time at all, never the device\'s (main-session ruling)', () => {
+    expect(additionDetail(makeAddition({ tickedAt: at }), null)).toBe('')
+    expect(additionDetail(makeAddition({ tickedAt: at }), undefined)).toBe('')
   })
   it('moves with the zone: Rome is an hour ahead in November, Kiritimati is 14 hours ahead', () => {
-    expect(additionDetail(makeAddition({ tickedAt: at }), 'Europe/Rome')).toBe('Ticked at 11:12 · Not sorted')
-    expect(additionDetail(makeAddition({ tickedAt: at }), 'Pacific/Kiritimati')).toBe('Ticked at 00:12 · Not sorted')
+    expect(additionDetail(makeAddition({ tickedAt: at }), 'Europe/Rome')).toBe('Ticked at 11:12')
+    expect(additionDetail(makeAddition({ tickedAt: at }), 'Pacific/Kiritimati')).toBe('Ticked at 00:12')
   })
   it('a Scan\'s addition: "Scanned at 10:12"', () => {
     expect(additionDetail(makeAddition({ by: 'scan', tickedAt: at }), 'UTC')).toBe('Scanned at 10:12')
