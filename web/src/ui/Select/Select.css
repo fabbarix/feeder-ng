@@ -113,6 +113,12 @@
   max-block-size: none;
 }
 
+/* Only the list gives way, in a sheet or a popover capped to the window: the search field and the chip line (which clips) keep their
+   height. */
+.select__panel > :not(.select__list) {
+  flex: none;
+}
+
 /* SET-06: the filter chips are one line: what does not fit is "+N" (SelectTools). The line clips its overflow, so it is padded by the
    ring room and pulled back by it: a chip's ring stays inside the clip and the chips still line up with the search field. */
 .select__tools {
