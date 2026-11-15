@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeLine, makeList } from '../testData'
 
-// b8-polish (docs/dev/design/b8-polish.md 2): below 420 px (26.25 em, the same query as the header chips, useNarrowChips) the screen passes
+// b8-polish (docs/dev/design/b8-polish.md 2): below 420 px (26.25 em, lib/compactRows, useCompactRows) the screen passes
 // compact to ShoppingBody, so the Supplies group reads "400 ml/1 l" at 360 and 390 px, and "400 ml of 1 l" from 420 px up.
 const listHook = vi.hoisted(() => ({ useShoppingList: vi.fn() }))
 vi.mock('../hooks/useShoppingList', () => listHook)

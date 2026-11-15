@@ -1,22 +1,22 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RangePicker } from './RangePicker'
 
-// b8-shop, B9-09: below 26.25 em (420 px; lib/narrowChips) the chip keeps its calendar icon and shows the short value; the list shows the full labels.
+// b8-shop, B9-15: when the chip's own row has no room for "Until Fri 20" the chip keeps its calendar icon and shows the short value
+// (the chip Select's shortLabel; no window query). The list shows the full labels. The row's room is stood in for here.
+const room: { fit: { natural: number; room: number } | null } = { fit: null }
+vi.mock('../../../ui/Select/chipFit', async (orig) => ({ ...(await orig<typeof import('../../../ui/Select/chipFit')>()), measureChipFit: () => room.fit }))
 function viewport(wide: boolean) {
-  vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: /width\s*<\s*26\.25em/.test(query) ? !wide : false,
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  }))
+  room.fit = wide ? { natural: 150, room: 300 } : { natural: 150, room: 120 }
 }
-afterEach(() => vi.unstubAllGlobals())
+beforeEach(() => {
+  room.fit = null
+})
 
 const props = { today: '2026-11-09', maxTo: '2026-11-22', to: '2026-11-20', onChange: () => {} }
 
-describe('RangePicker at a narrow width', () => {
+describe('RangePicker when its row has no room for the full value', () => {
   it('shows "Fri 20", keeps the icon, and is still named "Shop for"', () => {
     viewport(false)
     render(<RangePicker {...props} />)
@@ -36,7 +36,7 @@ describe('RangePicker at a narrow width', () => {
     viewport(false)
     render(<RangePicker {...props} />)
     await userEvent.click(screen.getByRole('combobox', { name: /Shop for/ }))
-    expect(within(screen.getByRole('dialog')).getByRole('option', { name: 'Until tomorrow' })).toBeInTheDocument()
+    expect(within(screen.getByRole('listbox')).getByRole('option', { name: 'Until tomorrow' })).toBeInTheDocument()
   })
 
   it('"Today" and "Tomorrow" show as they are', () => {
@@ -48,7 +48,7 @@ describe('RangePicker at a narrow width', () => {
   })
 })
 
-describe('RangePicker from 26.25 em (420 px)', () => {
+describe('RangePicker with room for the full value', () => {
   it('shows the full "Until Fri 20" and sets no title', () => {
     viewport(true)
     render(<RangePicker {...props} />)

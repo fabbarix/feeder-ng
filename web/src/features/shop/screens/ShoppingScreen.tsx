@@ -20,7 +20,7 @@ import { TickSheet } from '../components/TickSheet'
 import { ANY_SHOP_ID, shopPickerChoices } from '../lib/anyShop'
 import type { ListEntry } from '../lib/lines'
 import { useLineSheet } from '../hooks/useLineSheet'
-import { useNarrowChips } from '../hooks/useNarrowChips'
+import { useCompactRows } from '../hooks/useCompactRows'
 import { useShopChoice } from '../hooks/useShopChoice'
 import { useShopHere } from '../hooks/useShopHere'
 import { AddShopSheet } from '../../shops/components/AddShopSheet'
@@ -49,9 +49,10 @@ export function ShoppingScreen() {
   const ingredients = useIngredientChoices()
   const data = list.data
   const shopName = choice.shops.find((s) => s.id === choice.shopId)?.name ?? null
-  // b8-shop: below 420 px the Shop chip shows "Any"; the list keeps "Any Shop".
-  const narrow = useNarrowChips()
-  const shopOptions = useMemo(() => shopPickerChoices(choice.shops, shopStrings.anyShop, narrow ? shopStrings.anyShopShort : undefined), [choice.shops, narrow])
+  // b8-shop, B9-15: the Shop chip shows "Any" when its own row has no room for "Any Shop" (the chip Select fits it); the list keeps "Any Shop".
+  const shopOptions = useMemo(() => shopPickerChoices(choice.shops, shopStrings.anyShop, shopStrings.anyShopShort), [choice.shops])
+  // b8-polish: the compact Restock reason on a narrow screen (lib/compactRows).
+  const compactRows = useCompactRows()
 
   const run = (fn: () => Promise<unknown>) => {
     setActionError(null)
@@ -163,7 +164,7 @@ export function ShoppingScreen() {
           onOpenLine={lineSheet.open}
           onScan={() => navigate('/scan')}
           onMarkIt={(slot) => navigate(markSlotPath(slot))}
-          compact={narrow}
+          compact={compactRows}
         />
       ) : null}
       <LineSheet entry={lineSheet.entry} actions={lineSheet.actions} onAction={lineSheet.run} onClose={lineSheet.close} />

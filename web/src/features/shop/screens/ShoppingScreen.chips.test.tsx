@@ -3,7 +3,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeList } from '../testData'
 
-// b8-shop (user decision): the header chips keep their icons at every width; the labels get shorter at narrow widths.
+// b8-shop (user decision): the header chips keep their icons at every width; the labels get shorter when they do not fit.
+// B9-15: a chip shortens by its own row's room (the chip Select's shortLabel), never by a window query; the room is stood in for here.
+const room: { fit: { natural: number; room: number } | null } = { fit: null }
+vi.mock('../../../ui/Select/chipFit', async (orig) => ({ ...(await orig<typeof import('../../../ui/Select/chipFit')>()), measureChipFit: () => room.fit }))
 const listHook = vi.hoisted(() => ({ useShoppingList: vi.fn() }))
 vi.mock('../hooks/useShoppingList', () => listHook)
 vi.mock('../hooks/useShoppingActions', () => ({ useShoppingActions: () => ({ tick: vi.fn(), untick: vi.fn(), addExtra: vi.fn(), deleteExtra: vi.fn(), tickExtra: vi.fn(), untickExtra: vi.fn() }) }))
@@ -18,7 +21,7 @@ vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices:
 import { ShoppingScreen } from './ShoppingScreen'
 
 function show(shopId: number | null, wide: boolean) {
-  vi.stubGlobal('matchMedia', (query: string) => ({ matches: /width\s*<\s*26\.25em/.test(query) ? !wide : false, media: query, addEventListener: () => {}, removeEventListener: () => {} }))
+  room.fit = wide ? { natural: 150, room: 300 } : { natural: 150, room: 120 }
   listHook.useShoppingList.mockReturnValue({ data: makeList(), isLoading: false, error: null, stale: false, status: 'ready', retry: vi.fn() })
   choice.useShopChoice.mockReturnValue({ shops: [{ id: 1, name: 'Coop' }], shopId, setShopId: vi.fn(), isLoading: false })
   render(
@@ -34,9 +37,11 @@ function show(shopId: number | null, wide: boolean) {
   }
 }
 beforeEach(() => listHook.useShoppingList.mockReset())
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  room.fit = null
+})
 
-describe('Shop header chips below 26.25 em (420 px; the Shop\'s named exception, lib/narrowChips)', () => {
+describe('Shop header chips whose row has no room for their full values', () => {
   it('both chips keep their icon and the row still holds both pickers and the locate button', () => {
     const { range, shop } = show(null, false)
     expect(range.querySelector('.select__leading svg')).not.toBeNull()
@@ -62,7 +67,7 @@ describe('Shop header chips below 26.25 em (420 px; the Shop\'s named exception,
   })
 })
 
-describe('Shop header chips from 26.25 em (420 px)', () => {
+describe('Shop header chips with room for their full values', () => {
   it('show the full values with their icons', () => {
     const { range, shop } = show(null, true)
     expect(range).toHaveTextContent('Until Sun 15')

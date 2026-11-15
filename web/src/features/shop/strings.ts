@@ -19,7 +19,7 @@ export const shopStrings = {
   locationFailed: 'Could not find where you are',
   addShopNamed: (name: string) => `Add Shop "${name}"`,
   anyShop: 'Any Shop',
-  // b8-shop: the narrow Shop chip shows "Any" (the storefront icon says Shop)
+  // b8-shop: the Shop chip shows "Any" when "Any Shop" does not fit its row (the storefront icon says Shop)
   anyShopShort: 'Any',
   loadFailed: 'The Shopping List could not be loaded.',
   extraTick: (name: string) => `Tick ${name}`,

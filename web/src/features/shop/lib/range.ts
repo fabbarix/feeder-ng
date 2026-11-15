@@ -53,7 +53,7 @@ export function describeRange(to: string, today: string): string {
   return `Until ${label}`
 }
 
-/** b8-shop: below 420 px the chip shows the short value: "Today", "Tomorrow" or "Fri 20" (no "Until"). */
+/** b8-shop: the chip's short value, shown when its row has no room for the label (B9-15): "Today", "Tomorrow" or "Fri 20" (no "Until"). */
 export function shortRangeLabel(to: string, today: string): string {
   return dayLabel(to, today)
 }
@@ -63,7 +63,7 @@ export interface RangeOption {
   value: string
   /** describeRange: "Today", "Until tomorrow", "Until Thu 12" (the list shows it) */
   label: string
-  /** shortRangeLabel: "Today", "Tomorrow", "Thu 12" (the narrow chip shows it) */
+  /** shortRangeLabel: "Today", "Tomorrow", "Thu 12" (the chip shows it when the label does not fit its row) */
   short: string
 }
 
