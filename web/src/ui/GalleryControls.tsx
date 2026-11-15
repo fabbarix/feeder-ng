@@ -9,8 +9,7 @@ import { IconButton } from './IconButton'
 import { IconSet } from './IconSet'
 import { Stepper } from './Stepper'
 import { Tile } from './Tile'
-import type { ChipStatus } from './Chip'
-import type { TileVariant } from './Tile'
+import type { TileStatus, TileVariant } from './Tile'
 import { DateField } from './fields/DateField'
 import { DurationField } from './fields/DurationField'
 import { FieldRow } from './fields/FieldRow'
@@ -63,7 +62,7 @@ function RuledPair({ name }: { name: string }) {
   )
 }
 
-const SURFACES: { name: string; variant?: TileVariant; status?: ChipStatus }[] = [
+const SURFACES: { name: string; variant?: TileVariant; status?: TileStatus }[] = [
   { name: 'surface tile', variant: 'surface' },
   { name: 'Step card, surface-2', variant: 'action' },
   { name: 'soft tile', variant: 'soft' },
