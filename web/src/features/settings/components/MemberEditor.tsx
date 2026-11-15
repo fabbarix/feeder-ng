@@ -116,7 +116,7 @@ function MemberForm({ id, member, users, members, currentUserId, error, emailErr
   }
 
   return (
-    <form ref={formRef} id={id} className="settings__stack" onSubmit={submit} noValidate>
+    <form ref={formRef} id={id} className="settings__stack member-sheet__form" onSubmit={submit} noValidate>
       <TextField
         label={text.name}
         value={draft.name}

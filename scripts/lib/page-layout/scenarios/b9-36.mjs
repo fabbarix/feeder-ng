@@ -30,6 +30,9 @@ export default {
       if (clean.sticky) throw new Error('setup: the Preferences actions bar is sticky while the form is clean (it must exist only while dirty)')
       if (!clean.allDisabled) throw new Error('setup: Revert and Save preferences are not both disabled while the form is clean')
 
+      // The saved look (System: light in the light pass, dark in the dark pass); Revert must bring exactly it back.
+      const savedScheme = await evaluate(`document.documentElement.dataset.scheme`)
+      // From System, Dark is a change in both passes (the radio, not the resolved scheme, is what the preview changes).
       await press(byText('[role="radio"]', 'Dark'), 'the Dark option of Colour mode')
       await until(`!!${BAR} && document.documentElement.dataset.scheme === 'dark'`, 'the sticky bar and a dark app after choosing Dark')
       const dirty = await evaluate(`(() => {
@@ -50,7 +53,7 @@ export default {
         return { bar: !!${BAR}, scheme: document.documentElement.dataset.scheme }
       })()`)
       if (reverted.bar) throw new Error('setup: Revert left the sticky bar in place')
-      if (reverted.scheme === 'dark') throw new Error('setup: Revert left the app dark')
+      if (reverted.scheme !== savedScheme) throw new Error(`setup: Revert left the app ${reverted.scheme}, not the saved ${savedScheme}`)
       // Dirty again for the rules.
       await press(byText('[role="radio"]', 'Dark'), 'the Dark option again')
       await until(`!!${BAR}`, 'the sticky bar again')

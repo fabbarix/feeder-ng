@@ -333,3 +333,12 @@
     border-block-start: 0;
   }
 }
+
+/* A11Y-02 (P39): the footer sits right under the scrolling body, so the last field's ring keeps --space-1 clear of it, also when focus
+   scrolls a field into view at the body's lower edge. */
+.sheet__body:has(> .member-sheet__form) {
+  scroll-padding-block-end: calc(var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1));
+}
+.member-sheet__form {
+  padding-block-end: var(--space-1);
+}
