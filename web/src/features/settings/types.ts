@@ -14,6 +14,12 @@ export interface HouseholdSettings {
   plannerStyle: number
   location: HouseholdLocation | null
   currency: string
+  /** B9-12 (PC-14): the Earliest start, "HH:MM" or null for Off; the Planning rules page edits it, this form leaves it out. */
+  earliestStart?: string | null
+  /** B9-58 (A2): the Latest start, "HH:MM" or null for Off. */
+  latestStart?: string | null
+  /** B9-53 (TB-06, TB 6): the first-run checklist is hidden from Today ("Hide for now"); the Household page shows it again. */
+  setupHidden?: boolean
 }
 
 /** What the Admin sends: the settings without the server-owned flag. */

@@ -3,7 +3,7 @@ import { useToast } from '../../../ui'
 import { errorMessage } from '../lib/errors'
 import { browserTimeZone, needsTimeZoneSetup } from '../lib/timezone'
 import { settingsStrings } from '../strings'
-import type { SettingsInput } from '../types'
+import type { HouseholdSettings, SettingsInput } from '../types'
 import { useHouseholdLiveUpdates } from './useHouseholdLiveUpdates'
 import { useHouseholdSettings } from './useHouseholdSettings'
 
@@ -24,5 +24,18 @@ export function useHouseholdPage() {
     }
   }
 
-  return { isAdmin, household, suggestedTimeZone, save }
+  /** B9-53 (TB 6): shows the hidden first-run checklist on Today again; the rest of the settings go back as they are. */
+  const showSetup = async () => {
+    const current = household.settings
+    if (!current) return
+    const { timeZoneConfigured: _owned, ...rest }: HouseholdSettings = current
+    try {
+      await household.save({ ...rest, setupHidden: false })
+      toast.show(settingsStrings.form.setupShown)
+    } catch (err) {
+      toast.show(errorMessage(err), { status: 'warning' })
+    }
+  }
+
+  return { isAdmin, household, suggestedTimeZone, save, showSetup }
 }

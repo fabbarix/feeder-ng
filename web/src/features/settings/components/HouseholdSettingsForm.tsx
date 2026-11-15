@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import { Button, CurrencySelect, FieldRow, FormActions, Icon, NumberField, TextField, TimeField, TimeZoneSelect } from '../../../ui'
 import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { draftFromSettings, settingsFromDraft, validateSettings, type SettingsDraft } from '../lib/settingsForm'
@@ -16,6 +16,10 @@ export interface HouseholdSettingsFormProps {
   /** The browser's zone, offered while the Household's zone was never set. */
   suggestedTimeZone?: string
   onSave: (next: SettingsInput) => void | Promise<void>
+  /** B9-53 (TB 6): "Show on Today" on the hidden setup checklist's row: an immediate write, not part of the form's Save. */
+  onShowSetup?: () => void | Promise<void>
+  /** The Show write is running. */
+  showingSetup?: boolean
 }
 
 const text = settingsStrings.form
@@ -24,7 +28,8 @@ const text = settingsStrings.form
  *  Earliest start and Latest start are not here (Planning rules, B9-51): the save leaves them out, so the server keeps them.
  *  Time zone, the day counts (NumberFields bounded in the field: Planning Horizon 1-28, Cool-down 0-365, Leftover Use-by 1-14, Frozen Use-by 1-365),
  *  quiet hours (two TimeFields), Planner Style, Location (its helper says why coordinates matter) and Currency. */
-export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZone, onSave }: HouseholdSettingsFormProps) {
+export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZone, onSave, onShowSetup, showingSetup }: HouseholdSettingsFormProps) {
+  const setupRowId = useId()
   const [draft, setDraft] = useState<SettingsDraft>(() => draftFromSettings(value, suggestedTimeZone))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitCount, setSubmitCount] = useState(0)
@@ -133,6 +138,25 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
         onChange={(locationText) => set({ locationText })}
       />
       <CurrencySelect size="sm" label={text.currency} value={draft.currency} disabled={readOnly} error={errors.currency} onChange={(currency) => set({ currency })} />
+      {canEdit && value.setupHidden === true ? (
+        <ul className="settings__rows" aria-label={text.rowsLabel}>
+          <li className="list-row" data-height="auto" data-actions="true" aria-labelledby={setupRowId}>
+            <span className="list-row__text">
+              <span id={setupRowId} className="list-row__title">
+                {text.setupChecklist}
+              </span>
+              <span className="list-row__meta">
+                <span className="list-row__meta-text">{text.setupHidden}</span>
+              </span>
+            </span>
+            <div className="list-row__actions">
+              <Button variant="secondary" size="sm" loading={showingSetup} onClick={() => void onShowSetup?.()}>
+                {text.showSetup}
+              </Button>
+            </div>
+          </li>
+        </ul>
+      ) : null}
       {canEdit ? (
         <FormActions
           primary={

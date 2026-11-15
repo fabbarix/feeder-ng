@@ -31,6 +31,9 @@ export const settingsMembersStrings = {
     linkedUser: 'Linked User',
     noLinkedUser: 'No linked User',
     save: 'Save Member',
+    // B9-53 (TB-06): the Member sheet over Today during first run.
+    firstRunSave: 'Save',
+    saveAndAddAnother: 'Save and add another',
     remove: 'Remove Member',
     // B9-36 (SAFE-04): the Member sheet.
     cancel: 'Cancel',

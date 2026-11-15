@@ -6,6 +6,22 @@ export const settingsSlotsStrings = {
   slotStarted: (slot: string) => `Part of ${slot} is already Cooked or Not cooked, so it cannot be left out.`,
 
   slot: {
+    // B9-53 (TB-06, step 3): the Meal Slot quick start over Today, "When do you eat?".
+    quickStart: {
+      title: 'When do you eat?',
+      lead: 'Pick the Meal Slots you plan. Every day, everyone at the table; you can change days and attendance per Meal Slot later.',
+      time: (name: string, time: string) => `${name} time, ${time}`,
+      timeField: (name: string) => `${name} time`,
+      addAnother: 'Add another Meal Slot',
+      newName: (n: number) => (n <= 1 ? 'New Meal Slot' : `New Meal Slot ${n}`),
+      newNameField: (n: number) => (n <= 1 ? 'New Meal Slot name' : `New Meal Slot ${n} name`),
+      atTheTable: (names: string[]) => `At the table: ${names.join(', ')}`,
+      byHand: 'Set up by hand',
+      create: (n: number) => (n === 1 ? 'Create 1 Meal Slot' : `Create ${n} Meal Slots`),
+      breakfast: 'Breakfast',
+      lunch: 'Lunch',
+      dinner: 'Dinner',
+    },
     add: 'Add Meal Slot',
     edit: (name: string, weekday: string) => `Edit ${name} on ${weekday}`,
     changeDate: (name: string, weekday: string) => `Change ${name} on a date (${weekday})`,
