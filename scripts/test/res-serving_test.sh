@@ -91,6 +91,18 @@ for i in 1 2 3 4 5 6; do printf 'export{}' >"$d6/assets/r$i-aa.js"; head -c $((i
 listed="$(run_budget "$d6" | sed -n '/five largest/,$p' | tail -n +2)"
 [ "$(grep -c 'KB' <<<"$listed")" -eq 5 ] && ok || bad "budget: lists five chunks, no more (got: $listed)"
 
+# B9-59: a chunk the entry imports statically (index.html preloads it) is downloaded before Today paints: it counts toward
+# the entry's budget, not the route-chunk one
+dp="$(fixture preload 300000)"
+printf 'export{}' >"$dp/assets/ui-Ee55Ff.js"
+head -c 60000 /dev/zero >"$dp/assets/ui-Ee55Ff.js.br"
+sed -i 's|<link rel="stylesheet"|<link rel="modulepreload" crossorigin href="/assets/ui-Ee55Ff.js"><link rel="stylesheet"|' "$dp/index.html"
+out="$(run_budget "$dp")"; rc=$?
+[ "$rc" -eq 0 ] && grep -qiE 'warn.*index-Ab12Cd.js.*360 KB' <<<"$out" && ok || bad "budget: the entry (300000) and its preloaded chunk (60000) count together: 360 KB warns (exit $rc: $out)"
+head -c 120000 /dev/zero >"$dp/assets/ui-Ee55Ff.js.br"
+out="$(run_budget "$dp")"; rc=$?
+[ "$rc" -ne 0 ] && ok || bad "budget: the entry and its preloaded chunk over 400 KB together must fail (got: $out)"
+
 out="$(run_budget "$(fixture nobr)")"; rc=$?
 [ "$rc" -ne 0 ] && ok || bad "budget: a build with no .br sibling for the entry chunk must fail (the compression step did not run)"
 
