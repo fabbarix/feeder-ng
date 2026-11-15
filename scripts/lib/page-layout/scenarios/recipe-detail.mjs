@@ -4,7 +4,8 @@
 //                        viewport, or is in a .sticky-action-bar; the side column's edges are equal (+-1 px: the hero, the Cook tile, the metric
 //                        strip and the Ingredients share them); the aside is never sticky; nothing in the metric strip is a chip (RX-13).
 //   recipe-detail-phone  /recipes/:id at 375 and 390: no metric value wraps; the Cook bar is one row of at most 70 px, the button reads "Cook" at
-//                        375 and "Start Cook Mode" at 390 (named "Start Cook Mode" in both); the hero chip line shows no chip cut, "+N" included.
+//                        375 and "Start Cook Mode" at 390 (named "Start Cook Mode" in both); the hero chip line shows no chip cut, "+N" included,
+//                        and hides no lead chip (ruling 6: they wrap to a second line rather than collapse or clip).
 import { evaluate, js, until } from '../helpers.mjs'
 
 const ready = `!!document.querySelector('main h1') && !document.querySelector('[aria-busy="true"], .skeleton') && !!document.querySelector('main .recipe-detail__layout')`
@@ -58,8 +59,11 @@ export default {
         const shown = button ? [...button.querySelectorAll('span')].filter((s) => getComputedStyle(s).display !== 'none').map((s) => s.textContent.trim()).join('') : null
         const line = document.querySelector('.recipe-detail__hero .recipe-tags[data-fitted="true"]')
         const lb = line ? line.getBoundingClientRect() : null
-        const cut = line ? [...line.querySelectorAll('.chip')].filter((c) => { const r = c.getBoundingClientRect(); return r.width > 0 && (r.left < lb.left - 1 || r.right > lb.right + 1) }).map((c) => c.textContent.trim()) : []
-        return { vw: innerWidth, wraps, barH: barBox ? barBox.height : null, sameRow: bb && sb ? Math.abs((bb.top + bb.bottom) / 2 - (sb.top + sb.bottom) / 2) < 8 : null, name: button ? button.getAttribute('aria-label') : null, shown, cut, hasLine: !!line }
+        // Ruling 6: the lead chips never collapse (they wrap to a second line if they must) and no chip is cut; the fit's hidden copy is not shown.
+        const shownChips = line ? [...line.querySelectorAll('.chip')].filter((c) => !c.closest('.recipe-tags__measure')) : []
+        const cut = shownChips.filter((c) => { const r = c.getBoundingClientRect(); return r.width > 0 && (r.left < lb.left - 1 || r.right > lb.right + 1 || r.top < lb.top - 1 || r.bottom > lb.bottom + 1) }).map((c) => c.textContent.trim())
+        const leadHidden = line ? [...line.querySelectorAll('.recipe-tags__lead .chip')].filter((c) => c.getBoundingClientRect().width === 0).map((c) => c.textContent.trim()) : []
+        return { vw: innerWidth, leadHidden, wraps, barH: barBox ? barBox.height : null, sameRow: bb && sb ? Math.abs((bb.top + bb.bottom) / 2 - (sb.top + sb.bottom) / 2) < 8 : null, name: button ? button.getAttribute('aria-label') : null, shown, cut, hasLine: !!line }
       })()`)
       if (m.wraps.length) throw new Error(`setup: a metric value wraps or overflows (RX-04: nowrap, title-2 on a phone): ${js(m.wraps)}`)
       if (m.barH === null) throw new Error('setup: no Cook bar on a phone')
@@ -70,6 +74,7 @@ export default {
       if (m.shown !== want) throw new Error(`setup: at ${m.vw} px the Cook button reads ${js(m.shown)}, want ${js(want)} ("Cook" at 375 and below)`)
       if (!m.hasLine) throw new Error('setup: the hero has no fitted chip line (RX-04)')
       if (m.cut.length) throw new Error(`setup: chips cut by the hero chip line (the "+N" included): ${js(m.cut)}`)
+      if (m.leadHidden.length) throw new Error(`setup: lead chips hidden on the hero chip line (they never collapse, ruling 6): ${js(m.leadHidden)}`)
     },
   },
 }
