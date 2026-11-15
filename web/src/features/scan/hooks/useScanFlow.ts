@@ -4,11 +4,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import type { Scanned } from '../lib/barcode'
+import { isInStoreCode, type Scanned } from '../lib/barcode'
 import type { Feedback } from '../lib/feedback'
 import { archivedOwnerId, type ArchivedProduct } from '../lib/archivedProduct'
 import { planScan, applyAskedWeight, type ScanPlan } from '../lib/resolveScan'
-import { stockTakeMessage } from '../lib/stockTakeToast'
+import { stockTakeMessage, stockTakeUndoLabel } from '../lib/stockTakeToast'
 import { toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
 import { entryPrice, planPriceEntry, type PriceEntry, type PriceIntent, type PriceLine } from '../lib/priceEntry'
@@ -270,7 +270,10 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
 
   const openUnknown = (plan: Extract<ScanPlan, { kind: 'unknown' | 'unknown_weighed' }>) => {
     if (plan.kind === 'unknown') {
-      setSheet({ kind: 'unknown', mode: 'pack', target: { mode: 'pack', code: plan.code } })
+      // B9-41 (SSP-15): an in-store code at a Shop with no Weight Barcode Rule at all says so in the sheet.
+      const rules = depsRef.current.offline?.catalog.weightRules ?? []
+      const hint = rules.length === 0 && isInStoreCode(plan.code)
+      setSheet({ kind: 'unknown', mode: 'pack', target: { mode: 'pack', code: plan.code }, ...(hint ? { weightCodeHint: true } : {}) })
       return
     }
     if (plan.needsWeight) {
@@ -408,9 +411,16 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     }
     d.feedback.confirm()
     const s = result.scan
-    if (s?.total !== undefined) {
-      d.notify?.(stockTakeMessage(action, s.ingredientName, formatQuantity(s.total, s.baseUnit, d.system)), 'success')
+    if (s?.total === undefined) return
+    // B9-41 (SAFE-09): the action is done at once; its toast has Undo, the server Undo of that scan (B9-05), run once. A refusal
+    // rejects, so the Undo toast says "Nothing was undone" with the reason.
+    const headline = stockTakeMessage(action, s.ingredientName, formatQuantity(s.total, s.baseUnit, d.system))
+    const undo = once(() => d.undo(op.clientUuid))
+    if (d.announceAdded) {
+      d.announceAdded({ headline, undoAriaLabel: stockTakeUndoLabel(action, s.ingredientName), undo, durationMs: ADDED_TOAST_MS })
+      return
     }
+    d.notify?.(headline, 'success', { actionLabel: scanStrings.undo, onAction: undo, durationMs: ADDED_TOAST_MS })
   }
 
   /**

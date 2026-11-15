@@ -477,17 +477,55 @@ function isDigits(s: string): boolean {
 }
 
 /**
- * B9-41 (SSP-20) STUB: the code as printed under the bars: EAN-13 in 1-6-6 groups, UPC-A in 1-5-5-1, EAN-8 in 4-4, anything else as typed.
- * Takes the canonical code (GTIN-14, zero padded) or a code as typed. The developer implements it.
+ * B9-41 (SSP-20): the code as printed under the bars: an EAN-13 in 1-6-6 groups, a UPC-A in 1-5-5-1, an EAN-8 in 4-4, anything else as
+ * typed. Takes the canonical code (GTIN-14, zero padded) or a code as typed; the 14-digit form never reaches the screen.
  */
 export function displayCode(code: string): string {
-  return code
+  if (!isDigits(code)) return code
+  const printed = printedDigits(code)
+  if (printed === null) return code
+  switch (printed.length) {
+    case 13:
+      return groups(printed, [1, 6, 6])
+    case 12:
+      return groups(printed, [1, 5, 5, 1])
+    default:
+      return groups(printed, [4, 4])
+  }
 }
 
-/**
- * B9-41 (SSP-15) STUB: is this an EAN-13 (or its zero-padded GTIN-14) that starts with a GS1 in-store prefix, 20 to 29 or 02? The
- * developer implements it.
- */
-export function isInStoreCode(_code: string): boolean {
-  return false
+/** The digits under the bars: an 8, 12 or 13 digit code, from what was typed or its GTIN-14; null for anything else. */
+function printedDigits(code: string): string | null {
+  switch (code.length) {
+    case 8:
+    case 12:
+      return code
+    case 13:
+      return code.startsWith('0') ? code.slice(1) : code
+    case 14:
+      if (code.startsWith('000000')) return code.slice(6)
+      if (code.startsWith('00')) return code.slice(2)
+      if (code.startsWith('0')) return code.slice(1)
+      return null
+    default:
+      return null
+  }
+}
+
+function groups(digits: string, sizes: number[]): string {
+  const out: string[] = []
+  let at = 0
+  for (const size of sizes) {
+    out.push(digits.slice(at, at + size))
+    at += size
+  }
+  return out.join(' ')
+}
+
+/** B9-41 (SSP-15): an EAN-13 (or its zero-padded GTIN-14) that starts with a GS1 in-store prefix, 20 to 29 or 02. */
+export function isInStoreCode(code: string): boolean {
+  if (!isDigits(code)) return false
+  const ean13 = code.length === 14 && code.startsWith('0') ? code.slice(1) : code
+  if (ean13.length !== 13) return false
+  return ean13.startsWith('2') || ean13.startsWith('02')
 }

@@ -387,7 +387,7 @@ export function repriceEntries(entries: SessionEntry[], updates: PriceUpdate[]):
   })
 }
 
-/** B9-41 (SSP-11) STUB: the open (not ticked) manual extras of the Shopping List, in the list's order. The developer implements it. */
-export function toGetExtras(_list: ShoppingList | undefined): ShoppingExtra[] {
-  return []
+/** B9-41 (SSP-11): the open (not ticked) manual extras of the Shopping List, in the list's order. */
+export function toGetExtras(list: ShoppingList | undefined): ShoppingExtra[] {
+  return (list?.extras ?? []).filter((e) => !e.ticked)
 }

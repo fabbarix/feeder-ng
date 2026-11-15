@@ -218,7 +218,8 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     feedback,
     notify: (message, status, opts) => toast.show(message, { status, ...opts }),
     // SSP-06: "Added <product>" is an Undo toast (no status icon, the 'undo' role); Scan keeps its 5 s.
-    announceAdded: ({ headline, undo, durationMs }) => undoToast.show({ headline, undo, durationMs }),
+    // B9-41 (SAFE-09): a Stock-take toast names its Undo ("Undo +1 pack of Passata").
+    announceAdded: ({ headline, undo, durationMs, undoAriaLabel }) => undoToast.show({ headline, undo, durationMs, ...(undoAriaLabel ? { undoAriaLabel } : {}) }),
     findArchived: (code, shopId) => scanApi.findArchived(code, shopId),
     fetchProduct: (id) => scanApi.product(id),
     unarchive,

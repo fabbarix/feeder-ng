@@ -29,7 +29,9 @@ export function useToGetTick({ to, shopId, system = 'metric' }: { to: string | u
 
   const tick = useCallback(
     async (entry: ListEntry) => {
-      if (to === undefined || tickRequest(entry) === null) return
+      // B9-41 (SSP-11): an extra (free text too) is ticked through the Shop's tick flow, like a Line.
+      const tickable = entry.kind === 'extra' ? entry.extraId !== null : tickRequest(entry) !== null
+      if (to === undefined || !tickable) return
       try {
         await flowTick(entry)
       } catch {

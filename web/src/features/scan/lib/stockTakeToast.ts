@@ -3,11 +3,17 @@ import { scanStrings } from '../strings'
 import type { StockTakeAction } from '../types'
 
 /**
- * "+1 pack: Passata, 1.4 kg in Stock" / "−1 pack: Passata, 700 g in Stock" (U+2212, as scanStrings.minusPack) /
- * "Passata: 1500 g in Stock" for set_total. `totalText` is the formatted new total.
+ * B9-41 (SAFE-09): "+1 pack of Passata: 1.4 kg in Stock" / "−1 pack of Passata: 700 g in Stock" (U+2212, as scanStrings.minusPack) /
+ * "Passata set to 1500 g" for set_total. `totalText` is the formatted new total.
  */
 export function stockTakeMessage(action: StockTakeAction, ingredientName: string, totalText: string): string {
-  if (action === 'set_total') return scanStrings.inStock(ingredientName, totalText)
+  if (action === 'set_total') return scanStrings.setTo(ingredientName, totalText)
   const change = action === 'plus_pack' ? scanStrings.plusPack : scanStrings.minusPack
-  return `${change}: ${ingredientName}, ${totalText} in Stock`
+  return `${change} of ${ingredientName}: ${totalText} in Stock`
+}
+
+/** B9-41 (SAFE-09): the Undo button's name: "Undo +1 pack of Passata", "Undo −1 pack of Passata", "Undo set total of Passata". */
+export function stockTakeUndoLabel(action: StockTakeAction, ingredientName: string): string {
+  const what = action === 'plus_pack' ? scanStrings.plusPack : action === 'minus_pack' ? scanStrings.minusPack : scanStrings.setTotalUndo
+  return `Undo ${what} of ${ingredientName}`
 }

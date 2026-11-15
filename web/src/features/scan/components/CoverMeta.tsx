@@ -10,11 +10,18 @@ export interface CoverMetaProps {
   cover: { text: string; done: boolean } | null
   /** every scan still waits in the queue: the clock and "Waiting to sync" */
   waiting?: boolean
+  /** B9-41 (SSP-11): a free-text extra: the extra icon and "Added by hand" instead of a cover */
+  byHand?: boolean
 }
 
-export function CoverMeta({ size, cover, waiting }: CoverMetaProps) {
+export function CoverMeta({ size, cover, waiting, byHand }: CoverMetaProps) {
   // The tick and its "x of y" (or the clock and its words) stay together when the line wraps.
-  const after = cover ? (
+  const after = byHand ? (
+    <span className="scanned-row__cover">
+      <Icon name="extra" size={14} />
+      <span>{scanStrings.addedByHand}</span>
+    </span>
+  ) : cover ? (
     <span className="scanned-row__cover">
       <Icon name={cover.done ? 'success' : 'successOpen'} size={14} weight={cover.done ? 'fill' : 'bold'} className="scanned-row__tick" />
       <span>{cover.text}</span>
