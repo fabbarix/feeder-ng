@@ -9,6 +9,8 @@ export interface ActionGroupButton {
   icon?: IconName
   disabled?: boolean
   onClick: () => void
+  /** B9-39 (A11Y-08): the button's accessible name when its visible text repeats on the page ("Cooked Lentil soup, Mon 9 Lunch"). Starts with the visible text. */
+  'aria-label'?: string
 }
 
 export interface ActionGroupProps {
@@ -32,12 +34,12 @@ export function ActionGroup({ label, primary, secondary, more }: ActionGroupProp
   return (
     <div className="action-group" role="group" aria-label={label} data-more={hasMore ? 'true' : undefined}>
       {primary ? (
-        <Button variant="primary" size="md" icon={primary.icon} disabled={primary.disabled} onClick={primary.onClick}>
+        <Button variant="primary" size="md" icon={primary.icon} disabled={primary.disabled} aria-label={primary['aria-label']} onClick={primary.onClick}>
           {primary.label}
         </Button>
       ) : null}
       {secondary ? (
-        <Button variant="secondary" size="md" icon={secondary.icon} disabled={secondary.disabled} onClick={secondary.onClick}>
+        <Button variant="secondary" size="md" icon={secondary.icon} disabled={secondary.disabled} aria-label={secondary['aria-label']} onClick={secondary.onClick}>
           {secondary.label}
         </Button>
       ) : null}
