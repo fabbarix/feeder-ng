@@ -2,7 +2,7 @@
 // rows (questions first, then each Leftover with its row menu); below, the questions and one summary row with Show, which
 // opens the same rows in a sheet. Presentational: the summary is lib/planLeftovers.
 import { useId, useState, type ReactNode } from 'react'
-import { BottomSheet, Button, Tile } from '../../../ui'
+import { BottomSheet, Button, Icon, Tile } from '../../../ui'
 import { tileRows } from '../../../lib/leftovers/rows'
 import type { LeftoverFlow } from '../../../lib/leftovers/useLeftoverFlow'
 import { LeftoverItems } from '../../../ui/LeftoverActions/LeftoverItems'
@@ -40,11 +40,11 @@ export function PlanLeftovers({ flow }: PlanLeftoversProps): ReactNode {
       variant="status"
       status="leftover"
       aria-labelledby={titleId}
-      overline={planStrings.leftoversOverline}
-      overlineIcon="leftover"
       className="plan-leftovers"
     >
-      <h2 id={titleId} className="plan__tile-title">
+      {/* PC-07 mock: the tile's heading IS its overline ("LEFTOVERS TO USE"); no second title line repeats it. */}
+      <h2 id={titleId} className="tile__overline">
+        <Icon name="leftover" size={16} />
         {planStrings.leftoversTitle}
       </h2>
       {summary === null ? (
