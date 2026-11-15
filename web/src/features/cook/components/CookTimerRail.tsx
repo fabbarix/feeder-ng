@@ -2,8 +2,7 @@
 import type { ReactNode } from 'react'
 import { TimerTile } from '../../../ui'
 import type { TimerItem } from '../hooks/useTimers'
-import { parseTimerLabel } from '../lib/householdTimers'
-import { cookTimerOrder, railPlace } from '../lib/timers'
+import { cookTimerOrder, railPlace, timerNames } from '../lib/timers'
 import { cookStrings } from '../strings'
 
 export interface CookTimerRailProps {
@@ -27,6 +26,7 @@ export interface CookTimerRailProps {
 export function CookTimerRail({ scope, items, holdingIds = [], belongs, onPause, onResume, onOpenTimer, children }: CookTimerRailProps): ReactNode {
   const hasChildren = children !== undefined && children !== null && children !== false
   if (items.length === 0 && !hasChildren) return null
+  const names = timerNames(items.map((i) => i.timer))
   const ordered = cookTimerOrder(items, scope, holdingIds, belongs)
   return (
     <aside className="cook-rail" aria-label={hasChildren ? cookStrings.timersAndIngredients : cookStrings.timersRegion}>
@@ -41,7 +41,7 @@ export function CookTimerRail({ scope, items, holdingIds = [], belongs, onPause,
               <div key={id} className="cook-rail__timer" data-gate={holds ? '' : undefined}>
                 <TimerTile
                   size="md"
-                  label={parseTimerLabel(label).title}
+                  label={names.get(id) ?? label}
                   place={railPlace(item.timer, scope, holds)}
                   seconds={finished ? 0 : item.seconds}
                   running={state === 'running'}

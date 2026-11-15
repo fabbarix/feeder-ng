@@ -17,7 +17,7 @@ describe('AdvanceStepsTile', () => {
   it('marks a pending Advance Step done by its Recipe Step index', async () => {
     const onMarkDone = vi.fn()
     render(<AdvanceStepsTile summary={{ done: [], pending: [pending] }} onMarkDone={onMarkDone} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Done: / }))
     expect(onMarkDone).toHaveBeenCalledWith(3)
   })
 
@@ -29,7 +29,7 @@ describe('AdvanceStepsTile', () => {
 
   it('has no warning when everything is done', () => {
     render(<AdvanceStepsTile summary={{ done: [done], pending: [] }} onMarkDone={() => {}} />)
-    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Done: / })).not.toBeInTheDocument()
   })
 
   it('renders nothing without Advance Steps', () => {

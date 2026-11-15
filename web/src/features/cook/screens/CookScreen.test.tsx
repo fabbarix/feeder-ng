@@ -297,7 +297,7 @@ describe('CookScreen: layout (2.7, 5.12)', () => {
     const api = mockApi({ ...twoStepRoutes, 'PUT /api/cook/marks': { scope: 'meal:2026-11-09/2', step: 4, done: true, doneAt: '2026-11-09T12:00:00Z' } })
     renderMeal()
     expect(await screen.findByText('Marinate the chicken · 4 h ahead')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Done: / }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/cook/marks')).toHaveLength(1))
     await userEvent.click(screen.getByRole('button', { name: 'Next' }))
     expect(await screen.findByRole('article', { name: 'Step 2 of 2' })).toBeInTheDocument()

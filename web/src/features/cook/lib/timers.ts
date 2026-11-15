@@ -1,6 +1,7 @@
 // Pure helpers for synced timers. Plain TypeScript, no React.
 import { weekdayName } from '../../plan/lib/phrase'
 import type { CookTimer, StartTimerInput } from '../types'
+import { parseTimerLabel } from './householdTimers'
 
 /**
  * serverNow - clientNow in ms, measured from a response's `now`. Add it to the
@@ -147,4 +148,42 @@ export function cookTimerOrder<T extends { timer: CookTimer }>(items: T[], scope
   const here = belongs ? items.filter((i) => belongs(i.timer.scope)) : items.filter((i) => i.timer.scope === scope)
   const elsewhere = belongs ? items.filter((i) => !belongs(i.timer.scope)) : items.filter((i) => i.timer.scope !== scope)
   return stripOrder([...here, ...elsewhere], holdingIds)
+}
+
+/**
+ * B9-40 (P38, A11Y-08): the name Cook Mode shows and announces for each timer, unique on the page so "Pause <name>", "Options for <name>"
+ * and the pill's open button never repeat. It is the label's title ("Pre-heat the oven"); titles that two timers share get their Step
+ * ("Pre-heat the oven · Step 3"), then their Recipe, then a running number. Keyed by timer id; does not mutate.
+ */
+export function timerNames(timers: CookTimer[]): Map<number, string> {
+  const names = new Map<number, string>()
+  const base = (t: CookTimer) => parseTimerLabel(t.label).title
+  const stepOf = (t: CookTimer) => {
+    const n = parseTimerLabel(t.label).stepNumber ?? (t.step !== null && t.step !== undefined ? t.step + 1 : null)
+    return n === null ? '' : `Step ${n}`
+  }
+  const steps: Array<(t: CookTimer, name: string) => string> = [
+    (t, name) => (stepOf(t) ? `${name} · ${stepOf(t)}` : name),
+    (t, name) => (t.recipeName ? `${name} · ${t.recipeName}` : name),
+  ]
+  for (const t of timers) names.set(t.id, base(t))
+  for (const widen of steps) {
+    const count = new Map<string, number>()
+    for (const n of names.values()) count.set(n, (count.get(n) ?? 0) + 1)
+    for (const t of timers) {
+      const name = names.get(t.id)!
+      if ((count.get(name) ?? 0) > 1) names.set(t.id, widen(t, name))
+    }
+  }
+  const seen = new Map<string, number>()
+  const total = new Map<string, number>()
+  for (const n of names.values()) total.set(n, (total.get(n) ?? 0) + 1)
+  for (const t of timers) {
+    const name = names.get(t.id)!
+    if ((total.get(name) ?? 0) < 2) continue
+    const k = (seen.get(name) ?? 0) + 1
+    seen.set(name, k)
+    names.set(t.id, `${name} (${k})`)
+  }
+  return names
 }

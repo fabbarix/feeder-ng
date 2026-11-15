@@ -33,14 +33,14 @@ describe('TimelineAdvanceTile: Base recipe chips', () => {
     render(<TimelineAdvanceTile groups={groups()} onMarkDone={noop} />)
     const row = screen.getByText('Buy fresh pasta · 1 h ahead').closest('li')!
     expect(row.querySelector('.chip')).toBeNull()
-    expect(within(row).getByRole('button', { name: 'Done' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /^Done: / })).toBeInTheDocument()
   })
 
   it('Done still marks the Step of its own Course scope and composed index', async () => {
     const calls: [string, number][] = []
     render(<TimelineAdvanceTile groups={groups()} onMarkDone={(s, i) => calls.push([s, i])} />)
     const row = screen.getByText('Chill the milk · 4 h ahead').closest('li')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Done' }))
+    await userEvent.click(within(row).getByRole('button', { name: /^Done: / }))
     expect(calls).toEqual([['meal:2026-11-10/4/1', 4]])
   })
 })

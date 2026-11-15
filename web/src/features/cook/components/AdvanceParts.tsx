@@ -45,7 +45,7 @@ export function AdvanceRows({ label, items }: { label: string; items: AdvanceRow
             wrapTitle
             data-state="pending"
             actions={
-              <Button variant="secondary" size="sm" onClick={item.onMarkDone}>
+              <Button variant="secondary" size="sm" aria-label={cookStrings.markAdvanceDoneName(item.text)} onClick={item.onMarkDone}>
                 {cookStrings.markAdvanceDoneShort}
               </Button>
             }

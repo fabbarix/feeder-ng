@@ -13,6 +13,8 @@ export interface CookTimerSheetProps {
   /** The scope Cook Mode is open for (words the place line of another scope's timer). */
   scope: string
   holdsNext?: boolean
+  /** The timer's name on this page (lib/timers timerNames); default its label's title. */
+  name?: string
   onClose: () => void
   onAddMinute: (id: number) => void
   onCancel: (id: number) => void
@@ -24,7 +26,7 @@ export interface CookTimerSheetProps {
  * and "Cancel timer" (danger secondary) for a running or paused timer, "Dismiss" alone for a finished one. Each action closes the
  * sheet; the Undo toast of a cancel is the screen's (hooks/useTimerActions).
  */
-export function CookTimerSheet({ item, scope, holdsNext = false, onClose, onAddMinute, onCancel, onDismiss }: CookTimerSheetProps): ReactNode {
+export function CookTimerSheet({ item, scope, holdsNext = false, name, onClose, onAddMinute, onCancel, onDismiss }: CookTimerSheetProps): ReactNode {
   if (!item) return null
   const { id, state, label } = item.timer
   const finished = state === 'finished' || item.seconds <= 0
@@ -34,7 +36,7 @@ export function CookTimerSheet({ item, scope, holdsNext = false, onClose, onAddM
     onClose()
   }
   return (
-    <BottomSheet open onClose={onClose} title={parseTimerLabel(label).title}>
+    <BottomSheet open onClose={onClose} title={name ?? parseTimerLabel(label).title}>
       <div className="cook-timer-sheet" data-state={finished ? 'finished' : state}>
         <p className="cook-timer-sheet__time">{finished ? cookStrings.timerDone : formatTimer(item.seconds)}</p>
         {place ? <p className="cook-timer-sheet__place">{place}</p> : null}

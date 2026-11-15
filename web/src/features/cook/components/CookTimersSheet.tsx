@@ -3,8 +3,7 @@ import type { ReactNode } from 'react'
 import { BottomSheet, ListGroup, ListRow } from '../../../ui'
 import { formatTimer } from '../../../lib/format'
 import type { TimerItem } from '../hooks/useTimers'
-import { parseTimerLabel } from '../lib/householdTimers'
-import { cookTimerOrder, railPlace } from '../lib/timers'
+import { cookTimerOrder, railPlace, timerNames } from '../lib/timers'
 import { cookStrings } from '../strings'
 
 export interface CookTimersSheetProps {
@@ -20,6 +19,7 @@ export interface CookTimersSheetProps {
 
 /** A BottomSheet "Timers" with the one round Close: one ListRow per timer (its name, place line and time), in Cook Mode's order. */
 export function CookTimersSheet({ open, scope, items, holdingIds = [], belongs, onClose, onOpenTimer }: CookTimersSheetProps): ReactNode {
+  const names = timerNames(items.map((i) => i.timer))
   return (
     <BottomSheet open={open} onClose={onClose} title={cookStrings.timersRegion}>
       <ListGroup label={cookStrings.timersRegion}>
@@ -29,7 +29,7 @@ export function CookTimersSheet({ open, scope, items, holdingIds = [], belongs, 
           return (
             <ListRow
               key={id}
-              title={parseTimerLabel(label).title}
+              title={names.get(id) ?? label}
               meta={railPlace(item.timer, scope, holdingIds.includes(id)) || undefined}
               icon={finished ? 'bellRinging' : state === 'paused' ? 'pause' : 'timer'}
               value={finished ? cookStrings.timerDone : formatTimer(item.seconds)}

@@ -27,7 +27,7 @@ describe('AdvanceStepsTile tone (DS 3: the Advance Steps tiles use info)', () =>
   })
   it('its Done button is an outlined secondary button', () => {
     render(<AdvanceStepsTile summary={{ done: [], pending: [pending] }} onMarkDone={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Done' })).toHaveAttribute('data-variant', 'secondary')
+    expect(screen.getByRole('button', { name: /^Done: / })).toHaveAttribute('data-variant', 'secondary')
   })
 })
 
@@ -81,7 +81,7 @@ describe('Scenario: The Advance Steps chip opens the Advance Steps and marks one
     const sheet = await screen.findByRole('dialog', { name: 'Advance Steps' })
     expect(within(sheet).getByText('Soak the beans · 8 h ahead')).toBeInTheDocument()
     expect(within(sheet).getByText('Done: Marinate the chicken')).toBeInTheDocument()
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Done' }))
+    await userEvent.click(within(sheet).getByRole('button', { name: /^Done: / }))
     expect(onMarkDone).toHaveBeenCalledWith(3)
   })
   it('closing the sheet returns focus to the chip', async () => {
@@ -123,7 +123,7 @@ describe('TimelineAdvanceTile (the Timeline uses the same tone and chip)', () =>
     render(<TimelineAdvanceTile compact groups={[group([tl(), tl({ step: 2, text: 'Soak the beans', done: true, doneAt: 'x' })]), { ...group([tl({ courseId: 2, scope: 'meal:2026-11-10/4/2', step: 1, text: 'Make the stock' })]), courseId: 2, courseName: 'Side' }]} onMarkDone={onMarkDone} />)
     await userEvent.click(screen.getByRole('button', { name: 'Advance Steps: 2 to do' }))
     const sheet = await screen.findByRole('dialog', { name: 'Advance Steps' })
-    const buttons = within(sheet).getAllByRole('button', { name: 'Done' })
+    const buttons = within(sheet).getAllByRole('button', { name: /^Done: / })
     expect(buttons).toHaveLength(2)
     await userEvent.click(buttons[1]!)
     expect(onMarkDone).toHaveBeenCalledWith('meal:2026-11-10/4/2', 1)

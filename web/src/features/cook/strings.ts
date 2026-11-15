@@ -17,6 +17,8 @@ export const cookStrings = {
   /** "Marinate the chicken · 4 h ahead": a pending Advance Step and how far ahead it starts. */
   advanceAhead: (text: string, leadTime: string) => `${text} · ${leadTime} ahead`,
   markAdvanceDoneShort: 'Done',
+  /** B9-40 (P38): each Advance Step's Done button has its own name, starting with the visible word: "Done: Marinate the chicken". */
+  markAdvanceDoneName: (text: string) => `Done: ${text}`,
   timersRegion: 'Timers',
   otherTimersRegion: 'Other timers',
   timerFinished: (label: string) => `${label} is ready`,

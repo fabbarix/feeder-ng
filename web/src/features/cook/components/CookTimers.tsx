@@ -7,6 +7,7 @@ import { CookTimerRail } from './CookTimerRail'
 import { CookTimerSheet } from './CookTimerSheet'
 import { CookTimersSheet } from './CookTimersSheet'
 import { CookTimerStrip } from './CookTimerStrip'
+import { timerNames } from '../lib/timers'
 
 export interface CookTimersProps {
   panel: CookTimerPanel
@@ -62,6 +63,7 @@ export function CookTimerSheets({ panel, scope, items, holdingIds, belongs }: Co
         item={panel.sheetItem}
         scope={scope}
         holdsNext={panel.sheetHoldsNext}
+        name={panel.sheetItem ? timerNames(items.map((i) => i.timer)).get(panel.sheetItem.timer.id) : undefined}
         onClose={panel.closeTimer}
         onAddMinute={(id) => void actions.addMinute(id)}
         onCancel={(id) => void actions.cancel(id)}

@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { TimerPill } from '../../../ui/TimerPill'
 import type { TimerItem } from '../hooks/useTimers'
-import { parseTimerLabel } from '../lib/householdTimers'
-import { cookTimerOrder, splitPills } from '../lib/timers'
+import { cookTimerOrder, splitPills, timerNames } from '../lib/timers'
 import { cookStrings } from '../strings'
 
 export interface CookTimerStripProps {
@@ -36,6 +35,7 @@ export interface CookTimerStripProps {
  */
 export function CookTimerStrip({ scope, items, onPause, onResume, belongs, holdingIds = [], maxPills, onOpenTimer, onShowAll }: CookTimerStripProps): ReactNode {
   if (items.length === 0) return null
+  const names = timerNames(items.map((i) => i.timer))
   const { shown, more } = splitPills(cookTimerOrder(items, scope, holdingIds, belongs), maxPills)
   return (
     <section className="cook-strip" aria-label={cookStrings.timersRegion}>
@@ -46,7 +46,8 @@ export function CookTimerStrip({ scope, items, onPause, onResume, belongs, holdi
         return (
           <TimerPill
             key={id}
-            label={parseTimerLabel(label).title}
+            label={names.get(id) ?? label}
+            opensOptions
             seconds={finished ? 0 : item.seconds}
             running={state === 'running'}
             gate={holdingIds.includes(id)}

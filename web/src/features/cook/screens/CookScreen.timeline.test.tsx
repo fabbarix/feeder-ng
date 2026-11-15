@@ -101,7 +101,7 @@ describe('CookScreen: the cooking timeline', () => {
     const api = setup({ view: timelineView({ advance }), extra: { 'PUT /api/cook/marks': {} } })
     const side = await screen.findByRole('group', { name: 'Side' })
     expect(within(side).getByText('Soak the beans · 8 h ahead')).toBeInTheDocument()
-    await userEvent.click(within(side).getByRole('button', { name: 'Done' }))
+    await userEvent.click(within(side).getByRole('button', { name: /^Done: / }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/cook/marks')).toHaveLength(1))
     expect(api.callsTo('PUT', '/api/cook/marks')[0]!.body).toEqual({ scope: SIDE_SCOPE, step: 2, done: true })
   })

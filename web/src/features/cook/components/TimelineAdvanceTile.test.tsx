@@ -24,9 +24,9 @@ describe('TimelineAdvanceTile', () => {
   it('Done marks the Step with the scope of its own Course', async () => {
     const onMarkDone = vi.fn()
     render(<TimelineAdvanceTile groups={groups()} onMarkDone={onMarkDone} />)
-    await userEvent.click(within(screen.getByRole('group', { name: 'Side' })).getByRole('button', { name: 'Done' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Side' })).getByRole('button', { name: /^Done: / }))
     expect(onMarkDone).toHaveBeenCalledWith(SIDE_SCOPE, 0)
-    await userEvent.click(within(screen.getByRole('group', { name: 'Main' })).getByRole('button', { name: 'Done' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Main' })).getByRole('button', { name: /^Done: / }))
     expect(onMarkDone).toHaveBeenCalledWith(MAIN_SCOPE, 1)
   })
 
