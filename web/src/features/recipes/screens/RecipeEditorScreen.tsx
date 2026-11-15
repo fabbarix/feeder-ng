@@ -16,7 +16,6 @@ import {
   Tile,
   useConfirm,
   useLeaveGuard,
-  useUndoToast,
 } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
 import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
@@ -41,7 +40,7 @@ import { useIngredientRefs } from '../hooks/useIngredientRefs'
 import { useQuickCreateIngredient } from '../hooks/useQuickCreateIngredient'
 import { useRecipeEditor } from '../hooks/useRecipeEditor'
 import { useRecipeDraft } from '../hooks/useRecipeDraft'
-import { useRemovalFocus } from '../hooks/useRemovalFocus'
+import { useEditorRemovals } from '../hooks/useEditorRemovals'
 import { discardDialog, editorExitRoute } from '../lib/editorExit'
 import type { RecipeDraft } from '../lib/draft'
 import { pickCourseIds } from '../lib/recipeCourses'
@@ -131,9 +130,9 @@ export function RecipeEditorScreen(): ReactNode {
   })
   const guard = useLeaveGuard(dirty, { what, isNew, onDiscard: () => void keeper.forget() })
   const confirmApi = useConfirm()
-  const undoToast = useUndoToast()
   const formRef = useRef<HTMLElement>(null)
-  const focusAfter = useRemovalFocus(formRef)
+  // SAFE-10: a removal acts at once and offers Undo; focus moves to what took the removed row's place.
+  const { removeLine, removeStep, removeUse } = useEditorRemovals(editor, byId, formRef)
   // SAFE-04: grows after every Save the editor answered (client check or server), so focus goes to the first invalid field.
   const [submits, setSubmits] = useState(0)
   useFocusFirstInvalid(formRef, editor.errors, submits)
@@ -222,57 +221,6 @@ export function RecipeEditorScreen(): ReactNode {
       await keeper.forget()
     }
     go(editorExitRoute(recipeId), true)
-  }
-
-  // SAFE-10: a removal acts at once and offers Undo; focus moves to what took the removed row's place.
-  const lineName = (key: string) => {
-    const line = draft.lines.find((l) => l.key === key)
-    return (line?.ingredientName || (line?.ingredientId === null || line?.ingredientId === undefined ? '' : byId.get(line.ingredientId)?.name) || '').trim()
-  }
-  const removeLine = (key: string) => {
-    const index = draft.lines.findIndex((l) => l.key === key)
-    const name = lineName(key)
-    const restore = editor.removeLine(key)
-    if (!restore) return
-    focusAfter({ kind: 'line', index })
-    undoToast.show({
-      headline: recipeStrings.removed.line(name, index + 1),
-      undoAriaLabel: recipeStrings.removed.undo.line(name, index + 1),
-      undo: () => {
-        restore()
-        focusAfter({ kind: 'line', index })
-      },
-    })
-  }
-  const removeStep = (index: number) => {
-    const restore = editor.removeStep(index)
-    if (!restore) return
-    focusAfter({ kind: 'step', index })
-    undoToast.show({
-      headline: recipeStrings.removed.step(index + 1),
-      undoAriaLabel: recipeStrings.removed.undo.step(index + 1),
-      undo: () => {
-        restore()
-        focusAfter({ kind: 'step', index })
-      },
-    })
-  }
-  const removeUse = (stepIndex: number, useIndex: number) => {
-    const step = draft.steps[stepIndex]
-    const use = step?.uses[useIndex]
-    if (!step || !use) return
-    const name = (use.ingredientName || (use.ingredientId === null ? '' : byId.get(use.ingredientId)?.name) || '').trim()
-    const restore = editor.removeUse(stepIndex, useIndex)
-    if (!restore) return
-    focusAfter({ kind: 'use', stepKey: step.key, index: useIndex })
-    undoToast.show({
-      headline: recipeStrings.removed.use(name, stepIndex + 1),
-      undoAriaLabel: recipeStrings.removed.undo.use(name, stepIndex + 1),
-      undo: () => {
-        restore()
-        focusAfter({ kind: 'use', stepKey: step.key, index: useIndex })
-      },
-    })
   }
 
   const answer = async (toBase: number) => {
