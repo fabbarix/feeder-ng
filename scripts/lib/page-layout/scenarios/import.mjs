@@ -50,7 +50,14 @@ export default {
     },
     async importResult() {
       await reviewTheFile()
-      await press(byText('main [aria-label="What to do with Import guard stew"] button', 'Keep both'), '"Keep both" of the existing Recipe')
+      // Answer Keep both on every Recipe that already exists: "Import guard stew" from the seed, and both Recipes when an earlier pass
+      // (the other scheme) imported the file already.
+      for (const name of NAMES) {
+        if (await evaluate(`!!document.querySelector(${js(`main [aria-label="What to do with ${name}"]`)})`)) {
+          await press(byText(`main [aria-label="What to do with ${name}"] button`, 'Keep both'), `"Keep both" of ${name}`)
+          await until(`document.querySelector(${js(`main [aria-label="What to do with ${name}"] button[aria-pressed="true"]`)})?.textContent.trim() === 'Keep both'`, `${name} kept both`)
+        }
+      }
       await until(`!!document.querySelector('[aria-label="Import actions"] button[data-variant="primary"]:not([disabled])') && /^Import 2 Recipes$/.test(document.querySelector('[aria-label="Import actions"] button[data-variant="primary"]')?.textContent.trim() ?? '')`, 'the Import button, with the question answered')
       await press(`document.querySelector('[aria-label="Import actions"] button[data-variant="primary"]')`, '"Import 2 Recipes" button')
       await until(`[...document.querySelectorAll('main h2, main h1')].some((h) => h.textContent.trim() === 'Imported 2 Recipes')`, 'the import result')

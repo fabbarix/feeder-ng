@@ -958,3 +958,24 @@
 .import-review .list-row__meta {
   align-items: flex-start;
 }
+
+/* The result's state ("Kept as Lasagne (2)") wraps in a narrow end column instead of squeezing the Recipe name. */
+.import-result .list-row__value {
+  min-inline-size: 0;
+  max-inline-size: 7rem;
+  white-space: normal;
+}
+
+/* On a phone the 40 px monogram gives its room to the name (P40: a name keeps 120 px); the name, its detail and its state carry the row. */
+@media (width < 37.5em) {
+  .import-result .list-row__leading {
+    display: none;
+  }
+}
+
+@media (width < 23.5em) {
+  .recipe-preview .list-row__leading,
+  .ingredient-matches .list-row[data-row='ingredient'] .list-row__leading {
+    display: none;
+  }
+}
