@@ -52,7 +52,7 @@ export function RecipeChooserSheet({
   const main = course?.main ?? true
   const courseName = course?.name ?? ''
   const shown = matchRecipes(recipes, query)
-  const groups = chooseGroups(shown, { id: course?.courseId ?? 0, main })
+  const groups = course ? chooseGroups(shown, { id: course.courseId, main }) : { marked: shown, other: [] }
   const freezer = freezerChoices(frozenLeftovers, new Set(shown.map((r) => r.id)))
   const fine = useFinePointer()
   const searchRef = useRef<HTMLInputElement>(null)
