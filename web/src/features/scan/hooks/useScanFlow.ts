@@ -14,6 +14,7 @@ import { scanStrings } from '../strings'
 import { entryPrice, planPriceEntry, type PriceEntry, type PriceIntent, type PriceLine } from '../lib/priceEntry'
 import { buildScannedRows, displayOrder, nextWithoutPrice, repriceEntries, rowByKey, type PriceUpdate, type ScannedRow } from '../lib/scannedList'
 import type { ScannedList } from './useScannedList'
+import type { ToastHandle } from '../../../ui/Toast'
 import type { OfflineData, OfflineProduct, Op, PricePatch, ScanResult, StockTakeAction } from '../types'
 
 /** SR3: the options of a Toast: an action (Undo, Put back) and how long it stays. */
@@ -21,6 +22,16 @@ export interface NotifyOptions {
   actionLabel?: string
   onAction?: () => unknown
   durationMs?: number
+}
+
+/** SR3: the "Added" toast stays 5 s (Scan's own timing; other Undo toasts are 8 s). */
+const ADDED_TOAST_MS = 5000
+
+/** B9-35: what the flow asks the "Added" toast to say and do. */
+export interface AddedToast {
+  headline: string
+  undo: () => unknown
+  durationMs: number
 }
 
 export interface ScanFlowDeps {
@@ -51,6 +62,11 @@ export interface ScanFlowDeps {
    * here instead of the inline banner (QA: "-1 pack gives no toast"); lib/stockTakeToast.stockTakeMessage builds the text.
    */
   notify?: (message: string, status: 'success' | 'info' | 'error', opts?: NotifyOptions) => void
+  /**
+   * B9-35 (SSP-06, SSP-12): the "Added <product>" toast with Undo (the controller wires it to useUndoToast: no status icon, Undo
+   * with the 'undo' role). Returns the toast's handle, so the Price entry of that row can drop it. Without it, notify is used.
+   */
+  announceAdded?: (toast: AddedToast) => ToastHandle | undefined
   /** R8, online only: scanApi.findArchived(code, shopId). A network error (ApiError 0) or a missing dep means "no archived owner known". */
   findArchived?: (barcode: string, shopId: number) => Promise<ArchivedProduct | null>
   /** R8: scanApi.product(id), for the owner named by a barcode_archived rejection */
@@ -175,6 +191,8 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   const [pricing, setPricing] = useState<PricingState | null>(null)
   // SR3: the scans whose Undo is under way.
   const undoing = useRef(new Set<string>())
+  // SSP-12: the last "Added" toast and its Scan, dropped when the Price entry opens on that Scan's row.
+  const lastAdded = useRef<{ clientUuid: string; handle: ToastHandle | undefined } | null>(null)
   // b8-scanflake: the reads made while the offline data was loading, in order.
   const held = useRef<Scanned[]>([])
   const hasOffline = deps.offline !== null
@@ -196,7 +214,21 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
       if (!depsRef.current.session?.entries.some((e) => e.op.clientUuid === clientUuid)) return
       await undoScan(clientUuid)
     })
-    depsRef.current.notify?.(scanStrings.added(productName), 'success', { actionLabel: scanStrings.undo, onAction: undoOnce, durationMs: 5000 })
+    const d = depsRef.current
+    if (d.announceAdded) {
+      lastAdded.current = { clientUuid, handle: d.announceAdded({ headline: scanStrings.added(productName), undo: undoOnce, durationMs: ADDED_TOAST_MS }) }
+      return
+    }
+    d.notify?.(scanStrings.added(productName), 'success', { actionLabel: scanStrings.undo, onAction: undoOnce, durationMs: ADDED_TOAST_MS })
+  }
+
+  /** SSP-12: the Price entry opens on `key`: the "Added" toast of that row's last Scan is dropped (the outlined row confirms it). */
+  const dropAddedFor = (key: string) => {
+    const last = lastAdded.current
+    const row = last ? rowByKey(depsRef.current.session?.rows ?? [], key) : undefined
+    if (!last || !row?.clientUuids.includes(last.clientUuid)) return
+    lastAdded.current = null
+    last.handle?.dismiss()
   }
 
   /** Applies the Result of one Op (or the queueing when null): the beep, the banner, and the Scanned list with its Toast. */
@@ -541,12 +573,9 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   const startPriceEntry = (key?: string): void => {
     const session = depsRef.current.session
     if (!session) return
-    if (key !== undefined) {
-      setPricing({ key })
-      return
-    }
-    const next = nextWithoutPrice(session.rows)
-    setPricing(next ? { key: next.key } : null)
+    const target = key ?? nextWithoutPrice(session.rows)?.key
+    if (target !== undefined) dropAddedFor(target)
+    setPricing(target !== undefined ? { key: target } : null)
   }
 
   const closePriceEntry = (): void => setPricing(null)

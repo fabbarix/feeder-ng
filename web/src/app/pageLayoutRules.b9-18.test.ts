@@ -81,11 +81,11 @@ describe('P43: a toast covers the row being acted on (SSP-12)', () => {
 })
 
 describe('the probe and the scenarios', () => {
-  it('the probe toast-cover fills toastCover, only on the two toast scenarios', () => {
+  it('the probe toast-cover fills toastCover, only on the two toast scenarios and scan-price-keypad (B9-35)', () => {
     const p = api.PROBES.find((x) => x.name === 'toast-cover')
     expect(p).toBeDefined()
     expect(p!.key).toBe('toastCover')
-    expect(p!.scenarios).toEqual(['toast-pricing', 'toast-over-bar'])
+    expect(p!.scenarios).toEqual(['toast-pricing', 'toast-over-bar', 'scan-price-keypad'])
     expect(p!.source).toContain('[data-pricing]')
     expect(p!.source).toContain('.toast')
   })

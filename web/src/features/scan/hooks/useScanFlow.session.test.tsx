@@ -40,10 +40,12 @@ function setup(over: Partial<ScanFlowDeps> = {}) {
     ),
     feedback: { confirm: vi.fn(), reject: vi.fn() },
     notify: vi.fn(),
+    // B9-35: the "Added" toast goes through announceAdded (the controller wires it to useUndoToast), which returns the toast's handle.
+    announceAdded: vi.fn(() => ({ id: 1, dismiss: vi.fn() })),
     newUuid: () => `uuid-${++n}`,
     now: () => new Date('2026-11-13T12:00:00Z'),
     ...over,
-  } as ScanFlowDeps & { notify: ReturnType<typeof vi.fn>; undo: ReturnType<typeof vi.fn>; submit: ReturnType<typeof vi.fn>; setPrices: ReturnType<typeof vi.fn>; setQueuedPrice: ReturnType<typeof vi.fn>; cancelQueued: ReturnType<typeof vi.fn> }
+  } as ScanFlowDeps & { notify: ReturnType<typeof vi.fn>; announceAdded: ReturnType<typeof vi.fn>; undo: ReturnType<typeof vi.fn>; submit: ReturnType<typeof vi.fn>; setPrices: ReturnType<typeof vi.fn>; setQueuedPrice: ReturnType<typeof vi.fn>; cancelQueued: ReturnType<typeof vi.fn> }
   const hook = renderHook(() => {
     const session = useScannedList({ shopId: 1, day: '2026-11-13', store, offline, list: makeList({ lines: [], extras: [] }), system: 'metric' })
     const flow = useScanFlow({ ...deps, session })
@@ -60,6 +62,8 @@ async function seed(h: Harness, entries: SessionEntry[]) {
 const scanCode = (h: Harness, code = '8000500310427') => act(async () => h.hook.result.current.flow.onScan(parse(code, 'ean_13')))
 const rows = (h: Harness) => h.hook.result.current.session.rows
 const flow = (h: Harness) => h.hook.result.current.flow
+/** B9-35: the last "Added" announcement: { headline, undo, durationMs }. */
+const lastAdded = (h: Harness) => h.deps.announceAdded.mock.calls.at(-1)![0] as { headline: string; undo: () => unknown; durationMs?: number }
 const lastNotify = (h: Harness) => h.deps.notify.mock.calls.at(-1) as [string, string, { actionLabel?: string; onAction?: () => void; durationMs?: number }?]
 
 beforeEach(() => vi.clearAllMocks())
@@ -119,13 +123,12 @@ describe('a scan lands in the Scanned list', () => {
     expect(rows(h)).toEqual([])
   })
 
-  it('says "Added Mutti passata 700 g" with Undo for 5 s', async () => {
+  it('says "Added Mutti passata 700 g" with Undo for 5 s, through announceAdded (not the plain notify)', async () => {
     const h = setup()
     await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
     await scanCode(h)
-    const [message, status, options] = lastNotify(h)
-    expect([message, status]).toEqual(['Added Mutti passata 700 g', 'success'])
-    expect(options).toMatchObject({ actionLabel: 'Undo', durationMs: 5000 })
+    expect(lastAdded(h)).toMatchObject({ headline: 'Added Mutti passata 700 g', durationMs: 5000 })
+    expect(h.deps.notify).not.toHaveBeenCalled()
   })
 
   it('the Undo of that toast undoes that scan on the server and takes it off the row', async () => {
@@ -133,7 +136,7 @@ describe('a scan lands in the Scanned list', () => {
     await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
     await scanCode(h)
     await scanCode(h)
-    await act(async () => lastNotify(h)[2]!.onAction!())
+    await act(async () => lastAdded(h).undo())
     expect(h.deps.undo).toHaveBeenCalledWith('uuid-2')
     expect(rows(h)[0]?.clientUuids).toEqual(['uuid-1'])
   })
@@ -144,7 +147,7 @@ describe('toast actions fire once (review)', () => {
     const h = setup()
     await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
     await scanCode(h)
-    const onAction = lastNotify(h)[2]!.onAction!
+    const onAction = lastAdded(h).undo
     await act(async () => { await onAction(); await onAction() })
     expect(h.deps.undo).toHaveBeenCalledTimes(1)
   })
@@ -154,7 +157,7 @@ describe('toast actions fire once (review)', () => {
     await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
     await scanCode(h)
     await scanCode(h)
-    const onAction = lastNotify(h)[2]!.onAction!
+    const onAction = lastAdded(h).undo
     await act(async () => flow(h).decrement('7'))
     expect(h.deps.undo).toHaveBeenCalledTimes(1)
     await act(async () => { await onAction() })
@@ -484,5 +487,59 @@ describe('the flow without a session (Stock-take)', () => {
     const hook = renderHook(() => useScanFlow(deps))
     await act(async () => hook.result.current.onScan(parse('8000500310427', 'ean_13')))
     expect(hook.result.current.sheet?.kind).toBe('stock_take')
+  })
+})
+
+
+// B9-35 (SSP-12): the toast of the Scan that opened the Price keypad is dropped: the outlined row is the confirmation and its Remove is in
+// the row's strip. announceAdded returns the toast's handle; opening the Price entry for the row of the announced Scan dismisses it.
+// Another row's keypad leaves it alone (the hold in useScanController keeps it from showing until the keypad closes).
+describe('the keypad drops the Added toast of its own Scan (SSP-12)', () => {
+  it('startPriceEntry(key) for the row that was just scanned dismisses its Added toast, once', async () => {
+    const h = setup()
+    await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
+    await scanCode(h)
+    const handle = h.deps.announceAdded.mock.results.at(-1)!.value as { dismiss: ReturnType<typeof vi.fn> }
+    act(() => flow(h).startPriceEntry('7'))
+    expect(handle.dismiss).toHaveBeenCalledTimes(1)
+    act(() => flow(h).closePriceEntry())
+    act(() => flow(h).startPriceEntry('7'))
+    expect(handle.dismiss).toHaveBeenCalledTimes(1)
+  })
+
+  it('startPriceEntry() with no key (the next row without a Price) drops it when that row is the scanned one', async () => {
+    const h = setup()
+    await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
+    // toiletPaper has no Price, so it is the next row without one (passata's lastPriceCents gives it a Price)
+    await scanCode(h, '8000500310434')
+    const handle = h.deps.announceAdded.mock.results.at(-1)!.value as { dismiss: ReturnType<typeof vi.fn> }
+    act(() => flow(h).startPriceEntry())
+    expect(handle.dismiss).toHaveBeenCalledTimes(1)
+  })
+
+  it('the keypad of another row leaves the Added toast alone', async () => {
+    const h = setup()
+    await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
+    await scanCode(h, '8000500310434')
+    await scanCode(h)
+    const handle = h.deps.announceAdded.mock.results.at(-1)!.value as { dismiss: ReturnType<typeof vi.fn> }
+    act(() => flow(h).startPriceEntry('31'))
+    expect(handle.dismiss).not.toHaveBeenCalled()
+  })
+
+  it('without announceAdded there is nothing to drop and the keypad opens without error', async () => {
+    const h = setup({ announceAdded: undefined })
+    await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
+    await scanCode(h)
+    expect(() => act(() => flow(h).startPriceEntry('7'))).not.toThrow()
+  })
+
+  it('without announceAdded (Stock-take, older callers) the Added toast falls back to notify with Undo for 5 s', async () => {
+    const h = setup({ announceAdded: undefined })
+    await waitFor(() => expect(h.hook.result.current.session.loaded).toBe(true))
+    await scanCode(h)
+    const [message, status, options] = lastNotify(h)
+    expect([message, status]).toEqual(['Added Mutti passata 700 g', 'success'])
+    expect(options).toMatchObject({ actionLabel: 'Undo', durationMs: 5000 })
   })
 })
