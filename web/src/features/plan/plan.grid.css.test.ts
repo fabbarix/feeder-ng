@@ -75,3 +75,23 @@ describe('PC-06: the chip line', () => {
     expect(b).toMatch(/color\s*:\s*var\(--color-muted\)/)
   })
 })
+
+describe("PC-07: the compact Couldn't plan tile", () => {
+  it('the tile is a size container, so a cause row can put its fix under the text below 22 rem of tile width', () => {
+    expect(d('.plan-couldnt')['container-type']).toBe('inline-size')
+    expect(css).toMatch(/@container[^{]*\(max-width:\s*22rem\)/)
+  })
+  it('a cause row is icon | text | fix on a grid; the text column may shrink (minmax(0, 1fr)); rows are told apart by a 1 px line', () => {
+    expect(bodyOf('.couldnt-cause')).toMatch(/display\s*:\s*grid/)
+    expect(bodyOf('.couldnt-cause')).toMatch(/grid-template-columns\s*:[^;]*minmax\(0,\s*1fr\)/)
+    expect(bodyOf('.couldnt-cause + .couldnt-cause')).toMatch(/border-top\s*:\s*1px solid/)
+  })
+  it('the cause icon is info-coloured, warn-coloured in a warn row (DS-06 token, never spoil)', () => {
+    expect(bodyOf(".couldnt-cause[data-tone='warn'] .couldnt-cause__icon")).toMatch(/var\(--status-warn-fg\)/)
+    expect(css).not.toMatch(/--status-spoil/)
+  })
+  it('the tile header holds the overline and "Show which meals" on one row', () => {
+    expect(bodyOf('.couldnt-head')).toMatch(/display\s*:\s*flex/)
+    expect(bodyOf('.couldnt-head')).toMatch(/justify-content\s*:\s*space-between/)
+  })
+})
