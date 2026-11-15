@@ -8,11 +8,12 @@ describe('cameraFailure', () => {
   })
 
   it.each([
-    // B9-35 (SSP-06): the camera bar's message is short; a blocked camera and an absent one have their own words, a busy or failed one keeps its sentence.
+    // B9-35 (SSP-06): the camera bar's message is short, one line at 375 px. Main-session ruling: a busy and a failed camera get short
+    // words too ("The camera is busy", "The camera did not start"), not the old sentences.
     ['denied', true, scanStrings.cameraBarDenied],
     ['no_camera', true, scanStrings.noCameraBar],
-    ['in_use', true, scanStrings.cameraInUse],
-    ['error', true, scanStrings.cameraError],
+    ['in_use', true, scanStrings.cameraBarInUse],
+    ['error', true, scanStrings.cameraBarError],
     ['unsupported', false, scanStrings.noCameraBar],
   ] as const)('%s: retry %s and its own message', (status, canRetry, message) => {
     expect(cameraFailure(status)).toEqual({ status, canRetry, message })

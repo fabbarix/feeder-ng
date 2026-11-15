@@ -9,6 +9,9 @@ describe('SSP-06 copy', () => {
   it.each([
     ['noCameraBar', 'No camera on this device'],
     ['cameraBarDenied', 'Feeder may not use the camera'],
+    // main-session ruling: every camera bar message is short and fits one line at 375 px
+    ['cameraBarInUse', 'The camera is busy'],
+    ['cameraBarError', 'The camera did not start'],
     ['tryAgain', 'Try again'],
     ['typeBarcode', 'Type a barcode'],
     ['manualBarcodeHint', 'The digits under the bars. Press Use for each one.'],
