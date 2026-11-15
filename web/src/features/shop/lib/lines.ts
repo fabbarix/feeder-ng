@@ -74,6 +74,8 @@ export interface ListEntry {
   details?: LineDetails
   /** B9-34 (SSP-02): true on the open entry "more:<ingredientId>" that carries a ticked Line's growth. */
   moreSince?: boolean
+  /** B9-54 (RES-03): 'pending' when one of the entry's own additions is waiting in the offline queue (`syncedAt` null); absent otherwise. */
+  sync?: 'pending'
 }
 
 /** "1.4 kg · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1.4 kg" with no pack suggestion. */

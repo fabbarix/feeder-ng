@@ -8,6 +8,8 @@ import { onQueueChange } from '../lib/queueEvents'
 
 export interface ShellStatus {
   pendingScans: number
+  /** B9-54 (RES-03): Ticks by hand waiting in the same queue (a shop_tick or shop_untick); the banner says "2 Scans and 1 Tick waiting to sync" */
+  pendingTicks: number
 }
 
 /**
@@ -46,5 +48,5 @@ export function useShellStatus(store?: OpStore): ShellStatus {
     }
   }, [source])
 
-  return { pendingScans }
+  return { pendingScans, pendingTicks: 0 }
 }

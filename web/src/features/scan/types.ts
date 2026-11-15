@@ -3,7 +3,7 @@ import type { IngredientKind } from '../ingredients/types'
 import type { Catalog } from './lib/barcode'
 
 export type BaseUnit = 'g' | 'ml' | 'piece'
-export type OpKind = 'shop_scan' | 'shop_unknown' | 'stock_take'
+export type OpKind = 'shop_scan' | 'shop_unknown' | 'stock_take' | 'shop_tick' | 'shop_untick'
 export type StockTakeAction = 'plus_pack' | 'minus_pack' | 'set_total'
 export type BarcodeScope = 'global' | 'shop'
 /** SR3: the kind of the Ingredient a Product belongs to (H4); absent from an older server. */
@@ -44,6 +44,16 @@ export interface Op {
   scope?: BarcodeScope
   action?: StockTakeAction
   total?: number
+  /** B9-54 (RES-03), shop_tick / shop_untick of a Line: the Ingredient (with `rangeTo`) */
+  ingredientId?: number
+  /** B9-54 (RES-03), shop_tick of an Ingredient extra: the extra's id (a Line's tick names `ingredientId` and `rangeTo`) */
+  extraId?: number
+  /** B9-54, shop_tick: the Line quantity the phone showed when the User ticked (SSP-02's Q0); `quantity` is the amount added to Stock (0 = Tick without adding) */
+  covers?: number
+  /** B9-54, shop_untick: the client id of the tick (addition) to take off; else `ingredientId` + `rangeTo` unticks the whole Line */
+  tickClientUuid?: string
+  /** B9-54, shop_tick: a tick of the "more since your tick" row. Kept on the phone and sent as it is (the server ignores it): a second purchase the User asked for is not "ticked twice". */
+  more?: boolean
 }
 
 export type ResultStatus = 'applied' | 'duplicate' | 'rejected'
@@ -72,11 +82,30 @@ export interface ScanApplied {
   total?: number
 }
 
+/** B9-54 (RES 2): an addition made to the Line before a queued tick synced; `mine` = the same User's (their other phone). */
+export interface AlsoTickedBy {
+  name: string
+  quantity: number
+  by: 'hand' | 'scan'
+  mine: boolean
+  /** RFC 3339 instant it was ticked (the phone's time for a queued tick) */
+  tickedAt: string
+}
+
+/** B9-54: what a shop_tick did; `lotId` null = nothing added to Stock. */
+export interface AppliedTick {
+  lotId: number | null
+  added: number
+  alsoTickedBy: AlsoTickedBy[]
+}
+
 export interface ScanResult {
   clientUuid: string
   status: ResultStatus
   error?: { code: string; message: string }
   scan?: ScanApplied
+  /** B9-54: set on an applied or duplicate shop_tick */
+  tick?: AppliedTick
 }
 
 export interface OfflineProduct {

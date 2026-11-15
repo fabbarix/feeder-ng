@@ -11,7 +11,7 @@ export interface UseSyncQueueOptions {
   /** navigator.onLine by default */
   isOnline?: () => boolean
   /** called with the results of each flush that sent something (results empty when only Pictures were given up) */
-  onResults?: (results: ScanResult[], notices: SyncNotice[]) => void
+  onResults?: (results: ScanResult[], notices: SyncNotice[], sent: Op[]) => void
   /** PPX: called with the operation when enqueue could not keep its Picture (the scan is queued without it) */
   onPictureNotStored?: (op: Op) => void
 }
@@ -34,6 +34,12 @@ export interface UseSyncQueueResult {
   cancel(clientUuid: string): Promise<boolean>
   /** re-read the counts after the queue was changed elsewhere */
   refresh(): Promise<void>
+  /** B9-54: the Ops still waiting, in the order they were made (Scans and Ticks); the Shop applies its Ticks to its list (shop/lib/pendingTicks) */
+  pendingOps: readonly Op[]
+  /** B9-54: the Ops the server refused in this session, until dismissed (the "Tick not synced" rows and notices read them) */
+  rejectedOps: readonly Op[]
+  /** B9-54: OfflineQueue.updateTick: true when the waiting Tick took the new amount; false when it already left the queue (the caller PATCHes the synced Tick) */
+  updateQueuedTick(clientUuid: string, quantity: number): Promise<boolean>
 }
 
 const defaultOnline = (): boolean => (typeof navigator === 'undefined' ? true : navigator.onLine)
@@ -80,7 +86,7 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
       if (isOnlineRef.current()) {
         retryRef.current = setTimeout(() => void flushRef.current(), backoffMs(failuresRef.current))
       }
-      if (pictureFound.length > 0) onResultsRef.current?.([], pictureFound)
+      if (pictureFound.length > 0) onResultsRef.current?.([], pictureFound, [])
       await refreshCounts()
       return
     }
@@ -89,7 +95,7 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
       await refreshCounts()
       return
     }
-    onResultsRef.current?.(results, [...syncNotices(results), ...pictureFound])
+    onResultsRef.current?.(results, [...syncNotices(results), ...pictureFound], [])
     await refreshCounts()
   }, [clearRetry, refreshCounts])
   flushRef.current = flush
@@ -140,5 +146,5 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     [],
   )
 
-  return { online, pendingCount, rejectedCount, updateQueuedPrice, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }
+  return { online, pendingCount, rejectedCount, pendingOps: [], rejectedOps: [], updateQueuedTick: async () => false, updateQueuedPrice, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }
 }

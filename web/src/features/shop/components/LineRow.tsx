@@ -18,6 +18,8 @@ export interface LineRowProps {
   onOpen: (entry: ListEntry, group: RowGroup) => void
   /** B9-34: this row's tick is in flight (aria-busy and aria-disabled; it stays focusable) */
   pending?: boolean
+  /** B9-54 (RES-03): 'failed' = the Tick of this (open) row was refused on sync: "Tick not synced", the danger bar. A waiting Tick is `entry.sync`. */
+  sync?: 'pending' | 'failed'
   /** batch w5a (P38): the row's name when its title is not unique on the page (lib/rows rowNames); default the title */
   name?: string
 }

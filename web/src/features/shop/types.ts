@@ -155,7 +155,7 @@ export interface TickResult {
   /** B9-23: Base Units this tick added to Stock (0 when none) */
   added?: number
   /** B9-23: others who ticked the same Line meanwhile */
-  alsoTickedBy?: { name: string; quantity: number; by: 'hand' | 'scan' }[]
+  alsoTickedBy?: { name: string; quantity: number; by: 'hand' | 'scan'; mine?: boolean; tickedAt?: string }[]
 }
 
 /** B9-23: PATCH /api/shopping/ticks. `quantity` 0 is Take back (the tick stays); `clientUuid` names the addition. */

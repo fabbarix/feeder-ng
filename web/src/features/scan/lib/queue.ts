@@ -63,6 +63,8 @@ export interface FlushResult {
   /** the server was unreachable (network error or 5xx); everything stays queued */
   offline: boolean
   results: ScanResult[]
+  /** B9-54: the operations this flush sent, in the order sent (their kinds tell a Tick's result from a Scan's); empty when nothing was sent */
+  sent?: Op[]
   /** PPX: Pictures given up in this flush; absent when there were none */
   pictureFailures?: PictureFailure[]
 }
@@ -198,6 +200,15 @@ export class OfflineQueue {
       await this.store.put({ ...queued, op })
       return true
     })
+  }
+
+  /**
+   * B9-54 (RES-03): sets `quantity` (the amount added to Stock; 0 = Tick without adding) on the still-queued shop_tick `clientUuid`, in
+   * place, so its order is kept. true when it was queued and changed; false when it already left the queue (sent, applied or rejected), or
+   * is not a shop_tick: the caller then PATCHes the synced tick. Runs in the queue's lock, like updatePrice.
+   */
+  async updateTick(_clientUuid: string, _quantity: number): Promise<boolean> {
+    return false
   }
 
   /** Operations still to send, in order. */

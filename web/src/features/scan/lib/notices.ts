@@ -1,6 +1,6 @@
 // Notices after a sync (functional spec §10.3). Plain TypeScript. Stubs until implemented.
 import { scanStrings } from '../strings'
-import type { ScanResult } from '../types'
+import type { Op, ScanResult } from '../types'
 import type { PictureFailure } from './queue'
 
 export interface SyncNotice {
@@ -13,7 +13,7 @@ export interface SyncNotice {
  * One notice per rejected result and one per result merged into a Product that this same batch did NOT create
  * (a merge into the sender's own earlier creation is not news). Order follows the results. Texts from scanStrings.
  */
-export function syncNotices(results: readonly ScanResult[]): SyncNotice[] {
+export function syncNotices(results: readonly ScanResult[], _sent?: readonly Op[]): SyncNotice[] {
   const createdInBatch = new Set<number>()
   for (const r of results) if (r.scan?.productCreated) createdInBatch.add(r.scan.productId)
   const notices: SyncNotice[] = []
