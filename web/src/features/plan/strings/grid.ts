@@ -144,6 +144,22 @@ export const gridStrings = {
     thisCourse: 'this Course',
   },
   couldntShowAll: (n: number) => `Show all ${n}`,
+  // B9-32 (PC-07): Mark Recipes as <Course> on the Plan (components/MarkCourseRecipesSheet, lib/markRecipes).
+  markContext: (n: number, noun: string) => `Couldn't plan ${n} ${noun}`,
+  markLede: (course: string) => `The planner fills ${course} only from Recipes marked with it. Tick the ones you would serve as ${course}.`,
+  markSearch: 'Search Recipes',
+  markPrimary: (n: number, course: string) => (n === 0 ? `Mark Recipes as ${course}` : n === 1 ? `Mark 1 Recipe as ${course}` : `Mark ${n} Recipes as ${course}`),
+  markNoCourse: 'No Course yet',
+  markAllMarked: (course: string) => `Every Recipe is already marked as ${course}.`,
+  markNoMatch: 'No Recipe has that name.',
+  markLoading: 'Loading the Recipes…',
+  markLoadFailed: 'The Recipes could not be loaded.',
+  markedToast: (n: number, course: string) => (n === 1 ? `1 Recipe marked as ${course}` : `${n} Recipes marked as ${course}`),
+  markedPlanned: (n: number) => (n === 1 ? '1 meal planned' : `${n} meals planned`),
+  markedNonePlanned: 'No new meals planned yet',
+  unmarkedToast: (n: number, course: string) => (n === 1 ? `1 Recipe is no longer marked as ${course}` : `${n} Recipes are no longer marked as ${course}`),
+  /** B9-32 (PC-07): the compact tile's header button; it opens the sheet of the affected meals. */
+  couldntShowMeals: 'Show which meals',
   couldntHideList: 'Hide the list',
   couldntSlotRuleOne: 'Nothing that matches its Slot Rule is available.',
   couldntSlotRuleMany: 'Nothing that matches their Slot Rules is available.',
@@ -179,6 +195,8 @@ export const gridStrings = {
   allCookedShort: 'All Cooked',
   notCookedSlot: 'Not cooked: whole slot',
   slotActions: (slot: string) => `${slot} actions`,
+  /** B9-32 (A11Y-09): the IconSet of a hero Course row. */
+  courseActions: (course: string) => `${course} actions`,
   // B9-32 (A11Y-08): row action names (lib/actionNames.ts); `when` is "Sun 15 Breakfast".
   actionSwap: (recipe: string, when: string) => `Swap ${recipe}, ${when}`,
   actionPin: (recipe: string, when: string) => `Pin ${recipe}, ${when}`,

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { IconButton, Icon } from '../../../ui'
+import { IconSet } from '../../../ui/IconSet'
+import { actionName, dayLabel } from '../lib/actionNames'
 import { timeCaption } from '../lib/slotDate'
 import { slotIcon } from '../lib/hero'
 import { slotHead } from '../lib/rowActions'
-import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotDateActions, SlotDayKey, SlotKey } from '../types'
 import { SlotMenu } from './SlotMenu'
 
@@ -21,6 +22,7 @@ export interface SlotHeaderProps {
 export function SlotHeader({ slot, today, onCook, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions }: SlotHeaderProps): ReactNode {
   const head = slotHead(slot, today, dateActions !== undefined)
   const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
+  const day = dayLabel(slot.date)
   return (
     <div className="plan-slot-head">
       <span className="plan-slot-head__label">
@@ -29,12 +31,12 @@ export function SlotHeader({ slot, today, onCook, onMarkAllCooked, onNotCookedSl
       </span>
       <span className="plan-slot-head__time">{timeCaption(slot) ?? slot.time}</span>
       {head.cook || head.menu ? (
-        <span className="plan-slot-head__actions">
-          {head.cook ? <IconButton icon="cook" label={s.cook} size="compact" onClick={() => onCook(slotKey)} /> : null}
+        <IconSet className="plan-slot-head__actions">
+          {head.cook ? <IconButton icon="cook" label={actionName('cook', { day, slot: slot.name })} size="compact" onClick={() => onCook(slotKey)} /> : null}
           {head.menu ? (
-            <SlotMenu slot={slot} today={today} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} dateActions={dateActions} size="compact" />
+            <SlotMenu slot={slot} today={today} dayLabel={day} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} dateActions={dateActions} size="compact" />
           ) : null}
-        </span>
+        </IconSet>
       ) : null}
     </div>
   )

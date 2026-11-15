@@ -1,7 +1,8 @@
 import type { IconName } from '../../../ui/icons'
 import { slotHash } from '../../settings/lib/slotAnchor'
 import { planStrings as s } from '../strings'
-import type { PlanEntry, PlanSlot } from '../types'
+import type { PlanEntry, PlanSlot, SlotKey } from '../types'
+import { actionName, dayLabel } from './actionNames'
 import { weekdayName } from './phrase'
 
 export type Cause =
@@ -275,4 +276,59 @@ function isEntry(slot: PlanSlot | PlanEntry): slot is PlanEntry {
 export function shortCause(cause: Cause, courseName?: string | null): string {
   if (cause === 'no_course_recipes') return courseName ? s.causeChipCourse(courseName) : s.causeChip.no_course_recipes
   return s.causeChip[cause]
+}
+
+/** B9-32 (PC-07): one affected meal in the "Show which meals" sheet. */
+export interface CouldntMeal {
+  id: string
+  key: SlotKey
+  slotName: string
+  /** The Course of the cell; null when the line stands for the whole Meal Slot. */
+  courseName: string | null
+  /** "Choose a Recipe for Dessert, Wed 11 Dinner"; null when nobody attends (nobody to cook for). */
+  chooseLabel: string | null
+  /** Excluded: the cell on Review Exclusions, and the link's name ("Wed 11 Nov · Dinner · Side"). */
+  to?: string
+  linkLabel?: string
+}
+
+export interface CouldntDay {
+  date: string
+  /** "Tue 10 Nov". */
+  label: string
+  meals: CouldntMeal[]
+}
+
+/** B9-32 (PC-07): a cause's affected meals by day, in plan order: one line per cell, or per Meal Slot when the line stands for it (`cellItems`). */
+export function mealsByDay(group: CauseGroup): CouldntDay[] {
+  const days: CouldntDay[] = []
+  const done = new Set<string>()
+  for (const cell of group.slots) {
+    const item = group.items.find((i) => i.id === cellId(cell) || i.key === cellId(cell) || i.key === slotKey(cell))
+    const lineKey = item?.key ?? cellId(cell)
+    if (done.has(lineKey)) continue
+    done.add(lineKey)
+    const wholeSlot = item !== undefined && item.key === slotKey(cell)
+    const key: SlotKey = { date: cell.date, mealSlotId: cell.mealSlotId, courseId: cell.courseId ?? 0 }
+    const day = dayLabel(cell.date)
+    const meal: CouldntMeal = {
+      id: lineKey,
+      key,
+      slotName: cell.name,
+      courseName: wholeSlot && group.cause === 'nobody_attending' ? null : (cell.courseName ?? null),
+      chooseLabel: group.cause === 'nobody_attending' ? null : actionName('choose', { course: cell.courseName ?? '', day, slot: cell.name }),
+      ...(item?.to ? { to: item.to, linkLabel: item.text } : {}),
+    }
+    const label = dayMonthOf(cell.date)
+    const last = days[days.length - 1]
+    if (last && last.date === cell.date) last.meals.push(meal)
+    else days.push({ date: cell.date, label, meals: [meal] })
+  }
+  return days
+}
+
+/** "Tue 10 Nov". */
+function dayMonthOf(date: string): string {
+  const [, m, d] = date.split('-').map(Number)
+  return s.dayMonth(weekdayName(date, 'short'), d, MONTHS[(m ?? 1) - 1]!)
 }

@@ -7,7 +7,7 @@ import type { PlannedMeal, PlanCourse, Why } from '../types'
 import { addBoughtChip } from './bought'
 import type { PlanChip } from './chips'
 import { leftoverChip } from './chips'
-import { causeOf, shortReason, toneOf, toneStyle } from './couldntGroups'
+import { causeOf, shortCause, toneOf, toneStyle } from './couldntGroups'
 import { phraseWhy, weekdayName, type PhraseContext } from './phrase'
 
 /** One chip of a row, with its look decided: `outline` is "Leftover for", `icon` an accent-coloured glyph on a why chip. */
@@ -123,7 +123,10 @@ export function rowChips(meal: PlannedMeal, ctx: PhraseContext, whole?: PlanChip
   })
 }
 
-/** An empty Course: its short reason is the row title, its "Not planned" chip is in the tone of its cause. */
+/**
+ * B9-32 (PC-07): an empty Course row. Unfilled with a reason: title "Not planned", one chip naming the short cause in the
+ * tone of its cause. Empty with no reason: "Nothing planned", no chip.
+ */
 export interface EmptyRowModel {
   title: string
   chip: RowChip | null
@@ -132,12 +135,12 @@ export interface EmptyRowModel {
 }
 
 export function emptyRow(course: PlanCourse): EmptyRowModel {
-  if (course.unfilled === null) return { title: s.nothingPlanned, chip: null, canChoose: true }
+  if (course.unfilled === null || course.unfilled === undefined) return { title: s.nothingPlanned, chip: null, canChoose: true }
   const cause = causeOf(course)
   const tone = toneStyle(toneOf(cause)).chip
   return {
-    title: shortReason(cause),
-    chip: { key: 'status:not-planned', kind: 'status', status: tone.status, label: s.notPlanned },
+    title: s.notPlanned,
+    chip: { key: `cause:${cause}`, kind: 'status', status: tone.status, label: shortCause(cause, course.name) },
     canChoose: cause !== 'nobody_attending',
   }
 }

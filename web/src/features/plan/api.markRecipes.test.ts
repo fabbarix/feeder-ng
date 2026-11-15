@@ -13,4 +13,11 @@ describe('planApi.markRecipes', () => {
     expect(api.calls.map((c) => `${c.method} ${c.path}`)).toEqual(['POST /api/courses/3/recipes'])
     expect(api.calls[0]!.body).toEqual({ recipeIds: [11, 12] })
   })
+
+  it('unmarkRecipes (the Undo, ruling 2) POSTs the ids to …/recipes/unmark', async () => {
+    const answer = { unmarked: 2, unmarkedIds: [11, 12], changes: [] }
+    const api = mockApi({ 'POST /api/courses/3/recipes/unmark': answer })
+    expect(await planApi.unmarkRecipes(3, [11, 12])).toEqual(answer)
+    expect(api.calls[0]!.body).toEqual({ recipeIds: [11, 12] })
+  })
 })

@@ -23,6 +23,12 @@ function open(over: Record<string, unknown> = {}, onClose = vi.fn()) {
   return { api, onClose }
 }
 const sheet = () => screen.findByRole('dialog', { name: 'Mark Recipes as Dessert' })
+const findToast = (text: RegExp) =>
+  waitFor(() => {
+    const t = [...document.querySelectorAll<HTMLElement>('.toast')].find((e) => text.test(e.textContent ?? ''))
+    if (!t) throw new Error(`no toast ${text}`)
+    return t
+  })
 
 describe('MarkCourseRecipesSheet', () => {
   it('is titled "Mark Recipes as Dessert", with the context "Couldn\'t plan 7 Desserts" and the lede', async () => {
@@ -79,8 +85,14 @@ describe('MarkCourseRecipesSheet', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  // Main-session ruling 2 (B9-32 developer): Undo undoes what Mark did. It unmarks the Recipes this call newly marked (`markedIds`) through
+  // POST /api/courses/<id>/recipes/unmark, which replans, instead of a plan restore (that left the Recipes marked, so the next replan
+  // filled Dessert again). The test author's version undid with POST /api/plan/restore { undoToken }.
   it('Mark POSTs the ticked Recipe ids to the Course, closes, and the toast says how many were marked and how many meals were planned, with Undo', async () => {
-    const { api, onClose } = open({ 'POST /api/courses/3/recipes': { marked: 2, changes, undoToken: 'tok-9' }, 'POST /api/plan/restore': { changes: [] } })
+    const { api, onClose } = open({
+      'POST /api/courses/3/recipes': { marked: 2, markedIds: [11, 12], changes, undoToken: 'tok-9' },
+      'POST /api/courses/3/recipes/unmark': { unmarked: 2, unmarkedIds: [11, 12], changes: [] },
+    })
     const dialog = await sheet()
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
     await userEvent.click(within(dialog).getByRole('checkbox', { name: /Panna cotta/ }))
@@ -88,15 +100,52 @@ describe('MarkCourseRecipesSheet', () => {
     await waitFor(() => expect(api.callsTo('POST', '/api/courses/3/recipes')).toHaveLength(1))
     expect(api.callsTo('POST', '/api/courses/3/recipes')[0]!.body).toEqual({ recipeIds: [11, 12] })
     await waitFor(() => expect(onClose).toHaveBeenCalled())
-    const toast = await waitFor(() => {
-      const t = [...document.querySelectorAll<HTMLElement>('.toast')].find((e) => /2 Recipes marked as Dessert/.test(e.textContent ?? ''))
-      if (!t) throw new Error('no toast')
-      return t
-    })
+    const toast = await findToast(/2 Recipes marked as Dessert/)
     expect(toast).toHaveTextContent('3 meals planned')
-    expect(toast.querySelector('svg')).toBeNull() // no success icon on a toast
+    expect(toast.querySelector('.toast__title svg')).toBeNull() // no success icon on a toast (the round Dismiss keeps its X)
     await userEvent.click(within(toast).getByRole('button', { name: /^Undo/ }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/restore')[0]?.body).toEqual({ undoToken: 'tok-9' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/courses/3/recipes/unmark')[0]?.body).toEqual({ recipeIds: [11, 12] }))
+    expect(api.callsTo('POST', '/api/plan/restore')).toHaveLength(0)
+    const after = await findToast(/2 Recipes are no longer marked as Dessert/)
+    expect(after.querySelector('.toast__title svg')).toBeNull() // plain, no icon
+  })
+
+  it('Undo unmarks only the Recipes the call newly marked (markedIds), not every ticked one', async () => {
+    const { api } = open({
+      'POST /api/courses/3/recipes': { marked: 1, markedIds: [12], changes, undoToken: 'tok-9' },
+      'POST /api/courses/3/recipes/unmark': { unmarked: 1, unmarkedIds: [12], changes: [] },
+    })
+    const dialog = await sheet()
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: /Panna cotta/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 2 Recipes as Dessert' }))
+    const toast = await findToast(/1 Recipe marked as Dessert/)
+    await userEvent.click(within(toast).getByRole('button', { name: /^Undo/ }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/courses/3/recipes/unmark')[0]?.body).toEqual({ recipeIds: [12] }))
+    await findToast(/1 Recipe is no longer marked as Dessert/)
+  })
+
+  it('a refused Undo is a warning toast "Nothing was undone"', async () => {
+    open({
+      'POST /api/courses/3/recipes': { marked: 1, markedIds: [11], changes, undoToken: 'tok-9' },
+      'POST /api/courses/3/recipes/unmark': { status: 404, json: { error: { code: 'not_found', message: 'Not found' } } },
+    })
+    const dialog = await sheet()
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe as Dessert' }))
+    const toast = await findToast(/1 Recipe marked as Dessert/)
+    await userEvent.click(within(toast).getByRole('button', { name: /^Undo/ }))
+    const refused = await findToast(/Nothing was undone/)
+    expect(refused).toHaveAttribute('data-status', 'warning')
+  })
+
+  it('marked Recipes that planned nothing new can still be undone (the Undo unmarks them)', async () => {
+    open({ 'POST /api/courses/3/recipes': { marked: 1, markedIds: [11], changes: [] } })
+    const dialog = await sheet()
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe as Dessert' }))
+    const toast = await findToast(/1 Recipe marked as Dessert/)
+    expect(within(toast).getByRole('button', { name: /^Undo/ })).toBeInTheDocument()
   })
 
   it('"1 Recipe marked as Dessert", and with nothing planned the subline says so instead of "0 meals planned"', async () => {
@@ -110,7 +159,7 @@ describe('MarkCourseRecipesSheet', () => {
       return t
     })
     expect(toast.textContent).not.toMatch(/0 meals planned/)
-    expect(within(toast).queryByRole('button', { name: /^Undo/ })).not.toBeInTheDocument() // no token, nothing to undo
+    expect(within(toast).queryByRole('button', { name: /^Undo/ })).not.toBeInTheDocument() // no markedIds, nothing to undo
   })
 
   it('a refusal stays in the sheet as the form error (role alert inside the dialog), keeps the ticks and the sheet open', async () => {

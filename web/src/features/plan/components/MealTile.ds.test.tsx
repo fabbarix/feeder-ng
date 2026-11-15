@@ -65,7 +65,7 @@ describe('MealTile structure', () => {
   it('an empty single slot is one dashed row with Choose a Recipe', async () => {
     const { h, root } = setup(slot({ date: today, meal: null, unfilled: { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 2, exclusion: 2, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }))
     expect(root.querySelector('li.list-row')).toHaveAttribute('data-unfilled')
-    await userEvent.click(screen.getByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Choose a Recipe for / }))
     expect(h.onChoose).toHaveBeenCalledOnce()
   })
 

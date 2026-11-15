@@ -85,7 +85,7 @@ describe('several Courses: one slot block', () => {
     const h = setup(courseSlot([main(), side({ meal: null, unfilled })]))
     const item = rowOf('Side')
     expect(item).toHaveAttribute('data-unfilled')
-    await userEvent.click(within(item).getByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(within(item).getByRole('button', { name: /^Choose a Recipe for / }))
     expect(h.onChoose).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2, courseId: 2 })
   })
 

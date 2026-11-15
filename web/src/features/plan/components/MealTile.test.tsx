@@ -169,7 +169,7 @@ describe('MealTile (on a day tile)', () => {
   it('a slot with nothing planned and no reason just says so', () => {
     setup(slot({ meal: null }))
     expect(screen.getByText('Nothing planned')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Choose a Recipe' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Choose a Recipe for / })).toBeInTheDocument()
   })
 
   // ds-plan: the 2-line clamp is ListRow's; the full name stays the row's accessible name.

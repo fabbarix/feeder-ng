@@ -87,7 +87,7 @@ describe('CourseRow', () => {
     const h = setup(sideCourse({ meal: null }))
     const item = screen.getByRole('listitem', { name: 'Side' })
     expect(item.querySelector('[data-unfilled]')).not.toBeNull()
-    await userEvent.click(within(item).getByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(within(item).getByRole('button', { name: /^Choose a Recipe for / }))
     expect(h.onChoose).toHaveBeenCalledWith(key)
   })
 
