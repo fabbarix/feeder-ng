@@ -2,16 +2,17 @@
 // The Add… seam: pressing Add… on a Not scanned row calls `renderAdd` (the new-Product sheet, wired at integration) with the row.
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { formatPriceMinor } from '../../../ui/lib/moneyInput'
-import { Button, FormActions, IconButton, Page, StickyActionBar, useConfirm, useToast } from '../../../ui'
-import { useCurrency } from '../../products/hooks/useCurrency'
+import { Button, FormActions, Icon, IconButton, Page, StickyActionBar, useConfirm, useToast } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
 import { ReceiptAlert } from '../components/ReceiptAlert'
+import { useMoney } from '../hooks/useMoney'
 import { ReceiptPageHeader } from '../components/ReceiptPageHeader'
 import { ReviewSection } from '../components/ReviewSection'
 import { ReviewSummary } from '../components/ReviewSummary'
 import { useReceiptReview } from '../hooks/useReceiptReview'
 import { noteTexts, appliedToast, applyLabel, localDay } from '../lib/reviewCopy'
 import { reviewRowViews } from '../lib/reviewRows'
+import { acceptableCount } from '../lib/reviewState'
 import { receiptStrings as t } from '../strings'
 import type { AddDraft, Proposal } from '../types'
 import '../receipt.css'
@@ -30,17 +31,19 @@ export interface ReceiptReviewScreenProps {
   products?: { id: number; name: string }[]
 }
 
-export function ReceiptReviewScreen({ renderAdd }: ReceiptReviewScreenProps = {}) {
+export function ReceiptReviewScreen({ renderAdd, products }: ReceiptReviewScreenProps = {}) {
   const navigate = useNavigate()
   const toast = useToast()
   const confirm = useConfirm()
-  const currency = useCurrency()
-  const money = useCallback((cents: number) => formatPriceMinor(cents, currency, 'en'), [currency])
+  const money = useMoney()
   const today = localDay(new Date())
   const [adding, setAdding] = useState<Proposal>()
+  // B9-50: "Clear all" answers a press of Accept all; rows the read checked by default still offer "Accept all N".
+  const [accepted, setAccepted] = useState(false)
 
   const onApplied = useCallback(
     (applied: number) => {
+      // A plain success toast: no icon (R-D+).
       toast.show(appliedToast(applied), { status: 'success' })
       navigate('/scan')
     },
@@ -71,9 +74,9 @@ export function ReceiptReviewScreen({ renderAdd }: ReceiptReviewScreenProps = {}
       review.sections.map((section) => ({
         id: section.id,
         title: section.title,
-        items: reviewRowViews(section.proposals, { rows: review.rows, state: review.state, money, today, highlightId }),
+        items: reviewRowViews(section.proposals, { rows: review.rows, state: review.state, money, today, highlightId, products }),
       })),
-    [review.sections, review.rows, review.state, money, today, highlightId],
+    [review.sections, review.rows, review.state, money, today, highlightId, products],
   )
 
   if (!review.stored) {
@@ -88,6 +91,8 @@ export function ReceiptReviewScreen({ renderAdd }: ReceiptReviewScreenProps = {}
   }
 
   const read = review.stored.read
+  const acceptable = acceptableCount(read.proposals)
+  const showClear = accepted && review.allAccepted
   const addOpen = adding && renderAdd ? renderAdd({
     proposal: adding,
     draft: review.state.adds[adding.id],
@@ -108,9 +113,24 @@ export function ReceiptReviewScreen({ renderAdd }: ReceiptReviewScreenProps = {}
         money={money}
         notes={noteTexts(read.notes, money)}
       />
-      <Button variant="secondary" block="always" onClick={review.allAccepted ? review.clearAll : review.acceptAll}>
-        {review.allAccepted ? t.clearAll : t.acceptAll}
-      </Button>
+      {acceptable > 0 ? (
+        <Button
+          variant="secondary"
+          block="always"
+          onClick={() => {
+            if (showClear) review.clearAll()
+            else review.acceptAll()
+            setAccepted(!showClear)
+          }}
+        >
+          {showClear ? t.clearAll : t.acceptAllN(acceptable)}
+        </Button>
+      ) : (
+        <p className="receipt-todo">
+          <Icon name="info" size={16} />
+          <span>{t.acceptNothing}</span>
+        </p>
+      )}
       {sections.map((section) => (
         <ReviewSection
           key={section.id}
@@ -120,7 +140,9 @@ export function ReceiptReviewScreen({ renderAdd }: ReceiptReviewScreenProps = {}
           onOpenAdd={(id) => setAdding(review.stored?.read.proposals.find((p) => p.id === id))}
         />
       ))}
-      {review.error ? (
+      {/* B9-50: a refusal about a line shows at its row (the highlight) and as the form's one FormError; one with something to press is an alert tile */}
+      {review.error && review.error.action === 'none' ? <FormError>{review.error.message}</FormError> : null}
+      {review.error && review.error.action !== 'none' ? (
         <ReceiptAlert
           copy={{ message: review.error.message, action: review.error.action }}
           onRetry={() => void review.apply()}

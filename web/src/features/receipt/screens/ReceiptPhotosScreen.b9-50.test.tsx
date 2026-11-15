@@ -34,7 +34,8 @@ function setPhotos(n: number, over: Partial<UseReceiptPhotos> = {}) {
   return photosRef.current
 }
 const coarse = (on: boolean) => vi.stubGlobal('matchMedia', (q: string) => ({ matches: on && q.includes('pointer: coarse'), media: q, addEventListener() {}, removeEventListener() {} }))
-const ui = (
+// A fresh tree on every call: rerender with the same element would be skipped by React, so the screen would never read the new photos.
+const screenUi = () => (
   <MemoryRouter initialEntries={['/scan', '/scan/receipt']} initialIndex={1}>
     <ToastProvider>
       <ConfirmProvider>
@@ -46,6 +47,7 @@ const ui = (
     </ToastProvider>
   </MemoryRouter>
 )
+const ui = screenUi()
 const bar = () => within(screen.getByRole('group', { name: 'Actions' }))
 const photoHint = 'Take a photo of the whole receipt. Long receipt? Take it in parts, top to bottom.'
 
@@ -161,12 +163,12 @@ describe('a photo row', () => {
     const file = new File(['x'], 'r.jpg', { type: 'image/jpeg' })
     fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } })
     setPhotos(1)
-    rerender(ui)
+    rerender(screenUi())
     expect(screen.getByRole('button', { name: 'Edit photo 1' })).toHaveFocus()
     // a second photo: its Edit button
     fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } })
     setPhotos(2)
-    rerender(ui)
+    rerender(screenUi())
     expect(screen.getByRole('button', { name: 'Edit photo 2' })).toHaveFocus()
   })
   it('focus does not jump to Edit when the count did not grow from an add (a Remove)', async () => {
@@ -174,7 +176,7 @@ describe('a photo row', () => {
     const { rerender } = render(ui)
     await userEvent.click(screen.getByRole('button', { name: 'Remove photo 2' }))
     setPhotos(1)
-    rerender(ui)
+    rerender(screenUi())
     expect(screen.getByRole('button', { name: 'Edit photo 1' })).not.toHaveFocus()
   })
 })

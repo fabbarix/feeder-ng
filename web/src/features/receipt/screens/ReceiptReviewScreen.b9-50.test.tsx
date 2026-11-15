@@ -135,7 +135,7 @@ describe('a Not scanned row has no checkbox until it is set up', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save add' }))
     const row = rowOfText('Pane casereccio')
     expect(within(row).getByRole('checkbox', { name: /^Pane casereccio/ })).toBeChecked()
-    expect(within(row).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Edit PANE CASERECCIO 0,45 kg 2,25' })).toHaveTextContent('Edit') // ruling 2 (P38): named after its line
     expect(row).toHaveTextContent('Set up, ready to apply')
     expect(applyButton()).toHaveTextContent('Apply 6 changes')
     expect(within(rowOfText('Bananas')).queryByRole('checkbox')).toBeNull()

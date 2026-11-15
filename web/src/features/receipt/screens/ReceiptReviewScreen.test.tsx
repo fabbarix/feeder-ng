@@ -155,7 +155,8 @@ describe('the rows', () => {
     expect(row).toHaveTextContent('Not on the receipt')
     expect(row).toHaveTextContent('×1')
     expect(row).toHaveTextContent('€8.90')
-    await userEvent.click(within(row).getByRole('button', { name: 'Remove' }))
+    // B9-50 (ruling 2, P38): every button on the page has its own name; Remove is named after its row
+    await userEvent.click(within(row).getByRole('button', { name: 'Remove Monini olive oil 1 l' }))
     expect(check(/^Monini olive oil/)).toBeChecked()
     expect(applyButton()).toHaveTextContent('Apply 6 changes')
   })
@@ -232,13 +233,13 @@ describe('Add…: the seam for the new-Product sheet (SR5, wired at integration)
     expect(applyButton()).toHaveTextContent('Apply 6 changes')
     const row = rowOf(/^Pane casereccio/)
     expect(row).toHaveTextContent('ready')
-    expect(within(row).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Edit PANE CASERECCIO 0,45 kg 2,25' })).toHaveTextContent('Edit') // B9-50 (ruling 2, P38): named after its line
   })
   it('Edit hands the saved draft back', async () => {
     show(sheet)
     await userEvent.click(within(addRow('Pane casereccio')).getByRole('button', { name: /^Add PANE CASERECCIO/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Save add' }))
-    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Edit' }))
+    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Edit PANE CASERECCIO 0,45 kg 2,25' }))
     expect(sheet.mock.calls.at(-1)![0].draft).toEqual(completeDraft)
   })
   it('an incomplete draft does not count and does not check the row', async () => {

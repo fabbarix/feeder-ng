@@ -1,7 +1,8 @@
-// One proposal of the review. The whole row toggles it (design 3.4): a click on its text checks the row, or opens the Add form of an
-// unfinished Add. The controls inside (the checkbox, its label, the buttons) do their own job. Our Checkbox is the keyboard control.
-import type { MouseEvent } from 'react'
-import { Button, Checkbox, Thumb } from '../../../ui'
+// One proposal of the review, as a ListRow (DS R-E; B9-50 SSP-08): the name read as the key, the state at the row's end, the printed line
+// muted under it. A row with a checkbox is toggled by the whole row; a Not scanned row has no checkbox until it is set up, and its one
+// control is "Add…" (named after its printed line), which the whole row opens too. The whole-row click is ReviewSection's (one listener for
+// the list); here the row only renders. Our Checkbox is the keyboard control.
+import { Button, Checkbox, Icon, ListRow, Thumb } from '../../../ui'
 import { receiptStrings as t } from '../strings'
 import type { ReviewRowView } from '../lib/reviewRows'
 
@@ -12,51 +13,53 @@ export interface ReviewRowProps {
 }
 
 export function ReviewRow({ view, onToggle, onOpenAdd }: ReviewRowProps) {
-  // The checkbox's (visually hidden) name says the change too: one Product can have two rows (its Price and its pack size).
-  const name = view.change !== '' ? `${view.title}, ${view.change}` : view.title
-  const activate = () => (view.needsForm ? onOpenAdd(view.id) : onToggle(view.id))
-  const onClick = (e: MouseEvent<HTMLLIElement>) => {
-    if ((e.target as Element).closest('button, input, label, a')) return
-    activate()
+  const control = view.hasCheckbox ? (
+    <span className="receipt-row__check">
+      <Checkbox label={view.checkName} checked={view.checked} onChange={() => onToggle(view.id)} />
+    </span>
+  ) : undefined
+  let actions = null
+  if (view.isAdd) {
+    actions = (
+      <>
+        {view.ready ? <span className="receipt-row__ready">{t.ready}</span> : null}
+        <Button variant="secondary" size="sm" aria-label={view.buttonName} onClick={() => onOpenAdd(view.id)}>
+          {view.ready ? t.edit : t.add}
+        </Button>
+      </>
+    )
+  } else if (view.isMissing) {
+    actions = (
+      <Button variant="secondary" size="sm" aria-label={view.buttonName} onClick={() => onToggle(view.id)}>
+        {view.checked ? t.undo : t.remove}
+      </Button>
+    )
   }
+  const detail = view.isAdd ? null : view.change
   return (
-    <li className="receipt-row" data-checked={view.checked ? 'true' : undefined} data-highlighted={view.highlighted ? 'true' : undefined} onClick={onClick}>
-      <span className="receipt-row__check">
-        <Checkbox label={name} checked={view.checked} disabled={view.checkDisabled} onChange={() => onToggle(view.id)} />
-      </span>
-      <Thumb name={view.title} size={40} />
-      <span className="receipt-row__text">
-        <span className="receipt-row__title">{view.title}</span>
-        <span className="receipt-row__change">{view.change}</span>
+    <ListRow
+      title={view.title}
+      wrapTitle
+      data-proposal={view.id}
+      data-checked={view.checked ? 'true' : undefined}
+      data-highlighted={view.highlighted ? 'true' : undefined}
+      data-receipt-row={view.isAdd ? 'add' : view.isMissing ? 'missing' : 'change'}
+      control={control}
+      leading={<Thumb name={view.title} size={40} />}
+      value={view.value}
+      subValue={view.subValue}
+      actions={actions}
+    >
+      <span className="receipt-row__details">
+        {detail ? <span className="receipt-row__change">{detail}</span> : null}
         {view.line ? <span className="receipt-row__line">{view.line}</span> : null}
-        {view.isAdd ? (
-          <span className="receipt-row__actions">
-            {view.ready ? <span className="receipt-row__ready">{t.ready}</span> : null}
-            {view.ready ? (
-              <Button variant="secondary" size="sm" onClick={() => onOpenAdd(view.id)}>
-                {t.edit}
-              </Button>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => onOpenAdd(view.id)}>
-                {t.add}
-              </Button>
-            )}
-          </span>
-        ) : null}
-        {view.isMissing ? (
-          <span className="receipt-row__actions">
-            <Button variant="secondary" size="sm" onClick={() => onToggle(view.id)}>
-              {view.checked ? t.undo : t.remove}
-            </Button>
+        {view.productMatch ? (
+          <span className="receipt-row__match">
+            <Icon name="link" size={14} />
+            {view.productMatch}
           </span>
         ) : null}
       </span>
-      {view.value !== undefined ? (
-        <span className="receipt-row__value">
-          {view.value}
-          {view.subValue !== undefined ? <span className="receipt-row__sub">{view.subValue}</span> : null}
-        </span>
-      ) : null}
-    </li>
+    </ListRow>
   )
 }

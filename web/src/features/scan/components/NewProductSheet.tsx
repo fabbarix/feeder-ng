@@ -56,8 +56,8 @@ export interface NewProductSheetProps {
   barcode?: string
   /** the Shopping List's Lines; the sheet picks the open ones (lib/lineChoice.lineChips). Absent or none open: step 1 is skipped. */
   lines?: LineCandidate[]
-  /** the known Products, for the pack chips (OfflineProduct fits) */
-  products?: PackProduct[]
+  /** the known Products, for the pack chips (OfflineProduct fits); B9-50: their id and name feed a receipt line's Product-name guard */
+  products?: (PackProduct & { id?: number; name?: string })[]
   /** the Household's unit system for amounts on the Line chips; default metric */
   system?: UnitSystem
   /** replaceable Picture handling; the defaults are the shared ImagePicker pipeline and POST /api/images */
@@ -99,10 +99,12 @@ export interface NewProductSheetProps {
 }
 
 export function NewProductSheet(props: NewProductSheetProps) {
-  const describeIds = { note: useId(), code: useId() }
+  const describeIds = { note: useId(), code: useId(), receipt: useId() }
   // B9-41: the hint tile is the sheet's first description, then the code line (SSP-07, SSP-15).
   const hasCode = props.weighed !== undefined || (Boolean(props.barcode) && !props.noBarcode)
-  const describedBy = [props.weightCodeHint ? describeIds.note : null, hasCode ? describeIds.code : null].filter(Boolean).join(' ')
+  // B9-50 (SSP-08): a receipt line's Add… is described by its "On the receipt" row.
+  const hasReceipt = Boolean(props.noBarcode && props.receiptLine)
+  const describedBy = [props.weightCodeHint ? describeIds.note : null, hasCode ? describeIds.code : null, hasReceipt ? describeIds.receipt : null].filter(Boolean).join(' ')
   return (
     <BottomSheet open={props.open} onClose={props.onClose} title={newProductStrings.title} describedBy={describedBy}>
       {props.open ? <NewProductForm {...props} describeIds={describeIds} /> : null}

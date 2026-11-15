@@ -97,7 +97,7 @@ describe('the review route, Add… with its receipt context', () => {
     show()
     await openAdd()
     await userEvent.click(within(sheet()).getByRole('button', { name: 'Use Kitchen roll 4 pack' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Edit KITCHEN ROLL 4 PACK' })) // ruling 2 (P38): named after its line
     expect(within(sheet()).getByRole('radiogroup', { name: 'Is it one of these?' })).toBeInTheDocument()
   })
   it('with no Product or Line matching, the sheet is "Which Line is it?" and the row says nothing about a Product', async () => {

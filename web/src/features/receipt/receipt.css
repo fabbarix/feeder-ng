@@ -46,13 +46,21 @@
 
 .receipt-photo {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  /* B9-50 (A11Y-09): the thumb, the name, and Edit and Remove as one IconSet (the set keeps its own gap) */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2);
   border-radius: var(--radius-tile);
   background: var(--color-surface);
   box-shadow: var(--elev-1);
+}
+
+/* B9-50 (SSP-19): the thumbnail has a frame, so a white receipt does not vanish on the white row */
+.receipt-photo .thumb {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-thumb);
+  background: var(--color-surface-2);
 }
 
 .receipt-photo__title {
@@ -206,58 +214,36 @@
   white-space: nowrap;
 }
 
-.receipt-row__line {
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-  color: var(--color-muted);
+/* B9-50 (SSP-08, A11Y-09; mock ssp-08-review.html): the review's rows are ListRows (R-E). The name read is the key, the state sits at the
+   row's end, the change and the printed line are muted detail under the key, and the row's one button sits under the detail, in line with
+   the text, so a long name keeps the whole text column. The whole row is the target (ReviewSection listens on the list). */
+.receipt-section__list {
+  container-type: inline-size;
 }
 
-.receipt-row__actions {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.receipt-row__ready {
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-  color: var(--color-accent-text);
-}
-
-.receipt-row {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: 64px;
-  padding: var(--space-2) var(--space-3);
+.receipt-section__list > .list-row {
+  align-items: flex-start;
+  padding-block: var(--space-3);
   cursor: pointer;
 }
 
-.receipt-row + .receipt-row {
-  border-block-start: 1px solid var(--color-surface-2);
+.receipt-section__list > .list-row:hover {
+  background: var(--color-surface-2);
 }
 
-.receipt-row[data-highlighted='true'] {
+.receipt-section__list > .list-row[data-highlighted='true'] {
   box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 
-.receipt-row__text {
-  display: grid;
-  gap: var(--space-1);
-  min-inline-size: 0;
+.receipt-section__list .list-row__control {
+  margin-block: calc(-1 * var(--space-1));
 }
 
-.receipt-row__title {
-  font-size: var(--text-body-strong-size);
-  line-height: var(--text-body-strong-line);
-  font-weight: var(--text-body-strong-weight);
-  color: var(--color-text);
+.receipt-row__details {
+  display: grid;
+  flex: 1 1 100%;
+  gap: var(--space-half);
+  min-inline-size: 0;
 }
 
 .receipt-row__change {
@@ -267,18 +253,80 @@
   color: var(--color-text);
 }
 
-.receipt-row__value {
-  display: grid;
-  justify-items: end;
+.receipt-row__line {
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
-  color: var(--color-text);
+  color: var(--color-muted);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
-.receipt-row__sub {
+.receipt-row__match {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-label-weight);
+  color: var(--color-info-fg);
+}
+
+.receipt-row__match > svg {
+  flex: none;
+}
+
+/* The row's button under the detail, lined up with the text column: after the 40 px thumb (--space-10), and after the 44 px checkbox (--space-10 + --space-1) when there is one. */
+.receipt-section__list .list-row__actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  padding-inline-start: calc(var(--space-10) + var(--space-3));
+}
+
+.receipt-section__list .list-row:has(> .list-row__control) .list-row__actions {
+  padding-inline-start: calc(2 * var(--space-10) + var(--space-1) + 2 * var(--space-3));
+}
+
+@container (width < 24rem) {
+  .receipt-section__list .list-row__actions {
+    padding-inline-start: calc(var(--space-10) + var(--space-2));
+  }
+
+  .receipt-section__list .list-row:has(> .list-row__control) .list-row__actions {
+    padding-inline-start: calc(2 * var(--space-10) + var(--space-1) + 2 * var(--space-2));
+  }
+}
+
+/* From 35 rem of row the button sits at the end of the first line (ListRow's actions slot). */
+@container (width >= 35rem) {
+  .receipt-section__list .list-row__actions,
+  .receipt-section__list .list-row:has(> .list-row__control) .list-row__actions {
+    padding-inline-start: 0;
+    justify-content: flex-end;
+  }
+}
+
+.receipt-row__ready {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-accent-text);
+}
+
+/* SSP-08: the quiet note that says why there is no Accept all. */
+.receipt-todo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   color: var(--color-muted);
+}
+
+.receipt-todo > svg {
+  flex: none;
+  margin-block-start: var(--space-half);
 }
 
 /* The receipt pages (b8-rxweb, docs/dev/design/b8-rxweb.md 3): the header sits a section gap above the first section, and on a short
