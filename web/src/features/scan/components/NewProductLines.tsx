@@ -11,23 +11,25 @@ export interface NewProductLinesProps {
   /** the units of the amounts on the chips */
   system: UnitSystem
   expanded: boolean
-  /** the hint under the heading (a weighed code: "Lines in grams are listed first.") */
+  /** the hint under the heading (a weighed code: "Lines in grams are listed first."); '' for none */
   hint?: string
+  /** B9-50 (SSP-08): the heading when matches come first ("Other Lines"); default "Which Line is it?" */
+  title?: string
   onExpand: () => void
   onPick: (line: LineChip) => void
   onSomethingElse: () => void
 }
 
-export function NewProductLines({ chips, system, expanded, hint = newProductStrings.whichLineHint, onExpand, onPick, onSomethingElse }: NewProductLinesProps) {
+export function NewProductLines({ chips, system, expanded, hint = newProductStrings.whichLineHint, title = newProductStrings.whichLine, onExpand, onPick, onSomethingElse }: NewProductLinesProps) {
   const labelId = useId()
   const shown = expanded ? [...chips.chips, ...chips.more] : chips.chips
   return (
     <div role="group" aria-labelledby={labelId} className="new-product__lines">
       {/* A11Y-07: the step's heading; a step change focuses it (tabIndex -1, no ring) */}
       <h3 id={labelId} className="new-product__label" tabIndex={-1} data-step-heading="">
-        {newProductStrings.whichLine}
+        {title}
       </h3>
-      <p className="new-product__hint">{hint}</p>
+      {hint ? <p className="new-product__hint">{hint}</p> : null}
       <div className="new-product__chips">
         {shown.map((line) => (
           <ChoiceChip

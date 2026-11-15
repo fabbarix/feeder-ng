@@ -159,7 +159,8 @@ describe('Read the receipt, from the Scanned list and back', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Review the receipt' }, { timeout: 3000 })).toBeInTheDocument()
 
     // Add… on the Not scanned line: the new-Product sheet without a barcode, opened with the line's name and weight.
-    await userEvent.click(screen.getByRole('button', { name: 'Add…' }))
+    // B9-50 (P38): the button reads "Add…" and is named after its printed line
+    await userEvent.click(within(screen.getByRole('list', { name: 'Not scanned' })).getByRole('button', { name: /^Add / }))
     const sheet = screen.getByRole('dialog', { name: 'What is this?' })
     expect(within(sheet).queryByText(/not in Feeder yet/)).toBeNull()
     await userEvent.click(within(sheet).getByRole('combobox', { name: /Ingredient/ }))

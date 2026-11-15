@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useConnectivity } from '../../../app/useConnectivity'
 import { useReadAvailability } from '../../import/hooks/useReadAvailability'
-import { Button, FormActions, IconButton, ImageFileInput, Page, PhotoEditSheet, StickyActionBar, Tile, useConfirm, type ImageEdit, type ImageFileInputHandle } from '../../../ui'
+import { Button, FormActions, IconButton, ImageFileInput, Page, PhotoEditSheet, StickyActionBar, Tile, useConfirm, useMediaQuery, type ImageEdit, type ImageFileInputHandle } from '../../../ui'
 import { ReadProgress } from '../components/ReadProgress'
 import { ReceiptPageHeader } from '../components/ReceiptPageHeader'
 import { ReceiptAlert } from '../components/ReceiptAlert'
@@ -43,6 +43,10 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
   const editIndex = editingId === undefined ? -1 : photos.photos.findIndex((p) => p.id === editingId)
   const editing = editIndex >= 0 ? photos.photos[editIndex] : undefined
   const rowsBusy = read.busy || photos.busy
+  // B9-50 (SSP-19): "Take a photo" on a phone, "Choose a photo" on a computer.
+  const coarse = useMediaQuery('(pointer: coarse)')
+  // The photo count when photos were last added: once it grows, focus goes to the newest photo's Edit (receipt-reading 3.2).
+  const addedFrom = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     if (read.phase === 'done') navigate('/scan/receipt/review', { replace: true })
@@ -57,6 +61,19 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
       returnFocusTo.current = undefined
     }
   }, [editingId, rowsBusy])
+
+  useEffect(() => {
+    const from = addedFrom.current
+    if (from === undefined || photos.count <= from) return
+    addedFrom.current = undefined
+    photosSection.current?.querySelector<HTMLButtonElement>(`button[aria-label="${t.editPhoto(photos.count)}"]`)?.focus()
+  }, [photos.count])
+
+  const addPhotos = (list: File[]) => {
+    addedFrom.current = photos.count
+    void photos.add(list)
+  }
+  const openCamera = () => files.current?.open()
 
   const openEdit = (id: string) => setEditingId(id)
   const closeEdit = () => {
@@ -107,16 +124,13 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
           <ReadProgress elapsedSeconds={read.elapsedSeconds} connectionLost={read.connectionLost} onCancel={() => void read.cancel()} />
         ) : null}
         {failure ? <ReceiptAlert copy={failure} onRetry={() => void read.start(photos.toBody())} /> : null}
+        {photos.count === 0 ? <p className="receipt-hint">{t.firstHint}</p> : null}
         {!read.busy ? (
           <div className="receipt-add">
-            <ImageFileInput ref={files} capture onFiles={(list) => void photos.add(list)} disabled={!photos.canAdd} />
-            {photos.count === 0 ? (
-              <Button variant="secondary" icon="camera" onClick={() => files.current?.open()}>
-                {t.takePhoto}
-              </Button>
-            ) : null}
+            <ImageFileInput ref={files} capture onFiles={addPhotos} disabled={!photos.canAdd} />
+            {/* B9-50 (SSP-19): with no photo the first action is the sticky primary; from the first, Add another photo is the secondary here */}
             {photos.count > 0 && photos.canAdd ? (
-              <Button variant="secondary" icon="camera" onClick={() => files.current?.open()}>
+              <Button variant="secondary" icon="camera" onClick={openCamera}>
                 {t.addPhoto}
               </Button>
             ) : null}
@@ -155,16 +169,22 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
         <StickyActionBar>
           <FormActions
             primary={
-              <Button
-                variant="primary"
-                size="lg"
-                block="always"
-                disabled={!canRead}
-                aria-describedby={reasons.length > 0 ? reasonId : undefined}
-                onClick={() => void read.start(photos.toBody())}
-              >
-                {t.readTitle}
-              </Button>
+              photos.count === 0 ? (
+                <Button variant="primary" size="lg" block="always" icon="camera" disabled={!photos.canAdd} onClick={openCamera}>
+                  {coarse ? t.takePhoto : t.choosePhoto}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  block="always"
+                  disabled={!canRead}
+                  aria-describedby={reasons.length > 0 ? reasonId : undefined}
+                  onClick={() => void read.start(photos.toBody())}
+                >
+                  {t.readTitle}
+                </Button>
+              )
             }
           />
         </StickyActionBar>

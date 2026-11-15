@@ -57,6 +57,9 @@ type AddChoice struct {
 	Ingredient  IngredientChoice
 	ProductName string
 	PackSize    int
+	// ProductID (B9-50, SSP-08): an existing Product of the Household. The Add then makes no Product: it scans this one.
+	// The other fields are ignored.
+	ProductID int64
 }
 
 // Op is one operation. Only the fields of its Kind are set.
@@ -75,6 +78,8 @@ type Op struct {
 	PackSize   int
 	BaseUnit   string
 	Ingredient *IngredientChoice
+	// AddID (B9-50) is the Add's proposal id on a new_scan of an existing Product, so a refusal can name it.
+	AddID string
 }
 
 // Step is one operation with the operation that undoes it.
@@ -123,6 +128,8 @@ type PlanCode string
 const (
 	PlanUnknownProposal PlanCode = "unknown_proposal"
 	PlanAddIncomplete   PlanCode = "add_incomplete"
+	// PlanUnknownProduct (B9-50): an Add names a Product that does not exist or is archived.
+	PlanUnknownProduct PlanCode = "unknown_product"
 )
 
 // PlanError refuses a plan: an accepted id that is not a proposal, or an accepted Add without its choice.
@@ -370,6 +377,10 @@ func BuildPlan(in PlanInput) (Plan, error) {
 			continue
 		}
 		c := in.Adds[p.ID]
+		if c.ProductID > 0 {
+			b.addExisting(p, c.ProductID, shopID, date)
+			continue
+		}
 		ing := c.Ingredient
 		b.add(Step{Phase: PhaseAdd,
 			Op:      Op{Kind: OpCreateProduct, Ref: p.ID, Name: c.ProductName, PackSize: c.PackSize, BaseUnit: addBaseUnit(c, p.After), Ingredient: &ing},
@@ -414,9 +425,43 @@ func BuildPlan(in PlanInput) (Plan, error) {
 	return Plan{Steps: b.steps}, nil
 }
 
-// completeChoice: an Add needs an Ingredient (an ID, or a new one with a name and a Base Unit), a Product name and a
+// addExisting scans an existing Product for an Add (B9-50): no Product is made. A weighed line is one scan of its grams;
+// otherwise one scan per pack at the shared per-pack Price, each with Quantity 0, which the scan service reads as one pack
+// of that Product (the plan does not know its pack size).
+func (b *planBuilder) addExisting(p Proposal, productID int64, shopID int64, date string) {
+	price := -1
+	if p.After.PriceCents != nil {
+		price = *p.After.PriceCents
+	}
+	if p.After.Count == nil && p.After.Grams != nil {
+		u := b.newUUID()
+		b.add(Step{Phase: PhaseAdd,
+			Op:      Op{Kind: OpNewScan, UUID: u, ProductID: productID, Quantity: float64(*p.After.Grams), PriceCents: price, PerKgCents: -1, ShopID: shopID, Date: date, AddID: p.ID},
+			Inverse: Op{Kind: OpUndo, UUID: u}})
+		return
+	}
+	count := deref(p.After.Count)
+	if count == 0 {
+		count = 1
+	}
+	perPack := -1
+	if price >= 0 {
+		perPack = roundDiv(price, count)
+	}
+	for k := 0; k < count; k++ {
+		u := b.newUUID()
+		b.add(Step{Phase: PhaseAdd,
+			Op:      Op{Kind: OpNewScan, UUID: u, ProductID: productID, Quantity: 0, PriceCents: perPack, PerKgCents: -1, ShopID: shopID, Date: date, AddID: p.ID},
+			Inverse: Op{Kind: OpUndo, UUID: u}})
+	}
+}
+
+// completeChoice: an Add of an existing Product (a positive ProductID) is complete on its own. Otherwise an Add needs an Ingredient (an ID, or a new one with a name and a Base Unit), a Product name and a
 // positive pack size (a Product's pack size must be positive).
 func completeChoice(c AddChoice) bool {
+	if c.ProductID > 0 {
+		return true
+	}
 	if strings.TrimSpace(c.ProductName) == "" || c.PackSize <= 0 {
 		return false
 	}

@@ -116,7 +116,7 @@ type catalogue struct {
 
 func productInfo(p productstore.Product) service.ProductInfo {
 	return service.ProductInfo{ID: p.ID, Name: p.Name, IngredientID: p.IngredientID, IngredientName: p.IngredientName,
-		BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL}
+		BaseUnit: string(p.BaseUnit), PackSize: p.PackSize, ImageURL: p.ImageURL, IngredientImageURL: p.IngredientImageURL, Archived: p.Archived}
 }
 
 // info is productInfo with the kind of the Product's Ingredient (H4: a Supply's Applied and offline rows say so).

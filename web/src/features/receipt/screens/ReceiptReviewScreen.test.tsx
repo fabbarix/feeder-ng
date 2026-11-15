@@ -48,6 +48,8 @@ function show(renderAdd?: (p: AddSheetRenderProps) => ReactNode) {
 const inScreen = () => within(screen.getByTestId('screen'))
 const check = (name: RegExp | string) => screen.getByRole('checkbox', { name }) as HTMLInputElement
 const rowOf = (name: RegExp | string) => check(name).closest('li') as HTMLElement
+// B9-50 (SSP-08): a Not scanned row has no checkbox until it is set up, so it is found by its name
+const addRow = (name: string) => within(screen.getByRole('list', { name: 'Not scanned' })).getByText(name).closest('li') as HTMLElement
 const applyButton = () => within(screen.getByRole('group', { name: 'Actions' })).getByRole('button', { name: /^Apply \d+ changes?$/ })
 const refused = (status: number, code: string, extra: Record<string, unknown> = {}, results: unknown[] = []) => ({ ok: false, status, code, message: 'server words', results, ...extra })
 
@@ -125,13 +127,13 @@ describe('the rows', () => {
     for (const n of [/^Mutti passata 700 g/, /^Barilla spaghetti/, /^Parmigiano Reggiano/, /^Granarolo mozzarella/]) expect(check(n)).toBeChecked()
     const corrections = within(screen.getByRole('list', { name: 'Corrections' }))
     expect(corrections.getByRole('checkbox')).not.toBeChecked()
-    expect(check(/^Pane casereccio/)).not.toBeChecked()
-    expect(check(/^Bananas/)).not.toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /^Pane casereccio/ })).toBeNull() // B9-50: an Add has no checkbox until it is set up
+    expect(screen.queryByRole('checkbox', { name: /^Bananas/ })).toBeNull()
     expect(check(/^Monini olive oil/)).not.toBeChecked()
   })
   it('the checkboxes are our own (a real input under the styling), each named after its row', () => {
     show()
-    expect(screen.getAllByRole('checkbox')).toHaveLength(9)
+    expect(screen.getAllByRole('checkbox')).toHaveLength(7) // B9-50: the two Not scanned rows have none until they are set up
     for (const box of screen.getAllByRole('checkbox')) expect(box).toHaveAccessibleName()
   })
   it('each checkbox name says its change too, so two rows of one Product are told apart', () => {
@@ -153,16 +155,17 @@ describe('the rows', () => {
     expect(row).toHaveTextContent('Not on the receipt')
     expect(row).toHaveTextContent('×1')
     expect(row).toHaveTextContent('€8.90')
-    await userEvent.click(within(row).getByRole('button', { name: 'Remove' }))
+    // B9-50 (ruling 2, P38): every button on the page has its own name; Remove is named after its row
+    await userEvent.click(within(row).getByRole('button', { name: 'Remove Monini olive oil 1 l' }))
     expect(check(/^Monini olive oil/)).toBeChecked()
     expect(applyButton()).toHaveTextContent('Apply 6 changes')
   })
-  it('a Not scanned row shows the receipt line and Add…', () => {
+  it('a Not scanned row shows the receipt line and Add…, named after the line', () => {
     show()
-    const row = rowOf(/^Pane casereccio/)
+    const row = addRow('Pane casereccio')
     expect(row).toHaveTextContent('450 g · €2.25')
     expect(row).toHaveTextContent('PANE CASERECCIO 0,45 kg 2,25')
-    expect(within(row).getByRole('button', { name: 'Add…' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Add PANE CASERECCIO 0,45 kg 2,25' })).toHaveTextContent('Add…')
   })
 })
 
@@ -175,26 +178,26 @@ describe('Accept all and the count', () => {
   })
   it('one change is singular', async () => {
     show()
-    await userEvent.click(screen.getByRole('button', { name: 'Accept all' })) // 6
+    await userEvent.click(screen.getByRole('button', { name: 'Accept all 6' })) // 6
     await userEvent.click(screen.getByRole('button', { name: 'Clear all' }))
     await userEvent.click(check(/^Barilla spaghetti/))
     expect(applyButton()).toHaveTextContent('Apply 1 change')
   })
   it('Accept all checks the Correction too, never Remove, and leaves the Adds; then it reads Clear all', async () => {
     show()
-    await userEvent.click(screen.getByRole('button', { name: 'Accept all' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Accept all 6' }))
     expect(within(screen.getByRole('list', { name: 'Corrections' })).getByRole('checkbox')).toBeChecked()
     expect(check(/^Monini olive oil/)).not.toBeChecked()
-    expect(check(/^Pane casereccio/)).not.toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /^Pane casereccio/ })).toBeNull()
     expect(applyButton()).toHaveTextContent('Apply 6 changes')
-    expect(screen.queryByRole('button', { name: 'Accept all' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Accept all 6' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Clear all' }))
     expect(applyButton()).toHaveTextContent('Apply 0 changes')
-    expect(screen.getByRole('button', { name: 'Accept all' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Accept all 6' })).toBeInTheDocument()
   })
   it('Apply is disabled at 0 changes', async () => {
     show()
-    await userEvent.click(screen.getByRole('button', { name: 'Accept all' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Accept all 6' }))
     await userEvent.click(screen.getByRole('button', { name: 'Clear all' }))
     expect(applyButton()).toBeDisabled()
   })
@@ -215,7 +218,7 @@ describe('Add…: the seam for the new-Product sheet (SR5, wired at integration)
   it('renders nothing of it until Add… is pressed, then calls renderAdd with the proposal and no draft', async () => {
     show(sheet)
     expect(sheet).not.toHaveBeenCalled()
-    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Add…' }))
+    await userEvent.click(within(addRow('Pane casereccio')).getByRole('button', { name: /^Add PANE CASERECCIO/ }))
     const props = sheet.mock.calls.at(-1)![0]
     expect(props.proposal.id).toBe('add:0')
     expect(props.draft).toBeUndefined()
@@ -223,47 +226,47 @@ describe('Add…: the seam for the new-Product sheet (SR5, wired at integration)
   })
   it('Save with a complete draft closes it, checks the row and counts it; the row is ready and offers Edit', async () => {
     show(sheet)
-    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Add…' }))
+    await userEvent.click(within(addRow('Pane casereccio')).getByRole('button', { name: /^Add PANE CASERECCIO/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Save add' }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(check(/^Pane casereccio/)).toBeChecked()
     expect(applyButton()).toHaveTextContent('Apply 6 changes')
     const row = rowOf(/^Pane casereccio/)
     expect(row).toHaveTextContent('ready')
-    expect(within(row).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Edit PANE CASERECCIO 0,45 kg 2,25' })).toHaveTextContent('Edit') // B9-50 (ruling 2, P38): named after its line
   })
   it('Edit hands the saved draft back', async () => {
     show(sheet)
-    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Add…' }))
+    await userEvent.click(within(addRow('Pane casereccio')).getByRole('button', { name: /^Add PANE CASERECCIO/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Save add' }))
-    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Edit' }))
+    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Edit PANE CASERECCIO 0,45 kg 2,25' }))
     expect(sheet.mock.calls.at(-1)![0].draft).toEqual(completeDraft)
   })
   it('an incomplete draft does not count and does not check the row', async () => {
     show(sheet)
-    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Add…' }))
+    await userEvent.click(within(addRow('Pane casereccio')).getByRole('button', { name: /^Add PANE CASERECCIO/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Save incomplete' }))
-    expect(check(/^Pane casereccio/)).not.toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /^Pane casereccio/ })).toBeNull()
     expect(applyButton()).toHaveTextContent('Apply 5 changes')
   })
   it('closing without saving changes nothing', async () => {
     show(sheet)
-    await userEvent.click(within(rowOf(/^Bananas/)).getByRole('button', { name: 'Add…' }))
+    await userEvent.click(within(addRow('Bananas')).getByRole('button', { name: /^Add BANANE/ }))
     expect(sheet.mock.calls.at(-1)![0].proposal.id).toBe('add:1')
     await userEvent.click(screen.getByRole('button', { name: 'Close add' }))
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(check(/^Bananas/)).not.toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /^Bananas/ })).toBeNull()
   })
-  it('an Add that is not ready cannot be checked by hand', async () => {
+  it('an Add that is not ready has nothing to check by hand: no checkbox', async () => {
     show(sheet)
-    await userEvent.click(check(/^Pane casereccio/))
-    expect(check(/^Pane casereccio/)).not.toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /^Pane casereccio/ })).toBeNull()
+    await userEvent.click(addRow('Pane casereccio'))
     expect(applyButton()).toHaveTextContent('Apply 5 changes')
   })
   it('the completed Add goes to the apply, with its choices', async () => {
     api.apply.mockResolvedValue({ ok: true, applied: 6, results: [], undone: [] })
     show(sheet)
-    await userEvent.click(within(rowOf(/^Pane casereccio/)).getByRole('button', { name: 'Add…' }))
+    await userEvent.click(within(addRow('Pane casereccio')).getByRole('button', { name: /^Add PANE CASERECCIO/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Save add' }))
     await userEvent.click(applyButton())
     const body = api.apply.mock.calls[0]![0]
@@ -340,8 +343,8 @@ describe('Apply: refused or failed', () => {
   it('422 add_incomplete highlights the row by id and says what to do', async () => {
     const alert = await press(refused(422, 'add_incomplete', { id: 'add:0' }))
     expect(alert).toHaveTextContent('Choose the Ingredient and the Product name and pack size for this line first.')
-    expect(rowOf(/^Pane casereccio/)).toHaveAttribute('data-highlighted', 'true')
-    expect(rowOf(/^Bananas/)).not.toHaveAttribute('data-highlighted', 'true')
+    expect(addRow('Pane casereccio')).toHaveAttribute('data-highlighted', 'true')
+    expect(addRow('Bananas')).not.toHaveAttribute('data-highlighted', 'true')
   })
   it('422 unknown_proposal highlights the row by id', async () => {
     const alert = await press(refused(422, 'unknown_proposal', { id: 'price:0' }))
@@ -401,7 +404,7 @@ describe('leaving', () => {
   })
   it('Back with nothing checked leaves at once', async () => {
     show()
-    await userEvent.click(screen.getByRole('button', { name: 'Accept all' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Accept all 6' }))
     await userEvent.click(screen.getByRole('button', { name: 'Clear all' }))
     await userEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(screen.queryByRole('dialog')).toBeNull()

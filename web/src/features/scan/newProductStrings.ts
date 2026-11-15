@@ -76,4 +76,20 @@ export const newProductStrings = {
   needName: 'Give it a name',
   needPack: 'Pick a pack size',
   mustBePositive: 'Enter a number above 0',
+
+  // B9-50 (SSP-08): a receipt line's Add… (no barcode): the line on top, its name matches, and an existing Product.
+  receipt: {
+    onReceipt: 'On the receipt',
+    lineList: 'Receipt line',
+    matches: 'Is it one of these?',
+    otherLines: 'Other Lines',
+    product: 'Product',
+    line: 'Line',
+    use: (product: string) => `Use ${product}`,
+    scans: (n: number) => (n === 1 ? '1 Scan' : `${n} Scans`),
+    /** "Kitchen roll 4 pack: 1 Scan at $3.49, and it ticks Kitchen roll." */
+    useNote: (product: string, scans: string, price: string | undefined, line: string | undefined) =>
+      `${product}: ${scans}${price ? ` at ${price}` : ''}${line ? `, and it ticks ${line}` : ''}.`,
+    alreadyProduct: (product: string) => `${product} is already a Product. Use it?`,
+  },
 } as const

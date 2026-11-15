@@ -52,6 +52,7 @@ const FIXED: Record<string, ReceiptErrorCopy> = {
   receipt_read_not_done: copy(t.notDone, 'readAgain'),
   unknown_proposal: copy(t.unknownProposal, 'readAgain'),
   add_incomplete: copy(t.addIncomplete),
+  unknown_product: copy(t.unknownProduct),
   receipt_apply_failed: copy(t.applyFailed, 'readAgain'),
 }
 
