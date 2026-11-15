@@ -23,7 +23,7 @@ describe('KeepDateSheet', () => {
     setup()
     expect(within(sheet()).getByText('Keep means it did not go off. It leaves Throw out or keep? until then.')).toBeInTheDocument()
   })
-  it('offers Today, Tomorrow, In 3 days and In a week as a radiogroup, each with its date, Today chosen', () => {
+  it('offers Today, Tomorrow, In 3 days and In a week as a radiogroup, each with its date, Today chosen, then Pick a date', () => {
     setup()
     const group = within(sheet()).getByRole('radiogroup')
     const radios = within(group).getAllByRole('radio')
@@ -32,6 +32,8 @@ describe('KeepDateSheet', () => {
       expect.stringMatching(/Tomorrow.*Tue 10 Nov/),
       expect.stringMatching(/In 3 days.*Thu 12 Nov/),
       expect.stringMatching(/In a week.*Mon 16 Nov/),
+      // B9-29 developer: "Pick a date" is the group's fifth radio (the picked day is the choice); a radio outside the radiogroup is not valid ARIA.
+      expect.stringMatching(/^Pick a date$/),
     ])
     expect(radios[0]).toBeChecked()
     expect(within(sheet()).getByRole('button', { name: 'Keep until Mon 9 Nov' })).toBeInTheDocument()

@@ -152,4 +152,28 @@ export const stockStrings = {
     done: (name: string) => `${name} used up`,
   },
   deleteBodySupply: 'Use Delete for a mistake, such as a double Scan. If the Household used it, choose Used up instead.',
+  /** B9-29 (SSP-10): Put away the Not sorted Stock Lots into a Storage Place, many at once. */
+  putAway: {
+    action: 'Put away',
+    actionLabel: (n: number) => `Put away ${n === 1 ? '1 Stock Lot' : `${n} Stock Lots`}`,
+    into: 'Put into',
+    hint: 'Tick what goes there. Feeder remembers it for next time.',
+    moveTo: (place: string) => `Move to ${place}`,
+    tickOne: 'Tick at least one Stock Lot.',
+    allDone: 'Every Stock Lot is put away',
+  },
+  /** B9-29 (SSP-17, decision SSP 8): Keep makes a spoiled Lot good until today; Change offers other dates. */
+  keepDate: {
+    title: (name: string) => `${name}: good until?`,
+    why: 'Keep means it did not go off. It leaves Throw out or keep? until then.',
+    choices: 'Good until',
+    pick: 'Pick a date',
+    field: 'Good until',
+    choose: 'Choose a date.',
+    kept: (name: string) => `${name} kept`,
+    goodUntilToday: 'Good until today',
+    goodUntil: (day: string) => `Good until ${day}`,
+    change: 'Change',
+    changeLabel: (name: string) => `Change the date ${name} is good until`,
+  },
 }

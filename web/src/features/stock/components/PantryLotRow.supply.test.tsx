@@ -76,7 +76,7 @@ describe('PantryLotRow for food (SSP-05: the status leads, the quantity is in th
     expect(meta).toHaveAttribute('data-status', 'spoil')
   })
   it('a Lot that went off says so alone, with the spoiled icon (not the hourglass of Use soon)', () => {
-    const { meta } = setup(makeLot({ kind: 'food', goesOff: '2026-10-29', spoiled: true, useSoon: false }))
+    const { meta } = setup(makeLot({ kind: 'food', goesOff: '2026-10-28', spoiled: true, useSoon: false }))
     expect(meta).toHaveTextContent(/^Went off 14 days ago$/)
     expect(meta).toHaveAttribute('data-status', 'spoil')
     const went = meta.querySelector('svg')?.outerHTML
