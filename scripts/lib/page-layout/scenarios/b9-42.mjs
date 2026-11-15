@@ -217,9 +217,13 @@ export default {
           const [r1, r2] = foot.map((b) => b.getBoundingClientRect())
           if (Math.abs(r1.top - r2.top) > 1) out.push('Reset and Save are not on one row')
           for (const b of foot) {
-            const label = b.querySelector('.button__label') ?? b
-            const lh = parseFloat(getComputedStyle(label).lineHeight) || 22
-            if (label.getBoundingClientRect().height > lh * 1.5) out.push(b.textContent.trim() + ' wraps')
+            // The label is the button's text node: its line boxes, one per line.
+            const text = [...b.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim())
+            if (!text) continue
+            const range = document.createRange()
+            range.selectNodeContents(text)
+            const lines = new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size
+            if (lines > 1) out.push(b.textContent.trim() + ' wraps onto ' + lines + ' lines')
           }
         }
         res(out)
