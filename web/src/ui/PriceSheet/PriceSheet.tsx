@@ -1,7 +1,13 @@
-// B9-43 (SSP-13): the Price keypad in a sheet, lifted from features/scan/components/PriceEntrySheet.tsx so the Shop's Line sheet and
-// Scan share it. STUB (test author): the developer lifts the sheet (keeping Scan's behaviour) and generalises its props.
-import type { PriceEntry } from '../PriceKeypad'
+// B9-43 (SSP-13): the Price keypad in a sheet, lifted from features/scan/components/PriceEntrySheet.tsx so the Shop's Line sheet ("Change
+// the Price") and Scan share one Price sheet around ui/PriceKeypad. It reports Save, Next and Close with what was typed; the caller saves.
+// R-B: ONE Close, the keypad's footer Close (outlined secondary); the sheet header has none. Escape closes like that Close, through the
+// keypad, so a valid typed Price is kept. Modal by default (auto height); `modal={false}` is Scan's non-modal half sheet.
+import { useRef } from 'react'
+import { BottomSheet } from '../BottomSheet'
+import { PriceKeypad, type PriceEntry, type PriceKeypadHandle } from '../PriceKeypad'
 import type { PackSize } from '../lib/priceImplication'
+import { uiStrings } from '../strings'
+import './PriceSheet.css'
 
 export interface PriceSheetProps {
   /** the Product's name: the sheet is titled "Price of <name>" and the keypad is named by it */
@@ -29,6 +35,57 @@ export interface PriceSheetProps {
   entryKey?: string
 }
 
-export function PriceSheet(_props: PriceSheetProps) {
-  return null
+const NOTHING_TYPED: PriceEntry = { basis: 'pack', cents: null, packCents: null, perKgCents: null }
+
+export function PriceSheet({
+  productName,
+  shopName,
+  currency,
+  locale,
+  pack,
+  last,
+  weighed,
+  initialCents,
+  initialPerKgCents,
+  hasNext = false,
+  error,
+  onNext,
+  onSave,
+  onClose,
+  modal = true,
+  entryKey,
+}: PriceSheetProps) {
+  const keypad = useRef<PriceKeypadHandle>(null)
+  // Escape closes like the keypad's Close: through the keypad, which keeps a valid typed Price.
+  const close = () => (keypad.current ? keypad.current.close() : onClose(NOTHING_TYPED))
+  return (
+    <BottomSheet open modal={modal} size={modal ? 'auto' : 'half'} title={uiStrings.priceOf(productName)} onClose={close} closeButton={false}>
+      {/* the modal sheet names the Shop the Price is for (Scan's half sheet sits under the Shop's own Scan session, so it does not) */}
+      {modal ? <p className="price-sheet__shop">{uiStrings.priceAt(shopName)}</p> : null}
+      <PriceKeypad
+        ref={keypad}
+        key={entryKey ?? productName}
+        compact
+        showName={false}
+        productName={productName}
+        currency={currency}
+        locale={locale}
+        pack={pack}
+        last={last}
+        weighed={weighed}
+        initialCents={initialCents}
+        initialPerKgCents={initialPerKgCents}
+        shopName={shopName}
+        hasNext={hasNext}
+        onNext={onNext ?? onSave}
+        onSave={onSave}
+        onClose={onClose}
+      />
+      {error ? (
+        <p role="alert" className="price-sheet__error">
+          {error}
+        </p>
+      ) : null}
+    </BottomSheet>
+  )
 }
