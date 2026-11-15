@@ -40,6 +40,10 @@
 # tile-like selector that must keep a floor (a crashed tile keeps its slot, so the grid does not jump). An entry without a
 # reason is ignored; an entry matches only the min-height / min-block-size violation on exactly that selector.
 #
+# opacity-muting has a selector-level allowlist, scripts/check-ui.allow-opacity (w6a): `<selector>   # reason`, one line per
+# control whose fade is itself a designed state the user decided (the Kitchen board's Close dims after 10 s idle, TB 4), never
+# muted text. An entry without a reason is ignored; an entry matches only the violation on exactly that selector list.
+#
 # Output: counts per rule and the first few violations; every violation goes to
 # <root>/build/check-ui.txt (override with CHECK_UI_OUT). Exit 1 only if a rule in
 # `fail` mode (or a violation under that rule's fail_paths) has violations.
@@ -68,6 +72,7 @@ ALLOW_CLASSES="$ALLOW_DIR/check-ui.allow-classnames"
 ALLOW_GLOSSARY="$ALLOW_DIR/check-ui.allow-glossary"
 ALLOW_COLOURS="$ALLOW_DIR/check-ui.allow-colours"
 ALLOW_SIZING="$ALLOW_DIR/check-ui.allow-sizing"
+ALLOW_OPACITY="$ALLOW_DIR/check-ui.allow-opacity"
 OUT="${CHECK_UI_OUT:-$ROOT/build/check-ui.txt}"
 mkdir -p "$(dirname "$OUT")"
 TMP="$(mktemp -d)"
@@ -636,6 +641,27 @@ if [ -f "$ALLOW_SIZING" ]; then
     {
       if ($1 == "sizing" && match($4, /on tile variant \047[^\047]*\047/)) {
         s = substr($4, RSTART + 17, RLENGTH - 18)
+        if (s in sel) next
+      }
+      print
+    }' "$VIOL" >"$TMP/violations.kept" && mv "$TMP/violations.kept" "$VIOL"
+fi
+
+# Selector-level opacity allowlist (w6a): drop the opacity-muting violation of a selector list named exactly by an entry with a reason.
+if [ -f "$ALLOW_OPACITY" ]; then
+  awk -F'\t' -v ALLOW="$ALLOW_OPACITY" '
+    BEGIN {
+      n = 0
+      while ((getline l < ALLOW) > 0) {
+        h = index(l, "#"); if (!h) continue
+        p = substr(l, 1, h - 1); r = substr(l, h + 1)
+        gsub(/^[ \t]+|[ \t]+$/, "", p); gsub(/^[ \t]+|[ \t]+$/, "", r)
+        if (p != "" && r != "") sel[p] = 1
+      }
+    }
+    {
+      if ($1 == "opacity-muting" && match($4, / on \047.*\047 mutes content/)) {
+        s = substr($4, RSTART + 5, RLENGTH - 5 - 15)
         if (s in sel) next
       }
       print

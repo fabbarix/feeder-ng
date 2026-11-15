@@ -82,6 +82,14 @@ run_ui "$FIX/opacity-muting/fail" "$(rules_file opacity-muting warn)"
 run_ui "$FIX/opacity-muting/pass" "$(rules_file opacity-muting fail)"
 [ "$RC" -eq 0 ] && ok || bad "opacity-muting: the original pass fixture still passes (got $RC)"
 
+# --- w6a: the selector-level opacity allowlist drops exactly the named selector list (with a reason), nothing else
+mkdir -p "$TMP/opallow"
+printf '%s\n' ".course-eaters__pill[aria-pressed=\"false\"]   # a designed resting state" ".badge" >"$TMP/opallow/check-ui.allow-opacity"
+OUTPUT="$(CHECK_UI_ALLOW_DIR="$TMP/opallow" CHECK_UI_OUT="$TMP/out.txt" bash "$SCRIPTS/check-ui.sh" --root "$FIX/opacity-muting-wide/fail" --rules "$(rules_file opacity-muting warn)" 2>&1)"
+[ "$(count_of opacity-muting)" = 2 ] && ok || bad "opacity-muting: an allow entry with a reason drops its one selector, one without a reason none (got '$(count_of opacity-muting)')"
+grep -q 'course-eaters__pill' "$TMP/out.txt" && bad "opacity-muting: the allowed selector must not be reported" || ok
+grep -q "board-close\[data-idle='true'\]   # " "$SCRIPTS/check-ui.allow-opacity" && ok || bad "check-ui.allow-opacity: the board's idle Close (TB 4) is the committed entry, with its reason"
+
 # --- the drop-ins and their modes are committed files
 for r in "${NEW[@]}"; do
   [ -f "$SCRIPTS/check-ui.d/$r.sh" ] && ok || bad "scripts/check-ui.d/$r.sh must exist (the drop-in of rule $r)"
