@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Icon, Page, PageWidthProvider } from '../ui'
+import { useKeyboardInset } from '../ui/lib/useKeyboardInset'
 import { withAccessRequests } from './accessMenu'
 import { BrandMark } from './BrandMark'
 import { isChromeless } from './chromeless'
@@ -9,6 +10,7 @@ import type { NavItem } from './nav'
 import { MENU_NAV, PRIMARY_NAV, RAIL_NAV, sortByOrder } from './nav'
 import { isCurrentNav } from './navCurrent'
 import { ShellStatus } from './ShellStatus'
+import { ShellTimerAlert, ShellTimers } from './ShellTimers'
 import { shellStrings } from './strings'
 import { YourMenu } from './YourMenu'
 import './shell.css'
@@ -24,11 +26,15 @@ export interface AppShellProps {
   pendingAccessRequests?: number
 }
 
+/** The receipt screens (chromeless, under /scan/receipt). Cook Mode and the board show timers themselves. */
+const isReceiptScreen = (pathname: string) => /^\/scan\/receipt(\/|$)/.test(pathname)
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
 export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
   const { pathname } = useLocation()
   const pageWidth = pageWidthFor(pathname)
+  // Mounted before the chromeless return so both frames get it: the receipt screens carry a sticky Save bar there too.
+  useKeyboardInset()
   if (isChromeless(pathname)) {
     // The kitchen board, Cook Mode and the receipt screens: the page alone, no bars, no avatar menu, no status slot. A screen
     // that is a ui Page (the receipt ones) still takes its route's width from the table.
@@ -41,6 +47,8 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
             </PageErrorBoundary>
           </PageWidthProvider>
         </main>
+        {/* PC-04: a timer can finish while the cook is on a receipt screen: the finish banner shows there (no pill: Save is there). */}
+        {isReceiptScreen(pathname) ? <ShellTimerAlert /> : null}
       </div>
     )
   }
@@ -58,6 +66,8 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
           onSignOut={onSignOut}
         />
       </header>
+      {/* PC-04: the timer pill, finish banner and Timers sheet, mounted once for the framed pages (one poll, one alarm). */}
+      <ShellTimers />
       <div className="app-status">
         <ShellStatus pendingScans={pendingScans} />
       </div>
@@ -100,7 +110,9 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
               className="bottom-bar__link"
               data-accent={item.accent ? 'true' : undefined}
             >
-              <Icon name={item.icon} size={item.accent ? 28 : 24} weight={isActive ? 'fill' : 'regular'} />
+              <span className="bottom-bar__icon" aria-hidden="true">
+                <Icon name={item.icon} size={item.accent ? 28 : 24} weight={isActive ? 'fill' : 'regular'} />
+              </span>
               <span className="bottom-bar__label">{item.label}</span>
             </Link>
           )

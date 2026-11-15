@@ -25,6 +25,8 @@ export const boardStrings = {
   streak: 'Zero-waste streak',
   streakDays: (n: number) => (n === 1 ? '1 day' : `${n} days`),
   cook: 'Cook',
+  /** A11Y-01 (B9-19): the document title of /board, which has no PageHeader ("Kitchen board · Feeder"). */
+  documentTitle: 'Kitchen board',
   loading: 'Loading the kitchen board',
   loadError: 'The kitchen board could not be loaded',
   due: (when: string) => `Start ${when}`,
