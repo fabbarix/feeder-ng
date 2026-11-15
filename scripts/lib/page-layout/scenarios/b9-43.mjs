@@ -30,7 +30,8 @@ async function openPriceableLineSheet() {
   await until(`document.querySelectorAll('.shop-open .shop-lines .list-row__target').length > 0 && !document.querySelector('.skeleton')`, 'the Shop\'s open Lines')
   return evaluate(`(async () => {
     const wait = async (f) => { for (let i = 0; i < 40 && !f(); i++) await new Promise((r) => setTimeout(r, 100)) }
-    for (const t of document.querySelectorAll('.shop-open .shop-lines .list-row__target')) {
+    // B9-55: the Supplies group's open Lines too (their packs are priced and never bought in the seed, so they offer it under Any Shop).
+    for (const t of document.querySelectorAll('.shop-open .shop-lines .list-row__target, .shop-supplies .shop-lines .list-row__target')) {
       t.click()
       await wait(() => document.querySelector('dialog.sheet[open]'))
       const d = document.querySelector('dialog.sheet[open]')
@@ -94,7 +95,13 @@ export default {
       if (!facts.footer.includes('Not needed') || !facts.footer.includes('Get something else…')) throw new Error('setup: SSP-14: the footer lacks "Get something else…" and "Not needed"')
     },
     async shopLineSheetPrice() {
-      if (!(await openPriceableLineSheet())) throw new Error('setup: SSP-13: no open Line has "Change the Price" (the seed needs a priced Product at a Shop for one)')
+      // B9-55: the scan scenarios (order 40) tick the seed's priced food Lines; their packs are then last-bought ones, with no Shop to price
+      // at under Any Shop (ruling 3). The Supplies group's Lines (priced, never bought) still offer it, so they are tried too.
+      const found = await openPriceableLineSheet()
+      if (!found) {
+        const lines = await evaluate(`fetch('/api/shopping/list').then((r) => r.json()).then((l) => (l.lines ?? []).map((x) => x.name + (x.ticked ? ' (ticked)' : '') + (x.pack ? ' pack ' + x.pack.productId + (x.pack.bought === false ? ' unbought' : ' bought') : '')).join(', '))`)
+        throw new Error(`setup: SSP-13: no open Line has "Change the Price" (the seed needs a priced Product at a Shop for one); the Lines: ${lines}`)
+      }
       await press(byText('dialog.sheet[open] button', 'Change the Price'), '"Change the Price"')
       await until(`document.querySelectorAll('dialog.sheet[open]').length >= 2 && !!document.querySelector('.price-keypad')`, 'the Price sheet over the Line sheet')
       const closes = await evaluate(`[...document.querySelectorAll('dialog.sheet[open]')].pop().querySelectorAll('button[aria-label="Close"], .price-keypad button').length`)

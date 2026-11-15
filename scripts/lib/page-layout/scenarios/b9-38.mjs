@@ -129,6 +129,10 @@ const scenarios = {
         await press(named('document', 'Swap'), 'Swap in the ⋮')
         await until(`!!(${DIALOG}?.querySelector('.sheet__title')?.textContent.startsWith('Swap '))`, 'the Swap sheet', 8000)
         await until(`!!document.querySelector('dialog.sheet[open] [aria-label="Now"]') && !document.querySelector('dialog.sheet[open] [aria-busy="true"]')`, 'Now and Instead', 8000)
+        // B9-55: the full release run measured the sheet while its step change was still moving (P33 at 375 under load; clean alone), so
+        // wait, as b9-14 does, until its animations are done and its box holds still for two frames.
+        await until(`(() => { const d = document.querySelector('dialog.sheet[open]'); return !!d && d.getAnimations({ subtree: true }).every((a) => a.playState !== 'running') })()`, 'the Swap sheet to finish its step change')
+        await until(`new Promise((ok) => { const d = document.querySelector('dialog.sheet[open]'); const a = JSON.stringify(d.getBoundingClientRect()); requestAnimationFrame(() => requestAnimationFrame(() => ok(JSON.stringify(d.getBoundingClientRect()) === a))) })`, 'the Swap sheet to hold still')
         await assertChrome()
         if (!(await evaluate(`!!document.querySelector('dialog.sheet[open] [aria-label="Instead"], dialog.sheet[open] [aria-label="Now"]')`))) throw new Error('setup: no Now / Instead lists')
       })
