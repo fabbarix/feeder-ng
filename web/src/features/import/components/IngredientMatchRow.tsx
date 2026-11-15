@@ -53,7 +53,7 @@ function Answers({ match, prompt, onUseExisting, onCreate, onAnswerConversion }:
     return (
       <div className="import-row__answers" role="group" aria-label={t.baseUnitGroup(name)}>
         {baseUnits.map((u) => (
-          <ChoiceChip key={u} pressed={chosen === u} icon={chosen === u ? 'tick' : undefined} onClick={() => onCreate({ baseUnit: u })}>
+          <ChoiceChip key={u} pressed={chosen === u} onClick={() => onCreate({ baseUnit: u })}>
             {u}
           </ChoiceChip>
         ))}
@@ -66,7 +66,6 @@ function Answers({ match, prompt, onUseExisting, onCreate, onAnswerConversion }:
       <div className="import-row__answers">
         <ChoiceChip
           pressed={match.effective?.action === 'use'}
-          icon={match.effective?.action === 'use' ? 'tick' : undefined}
           onClick={() => onUseExisting(existing.id)}
         >
           {s.useExisting(displayName(existing.name))}
@@ -82,12 +81,12 @@ function Answers({ match, prompt, onUseExisting, onCreate, onAnswerConversion }:
         {match.suggestions.map((x) => {
           const on = e?.action === 'use' && e.ingredientId === x.id
           return (
-            <ChoiceChip key={x.id} pressed={on} icon={on ? 'tick' : undefined} onClick={() => onUseExisting(x.id)}>
+            <ChoiceChip key={x.id} pressed={on} onClick={() => onUseExisting(x.id)}>
               {s.useExisting(displayName(x.name))}
             </ChoiceChip>
           )
         })}
-        <ChoiceChip pressed={e?.action === 'create'} icon={e?.action === 'create' ? 'tick' : undefined} onClick={() => onCreate()}>
+        <ChoiceChip pressed={e?.action === 'create'} onClick={() => onCreate()}>
           {t.createNamed(name)}
         </ChoiceChip>
       </div>

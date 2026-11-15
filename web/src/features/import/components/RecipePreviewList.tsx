@@ -110,7 +110,7 @@ function ConflictAnswers({ recipe: r, onChoose }: { recipe: RecipeStatus; onChoo
     <div className="import-row__answers">
       <div className="import-row__choices" role="group" aria-label={t.whatToDo(r.name)}>
         {actions.map(({ action, label }) => (
-          <ChoiceChip key={action} pressed={chosen === action} icon={chosen === action ? 'tick' : undefined} onClick={() => onChoose(r.index, action)}>
+          <ChoiceChip key={action} pressed={chosen === action} onClick={() => onChoose(r.index, action)}>
             {label}
           </ChoiceChip>
         ))}
