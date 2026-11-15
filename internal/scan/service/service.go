@@ -112,6 +112,8 @@ type ProductInfo struct {
 	// Barcode is the Product's first global barcode (canonical, the smallest of product_barcodes; "" = none). Product
 	// fills it; the receipt read sends it with each row (RR3).
 	Barcode string
+	// Archived (B9-50): the Product is archived. A receipt Add may not scan it.
+	Archived bool
 }
 
 // ShopBarcode is a Shop-only barcode: a plain code, or RuleID + ItemCode for a weighed one.
