@@ -43,6 +43,7 @@ import { Tile, TileMetric } from './Tile'
 import { TimerTile } from './TimerTile'
 import { WhyChip } from './WhyChip'
 import { OverlayGalleryGroups } from './GalleryOverlays'
+import { ToastUndoGalleryGroup } from './GalleryToasts'
 import './focusLayer.css'
 import './Gallery.css'
 
@@ -829,6 +830,7 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <TagColourPickerGroup />
       <TagSelectGroup />
       <OverlayGalleryGroups />
+      <ToastUndoGalleryGroup />
     </section>
   )
 }

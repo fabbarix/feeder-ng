@@ -1,0 +1,20 @@
+/* B9-18 Gallery stages: a framed box that contains its own toast region. The transform makes the stage the containing block of the
+   region's position: fixed, and the stage has no bottom bar or keyboard, so the region sits a gap above the stage's bottom edge. */
+.gallery__toast-stage {
+  --nav-top: 0px;
+  --keyboard-inset: 0px;
+  position: relative;
+  transform: translateZ(0);
+  inline-size: min(calc(420px + 2 * var(--space-4)), calc(100vw - 2 * var(--space-8)));
+  min-block-size: calc(3 * var(--space-10));
+  border-radius: var(--radius-tile);
+  background: var(--color-surface-2);
+}
+
+.gallery__toast-stage[data-size='two'] {
+  min-block-size: calc(5 * var(--space-10));
+}
+
+.gallery__toast-stage[data-size='three'] {
+  min-block-size: calc(8 * var(--space-10));
+}
