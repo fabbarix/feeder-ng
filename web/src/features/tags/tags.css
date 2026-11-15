@@ -4,20 +4,21 @@
   gap: var(--space-4);
 }
 
-/* A Tag may have 40 characters: a long one in capitals is a 340 px pill, wider than a phone's row once the usage line and the
-   chevron are beside it. ListRow's leading slot never shrinks, so on this list it may: at most 65% of the row, and the pill ends in
-   an ellipsis (its full name stays in its tooltip and in the row's accessible name). */
+/* SET-11: the Tag is the row's title, at most two lines (a long one ends in an ellipsis; its full name stays in the row's accessible
+   name); the Recipe count is the value, which never shrinks, so "12 Recipes" is never cut at 375. */
 .tags-screen {
   min-inline-size: 0;
 }
 
-.tags-screen .list-row__leading {
-  flex: 0 1 auto;
-  min-inline-size: 0;
-  max-inline-size: 65%;
+.tags-screen .list-row__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
-.tags-screen .list-row__leading > .chip {
-  min-inline-size: 0;
-  max-inline-size: 100%;
+.tags-screen .list-row__value {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
