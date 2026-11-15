@@ -1,7 +1,7 @@
 // B9-49 (RES-08): index.html paints the returning User's theme before the first frame and draws a shell skeleton, from the cache the
 // settings feature wrote (theme/themeCache: localStorage `feeder.theme`). Mock: docs/design/ui-review-3/mocks/res-08-boot-shell.html.
 // index.html links no app.css (none has loaded yet): everything is inline, and the inline script is under 1 KB.
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildThemeCache, writeThemeCache } from './theme/themeCache'
 
 const nodeFs = 'node:fs'
@@ -66,6 +66,44 @@ describe('the inline boot script', () => {
   })
 })
 
+describe('the boot script with junk in localStorage (the page must still open)', () => {
+  const junk: [string, string][] = [
+    ['not JSON', '{not json'],
+    ['a number', '42'],
+    ['a string', '"dark"'],
+    ['an array', '[1,2]'],
+    ['true', 'true'],
+    ['a palette that is a string', '{"scheme":"dark","dark":"#000000"}'],
+    ['a scheme that names a prototype key', '{"scheme":"constructor"}'],
+    ['a palette missing colours', '{"scheme":"light","light":{"bg":"#ffffff"}}'],
+    ['a colour that is CSS, not #rrggbb', '{"scheme":"light","light":{"bg":"#ffffff","surface":"#ffffff","surface2":"#ffffff","line":"#ffffff","text":"red;x:y","accent":"#ffffff"}}'],
+  ]
+  it.each(junk)('%s: no throw, and nothing on <html> changes', (_name, value) => {
+    localStorage.setItem('feeder.theme', value)
+    const root = document.documentElement
+    root.removeAttribute('data-boot')
+    root.removeAttribute('data-scheme')
+    root.removeAttribute('style')
+    expect(() => new Function(bootScript)()).not.toThrow()
+    expect(root.dataset.boot).toBeUndefined()
+    expect(root.dataset.scheme).toBeUndefined()
+    expect(root.getAttribute('style') ?? '').toBe('')
+  })
+
+  it('a storage that throws on read (blocked site data) is caught', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError')
+    })
+    try {
+      document.documentElement.removeAttribute('data-boot')
+      expect(() => new Function(bootScript)()).not.toThrow()
+      expect(document.documentElement.dataset.boot).toBeUndefined()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})
+
 describe('the shell skeleton in index.html', () => {
   it('is a role="status" named "Opening Feeder" inside #root, its blocks aria-hidden (the brand is text, not announced twice)', () => {
     expect(html).toMatch(/<div[^>]*class="boot-shell"[^>]*role="status"[^>]*aria-label="Opening Feeder"|<div[^>]*role="status"[^>]*class="boot-shell"[^>]*aria-label="Opening Feeder"|<div[^>]*aria-label="Opening Feeder"[^>]*>/)
@@ -90,7 +128,8 @@ describe('the shell skeleton in index.html', () => {
   })
 
   it('paints with the --boot-* colours, falling back to the default boot colours when there is no cache', () => {
-    expect(styles).toMatch(/background:\s*var\(--boot-bg,\s*#[0-9a-f]{6}\)/i)
+    // the live theme's --color-bg wins once the app has applied it (a scheme changed later is not left behind the page)
+    expect(styles).toMatch(/background:\s*var\(--color-bg,\s*var\(--boot-bg,\s*#[0-9a-f]{6}\)\)/i)
     expect(styles).toMatch(/var\(--boot-surface-2\)/)
     expect(styles).toMatch(/var\(--boot-accent/)
   })
