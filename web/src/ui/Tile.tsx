@@ -137,6 +137,7 @@ export function TileMetric({ value, label }: TileMetricProps) {
   return (
     <span className="tile-metric">
       <span className="tile-metric__value">{value}</span>
+      {/* A space for the text and screen readers ("8 portions per Batch"); the flex column drops it from the layout. */}{' '}
       <span className="tile-metric__label">{label}</span>
     </span>
   )
