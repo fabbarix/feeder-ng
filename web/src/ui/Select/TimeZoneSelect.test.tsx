@@ -20,7 +20,8 @@ describe('TimeZoneSelect', () => {
   it('is searchable whatever the number of zones', async () => {
     setup({ zones: ['Europe/Rome', 'UTC'] })
     await userEvent.click(screen.getByRole('combobox', { name: 'Time zone' }))
-    expect(screen.getByRole('combobox', { name: /Search/ })).toBeInTheDocument()
+    // The open Select's search field is a searchbox (the trigger is the one combobox, as Select.keys.test pins).
+    expect(screen.getByRole('searchbox', { name: /Search/ })).toBeInTheDocument()
   })
   it('An Admin finds Rome by typing "Rom" and picks it', async () => {
     const onChange = setup()
