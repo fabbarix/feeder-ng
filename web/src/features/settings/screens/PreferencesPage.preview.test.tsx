@@ -54,7 +54,10 @@ describe('Your preferences: the preview', () => {
     await pick('Dark')
     await waitFor(() => expect(scheme()).toBe('dark'))
     expect(puts(api)).toHaveLength(0)
-    expect(screen.getByRole('status')).toHaveTextContent('Not saved yet: Dark is a preview. Save it or put back System.')
+    // The toast layer keeps its own role=status live region mounted; the preview notice is the other one.
+    const notice = screen.getAllByRole('status').filter((el) => !el.closest('.toast-live'))
+    expect(notice).toHaveLength(1)
+    expect(notice[0]).toHaveTextContent('Not saved yet: Dark is a preview. Save it or put back System.')
   })
 
   it('Choosing Imperial changes the units of every consumer elsewhere in the app', async () => {
