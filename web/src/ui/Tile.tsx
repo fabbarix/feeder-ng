@@ -105,6 +105,7 @@ export function Tile({
 
   return (
     <Tag
+      data-size={size}
       {...rest}
       className={['tile', className].filter(Boolean).join(' ')}
       data-variant={resolved.variant}
@@ -112,7 +113,6 @@ export function Tile({
       data-span={resolved.span}
       data-row-span={rowSpan}
       data-tone={tone}
-      data-size={size}
       data-primary-scope=""
       role={onClick ? (rest.role ?? 'button') : rest.role}
       tabIndex={onClick ? 0 : rest.tabIndex}
