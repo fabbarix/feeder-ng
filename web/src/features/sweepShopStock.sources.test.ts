@@ -77,7 +77,10 @@ describe('B9-09: the .pg__* styling is gone from Products, Shops and Stock (DS-0
     expect(readFeature('stock/screens/StoragePlacesScreen.tsx')).toMatch(/<Muted[ >]/)
     expect(readFeature('stock/components/LotSheet.tsx')).toMatch(/<Stack[ >]/)
     expect(readFeature('shops/components/WeightRuleList.tsx')).toMatch(/<Stack[ >]/)
-    expect(readFeature('shops/components/WeightRuleEditor.tsx')).toMatch(/<SectionTitle as="h3"/)
+    // B9-30 (ruling 6): the "Item code" and "Value" subheads keep the SectionTitle look (class section-title) but are no longer h3,
+    // so each is said once, as the name of its FieldRow group (WeightRuleEditor.b9-30.test.tsx).
+    expect(readFeature('shops/components/WeightRuleEditor.tsx')).toMatch(/className="section-title rule-editor__group"/)
+    expect(readFeature('shops/components/WeightRuleEditor.tsx')).toMatch(/<FieldRow labelledBy=/)
   })
 })
 

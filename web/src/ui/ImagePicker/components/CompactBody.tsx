@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { ImageFileInput, type ImageFileInputHandle } from './ImageFileInput'
 import { Button } from '../../Button'
 import { acceptsFile } from '../../fields/accept'
 import { Thumb } from '../../Thumb'
@@ -27,8 +28,8 @@ export interface CompactBodyProps {
  * small "Choose a file" (and "Take photo" where a camera route exists). Filled: the 72 px picture with "Change" and "Remove".
  */
 export function CompactBody({ label, monogram, hasValue, previewSrc, helper, helperId, camera, disabled, onFiles, onReject, onTakePhoto, onRemove }: CompactBodyProps) {
-  const input = useRef<HTMLInputElement>(null)
-  const choose = () => input.current?.click()
+  const input = useRef<ImageFileInputHandle>(null)
+  const choose = () => input.current?.open()
   return (
     <div className="image-picker__compact">
       <Thumb name={monogram} imageUrl={hasValue ? previewSrc : undefined} size={72} label={hasValue ? label : undefined} />
@@ -62,15 +63,11 @@ export function CompactBody({ label, monogram, hasValue, previewSrc, helper, hel
           )}
         </div>
       </div>
-      <input
+      <ImageFileInput
         ref={input}
-        type="file"
-        hidden
         accept={ACCEPT}
         disabled={disabled}
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? [])
-          e.target.value = ''
+        onFiles={(files) => {
           const rejected = files.filter((f) => !acceptsFile(f, ACCEPT))
           if (rejected.length > 0) onReject(rejected)
           const accepted = files.filter((f) => acceptsFile(f, ACCEPT)).slice(0, 1)
