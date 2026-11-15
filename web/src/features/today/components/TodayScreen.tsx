@@ -42,6 +42,7 @@ import { useMinuteClock } from '../hooks/useMinuteClock'
 import { useLayoutMemory } from '../hooks/useLayoutMemory'
 import { useTodayShortfalls } from '../hooks/useTodayShortfalls'
 import { useAdvanceStepsDue, useToday } from '../hooks/useToday'
+import { useTodayLanding } from '../hooks/useTodayLanding'
 import { useTodayMetrics } from '../hooks/useTodayMetrics'
 import { todayHeading } from '../lib/heading'
 import { rowCounts } from '../lib/layoutMemory'
@@ -51,7 +52,7 @@ import { useShoppingSession } from '../shoppingSeam'
 import { todayStrings } from '../strings'
 import type { TileId } from '../types'
 import { courseCells } from '../../plan/lib/couldntGroups'
-import { AdvanceStepsTile } from './AdvanceStepsTile'
+import { AdvanceStepsTile, focusAdvanceStepDone } from './AdvanceStepsTile'
 import { MetricStrip } from './MetricStrip'
 import { SetupChecklistTile } from './SetupChecklistTile'
 import { SetupSheets } from './SetupSheets.lazy'
@@ -128,6 +129,15 @@ export function TodayScreen(): ReactElement {
   const slotDate = useSlotDate(hero ? [hero, ...notServed] : notServed)
   // PC-02 (ruling 2): one shortfall notice under To confirm for both cook flows, with one Correct Stock sheet.
   const shortfalls = useTodayShortfalls(flow, sheets.allCooked)
+  // B9-49 (TB-14): Today as a notification's landing (?step= rings the Advance Step and focuses its Done; ?leftover= opens its sheet).
+  const landing = useTodayLanding({
+    ready: !loading && !steps.loading,
+    hasOpenStep: (scope, i) => steps.steps.some((st) => st.scope === scope && st.step === i),
+    hasOpenLeftover: (id) => data.leftovers.some((l) => l.id === id),
+    onRingStep: focusAdvanceStepDone,
+    onOpenLeftover: (id) => leftovers.openLeftover(id),
+    onNotice: (text) => toast.show(text),
+  })
   // RES-05: the shape of this layout is remembered for the next launch, and the last one is drawn while the plan loads.
   const remembered = useLayoutMemory(
     layout,
@@ -197,6 +207,7 @@ export function TodayScreen(): ReactElement {
         timeZone={timeZone ?? 'UTC'}
         offline={stepDone.offline}
         onDone={(step) => void stepDone.markDone(step)}
+        ringed={landing.ringed}
       />
     ),
     toConfirm: (
