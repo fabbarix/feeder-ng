@@ -1,17 +1,6 @@
 /* Products and Shops screens: layout only; colours come from the theme tokens. DS-07 (B9-09): the old .pg layout and type classes
    are the ui primitives now (Stack, Cluster, SectionTitle, Muted). */
 
-/* The field-error line stays until SAFE's field-error pattern replaces it. */
-.pg__error {
-  margin: 0;
-  font-weight: 600;
-}
-
-/* "Latest Price per Shop" and "Price history": third-level headings in the Prices tile, set as a muted line (Muted inside). */
-.product-prices__subhead {
-  line-height: var(--text-meta-line);
-}
-
 /* Shop Location status line with its optional "Try again". */
 .shop-location {
   display: flex;
@@ -55,4 +44,28 @@
   line-height: var(--text-meta-line);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* SET-04: a subhead inside a tile ("Latest at each Shop", "Shop Barcodes"): the label role, muted. */
+.product-subhead {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
+}
+
+/* SET-04: "Price history · N older": a disclosure whose CaretRight turns down while open. */
+.product-history svg {
+  transition: transform var(--motion-fast) ease;
+}
+
+.product-history[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+/* SET-04: the Shop Barcodes subhead over its rows. */
+.product-barcodes__shop {
+  display: grid;
+  gap: var(--space-2);
 }

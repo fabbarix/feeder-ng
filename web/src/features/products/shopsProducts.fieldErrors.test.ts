@@ -9,7 +9,8 @@ const raw = import.meta.glob(['../products/**/*.{ts,tsx,css}', '../shops/**/*.{t
   eager: true,
 }) as Record<string, string>
 
-const files = Object.entries(raw).map(([path, text]) => ({ rel: path.replace(/^\.\.\//, ''), text: text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '') }))
+// Vite keys this folder's own files "./components/…" (not "../products/…"), so both forms are normalised to "products/…".
+const files = Object.entries(raw).map(([path, text]) => ({ rel: path.replace(/^\.\.\//, '').replace(/^\.\//, 'products/'), text: text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '') }))
 const file = (rel: string) => files.find((f) => f.rel === rel)?.text ?? ''
 
 describe('Shops and Products have one field-error pattern', () => {

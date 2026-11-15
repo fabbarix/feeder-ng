@@ -13,7 +13,13 @@ export interface ProductFormValues {
   image?: string
 }
 
-export type ProductFormErrors = Partial<Record<keyof ProductFormValues, string>>
+export type ProductFormErrors = Partial<Record<keyof ProductFormValues | 'ingredient', string>>
+
+/** The fields of a failed save that belong to a field: a 400 invalid_barcode is the Barcode field's; anything else is the form's. */
+export function saveErrors(e: unknown): { errors: ProductFormErrors; formError: string | null } {
+  const barcode = barcodeErrorFor(e)
+  return barcode ? { errors: { barcode }, formError: null } : { errors: {}, formError: errorText(e) }
+}
 
 function cleanName(s: string): string {
   return s.trim().replace(/\s+/g, ' ')

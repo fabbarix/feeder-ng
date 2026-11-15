@@ -4,6 +4,7 @@ import { FileDrop } from '../fields/FileDrop'
 import { Icon } from '../Icon'
 import { IconButton } from '../IconButton'
 import { CameraPanel } from './components/CameraPanel'
+import { CompactBody } from './components/CompactBody'
 import { CropEditor } from './components/CropEditor'
 import { FileButton } from './components/FileButton'
 import { LinkPanel } from './components/LinkPanel'
@@ -31,6 +32,7 @@ export function ImagePicker(props: ImagePickerProps) {
   const helper = props.helper ?? limitHelperFor(p.maxBytes)
   const editing = p.cropSession.phase === 'ready'
   const statusText = p.loadingCrop ? t.cropLoading : PHASE_TEXT[p.phase]
+  const compact = props.compact === true
   const fieldOnly = p.linkPanelOpen // the link problem is shown on its field, the alert below is then only for screen readers
 
   return (
@@ -39,7 +41,8 @@ export function ImagePicker(props: ImagePickerProps) {
       role="group"
       className="image-picker"
       aria-labelledby={headingId}
-      aria-describedby={[helperId, p.message ? errorId : null].filter(Boolean).join(' ')}
+      aria-describedby={[compact && p.hasValue ? null : helperId, p.message ? errorId : null].filter(Boolean).join(' ') || undefined}
+      data-compact={compact ? 'true' : undefined}
       aria-keyshortcuts="Control+V Meta+V"
       aria-busy={p.busy || undefined}
       onPaste={p.handlePaste}
@@ -49,7 +52,25 @@ export function ImagePicker(props: ImagePickerProps) {
         {props.label}
       </p>
 
-      {editing && p.cropSession.phase === 'ready' ? (
+      {compact && !editing ? (
+        <>
+          <CompactBody
+            label={props.label}
+            monogram={props.monogram ?? props.label}
+            hasValue={p.hasValue}
+            previewSrc={p.previewSrc}
+            helper={props.helper}
+            helperId={helperId}
+            camera={p.cameraButton}
+            disabled={p.locked}
+            onFiles={p.onFiles}
+            onReject={p.onReject}
+            onTakePhoto={p.takePhoto}
+            onRemove={p.remove}
+          />
+          {p.panel === 'camera' ? <CameraPanel camera={p.camera} disabled={p.busy} onCapture={() => void p.capture()} onClose={p.closeCamera} /> : null}
+        </>
+      ) : editing && p.cropSession.phase === 'ready' ? (
         <CropEditor
           src={p.cropSession.src}
           width={p.cropSession.width}
@@ -86,7 +107,8 @@ export function ImagePicker(props: ImagePickerProps) {
             <div onDropCapture={() => (p.dropped.current = true)}>
               <FileDrop
                 label={p.hasValue ? t.replaceImage : t.addImage}
-                buttonLabel={p.hasValue ? `${t.replaceImage}: choose a file or drop it here` : undefined}
+                buttonLabel={p.hasValue ? `${t.replaceImage}: choose a file` : t.chooseFile}
+                hint={t.dropHint}
                 accept={ACCEPT}
                 disabled={p.locked}
                 onFiles={p.onFiles}

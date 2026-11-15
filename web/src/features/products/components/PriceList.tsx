@@ -1,37 +1,33 @@
-import { IconButton, ListGroup, ListRow, Muted } from '../../../ui'
-import { formatMinor, formatPricePerKg } from '../lib/money'
-import { strings } from '../strings'
-import type { Price, Shop } from '../types'
+import { ListGroup, ListRow } from '../../../ui'
+import type { PriceRow } from '../lib/priceRows'
+import type { Price } from '../types'
 import '../products.css'
 
 export interface PriceListProps {
-  prices: Price[]
-  shops: Shop[]
-  currency: string
-  onDelete: (priceId: number) => void
+  rows: PriceRow[]
+  /** Names the list for a screen reader. */
+  label: string
+  /** Opens the Price sheet of a row. */
+  onOpen: (price: Price) => void
 }
 
-/** Rows "Corner Market · 2026-11-05 · $1.59 · $2.27 / kg (worked out from the pack size)", newest first as given. */
-export function PriceList({ prices, shops, currency, onDelete }: PriceListProps) {
-  if (prices.length === 0) return <Muted>{strings.noPrices}</Muted>
-  const shopName = (id: number) => shops.find((s) => s.id === id)?.name ?? strings.unknownShop
+/** SET-04: R-E Price rows (priceRows): the Shop as title, the date as meta, the price in the value column; a row opens its Price sheet. */
+export function PriceList({ rows, label, onOpen }: PriceListProps) {
   return (
-    <ListGroup label={strings.pricesTitle}>
-      {prices.map((p) => {
-        const parts = [shopName(p.shopId), p.date]
-        if (p.priceCents != null) parts.push(formatMinor(p.priceCents, currency))
-        if (p.pricePerKgCents != null) {
-          const perKg = formatPricePerKg(p.pricePerKgCents, currency)
-          parts.push(p.pricePerKgDerived ? `${perKg} (${strings.derivedPerKg})` : perKg)
-        }
-        return (
-          <ListRow
-            key={p.id}
-            title={parts.join(' · ')}
-            trailing={<IconButton icon="delete" label={`${strings.deletePrice}: ${parts.slice(0, 2).join(' ')}`} onClick={() => onDelete(p.id)} />}
-          />
-        )
-      })}
+    <ListGroup label={label}>
+      {rows.map((r) => (
+        <ListRow
+          key={r.id}
+          title={r.key}
+          aria-label={r.label}
+          meta={r.detail}
+          value={r.value}
+          subValue={r.subValue}
+          chevron
+          haspopup="dialog"
+          onActivate={() => onOpen(r.price)}
+        />
+      ))}
     </ListGroup>
   )
 }

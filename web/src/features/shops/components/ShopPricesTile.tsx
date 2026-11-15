@@ -30,7 +30,7 @@ export function ShopPricesTile({ shopName, prices }: ShopPricesTileProps) {
   }, [expanded])
 
   return (
-    <Tile as="section" span="full" aria-label={strings.pricesKnownTitle} className="shop-prices">
+    <Tile as="section" span="full" aria-label={strings.pricesKnownTitle}>
       <div className="shop-prices__head">
         <SectionTitle>{strings.pricesKnownTitle}</SectionTitle>
         {prices.rows.length > 0 ? <span className="shop-prices__count">{strings.pricesCount(prices.rows.length)}</span> : null}

@@ -5,3 +5,5 @@
 web/src/ui/Gallery.tsx   # the primitives Gallery shows every tone as a specimen, spoil and danger included
 web/src/ui/GalleryOverlays.tsx   # the Gallery's overlay specimens show the danger confirm dialogs (a loss)
 web/src/features/products/hooks/useProductActions.ts   # Delete Product is a loss: its confirm keeps the danger tone (SAFE-02, B9-30); a Shop delete confirm file is listed here by the developer when it sets tone: danger
+web/src/features/products/screens/ProductScreen.tsx   # B9-30: the header menu's Delete Product item is a loss (danger tone; its confirm keeps danger too)
+web/src/features/shops/screens/ShopScreen.tsx   # B9-30 (SAFE-02): the Delete Shop confirm is a loss and keeps the danger tone

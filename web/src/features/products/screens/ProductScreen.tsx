@@ -1,42 +1,37 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
+import { useHouseholdDate } from '../../../app/useHouseholdDate'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, Button, Chip, Cluster, CROP_ASPECTS, EmptyState, ErrorState, LoadState, FormActions, ImagePicker, Muted, PageHeader, SectionTitle, Stack, TextField, Tile } from '../../../ui'
+import { BentoGrid, Button, Chip, Cluster, CROP_ASPECTS, EmptyState, ErrorState, FieldRow, ImagePicker, LoadState, Menu, Muted, PageHeader, SectionTitle, Stack, TextField, Tile } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { displayName } from '../../ingredients/lib/names'
 import { PriceEditor } from '../components/PriceEditor'
-import { PriceList } from '../components/PriceList'
 import { ProductBarcodes } from '../components/ProductBarcodes'
+import { ProductPrices } from '../components/ProductPrices'
 import { ProductShops } from '../components/ProductShops'
 import { useAttempt } from '../hooks/useAttempt'
 import { useCurrency } from '../hooks/useCurrency'
+import { usePackSize } from '../hooks/usePackSize'
 import { useProduct } from '../hooks/useProduct'
 import { useProductActions } from '../hooks/useProductActions'
 import { useProductsLiveUpdates } from '../hooks/useProductsLiveUpdates'
 import { productActions } from '../lib/archive'
 import { formatPackSize } from '../lib/names'
 import { todayIso } from '../lib/priceForm'
-import { parsePackSize } from '../lib/productForm'
 import { strings } from '../strings'
+import type { Price, ProductDetail } from '../types'
 import '../products.css'
 
 /**
- * /products/:id: a PageHeader, then a BentoGrid of Tiles: pack size (editable), barcodes and Shop Barcodes, Shops,
- * Prices (PriceList + PriceEditor in a BottomSheet) and the actions (Archive or Unarchive, Delete).
- * Hooks: useProduct, useProductActions, useCurrency.
+ * /products/:id, in order of use (SET-04): the header (the Ingredient link and the pack size; Archive and Delete in the ⋮ menu), Prices
+ * (rows, history, Add Price), Sold at and Pack size (cards, two-up when they fit), Barcodes, and the compact Picture last. Light removals
+ * act at once with Undo; a failed change is the page's FormError.
  */
 export function ProductScreen() {
   const id = Number(useParams().id)
-  const currency = useCurrency()
-  const system = useDisplayUnitSystem()
   const p = useProduct(id)
-  const [packText, setPackText] = useState<string | null>(null)
-  const [pricing, setPricing] = useState(false)
-  const { error: packError, attempt } = useAttempt()
-  const actions = useProductActions(p.product, p)
-  useProductsLiveUpdates()
-
   const product = p.product
   const breadcrumbs = useBreadcrumbs(product?.name)
   if (!product) {
@@ -56,67 +51,92 @@ export function ProductScreen() {
       </Stack>
     )
   }
+  return <ProductPage product={product} p={p} breadcrumbs={breadcrumbs} />
+}
 
-  const packValue = packText ?? String(product.packSize)
-  const packSize = parsePackSize(packValue)
+function ProductPage({ product, p, breadcrumbs }: { product: ProductDetail; p: ReturnType<typeof useProduct>; breadcrumbs: ReturnType<typeof useBreadcrumbs> }) {
+  const currency = useCurrency()
+  const system = useDisplayUnitSystem()
+  const today = useHouseholdDate() ?? todayIso()
+  const [sheet, setSheet] = useState<Price | 'new' | null>(null)
+  const { error: changeError, attempt } = useAttempt()
+  const actions = useProductActions(product, p)
+  const pack = usePackSize(product, (size) => attempt(() => p.setPackSize(size)))
+  useProductsLiveUpdates()
+
   const offered = productActions(product)
-  const error = packError ?? actions.error
+  const error = changeError ?? actions.error
+  const editing = sheet !== null && sheet !== 'new' ? sheet : undefined
 
   return (
     <Stack gap="4">
-      <PageHeader title={product.name} breadcrumbs={breadcrumbs} />
-      <Muted>
-        <Link to={`/ingredients/${product.ingredientId}`}>{displayName(product.ingredientName)}</Link> · {formatPackSize(product.packSize, product.baseUnit, system)}
-      </Muted>
+      <PageHeader
+        title={product.name}
+        breadcrumbs={breadcrumbs}
+        subtitle={
+          <>
+            <Link className="text-link" to={`/ingredients/${product.ingredientId}`}>
+              {displayName(product.ingredientName)}
+            </Link>{' '}
+            · {strings.packPill(formatPackSize(product.packSize, product.baseUnit, system))}
+          </>
+        }
+        actions={
+          <Menu
+            label={strings.morePrefix(product.name)}
+            items={[
+              offered.includes('unarchive')
+                ? { id: 'unarchive', label: strings.unarchiveProduct, icon: 'unarchive', onSelect: () => void actions.unarchive() }
+                : { id: 'archive', label: strings.archiveProduct, icon: 'archive', onSelect: () => void actions.archive() },
+              { id: 'delete', label: strings.deleteProduct, icon: 'delete', tone: 'danger', onSelect: () => void actions.remove() },
+            ]}
+          />
+        }
+      />
       {product.archived ? (
         <Cluster>
           <Chip kind="state">{strings.archivedChip}</Chip>
           <Muted>{strings.archivedNote}</Muted>
         </Cluster>
       ) : null}
-      {error ? (
-        <p role="alert" className="pg__error">
-          {error}
-        </p>
-      ) : null}
+      <FormError>{error}</FormError>
 
       <BentoGrid min="card">
-        <Tile as="section" span="full" aria-labelledby="product-picture-heading">
-          <SectionTitle id="product-picture-heading">{strings.pictureLabel}</SectionTitle>
-          <ImagePicker
-            hideLabel
-            label={strings.pictureLabel}
-            value={product.image ?? ''}
-            onChange={(id) => void attempt(() => p.setImage(id))}
-            aspect={CROP_ASPECTS.landscape}
+        <Tile as="section" span="full" aria-label={strings.pricesTitle}>
+          <SectionTitle>{strings.pricesTitle}</SectionTitle>
+          <ProductPrices
+            latest={product.latestPrices}
+            all={p.prices}
+            shops={p.shops}
+            currency={currency}
+            today={today}
+            onOpen={(price) => setSheet(price)}
+            onAdd={() => setSheet('new')}
           />
         </Tile>
 
-        <Tile as="section" span="full" aria-label={strings.packSizeTitle}>
+        <Tile as="section" aria-label={strings.shopsTitle}>
+          <SectionTitle>{strings.shopsTitle}</SectionTitle>
+          <ProductShops allShops={p.shops} soldAt={product.shops} onToggle={(shopId, sells) => void attempt(() => p.setSoldAt(shopId, sells))} />
+        </Tile>
+
+        <Tile as="section" aria-label={strings.packSizeTitle}>
           <SectionTitle>{strings.packSizeTitle}</SectionTitle>
           <form
             noValidate
             onSubmit={(e) => {
               e.preventDefault()
-              if (packSize !== null) void attempt(() => p.setPackSize(packSize)).then(() => setPackText(null))
+              void pack.submit()
             }}
           >
-            <Stack>
-              <TextField
-                size="sm"
-                label={strings.packSizeLabel(product.baseUnit)}
-                inputMode="decimal"
-                value={packValue}
-                onChange={setPackText}
-                error={packSize === null ? strings.errPackSize : undefined}
-              />
-              <FormActions
-                primary={
-                  <Button type="submit" disabled={packSize === null || packSize === product.packSize}>
-                    {strings.savePackSize}
-                  </Button>
-                }
-              />
+            <Stack gap="2">
+              <FieldRow align="end">
+                <TextField size="xs" label={strings.packSizeLabel(product.baseUnit)} inputMode="decimal" value={pack.value} onChange={pack.setValue} error={pack.error} />
+                <Button type="submit" disabled={!pack.canSave}>
+                  {strings.savePackSize}
+                </Button>
+              </FieldRow>
+              {pack.hint ? <Muted>{pack.hint}</Muted> : null}
             </Stack>
           </form>
         </Tile>
@@ -133,61 +153,40 @@ export function ProductScreen() {
           />
         </Tile>
 
-        <Tile as="section" span="full" aria-label={strings.shopsTitle}>
-          <SectionTitle>{strings.shopsTitle}</SectionTitle>
-          <ProductShops allShops={p.shops} soldAt={product.shops} onToggle={(shopId, sells) => void attempt(() => p.setSoldAt(shopId, sells))} />
-        </Tile>
-
-        <Tile as="section" span="full" aria-label={strings.pricesTitle}>
-          <SectionTitle>{strings.pricesTitle}</SectionTitle>
-          <h3 className="product-prices__subhead">
-            <Muted as="span">{strings.latestPrices}</Muted>
-          </h3>
-          <PriceList prices={product.latestPrices} shops={p.shops} currency={currency} onDelete={(priceId) => void attempt(() => p.deletePrice(priceId))} />
-          <Cluster>
-            <Button variant="secondary" icon="add" onClick={() => setPricing(true)}>
-              {strings.addPrice}
-            </Button>
-          </Cluster>
-          <h3 className="product-prices__subhead">
-            <Muted as="span">{strings.priceHistory}</Muted>
-          </h3>
-          <PriceList prices={p.prices} shops={p.shops} currency={currency} onDelete={(priceId) => void attempt(() => p.deletePrice(priceId))} />
-        </Tile>
-
-        <Tile as="section" span="full" aria-label={strings.actionsTitle}>
-          <FormActions
-            destructive={
-              <Button variant="danger-secondary" onClick={() => void actions.remove()}>
-                {strings.deleteProduct}
-              </Button>
-            }
-            primary={
-              offered.includes('unarchive') ? (
-                <Button variant="secondary" onClick={() => void actions.unarchive()}>
-                  {strings.unarchiveProduct}
-                </Button>
-              ) : (
-                <Button variant="secondary" onClick={() => void actions.archive()}>
-                  {strings.archiveProduct}
-                </Button>
-              )
-            }
+        <Tile as="section" span="full" aria-labelledby="product-picture-heading">
+          <SectionTitle id="product-picture-heading">{strings.pictureLabel}</SectionTitle>
+          <ImagePicker
+            compact
+            monogram={product.name}
+            hideLabel
+            label={strings.pictureLabel}
+            value={product.image ?? ''}
+            onChange={(image) => void attempt(() => p.setImage(image))}
+            aspect={CROP_ASPECTS.landscape}
           />
         </Tile>
       </BentoGrid>
 
-      {pricing ? (
+      {sheet !== null ? (
         <PriceEditor
           shops={p.shops}
           latestByShop={p.latestByShop}
           currency={currency}
-          today={todayIso()}
+          today={today}
+          price={editing}
+          onDelete={
+            editing
+              ? () => {
+                  setSheet(null)
+                  void attempt(() => p.deletePrice(editing))
+                }
+              : undefined
+          }
           onSave={async (body) => {
             await p.recordPrice(body)
-            setPricing(false)
+            setSheet(null)
           }}
-          onCancel={() => setPricing(false)}
+          onCancel={() => setSheet(null)}
         />
       ) : null}
     </Stack>

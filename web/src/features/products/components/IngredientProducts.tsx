@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { UnitSystem } from '../../../lib/units'
-import { BottomSheet, Button, SectionTitle, Tile } from '../../../ui'
+import { Button, SectionTitle, Tile } from '../../../ui'
 import { useIngredientProducts } from '../hooks/useIngredientProducts'
 import { strings } from '../strings'
 import type { BaseUnit } from '../types'
-import { ProductForm } from './ProductForm'
+import { NewProductSheet } from './NewProductSheet'
 import { ProductList } from './ProductList'
 import '../products.css'
 
@@ -19,8 +19,8 @@ export interface IngredientProductsProps {
 /**
  * The "Products" tile of an Ingredient page (embedded by the ingredients feature):
  * lists the Ingredient's Products (name, pack size, link to /products/:id) with an
- * EmptyState when there are none, and a "New Product" button opening a BottomSheet
- * with ProductForm. A successful create closes the sheet.
+ * EmptyState when there are none, and a "New Product" button opening the shared
+ * NewProductSheet (SET-14a). A successful create closes the sheet.
  */
 export function IngredientProducts({ ingredientId, ingredientName, baseUnit, system = 'metric' }: IngredientProductsProps) {
   const { products, create } = useIngredientProducts(ingredientId)
@@ -32,17 +32,15 @@ export function IngredientProducts({ ingredientId, ingredientName, baseUnit, sys
       <Button variant="secondary" onClick={() => setOpen(true)}>
         {strings.newProduct}
       </Button>
-      <BottomSheet open={open} onClose={() => setOpen(false)} title={strings.newProduct}>
-        <ProductForm
-          ingredientId={ingredientId}
-          ingredientName={ingredientName}
-          baseUnit={baseUnit}
-          onSubmit={async (body) => {
-            await create(body)
-            setOpen(false)
-          }}
-        />
-      </BottomSheet>
+      <NewProductSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        ingredient={{ id: ingredientId, name: ingredientName, baseUnit }}
+        onSubmit={async (body) => {
+          await create(body)
+          setOpen(false)
+        }}
+      />
     </Tile>
   )
 }

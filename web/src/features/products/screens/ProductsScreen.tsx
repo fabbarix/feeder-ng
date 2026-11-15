@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Chip, ErrorState, ListPage, LoadState, PageHeader, SearchField } from '../../../ui'
+import { Button, Chip, ErrorState, ListPage, LoadState, PageHeader, SearchField } from '../../../ui'
+import { NewProductSheet } from '../components/NewProductSheet'
 import { ProductList } from '../components/ProductList'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { applyArchivedFilter } from '../lib/archive'
+import { useCreateProduct } from '../hooks/useCreateProduct'
 import { useProducts } from '../hooks/useProducts'
 import { useProductsLiveUpdates } from '../hooks/useProductsLiveUpdates'
 import { strings } from '../strings'
 
-/** /products: search field, the Archived filter chip (off: active Products only), ProductList. Hook: useProducts. */
+/** /products: "New Product" (SET-14a), search field, the Archived filter chip (off: active Products only), ProductList. Hook: useProducts. */
 export function ProductsScreen() {
   const [q, setQ] = useState('')
   const [archived, setArchived] = useState(false)
@@ -16,9 +18,21 @@ export function ProductsScreen() {
   useProductsLiveUpdates()
   const system = useDisplayUnitSystem()
   const breadcrumbs = useBreadcrumbs()
+  const [creating, setCreating] = useState(false)
+  const create = useCreateProduct()
   return (
     <ListPage
-      header={<PageHeader title={strings.productsTitle} breadcrumbs={breadcrumbs} />}
+      header={
+        <PageHeader
+          title={strings.productsTitle}
+          breadcrumbs={breadcrumbs}
+          actions={
+            <Button icon="add" onClick={() => setCreating(true)}>
+              {strings.newProduct}
+            </Button>
+          }
+        />
+      }
       search={<SearchField label={strings.productsSearch} value={q} onChange={setQ} />}
       filters={
         <Chip kind="filter" selected={archived} onClick={() => setArchived((on) => !on)}>
@@ -36,6 +50,14 @@ export function ProductsScreen() {
       ) : (
         <ProductList products={applyArchivedFilter(list.products, archived)} system={system} showingArchived={archived} />
       )}
+      <NewProductSheet
+        open={creating}
+        onClose={() => setCreating(false)}
+        onSubmit={async (body) => {
+          await create(body)
+          setCreating(false)
+        }}
+      />
     </ListPage>
   )
 }
