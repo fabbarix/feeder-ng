@@ -1,9 +1,11 @@
 // The Leftover flow of one screen: which sheet is open, the Leftover details, the answer waiting for a yes, and the calls.
 // React-facing state only: the rules are in sheetModel, the copy in copy, the requests in api.
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useConfirm } from '../../ui/ConfirmDialog'
 import { leftoversApi } from './api'
 import { answerLabel, answerTitle } from './copy'
+import { plannedForNames, type PlannedForSlot } from './rows'
 import { replannedNotes } from './sheetModel'
 import { useLeftoverSheetContext, type LeftoverSheetContext } from './useLeftoverSheetContext'
 import { useLeftoverActions, useLeftovers } from './useLeftoverActions'
@@ -18,6 +20,8 @@ export interface LeftoverFlow {
   today: string
   /** Every Leftover with portions left (the Pantry and the Plan filter them). */
   leftovers: Leftover[]
+  /** B9-45 (PC-13): the Planned Meals each Leftover is planned for, by id ("Mon Dinner"), from the plan view the screen holds. */
+  plannedFor: Record<number, string[]>
   sheet: OpenLeftoverSheet | null
   /** The Leftover whose details sheet is open ("From Mon's Chilli"), or null. */
   details: Leftover | null
@@ -54,10 +58,15 @@ export function useLeftoverFlow(today: string): LeftoverFlow {
   const recipeId = sheet?.leftover.recipeId ?? null
   const context = useLeftoverSheetContext(recipeId)
   const details = detailsId === null ? null : (leftovers.find((l) => l.id === detailsId) ?? null)
+  // The plan view as the screen holds it (read from the cache, no fetch and no observer of its own): which Planned Meals eat from
+  // which Leftover. The Leftovers list refetches with the plan (both under ['plan']), so this is read again then.
+  const client = useQueryClient()
+  const plannedFor = plannedForNames(client.getQueryData<{ slots?: PlannedForSlot[] }>(['plan', 'view'])?.slots ?? [])
 
   return {
     today,
     leftovers,
+    plannedFor,
     sheet,
     details,
     context,
@@ -69,7 +78,10 @@ export function useLeftoverFlow(today: string): LeftoverFlow {
     closeSheet: () => setSheet(null),
     confirm: async (request) => {
       if (!sheet) return
-      if (await actions.run(sheet.leftover, request)) setSheet(null)
+      // A merged row (B9-45, PC-13) stands for several Leftovers: the action takes from the soonest first.
+      const ids = (sheet.leftover as Leftover & { ids?: number[] }).ids
+      const members = ids && ids.length > 1 ? leftovers.filter((l) => ids.includes(l.id)) : undefined
+      if (await actions.run(sheet.leftover, request, members)) setSheet(null)
     },
     openDetails: (id) => {
       setSheet(null)

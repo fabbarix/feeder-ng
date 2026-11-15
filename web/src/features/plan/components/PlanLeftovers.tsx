@@ -23,6 +23,7 @@ export function PlanLeftovers({ flow }: PlanLeftoversProps): ReactNode {
         leftovers={flow.leftovers}
         today={flow.today}
         busy={flow.busy}
+        plannedFor={flow.plannedFor}
         onAction={(kind, leftover) => flow.openSheet(kind, leftover)}
         onAnswer={(leftover, answer) => void flow.answer(leftover, answer)}
       />

@@ -134,6 +134,7 @@ export function LeftoversTile({ leftovers, today, onOpen, flow, tone = 'leftover
           leftovers={leftovers.map(asLeftover)}
           today={today}
           busy={flow.busy}
+          plannedFor={flow.plannedFor}
           onAction={(kind: LeftoverActionKind, l: LeftoverFull) => flow.openSheet(kind, l)}
           onAnswer={(l: LeftoverFull, answer: LeftoverAnswer) => void flow.answer(l, answer)}
         />

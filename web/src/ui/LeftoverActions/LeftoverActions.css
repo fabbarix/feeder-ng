@@ -44,3 +44,89 @@
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
 }
+
+/* B9-45 (PC-13): Freeze it as one question. The large Stepper centred, the hint muted under it, then one compact meta line
+   "Goes to Garage Freezer · Use by 13 Feb" with its small outlined Change. */
+.leftover-freeze {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  text-align: center;
+}
+
+.leftover-freeze > .stepper {
+  inline-size: min(100%, 20rem);
+}
+
+.leftover-freeze__hint,
+.leftover-freeze__where {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.leftover-freeze__where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.leftover-freeze__where > svg {
+  flex: none;
+  color: var(--color-info-fg);
+}
+
+.leftover-freeze__where strong {
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+}
+
+.leftover-freeze__choice {
+  inline-size: 100%;
+  text-align: start;
+}
+
+/* B9-45 (PC-13): the second meta line of a Leftover that is planned for ("1.25 for Mon Dinner · 1.25 spare: have it or freeze it"). */
+.leftover-row__hint {
+  display: block;
+  color: var(--color-muted);
+}
+
+.leftover-freeze__where-text {
+  min-inline-size: 0;
+}
+
+/* The large Stepper keeps − and + in the side columns and sets "portions" under the value. */
+.leftover-freeze .stepper[data-size='lg'] {
+  grid-template-rows: auto auto;
+  align-items: center;
+  row-gap: 0;
+}
+
+.leftover-freeze .stepper[data-size='lg'] > .icon-button:first-child {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.leftover-freeze .stepper[data-size='lg'] > .icon-button:last-child {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+.leftover-freeze .stepper[data-size='lg'] > .stepper__value {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.leftover-freeze .stepper[data-size='lg'] > .stepper__unit {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}

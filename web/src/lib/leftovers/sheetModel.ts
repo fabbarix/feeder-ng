@@ -1,5 +1,5 @@
 // The Leftover sheets' view model: defaults, the request each confirm sends, the place choices and the notes (pure, no React).
-import { freezeNote, leftoverStrings, replannedNote, takeOutNote } from './copy'
+import { freezeNote, leftoverStrings, replannedNote, takeOutNote, useByPhrase } from './copy'
 import { defaultFreezer, freezeDefaultPortions, freezerPlaces, freezeUseBy, hadItDefault, takeOutPlaces, takeOutUseBy, throwOutDefault } from './portions'
 import { NOT_SORTED_PLACE, type Leftover, type LeftoverActionKind, type LeftoverPlace, type LeftoverRequest, type PlannedMealRef } from './types'
 
@@ -100,26 +100,43 @@ export function replannedNotes(refs: PlannedMealRef[]): ReplannedNote[] {
   }))
 }
 
-// ---- B9-45 (PC-13): the Freeze sheet's words. STUBS: the developer builds them. ----
+// ---- B9-45 (PC-13): the Freeze sheet's words. ----
 
 /** The sheet's title: "How many portions to freeze?". */
 export const freezeQuestion = 'How many portions to freeze?'
 
+/** A portion count as the sheet writes it: at most two decimals, never rounded to one ("0.25", never "0.3"). */
+export const portionNumber = (n: number): string => String(Math.round(n * 100) / 100)
+
 /** The context line under the title: "Cauliflower al gorgonzola · 1.25 left" (one line; the sheet ends it in an ellipsis). */
-export function freezeContext(_recipeName: string, _left: number): string {
-  throw new Error('B9-45: not built yet')
+export function freezeContext(recipeName: string, left: number): string {
+  return `${recipeName} · ${portionNumber(left)} left`
 }
+
+const meals = (names: string[]): string => (names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`)
 
 /**
  * The muted hint under the stepper, about the default (every spare portion):
  * "All of it. None of it is planned." / "1.25 of 2.5. The rest is planned for Mon Dinner." / "All of it is planned for Mon Dinner." (nothing spare).
  * `plannedFor` names the Planned Meals ("Mon Dinner"); without names: "The rest is planned." / "All of it is planned."
  */
-export function freezeHint(_left: number, _plannedPortions: number, _plannedFor: string[]): string {
-  throw new Error('B9-45: not built yet')
+export function freezeHint(left: number, plannedPortions: number, plannedFor: string[]): string {
+  const where = plannedFor.length > 0 ? ` for ${meals(plannedFor)}` : ''
+  if (plannedPortions <= 0) return 'All of it. None of it is planned.'
+  const spare = freezeDefaultPortions(left, plannedPortions)
+  if (plannedPortions >= left || spare >= left) return `All of it is planned${where}.`
+  return `${portionNumber(spare)} of ${portionNumber(left)}. The rest is planned${where}.`
 }
 
 /** The primary button: "Freeze 1.25 portions", "Freeze 1 portion". */
-export function freezeLabel(_portions: number): string {
-  throw new Error('B9-45: not built yet')
+export function freezeLabel(portions: number): string {
+  return portions === 1 ? 'Freeze 1 portion' : `Freeze ${portionNumber(portions)} portions`
+}
+
+/** Where a freeze goes: the chosen freezer's name and "Use by 10 Feb" (the Recipe's Frozen Use-by, else the Household's); null with no freezer chosen. */
+export function freezeDestination(input: SheetInput, placeId: number | null): { placeName: string; useBy: string } | null {
+  const place = input.places.find((p) => p.id === placeId)
+  if (!place) return null
+  const { date } = freezeUseBy(input.today, input.recipeFrozenUseBy, input.householdFrozenUseBy)
+  return { placeName: place.name, useBy: useByPhrase(date, input.today) }
 }

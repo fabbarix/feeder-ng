@@ -2,7 +2,8 @@
 import { addDays } from './dates'
 import type { LeftoverPlace } from './types'
 
-export const PORTION_STEP = 0.5
+/** B9-45 (PC-13): portions move in quarters, so a 1.25-portion Leftover is never stranded. */
+export const PORTION_STEP = 0.25
 
 export interface StepperBounds {
   min: number
@@ -20,16 +21,21 @@ export function throwOutDefault(left: number): number {
   return left
 }
 
-/** The stepper: 0.5 steps, 0.5 up to what is left. */
+/** The stepper: quarter steps, a quarter up to what is left (stepPortions reaches the maximum). */
 export function portionBounds(left: number): StepperBounds {
   return { min: PORTION_STEP, max: left, step: PORTION_STEP }
 }
 
-/** Freeze it: default the portions no Planned Meal is planned to use, rounded down to a 0.5 step; all of them when less than half a portion is spare. */
+/** Two decimals at most: no floating point dust (0.75 + 0.25 is 1). */
+const tidy = (n: number) => Math.round(n * 100) / 100
+/** A tolerance for quarters computed from sums of decimals (1.3 - 0.05 is not exactly 1.25). */
+const EPS = 1e-9
+
+/** Freeze it: default every portion no Planned Meal is planned to use, rounded down to a quarter; all of them when less than a quarter is spare. */
 export function freezeDefaultPortions(left: number, plannedPortions: number): number {
   const spare = left - plannedPortions
-  if (spare < PORTION_STEP) return left
-  return Math.floor(spare / PORTION_STEP) * PORTION_STEP
+  if (spare < PORTION_STEP - EPS) return left
+  return tidy(Math.floor(spare / PORTION_STEP + EPS) * PORTION_STEP)
 }
 
 const byName = (a: LeftoverPlace, b: LeftoverPlace) => a.name.localeCompare(b.name)
@@ -61,9 +67,26 @@ export function takeOutUseBy(today: string, useByDays: number): { date: string; 
   return { date: addDays(today, useByDays), days: useByDays }
 }
 
-// ---- B9-45 (PC-13): the Freeze sheet's one question. STUBS: the developer builds them (and moves PORTION_STEP to 0.25, see portions.pc13.test.ts). ----
+// ---- B9-45 (PC-13): the portion steppers' move (Had it, Threw it out, Freeze it). ----
 
 /** The stepper's move: one step up (1) or down (-1) in steps of 0.25, from `value`, never below 0.25 and never above `left`; the maximum is always reachable (1 up from 1 in a 1.25 Leftover is 1.25; 1 down from 1.3 is 1.25). */
-export function stepPortions(_value: number, _direction: 1 | -1, _left: number): number {
-  throw new Error('B9-45: not built yet')
+export function stepPortions(value: number, direction: 1 | -1, left: number): number {
+  const min = Math.min(PORTION_STEP, left)
+  const next =
+    direction === 1
+      ? Math.floor(value / PORTION_STEP + EPS) * PORTION_STEP + PORTION_STEP
+      : Math.ceil(value / PORTION_STEP - EPS) * PORTION_STEP - PORTION_STEP
+  return tidy(Math.min(left, Math.max(min, next)))
+}
+
+/**
+ * What a portion stepper's control asked for (`next`, the shared Stepper's one step, Home or End) as a quarter move from `value`: the
+ * ends stay the ends, a step up or down lands on the next quarter (lib stepPortions), so 1.3 - 0.25 reads 1.25, never 1.05.
+ */
+export function snapPortions(value: number, next: number, left: number): number {
+  const min = Math.min(PORTION_STEP, left)
+  if (next >= left) return left
+  if (next <= min) return min
+  if (next === value) return value
+  return stepPortions(value, next > value ? 1 : -1, left)
 }

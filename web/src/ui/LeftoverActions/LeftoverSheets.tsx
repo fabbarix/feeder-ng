@@ -1,5 +1,6 @@
 // The Leftover sheets of one screen, drawn from its flow: the action sheet and the details sheet. An answer that would replan
 // is asked by the flow through the shared confirm.
+import { plannedForOf } from '../../lib/leftovers/rows'
 import type { LeftoverFlow } from '../../lib/leftovers/useLeftoverFlow'
 import { LeftoverDetailsSheet } from './LeftoverDetailsSheet'
 import { LeftoverSheet } from './LeftoverSheet'
@@ -23,6 +24,7 @@ export function LeftoverSheets({ flow }: LeftoverSheetsProps) {
           householdFrozenUseBy={context.householdFrozenUseBy}
           recipeUseByDays={context.recipeUseByDays}
           busy={flow.busy}
+          plannedFor={plannedForOf(flow.plannedFor ?? {}, sheet.leftover)}
           onConfirm={(request) => void flow.confirm(request)}
           onClose={flow.closeSheet}
           storagePlacesHref="/settings/storage-places"

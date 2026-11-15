@@ -13,9 +13,11 @@ export interface LeftoverRowProps {
   onAction: (kind: LeftoverActionKind, leftover: Leftover) => void
   /** Adds the Storage Place of a frozen Leftover to its meta line; off where the group heading already names it. Default on. */
   showPlace?: boolean
+  /** B9-45 (PC-13): a second meta line, "1.25 for Mon Dinner · 1.25 spare: have it or freeze it" (lib/leftovers spareHint). */
+  hint?: string
 }
 
-export function LeftoverRow({ leftover, today, onAction, showPlace = true }: LeftoverRowProps) {
+export function LeftoverRow({ leftover, today, onAction, showPlace = true, hint }: LeftoverRowProps) {
   const row = leftoverRow(leftover, today)
   const entries: MenuEntry[] = menuActions(leftover, today).map((kind) => ({
     id: kind,
@@ -31,6 +33,8 @@ export function LeftoverRow({ leftover, today, onAction, showPlace = true }: Lef
       metaStatus={row.tone === 'info' ? undefined : row.tone}
       icon={row.icon}
       trailing={entries.length > 0 ? <Menu label={`Actions for ${leftover.recipeName}`} title={leftover.recipeName} items={entries} /> : undefined}
-    />
+    >
+      {hint ? <span className="list-row__meta leftover-row__hint">{hint}</span> : null}
+    </ListRow>
   )
 }
