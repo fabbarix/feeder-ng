@@ -520,6 +520,14 @@
   flex: 1 1 9rem;
 }
 
+/* From tablet the column is centred and the footer follows the tiles. */
+@media (min-width: 48em) {
+  .cook-confirmation__actions {
+    position: static;
+    margin-block-start: 0;
+  }
+}
+
 /* B9-45 (PC-05): Get ready, the Ingredients before the first Step (and the same rows in the sheet and the rail). A row is our own
    checkbox, the name, the Storage Place muted under it and the amount at the end; a ticked row is muted, its name struck through. */
 .get-ready {
