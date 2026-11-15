@@ -54,3 +54,8 @@
 .planning-rules__editor .list-row__meta {
   align-items: flex-start;
 }
+
+/* A plain User's Cooking times: read-only rows (R-E), the time or "Off" at the row's end. */
+.cooking-times__read {
+  margin: 0;
+}

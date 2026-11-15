@@ -17,6 +17,10 @@ export const cookingTimesStrings = {
   saved: 'Cooking times saved',
   saveFailed: "Couldn't save the Cooking times. Try again.",
   readOnly: 'Only an Admin can change the Cooking times.',
+  // A plain User reads the times as rows (R-E): the time or "Off" at the row's end, what it means under it.
+  off: 'Off',
+  earliestOffNote: 'Cooking may start at any time.',
+  latestOffNote: 'Cooking starts on the day of the meal.',
   latestNotLater: 'Latest start must be later than Earliest start.',
   earliestInvalid: 'Earliest start must be a time, or Off.',
   loadFailed: "Couldn't load the Cooking times.",

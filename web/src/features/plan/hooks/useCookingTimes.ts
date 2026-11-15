@@ -44,6 +44,8 @@ export interface UseCookingTimes {
   state: 'loading' | 'error' | 'ready'
   /** Only an Admin changes Household settings; a plain User reads them. */
   canEdit: boolean
+  /** Known to be a plain User (not while /api/me is loading): the tile shows the times as read-only rows. */
+  readOnly: boolean
   earliest: TimeDraft
   latest: TimeDraft
   setEarliestOn: (on: boolean) => void
@@ -123,6 +125,7 @@ export function useCookingTimes(): UseCookingTimes {
   return {
     state: settings.isError && !settings.data ? 'error' : settings.data ? 'ready' : 'loading',
     canEdit: Boolean(me.data?.isAdmin),
+    readOnly: me.data !== undefined && me.data !== null && !me.data.isAdmin,
     earliest: draft.earliest,
     latest: draft.latest,
     setEarliestOn: (on) => change((d) => ({ ...d, earliest: { ...d.earliest, on } })),

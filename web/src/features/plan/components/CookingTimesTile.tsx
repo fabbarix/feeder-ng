@@ -1,7 +1,7 @@
 // B9-51 (PC-14, A2): the Cooking times tile, first on Planning rules. Renders and wires events; useCookingTimes owns the draft,
 // the check, the save and the example line.
 import type { ReactNode } from 'react'
-import { Button, Icon, Switch, Tile, TimeField } from '../../../ui'
+import { Button, DetailList, DetailRow, Icon, Switch, Tile, TimeField } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
 import type { UseCookingTimes } from '../hooks/useCookingTimes'
 import { cookingTimesStrings as s } from '../lib/planningRulesStrings'
@@ -33,6 +33,32 @@ function TimeRow({ label, timeLabel, description, on, time, error, disabled, onO
   )
 }
 
+/** The example line: muted, after the info glyph (the mock of PC-14). */
+function Example({ text }: { text: string | null }): ReactNode {
+  return text ? (
+    <p className="cooking-times__example">
+      <Icon name="info" size={16} />
+      <span>{text}</span>
+    </p>
+  ) : null
+}
+
+/** A plain User reads the stored times as rows (R-E: read-only rows are a DetailList), not as disabled controls. */
+function ReadOnlyTimes({ times }: CookingTimesTileProps): ReactNode {
+  const { earliest, latest } = times
+  return (
+    <div className="cooking-times__form">
+      <p className="plan__muted">{s.lede}</p>
+      <DetailList className="cooking-times__read">
+        <DetailRow label={s.earliest} state={earliest.on ? earliest.time : s.off} detail={earliest.on ? s.earliestOn : s.earliestOffNote} />
+        <DetailRow label={s.latest} state={latest.on ? latest.time : s.off} detail={latest.on ? s.latestOn : s.latestOffNote} />
+      </DetailList>
+      <Example text={times.example} />
+      <p className="plan__muted">{s.readOnly}</p>
+    </div>
+  )
+}
+
 export function CookingTimesTile({ times }: CookingTimesTileProps): ReactNode {
   const readOnly = !times.canEdit
   return (
@@ -42,6 +68,8 @@ export function CookingTimesTile({ times }: CookingTimesTileProps): ReactNode {
       </h2>
       {times.state === 'error' ? (
         <p className="plan__muted">{s.loadFailed}</p>
+      ) : times.readOnly && times.state === 'ready' ? (
+        <ReadOnlyTimes times={times} />
       ) : (
         <form
           ref={times.formRef}
@@ -75,15 +103,8 @@ export function CookingTimesTile({ times }: CookingTimesTileProps): ReactNode {
             onOn={times.setLatestOn}
             onTime={times.setLatestTime}
           />
-          {times.example ? (
-            <p className="cooking-times__example">
-              <Icon name="info" size={16} />
-              <span>{times.example}</span>
-            </p>
-          ) : null}
-          {readOnly ? (
-            <p className="plan__muted">{s.readOnly}</p>
-          ) : (
+          <Example text={times.example} />
+          {readOnly ? null : (
             <>
               <FormError>{times.formError}</FormError>
               <div className="cooking-times__actions">

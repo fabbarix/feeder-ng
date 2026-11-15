@@ -256,13 +256,17 @@ describe('Cooking times: errors at the field (SAFE-04)', () => {
 })
 
 describe('Cooking times: a plain User', () => {
-  it('reads the times; the switches and the time fields are disabled; there is no Save; it says only an Admin changes them', async () => {
-    setup({ me: USER_ME })
+  // Review (w4c): read-only rows are a DetailList (R-E, VC5); disabled switches and time fields read pale at a glance.
+  it('reads the times as rows (the time or Off at the end, what it means under it); no switch, no time field, no Save; only an Admin changes them', async () => {
+    setup({ me: USER_ME, settings: { latestStart: null } })
     await loaded()
-    await waitFor(() => expect(shown('Earliest start time')).toBe('06:30'))
-    expect(sw('Earliest start')).toBeDisabled()
-    expect(sw('Latest start')).toBeDisabled()
-    for (const n of ['Hour', 'Minute']) expect(within(group('Earliest start time')).getByRole('spinbutton', { name: n })).toBeDisabled()
+    const rows = await screen.findAllByRole('listitem')
+    const row = (key: string) => rows.find((r) => r.querySelector('.detail-row__label')?.textContent === key)!
+    expect(row('Earliest start').querySelector('.detail-row__state')).toHaveTextContent('06:30')
+    expect(row('Latest start').querySelector('.detail-row__state')).toHaveTextContent('Off')
+    expect(row('Latest start').querySelector('.detail-row__detail')).toHaveTextContent('Cooking starts on the day of the meal.')
+    expect(screen.queryByRole('switch', { name: 'Earliest start' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Earliest start time' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Save Cooking times' })).toBeNull()
     expect(screen.getByText(/Only an Admin can change/)).toBeInTheDocument()
   })
