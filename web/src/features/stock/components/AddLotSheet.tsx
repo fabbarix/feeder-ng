@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { BottomSheet, Button, FormActions, DateField, IngredientSelect, Select, TextField } from '../../../ui'
+import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { parseAmount } from '../lib/amount'
 import { deviceToday } from '../lib/days'
 import '../stock.css'
@@ -17,7 +18,7 @@ export interface AddLotSheetProps {
   initialIngredientId?: number
 }
 
-interface AddLotErrors {
+type AddLotErrors = {
   ingredient?: string
   quantity?: string
 }
@@ -36,12 +37,8 @@ export function AddLotSheet({ open, onClose, choices, onSubmit, places = [], ini
   const [errors, setErrors] = useState<AddLotErrors>({})
   const [submits, setSubmits] = useState(0)
   const fields = useRef<HTMLDivElement>(null)
-  // After a Save that leaves errors, the first invalid field takes the focus (SAFE-04). Not the shared useFocusFirstInvalid: its
-  // unguarded scrollIntoView throws where the page has none (jsdom), and the sheet's body scrolls the field into view itself.
-  useEffect(() => {
-    if (submits === 0) return
-    fields.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
-  }, [submits])
+  // After a Save that leaves errors, the first invalid field takes the focus (SAFE-04).
+  useFocusFirstInvalid(fields, errors, submits)
 
   const chosen = choices.find((c) => c.id === pickedId) ?? null
 

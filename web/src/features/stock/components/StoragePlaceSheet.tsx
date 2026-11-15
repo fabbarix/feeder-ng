@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { useRef, useState, type ReactElement } from 'react'
 import { BottomSheet, Button, Chip, FormActions, Muted, Stack, Switch, TextField } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
+import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { ApiError } from '../../../lib/http'
 import { errorText } from '../../products/lib/productForm'
 import { KIND_ICON, STORAGE_KINDS } from '../lib/kinds'
@@ -37,10 +38,7 @@ function PlaceForm({ initial, onSave, onDelete }: { initial: StoragePlace | null
   const [saving, setSaving] = useState(false)
   const form = useRef<HTMLFormElement>(null)
   // SAFE-04: after a refused save, the invalid field takes the focus.
-  useEffect(() => {
-    if (refusals === 0) return
-    form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
-  }, [refusals])
+  useFocusFirstInvalid(form, { name: nameError }, refusals)
   return (
     <form
       ref={form}
