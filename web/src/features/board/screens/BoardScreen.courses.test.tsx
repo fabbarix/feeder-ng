@@ -1,4 +1,5 @@
 // CRS F: the board reads the payload's `slots` (with Courses), and its big Cook button opens tonight's cooking timeline.
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -13,7 +14,7 @@ vi.mock('../hooks/useBoard', () => ({
   useNow: () => new Date('2026-11-09T17:00:00Z'),
 }))
 vi.mock('../hooks/useBoardPalette', () => ({ useBoardPalette: () => undefined }))
-vi.mock('../../plan', () => ({ usePlan: () => ({ slots: h.planSlots }), useLeftovers: () => ({ leftovers: [] }) }))
+vi.mock('../../plan', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../plan')>()), usePlan: () => ({ slots: h.planSlots }), useLeftovers: () => ({ leftovers: [] }) }))
 vi.mock('../../stock/hooks/useStock', () => ({ useStockTotals: () => ({ data: [] }) }))
 vi.mock('../../cook/hooks/useTimers', () => ({ useTimers: () => ({ items: [] }) }))
 vi.mock('../../settings/hooks/useHouseholdSettings', () => ({ useHouseholdSettings: () => ({ settings: { timeZone: 'UTC' } }) }))
@@ -33,12 +34,14 @@ const data = (slots?: SlotLike[]): BoardData => ({
 })
 const view = () =>
   render(
-    <MemoryRouter initialEntries={['/board']}>
-      <Routes>
-        <Route path="/board" element={<BoardScreen />} />
-        <Route path="/cook/meal/:date/:slotId" element={<p>Cook timeline</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/board']}>
+        <Routes>
+          <Route path="/board" element={<BoardScreen />} />
+          <Route path="/cook/meal/:date/:slotId" element={<p>Cook timeline</p>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 
 afterEach(() => {
@@ -51,7 +54,8 @@ describe('BoardScreen with Courses', () => {
     view()
     expect(screen.getAllByText('Roast chicken').length).toBeGreaterThan(0)
     expect(screen.getByText('Green beans')).toBeInTheDocument()
-    expect(screen.getByText('Dinner: Roast chicken + Green beans')).toBeInTheDocument()
+    // B9-47 (TB-08): the Meal Slot is a <strong> of the line ("<strong>Dinner:</strong> Roast chicken + Green beans")
+    expect(screen.getByText('Dinner:').closest('li')?.textContent).toBe('Dinner: Roast chicken + Green beans')
   })
 
   it('reads the plan\'s slots when the payload has none (an older server): nothing changes', () => {
@@ -64,7 +68,7 @@ describe('BoardScreen with Courses', () => {
   it('the big Cook button opens tonight\'s slot timeline, with no Course in the route', async () => {
     h.data = data([dinner('2026-11-09')])
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cook Dinner' }) /* B9-47 ruling 5 (P38): Cook names its slot */)
     expect(await screen.findByText('Cook timeline')).toBeInTheDocument()
   })
 })

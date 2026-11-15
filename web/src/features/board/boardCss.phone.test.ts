@@ -29,8 +29,8 @@ describe('board.css phone grid', () => {
     const r = rule(wall, '  .board-screen .board-grid')
     expect(r).toMatch(/grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/)
     expect(r).toMatch(/grid-template-rows:\s*repeat\(3, minmax\(0, 1fr\)\)/)
-    // B9-08 (DS-11): the screen less its padding, 2 x --space-6 (48 px), in the token.
-    expect(r).toMatch(/height:\s*calc\(100vh - 2 \* var\(--space-6\)\)/)
+    // B9-47 (TB-07): the screen less its padding, 2 x --board-pad (1.5 board units); dvh or vh.
+    expect(r).toMatch(/height:\s*calc\(100d?vh - 2 \* var\(--board-pad\)\)/)
   })
   it('a phone tile has a readable minimum height (the clock does not clip)', () => {
     expect(rule(base, '.board-cell')).toMatch(/min-height:\s*\d+(\.\d+)?rem/)
@@ -52,7 +52,7 @@ describe('board.css clock tile on a phone (R2-4 review: "Wednesda" and "Novembe"
   })
   it('from 600 px the wall clock keeps its big sizes', () => {
     expect(rule(clockWall, '  .board-clock__time')).toMatch(/font-size:\s*32cqi/)
-    expect(rule(clockWall, '  .board-clock__date')).toMatch(/font-size:\s*2rem/)
+    expect(rule(clockWall, '  .board-clock__date')).toMatch(/font-size:\s*var\(--text-board-title\)/) // B9-47: the board role (2 u)
   })
 })
 

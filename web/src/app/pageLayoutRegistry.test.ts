@@ -129,6 +129,7 @@ const ADDED = {
   // B9-46: scenarios/b9-46.mjs (order 346): plan-away, away-sheet, away-sheet-open, whos-eating-away and member-away (PC-08, SET-16).
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
   // B9-43: scenarios/b9-43.mjs (order 350, after b9-40 by file name): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete and shop-complete-restore (SSP-04, 09, 13, 14).
+  // B9-47: scenarios/b9-47.mjs (order 350, after b9-43 by file name): the Kitchen board on real screens (TB-04, TB-07, TB-08, TB-15c/d, SHORT-03, A11Y-12, RES-09): board-wall, board-portrait, board-short, board-phone, board-close, board-error.
   // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
@@ -160,6 +161,7 @@ const ADDED = {
     'plan-away', 'away-sheet', 'away-sheet-open', 'whos-eating-away', 'member-away',
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
     'shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete', 'shop-complete-restore',
+    'board-wall', 'board-portrait', 'board-short', 'board-phone', 'board-close', 'board-error',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',

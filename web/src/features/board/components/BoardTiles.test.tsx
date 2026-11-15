@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { TimerItem } from '../../cook/hooks/useTimers'
 import type { NextAdvance, SlotLike, StockTotalLike } from '../types'
-import { BoardLeftoversTile, BoardTimersTile, ClockTile, NextAdvanceTile, StreakTile, TomorrowTile, TonightTile, UseSoonTile } from './BoardTiles'
+import { BoardLeftoversTile, BoardTimersTile, ClockTile, NextAdvanceTile, StreakTile, TomorrowTile, UseSoonTile } from './BoardTiles'
 
 const slot = (id: number, name: string, recipe: string, time: string): SlotLike => ({
   date: '2026-11-09',
@@ -24,19 +24,6 @@ describe('ClockTile', () => {
   it('never shows the coordinates hint on the wall display (it lives in Settings)', () => {
     render(<ClockTile now={new Date('2026-11-09T17:42:00Z')} timeZone="UTC" showFallbackHint />)
     expect(screen.queryByText(/coordinates/i)).not.toBeInTheDocument()
-  })
-})
-
-describe('TonightTile', () => {
-  it("shows tonight's Recipe and Meal Slot", () => {
-    render(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} />)
-    expect(screen.getByText('Tonight')).toBeInTheDocument()
-    expect(screen.getByText('Chicken stew')).toBeInTheDocument()
-    expect(screen.getByText('Dinner · 19:00')).toBeInTheDocument()
-  })
-  it('says when nothing is planned', () => {
-    render(<TonightTile slot={null} />)
-    expect(screen.getByText('Nothing planned tonight')).toBeInTheDocument()
   })
 })
 
@@ -64,7 +51,7 @@ describe('NextAdvanceTile', () => {
   it('marks it done by scope and Step', async () => {
     const onDone = vi.fn()
     render(<NextAdvanceTile next={next} nowMs={NOW} onDone={onDone} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done: Marinate the chicken' }))
     expect(onDone).toHaveBeenCalledWith('meal:2026-11-09/2', 0)
   })
   it('says there is nothing to prepare', () => {
@@ -76,19 +63,20 @@ describe('NextAdvanceTile', () => {
 
 describe('BoardLeftoversTile', () => {
   it('lists Leftovers with portions and Use-by', () => {
-    render(<BoardLeftoversTile rows={[{ id: 1, recipeName: 'Stew', portions: 2, useBy: '2026-11-12' }]} />)
+    render(<BoardLeftoversTile today="2026-11-09" rows={[{ id: 1, recipeName: 'Stew', portions: 2, useBy: '2026-11-12' }]} />)
     expect(screen.getByText('Leftovers')).toBeInTheDocument()
-    expect(screen.getByText(/Stew/)).toHaveTextContent('2 portions')
-    expect(screen.getByText(/Stew/)).toHaveTextContent('use by Thu')
+    expect(screen.getByText('Stew')).toBeInTheDocument()
+    expect(screen.getByText('2 portions · Use by Thu')).toBeInTheDocument() // B9-47 (TB-08): Today's meta, a capital U
   })
   it('a Leftover to answer is a read-only line "Stew, Use-by passed", with no buttons', () => {
-    render(<BoardLeftoversTile rows={[{ id: 1, recipeName: 'Stew', portions: 2, useBy: '2026-11-10', toAnswer: true }]} />)
-    expect(screen.getByText('Stew, Use-by passed')).toBeInTheDocument()
-    expect(screen.queryByText(/use by/)).not.toBeInTheDocument()
+    render(<BoardLeftoversTile today="2026-11-09" rows={[{ id: 1, recipeName: 'Stew', portions: 2, useBy: '2026-11-10', toAnswer: true }]} />)
+    expect(screen.getByText('Stew')).toBeInTheDocument()
+    expect(screen.getByText('Use-by passed')).toBeInTheDocument()
+    expect(screen.queryByText(/use by/i, { selector: 'li *:not(.board-list__meta)' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
   it('says when there are none', () => {
-    render(<BoardLeftoversTile rows={[]} />)
+    render(<BoardLeftoversTile today="2026-11-09" rows={[]} />)
     expect(screen.getByText('No Leftovers')).toBeInTheDocument()
   })
 })
@@ -96,12 +84,12 @@ describe('BoardLeftoversTile', () => {
 describe('UseSoonTile', () => {
   const row: StockTotalLike = { ingredientId: 1, name: 'milk', baseUnit: 'ml', total: 500, nextGoesOff: '2026-11-11', useSoon: true, spoiledCount: 0 }
   it('shows a spoil-tone chip per Ingredient', () => {
-    render(<UseSoonTile rows={[row]} />)
-    const chip = screen.getByText('milk')
+    render(<UseSoonTile today="2026-11-09" rows={[row]} />)
+    const chip = screen.getByText('milk · Wed') // B9-47 (TB-08): the chip says when ("milk · Wed")
     expect(chip.closest('[data-status]')).toHaveAttribute('data-status', 'spoil')
   })
   it('says when nothing needs using up', () => {
-    render(<UseSoonTile rows={[]} />)
+    render(<UseSoonTile today="2026-11-09" rows={[]} />)
     expect(screen.getByText('Nothing to use up')).toBeInTheDocument()
   })
 })
@@ -135,10 +123,9 @@ describe('BoardTimersTile', () => {
 
 describe('TomorrowTile', () => {
   it("lists tomorrow's meals", () => {
-    render(<TomorrowTile slots={[slot(1, 'Lunch', 'Soup', '12:00'), slot(2, 'Dinner', 'Pasta', '19:00')]} />)
+    const { container } = render(<TomorrowTile slots={[slot(1, 'Lunch', 'Soup', '12:00'), slot(2, 'Dinner', 'Pasta', '19:00')]} />)
     expect(screen.getByText('Tomorrow')).toBeInTheDocument()
-    expect(screen.getByText('Lunch · Soup')).toBeInTheDocument()
-    expect(screen.getByText('Dinner · Pasta')).toBeInTheDocument()
+    expect([...container.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['Lunch: Soup', 'Dinner: Pasta'])
   })
   it('says when nothing is planned', () => {
     render(<TomorrowTile slots={[]} />)
@@ -158,82 +145,11 @@ describe('StreakTile', () => {
   })
 })
 
-describe('TonightTile hero Cook button (5.13)', () => {
-  it('has a big "Cook" button that starts Cook Mode, replacing the separate Start Cook Mode tile', async () => {
-    const onCook = vi.fn()
-    render(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} onCook={onCook} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
-    expect(onCook).toHaveBeenCalledTimes(1)
-    expect(screen.queryByText('Start Cook Mode')).not.toBeInTheDocument()
-  })
-  it('has no Cook button when nothing is planned or no handler is given', () => {
-    const { rerender } = render(<TonightTile slot={null} onCook={() => {}} />)
-    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
-    rerender(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} />)
-    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
-  })
-  it('is the hero tile, 2 x 2', () => {
-    const { container } = render(<TonightTile slot={slot(2, 'Dinner', 'Chicken stew', '19:00')} />)
-    const tile = container.firstElementChild
-    expect(tile).toHaveAttribute('data-variant', 'hero')
-    expect(tile).toHaveAttribute('data-span', '2')
-    expect(tile).toHaveAttribute('data-row-span', '2')
-  })
-})
-
 describe('UseSoonTile layout', () => {
   it('spans two columns and uses spoil status chips (not the deprecated tone)', () => {
-    const { container } = render(<UseSoonTile rows={[{ ingredientId: 1, name: 'milk', baseUnit: 'ml', total: 500, nextGoesOff: '2026-11-11', useSoon: true, spoiledCount: 0 }]} />)
+    const { container } = render(<UseSoonTile today="2026-11-09" rows={[{ ingredientId: 1, name: 'milk', baseUnit: 'ml', total: 500, nextGoesOff: '2026-11-11', useSoon: true, spoiledCount: 0 }]} />)
     expect(container.firstElementChild).toHaveAttribute('data-span', '2')
     expect(container.querySelector('[data-tone]')).toBeNull()
     expect(container.querySelector('[data-status="spoil"]')).not.toBeNull()
-  })
-})
-
-// Layout contract at 1280 x 800 (cells are 240 px high): long text clamps instead of clipping.
-// @types/node is not installed, so read the stylesheet through an untyped dynamic import of node:fs (as tokens.css.test does).
-const nodeFs = 'node:fs'
-const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string }
-const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd() // vitest runs in web/
-const boardCss = readFileSync(`${cwd}/src/features/board/board.css`, 'utf8')
-const rule = (selector: string): string => {
-  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const m = new RegExp(`(?:^|[},\\s])${esc}\\s*\\{([^}]*)\\}`, 'm').exec(boardCss)
-  expect(m, `${selector} rule`).not.toBeNull()
-  return m![1]!
-}
-describe('board text truncation contract', () => {
-  it.each([['.board-next__text', 2], ['.board-next__recipe', 1]])('%s clamps to %i line(s) with an ellipsis and may shrink', (sel, lines) => {
-    const body = rule(sel)
-    expect(body).toMatch(new RegExp(`-webkit-line-clamp:\\s*${lines}\\b`))
-    expect(body).toMatch(/display:\s*-webkit-box/)
-    expect(body).toMatch(/-webkit-box-orient:\s*vertical/)
-    expect(body).toMatch(/overflow:\s*hidden/)
-  })
-  it('the Next Advance Step text is at most 2rem so 2 lines + recipe + Done fit 240 px', () => {
-    expect(rule('.board-next__text')).toMatch(/font-size:\s*(1\.\d+|2)rem/)
-  })
-  it('the hero Cook button keeps the board size: its rule outranks .button[data-size=\'xl\'] (0,2,0)', () => {
-    const body = rule('.board-screen .board-tonight .board-tonight__cook')
-    expect(body).toMatch(/font-size:\s*1\.75rem/)
-    expect(rule('.board-tonight__recipe')).toMatch(/font-size:\s*3\.25rem/)
-    expect(rule('.board-tonight__recipe')).toMatch(/font-weight:\s*800/)
-  })
-  it('headings and meta lines are at full strength and board scale (no 0.8 opacity)', () => {
-    expect(rule('.board-tile__heading')).not.toMatch(/opacity/)
-    expect(rule('.board-tile__heading')).toMatch(/font-size:\s*1\.3125rem/)
-    expect(rule('.board-screen .board-use-soon .chip')).toMatch(/block-size:\s*40px/)
-  })
-  it('R13: the "Not planned" chip in Tomorrow is board scale (40 px, like Use soon), one line', () => {
-    const body = rule('.board-screen .board-tomorrow .chip')
-    expect(body).toMatch(/block-size:\s*40px/)
-    expect(body).toMatch(/font-size:\s*1\.25rem/)
-    expect(body).toMatch(/white-space:\s*nowrap/)
-  })
-  it('timer rows in the Timers tile are compact and clamp their label to 1 line', () => {
-    // B9-08 (DS-11): the gap is the spacing token for 4 or 8 px.
-    expect(rule('.board-timers .board-list')).toMatch(/gap:\s*var\(--space-(1|2)\)/)
-    expect(rule('.board-timers .timer-tile__label')).toMatch(/-webkit-line-clamp:\s*1|text-overflow:\s*ellipsis/)
-    expect(rule('.board-timers__more')).toMatch(/font-size:\s*1\.\d+rem/)
   })
 })

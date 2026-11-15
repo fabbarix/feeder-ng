@@ -1,8 +1,7 @@
 // Pure helpers behind the kitchen board's tiles. Plain TypeScript, no React.
 import { boardStrings } from '../strings'
-import type { CourseLike, LeftoverLike, SlotLike, StockTotalLike } from '../types'
+import type { CourseLike, LeftoverLike, NextAdvance, SlotLike, StockTotalLike } from '../types'
 
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000
 const MINUTE_MS = 60 * 1000
 
@@ -17,17 +16,6 @@ function plannedOn(slots: SlotLike[], date: string): SlotLike[] {
 function dayAfter(date: string): string {
   const [y, m, d] = date.split('-').map(Number)
   return new Date(Date.UTC(y!, (m ?? 1) - 1, (d ?? 1) + 1)).toISOString().slice(0, 10)
-}
-
-/**
- * Tonight's Planned Meal: of today's slots (date === today) that have a meal
- * in state planned, the first whose `at` is not before nowIso minus 2 hours
- * (a meal that started less than 2 h ago is still tonight's); if all are
- * earlier, none. Sorted by `at`, then mealSlotId. Null when nothing qualifies.
- */
-export function tonightMeal(slots: SlotLike[], today: string, nowIso: string): SlotLike | null {
-  const floor = Date.parse(nowIso) - TWO_HOURS_MS
-  return plannedOn(slots, today).find((s) => Date.parse(s.at) >= floor) ?? null
 }
 
 /** The Planned Meals (state planned) of the day after `today`, by `at` then mealSlotId. */
@@ -111,23 +99,6 @@ export function dueText(dueAt: string, nowMs: number, timeZone = 'UTC'): string 
   return `${get('weekday')} ${get('hour')}:${get('minute')}`
 }
 
-/**
- * Where the big "Start Cook Mode" button goes: tonight's meal, else the next
- * planned meal from now on (any day, `at` not before now), else null (the
- * button is disabled). Returns the path "/cook/meal/<date>/<mealSlotId>".
- */
-export function startCookPath(slots: SlotLike[], today: string, nowIso: string): string | null {
-  const tonight = tonightMeal(slots, today, nowIso)
-  const now = Date.parse(nowIso)
-  const next =
-    tonight ??
-    slots
-      .filter((s) => hasPlanned(s) && Date.parse(s.at) >= now)
-      .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)[0] ??
-    null
-  return next ? `/cook/meal/${next.date}/${next.mealSlotId}` : null
-}
-
 /** Short weekday name ("Thu") of a YYYY-MM-DD date, independent of the browser zone. */
 export function shortWeekday(date: string): string {
   const [y, m, d] = date.split('-').map(Number)
@@ -152,7 +123,7 @@ export function boardSlots(slots: SlotLike[] | undefined, planSlots: SlotLike[])
 
 /**
  * True when any Course of the slot holds a Planned Meal still to cook (state planned). Without `courses` it is false.
- * Tonight's, tomorrow's and the Cook button's choices use this instead of `slot.meal` alone, so a slot
+ * Tomorrow's choice uses this instead of `slot.meal` alone, so a slot
  * whose main Course is already Cooked but whose Side is not is still tonight's.
  */
 export function hasPlanned(slot: SlotLike): boolean {
@@ -170,20 +141,22 @@ export function tonightRows(slot: SlotLike): TonightRow[] {
 }
 
 /**
- * Tomorrow's line of a slot. One Course (or no `courses`): "Dinner · Chicken stew" exactly as before. Several rows:
- * "Dinner: Roast chicken + green beans" (slot name, colon, the Recipe names of the Courses that hold a Planned Meal
- * joined by " + " exactly as named, in the slot's order). A covered slot is its Whole meal alone, plus any Course of
- * it that holds a Planned Meal.
+ * B9-47 (TB-08, spec 7.5): Tomorrow's line of a slot, one format for every slot: "Breakfast: Potato gratin", "Dinner: Roast chicken +
+ * green beans" (the Recipe names of the Courses that hold a Planned Meal, joined by " + " as named, in the slot's order). A covered
+ * slot is its Whole meal alone, plus any Course of it that holds a Planned Meal. A Not served slot is "Dinner · Not served".
  */
 export function tomorrowLine(slot: SlotLike): string {
   if (slot.notServed === true) return notServedLine(slot)
-  const names = (slot.courses ?? [])
+  const names = plannedNames(slot)
+  return names.length === 0 ? slot.name : `${slot.name}: ${names.join(' + ')}`
+}
+
+/** The Recipe names of the slot's Courses that hold a Planned Meal (state planned), in the slot's order. */
+export function plannedNames(slot: SlotLike): string[] {
+  return (slot.courses ?? [])
     .map((c) => c.meal)
     .filter((m): m is NonNullable<typeof m> => m !== null && m.state === 'planned')
     .map((m) => m.recipeName)
-  if (names.length === 0) return slot.name
-  if (names.length === 1) return `${slot.name} · ${names[0]}`
-  return `${slot.name}: ${names.join(' + ')}`
 }
 
 // ---- B5-F1: a Meal Slot that is Not served on tonight or tomorrow (ADR 0014) ----
@@ -198,4 +171,47 @@ export function tonightNotServed(slots: SlotLike[], today: string): SlotLike[] {
   return slots
     .filter((s) => s.date === today && s.notServed === true)
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
+}
+
+// ---- B9-47 (TB-08): the board's Leftover line, Use soon chip and Next Advance Step, in Today's words. ----
+
+/** Whole days from household date `from` to `to` (YYYY-MM-DD, independent of the browser zone). */
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS)
+}
+
+/** "today" (a day already gone counts as today, as on Today), "tomorrow", else the short weekday ("Tue"). Throws on a date that is not one. */
+function dayWord(date: string, today: string): string {
+  const days = daysBetween(today, date)
+  if (Number.isNaN(days)) throw new Error(`not a date: ${String(date)}`)
+  if (days <= 0) return boardStrings.dayToday
+  if (days === 1) return boardStrings.dayTomorrow
+  return shortWeekday(date)
+}
+
+/** The Leftover row of the board: the name over "1.25 portions · Use by Tue" (Today's meta), or "Use-by passed" for one to answer. */
+export function leftoverLine(row: LeftoverRow, today: string): { title: string; meta: string } {
+  if (row.toAnswer === true) return { title: row.recipeName, meta: boardStrings.useByPassed }
+  return { title: row.recipeName, meta: `${boardStrings.portions(row.portions)} · ${boardStrings.useBy(dayWord(row.useBy, today))}` }
+}
+
+/** The Use soon chip: "Flour · tomorrow" and its full accessible name "Flour, good until tomorrow"; just the name without a go-off date. */
+export function useSoonChip(row: StockTotalLike, today: string): { label: string; name: string } {
+  if (!row.nextGoesOff) return { label: row.name, name: row.name }
+  const when = dayWord(row.nextGoesOff, today)
+  return { label: `${row.name} · ${when}`, name: boardStrings.goodUntil(row.name, when) }
+}
+
+/** Next Advance Step's meal line: the Meal Slot's weekday first, "Tue Dinner · Cauliflower al gorgonzola". */
+export function nextAdvanceMeal(next: NextAdvance): string {
+  return `${shortWeekday(next.mealDate)} ${next.slotName} · ${next.recipeName}`
+}
+
+/**
+ * B9-47 (P38: every button on a page has its own name): Done's accessible name, "Done: <Step text>". When another Advance Step
+ * shown with it reads the same on a different meal, the name adds its meal ("Done: Soak the beans, Tue Dinner") so the two differ.
+ */
+export function advanceDoneName(next: NextAdvance, shown: NextAdvance[] = []): string {
+  const twin = shown.some((o) => o !== next && o.text === next.text && (o.mealDate !== next.mealDate || o.mealSlotId !== next.mealSlotId))
+  return twin ? boardStrings.markDoneNameWithSlot(next.text, `${shortWeekday(next.mealDate)} ${next.slotName}`) : boardStrings.markDoneName(next.text)
 }

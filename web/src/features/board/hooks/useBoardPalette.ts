@@ -6,9 +6,10 @@ import { usePreferenceTheme } from '../../settings/hooks/usePreferenceTheme'
 /**
  * Paints the accent palette in the board's scheme (dark or light by the
  * server's theme), overriding the User's preference on /board only. On unmount
- * the User's own scheme is restored.
+ * the User's own scheme is restored. `null` (B9-47: the board has not loaded,
+ * so its scheme is not known, as in its load error) keeps the User's scheme.
  */
-export function useBoardPalette(dark: boolean): void {
+export function useBoardPalette(dark: boolean | null): void {
   const pref = usePreferenceTheme()
   const restore = useRef<() => void>(() => {})
   restore.current = () => {
@@ -17,8 +18,9 @@ export function useBoardPalette(dark: boolean): void {
   }
 
   useEffect(() => {
-    applyTheme(document.documentElement, { accent: pref.accent }, dark ? 'dark' : 'light')
-  }, [dark, pref.accent])
+    if (dark === null) restore.current()
+    else applyTheme(document.documentElement, { accent: pref.accent }, dark ? 'dark' : 'light')
+  }, [dark, pref.accent, pref.scheme])
 
   useEffect(() => () => restore.current(), [])
 }
