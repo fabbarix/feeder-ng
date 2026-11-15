@@ -5,7 +5,7 @@ import { sheetStrings } from './BottomSheet.strings'
 import { CloseButton } from './CloseButton'
 import { Dialog, type CancelButtonProps } from './Dialog'
 import { ActionSurface } from './lib/actionSurface'
-import { stopReactPropagation } from './lib/portalStop'
+import { inheritScheme, stopReactPropagation } from './lib/portalStop'
 import { footerShouldFlow } from './lib/sheetLayout'
 import { overlayStrings } from './overlayStrings'
 import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
@@ -112,6 +112,8 @@ function SheetSurface({
   })
 
   useFooterFlow(panelRef, bodyRef)
+  const anchorRef = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => inheritScheme(anchorRef.current, ref.current), [])
 
   const hasFooter = Boolean(footer || onCancel || submit)
   const showClose = closeButton && !onCancel
@@ -197,7 +199,13 @@ function SheetSurface({
     </dialog>
   )
 
-  return modal ? createPortal(sheet, document.body) : sheet
+  if (!modal) return sheet
+  return (
+    <>
+      <span ref={anchorRef} hidden />
+      {createPortal(sheet, document.body)}
+    </>
+  )
 }
 
 /**

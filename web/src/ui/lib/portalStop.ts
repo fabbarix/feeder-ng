@@ -11,3 +11,14 @@ const stopped = () => true
 export function stopReactPropagation(e: SyntheticEvent): void {
   e.isPropagationStopped = stopped
 }
+
+/**
+ * A portalled dialog leaves the subtree it was mounted in, and with it a scheme that subtree sets (the Gallery's light and dark
+ * panels side by side). `anchor` is a hidden element left in place: the dialog takes the `data-scheme` of the anchor's nearest
+ * ancestor that sets one, unless that is the document itself (whose scheme reaches the dialog anyway).
+ */
+export function inheritScheme(anchor: HTMLElement | null, dialog: HTMLElement | null): void {
+  if (!anchor || !dialog) return
+  const owner = anchor.parentElement?.closest<HTMLElement>('[data-scheme]')
+  if (owner && owner !== document.documentElement) dialog.dataset['scheme'] = owner.dataset['scheme']
+}

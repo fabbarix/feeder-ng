@@ -1,9 +1,9 @@
-import { useId, useRef, type ReactNode, type RefObject } from 'react'
+import { useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import { ActionSurface } from './lib/actionSurface'
-import { stopReactPropagation } from './lib/portalStop'
+import { inheritScheme, stopReactPropagation } from './lib/portalStop'
 import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
 import { Button, PRIMARY_SCOPE_ATTR } from './Button'
 import { overlayStrings } from './overlayStrings'
@@ -67,6 +67,8 @@ function DialogSurface({
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const contextId = useId()
+  const anchorRef = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => inheritScheme(anchorRef.current, ref.current), [])
   const { onBackdropClick } = useModalDialog(ref, {
     onClose,
     dismissOnBackdrop,
@@ -80,7 +82,7 @@ function DialogSurface({
     },
   })
 
-  return createPortal(
+  const dialog = (
     <dialog
       ref={ref}
       className="dialog"
@@ -122,7 +124,13 @@ function DialogSurface({
           </div>
         ) : null}
       </div>
-    </dialog>,
-    document.body,
+    </dialog>
+  )
+
+  return (
+    <>
+      <span ref={anchorRef} hidden />
+      {createPortal(dialog, document.body)}
+    </>
   )
 }
