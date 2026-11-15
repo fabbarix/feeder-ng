@@ -179,9 +179,12 @@ describe('Timers: a strip on a phone, a rail from 1024 px (PC-03)', () => {
     })
     expect(toast).toHaveTextContent('Timer cancelled')
     expect(toast).toHaveTextContent('Pre-heat the oven')
+    // Opening Cook Mode on a Passive Step 0 auto-starts its timer first (useCookSession; the server answers it idempotently),
+    // so the Undo is the one POST added after the click, and it carries the label.
+    const before = api.callsTo('POST', '/api/cook/timers').length
     await userEvent.click(within(toast).getByRole('button', { name: /^Undo/ }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/cook/timers')).toHaveLength(1))
-    expect(api.callsTo('POST', '/api/cook/timers')[0]!.body).toMatchObject({ scope: 'recipe:7', step: 0, label: 'Step 1: Pre-heat the oven' })
+    await waitFor(() => expect(api.callsTo('POST', '/api/cook/timers')).toHaveLength(before + 1))
+    expect(api.callsTo('POST', '/api/cook/timers')[before]!.body).toMatchObject({ scope: 'recipe:7', step: 0, label: 'Step 1: Pre-heat the oven' })
   })
 })
 
