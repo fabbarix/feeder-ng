@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BOUGHT_CHIP_KEY, addBoughtChip, boughtLine, boughtNames, regenerateBoughtLines, swapBoughtNote, warningLine, type BoughtInfo } from './bought'
+import { BOUGHT_CHIP_KEY, addBoughtChip, boughtLine, boughtNames, swapBoughtNote, warningLine, type BoughtInfo } from './bought'
 import type { PlanChip } from './chips'
 import { boughtStrings } from '../boughtStrings'
 
@@ -77,17 +77,5 @@ describe('warningLine', () => {
   })
   it('null without a warning', () => {
     expect(warningLine(null, ctx)).toBeNull()
-  })
-})
-
-describe('regenerateBoughtLines', () => {
-  it('names each Bought meal', () => {
-    const r = regenerateBoughtLines([{ date: '2026-11-10', mealSlotName: 'Dinner', courseName: 'Main', recipeName: 'Roast chicken', ingredients: ['chicken thighs', 'cream'] }])
-    expect(r.intro).toBe('Among them, these have Ingredients you already bought:')
-    expect(r.lines).toEqual(['Tue Dinner · Roast chicken (chicken thighs, cream).'])
-  })
-  it('says nothing when none', () => {
-    expect(regenerateBoughtLines([])).toEqual({ intro: null, lines: [] })
-    expect(regenerateBoughtLines(undefined)).toEqual({ intro: null, lines: [] })
   })
 })

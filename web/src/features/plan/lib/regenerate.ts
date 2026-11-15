@@ -1,6 +1,8 @@
 import { planStrings as s } from '../strings'
+import { undoStrings as u } from '../strings/undo'
 import type { PlanSlot } from '../types'
-import { regenerateBoughtLines, type RegenerateDryRun } from './bought'
+import type { RegenerateDryRun } from './bought'
+import { weekdayName } from './phrase'
 
 /** How many meals Regenerate would change: each Course's Planned Meal that is state planned, not Pinned, dated today or later. */
 export function regenerateImpact(slots: PlanSlot[], today: string): number {
@@ -20,10 +22,19 @@ export interface RegenerateConfirmCopy {
   confirmLabel: string
 }
 
-/** Copy of the Regenerate confirm dialog; the body states the count (plan 2.4). */
+/**
+ * Copy of the Regenerate question (plan 2.4, SAFE-07): the lead states the count, the note says what stays and that it can be undone,
+ * and the Bought Planned Meals it would replace are R-E rows behind a one-line summary ("Wed Lunch" · "Carrot bought" · the Recipe).
+ */
 export function regenerateConfirmCopy(unpinned: number, dryRun?: RegenerateDryRun | null): RegenerateConfirmCopy {
-  const count = unpinned === 0 ? s.regenerateNone : s.regenerateCount(unpinned)
-  const { intro, lines } = regenerateBoughtLines(dryRun?.bought)
-  const body = intro === null ? count : [count, intro, ...lines].join('\n')
-  return { title: s.regenerateConfirmTitle, body, confirmLabel: s.regenerateConfirmLabel }
+  const body = unpinned === 0 ? s.regenerateNone : s.regenerateCount(unpinned)
+  const copy: RegenerateConfirmCopy = { title: s.regenerateConfirmTitle, body, note: s.regenerateNote, confirmLabel: s.regenerateConfirmLabel }
+  const bought = dryRun?.bought ?? []
+  if (bought.length > 0) {
+    copy.details = {
+      summary: u.regenerateBoughtSummary(bought.length),
+      rows: bought.map((b) => ({ key: u.slotLabel(weekdayName(b.date, 'short'), b.mealSlotName), state: u.regenerateBoughtState(b.ingredients.join(', ')), detail: b.recipeName })),
+    }
+  }
+  return copy
 }
