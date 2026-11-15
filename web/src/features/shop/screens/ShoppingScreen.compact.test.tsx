@@ -46,6 +46,7 @@ describe('Shop screen: the Restock reason by width', () => {
   it('from 420 px it is the full text', () => {
     show(true)
     expect(screen.getByText('Below 1 l · 400 ml in Stock')).not.toHaveClass('visually-hidden')
-    expect(screen.queryByText('400 ml in Stock')).toBeNull()
+    // B9-13: the short form is still there as the row's compact meta, shown by ListRow only while its text column is under 12 rem
+    expect(screen.getByText('400 ml in Stock')).toHaveClass('list-row__meta-compact')
   })
 })

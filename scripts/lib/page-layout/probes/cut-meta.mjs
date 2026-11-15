@@ -7,7 +7,11 @@ const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')
   const out = []
-  for (const t of (main ? main.querySelectorAll('.shop-lines .list-row__meta[data-status="info"] .list-row__meta-text') : [])) {
+  for (const long of (main ? main.querySelectorAll('.shop-lines .list-row__meta[data-status="info"] .list-row__meta-text') : [])) {
+    // B9-13 (SSP-05): a row with a compact form shows it while its text column is under 12 rem; the long text is then visually
+    // hidden (a 1 px clip), so the painted form is the one measured.
+    const compact = long.nextElementSibling && long.nextElementSibling.matches('.list-row__meta-compact') ? long.nextElementSibling : null
+    const t = compact && getComputedStyle(compact).display !== 'none' ? compact : long
     if (t.getClientRects().length === 0) continue
     const box = t.getBoundingClientRect()
     // the painted text only: a compact Restock reason carries its full text in a .visually-hidden span (b8-polish), whose text
@@ -24,7 +28,7 @@ const cutMetaProbe = `
     }
     label = label.trim()
     const cut = Math.max(t.scrollWidth - t.clientWidth, right > left ? right - left - box.width : 0)
-    if (cut > 0.5) out.push({ sel: 'span.list-row__meta-text', label, shown: Math.round(box.width), px: Math.round(cut) })
+    if (cut > 0.5) out.push({ sel: t === long ? 'span.list-row__meta-text' : 'span.list-row__meta-compact', label, shown: Math.round(box.width), px: Math.round(cut) })
   }
   return out
 })()`

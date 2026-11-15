@@ -45,6 +45,7 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, compact }: Lin
       leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={40} />}
       control={control}
       meta={metaNode(meta)}
+      metaCompact={meta.fullText ? undefined : entry.restockCompact}
       metaStatus={meta.status}
       value={value}
       subValue={subValue}

@@ -18,7 +18,8 @@ describe('ShoppingBody: compact Restock reason', () => {
   it('without compact the row reads "Below 1 l · 400 ml in Stock"', () => {
     render(<ShoppingBody {...base} list={list()} />)
     expect(supplies().getByText('Below 1 l · 400 ml in Stock')).not.toHaveClass('visually-hidden')
-    expect(supplies().queryByText('400 ml in Stock')).toBeNull()
+    // B9-13: the short form is still there as the row's compact meta, shown by ListRow only while its text column is under 12 rem
+    expect(supplies().getByText('400 ml in Stock')).toHaveClass('list-row__meta-compact')
   })
   it('with compact the meta shows "400 ml in Stock" and its accessible text is the full "Below 1 l · 400 ml in Stock"', () => {
     render(<ShoppingBody {...base} list={list()} compact />)
