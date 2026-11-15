@@ -100,6 +100,8 @@ export default {
       await openReview()
       await press(`(${KITCHEN_ROW})?.querySelector('button[aria-label^="Add "]')`, 'the Add… of KITCHEN ROLL 4 PACK')
       await until(`!!${SHEET}?.querySelector('form')`, 'the Add… sheet')
+      // the sheet slides up (no reduced motion here): measure it once it has settled, or the primary reads as off screen by the slide
+      await until(`${SHEET}.getAnimations({ subtree: true }).every((a) => a.playState !== 'running')`, 'the Add… sheet settled')
       const state = await evaluate(`(() => {
         const sheet = ${SHEET}
         const problems = []
