@@ -107,6 +107,10 @@ describe('Tile: the why chip on a hero (TB-05: a currentColor tint, one rule, in
     expect(val(why, 'color')).toBe('inherit')
   })
 
+  it("its icon is the hero's colour, not Chip.css's accent-text (a dark accent on the light accent hero all but hid the glyph)", () => {
+    expect(val(rule(".tile[data-variant='hero'] .chip[data-kind='why'] svg"), 'color')).toBe('inherit')
+  })
+
   it('the tint is at most 14 % (TB-05) and Chip.css has no second rule for the same chip (a surface chip there fought this one)', () => {
     const pct = Number(/currentColor (\d+)%/.exec(val(rule(".tile[data-variant='hero'] .chip[data-kind='why']"), 'background') ?? '')?.[1])
     expect(pct).toBeLessThanOrEqual(14)

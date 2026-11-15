@@ -82,6 +82,12 @@
   color: inherit;
 }
 
+/* Its icon is the hero's colour too: Chip.css paints a why chip's icon in --color-accent-text, which on the light (accent) hero is a
+   dark accent on the accent (about 1.5:1, the glyph all but gone). */
+.tile[data-variant='hero'] .chip[data-kind='why'] svg {
+  color: inherit;
+}
+
 .tile[data-variant='soft'] {
   background: var(--color-soft);
   color: var(--color-text);
