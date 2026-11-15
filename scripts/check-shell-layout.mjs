@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// Browser check of the shell layout (WP5 acceptance). Not part of scripts/check.sh: it needs Chrome and a running Vite dev server.
+// Browser check of the shell layout (WP5 acceptance). Not part of scripts/check.sh: it needs Chrome and a running server, either the
+// Go binary serving a production build (rules 1 to 15; rule 16 is then reported as not run) or a Vite dev server (all rules).
 //   pnpm -C web dev --port 5199 &            (start it detached, log to build/)
 //   node scripts/check-shell-layout.mjs --url http://localhost:5199 [--chrome /usr/bin/google-chrome]
+// Pages are awaited by condition (load(): <main> content and the navigation present), capped at SHELL_LAYOUT_LOAD_CAP_MS (20 s).
 // It drives Chrome over the DevTools protocol (no extra dependency; Node 22+ has WebSocket), fakes GET /api/me so the shell renders,
 // and for every route at 375, 390, 430, 820, 1024, 1280, 1440, 1920 and 2560 px wide asserts:
 //   1. document.documentElement.scrollWidth <= clientWidth (= innerWidth without a scrollbar): no sideways scroll;
@@ -27,7 +29,8 @@
 //      every slot has the same width (the centre-to-centre distance of neighbours is equal, within 1 px; no slot is narrower than 44 px);
 //      Scan's centre is the bar's centre (within 1 px); the active pill (the current page's .bottom-bar__icon squircle) sits at least the gap between
 //      items, and 4 px, from the bar's inner edge (Today current on /, Settings current on /settings); the squircles are 40 x 40 and 6 px inside the bar;
-//      no label is clipped, wrapped or wider than its button where labels show. At 375 px the bar is icons only (A1): every label is visually hidden.
+//      no label is clipped, wrapped or wider than its button where labels show, and (also at 376 px, the narrowest labelled width) every label keeps
+//      8 px from the bar's inner outline, its rounded ends included, and 4 px from its neighbour's label. At 375 px the bar is icons only (A1).
 //      At 1024 and 1280 px (side rail) the bottom bar is hidden and the rail shows seven links of one size (within 1 px), all inside the rail.
 //  16. (phone, 390 and 412 px, dev route /_editor-fixture) hotfix 4.2: the photo editor, hosted inside a Tile as in the Read step, on a generated
 //      2268x3226 picture: the eight crop handles sit within 3 px of the crop box's corners and edge middles (whole picture and an inset crop),
@@ -62,6 +65,8 @@ const profile = mkdtempSync(join(tmpdir(), 'shell-layout-'))
 const chrome = spawn(chromeBin, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--disable-gpu', 'about:blank'], {
   stdio: ['ignore', 'ignore', 'pipe'],
 })
+// Chrome never outlives the run, whatever way it ends (a thrown probe included).
+process.on('exit', () => chrome.kill())
 const failures = []
 const fail = (msg) => failures.push(msg)
 
@@ -118,6 +123,33 @@ listeners.push(({ method, params, sessionId: sid }) => {
     body,
   }).catch(() => {})
 })
+
+// Every page is loaded by waiting for a condition, not for a fixed time: on a loaded machine a page could take longer than a
+// fixed wait to render, and the rules then measured an empty frame. A page is ready when the new document (not the one before the
+// navigation) has finished loading, <main> holds content, the shell's navigation is in the DOM (outside the chromeless frames),
+// nothing is marked busy, and the route's own marker (`until`, a selector) is present. The cap is generous (LOAD_CAP_MS); a page that
+// is still not ready then is a failure of its own, not a silent pass. A short settle follows for layout and transitions.
+const LOAD_CAP_MS = Number(process.env.SHELL_LAYOUT_LOAD_CAP_MS ?? 20000)
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const readyProbe = (chromeless, until) => `(() => {
+  if (window.__shellLayoutPrevious || document.readyState !== 'complete') return false
+  const main = document.querySelector('main')
+  if (!main || main.childElementCount === 0) return false
+  if (!${chromeless} && !document.querySelector('nav.bottom-bar, nav.side-rail')) return false
+  if (document.querySelector('[aria-busy="true"]')) return false
+  return ${until ? `!!document.querySelector(${JSON.stringify(until)})` : 'true'}
+})()`
+async function load(url, { chromeless = false, until } = {}) {
+  await evaluate('window.__shellLayoutPrevious = true').catch(() => {})
+  await cdp('Page.navigate', { url })
+  for (const end = Date.now() + LOAD_CAP_MS; Date.now() < end; await sleep(100)) {
+    if (await evaluate(readyProbe(chromeless, until)).catch(() => false)) {
+      await sleep(250)
+      return true
+    }
+  }
+  return false
+}
 
 // Opens the avatar menu and reports the popover's box (null when it did not open).
 const menuProbe = `
@@ -195,8 +227,10 @@ for (const vp of VIEWPORTS) {
   await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
   for (const route of ROUTES) {
     const tag = `${vp.width}px ${route}`
-    await cdp('Page.navigate', { url: base + route })
-    await new Promise((r) => setTimeout(r, 1500))
+    if (!(await load(base + route, { chromeless: CHROMELESS.test(route) }))) {
+      fail(`${tag}: the page did not render within ${LOAD_CAP_MS / 1000} s (no <main> content or no navigation)`)
+      continue
+    }
     let m
     try {
       m = await evaluate(page)
@@ -288,8 +322,10 @@ const gapProbe = `
 })()`
 for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
   await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: true })
-  await cdp('Page.navigate', { url: base + '/recipes/new' })
-  await new Promise((r) => setTimeout(r, 1500))
+  if (!(await load(base + '/recipes/new', { until: '.sticky-action-bar' }))) {
+    fail(`${vp.width}px /recipes/new: the editor and its sticky action bar did not render within ${LOAD_CAP_MS / 1000} s (rule 13)`)
+    continue
+  }
   const g = await evaluate(gapProbe).catch(() => null)
   const tag = `${vp.width}px /recipes/new`
   if (!g) fail(`${tag}: no .sticky-action-bar or bottom bar to measure`)
@@ -319,8 +355,10 @@ const toastProbe = `
 })()`
 for (const vp of VIEWPORTS.filter((v) => v.mobile && v.width <= 390)) {
   await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: true })
-  await cdp('Page.navigate', { url: base + '/recipes/new' })
-  await new Promise((r) => setTimeout(r, 1500))
+  if (!(await load(base + '/recipes/new', { until: '.sticky-action-bar' }))) {
+    fail(`${vp.width}px /recipes/new: the editor and its sticky action bar did not render within ${LOAD_CAP_MS / 1000} s (rule 14)`)
+    continue
+  }
   const t = await evaluate(toastProbe).catch(() => null)
   const tag = `${vp.width}px /recipes/new`
   if (!t) fail(`${tag}: no .toast-region, live region or .sticky-action-bar to measure`)
@@ -348,9 +386,16 @@ const navProbe = `
         text: a.textContent.trim(), ...box(a), scan: a.getAttribute('data-accent') === 'true', current: a.getAttribute('aria-current') === 'page',
         labelOut: lb ? Math.max(ab.left - lb.left, lb.right - ab.right, 0) : 0, labelH: lb ? lb.height : 0, fs: label ? parseFloat(getComputedStyle(label).fontSize) : 0,
         sw: label ? label.scrollWidth : 0, cw: label ? label.clientWidth : 0, iconsOnly: !!label && getComputedStyle(label).clipPath !== 'none',
-        icon: icon ? box(icon) : null,
+        icon: icon ? box(icon) : null, label: lb ? { left: lb.left, right: lb.right, top: lb.top, bottom: lb.bottom } : null,
       }
     })
+    // The bar's inner outline (inside the border) has rounded ends: how far in it is at height y, so a label near a rounded end is
+    // measured against the curve, not the straight edge it never reaches.
+    const innerTop = b.top + parseFloat(cs.borderTopWidth), innerBottom = b.bottom - parseFloat(cs.borderBottomWidth)
+    const ri = Math.max(0, parseFloat(cs.borderTopLeftRadius) - parseFloat(cs.borderLeftWidth))
+    const curve = (y) => { const dy = Math.max(innerTop + ri - y, y - (innerBottom - ri), 0); return dy >= ri ? ri : ri - Math.sqrt(ri * ri - dy * dy) }
+    const edgeRoom = (l) => l ? Math.min(l.left - (innerLeft + Math.max(curve(l.top), curve(l.bottom))), innerRight - Math.max(curve(l.top), curve(l.bottom)) - l.right) : null
+    for (const l of links) l.labelEdgeRoom = l.iconsOnly ? null : edgeRoom(l.label)
     return { kind: 'bar', barCx: (b.left + b.right) / 2, innerLeft, innerRight, top: b.top, bottom: b.bottom, left: b.left, right: b.right, links }
   }
   if (shown(rail)) {
@@ -361,12 +406,15 @@ const navProbe = `
 })()`
 for (const scheme of ['light', 'dark']) {
   await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
-  for (const vp of VIEWPORTS.filter((v) => [375, 390, 820, 1024, 1280].includes(v.width))) {
+  // 376 px is the narrowest width that shows labels (A1: the narrow band is width < 23.5em): the label room is measured there too.
+  for (const vp of [...VIEWPORTS.filter((v) => [375, 390, 820, 1024, 1280].includes(v.width)), { width: 376, height: 800, mobile: true }]) {
     await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
     for (const route of ['/', '/settings']) {
       const tag = `${vp.width}px ${route} (${scheme}) nav-even`
-      await cdp('Page.navigate', { url: base + route })
-      await new Promise((r) => setTimeout(r, 1200))
+      if (!(await load(base + route))) {
+        fail(`${scheme} ${vp.width}px ${route}: the page did not render within ${LOAD_CAP_MS / 1000} s (rule 15)`)
+        continue
+      }
       const n = await evaluate(navProbe).catch(() => null)
       if (!n) { fail(`${tag}: neither the bottom bar nor the side rail is visible`); continue }
       if (n.kind === 'rail') {
@@ -413,6 +461,15 @@ for (const scheme of ['light', 'dark']) {
         if (vp.width <= 375 && !l.iconsOnly) fail(`${tag}: label "${l.text}" shows; the bar is icons only at 375 px (A1)`)
         if (vp.width > 375 && l.iconsOnly) fail(`${tag}: label "${l.text}" is hidden above 375 px (A1)`)
       }
+      // B9-19 review: a label keeps 8 px from the bar's inner outline (its rounded ends included) and 4 px from its neighbour's label.
+      const labelled = n.links.filter((x) => !x.iconsOnly && x.label)
+      for (const l of [labelled[0], labelled.at(-1)].filter(Boolean)) {
+        if (l.labelEdgeRoom < 8 - 0.5) fail(`${tag}: label "${l.text}" is ${l.labelEdgeRoom.toFixed(1)} px from the bar's rounded end, less than 8`)
+      }
+      for (let i = 1; i < labelled.length; i++) {
+        const space = labelled[i].label.left - labelled[i - 1].label.right
+        if (space < 4 - 0.5) fail(`${tag}: labels "${labelled[i - 1].text}" and "${labelled[i].text}" are ${space.toFixed(1)} px apart, less than 4`)
+      }
       for (const l of n.links.filter((x) => !x.iconsOnly)) {
         if (l.labelOut > 0.5) fail(`${tag}: label "${l.text}" sticks out of its button by ${l.labelOut.toFixed(1)} px (clipped)`)
         if (l.sw > l.cw + 0.5 && l.cw > 0) fail(`${tag}: label "${l.text}" is truncated (scrollWidth ${l.sw} > clientWidth ${l.cw})`)
@@ -454,10 +511,20 @@ const handleProbe = `
   await new Promise((r) => setTimeout(r, 200))
   return { full, inset: measure() }
 })()`
+let fixtureSkipped = false
 for (const width of [390, 412]) {
   await cdp('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 2.6, mobile: true })
-  await cdp('Page.navigate', { url: base + '/_editor-fixture?w=2268&h=3226' })
-  await new Promise((r) => setTimeout(r, 1500))
+  const tag0 = `${width}px /_editor-fixture`
+  // The fixture is a dev-only route (import.meta.env.DEV): a production build served by the Go binary has none, so rule 16 is
+  // reported as not run there (it needs the Vite dev server), rather than failing every other rule's run.
+  if (!(await load(base + '/_editor-fixture?w=2268&h=3226', { until: '.crop-editor__rect, .not-found, h1' }))) {
+    fail(`${tag0}: the page did not render within ${LOAD_CAP_MS / 1000} s (rule 16)`)
+    continue
+  }
+  if (!(await evaluate(`!!document.querySelector('.crop-editor__rect') || !/Page not found/.test(document.body.innerText)`))) {
+    fixtureSkipped = true
+    continue
+  }
   const h = await evaluate(handleProbe).catch(() => null)
   const tag = `${width}px /_editor-fixture`
   if (!h) {
@@ -481,4 +548,4 @@ if (failures.length) {
   console.error(`check-shell-layout: ${failures.length} failure(s)\n` + failures.map((f) => '  - ' + f).join('\n'))
   process.exit(1)
 }
-console.log(`check-shell-layout: OK (${VIEWPORTS.length} viewports x ${ROUTES.length} routes, photo editor handles)`)
+console.log(`check-shell-layout: OK (${VIEWPORTS.length} viewports x ${ROUTES.length} routes, ${fixtureSkipped ? 'rule 16 NOT RUN: no /_editor-fixture in a production build, run it against the Vite dev server' : 'photo editor handles'})`)
