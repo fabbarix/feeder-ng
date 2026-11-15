@@ -145,13 +145,14 @@ fi
 CHECK_SH="$HERE/../check.sh"
 FULL="$(env -u CHECK_PROFILE -u CHECK_ONLY CHECK_LIST=1 bash "$CHECK_SH" 2>&1)"
 CIL="$(env -u CHECK_ONLY CHECK_PROFILE=ci CHECK_LIST=1 bash "$CHECK_SH" 2>&1)"
-for s in 'UI guards' 'pnpm install' 'typecheck' 'vitest' 'vite build' 'page layout guard' 'go vet' 'go test' 'shell tests'; do
+for s in 'UI guards' 'pnpm install' 'typecheck' 'vitest' 'vite build' 'page layout guard' 'shell layout guard' 'go vet' 'go test' 'shell tests'; do
   grep -q "^==> $s" <<<"$FULL" && ok || bad "check.sh with no CHECK_PROFILE must run '$s' (the local default stays the full check)"
 done
 for s in 'UI guards' 'pnpm install' 'typecheck' 'vitest' 'vite build' 'go vet' 'go test' 'shell tests'; do
   grep -q "^==> $s" <<<"$CIL" && ok || bad "CHECK_PROFILE=ci must still run '$s'"
 done
 grep -q 'page layout guard' <<<"$CIL" && bad "CHECK_PROFILE=ci must leave out the page layout guard" || ok
+grep -q 'shell layout guard' <<<"$CIL" && bad "CHECK_PROFILE=ci must leave out the shell layout guard (it starts Chrome)" || ok
 # Every shell test runs in the full profile. A test is left out of the ci profile only when it is marked as a browser test, and a
 # test is marked exactly when it starts Chrome (it reads or sets CHROME).
 for f in "$HERE"/*_test.sh; do

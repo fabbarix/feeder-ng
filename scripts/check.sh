@@ -3,7 +3,7 @@
 # Output is teed to <worktree>/build/check.log. Exits non-zero on any failure.
 #
 # CHECK_PROFILE  full (the default): every step. This is the check to run locally before a tag.
-#                ci: the fast safety net the workflows run. It skips the headless-Chrome work: the page layout guard and the
+#                ci: the fast safety net the workflows run. It skips the headless-Chrome work: the page layout guard, the shell layout guard and the
 #                shell tests marked `# check-profile: browser` (the ones that start Chrome; workflows_test.sh keeps the marks honest).
 # CHECK_ONLY     ui: the UI guards only (scripts/test/check-ui_test.sh).
 #                web: the UI guards, pnpm install, typecheck, vitest and the vite build (the workflows' web job).
@@ -95,6 +95,8 @@ fi
 # PAGE_LAYOUT=skip skips it, PAGE_LAYOUT=full runs all six viewports and fails on any guard that did not run (default: quick profile).
 # Full profile only: the ci profile leaves it out (it is the slowest step, and every release tag runs the full check locally first).
 if wants layout; then step "page layout guard" bash "$ROOT/scripts/check-page-layout.sh"; fi
+# int1: the shell guard (bottom bar, rails, wide screens; scripts/check-shell-layout.mjs) against a production build, on its own server.
+if wants layout; then step "shell layout guard" bash "$ROOT/scripts/check-shell-layout.sh"; fi
 if wants go; then
   step "go vet" go vet ./...
   step "go test" go test ./...

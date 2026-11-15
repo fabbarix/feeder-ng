@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Browser check of the shell layout (WP5 acceptance). Not part of scripts/check.sh: it needs Chrome and a running server, either the
+// Browser check of the shell layout (WP5 acceptance). The full scripts/check.sh runs it through scripts/check-shell-layout.sh (int1), which
+// starts its own production server. By hand it needs Chrome and a running server, either the
 // Go binary serving a production build (rules 1 to 15; rule 16 is then reported as not run) or a Vite dev server (all rules).
 //   pnpm -C web dev --port 5199 &            (start it detached, log to build/)
 //   node scripts/check-shell-layout.mjs --url http://localhost:5199 [--chrome /usr/bin/google-chrome]
