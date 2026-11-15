@@ -11,7 +11,7 @@ import { evaluate, press, until } from '../helpers.mjs'
 const PLAN_READY = `!!document.querySelector('main .plan article') && !document.querySelector('[aria-busy="true"], .skeleton')`
 const TOAST = `document.querySelector('.toast')`
 /** The Swap buttons of the day tiles after today (page code returning an array). */
-const FUTURE_SWAPS = `[...document.querySelectorAll('main article')].filter((a) => !/Today/.test(a.querySelector('h2, h3')?.textContent ?? '')).flatMap((a) => [...a.querySelectorAll('button[aria-label="Swap"]')])`
+const FUTURE_SWAPS = `[...document.querySelectorAll('main article')].filter((a) => !/Today/.test(a.querySelector('h2, h3')?.textContent ?? '')).flatMap((a) => [...a.querySelectorAll('button[aria-label^="Swap "]')])`
 /** Courses the to-confirm-not-cooked setup marked Not cooked and has not reopened yet ({ date, mealSlotId, courseId }). */
 let marked = []
 

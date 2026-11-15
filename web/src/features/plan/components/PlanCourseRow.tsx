@@ -122,8 +122,10 @@ function chipLine(view: PlanCourseRowView, id: string): ReactNode {
         ) : null}
       </div>
       {view.measuring ? (
-        <div className="plan-row__measure" aria-hidden="true" ref={view.measureRef}>
-          {view.all.map(chipOf)}
+        <div className="plan-row__measure-box" aria-hidden="true">
+          <div className="plan-row__measure" aria-hidden="true" ref={view.measureRef}>
+            {view.all.map(chipOf)}
+          </div>
         </div>
       ) : null}
     </>

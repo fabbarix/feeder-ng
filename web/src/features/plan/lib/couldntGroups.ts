@@ -304,12 +304,13 @@ export function mealsByDay(group: CauseGroup): CouldntDay[] {
   const days: CouldntDay[] = []
   const done = new Set<string>()
   for (const cell of group.slots) {
+    if (cell.courseId === undefined) continue // every cell names its Course (courseCells)
     const item = group.items.find((i) => i.id === cellId(cell) || i.key === cellId(cell) || i.key === slotKey(cell))
     const lineKey = item?.key ?? cellId(cell)
     if (done.has(lineKey)) continue
     done.add(lineKey)
     const wholeSlot = item !== undefined && item.key === slotKey(cell)
-    const key: SlotKey = { date: cell.date, mealSlotId: cell.mealSlotId, courseId: cell.courseId ?? 0 }
+    const key: SlotKey = { date: cell.date, mealSlotId: cell.mealSlotId, courseId: cell.courseId }
     const day = dayLabel(cell.date)
     const meal: CouldntMeal = {
       id: lineKey,

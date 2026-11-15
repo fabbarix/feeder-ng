@@ -383,10 +383,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The chip line's slot holds the measuring copy: it clips it, so a long copy never widens the page (no horizontal scroll). */
+/* The chip line's slot holds the measuring copy in an unseen box of its own width that clips it, so a long copy never widens
+   the page (no horizontal scroll) and nothing visible is clipped. */
 .plan-meal__courses > .list-row > .list-row__below {
   position: relative;
+}
+.plan-row__measure-box {
+  position: absolute;
+  inset: 0;
   overflow: clip;
+  visibility: hidden;
+  pointer-events: none;
 }
 /* The measuring copy of every chip: out of the layout, unseen, each chip at its natural width on one line. */
 .plan-row__measure {

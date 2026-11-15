@@ -1,0 +1,4 @@
+# B9-32: P38 (unique button names, A11Y-08) on Today finds the To confirm rows' "Cooked" and "Adjust" buttons, which repeat
+# on every row. The Plan's own names and Today's hero rows are clean; the To confirm rows are B9-39's (ToConfirmTile). Only P38,
+# only on /, warns until B9-39 names them by their Recipe, day and Meal Slot; B9-39 deletes this file.
+P38@/ = warn until B9-39
