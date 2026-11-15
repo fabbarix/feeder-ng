@@ -3,6 +3,7 @@
 .today {
   display: grid;
   gap: var(--section-gap);
+  container: today / inline-size;
 }
 .today__slot {
   display: contents;
@@ -56,15 +57,333 @@
 .today-metrics .bento-grid[data-min] {
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
 }
-.today-metrics .tile {
+.today-metric {
   position: relative;
 }
-/* The icon sits top-right of its tile, beside the number (the mockup), out of the text flow. */
-.today-metric__icon {
+.today-metric__body,
+.today-metric__link {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+/* B9-44 (TB-03): "Lines to get" is a link: the whole tile is its target, its text keeps the tile's colour. */
+.today-metric__link {
+  color: inherit;
+  text-decoration: none;
+}
+.today-metric__link::after {
+  content: '';
   position: absolute;
-  inset-block-start: var(--tile-pad);
-  inset-inline-end: var(--tile-pad);
+  inset: 0;
+  border-radius: inherit;
+}
+.today-metric__link:hover .tile-metric__label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* B9-44 (TB-03, SHELL-17): the icon sits in the value's row (no absolute position), so it can never cover the number. */
+.today-metric__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.today-metric__head > .tile-metric {
+  min-inline-size: 0;
+}
+.today-metric__value,
+.today-metric__head .tile-metric__value {
+  display: block;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.today-metric__icon {
+  position: static;
   display: inline-grid;
+  flex: none;
+}
+
+/* ---- B9-44 (TB-03, TB 1, ADR 0026): Today lays its own grid out by the width of .today (a size container), never the viewport:
+   1 track below 40 rem, 2 from 40 rem, 3 from 60 rem with the hero and To confirm on two tracks and the aside in the third. A slot is
+   display: contents and holds the tile's boundary (also display: contents), so the tile itself is the grid item. ---- */
+.today__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+.today__aside {
+  display: contents;
+}
+/* A full-row tile at every width: the hero, To confirm, the Shopping tile, the setup checklist and the metric strip. */
+.today__slot[data-tile='shopping'] > .tile-boundary > *,
+.today__slot[data-tile='setup'] > .tile-boundary > *,
+.today__slot[data-tile='nextMeal'] > .tile-boundary > *,
+.today__slot[data-tile='toConfirm'] > .tile-boundary > *,
+.today__slot[data-tile='couldntPlan'] > .tile-boundary > *,
+.today__slot[data-tile='spoiled'] > .tile-boundary > *,
+.today__slot[data-tile='metrics'] > .tile-boundary > * {
+  grid-column: 1 / -1;
+}
+/* PC-02: the cook flows' one shortfall notice, under To confirm, takes the row (its Correct Stock sheet is a dialog). */
+.today__notice {
+  display: contents;
+}
+.today__notice > .shortfall-notice {
+  grid-column: 1 / -1;
+}
+/* Phone and tablet: the metric strip closes the page (passive numbers after the things to act on). Only CSS order moves it. */
+.today__slot[data-tile='metrics'],
+.today__slot[data-tile='metrics'] > .tile-boundary > * {
+  order: 9;
+}
+@container today (inline-size >= 40rem) {
+  .today__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .today__slot[data-tile='nextMeal'] > .tile-boundary > *,
+  .today__slot[data-tile='toConfirm'] > .tile-boundary > * {
+    grid-column: 1 / -1;
+  }
+  /* No half-width orphan: an odd last half tile takes the row. */
+  .today__grid[data-halves-odd='true'] .today__slot[data-half-last-2='true'] > .tile-boundary > * {
+    grid-column: 1 / -1;
+  }
+}
+@container today (inline-size >= 60rem) {
+  .today__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas: 'hero hero aside' 'confirm confirm aside';
+  }
+  .today__slot[data-tile='nextMeal'] > .tile-boundary > *,
+  .today-skeleton [data-tile='nextMeal'] {
+    grid-area: hero;
+  }
+  .today__slot[data-tile='toConfirm'] > .tile-boundary > *,
+  .today-skeleton [data-tile='toConfirm'] {
+    grid-area: confirm;
+  }
+  .today__notice > .shortfall-notice {
+    grid-column: 1 / 3;
+  }
+  .today__aside {
+    display: grid;
+    grid-area: aside;
+    gap: var(--bento-gap);
+    align-content: start;
+    align-self: start;
+    min-inline-size: 0;
+  }
+  .today__aside .tile[data-span='full'] {
+    grid-column: auto;
+  }
+  .today__slot[data-tile='metrics'],
+  .today__slot[data-tile='metrics'] > .tile-boundary > *,
+  .today-skeleton [data-tile='metrics'] {
+    order: 0;
+  }
+  .today__aside .today-metrics {
+    grid-column: auto;
+  }
+  .today__aside .today-metrics .bento-grid[data-min] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* The 2-track rule above does not apply here; a lone half tile under To confirm is as wide as To confirm. */
+  .today__grid[data-halves-odd='true'] .today__slot[data-half-last-2='true'] > .tile-boundary > * {
+    grid-column: auto;
+  }
+  .today__grid[data-halves-3='1'] .today__slot[data-half-last-3='true'] > .tile-boundary > * {
+    grid-column: 1 / 3;
+  }
+}
+
+/* ---- B9-44 (RES-05): while the plan is on its way Today draws the remembered shape: the hero, rows of 56 px, the metric tile. ---- */
+.today {
+  --skeleton-hero: 193px;
+}
+@media (min-width: 37.5em) {
+  .today {
+    --skeleton-hero: 208px;
+  }
+}
+@media (min-width: 64em) {
+  .today {
+    --skeleton-hero: 220px;
+  }
+}
+.today-skeleton {
+  display: contents;
+}
+/* The skeleton's blocks take the places of the tiles they stand for (the aside is a .today__aside like the real one). */
+.today-skeleton [data-full='true'] {
+  grid-column: 1 / -1;
+}
+.today-skeleton [data-tile='metrics'] {
+  order: 9;
+}
+.today-skeleton__hero {
+  block-size: var(--skeleton-hero);
+  border-radius: var(--radius-tile);
+  background: var(--color-surface-2);
+}
+.today-skeleton__tile {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--tile-pad);
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+}
+.today-skeleton__head {
+  block-size: 2.25rem;
+}
+.today-skeleton__row {
+  block-size: 56px;
+}
+.today-skeleton__metric {
+  block-size: 90px;
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+}
+.today-skeleton__head > .skeleton,
+.today-skeleton__row > .skeleton {
+  display: block;
+  block-size: 100%;
+}
+
+/* ---- B9-44 (TB-02, DS 3): Advance Steps rows in the To confirm anatomy: [When badge] [Step and meta] [Done]. The tile is the container:
+   below 30 rem of tile Done sits under the text, start-aligned; from 30 rem at the row's end. ---- */
+.advance-steps {
+  container-type: inline-size;
+}
+.advance-steps__list,
+.today__rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.advance-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'when text' 'when done';
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-2);
+  padding-block: var(--space-3);
+}
+.advance-step + .advance-step {
+  border-block-start: 1px solid color-mix(in srgb, var(--color-info-fg) 30%, transparent);
+}
+@container (min-width: 30rem) {
+  .advance-step {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'when text done';
+  }
+}
+.advance-step__when {
+  grid-area: when;
+  align-self: start;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  inline-size: 4.5rem;
+  min-block-size: 3rem;
+  margin: 0;
+  border-radius: var(--radius-chip);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.advance-step__when > span:first-child {
+  text-transform: uppercase;
+}
+/* Overdue: solid info (never danger or spoil); the word uses the overline size so it keeps room inside the badge. */
+.advance-step__when[data-overdue='true'] {
+  background: var(--color-info-fg);
+  color: var(--color-surface);
+}
+.advance-step__when[data-overdue='true'] > span:first-child {
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+}
+.advance-step__text {
+  grid-area: text;
+  min-inline-size: 0;
+}
+.advance-step__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+.advance-step__meta {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+.advance-step__done {
+  grid-area: done;
+  display: flex;
+  justify-content: flex-start;
+}
+/* R-C+: the tile has its own boundary, so Done draws its ring inside itself. */
+.advance-step__done > .button:focus-visible {
+  outline-width: var(--focus-ring-inner-width);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+}
+.advance-steps > .button {
+  justify-self: start;
+  margin-block-start: var(--space-2);
+}
+
+/* ---- B9-44 (TB-11): Use soon rows. The "+2 more" is a link (never a bare tertiary button), underlined like the header link. ---- */
+.today__rows .list-row + .list-row {
+  border-block-start: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+.today__more-link {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: inherit;
+  font-weight: var(--text-body-strong-weight);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.today__more-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ---- B9-44 (TB-12): the Shopping tile. ---- */
+.shopping-session__meta {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-variant-numeric: tabular-nums;
+}
+.shopping-session__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
 }
 
 /* R13: the first-run setup checklist. The title keeps a gap from the progress line, steps are spaced apart, the action

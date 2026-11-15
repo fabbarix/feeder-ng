@@ -35,20 +35,18 @@ export interface TileSpec {
   id: TileId
 }
 
-export type TodayLayout =
-  /** B9-44 (TB-12): no longer produced (a Scan session is the `shopping` tile); the developer deletes this member with the Shopping List screen seam. */
-  | { mode: 'shopping' }
-  | {
-      mode: 'today'
-      /** B9-44 (TB-03): every tile in DOM order (the aside's tiles follow To confirm), `aside` names the ones that sit in the aside. */
-      tiles: TileSpec[]
-      /** B9-44 (TB-03): the ids that go into `.today__aside`, in order: Advance Steps, then the metric strip (the ones that are present). */
-      aside?: TileId[]
-      /** nothing to do today: show the witty empty state */
-      empty: boolean
-      /** the data could not be loaded: show an error, never the empty state */
-      failed?: boolean
-    }
+/** B9-44 (TB-12): a Scan session is the `shopping` tile, so Today has one layout (the Shopping List mode is gone). */
+export interface TodayLayout {
+  mode: 'today'
+  /** B9-44 (TB-03): every tile in DOM order (the aside's tiles follow To confirm), `aside` names the ones that sit in the aside. */
+  tiles: TileSpec[]
+  /** B9-44 (TB-03): the ids that go into `.today__aside`, in order: Advance Steps, then the metric strip (the ones that are present). */
+  aside?: TileId[]
+  /** nothing to do today: show the witty empty state */
+  empty: boolean
+  /** the data could not be loaded: show an error, never the empty state */
+  failed?: boolean
+}
 
 export interface AdvanceStepDue {
   mealDate: string

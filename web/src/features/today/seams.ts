@@ -1,23 +1,20 @@
-// The seams where Today reads other features: Planning (T11), Stock (T10) and the
-// scan session (T13). Tests mock this module. Only this file imports other
-// features' hooks, so Today's own components and hooks stay decoupled.
+// The seams where Today reads other features: Planning (T11) and Stock (T10). Tests mock this module. Only this file (and the
+// small shopSeam and shoppingSeam beside it) imports other features' hooks, so Today's own components and hooks stay decoupled.
+// B9-44 (TB-12): the Scan session is read from the persisted session in shoppingSeam.ts; the Shopping List screen seam is gone.
 import { useQueryClient } from '@tanstack/react-query'
 import type { UnitSystem } from '../../lib/units'
 import { heroNextChange, heroSelection, justServed, useCouldntPlan, useHeroClock, useLeftovers, usePlan, useToConfirm, withJustServed } from '../plan'
 import { notServedToday } from '../plan/lib/slotDate'
 import type { HeroAction, HeroDay } from '../plan'
 import type { Leftover, PlanEntry, PlanSlot } from '../plan/types'
-import { useSpoiledLots, useStockTotals } from '../stock'
+import { useAllLots, useSpoiledLots, useStockTotals } from '../stock'
 import type { StockLot, WasteRecord } from '../stock/types'
-import { ShoppingScreen } from '../shop'
 import { useSoonItems } from './lib/useSoon'
 import type { UseSoonItem } from './types'
 
-/** T13: true while a scan session is active (Today then shows the Shopping List instead of the tiles). */
+/** T13: true while the Scan screen is open in Shop mode. B9-44: Today no longer reads it (the Shopping tile reads the persisted session in
+ * shoppingSeam.ts); kept for the callers and mocks that still name it. */
 export { useScanSessionActive } from '../scan'
-
-/** T13: the Shopping List screen Today shows during a scan session. */
-export const ShoppingListSeam = ShoppingScreen
 
 export interface TodayPlanCounts {
   /** Household date (YYYY-MM-DD), for the date under the title. */
@@ -96,6 +93,7 @@ export function useTodayTileData(): TodayTileData {
   const leftovers = useLeftovers()
   const spoiled = useSpoiledLots()
   const totals = useStockTotals()
+  const lots = useAllLots()
   const client = useQueryClient()
   // Offline with nothing held is not a failure (a Try again could not work): the plan's offlineUnknown is the LoadState, and Stock
   // that was never loaded simply shows no tile.
@@ -117,10 +115,12 @@ export function useTodayTileData(): TodayTileData {
     spoiled: spoiled.data ?? [],
     stockToday: spoiled.today ?? plan.today,
     system: totals.system,
-    useSoon: useSoonItems(totals.data ?? [], plan.today),
+    // RES-05: Use soon waits for the Household date the plan gives (never the device's, never ''); TB-11: it names the soonest Lot.
+    useSoon: plan.today === '' ? [] : useSoonItems(totals.data ?? [], plan.today, lots.data ?? []),
     // B9-29: useSpoiledLots now resolves with the waste record and the kept Lot (for the Pantry's Undo); Today keeps its void calls.
     throwOut: (lotId) => spoiled.throwOut(lotId).then(() => undefined),
     keep: (lotId) => spoiled.keep(lotId).then(() => undefined),
+    spoiledCalls: { throwOut: spoiled.throwOut, keep: spoiled.keep, undoThrowOut: spoiled.undoThrowOut, undoKeep: spoiled.undoKeep },
     planLoading: plan.isLoading || toConfirm.isLoading || couldntPlan.isLoading || leftovers.isLoading,
     stockLoading: spoiled.isLoading || totals.isLoading,
     loadFailed: failed,

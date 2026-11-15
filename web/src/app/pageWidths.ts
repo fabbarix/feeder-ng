@@ -9,7 +9,8 @@ export interface RouteWidth {
 }
 
 export const ROUTE_WIDTHS: RouteWidth[] = [
-  { path: '/', width: 'wide' },
+  // B9-44 (TB-03, L-01): Today is the default width; its grid is by container (ADR 0026).
+  { path: '/', width: 'default' },
   { path: '/pantry', width: 'default' },
   { path: '/recipes/:id', width: 'default' },
   { path: '/recipes/:id/edit', width: 'default' },
