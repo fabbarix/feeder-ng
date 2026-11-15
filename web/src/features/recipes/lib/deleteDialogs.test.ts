@@ -32,7 +32,7 @@ describe('blockedDialog', () => {
     const d = blockedDialog('Béchamel', 'in_use', [{ id: 1, name: 'Lasagne' }, { id: 2, name: 'Moussaka', archived: true }])
     expect(d.title).toBe("Béchamel can't be deleted")
     expect(d.body).toBe('It is used in 2 Recipes.')
-    expect(d.groups).toEqual([{ label: 'Recipes', rows: [{ key: 'Lasagne', state: undefined }, { key: 'Moussaka', state: 'Archived' }] }])
+    expect(d.groups).toEqual([{ label: 'Used in', rows: [{ key: 'Lasagne', state: undefined }, { key: 'Moussaka', state: 'Archived' }] }])
     expect(d.note).toBeUndefined()
     expect(d.confirmLabel).toBe('Archive')
     expect(d.icon).toBe('archive')

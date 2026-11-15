@@ -38,7 +38,7 @@ describe('useRecipeActions: delete a Base recipe in use (ruling 3)', () => {
     expect(options).toMatchObject({
       title: WHY,
       body: 'It is used in 2 Recipes.',
-      groups: [{ label: 'Recipes', rows: [{ key: 'Lasagne' }, { key: 'Moussaka', state: 'Archived' }] }],
+      groups: [{ label: 'Used in', rows: [{ key: 'Lasagne' }, { key: 'Moussaka', state: 'Archived' }] }],
       confirmLabel: 'Archive',
     })
     expect(options.alternateLabel).toBeUndefined()

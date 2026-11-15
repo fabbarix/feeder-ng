@@ -23,7 +23,8 @@ export const recipeDetailStrings = {
   /** Ruling 3 (B9-27): a Base recipe in use can't be deleted; the dialog lists the Recipes that use it (up to 5, then "and N more"). */
   inUse: {
     lead: (n: number) => `It is used in ${n} ${n === 1 ? 'Recipe' : 'Recipes'}.`,
-    rowsLabel: 'Recipes',
+    /** Main-session call (w4b): "Used in", so the rows' label does not repeat the lead line's "Recipes". */
+    rowsLabel: 'Used in',
     archived: 'Archived',
     more: (n: number) => `and ${n} more`,
   },
