@@ -52,18 +52,91 @@
   display: inline-flex;
   border-radius: var(--radius-pill);
 }
-.attendance {
+.attendance-editor {
   display: grid;
   gap: var(--space-2);
+  min-inline-size: 0;
 }
+
+/* SET-10: one row anatomy per Member (system.md 3), by the list's width, never the viewport's. */
+.attendance {
+  container-type: inline-size;
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .attendance__row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 44px 40px minmax(0, 1fr) auto;
+  grid-template-areas: 'check av name step';
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  /* the stepper icon buttons' 6 px hit area sticks out of the row; leave room so the sheet never scrolls sideways */
-  padding-inline-end: var(--space-2);
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  min-block-size: var(--row-min);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--color-line);
+}
+
+.attendance__row:last-child {
+  border-block-end: 0;
+}
+
+.attendance__check {
+  grid-area: check;
+  display: grid;
+  place-items: center;
+}
+
+.attendance__av {
+  grid-area: av;
+  display: flex;
+}
+
+.attendance__main {
+  grid-area: name;
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+/* Two lines at most, so one long word can never widen the row or push the stepper onto a line of nobody's. */
+.attendance__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  min-inline-size: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  cursor: pointer;
+}
+
+.attendance__step {
+  grid-area: step;
+  justify-self: end;
+}
+
+.attendance__off {
+  grid-area: step;
+  justify-self: end;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+/* A narrow sheet: every stepper goes under its name, in the same row, so it still reads as that Member's. All rows switch together. */
+@container (max-width: 20rem) {
+  .attendance__row {
+    grid-template-areas: 'check av name name' '. . step step';
+  }
+
+  .attendance__step {
+    justify-self: start;
+  }
 }
 
 /* F-02: the Allowlist add form. The field keeps a real width beside its button; on a phone it takes the row. */
