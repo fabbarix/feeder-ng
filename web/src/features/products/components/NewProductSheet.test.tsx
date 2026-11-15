@@ -96,6 +96,17 @@ describe('errors at the field (SAFE-04)', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
+  it('the footer Save shows it is busy while the Product saves', async () => {
+    let finish: () => void = () => {}
+    setup({ ingredient: { id: 3, name: 'tomato passata', baseUnit: 'g' }, onSubmit: () => new Promise<void>((resolve) => (finish = resolve)) })
+    await userEvent.type(await screen.findByLabelText('Pack size (g)'), '700')
+    const save = screen.getByRole('button', { name: 'Save Product' })
+    await userEvent.click(save)
+    await waitFor(() => expect(save).toHaveAttribute('aria-busy', 'true'))
+    finish()
+    await waitFor(() => expect(save).not.toHaveAttribute('aria-busy'))
+  })
+
   it('with the Ingredient fixed the first invalid field is Product name, then Pack size', async () => {
     setup({ ingredient: { id: 3, name: 'tomato passata', baseUnit: 'g' } })
     await userEvent.click(await screen.findByRole('button', { name: 'Save Product' }))

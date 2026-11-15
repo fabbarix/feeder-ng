@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { BottomSheet } from '../../../ui'
 import { useIngredientChoices } from '../hooks/useIngredientChoices'
 import { strings } from '../strings'
@@ -17,19 +17,28 @@ export interface NewProductSheetProps {
 /** SET-14a: "New Product", shared by the Products list and an Ingredient's Products tile. Cancel and Save Product are its footer (no Close). */
 export function NewProductSheet({ open, onClose, ingredient, onSubmit }: NewProductSheetProps) {
   const formId = useId()
+  // The footer Save shows its spinner while the form saves, and waits for a Picture still being read.
+  const [busy, setBusy] = useState({ saving: false, pictureBusy: false })
   return (
-    <BottomSheet open={open} onClose={onClose} onCancel={onClose} cancelLabel={strings.cancel} submit={{ label: strings.saveProduct, form: formId }} title={strings.newProduct}>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      onCancel={onClose}
+      cancelLabel={strings.cancel}
+      submit={{ label: strings.saveProduct, form: formId, loading: open && busy.saving, disabled: open && busy.pictureBusy }}
+      title={strings.newProduct}
+    >
       {!open ? null : ingredient ? (
-        <ProductForm formId={formId} hideActions ingredientId={ingredient.id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} onSubmit={onSubmit} />
+        <ProductForm formId={formId} hideActions onBusyChange={setBusy} ingredientId={ingredient.id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} onSubmit={onSubmit} />
       ) : (
-        <ChoosingProductForm formId={formId} onSubmit={onSubmit} />
+        <ChoosingProductForm formId={formId} onSubmit={onSubmit} onBusyChange={setBusy} />
       )}
     </BottomSheet>
   )
 }
 
 /** The form of the Products list: the Ingredient is chosen first, from every Ingredient. */
-function ChoosingProductForm({ formId, onSubmit }: { formId: string; onSubmit: (body: NewProduct) => Promise<void> }) {
+function ChoosingProductForm({ formId, onSubmit, onBusyChange }: { formId: string; onSubmit: (body: NewProduct) => Promise<void>; onBusyChange: (state: { saving: boolean; pictureBusy: boolean }) => void }) {
   const { ingredients } = useIngredientChoices()
-  return <ProductForm formId={formId} hideActions ingredients={ingredients} onSubmit={onSubmit} />
+  return <ProductForm formId={formId} hideActions onBusyChange={onBusyChange} ingredients={ingredients} onSubmit={onSubmit} />
 }

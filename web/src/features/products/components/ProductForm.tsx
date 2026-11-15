@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Button, CROP_ASPECTS, FormActions, ImagePicker, IngredientSelect, Stack, TextField } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
 import { useProductForm, type ProductIngredient } from '../hooks/useProductForm'
@@ -17,16 +18,21 @@ export interface ProductFormProps {
   formId?: string
   /** The sheet draws Save in its footer: no FormActions in the body. */
   hideActions?: boolean
+  /** With `hideActions`: the footer Save's state (busy while it saves; held while the Picture is still being read). */
+  onBusyChange?: (state: { saving: boolean; pictureBusy: boolean }) => void
 }
 
 /**
  * Ingredient (when it is chosen here), name, pack size (in the Base Unit) and optional barcode. While the name has not been edited by
  * hand it follows `defaultProductName`. Errors are at the field, with focus to the first invalid one (lib/productForm).
  */
-export function ProductForm({ ingredientId, ingredientName, baseUnit, ingredients, onSubmit, formId, hideActions = false }: ProductFormProps) {
+export function ProductForm({ ingredientId, ingredientName, baseUnit, ingredients, onSubmit, formId, hideActions = false, onBusyChange }: ProductFormProps) {
   const fixed = ingredientId !== undefined && ingredientName !== undefined && baseUnit !== undefined ? { id: ingredientId, name: ingredientName, baseUnit } : null
   const form = useProductForm(fixed, onSubmit)
   const unit = form.ingredient?.baseUnit
+  useEffect(() => {
+    onBusyChange?.({ saving: form.saving, pictureBusy: form.pictureBusy })
+  }, [onBusyChange, form.saving, form.pictureBusy])
   return (
     <form
       id={formId}
