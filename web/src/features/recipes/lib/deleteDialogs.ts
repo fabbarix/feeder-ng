@@ -13,12 +13,12 @@ export function deleteDialog(name: string): ConfirmOptions {
 }
 
 /**
- * "<Name> can't be deleted", Cancel (focused) and Archive, no Close. Planned before: why, and what Archive does. A Base recipe in use:
+ * "<Name> can't be deleted" under the Archive icon, Cancel (focused) and Archive, no Close. Planned before: why, and what Archive does. A Base recipe in use:
  * "It is used in N Recipes." and those Recipes as rows (up to IN_USE_ROWS, an archived one says so), then "and N more".
  */
 export function blockedDialog(name: string, reason: DeleteBlockedBy, usedBy: readonly RecipeRef[] = []): ConfirmOptions {
   const b = recipeStrings.deleteBlocked
-  if (reason === 'planned') return { title: b.title(name), body: b.planned, note: b.note, confirmLabel: b.archive }
+  if (reason === 'planned') return { title: b.title(name), body: b.planned, note: b.note, confirmLabel: b.archive, icon: 'archive' }
   const u = recipeStrings.inUse
   const rows = usedBy.slice(0, IN_USE_ROWS).map((r) => ({ key: r.name, state: r.archived ? u.archived : undefined }))
   const rest = usedBy.length - rows.length
@@ -28,5 +28,6 @@ export function blockedDialog(name: string, reason: DeleteBlockedBy, usedBy: rea
     groups: [{ label: u.rowsLabel, rows }],
     note: rest > 0 ? u.more(rest) : undefined,
     confirmLabel: b.archive,
+    icon: 'archive',
   }
 }

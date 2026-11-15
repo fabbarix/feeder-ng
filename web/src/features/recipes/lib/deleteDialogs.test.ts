@@ -23,6 +23,7 @@ describe('blockedDialog', () => {
       body: 'It was planned before, so Feeder keeps it in the history of what was Cooked.',
       note: 'Archive takes it out of the Recipes list, the pickers and the plan. You can unarchive it later.',
       confirmLabel: 'Archive',
+      icon: 'archive',
     })
     expect(d.tone ?? 'default').toBe('default')
     expect(d.alternateLabel).toBeUndefined()
@@ -34,6 +35,7 @@ describe('blockedDialog', () => {
     expect(d.groups).toEqual([{ label: 'Recipes', rows: [{ key: 'Lasagne', state: undefined }, { key: 'Moussaka', state: 'Archived' }] }])
     expect(d.note).toBeUndefined()
     expect(d.confirmLabel).toBe('Archive')
+    expect(d.icon).toBe('archive')
     expect(d.alternateLabel).toBeUndefined()
   })
   it('one Recipe is singular', () => {
