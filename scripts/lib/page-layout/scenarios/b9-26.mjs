@@ -90,7 +90,9 @@ async function planAfterSwap() {
         const actions = [...t.querySelectorAll('.toast__action')]
         if (!t.querySelector('.toast__title')?.textContent.trim()) return 'the toast has no headline'
         if (!t.querySelector('.toast__subline')?.textContent.trim()) return 'the toast has no subline'
-        if (actions.length < 2 || !actions.every((a) => parseFloat(getComputedStyle(a).borderTopWidth) > 0)) return 'the toast does not have two bordered buttons (Review, Undo)'
+        // A toast action draws its boundary as a 1 px inset ring (box-shadow, R-A; ui/Toast.css), or a border: either is a bordered button.
+        const bordered = (a) => parseFloat(getComputedStyle(a).borderTopWidth) > 0 || /inset/.test(getComputedStyle(a).boxShadow)
+        if (actions.length < 2 || !actions.every(bordered)) return 'the toast does not have two bordered buttons (Review, Undo)'
         if (t.querySelector('.toast__title svg')) return 'a success toast carries a status svg'
         const rows = [...document.querySelectorAll('[data-changed]')]
         if (rows.length === 0) return 'no row is marked data-changed'
@@ -124,8 +126,9 @@ async function toConfirmNotCooked() {
   // the ⋮ of the first row of the To confirm tile (the hero's own Course rows have one too); a phone shows the menu as a sheet
   const TO_CONFIRM_MORE = `(() => { const h = [...document.querySelectorAll('main h2, main h3')].find((e) => e.textContent.trim() === 'To confirm'); return h?.closest('section, article, [data-tile]')?.querySelector('button[aria-label^="More for "]') })()`
   await press(TO_CONFIRM_MORE, 'the ⋮ of a To confirm row')
-  // the item is a menu item on a tablet and desktop and a row of the Menu sheet on a phone: the leaf that says "Not cooked", its clickable ancestor
-  const NOT_COOKED = `([...document.querySelectorAll('[role="menuitem"]')].filter((e) => e.textContent.trim() === 'Not cooked')[0] ?? [...document.querySelectorAll('dialog[open] *')].filter((e) => e.children.length === 0 && e.textContent.trim() === 'Not cooked').map((e) => e.closest('button, a, li, [tabindex]') ?? e)[0])`
+  // the item is a menu item on a tablet and desktop and a row of the Menu sheet on a phone: the leaf that says "Not cooked", and its
+  // target. A ListRow's target is the stretched button BESIDE the title (not an ancestor), so the row's own button is pressed, not the li.
+  const NOT_COOKED = `([...document.querySelectorAll('[role="menuitem"]')].filter((e) => e.textContent.trim() === 'Not cooked')[0] ?? [...document.querySelectorAll('dialog[open] *')].filter((e) => e.children.length === 0 && e.textContent.trim() === 'Not cooked').map((e) => e.closest('button, a') ?? e.closest('li')?.querySelector('button, a') ?? e.closest('[tabindex]') ?? e)[0])`
   await until(`!!(${NOT_COOKED})`, 'the Not cooked menu item')
   await press(NOT_COOKED, '"Not cooked"')
   marked.push(target)
