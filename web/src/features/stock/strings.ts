@@ -186,6 +186,8 @@ export const stockStrings = {
   movePlaceNeeded: 'Choose where to move it.',
   /** B9-29 (SAFE-09): Throw out acts at once, with Undo. "500 g Flour thrown out". */
   thrownOut: (amount: string, name: string) => `${amount} ${name} thrown out`,
+  /** SAFE-09 "After Undo": a plain toast, no icon. "500 g Flour is back". */
+  thrownOutBack: (amount: string, name: string) => `${amount} ${name} is back`,
   /** B9-29 (SSP-03): a Storage Place group that holds only frozen Leftovers counts them. */
   leftoverCount: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
 }

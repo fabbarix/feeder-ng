@@ -50,9 +50,12 @@ export function useSpoiledFlow({ system, today, keep, undoKeep }: SpoiledFlowInp
         failed()
         return
       }
+      const amount = formatQuantity(lot.quantity, lot.baseUnit, system)
+      const name = capitalise(lot.ingredientName)
       undoToast.show({
-        headline: strings.thrownOut(formatQuantity(lot.quantity, lot.baseUnit, system), capitalise(lot.ingredientName)),
+        headline: strings.thrownOut(amount, name),
         undo: () => calls.undoThrowOut(record.id),
+        restored: strings.thrownOutBack(amount, name),
       })
     },
     [failed, system, undoToast],

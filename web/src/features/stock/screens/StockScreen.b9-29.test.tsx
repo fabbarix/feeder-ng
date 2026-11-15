@@ -159,6 +159,14 @@ describe('SAFE-09: Throw out acts at once and can be undone', () => {
     await userEvent.click(within(toast).getByRole('button', { name: 'Undo: 500 g Flour thrown out' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/stock/waste/90/undo')).toHaveLength(1))
   })
+  it('a done Undo says "500 g Flour is back" in a plain toast with no icon', async () => {
+    setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Throw out flour' }))
+    const toast = await findToast('500 g Flour thrown out')
+    await userEvent.click(within(toast).getByRole('button', { name: 'Undo: 500 g Flour thrown out' }))
+    const back = await findToast('500 g Flour is back')
+    expect(back.querySelector('.toast__title svg, .toast__icon')).toBeNull()
+  })
   it('a refused Undo says "Nothing was undone" with the reason', async () => {
     setup('/pantry', { 'POST /api/stock/waste/90/undo': { status: 409, json: { error: { code: 'undo_window_over', message: 'too late' } } } })
     await userEvent.click(await screen.findByRole('button', { name: 'Throw out flour' }))
