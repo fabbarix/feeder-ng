@@ -1,13 +1,13 @@
 // Probe "targets" (in-page, B9-16, A11Y-09; P36). It fills
 //   targets: { coarse, items: [{ i, sel, w, h, hit: { x, y, r, b }, anc: [i...], inline }] } | null
 // only on the touch-targets scenarios. coarse is matchMedia('(pointer: coarse)'): the scenarios emulate touch, so it is true there; on
-// a page that is not coarse the probe reports coarse false and the rule says nothing. Every visible, enabled control of main (or an open
-// dialog) is measured: its border box united with its ::after box. A pseudo-element box is read from getComputedStyle(el, '::after'):
+// a page that is not coarse the probe reports coarse false and the rule says nothing. Every visible, enabled control of the whole document
+// (the app bar, the rail and the bottom bar as well as main; only an open modal dialog, which makes the rest inert) is measured: its border box united with its ::after box. A pseudo-element box is read from getComputedStyle(el, '::after'):
 // width and height are the used size of the absolutely positioned box, left and top its offset from the control's padding edge.
 const source = `
 (() => {
   const coarse = matchMedia('(pointer: coarse)').matches
-  const scope = document.querySelector('dialog[open]') ?? document.querySelector('main')
+  const scope = document.querySelector('dialog[open]:modal') ?? document.body
   if (!scope) return null
   const CONTROLS = 'button, a[href], input:not([type=hidden]), textarea, select, summary, [role=button], [role=switch], [role=checkbox], [role=radio], [role=tab], [role=slider], [role=spinbutton], [role=combobox], [role=option], [role=menuitem]'
   const own = (e) => e.tagName.toLowerCase() + [...e.classList].slice(0, 2).map((c) => '.' + c).join('') + (e.getAttribute('aria-label') ? '[aria-label="' + e.getAttribute('aria-label').slice(0, 30) + '"]' : '')
