@@ -44,9 +44,9 @@
         html:not([data-scheme='light']) { background: #090f0b; }
       }
       html[data-scheme='dark'] { background: #090f0b; }
-      /* A returning User (the script above found their theme): their own ground and text; the ground follows the live theme once the app has
-         applied it (--color-bg on <html>), so a scheme or accent changed later is not left behind the page (overscroll). */
-      html[data-boot='shell'] { background: var(--color-bg, var(--boot-bg, #e7f4eb)); color: var(--boot-text, #131d17); }
+      /* A returning User (the script above found their theme): their own ground and text. theme/apply.ts keeps --boot-bg on the live
+         theme's ground afterwards, so a scheme or accent changed later is not left behind the page (overscroll). */
+      html[data-boot='shell'] { background: var(--boot-bg, #e7f4eb); color: var(--boot-text, #131d17); }
       /* Centred Family Pot mark until React mounts. The rule matches only while the mark is in #root, so the app is unaffected. */
       #root:has(> .boot-mark) { display: grid; place-items: center; min-height: 100dvh; }
       .boot-mark { display: grid; justify-items: center; gap: 8px; font-weight: 700; }

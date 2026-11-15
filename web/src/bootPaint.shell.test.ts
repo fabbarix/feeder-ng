@@ -128,8 +128,9 @@ describe('the shell skeleton in index.html', () => {
   })
 
   it('paints with the --boot-* colours, falling back to the default boot colours when there is no cache', () => {
-    // the live theme's --color-bg wins once the app has applied it (a scheme changed later is not left behind the page)
-    expect(styles).toMatch(/background:\s*var\(--color-bg,\s*var\(--boot-bg,\s*#[0-9a-f]{6}\)\)/i)
+    // never the stylesheet's --color-bg: app.css loads before the app applies the cached accent, and its default would show first
+    expect(styles).toMatch(/background:\s*var\(--boot-bg,\s*#[0-9a-f]{6}\)/i)
+    expect(styles).not.toMatch(/html\[data-boot=['"]shell['"]\]\s*\{[^}]*--color-bg/)
     expect(styles).toMatch(/var\(--boot-surface-2\)/)
     expect(styles).toMatch(/var\(--boot-accent/)
   })

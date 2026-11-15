@@ -8,4 +8,8 @@ export function applyTheme(root: HTMLElement, input: ThemeInput, scheme: Scheme)
   }
   root.style.colorScheme = scheme
   root.dataset.scheme = scheme
+  // B9-49 (RES-08): a returning User's page ground (index.html, html[data-boot='shell']) follows the theme applied since, so a scheme
+  // or accent changed later is not left behind the page.
+  const bg = vars['--color-bg']
+  if (root.dataset.boot === 'shell' && bg) root.style.setProperty('--boot-bg', bg)
 }

@@ -10,6 +10,7 @@ beforeEach(() => {
   localStorage.clear()
   document.documentElement.removeAttribute('style')
   document.documentElement.removeAttribute('data-scheme')
+  document.documentElement.removeAttribute('data-boot')
 })
 
 describe('applyCachedTheme', () => {
@@ -34,5 +35,20 @@ describe('applyCachedTheme', () => {
     expect(document.documentElement.dataset.scheme).toBe('dark')
     applyCachedTheme(document.documentElement, false)
     expect(document.documentElement.dataset.scheme).toBe('light')
+  })
+
+  it('keeps the boot ground (--boot-bg) on the theme applied since, so a scheme changed later is not left behind the page', async () => {
+    const { applyTheme } = await import('./apply')
+    const root = document.documentElement
+    writeThemeCache(buildThemeCache({ scheme: 'dark', accent: '#d9503f' }))
+    root.dataset.boot = 'shell'
+    applyCachedTheme(root, false)
+    expect(read('--boot-bg')).toBe(read('--color-bg'))
+    applyTheme(root, { accent: '#d9503f' }, 'light')
+    expect(read('--boot-bg')).toBe(read('--color-bg'))
+    root.removeAttribute('data-boot')
+    root.style.removeProperty('--boot-bg')
+    applyTheme(root, { accent: '#d9503f' }, 'dark')
+    expect(read('--boot-bg')).toBe('') // a first visit (no boot shell) gets no boot ground
   })
 })
