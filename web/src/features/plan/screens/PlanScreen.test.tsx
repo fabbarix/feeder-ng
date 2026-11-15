@@ -66,7 +66,8 @@ describe('PlanScreen layout (5.2)', () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     expect(await screen.findByRole('heading', { level: 1, name: 'Plan' })).toBeInTheDocument()
-    expect(screen.getByText('9 – 11 Nov')).toBeInTheDocument()
+    // B9-20: the header is there while the plan loads; the week range comes with the plan
+    expect(await screen.findByText('9 – 11 Nov')).toBeInTheDocument()
     const regenerate = screen.getByRole('button', { name: 'Regenerate' })
     expect(regenerate).toHaveAttribute('data-variant', 'secondary')
     expect(regenerate.querySelector('svg')).not.toBeNull()

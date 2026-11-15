@@ -35,7 +35,7 @@ vi.mock('../hooks/useStock', () => ({
 // The Pantry list has its own tests (StockScreen.pantry.test.tsx); these cover the By Ingredient list (?view=ingredients).
 vi.mock('../hooks/usePantry', () => ({
   usePantry: () => ({
-    lots: { get data() { return hooks.lots.data }, today: '2026-11-09', isLoading: false, error: null, status: 'ready', refetch: vi.fn() },
+    lots: { get data() { return hooks.lots.data }, today: '2026-11-09', isLoading: false, error: null, status: 'ready', state: 'ready', refetch: vi.fn() },
     places: [],
     groups: [],
     placeOf: () => null,
