@@ -21,6 +21,8 @@ vi.mock('../../../ui/Toast', () => ({ useToast: () => ({ show: vi.fn() }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [{ id: 3, name: 'milk', baseUnit: 'ml' }], isLoading: false }) }))
 
+// B9-34: the ticked Line's sheet shows times in the Household zone, read from /api/me (app/useMe)
+vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 import { ShoppingScreen } from './ShoppingScreen'
 
 const paper = () =>
@@ -70,12 +72,10 @@ describe('ShoppingScreen with Supply Lines', () => {
     expect(screen.getByRole('group', { name: 'Summary' })).toHaveTextContent(/2\s*of 2 left/)
   })
 
-  it('ticking a Restock Line opens the same "How much?" sheet, prefilled with what it needs, and ticks by Ingredient', async () => {
+  it('ticking a Restock Line ticks at once with what it needs (no pack here), by Ingredient (B9-34)', async () => {
     show(mixed())
     await userEvent.click(screen.getByRole('button', { name: 'Tick Toilet paper' }))
-    const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByRole('spinbutton')).toHaveValue('4')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Tick and add to Stock' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(actions.tick).toHaveBeenCalledWith(expect.objectContaining({ ingredientId: 20, quantity: 4, to: '2026-11-15', shopId: 1 }))
   })
 
@@ -90,7 +90,7 @@ describe('ShoppingScreen with Supply Lines', () => {
     show(makeList({ lines: [], extras: [makeExtra({ id: 5, text: null, ingredientId: 20, name: 'Toilet paper', baseUnit: 'piece', quantity: 9, kind: 'supply' })], progress: { ticked: 0, total: 1 } }))
     expect(within(screen.getByRole('list', { name: 'Supplies' })).getByRole('button', { name: 'Toilet paper' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Tick Toilet paper' }))
-    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(actions.tickExtra).toHaveBeenCalledWith(5, 9, 1, expect.any(String))
   })
 
   it('the row sheet of a Restock Line offers Not needed, as for any open Line', async () => {

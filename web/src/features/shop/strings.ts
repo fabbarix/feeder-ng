@@ -33,6 +33,10 @@ export const shopStrings = {
     notNeeded: (line: string) => `mark ${line} Not needed`,
     neededAfterAll: (line: string) => `put ${line} back on the list`,
     addExtra: (text: string | null) => (text ? `add ${text} to the list` : 'add that to the list'),
+    /** B9-34: Save or "Tick without adding" in the Change sheet */
+    change: (line: string) => `change the amount of ${line}`,
+    /** B9-34: Take back in the ticked Line's sheet */
+    takeBack: (line: string) => `take back that amount of ${line}`,
   },
   extraTick: (name: string) => `Tick ${name}`,
   unpriced: (n: number) => (n === 1 ? '1 Line has no Price yet' : `${n} Lines have no Price yet`),
@@ -99,6 +103,48 @@ export const shopStrings = {
   untilDay: (label: string) => `until ${label}`,
   unconfirmedCourses: (slot: string, courses: string) => `${slot} (${courses})`,
   andJoin: 'and',
+  // B9-34 (SAFE-11): the disabled Quantity of an Ingredient extra says why
+  extraQuantityFirst: 'Choose the Ingredient first; the quantity is in its unit.',
+  // B9-34 (SSP-01, SSP 2): one tap ticks; the toast says what reached Stock, with Change and Undo
+  tickedToast: (name: string) => `${name} ticked`,
+  addedToStock: (amount: string) => `${amount} added to Stock`,
+  change: 'Change',
+  // the ticked row's one meta line (lib/tickAmount tickedMeta)
+  inStock: (amount: string) => `+${amount} in Stock`,
+  notAdded: 'Not added to Stock',
+  notAddedCompact: 'No Stock added',
+  scanned: 'Scanned',
+  scannedAmount: (amount: string) => `Scanned · ${amount}`,
+  addedTimes: (n: number) => (n === 2 ? 'Added twice' : `Added ${n} times`),
+  tickYou: 'you',
+  // SSP-02 (decision SSP 3): need that grew after the tick
+  moreSince: 'More since your tick',
+  moreSinceCompact: 'More needed',
+  // the Change sheet (SSP-01)
+  changeTitle: (name: string) => `${name}: how much?`,
+  addedWhenTicked: 'Added when you ticked it',
+  plusAmount: (amount: string) => `+${amount}`,
+  whatLineNeeded: 'What the Line needed',
+  otherAmount: 'Other amount',
+  amountChoices: 'How much to add to Stock',
+  // an addition's time, in the Household zone, 24 hours (no Storage Place: the list does not say where the Lot is)
+  tickedAt: (time: string) => `Ticked at ${time}`,
+  scannedAt: (time: string) => `Scanned at ${time}`,
+  // the ticked Line's sheet (SSP-18)
+  tickedState: (amount: string) => `Ticked · ${amount} added to Stock`,
+  tickedNotAdded: 'Ticked · Not added to Stock',
+  tickedByScan: 'Ticked by a Scan',
+  lineNeeded: (amount: string) => `The Line needed ${amount}.`,
+  additionsList: 'Added to Stock',
+  you: 'You',
+  scannedBy: (who: string) => `${who} scanned`,
+  takeBack: 'Take back',
+  takeBackMine: (amount: string) => `Take back your ${amount}`,
+  takeBackOf: (who: string, amount: string) => `Take back ${who}'s ${amount}`,
+  changeAmount: 'Change amount',
+  tickedNote: 'Take back removes what is left of that Stock Lot. Untick takes back every addition.',
+  takenBackMine: (amount: string, name: string) => `Your ${amount} of ${name} was taken back from Stock`,
+  takenBackOf: (who: string, amount: string, name: string) => `${who}'s ${amount} of ${name} was taken back from Stock`,
   // H7′: the Supplies group (the Restock reason's "x of y" is lib/amountOf amountOfText, b8-polish)
   supplies: 'Supplies',
 }

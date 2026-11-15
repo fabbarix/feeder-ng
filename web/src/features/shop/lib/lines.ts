@@ -2,7 +2,8 @@
 import { formatMinor } from '../../products/lib/money'
 import { displayName } from '../../ingredients/lib/names'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import type { BaseUnit, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
+import { defaultTickAmount, tickedMeta, type TickedMeta } from './tickAmount'
+import type { BaseUnit, LineTick, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 import { shopStrings } from '../strings'
 import { slotsLabel } from './rows'
 import { restockText } from './supplies'
@@ -21,6 +22,11 @@ export interface ListEntry {
   quantityText: string
   /** the muted pack line ("2 × Mutti 700 g"); "" when there is no pack suggestion or the entry is ticked (WP7) */
   packLine: string
+  /**
+   * B9-34 (SSP-05, P23): the pack line's compact form for a narrow text column: the count and the pack size ("2 × 700 g"), so a long
+   * Product name is never what a card row cuts; "" with no pack line.
+   */
+  packCompact?: string
   /** "$3.18"; null when the Line has no Price (nothing is shown, never a dash) or where no estimate applies (extras, ticked lines) */
   estimatedCost: string | null
   ticked: boolean
@@ -47,6 +53,24 @@ export interface ListEntry {
    * The key is left out with no hint.
    */
   markIt?: { date: string; mealSlotId: number }
+  /**
+   * B9-34 (SSP-01, SSP-02): the amount one tap ticks with, in Base Units (lib/tickAmount defaultTickAmount): the suggested pack
+   * (count x size, the priced fallback included), else what the entry still needs; 0 for free text. A More entry is its `more`.
+   */
+  defaultAmount?: number
+  /**
+   * B9-34: the Change sheet's "What the Line needed": an open Line's quantity still to get (what one tap would have had to cover), a
+   * ticked Line's need (the server's `need`: its quantity left is 0). An Ingredient extra's own quantity; 0 for free text.
+   */
+  need?: number
+  /** B9-34: the suggested pack as the Change sheet's chip says it ("1 × Garlic organic pack", 500 g each pack); null without one. */
+  packChoice?: { count: number; name: string; size: number } | null
+  /** B9-34: the tick of a ticked entry, as the list sent it (the Line sheet's additions); null while open. */
+  tick?: LineTick | null
+  /** B9-34 (SSP-01): what a ticked entry's meta line says (lib/tickAmount tickedMeta); null while open or without a tick. */
+  tickMeta?: TickedMeta | null
+  /** B9-34 (SSP-02): true on the open entry "more:<ingredientId>" that carries a ticked Line's growth. */
+  moreSince?: boolean
 }
 
 /** "1.4 kg · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1.4 kg" with no pack suggestion. */
@@ -75,6 +99,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     // round 2: a ticked Line keeps the quantity it needed (the server's need), muted by the stylesheet
     quantityText: formatQuantity(line.ticked ? line.need : line.quantity, line.baseUnit, system),
     packLine: line.ticked || !line.pack ? '' : `${line.pack.count} × ${line.pack.name}`,
+    packCompact: line.ticked || !line.pack ? '' : `${line.pack.count} × ${formatQuantity(line.pack.size, line.baseUnit, system)}`,
     estimatedCost: priceText(line.estimatedCostCents, currency),
     ticked: line.ticked,
     quantity: line.ticked ? 0 : line.quantity,
@@ -84,7 +109,26 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     restockText: line.kind === 'supply' && line.restock && !line.ticked ? restockText(line.restock, line.baseUnit, system) : '',
     restockCompact:
       line.kind === 'supply' && line.restock && !line.ticked ? restockText(line.restock, line.baseUnit, system, { compact: true }) : '',
+    defaultAmount: defaultTickAmount(line),
+    // "What the Line needed" (the Change sheet): what was still to get when it was ticked; a ticked Line, the server's need
+    need: line.ticked ? line.need : line.quantity,
+    packChoice: line.pack ? { count: line.pack.count, name: line.pack.name, size: line.pack.size } : null,
+    tick: line.tick ?? null,
+    tickMeta: line.ticked ? tickedMeta(line.tick, line.baseUnit, system) : null,
+    moreSince: false,
   }
+}
+
+/**
+ * SSP-02 (decision SSP 3): the open entry "more:<ingredientId>" of a ticked Line whose need grew after the tick and is not covered yet
+ * (`more` > 0); null for any other Line. It is a real Line row for the difference: its quantity, pack suggestion and estimate are what the
+ * server sent for it, and one tap ticks the difference (the server covers the More with that tick). Its ticked entry stays in Ticked.
+ */
+export function moreEntryOf(line: ShoppingLine, currency: string, system: UnitSystem): ListEntry | null {
+  const more = line.more ?? 0
+  if (!line.ticked || more <= 0) return null
+  const open = lineEntry({ ...line, ticked: false, tick: null, quantity: more, restock: null }, currency, system)
+  return { ...open, key: `more:${line.ingredientId}`, moreSince: true, defaultAmount: defaultTickAmount({ ...line, quantity: more }) }
 }
 
 export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry {
@@ -106,14 +150,24 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     supply: extra.kind === 'supply',
     restockText: '',
     restockCompact: '',
+    defaultAmount: hasAmount ? (extra.quantity ?? 0) : 0,
+    need: hasAmount ? (extra.quantity ?? 0) : 0,
+    packChoice: null,
+    tick: extra.tick ?? null,
+    tickMeta: extra.ticked ? tickedMeta(extra.tick, extra.baseUnit ?? 'piece', system) : null,
+    moreSince: false,
   }
 }
 
-/** Open entries first (Lines in server order, then extras), then ticked ones (the "Ticked" group), in the same order. */
+/**
+ * Open entries first (Lines in server order, then extras), then ticked ones (the "Ticked" group), in the same order. A ticked Line whose
+ * need grew (SSP-02) also puts its "more:<id>" entry among the open Lines, where the Line sits in server order.
+ */
 export function listEntries(list: ShoppingList, system: UnitSystem): { open: ListEntry[]; ticked: ListEntry[] } {
   const lines = list.lines.map((l) => lineEntry(l, list.currency, system))
   const extras = list.extras.map((e) => extraEntry(e, system))
-  const all = [...lines.filter((i) => !i.ticked), ...extras.filter((i) => !i.ticked)]
+  const openLines = list.lines.flatMap((l, i) => (l.ticked ? [moreEntryOf(l, list.currency, system)].filter((e): e is ListEntry => e !== null) : [lines[i]!]))
+  const all = [...openLines, ...extras.filter((i) => !i.ticked)]
   const ticked = [...lines.filter((i) => i.ticked), ...extras.filter((i) => i.ticked)]
   return { open: all, ticked }
 }
