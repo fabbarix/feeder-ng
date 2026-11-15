@@ -19,8 +19,8 @@ const setup = (over: Partial<Parameters<typeof RenameSheet>[0]> = {}) => {
   render(<RenameSheet {...props} />)
   return props
 }
-const dialog = () => screen.getByRole('dialog', { name: 'Rename Garlic' })
-const field = () => within(dialog()).getByRole('textbox', { name: 'Name' }) as HTMLInputElement
+const dialog = (name = 'Rename Garlic') => screen.getByRole('dialog', { name })
+const field = (name?: string) => within(dialog(name)).getByRole('textbox', { name: 'Name' }) as HTMLInputElement
 
 describe('RenameSheet: anatomy', () => {
   it('is a dialog named for the Ingredient, with the Name field focused and selected', () => {
@@ -92,9 +92,10 @@ describe('RenameSheet: errors at the field', () => {
   })
   it('a Supply words the blank error for a Supply', async () => {
     setup({ kind: 'supply', name: 'dish soap' })
-    await userEvent.clear(field())
-    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save name' }))
-    expect(field()).toHaveAccessibleDescription(/Give the Supply a name/)
+    // Batch w3e: the helper names the sheet it renders ("Rename Dish soap"), not Garlic's.
+    await userEvent.clear(field('Rename Dish soap'))
+    await userEvent.click(within(dialog('Rename Dish soap')).getByRole('button', { name: 'Save name' }))
+    expect(field('Rename Dish soap')).toHaveAccessibleDescription(/Give the Supply a name/)
   })
   it('a taken name: at the field, the sheet stays open', async () => {
     const p = setup({ onSave: vi.fn().mockRejectedValue(new ApiError(409, 'name_taken', 'exists')) })
