@@ -325,6 +325,42 @@ type RecipeStatus struct {
 	Action     string `json:"action,omitempty"` // the user's answer; empty = unanswered
 	Resolved   bool   `json:"resolved"`
 	ImportedAs string `json:"importedAs,omitempty"` // final name ("X (2)" for keep_both)
+	// Preview (B9-28, RX-01) is what the file says about the Recipe, so Import Review can show it before anything is saved.
+	// Filled by BuildPlan for every Recipe of the file (kept, conflicting or skipped), in file order.
+	Preview RecipePreview `json:"preview"`
+}
+
+// RecipePreview is the read-only view of one Recipe of the file (B9-28, RX-01). Courses, Tags, Lines and Steps are never null in JSON.
+type RecipePreview struct {
+	Yield       float64       `json:"yield"`
+	YieldUnit   string        `json:"yieldUnit,omitempty"`
+	ReadyMeal   bool          `json:"readyMeal"`
+	BaseRecipe  bool          `json:"baseRecipe"` // true only when the file says so
+	Courses     []string      `json:"courses"`    // the file's Course names, as written; empty = the file names none (the main Course)
+	Tags        []string      `json:"tags"`
+	Description string        `json:"description,omitempty"`
+	Source      *Source       `json:"source,omitempty"`
+	Lines       []PreviewLine `json:"lines"`
+	Steps       []PreviewStep `json:"steps"`
+	HasImage    bool          `json:"hasImage"`
+}
+
+// PreviewLine is one Ingredient line of a previewed Recipe. Recipe is the name of the Base recipe the line calls for, or empty.
+type PreviewLine struct {
+	Quantity   float64 `json:"quantity"`
+	Unit       string  `json:"unit"`
+	Ingredient string  `json:"ingredient"`
+	Note       string  `json:"note,omitempty"`
+	Optional   bool    `json:"optional"`
+	Recipe     string  `json:"recipe,omitempty"`
+}
+
+// PreviewStep is one Step of a previewed Recipe; the minutes are 0 when the file gives none.
+type PreviewStep struct {
+	Text            string  `json:"text"`
+	Kind            string  `json:"kind"`
+	DurationMinutes float64 `json:"durationMinutes"`
+	LeadTimeMinutes float64 `json:"leadTimeMinutes"`
 }
 
 // Problem blocks the import: Path is a JSON path into the file.
