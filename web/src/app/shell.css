@@ -116,7 +116,9 @@ html {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   column-gap: var(--space-half);
-  padding-inline: var(--space-1);
+  /* 14 px: the end labels ("Settings", 43 px) clear the bar's rounded ends by 8 px at the label's height, and neighbouring labels
+     ("Recipes", "Settings") keep 4 px between them, from 376 px (the narrowest labelled width: a track is 44.3 px there). */
+  padding-inline: calc(var(--space-3) + var(--space-half));
   align-items: center;
   background: var(--color-surface);
   border: 1px solid var(--color-line);

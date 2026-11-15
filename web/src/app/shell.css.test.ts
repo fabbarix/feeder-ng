@@ -347,7 +347,20 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     expect(Number.isFinite(l.slot)).toBe(true)
     expect(Math.abs(l.scanCentre - l.barCentre)).toBeLessThanOrEqual(0.5)
   })
-  it.each([375, 390, 412, 430])('at %i px every slot is at least 44 px wide (seven of them; the narrow band keeps 6 px of padding and no gap)', (vw) => {
+  // B9-19 review: the longest end label, "Settings" (43.2 px), and its neighbour "Recipes" (40.5 px), as Chrome sets them in the
+  // nav type. A label's bottom sits 7.5 px above the bar's inner bottom; the inner outline's rounded end (radius 24 - 1 border) is
+  // 6 px further in at that height. The shell guard (rule 15) measures the real labels at 376, 390 and 820.
+  it.each([376, 390, 430])('at %i px the end label keeps 8 px from the rounded end and 4 px from its neighbour (labels show from 376 px)', (vw) => {
+    const l = layout(vw)
+    const ri = 23
+    const dy = ri - 7.5
+    const curveIn = ri - Math.sqrt(ri * ri - dy * dy)
+    const endRoom = l.pad + (l.slot - 43.2) / 2 - curveIn
+    const neighbour = l.slot + l.gap - (43.2 + 40.5) / 2
+    expect(endRoom).toBeGreaterThanOrEqual(8)
+    expect(neighbour).toBeGreaterThanOrEqual(4)
+  })
+  it.each([375, 376, 390, 412, 430])('at %i px every slot is at least 44 px wide (seven of them; the narrow band keeps 6 px of padding and no gap)', (vw) => {
     const l = layout(vw)
     expect(l.slot).toBeGreaterThanOrEqual(44)
   })
