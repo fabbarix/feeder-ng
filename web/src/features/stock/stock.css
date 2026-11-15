@@ -301,15 +301,19 @@
 }
 
 /* B9-29 (SAFE-11): when a form follows the Lot sheet's action row (Move… open, a Supply's Used up), Delete is the sheet's last row,
-   under a divider, as FormActions draws it on a phone; from 600 px it keeps its natural width at the start. */
+   under a divider, as FormActions draws it on a phone (full width); from 600 px it keeps its natural width at the start. */
 .lot-sheet__delete {
   display: flex;
   padding-block-start: var(--space-2);
   border-block-start: 1px solid var(--color-line);
 }
 
-@media (width < 37.5em) {
+.lot-sheet__delete .button {
+  inline-size: 100%;
+}
+
+@media (min-width: 37.5em) {
   .lot-sheet__delete .button {
-    inline-size: 100%;
+    inline-size: auto;
   }
 }
