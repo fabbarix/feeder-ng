@@ -50,7 +50,7 @@ Workflows:
 Both workflows run `scripts/check.sh` with `CHECK_PROFILE=ci`, a fast safety net, split into two jobs that run side by side:
 
 - **web** (`CHECK_ONLY=web`): the UI guards, `pnpm install`, typecheck, vitest and the vite build;
-- **Go and shell tests** (`CHECK_ONLY=go`): `pnpm install` (some shell tests run vite), `go vet`, `go test` and the shell tests that do not start a browser.
+- **Go and shell tests** (`CHECK_ONLY=go`): `pnpm install` (some shell tests run vite), `go vet`, `go test`, the BDD suite, the release preflight (`go vet` and `go build` on a clean copy of the tree, with no web build) and, from that copy, the shell tests that do not start a browser ([checks.md](checks.md)).
 
 The ci profile leaves out the headless-Chrome work, the slowest part of the check: the page layout guard (`scripts/check-page-layout.sh`) and the shell tests marked `# check-profile: browser` (the ones that start Chrome; `scripts/test/workflows_test.sh` fails when a test that starts Chrome is not marked, or the reverse). So **run the full check locally before every tag**: `bash scripts/check.sh` with no `CHECK_PROFILE` is the full check and runs every step. `CHECK_LIST=1 bash scripts/check.sh` prints the steps and shell tests a run would take, without running them (add `CHECK_PROFILE=ci` to see the CI list).
 
