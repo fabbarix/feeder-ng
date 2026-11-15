@@ -137,7 +137,8 @@ export function RecipeEditorScreen(): ReactNode {
   const [submits, setSubmits] = useState(0)
   useFocusFirstInvalid(formRef, editor.errors, submits)
 
-  const crumbs = useBreadcrumbs(editor.draft?.name)
+  // The crumb names the stored Recipe, as the leave dialogs do: a restored draft's unsaved name is not where the crumb leads.
+  const crumbs = useBreadcrumbs(editor.storedName ?? editor.draft?.name)
   if (editor.isLoading) return <Skeleton variant="tile" count={3} />
   const draft = editor.draft
   const setDraft = (change: (d: RecipeDraft) => RecipeDraft) => editor.setDraft(change)
