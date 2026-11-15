@@ -814,10 +814,13 @@
     display: none;
   }
 
+  /* icon-only it is a circle like Voice beside it (PC-03: the top row's icon buttons are circular outline buttons) */
   .cook-ingredients {
     inline-size: 44px;
+    block-size: 44px;
     padding: 0;
     justify-content: center;
+    border-radius: 50%;
   }
 }
 

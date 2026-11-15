@@ -143,7 +143,7 @@ describe('the top row (PC-03: one line at 375 px)', () => {
   it('does not wrap, and Ingredients is icon-only (a 44 px square) below 37.5 em', () => {
     expect(css('.cook-top')['flex-wrap']).toBe('nowrap')
     expect(css('.cook-ingredients__label', '(width < 37.5em)').display).toBe('none')
-    expect(css('.cook-ingredients', '(width < 37.5em)')).toMatchObject({ 'inline-size': '44px', padding: '0' })
+    expect(css('.cook-ingredients', '(width < 37.5em)')).toMatchObject({ 'inline-size': '44px', 'block-size': '44px', padding: '0', 'border-radius': '50%' })
   })
   it('Ingredients and Voice sit at the end of the row', () => {
     expect(css('.cook-top .cook-ingredients')['margin-inline-start']).toBe('auto')
