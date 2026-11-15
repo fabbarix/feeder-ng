@@ -194,7 +194,7 @@ export function ReadRecipeStep({ read, availability, headingRef, headingDescribe
         </Button>
       ) : null}
       {availability.settingsLink ? (
-        <Link className="import-text-link" to="/settings/recipe-assistant">
+        <Link className="button import-text-link" data-variant="secondary" data-size="sm" to="/settings/recipe-assistant">
           {t.settingsLink}
         </Link>
       ) : null}

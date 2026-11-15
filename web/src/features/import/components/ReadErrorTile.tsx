@@ -36,12 +36,12 @@ export function ReadErrorTile({ error, isAdmin, onRetry, focusRef }: ReadErrorTi
           </Button>
         ) : null}
         {copy.action === 'settings' ? (
-          <Link className="import-text-link" to={SETTINGS}>
+          <Link className="button import-text-link" data-variant="secondary" data-size="sm" to={SETTINGS}>
             {t.settingsLink}
           </Link>
         ) : null}
         {copy.action === 'chooseModel' ? (
-          <Link className="import-text-link" to={`${SETTINGS}#model`}>
+          <Link className="button import-text-link" data-variant="secondary" data-size="sm" to={`${SETTINGS}#model`}>
             {t.chooseModelLink}
           </Link>
         ) : null}

@@ -92,12 +92,9 @@
 }
 
 /* ---- Read a recipe (Recipe Assistant, WP-E/G). Tokens only. ---- */
+/* R-A: a link to the Recipe Assistant settings is an outlined secondary button (the shared .button look), never bare text. */
 .import-text-link {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: 44px;
-  color: var(--color-accent);
-  font-weight: var(--text-label-weight);
+  align-self: flex-start;
 }
 
 .read-step__muted {
@@ -517,6 +514,25 @@
   white-space: nowrap;
 }
 
+/* "or drop it here" sits inside the zone, after the button (the zone and the helper share one grid cell; the helper lets drops through). */
+.recipe-file-tile .ui-field {
+  display: grid;
+  grid-template-areas: 'zone';
+}
+
+.recipe-file-tile .file-drop,
+.recipe-file-tile .file-drop + .ui-field__helper {
+  grid-area: zone;
+}
+
+.recipe-file-tile .file-drop + .ui-field__helper {
+  align-self: center;
+  justify-self: end;
+  margin: 0;
+  padding-inline-end: var(--space-4);
+  pointer-events: none;
+}
+
 .recipe-file-tile .file-drop {
   grid-auto-flow: column;
   justify-content: start;
@@ -539,6 +555,7 @@
     background: none;
   }
 
+  .recipe-file-tile .file-drop > svg,
   .recipe-file-tile .file-drop + .ui-field__helper {
     display: none;
   }
@@ -919,4 +936,16 @@
 .export-picker__none {
   margin: 0;
   color: var(--color-muted);
+}
+
+/* Nothing is cut at 375 px: the detail line of a review or result row wraps under its name instead of ending in an ellipsis. */
+.import-review .list-row__meta,
+.import-review .list-row__meta-text,
+.import-result .list-row__meta,
+.import-result .list-row__meta-text {
+  white-space: normal;
+}
+
+.import-review .list-row__meta {
+  align-items: flex-start;
 }
