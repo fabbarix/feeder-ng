@@ -357,6 +357,7 @@
   font-size: var(--text-board-title);
   font-weight: 600;
   line-height: 1.08;
+  text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -579,5 +580,10 @@
   .board-screen .board-tonight .board-tonight__cook {
     margin-block-start: var(--space-4);
     min-height: 64px;
+  }
+
+  /* a quarter of a phone held sideways is about 120 px wide: the Step is the body role there, so its words fit their line */
+  .board-next__text {
+    font-size: var(--text-board-body);
   }
 }

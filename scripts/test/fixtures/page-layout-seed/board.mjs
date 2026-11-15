@@ -9,7 +9,7 @@ export async function seed(ctx) {
   const { api, step, line } = ctx
   const steps = [
     { text: 'Soak the chickpeas in plenty of cold water', kind: 'advance', durationMinutes: 5, leadTimeMinutes: 720, after: [], uses: [] },
-    { text: 'Simmer the chickpeas with the spinach and the spices until thick.', kind: 'active', durationMinutes: 40, leadTimeMinutes: 0, after: [0], uses: [] },
+    { text: 'Simmer the chickpeas with the spinach and the spices until thick.', kind: 'active', durationMinutes: 40, leadTimeMinutes: 0, after: [], uses: [] },
   ]
   const r = await step('board advance recipe', 'POST', '/api/recipes', {
     name: 'Chickpea and spinach curry', description: '', yield: 4, readyMeal: false, tags: [], lines: [line(3, 300)], steps,
