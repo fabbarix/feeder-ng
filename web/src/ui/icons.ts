@@ -96,6 +96,7 @@ import { RecycleIcon } from '@phosphor-icons/react/dist/csr/Recycle'
 import { RobotIcon } from '@phosphor-icons/react/dist/csr/Robot'
 import { ScalesIcon } from '@phosphor-icons/react/dist/csr/Scales'
 import { ShoppingBagOpenIcon } from '@phosphor-icons/react/dist/csr/ShoppingBagOpen'
+import { ShareNetworkIcon } from '@phosphor-icons/react/dist/csr/ShareNetwork'
 import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
 import { ShuffleIcon } from '@phosphor-icons/react/dist/csr/Shuffle'
 import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut'
@@ -270,6 +271,7 @@ export const icons = {
   // B9-17: the finished Timer pill (PC-04) and Scan's Type a barcode (SSP-06)
   bellRinging: BellRingingIcon,
   typeBarcode: KeyboardIcon,
+  share: ShareNetworkIcon, // B9-52 SET-03: Share sign-in message (the device's share sheet)
 } as const
 
 export type IconName = keyof typeof icons
