@@ -353,8 +353,9 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      {/* Batch w3e: while a modal sheet or dialog is open the region lives inside it, so a toast is seen and its Undo reachable. */}
-      {modalHost ? createPortal(region, modalHost) : region}
+      {/* Batch w3e: while a modal sheet or dialog is open, a toast with an action (Undo, Change) is shown inside it, so it is seen and
+          its action reachable; a plain toast stays in the page, as before. */}
+      {modalHost && toasts.some((t) => t.actions.length > 0) ? createPortal(region, modalHost) : region}
     </ToastContext.Provider>
   )
 }
