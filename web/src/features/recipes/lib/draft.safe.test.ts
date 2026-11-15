@@ -92,7 +92,7 @@ describe('rekeyDraft', () => {
 })
 
 describe('removeLineWithUndo / restoreLine', () => {
-  const base = (): RecipeDraft => ({ ...emptyDraft(), name: 'X', lines: [line('a', 'flour'), line('b', 'milk'), line('c', 'salt')] })
+  const base = (): RecipeDraft => ({ ...emptyDraft(), name: 'X', lines: [line('a', 'flour'), line('b', 'milk'), line('c', 'salt')], steps: [] }) // B9-37: no fresh-keyed blank Step
 
   it('removes the line and reports it with its index', () => {
     const { draft, removed } = removeLineWithUndo(base(), 'b')
