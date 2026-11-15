@@ -4,7 +4,6 @@ import {
   registerPushHandlers,
   safeTargetUrl,
   toShownNotification,
-  type ClickEventLike,
   type PushEventLike,
   type SwScope,
   type WindowClientLike,
