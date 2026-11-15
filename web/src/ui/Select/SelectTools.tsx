@@ -2,7 +2,7 @@
 // (aria-expanded), then the sort IconButton, which keeps its place at the end and never shrinks. "+N" expands the line in place and,
 // expanded, reads "Fewer" (the same button, so focus stays on it). While some chips are hidden, an inert hidden copy holds every chip
 // at its natural width, so the fit (useFittingChips) measures the same widths whether a chip shows or not.
-import { useLayoutEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { Chip } from '../Chip'
 import { IconButton } from '../IconButton'
 import { useFittingChips, type ChipLineMetrics } from '../lib/useFittingChips'
@@ -38,14 +38,9 @@ export interface SelectToolsProps<V extends string | number> {
 
 export function SelectTools<V extends string | number>({ filters, activeFilters, onToggleFilter, sort, onCycleSort, expanded, onToggleExpanded }: SelectToolsProps<V>) {
   const line = useRef<HTMLDivElement>(null)
-  const more = useRef<HTMLSpanElement>(null)
   const ordered = [...filters.filter((f) => activeFilters.includes(f.id)), ...filters.filter((f) => !activeFilters.includes(f.id))]
   const { visible, hidden } = useFittingChips(line, ordered.length, measureTools)
   const shown = expanded ? ordered : ordered.slice(0, visible)
-  // The shared Chip has no aria-expanded prop; the "+N" button states it here (a disclosure of the rest of the line).
-  useLayoutEffect(() => {
-    more.current?.querySelector('button')?.setAttribute('aria-expanded', String(expanded))
-  })
   const chip = (f: SelectFilter<V>) => (
     <Chip key={f.id} kind="filter" selected={activeFilters.includes(f.id)} title={f.label} onClick={() => onToggleFilter(f.id)}>
       {f.label}
@@ -55,8 +50,8 @@ export function SelectTools<V extends string | number>({ filters, activeFilters,
     <div ref={line} className="select__tools" data-expanded={expanded ? 'true' : undefined}>
       {shown.map(chip)}
       {hidden > 0 ? (
-        <span ref={more} className="filter-chips__more">
-          <Chip kind="filter" label={expanded ? undefined : selectStrings.moreFilters(hidden)} title={expanded ? selectStrings.fewerFilters : selectStrings.moreFilters(hidden)} onClick={onToggleExpanded}>
+        <span className="filter-chips__more">
+          <Chip kind="filter" aria-expanded={expanded} label={expanded ? undefined : selectStrings.moreFilters(hidden)} title={expanded ? selectStrings.fewerFilters : selectStrings.moreFilters(hidden)} onClick={onToggleExpanded}>
             {expanded ? selectStrings.fewerFilters : `+${hidden}`}
           </Chip>
         </span>

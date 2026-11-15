@@ -38,6 +38,8 @@ export interface ChipProps {
   title?: string
   /** Id of an element that describes a clickable chip (the screen reader reads it after the name). */
   'aria-describedby'?: string
+  /** A clickable chip that shows or hides more (a "+N" that expands its line): whether that is shown now. */
+  'aria-expanded'?: boolean
   children: ReactNode
 }
 
@@ -64,7 +66,7 @@ function renderIcon(icon: IconName | ReactNode, size: 14): ReactNode {
  * A chip carries meaning, never a raw fact (docs/design/ui-fix-plan.md 4.3). Clickable chips render a button;
  * a filter chip shows aria-pressed and a Check while selected.
  */
-export function Chip({ kind, status, outline, tone, icon, selected, disabled, tagColour, onClick, onRemove, removeLabel, label, title, 'aria-describedby': describedBy, children }: ChipProps) {
+export function Chip({ kind, status, outline, tone, icon, selected, disabled, tagColour, onClick, onRemove, removeLabel, label, title, 'aria-describedby': describedBy, 'aria-expanded': expanded, children }: ChipProps) {
   const resolved = resolveChip({ kind, status, tone, clickable: Boolean(onClick) })
   let finalKind = resolved.kind
   if ((finalKind === 'state' || finalKind === 'status') && !resolved.status) {
@@ -122,6 +124,7 @@ export function Chip({ kind, status, outline, tone, icon, selected, disabled, ta
         aria-pressed={finalKind === 'filter' ? selected : undefined}
         aria-label={label}
         aria-describedby={describedBy}
+        aria-expanded={expanded}
         disabled={disabled}
         onClick={onClick}
       >
