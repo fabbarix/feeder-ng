@@ -284,7 +284,7 @@ describe('TimerTile (plan 4.12)', () => {
     expect(screen.getByRole('timer')).toHaveAttribute('data-state', 'overdue')
   })
 
-  it('is a soft tile when running, a success status tile when finished, a spoil status tile when overdue', () => {
+  it('is a soft tile when running, a success status tile when finished, an info status tile when overdue (B9-17, DS-06: lateness is never red or peach)', () => {
     const { rerender } = render(<TimerTile label="t" seconds={30} running />)
     const tile = () => screen.getByRole('timer')
     expect(tile()).toHaveAttribute('data-variant', 'soft')
@@ -292,7 +292,7 @@ describe('TimerTile (plan 4.12)', () => {
     expect(tile()).toHaveAttribute('data-variant', 'status')
     expect(tile()).toHaveAttribute('data-status', 'success')
     rerender(<TimerTile label="t" seconds={-1} running />)
-    expect(tile()).toHaveAttribute('data-status', 'spoil')
+    expect(tile()).toHaveAttribute('data-status', 'info')
   })
 
   it('shows hours past an hour', () => {
