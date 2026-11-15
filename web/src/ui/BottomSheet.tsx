@@ -112,6 +112,7 @@ function SheetSurface({
   })
 
   useFooterFlow(panelRef, bodyRef)
+  useLateInitialFocus(ref, bodyRef, !initialFocusRef)
   const anchorRef = useRef<HTMLSpanElement>(null)
   useLayoutEffect(() => inheritScheme(anchorRef.current, ref.current), [])
 
@@ -206,6 +207,32 @@ function SheetSurface({
       {createPortal(sheet, document.body)}
     </>
   )
+}
+
+/**
+ * SHORT-02 rule 6 for a body that loads after the sheet opens (Mark as Cooked shows "Loading…" first): the open focused the title,
+ * as there was no control yet. When the body's first control appears while focus is still on the title, it moves there and is
+ * scrolled into view (nearest), so the question is never left cut off under the footer. Focus the person moved is never taken.
+ */
+function useLateInitialFocus(dialogRef: RefObject<HTMLDialogElement | null>, bodyRef: RefObject<HTMLDivElement | null>, enabled: boolean) {
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current
+    const body = bodyRef.current
+    if (!enabled || !dialog || !body || typeof MutationObserver !== 'function') return
+    const title = dialog.querySelector('.sheet__title')
+    const waiting = () => document.activeElement === title || document.activeElement === dialog
+    if (!waiting() || body.querySelector(INTERACTIVE_SELECTOR)) return
+    const observer = new MutationObserver(() => {
+      if (!waiting()) return observer.disconnect()
+      const first = body.querySelector<HTMLElement>(INTERACTIVE_SELECTOR)
+      if (!first) return
+      observer.disconnect()
+      first.focus()
+      first.scrollIntoView?.({ block: 'nearest' })
+    })
+    observer.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] })
+    return () => observer.disconnect()
+  }, [dialogRef, bodyRef, enabled])
 }
 
 /**

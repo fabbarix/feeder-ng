@@ -215,3 +215,32 @@ describe('initial focus is scrolled into view nearest', () => {
     expect(spy.mock.contexts.some((c) => c === screen.getByRole('button', { name: 'Leftover portions' }))).toBe(true)
   })
 })
+
+// B9-14 review: Mark as Cooked opens on "Loading…" (no control, so the title takes the focus); its Leftover portions arrive later.
+describe('a body that loads after the sheet opened', () => {
+  function Late({ loaded }: { loaded: boolean }) {
+    return (
+      <BottomSheet open onClose={() => {}} title="Mark as Cooked" footer={<Button disabled={!loaded}>Mark as Cooked</Button>}>
+        {loaded ? <button>Leftover portions</button> : <p>Loading…</p>}
+      </BottomSheet>
+    )
+  }
+  it('focuses the first body control when it appears while focus is still on the title, scrolled into view', async () => {
+    const spy = vi.fn()
+    Element.prototype.scrollIntoView = spy
+    const { rerender } = render(<Late loaded={false} />)
+    // Nothing to operate yet (the footer's button is disabled while loading): the open focused the title.
+    expect(screen.getByRole('heading', { name: 'Mark as Cooked' })).toHaveFocus()
+    rerender(<Late loaded />)
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Leftover portions' })).toHaveFocus())
+    expect(spy.mock.contexts.some((c) => c === screen.getByRole('button', { name: 'Leftover portions' }))).toBe(true)
+  })
+  it('never takes focus the person moved elsewhere', async () => {
+    const { rerender } = render(<Late loaded={false} />)
+    const close = screen.getByRole('button', { name: 'Close' })
+    close.focus()
+    rerender(<Late loaded />)
+    await new Promise((r) => setTimeout(r, 20))
+    expect(close).toHaveFocus()
+  })
+})
