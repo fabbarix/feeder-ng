@@ -13,7 +13,8 @@
 //                            open? } (every profile viewport) or { name, route, start, widths, setup?, emulate?: [CDP calls before the
 //                            first navigation], rules?: [ids: only these findings are reported] }; ctx.scenario names it for the rules: the scenarios run by `order`
 //                            (then file name; setups change server state, so the order is kept), each setup in the page opened at the
-//                            scenario's start (h: helpers.mjs).
+//                            scenario's start (h: helpers.mjs). An optional reset() forgets what the setups remember between
+//                            runs; the parallel guard calls it before every unit (each unit starts on a fresh copy of the seed).
 // Modules load SYNCHRONOUSLY (readdirSync + createRequire): the facade is loaded by vitest through require(esm), which cannot await.
 // A module that breaks a rule above throws on load, naming the file.
 import { readdirSync } from 'node:fs'
@@ -129,10 +130,15 @@ export const DARK_PROBES = PROBES.filter((p) => p.dark)
 const scenarioModules = modulesIn('scenarios').sort((a, b) => ord(a.mod) - ord(b.mod) || (a.file < b.file ? -1 : 1))
 const scenarioList = []
 const setupMap = {}
+const resetList = []
 for (const { file, mod } of scenarioModules) {
   if (!Array.isArray(mod.scenarios) || typeof mod.setups !== 'object' || mod.setups === null) {
     throw new Error(`page-layout: scenarios/${file} needs { scenarios: [...], setups: {...} }`)
   }
+  // fast-checks: `reset()` forgets what the module's setups remember between runs (a Course they marked, to undo next time). The
+  // parallel guard calls every reset at the start of each unit, which runs on a fresh copy of the seeded database.
+  if (mod.reset !== undefined && typeof mod.reset !== 'function') throw new Error(`page-layout: scenarios/${file}: reset is a function`)
+  if (mod.reset) resetList.push(mod.reset)
   for (const [name, fn] of Object.entries(mod.setups)) {
     if (typeof fn !== 'function') throw new Error(`page-layout: scenarios/${file}: setup ${name} is not a function`)
     if (setupMap[name]) throw new Error(`page-layout: scenarios/${file}: setup ${name} is defined twice`)
@@ -160,6 +166,8 @@ for (const p of PROBES) {
 export const SCENARIOS = scenarioList
 /** Every setup by name. */
 export const SETUPS = setupMap
+/** The scenario modules' reset() hooks: called at the start of every unit of the parallel guard. */
+export const RESETS = resetList
 
 /** --scenario NAME[,NAME]: the scenarios of `list` with those names (no spec: all). An unknown name throws and names the known ones. */
 export function selectScenarios(list, spec) {

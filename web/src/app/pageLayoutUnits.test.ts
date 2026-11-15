@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest'
 
 const nodeModule = 'node:module'
 const { createRequire } = (await import(/* @vite-ignore */ nodeModule)) as { createRequire: (u: string) => (p: string) => unknown }
+const nodeFs = 'node:fs'
+const { readdirSync, readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readdirSync: (p: string) => string[]; readFileSync: (p: string, e: string) => string }
 const nodePath = 'node:path'
 const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (...p: string[]) => string }
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
@@ -118,5 +120,28 @@ describe('the test clock', () => {
     expect(new Shifted(0).getTime()).toBe(0)
     expect(new Shifted() instanceof Date).toBe(true)
     expect(Shifted.UTC(2026, 0, 1)).toBe(Date.UTC(2026, 0, 1))
+  })
+})
+
+describe('scenario state between units', () => {
+  // Each unit of the parallel guard starts on a fresh copy of the seeded database. A scenario module that remembers what its setups did
+  // (to undo it in a later setup) must forget it at the start of a unit: it declares reset() (registry RESETS), which the driver calls.
+  // A counter that only makes fresh values (b9-41's item codes) needs none.
+  const dir = resolve(cwd, '../scripts/lib/page-layout/scenarios')
+  const noReset = new Set(['b9-41.mjs'])
+  it('every module with module-level state declares reset()', () => {
+    for (const f of readdirSync(dir).filter((n) => n.endsWith('.mjs'))) {
+      const text = readFileSync(resolve(dir, f), 'utf8')
+      if (!/^let /m.test(text) || noReset.has(f)) continue
+      const mod = (load(resolve(dir, f)) as { default: { reset?: unknown } }).default
+      expect(typeof mod.reset, `${f} keeps state between setups and has no reset()`).toBe('function')
+    }
+  })
+  it('the registry collects them', () => {
+    const r = load(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as { RESETS: unknown[] }
+    expect(r.RESETS.length).toBeGreaterThanOrEqual(5)
+  })
+  it('no scenario exists only to undo another (each unit starts on a fresh seed)', () => {
+    expect(rules.SCENARIOS.map((s) => s.name).filter((n) => /-restore$/.test(n))).toEqual([])
   })
 })

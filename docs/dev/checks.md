@@ -53,7 +53,8 @@ step's output as it comes.
   `logic` (the `lib/` tests and the CSS-contract tests, ~590 files) runs in threads without per-file isolation, and resets fake
   timers and mocks when a file ends (`src/test/logic-isolation.ts`); `dom` (the rest) is isolated as before, in threads.
 - **Page layout guard**: seeded once, then split in units run by parallel workers, each unit on a fresh copy of the seeded
-  database, at a fixed time of the week (`scripts/lib/page-layout/README.md`). Same 649 probes (quick profile).
+  database, at a fixed time of the week (`scripts/lib/page-layout/README.md`). 648 probes quick, 765 full: the serial run's 649
+  and 766 less shop-complete-restore, a scenario that only undid shop-complete on the shared server.
 - **Go**: unit packages use the test cache; the BDD suite always runs, scenarios concurrently, the `@serial` features (they swap
   process-wide state) one by one after (`GODOG_CONCURRENCY=1`: everything one by one).
 - **Release preflight**: `build/clean` holds the files git tracks and the untracked ones it does not ignore, as on disk, and nothing

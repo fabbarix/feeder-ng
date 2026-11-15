@@ -38,6 +38,10 @@ async function openAddMember() {
 
 export default {
   order: 310,
+  // fast-checks: a unit starts on a fresh copy of the seeded database, so what an earlier unit's setups did there is gone: forget it.
+  reset() {
+    cookedForLeftover = null
+  },
   scenarios: [
     { name: 'leftover-menu-sheet', route: '/', start: '/', setup: 'leftoverMenuSheet', widths: [375, 390], emulate: TOUCH, rules: ['P25', 'P33'] },
     { name: 'sheet-planned-meal', route: '/plan', start: '/plan', setup: 'plannedMealSheet', widths: [390, '844x390'], emulate: TOUCH, rules: ['P25', 'P33'] },

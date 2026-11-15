@@ -8,9 +8,8 @@
 //                          at 375, 390 and 1440. The setup throws when the Product has no button (no seeded Product for the first Line).
 //   shop-complete          /shop with every open Line ticked (by the setup, through the API): the "Shopping List complete" status tile with its
 //                          three rows and at most ONE primary button inside it; the strip's Scan is not primary; its buttons are not cut.
-//                          P23 at 375, 390, 834 and 1440. It leaves the seed changed, so the LAST scenario below, shop-complete-restore, unticks
-//                          what shop-complete ticked (the same pattern as b9-14's leftover-menu-sheet and its restoreToday).
-//   shop-complete-restore  /shop: unticks every Line shop-complete ticked and checks the list is open again (P1 only, 390: the setup is the point).
+//                          P23 at 375, 390, 834 and 1440. It leaves its unit's copy of the seed complete; the next unit starts on a fresh
+//                          copy (fast-checks), so the shop-complete-restore scenario that unticked it all again is gone.
 // Selectors are the app's: `.shop-notice`, `.shop-lines .list-row__target`, `dialog.sheet[open]`, `.celebration-tile`.
 import { byText, evaluate, press, until } from '../helpers.mjs'
 
@@ -19,8 +18,6 @@ const TOUCH = [
   { method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } },
 ]
 const dialogOpen = `!!document.querySelector('dialog.sheet[open]')`
-/** The Lines (ingredient ids) and range end shop-complete ticked, for shop-complete-restore. */
-let tickedByComplete = { to: null, ids: [], extras: [], mores: [], off: [] }
 
 /**
  * The first open Line whose sheet offers "Change the Price" (main-session ruling 3: under Any Shop a last-bought pack has no Shop to price
@@ -56,7 +53,6 @@ export default {
     { name: 'shop-line-sheet', route: '/shop', start: '/shop', setup: 'shopLineSheet', widths: [375, 390, 834, 1440], emulate: TOUCH, rules: ['P23', 'P25', 'P33'] },
     { name: 'shop-line-sheet-price', route: '/shop', start: '/shop', setup: 'shopLineSheetPrice', widths: [375, 390, 1440], emulate: TOUCH, rules: ['P25', 'P33'] },
     { name: 'shop-complete', route: '/shop', start: '/shop', setup: 'shopComplete', widths: [375, 390, 834, 1440], rules: ['P23'] },
-    { name: 'shop-complete-restore', route: '/shop', start: '/shop', setup: 'shopCompleteRestore', widths: [390], rules: ['P1'] },
   ],
   setups: {
     async shopNotice() {
@@ -152,7 +148,6 @@ export default {
         return { to: list.to, ids, extras, mores, off, failed, complete: !!after?.complete, left }
       })()`)
       if (done.error) throw new Error(`setup: ${done.error}`)
-      tickedByComplete = { to: done.to, ids: [...tickedByComplete.ids, ...done.ids], extras: [...tickedByComplete.extras, ...done.extras], mores: [...tickedByComplete.mores, ...done.mores], off: [...tickedByComplete.off, ...done.off] }
       if (!done.complete) throw new Error(`setup: the list is not complete after the setup ticked every open Line (left: ${done.left.join(', ') || 'none'}; failed ticks: ${done.failed.join(', ') || 'none'})`)
       await evaluate('location.reload()')
       await until(`!!document.querySelector('.celebration-tile')`, `the "Shopping List complete" tile (every Line ticked; the setup's ticks that failed: ${done.failed.join(', ') || 'none'})`, 15000)
@@ -172,26 +167,6 @@ export default {
       if (facts.primaries > 1) throw new Error(`setup: SSP-09: ${facts.primaries} primary buttons in the complete tile; one at most`)
       if (facts.scanPrimary) throw new Error('setup: SSP-09: the strip\'s Scan is still primary on a complete list (it is the outlined secondary then)')
       if (facts.cut.length > 0) throw new Error(`setup: SSP-09: a button in the complete tile is cut: ${facts.cut.join(', ')}`)
-    },
-    async shopCompleteRestore() {
-      await until(`!document.querySelector('.skeleton') && !!document.querySelector('.shop-screen')`, 'the Shop')
-      const { to, ids, extras, mores, off } = tickedByComplete
-      tickedByComplete = { to: null, ids: [], extras: [], mores: [], off: [] }
-      if (ids.length === 0 && extras.length === 0 && mores.length === 0 && off.length === 0) return
-      const failed = await evaluate(`(async () => {
-        const bad = []
-        for (const id of ${JSON.stringify(ids)}) if (!(await fetch('/api/shopping/ticks?ingredientId=' + id + '&to=${to}', { method: 'DELETE' })).ok) bad.push('line ' + id)
-        for (const id of ${JSON.stringify(off)}) if (!(await fetch('/api/shopping/not-needed/' + id + '?to=${to}', { method: 'DELETE' })).ok) bad.push('not needed ' + id)
-        // only the addition the setup made on a Line that was already ticked (by b9-34's seed): taken back by its client id, as a Scan sync does
-        for (const uuid of ${JSON.stringify(mores)}) {
-          const op = { clientUuid: 'undo-' + uuid, scannedAt: new Date().toISOString(), kind: 'shop_untick', tickClientUuid: uuid }
-          const r = await fetch('/api/scan/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ops: [op] }) })
-          if (!r.ok) bad.push('more ' + uuid)
-        }
-        for (const id of ${JSON.stringify(extras)}) if (!(await fetch('/api/shopping/extras/' + id + '/tick', { method: 'DELETE' })).ok) bad.push('extra ' + id)
-        return bad
-      })()`)
-      if (failed.length > 0) throw new Error(`setup: shop-complete's ticks could not be undone (${failed.join(', ')}); the Shop is left complete`)
     },
   },
 }

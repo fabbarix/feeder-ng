@@ -26,7 +26,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { DARK_PROBES, PROBES, PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, SETUPS, evaluateDarkMetrics, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario, scenarioViewports, selectScenarios } from './lib/page-layout-rules.mjs'
+import { DARK_PROBES, PROBES, PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, RESETS, SCENARIOS, SETUPS, evaluateDarkMetrics, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario, scenarioViewports, selectScenarios } from './lib/page-layout-rules.mjs'
 import { parseExemptions } from './lib/page-layout-coverage.mjs'
 import { installHelpers } from './lib/page-layout/helpers.mjs'
 import { emulationCalls } from './lib/page-layout/viewport.mjs'
@@ -331,6 +331,8 @@ try {
 const resetServer = async () => {
   if (!resetCmd) return
   execFileSync('bash', ['-c', resetCmd], { stdio: ['ignore', 'ignore', 'inherit'], timeout: 60_000 })
+  // The fresh copy has none of what earlier units' setups did: the modules forget it too (registry RESETS).
+  for (const reset of RESETS) reset()
   if (clockAt !== null) clockOffset = clockAt - Date.now()
   if (!cookieArg) await signIn()
 }

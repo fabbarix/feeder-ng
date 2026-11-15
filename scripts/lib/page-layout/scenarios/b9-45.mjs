@@ -171,6 +171,10 @@ async function leftoverFreezeSheet() {
 
 export default {
   order: 360,
+  // fast-checks: a unit starts on a fresh copy of the seeded database, so what an earlier unit's setups did there is gone: forget it.
+  reset() {
+    marked = []
+  },
   scenarios: [
     { name: 'cooked-confirmation', route: '/recipes/:id', start: '/', setup: 'cookedConfirmation', widths: [390, 1440], rules: ['P1'] },
     { name: 'cook-get-ready', route: '/recipes/:id', start: '/', setup: 'cookGetReady', widths: [390, 1440], rules: ['P1'] },

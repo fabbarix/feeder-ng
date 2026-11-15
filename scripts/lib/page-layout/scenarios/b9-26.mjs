@@ -144,6 +144,10 @@ async function toConfirmNotCooked() {
 
 export default {
   order: 326,
+  // fast-checks: a unit starts on a fresh copy of the seeded database, so what an earlier unit's setups did there is gone: forget it.
+  reset() {
+    marked = []
+  },
   scenarios: [
     { name: 'plan-after-swap', route: '/plan', start: '/plan', setup: 'planAfterSwap', widths: [390, 1440] },
     { name: 'regenerate', route: '/plan', start: '/plan', setup: 'regenerate', widths: [390, 1440] },

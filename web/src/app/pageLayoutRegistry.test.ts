@@ -128,7 +128,7 @@ const ADDED = {
   // B9-44: scenarios/b9-44.mjs (order 344): today-advance (TB-02), today-grid (TB-03, TB-09, TB-11, with the resize walk), today-shopping (TB-12), today-cls and plan-cls (RES-05).
   // B9-46: scenarios/b9-46.mjs (order 346): plan-away, away-sheet, away-sheet-open, whos-eating-away and member-away (PC-08, SET-16).
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
-  // B9-43: scenarios/b9-43.mjs (order 350, after b9-40 by file name): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete and shop-complete-restore (SSP-04, 09, 13, 14).
+  // B9-43: scenarios/b9-43.mjs (order 350, after b9-40 by file name): shop-notice, shop-line-sheet, shop-line-sheet-price and shop-complete (SSP-04, 09, 13, 14).
   // B9-47: scenarios/b9-47.mjs (order 350, after b9-43 by file name): the Kitchen board on real screens (TB-04, TB-07, TB-08, TB-15c/d, SHORT-03, A11Y-12, RES-09): board-wall, board-portrait, board-short, board-phone, board-close, board-error.
   // B9-49: scenarios/b9-49.mjs (order 350, after b9-47 by file name): shell-skip-link (A11Y-10), shell-offline-banner (RES-07), nav-current-recipe,
   // nav-current-recipe-edit and nav-current-ingredient (TB-13), toast-region-chromeless, boot-theme (RES-08). No rule number but P37 (titles): the setups measure and throw on a finding.
@@ -166,7 +166,7 @@ const ADDED = {
     'today-advance', 'today-grid', 'today-shopping', 'today-cls', 'plan-cls',
     'plan-away', 'away-sheet', 'away-sheet-open', 'whos-eating-away', 'member-away',
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
-    'shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete', 'shop-complete-restore',
+    'shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete',
     'board-wall', 'board-portrait', 'board-short', 'board-phone', 'board-close', 'board-error',
     'shell-skip-link', 'shell-offline-banner', 'nav-current-recipe', 'nav-current-recipe-edit', 'nav-current-ingredient', 'toast-region-chromeless', 'boot-theme',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',

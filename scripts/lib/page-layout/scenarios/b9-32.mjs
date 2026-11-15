@@ -183,6 +183,10 @@ async function planCouldnt() {
 
 export default {
   order: 332,
+  // fast-checks: a unit starts on a fresh copy of the seeded database, so what an earlier unit's setups did there is gone: forget it.
+  reset() {
+    archived = []
+  },
   scenarios: [
     { name: 'plan-grid', route: '/plan', start: '/plan', setup: 'planGrid', widths: [375, 390, 834, 1440, '1920x1080'], rules: ['P1', 'P3', 'P13', 'P14', 'P16', 'P17', 'P18', 'P38'] },
     { name: 'plan-couldnt', route: '/plan', start: '/plan', setup: 'planCouldnt', widths: [375, 390, 1440], rules: ['P1', 'P13', 'P14', 'P38'] },

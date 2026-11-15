@@ -1,5 +1,5 @@
 // B9-43 (SSP-04, SSP-09, SSP-13, SSP-14; plan section 9): the guard files of the Shop's notice, complete tile and open Line sheet.
-//   scenarios/b9-43.mjs (order 350): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete, shop-complete-restore
+//   scenarios/b9-43.mjs (order 350): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete
 //   probes/cut-meta.mjs: also reads `.shop-notice__title` (the verb is never cut), keeping the list-row form P23 had
 import { describe, expect, it } from 'vitest'
 
@@ -40,17 +40,18 @@ describe('B9-43 page-layout scenarios', () => {
     expect(s!.rules).toEqual(['P25', 'P33'])
   })
 
-  it('shop-complete runs P23 at 375, 390, 834 and 1440, and a restore scenario follows it (the setup changes the seed)', () => {
+  // fast-checks: every unit of the guard starts on a fresh copy of the seeded database, so the complete Shop is never seen by another
+  // scenario and the shop-complete-restore scenario that unticked it again is gone.
+  it('shop-complete runs P23 at 375, 390, 834 and 1440, and no restore scenario follows it (each unit starts on a fresh seed)', () => {
     const s = scenario('shop-complete')
     expect(s).toBeDefined()
     expect(s!.widths).toEqual([375, 390, 834, 1440])
     expect(s!.rules).toEqual(['P23'])
-    const names = api.SCENARIOS.map((x) => x.name)
-    expect(names.indexOf('shop-complete-restore')).toBe(names.indexOf('shop-complete') + 1)
+    expect(api.SCENARIOS.map((x) => x.name)).not.toContain('shop-complete-restore')
   })
 
   it('no scenario of the package runs below 375 px', () => {
-    for (const name of ['shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete', 'shop-complete-restore']) {
+    for (const name of ['shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete']) {
       for (const w of scenario(name)!.widths ?? []) expect(typeof w === 'number' ? w : Number(String(w).split('x')[0]), name).toBeGreaterThanOrEqual(375)
     }
   })

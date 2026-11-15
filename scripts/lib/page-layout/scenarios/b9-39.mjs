@@ -193,6 +193,10 @@ async function todayAfterSwap() {
 
 export default {
   order: 336,
+  // fast-checks: a unit starts on a fresh copy of the seeded database, so what an earlier unit's setups did there is gone: forget it.
+  reset() {
+    pending = null
+  },
   scenarios: [
     {
       name: 'today-after-lunch',
