@@ -105,7 +105,7 @@ export function RecipeAssistantSettingsPage() {
         {page.notice ? <p>{page.notice}</p> : null}
         {page.errors.form ? <p role="alert">{page.errors.form}</p> : null}
       </div>
-      <StickyActionBar column="narrow" label={raStrings.actionsLabel}>
+      <StickyActionBar column="narrow" label={raStrings.actionsLabel} sticky={page.dirty && !locked}>
         <FormActions
           tertiary={
             <Button variant="secondary" disabled={!page.dirty || page.saving} onClick={page.cancel}>

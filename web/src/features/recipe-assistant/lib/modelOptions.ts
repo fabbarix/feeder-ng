@@ -1,11 +1,11 @@
-// Model options for the shared Select (design 2.3). Pure: no React, so `leading` (the price badge) is added by the component.
+// Model options for the shared Select (design 2.3). Pure: no React. The price tier is shown in the meta line (SET-14f).
 import type { SelectOption } from '../../../ui/Select/lib'
 import type { ModelInfo } from '../types'
 
 export interface ModelOption extends SelectOption<string> {
-  /** '$'..'$$$$' or '' (unknown); the component shows it as a Chip. */
+  /** '$'..'$$$$' or '' (unknown); it leads the option's meta line. */
   priceTier: string
-  /** Deprecated or retired: the component marks it. */
+  /** Deprecated or retired: the meta line says when it retires. */
   warning: boolean
 }
 

@@ -22,6 +22,8 @@ export const raStrings = {
   removeBody: 'The Recipe Assistant turns off until a new key is saved.',
   model: 'Model',
   refreshModels: 'Refresh models',
+  /** SET-14f: what the "$" to "$$$$" in each option's meta line means. */
+  modelPriceHelper: 'Price per 1M tokens, from $ to $$$$',
   modelListFailed: "Couldn't load the model list. The saved model is still used.",
   modelRetired: 'The chosen model is no longer available. Pick another model.',
   modelIdInvalid: 'A model ID can use letters, numbers and . _ : @ / - only.',
@@ -40,7 +42,7 @@ export const raStrings = {
   deployGuideUrl: 'https://github.com/fabbarix/feeder-ng/blob/main/docs/dev/deploy.md',
   saved: 'Saved.',
   removeFailed: "Couldn't remove the API key. Try again.",
-  actionsLabel: 'Settings actions',
+  actionsLabel: 'Recipe Assistant actions',
   cancel: 'Cancel',
   save: 'Save',
   saving: 'Saving…',
