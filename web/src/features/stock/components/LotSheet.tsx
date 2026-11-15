@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react'
+import { useId, useRef, useState, type ReactElement, type RefObject } from 'react'
 import { BottomSheet, Button, FormActions, Muted, Select, Stack, TextField, useConfirm } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { capitalise, formatLotDate } from '../lib/display'
@@ -36,17 +36,22 @@ export interface LotSheetProps {
   onUsedUp?: (lot: StockLot, used: number | undefined) => void
 }
 
-/** One Stock Lot: where it is, when it was bought, how long it is good, and "Move to" another Storage Place (all or part). */
+/**
+ * One Stock Lot: where it is, when it was bought, how long it is good; Edit, Delete, and (SAFE-11) "Move…", a disclosure that reveals
+ * "Move to" another Storage Place (all or part), offered only when there is another place. "All <Ingredient>" is always there.
+ */
 export function LotSheet({ lot, places, today, system = 'metric', onClose, onMove, onSeeIngredient, onEdit, onDelete, onUsedUp }: LotSheetProps): ReactElement {
   // Edit closes this sheet first: the screen opens the edit sheet in its place.
   const edit = onEdit ? (l: StockLot) => {
     onClose()
     onEdit(l)
   } : undefined
+  // The sheet opens on its first action (Edit), never on Delete, which comes first in the action row's DOM.
+  const first = useRef<HTMLButtonElement>(null)
   return (
-    <BottomSheet open={lot !== null} onClose={onClose} title={lot ? capitalise(lot.ingredientName) : ''}>
+    <BottomSheet open={lot !== null} onClose={onClose} title={lot ? capitalise(lot.ingredientName) : ''} initialFocusRef={onEdit ? first : undefined}>
       {lot ? (
-        <LotDetail key={lot.id} lot={lot} places={places} today={today} system={system} onMove={onMove} onSeeIngredient={onSeeIngredient} onEdit={edit} onDelete={onDelete} onUsedUp={onUsedUp} />
+        <LotDetail key={lot.id} lot={lot} places={places} today={today} system={system} onMove={onMove} onSeeIngredient={onSeeIngredient} onEdit={edit} onDelete={onDelete} onUsedUp={onUsedUp} firstRef={first} />
       ) : null}
     </BottomSheet>
   )
@@ -55,7 +60,7 @@ export function LotSheet({ lot, places, today, system = 'metric', onClose, onMov
 /** The words of a refused "Used up" amount. */
 const usedUpErrors = { tooMuch: strings.moveTooMuch, notPositive: strings.errors.notPositive, negative: strings.errors.negative, invalid: strings.errors.invalid } as const
 
-function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredient, onEdit, onDelete, onUsedUp }: Omit<LotSheetProps, 'lot' | 'onClose'> & { lot: StockLot }) {
+function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredient, onEdit, onDelete, onUsedUp, firstRef }: Omit<LotSheetProps, 'lot' | 'onClose'> & { lot: StockLot; firstRef: RefObject<HTMLButtonElement | null> }) {
   const { confirm: ask } = useConfirm()
   const from = places.find((p) => p.id === lot.storagePlaceId) ?? null
   const supply = isSupply(lot)
@@ -68,15 +73,14 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
     })
     if (sure) onDelete?.(lot)
   }
-  const [placeId, setPlaceId] = useState<number | null>(null)
-  const [quantity, setQuantity] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [moving, setMoving] = useState(false)
   const [usedAmount, setUsedAmount] = useState('')
   const [usedError, setUsedError] = useState<string | null>(null)
-  const to = places.find((p) => p.id === placeId) ?? null
-  const note = lotMoveNote(lot, from, to)
+  const moveId = useId()
   const all = formatQuantity(lot.quantity, lot.baseUnit, system)
   const options = places.filter((p) => p.id !== lot.storagePlaceId).map((p) => ({ value: p.id, label: p.name, meta: strings.kinds[p.kind] }))
+  // SAFE-11: Move is offered only when there is somewhere to move to, and its form shows once Move… is pressed.
+  const canMove = options.length > 0
   return (
     <Stack>
       <p className="lot-sheet__facts">
@@ -84,20 +88,38 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
         <br />
         {from ? strings.inPlace(from.name) : strings.unsorted} · {strings.boughtOn(formatLotDate(lot.purchased))}
       </p>
-      {onEdit || onDelete ? (
-        <div className="lot-sheet__actions">
-          {onEdit ? (
-            <Button variant="secondary" onClick={() => onEdit(lot)}>
-              {strings.edit}
-            </Button>
-          ) : null}
-          {onDelete ? (
-            <Button variant="danger-secondary" onClick={() => void askDelete()}>
-              {strings.delete}
-            </Button>
-          ) : null}
-        </div>
+      <div className="lot-sheet__see">
+        <Button variant="secondary" size="sm" icon="ingredients" onClick={() => onSeeIngredient(lot.ingredientId)}>
+          {strings.seeIngredient(lot.ingredientName)}
+        </Button>
+      </div>
+      {!canMove && places.length === 0 ? <Muted>{strings.noPlacesHint}</Muted> : null}
+      {onEdit || onDelete || canMove ? (
+        <FormActions
+          destructive={
+            onDelete ? (
+              <Button variant="danger-secondary" onClick={() => void askDelete()}>
+                {strings.delete}
+              </Button>
+            ) : undefined
+          }
+          secondary={
+            canMove ? (
+              <Button variant="secondary" aria-expanded={moving} aria-controls={moving ? moveId : undefined} onClick={() => setMoving((m) => !m)}>
+                {strings.moveDisclosure}
+              </Button>
+            ) : undefined
+          }
+          primary={
+            onEdit ? (
+              <Button ref={firstRef} variant="secondary" onClick={() => onEdit(lot)}>
+                {strings.edit}
+              </Button>
+            ) : null
+          }
+        />
       ) : null}
+      {canMove && moving ? <MoveForm id={moveId} lot={lot} from={from} places={places} options={options} all={all} onMove={onMove} /> : null}
       {supply && onUsedUp ? (
         <>
           <h3 className="lot-sheet__heading">{strings.usedUp.heading}</h3>
@@ -131,66 +153,76 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
           </form>
         </>
       ) : null}
-      <h3 className="lot-sheet__heading">{strings.moveTitle}</h3>
-      {options.length > 0 ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (placeId === null) return
-            const check = checkMoveQuantity(quantity, lot)
-            if (!check.ok) {
-              setError(check.error === 'tooMuch' ? strings.moveTooMuch : strings.errors[check.error])
-              return
-            }
-            onMove(lot, placeId, check.quantity)
-          }}
-        >
-          <Stack>
-            {/* b8-polish: until a new place is chosen the field shows the hint; the sheet already says where the Lot is. */}
-            <Select<number>
-              label={strings.moveTo}
-              entityName="Storage Place"
-              options={options}
-              value={placeId}
-              onChange={setPlaceId}
-              placeholder={strings.chooseStoragePlace}
-            />
-            <TextField
-              label={strings.moveSome}
-              inputMode="decimal"
-              value={quantity}
-              placeholder={String(lot.quantity)}
-              onChange={(v) => {
-                setQuantity(v)
-                setError(null)
-              }}
-              suffix={lot.baseUnit}
-              helper={strings.moveSomeHint(all)}
-              error={error ?? undefined}
-            />
-            {note ? <Muted>{note === 'freezer' ? strings.freezerNote : strings.thawNote}</Muted> : null}
-            <FormActions
-              secondary={
-                <Button variant="secondary" onClick={() => onSeeIngredient(lot.ingredientId)}>
-                  {strings.seeIngredient(lot.ingredientName)}
-                </Button>
-              }
-              primary={
-                <Button type="submit" disabled={placeId === null}>
-                  {strings.move}
-                </Button>
-              }
-            />
-          </Stack>
-        </form>
-      ) : (
-        <>
-          <Muted>{strings.noPlacesHint}</Muted>
-          <Button variant="secondary" onClick={() => onSeeIngredient(lot.ingredientId)}>
-            {strings.seeIngredient(lot.ingredientName)}
-          </Button>
-        </>
-      )}
     </Stack>
+  )
+}
+
+interface MoveFormProps {
+  id: string
+  lot: StockLot
+  from: StoragePlace | null
+  places: StoragePlace[]
+  options: { value: number; label: string; meta: string }[]
+  all: string
+  onMove: LotSheetProps['onMove']
+}
+
+/** "Move to": a Storage Place and how much (all of it by default). Move is never disabled; it says what is missing. */
+function MoveForm({ id, lot, from, places, options, all, onMove }: MoveFormProps) {
+  const [placeId, setPlaceId] = useState<number | null>(null)
+  const [placeError, setPlaceError] = useState<string | null>(null)
+  const [quantity, setQuantity] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const to = places.find((p) => p.id === placeId) ?? null
+  const note = lotMoveNote(lot, from, to)
+  return (
+    <form
+      id={id}
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (placeId === null) {
+          setPlaceError(strings.movePlaceNeeded)
+          return
+        }
+        const check = checkMoveQuantity(quantity, lot)
+        if (!check.ok) {
+          setError(check.error === 'tooMuch' ? strings.moveTooMuch : strings.errors[check.error])
+          return
+        }
+        onMove(lot, placeId, check.quantity)
+      }}
+    >
+      <Stack>
+        <h3 className="lot-sheet__heading">{strings.moveTitle}</h3>
+        {/* b8-polish: until a new place is chosen the field shows the hint; the sheet already says where the Lot is. */}
+        <Select<number>
+          label={strings.moveTo}
+          entityName="Storage Place"
+          options={options}
+          value={placeId}
+          onChange={(v) => {
+            setPlaceId(v)
+            setPlaceError(null)
+          }}
+          placeholder={strings.chooseStoragePlace}
+          error={placeError ?? undefined}
+        />
+        <TextField
+          label={strings.moveSome}
+          inputMode="decimal"
+          value={quantity}
+          placeholder={String(lot.quantity)}
+          onChange={(v) => {
+            setQuantity(v)
+            setError(null)
+          }}
+          suffix={lot.baseUnit}
+          helper={strings.moveSomeHint(all)}
+          error={error ?? undefined}
+        />
+        {note ? <Muted>{note === 'freezer' ? strings.freezerNote : strings.thawNote}</Muted> : null}
+        <FormActions primary={<Button type="submit">{strings.move}</Button>} />
+      </Stack>
+    </form>
   )
 }

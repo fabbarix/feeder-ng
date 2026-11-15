@@ -1,4 +1,5 @@
 import { http as defaultHttp, type HttpClient } from '../../lib/http'
+import type { PutAwayMove, PutAwayResult } from './lib/putAway'
 import type { AddLotInput, IngredientStock, LotPatch, StockLot, StockLotsResponse, StockWarning, StoragePlace, StoragePlaceInput, WasteRecord } from './types'
 
 export interface StockApi {
@@ -8,7 +9,12 @@ export interface StockApi {
   setTotal(ingredientId: number, total: number): Promise<{ ingredient: IngredientStock; lots: StockLot[] }>
   spoiled(): Promise<StockLotsResponse>
   throwOut(lotId: number): Promise<WasteRecord>
-  keep(lotId: number): Promise<StockLot>
+  /** SSP-17: Keep a spoiled Lot; no date = good until today (the server's household day), a date = Change. */
+  keep(lotId: number, goodUntil?: string): Promise<StockLot>
+  /** SAFE-09: undoes a Throw out; resolves with the Lot as it was. 404 unknown/second Undo, 409 not_undoable | undo_window_over. */
+  undoThrowOut(wasteId: number): Promise<StockLot>
+  /** SSP-10: moves many Lots in one call; skipped = Lots somebody sorted meanwhile. */
+  putAway(moves: PutAwayMove[]): Promise<PutAwayResult>
   cooked(needs: { ingredientId: number; quantity: number }[]): Promise<StockWarning[]>
   /** Pantry: moves a Lot, or `quantity` of it (absent = all), to a Storage Place. */
   moveLot(lotId: number, storagePlaceId: number, quantity?: number): Promise<StockLot>
@@ -44,8 +50,15 @@ export function createStockApi(client: HttpClient): StockApi {
     throwOut(lotId) {
       return client.post<WasteRecord>(`/api/stock/lots/${lotId}/throw-out`)
     },
-    keep(lotId) {
-      return client.post<StockLot>(`/api/stock/lots/${lotId}/keep`)
+    keep(lotId, goodUntil) {
+      const path = `/api/stock/lots/${lotId}/keep`
+      return goodUntil === undefined ? client.post<StockLot>(path) : client.post<StockLot>(path, { goodUntil })
+    },
+    undoThrowOut(wasteId) {
+      return client.post<StockLot>(`/api/stock/waste/${wasteId}/undo`)
+    },
+    putAway(moves) {
+      return client.post<PutAwayResult>('/api/stock/lots/put-away', { moves })
     },
     async cooked(needs) {
       return (await client.post<{ warnings: StockWarning[] }>('/api/stock/cooked', { needs })).warnings

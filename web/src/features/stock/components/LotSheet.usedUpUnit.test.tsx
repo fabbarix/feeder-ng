@@ -1,12 +1,13 @@
 // b8-pantry G4: the Used up field of a Supply's Lot sheet shows the Base Unit as a suffix, like "How much to move" below it.
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
 import { ConfirmProvider } from '../../../ui'
 import { makeSupplyLot } from '../testData'
 import { LotSheet } from './LotSheet'
 
 describe('LotSheet for a Supply: units', () => {
-  it('shows the Base Unit after both quantity fields', () => {
+  it('shows the Base Unit after both quantity fields', async () => {
     const lot = makeSupplyLot({ id: 31, quantity: 4, baseUnit: 'piece', storagePlaceId: 1 })
     render(
       <ConfirmProvider>
@@ -14,6 +15,8 @@ describe('LotSheet for a Supply: units', () => {
       </ConfirmProvider>,
     )
     const dialog = screen.getByRole('dialog')
+    // B9-29 (SAFE-11): the Move form shows once "Move…" is pressed.
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Move…' }))
     for (const label of ['How much to move', 'How much was used up']) {
       const field = within(dialog).getByLabelText(label)
       expect(field.closest('.ui-field')?.querySelector('.ui-field__suffix')).toHaveTextContent('piece')

@@ -58,18 +58,25 @@ describe('names and roles', () => {
   })
 })
 
+// B9-29 (DS-03): jsdom does not implement `inert`, so user-event would land on the view row's hidden Sort copy
+// (FilterBarViewRow's `.filter-bar__sort-measure`, inert and aria-hidden); a browser skips it. Tab on past it.
+async function tab() {
+  await userEvent.tab()
+  while (document.activeElement?.closest('[inert]')) await userEvent.tab()
+}
+
 describe('keyboard', () => {
   it('tab order: Search, Filters, List, Sort, then the chips', async () => {
     await view('/pantry?status=useSoon')
     const search = screen.getByRole('searchbox', { name: 'Search Stock' })
     search.focus()
-    await userEvent.tab()
+    await tab()
     expect(filtersButton()).toHaveFocus()
-    await userEvent.tab()
+    await tab()
     expect(screen.getByRole('radio', { name: 'Storage Place' })).toHaveFocus()
-    await userEvent.tab()
+    await tab()
     expect(screen.getByRole('combobox', { name: 'Sort' })).toHaveFocus()
-    await userEvent.tab()
+    await tab()
     expect(screen.getByRole('button', { name: 'Remove Use soon' })).toHaveFocus()
   })
   it('from 768 px, opening the panel focuses "Use soon"; Escape closes it and focus returns to Filters', async () => {

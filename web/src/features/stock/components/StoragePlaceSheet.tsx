@@ -1,5 +1,7 @@
-import { useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { BottomSheet, Button, Chip, FormActions, Muted, Stack, Switch, TextField } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
+import { ApiError } from '../../../lib/http'
 import { errorText } from '../../products/lib/productForm'
 import { KIND_ICON, STORAGE_KINDS } from '../lib/kinds'
 import { stockStrings as strings } from '../strings'
@@ -30,20 +32,45 @@ function PlaceForm({ initial, onSave, onDelete }: { initial: StoragePlace | null
   const [kind, setKind] = useState<StorageKind>(initial?.kind ?? 'pantry')
   const [isDefault, setDefault] = useState(initial?.default ?? false)
   const [error, setError] = useState<string | null>(null)
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [refusals, setRefusals] = useState(0)
   const [saving, setSaving] = useState(false)
+  const form = useRef<HTMLFormElement>(null)
+  // SAFE-04: after a refused save, the invalid field takes the focus.
+  useEffect(() => {
+    if (refusals === 0) return
+    form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+  }, [refusals])
   return (
     <form
+      ref={form}
       onSubmit={(e) => {
         e.preventDefault()
         setSaving(true)
         setError(null)
+        setNameError(null)
         onSave({ name: name.trim(), kind, default: isDefault })
-          .catch((err: unknown) => setError(errorText(err)))
+          .catch((err: unknown) => {
+            // A refusal that names the Name field (or a name already in use, 409 name_taken) is that field's own error; anything else is
+            // the form's one alert.
+            if (err instanceof ApiError && (err.details.field === 'name' || err.code === 'name_taken')) setNameError(err.message)
+            else setError(errorText(err))
+            setRefusals((n) => n + 1)
+          })
           .finally(() => setSaving(false))
       }}
     >
       <Stack>
-        <TextField label={strings.places.name} value={name} onChange={setName} helper={strings.places.nameHint} />
+        <TextField
+          label={strings.places.name}
+          value={name}
+          onChange={(v) => {
+            setName(v)
+            setNameError(null)
+          }}
+          helper={strings.places.nameHint}
+          error={nameError ?? undefined}
+        />
         <div className="stock-screen__filters" role="group" aria-label={strings.places.kind}>
           {STORAGE_KINDS.map((k) => (
             <Chip key={k} kind="filter" icon={KIND_ICON[k]} selected={kind === k} onClick={() => setKind(k)}>
@@ -53,11 +80,7 @@ function PlaceForm({ initial, onSave, onDelete }: { initial: StoragePlace | null
         </div>
         <Muted>{strings.places.kindHint[kind]}</Muted>
         <Switch label={strings.places.default} checked={isDefault} onChange={setDefault} />
-        {error ? (
-          <p role="alert" className="pg__error">
-            {error}
-          </p>
-        ) : null}
+        <FormError>{error}</FormError>
         <FormActions
           destructive={
             onDelete ? (

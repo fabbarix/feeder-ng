@@ -66,8 +66,11 @@ describe('LotSheet: Edit and Delete', () => {
     expect(dialog).toHaveTextContent('deleting it also takes that go-off off your Zero-waste streak')
   })
 
-  it('keeps Move to', () => {
-    setup(fine)
+  it('keeps Move to, behind "Move…" (SAFE-11)', async () => {
+    // B9-29 developer: a Not sorted Lot, so Kitchen Pantry is somewhere to move to (with no other place there is no Move…).
+    setup({ ...fine, storagePlaceId: null })
+    expect(screen.queryByRole('heading', { name: 'Move to' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Move…' }))
     expect(screen.getByRole('heading', { name: 'Move to' })).toBeInTheDocument()
   })
 })

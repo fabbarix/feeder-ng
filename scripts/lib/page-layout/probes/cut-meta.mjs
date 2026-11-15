@@ -2,7 +2,8 @@
 //   cutMeta: [{ sel, label, shown, px }] (P23)
 // b8-shop (P23): the Shop hint (a food Line's Meal Slot hint, "Fri Dinner +2") cut by its ellipsis, at every width. The text is measured
 // with a Range per painted text node (like cutSelectProbe), so the ellipsis is found whatever it paints. b8-polish: the Supplies group's Restock reason is read
-// too; below 420 px it is the compact "400 ml/1 l", which the probe measures as painted.
+// too; below 420 px it is the compact "400 ml/1 l", which the probe measures as painted. B9-29 (SSP-05): every visible row meta is
+// read (the Pantry's status, the Supplies' Restock reason, any list): a meta is never cut, whatever screen it is on.
 const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')

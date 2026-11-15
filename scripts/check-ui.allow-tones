@@ -4,3 +4,7 @@
 # food, with B9-44).
 web/src/ui/Gallery.tsx   # the primitives Gallery shows every tone as a specimen, spoil and danger included
 web/src/ui/GalleryOverlays.tsx   # the Gallery's overlay specimens show the danger confirm dialogs (a loss)
+web/src/features/stock/components/SpoiledTile.tsx   # B9-29: "Throw out or keep?" is food that has gone off (the spoil tile, DS-06)
+web/src/features/stock/components/LotList.tsx   # B9-29: a Lot's Went off / Use soon chip is food going off (spoil)
+web/src/features/stock/components/LotSheet.tsx   # B9-29: Delete a Stock Lot asks in a danger confirm, a destructive loss
+web/src/features/stock/screens/StoragePlacesScreen.tsx   # B9-29: Delete a Storage Place asks in a danger confirm, a destructive loss

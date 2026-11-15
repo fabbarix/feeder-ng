@@ -44,6 +44,8 @@ export const SCENARIO_VIEWPORTS = {
   // B9-14 (SHORT-02's sizes): phone landscape without insets, and a 390 px phone with the on-screen keyboard up (400 px left).
   '844x390': { width: 844, height: 390, mobile: true },
   '390x400': { width: 390, height: 400, mobile: true },
+  // B9-29 (SSP-05): a 320 px card on a 1120 px screen, where P23 reads the Pantry's and Supplies' metas at desktop widths.
+  1120: { width: 1120, height: 800, mobile: false },
 }
 
 // B9-03: a scenario module that names a viewport this table lacks fails on load, not halfway through a run.

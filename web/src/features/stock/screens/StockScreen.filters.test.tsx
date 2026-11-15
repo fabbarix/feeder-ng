@@ -76,7 +76,8 @@ const where = () => screen.getByTestId('where').textContent ?? ''
 const params = () => new URLSearchParams(where().split('?')[1] ?? '')
 const filtersButton = () => screen.getByRole('button', { name: /^Filters/ })
 const panel = () => screen.getByRole('dialog', { name: 'Filters' })
-const groupNames = () => screen.getAllByRole('list').map((l) => l.getAttribute('aria-label')).filter((n) => n?.includes('Stock Lot'))
+// B9-29 (SSP-03): each Storage Place group has a visible heading; its name is what a group is called here.
+const groupNames = () => [...document.querySelectorAll('.list-group__name')].map((e) => e.textContent)
 const ready = () => screen.findByRole('list', { name: /^Garage Freezer/ })
 
 beforeEach(() => {
@@ -116,7 +117,7 @@ describe.each([390, 834, 1440])('the Pantry header at %i px', (width) => {
     await userEvent.click(within(panel()).getByRole('option', { name: /Garage Freezer/ }))
     await userEvent.click(within(panel()).getByRole('option', { name: /Not sorted/ }))
     await userEvent.click(within(panel()).getByRole('button', { name: 'Show Stock' }))
-    expect(groupNames()).toEqual(['Garage Freezer, 1 Stock Lot', 'Not sorted, 1 Stock Lot'])
+    expect(groupNames()).toEqual(['Garage Freezer', 'Not sorted'])
     expect(params().getAll('place')).toEqual(['2', 'none'])
     expect(screen.getByRole('button', { name: 'Filters, 2 active' })).toBeInTheDocument()
     const chips = screen.getByRole('group', { name: 'Active filters' })
@@ -135,7 +136,7 @@ describe('filters', () => {
     await userEvent.click(within(within(panel()).getByRole('group', { name: 'Show' })).getByRole('button', { name: 'Use soon' }))
     expect(params().get('status')).toBe('useSoon')
     await userEvent.click(within(panel()).getByRole('button', { name: 'Show Stock' }))
-    expect(groupNames()).toEqual(['Garage Fridge, 1 Stock Lot'])
+    expect(groupNames()).toEqual(['Garage Fridge'])
     const chip = screen.getByRole('button', { name: 'Remove Use soon' })
     expect(chip).toHaveAttribute('data-status', 'spoil')
     await userEvent.click(chip)
@@ -157,7 +158,7 @@ describe('filters', () => {
     view()
     await ready()
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search Stock' }), 'pea')
-    expect(groupNames()).toEqual(['Garage Freezer, 1 Stock Lot'])
+    expect(groupNames()).toEqual(['Garage Freezer'])
     expect(where()).toBe('/pantry')
   })
   it('the switch in the panel turns the grouping off (group=off)', async () => {
