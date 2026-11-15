@@ -1,5 +1,7 @@
 /* ListRow and ListGroup (docs/design/ui-fix-plan.md 4.13). Tokens only. */
 .list-group {
+  /* SSP-05: the list is the size container the narrow-row rule below reads (a row's padding follows its list, not the viewport). */
+  container-type: inline-size;
   background: var(--color-surface);
   border-radius: var(--radius-tile-sm);
   box-shadow: var(--elev-1);
@@ -44,6 +46,11 @@
   color: inherit;
 }
 
+/* DS-01: (0,2,0), so no lift on a descendant (a button in a sheet mounted inside a trailing slot) can collapse a target to 0x0. */
+.list-row > .list-row__target {
+  position: absolute;
+}
+
 .list-row__target:hover {
   background: var(--color-surface-2);
 }
@@ -77,11 +84,8 @@
   pointer-events: none;
 }
 
-.list-row__trailing button,
-.list-row__trailing a,
-.list-row__trailing input,
-.list-row__trailing select,
-.list-row__trailing [role='button'] {
+/* DS-01: the lift is scoped to the row's own trailing slot, so it never reaches the rows of a sheet mounted inside it. */
+.list-row > .list-row__trailing :is(button, a, input, select, [role='button']) {
   position: relative;
   z-index: 1;
   pointer-events: auto;
@@ -130,14 +134,13 @@
   flex: none;
 }
 
+/* SSP-05: the text column is a size container (a flex: 1 item with a definite width), so the meta picks its compact form and drops
+   its icon by the width of its own column, never by the viewport (system.md 3). */
 .list-row__text {
+  container: row-text / inline-size;
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-inline-size: 0;
-}
-
-.list-row__text {
   min-inline-size: 0;
 }
 
@@ -194,6 +197,56 @@
 
 .list-row__meta > svg {
   flex: none;
+}
+
+/* SSP-05: the compact form of the meta ("2 in Stock") shows only while the text column is under 12 rem. */
+.list-row__meta-compact {
+  display: none;
+}
+
+@container row-text (inline-size < 12rem) {
+  /* The long text stays the accessible text: visually hidden, never display: none. */
+  .list-row__meta-text:has(+ .list-row__meta-compact) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .list-row__meta-compact {
+    display: block;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Under 9 rem the 14 px meta icon goes; the tone colour stays on the text. */
+@container row-text (inline-size < 9rem) {
+  .list-row__meta > svg {
+    display: none;
+  }
+}
+
+/* DS-10: a navigation row's description may take two lines, then an ellipsis. A status row keeps its one line. */
+.list-row[data-meta-lines='2'] {
+  padding-block: var(--space-2);
+}
+
+.list-row[data-meta-lines='2'] .list-row__meta {
+  white-space: normal;
+  align-items: flex-start;
+}
+
+.list-row[data-meta-lines='2'] .list-row__meta-text {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 /* The value column: one line, end-aligned, tabular, never narrower than --row-value-min, so quantities line up. */
@@ -310,4 +363,162 @@
 
 .list-row > .list-row__footer {
   pointer-events: auto;
+}
+
+/* SSP-05: the narrow-row rule for every list (was Shop's): while the list is under 24 rem, 12 px row padding and 8 px gaps give the
+   text column room. A container query on the list (.list-group), never the viewport. */
+@container (width < 24rem) {
+  .list-row {
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+  }
+}
+
+/* SET-03: row actions (a Switch, two IconButtons, Deny and Approve). Below 35 rem of row they take their own line under the text,
+   end-aligned; from 35 rem they sit at the end of line 1. They catch the pointer; the rest of the row stays the target. */
+.list-row[data-actions='true'] {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+  padding-block: var(--space-3);
+}
+
+.list-row__actions {
+  display: flex;
+  flex: 1 0 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.list-row > .list-row__actions {
+  pointer-events: auto;
+}
+
+@container (width >= 35rem) {
+  .list-row__actions {
+    flex: none;
+  }
+}
+
+/* PC-06: a line under the whole row (title and icon set), e.g. the Plan row's chips. */
+.list-row[data-has-below] {
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
+  padding-block: var(--space-2);
+}
+
+.list-row__below {
+  order: 3;
+  flex: 1 0 100%;
+  min-inline-size: 0;
+}
+
+.list-row > .list-row__below {
+  pointer-events: auto;
+}
+
+/* RES-03: a Tick or Scan waiting to sync has a muted meta with a Clock and a clock badge on its tick; one refused on sync has a
+   strong danger meta and a 3 px inset bar (--status-danger-fg: --status-danger-solid is under 3:1 in dark). */
+.list-row__meta[data-tone='pending'] {
+  color: var(--color-muted);
+}
+
+.list-row[data-sync='failed'] {
+  box-shadow: inset 3px 0 0 var(--status-danger-fg);
+}
+
+.list-row[data-sync='failed'] .list-row__meta {
+  font-weight: var(--text-body-strong-weight);
+}
+
+/* The badge sits at the lower end corner of the 24 px tick centred in the 44 px control. Decorative. */
+.list-row__sync-badge {
+  position: absolute;
+  inset-inline-start: calc(50% + var(--space-half));
+  inset-block-start: calc(50% + var(--space-half));
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  inline-size: 14px;
+  block-size: 14px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  box-shadow: 0 0 0 1px var(--color-line);
+  pointer-events: none;
+}
+
+.list-row__sync-badge > svg {
+  inline-size: 10px;
+  block-size: 10px;
+}
+
+/* SSP-03: a ListGroup with a title: a visible heading row (icon, name, count chip, one action) above its card. */
+.list-group-section {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.list-group-section + .list-group-section {
+  margin-block-start: var(--section-gap);
+}
+
+.list-group__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--space-8);
+}
+
+.list-group__title {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+
+.list-group__icon {
+  display: grid;
+  flex: none;
+  color: var(--color-muted);
+}
+
+/* A long name wraps at a word, two lines at most; the full name stays the heading's text. */
+.list-group__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-inline-size: 0;
+  overflow-wrap: normal;
+}
+
+/* The count chip: a 24 px circle for one or two digits, a round-ended pill beyond. */
+.list-group__count {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  box-sizing: border-box;
+  min-inline-size: var(--space-6);
+  block-size: var(--space-6);
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-chip-size);
+  line-height: var(--text-chip-line);
+  font-weight: var(--text-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.list-group__action {
+  flex: none;
 }
