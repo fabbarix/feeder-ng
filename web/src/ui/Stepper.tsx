@@ -16,13 +16,21 @@ export interface StepperProps {
   describedBy?: string
   /**
    * 'sm' is the compact group (40 px buttons, never stretched). 'xs' is the smallest: 32 px outline buttons (44 px to hit) and a
-   * regular-weight count, for a control inside a list row.
+   * regular-weight count, for a control inside a list row. 'lg' (Cook Mode, Reheat) is 56 px circular buttons round a large value
+   * that takes the rest of the width.
    */
-  size?: 'md' | 'sm' | 'xs'
+  size?: 'md' | 'sm' | 'xs' | 'lg'
+  /** Sets aria-invalid on the value (a StepperField with an error). */
+  invalid?: boolean
+  /** The − and + names when "Decrease <label>" does not say it ("Remove 30 seconds"). */
+  decreaseLabel?: string
+  increaseLabel?: string
+  /** The shown value and its aria-valuetext ("4:00"); aria-valuenow stays the number. */
+  format?: (n: number) => string
 }
 
 /** A − value + control for small amounts. Accessible: a group named by `label`, the value is a spinbutton (arrows, Home, End). */
-export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit, describedBy, size = 'md' }: StepperProps) {
+export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit, describedBy, size = 'md', invalid, decreaseLabel, increaseLabel, format }: StepperProps) {
   const bounds = { step, min, max }
   const move = (next: number) => {
     if (next !== value) onChange(next)
@@ -39,11 +47,12 @@ export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit, 
       move(max)
     }
   }
+  const shown = format ? format(value) : String(value)
   return (
     <div role="group" aria-label={label} aria-describedby={describedBy} className="stepper" data-size={size}>
       <IconButton
         icon="minus"
-        label={uiStrings.decrease(label)}
+        label={decreaseLabel ?? uiStrings.decrease(label)}
         size={size === 'xs' ? 'compact' : 'md'}
         disabled={value <= min}
         onClick={() => move(stepValue(value, -1, bounds))}
@@ -56,15 +65,17 @@ export function Stepper({ value, onChange, label, min = 0, max, step = 1, unit, 
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuenow={value}
+        aria-valuetext={format ? shown : undefined}
+        aria-invalid={invalid ? true : undefined}
         className="stepper__value"
         onKeyDown={onKeyDown}
       >
-        {String(value)}
+        {shown}
       </span>
       {unit ? <span className="stepper__unit">{unit}</span> : null}
       <IconButton
         icon="add"
-        label={uiStrings.increase(label)}
+        label={increaseLabel ?? uiStrings.increase(label)}
         size={size === 'xs' ? 'compact' : 'md'}
         disabled={max !== undefined && value >= max}
         onClick={() => move(stepValue(value, 1, bounds))}

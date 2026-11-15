@@ -175,7 +175,7 @@ describe('SuppliesScreen: Use some of a g or ml Supply', () => {
     const sheet = await openSheet()
     await userEvent.type(within(sheet).getByRole('textbox', { name: 'How much' }), '900')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Use' }))
-    expect(within(sheet).getByRole('alert')).toHaveTextContent('Only 800 ml in Stock')
+    expect(within(sheet).getByRole('textbox', { name: 'How much' })).toHaveAccessibleDescription(expect.stringContaining('Only 800 ml in Stock'))
     expect(posts(api, '/api/stock/ingredients/21/use')).toEqual([])
   })
   it('closes without using anything on Escape', async () => {

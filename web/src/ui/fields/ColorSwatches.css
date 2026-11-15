@@ -34,7 +34,7 @@
 .colour-swatch--custom {
   display: grid;
   place-items: center;
-  border: 1.5px dashed var(--color-outline);
+  border: var(--field-border-width) dashed var(--color-outline);
   background: var(--color-surface-2);
 }
 
@@ -45,4 +45,22 @@
 .colour-swatches__picker {
   display: grid;
   gap: var(--space-4);
+}
+
+/* A11Y-09: on a coarse pointer the 40 px swatch hits 44 px; the row's 12 px gap keeps neighbours apart. */
+@media (pointer: coarse) {
+  .colour-swatch {
+    position: relative;
+  }
+
+  .colour-swatch::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+  }
+
+  /* The custom swatch's dashed border is inside its 40 px, so its ::after (placed from the padding edge) reaches past it too. */
+  .colour-swatch--custom::after {
+    inset: calc(-2px - var(--field-border-width));
+  }
 }

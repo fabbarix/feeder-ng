@@ -51,7 +51,7 @@ describe('WeightRuleEditor validation and actions (F-08, F-04)', () => {
   it('shows the reason on submit with an empty prefix, and does not save', async () => {
     const { onSave } = setup()
     await userEvent.click(screen.getByRole('button', { name: strings.saveRule }))
-    expect(document.querySelector('.pg__error, [role=alert]')).not.toBeNull()
+    expect(document.querySelector('.ui-field__error, .pg__error, [role=alert]')).not.toBeNull()
     expect(onSave).not.toHaveBeenCalled()
   })
 

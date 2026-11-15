@@ -51,11 +51,14 @@ describe('FieldRow.css', () => {
     expect(d['min-inline-size']).toBe('0')
   })
 
-  it('a row wraps before it shrinks a field below its size: every cap token is a max-inline-size in Field.css (incl. the stepper tokens)', () => {
+  // SET-07 (B9-16): a size caps the field's CONTROL (--field-control-max), not its frame, so the helper and the error keep the
+  // field's full track. In a row the frame takes its control's width, so the row still wraps before it shrinks a field.
+  it('a row wraps before it shrinks a field below its size: every cap token sets --field-control-max in Field.css (incl. the stepper tokens), and a row field is that wide', () => {
     const field = readUiCss('fields/Field.css')
     for (const sel of [".ui-field[data-size='xs']", ".ui-field[data-size='sm']", ".ui-field[data-size='md']", ".ui-field[data-size='lg']", ".ui-field--stepper[data-size='xs']", ".ui-field--stepper[data-size='sm']"]) {
-      expect(declarations(field, sel)['max-inline-size'], sel).toMatch(/field-size/)
+      expect(declarations(field, sel)['--field-control-max'], sel).toMatch(/field-size/)
     }
+    expect(declarations(css, ".field-row > .ui-field[data-size]:not([data-size='full'])")['inline-size']).toBe('min(var(--field-control-max), 100%)')
     expect(declarations(css, '.field-row')['flex-wrap']).toBe('wrap')
   })
 

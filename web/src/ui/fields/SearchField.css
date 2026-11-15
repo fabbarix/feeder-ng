@@ -1,4 +1,5 @@
-/* SearchField: the native search input keeps its role; the browser's own cancel glyph is hidden (the Clear search IconButton replaces it). Tokens only. */
+/* SearchField: the native search input keeps its role; the browser's own cancel glyph is hidden (the Clear search IconButton replaces it).
+   A11Y-05 option B: a RULED field (the strong fill and a 2 px bottom rule, shared with the Segmented track). Tokens only. */
 .search-field__control {
   position: relative;
   display: flex;
@@ -6,18 +7,38 @@
   gap: var(--space-2);
   min-block-size: 48px;
   padding: 0 var(--space-3);
-  border-radius: var(--radius-control);
-  background: var(--color-surface-2);
+  background: var(--field-fill-strong);
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--field-rule-color);
+  border-radius: var(--field-radius-ruled);
   color: var(--color-muted);
 }
 
-/* A11Y-02: the frame rings while its input has focus; Clear search inside it rings inside itself (ui/focusLayer.css). */
+.search-field__control:hover {
+  background: color-mix(in oklab, var(--field-fill-strong), var(--color-text) 6%);
+}
+
+/* A11Y-02: the frame rings while its input has focus and the rule turns accent under the ring; Clear search inside it rings
+   inside itself (ui/focusLayer.css). */
 .search-field__control:has(input:focus) {
   color: var(--color-text);
   border-color: var(--color-accent);
+  border-block-end-color: var(--color-accent);
   box-shadow: none;
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: 0;
+}
+
+/* Disabled: no fill, the rule in --color-line (exempt from 1.4.11), text muted. */
+.search-field__control:has(:disabled) {
+  background: transparent;
+  border: 0;
+  border-block-end: var(--field-rule-width) solid var(--color-line);
+  color: var(--color-muted);
+}
+
+.search-field__control:has(:disabled) .search-field__input {
+  color: var(--color-muted);
 }
 
 .search-field__input {

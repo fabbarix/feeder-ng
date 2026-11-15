@@ -63,7 +63,7 @@ export function TimeField({ size = 'sm', label, helper, error, disabled, require
   const describe = describedBy(ids, helper, error)
   return (
     <FieldFrame ids={ids} size={size} label={label} helper={helper} error={error}>
-      <div role="group" aria-labelledby={ids.labelId} aria-describedby={describe} aria-required={required || undefined} className="time-field" data-disabled={disabled || undefined}>
+      <div role="group" aria-labelledby={ids.labelId} aria-describedby={describe} aria-invalid={error ? true : undefined} aria-required={required || undefined} className="time-field" data-disabled={disabled || undefined}>
         <Segment name={fieldStrings.hour} value={parts?.hour} max={23} disabled={disabled} onKeyDown={onSegmentKey('hour')} onChange={onSegmentText('hour')} />
         <span className="time-field__colon" aria-hidden="true">
           :

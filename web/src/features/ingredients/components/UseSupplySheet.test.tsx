@@ -66,15 +66,15 @@ describe('UseSupplySheet', () => {
     await userEvent.type(field(), '400')
     await userEvent.click(screen.getByRole('button', { name: 'Use' }))
     expect(onConfirm).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent('Only 300 ml in Stock')
+    expect(field()).toHaveAccessibleDescription(expect.stringContaining('Only 300 ml in Stock'))
   })
   it('asks for an amount when the field is empty, and refuses 0', async () => {
     const { onConfirm } = setup({ packSize: null })
     await userEvent.click(screen.getByRole('button', { name: 'Use' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Enter how much you used')
+    expect(field()).toHaveAccessibleDescription(expect.stringContaining('Enter how much you used'))
     await userEvent.type(field(), '0')
     await userEvent.click(screen.getByRole('button', { name: 'Use' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Use more than 0')
+    expect(field()).toHaveAccessibleDescription(expect.stringContaining('Use more than 0'))
     expect(onConfirm).not.toHaveBeenCalled()
   })
   it('disables both buttons while busy', () => {

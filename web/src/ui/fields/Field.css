@@ -11,6 +11,17 @@
   --field-size-xs-stepper: 136px;
   --field-size-xs-stepper-unit: 168px; /* holds 3ch + a unit like "days" between the buttons */
   --field-size-sm-stepper: 192px;
+  --field-rule-width: 2px;
+  --field-radius-ruled: var(--radius-control) var(--radius-control) var(--space-1) var(--space-1);
+}
+
+/* A11Y-05 option B: the RULED shape of the Search field and the Segmented track (a stronger fill and a 2 px bottom rule); the
+   framed fields keep the 1.5 px outline all round. The colours are declared again on every [data-scheme] element, so a subtree
+   in the other scheme (the Gallery's dark half) resolves them from its own palette, not from :root's. */
+:root,
+[data-scheme] {
+  --field-fill-strong: var(--color-surface-3);
+  --field-rule-color: var(--color-outline);
 }
 
 .ui-field {
@@ -20,36 +31,42 @@
   min-inline-size: 0;
 }
 
+/* SET-07: a field's size token limits its CONTROL, never its label, helper or error. The size sets --field-control-max, and the
+   control (the frame's direct child: the input frame, a Select, a Segmented track, a stepper group) takes it. */
 .ui-field[data-size='xs'] {
-  max-inline-size: var(--field-size-xs);
+  --field-control-max: var(--field-size-xs);
 }
 
 .ui-field[data-size='sm'] {
-  max-inline-size: var(--field-size-sm);
+  --field-control-max: var(--field-size-sm);
 }
 
 .ui-field[data-size='md'] {
-  max-inline-size: min(var(--field-size-md), 100%);
+  --field-control-max: min(var(--field-size-md), 100%);
 }
 
 .ui-field[data-size='lg'] {
-  max-inline-size: var(--field-size-lg);
+  --field-control-max: var(--field-size-lg);
 }
 
 .ui-field[data-size='full'] {
-  max-inline-size: 100%;
+  --field-control-max: 100%;
 }
 
 .ui-field--stepper[data-size='xs'] {
-  max-inline-size: var(--field-size-xs-stepper);
+  --field-control-max: var(--field-size-xs-stepper);
 }
 
 .ui-field--stepper[data-size='xs']:has(.ui-field__suffix) {
-  max-inline-size: var(--field-size-xs-stepper-unit);
+  --field-control-max: var(--field-size-xs-stepper-unit);
 }
 
 .ui-field--stepper[data-size='sm'] {
-  max-inline-size: var(--field-size-sm-stepper);
+  --field-control-max: var(--field-size-sm-stepper);
+}
+
+.ui-field[data-size] > :not(.ui-field__label):not(.ui-field__helper):not(.ui-field__error) {
+  max-inline-size: var(--field-control-max);
 }
 
 fieldset.ui-field {
@@ -114,14 +131,19 @@ legend.ui-field__label {
 }
 
 .ui-field--stepper .icon-button {
-  inline-size: 40px;
-  block-size: 40px;
+  inline-size: 36px;
+  block-size: 36px;
 }
 
-/* The 44 px hit area (40 + 2 x 4) stays inside the control: 4 px is the room the 48 px min-block-size leaves
-   around a 40 px button, and under the 1.5 px border + 4 px inline padding. The sheet body then has no scrollbars. */
+/* A11Y-09: the − and + are 36 px, so 4.5 px of the frame's fill shows round each one inside the 48 px frame (the nested ring
+   never touches the frame). The 44 px hit area (36 + 2 x 4) still stays inside the control. */
 .ui-field--stepper .icon-button::after {
   inset: -4px;
+}
+
+/* The unit sits 8 px from the + (gap plus margin), as the value does from the buttons, so "days" never reads as touching it. */
+.ui-field--stepper .ui-field__suffix {
+  margin-inline-end: var(--space-1);
 }
 
 .ui-field--stepper .ui-field__number {
@@ -176,8 +198,20 @@ legend.ui-field__label {
   color: inherit;
   font: inherit;
   font-size: var(--text-body-strong-size);
-  resize: vertical;
+  line-height: var(--text-body-line);
+  resize: none;
   outline: none;
+}
+
+/* A11Y-12: no grip; the field grows with its text from its rows (3) to 12 lines, then scrolls. Without field-sizing,
+   ui/lib/useAutoGrow sets the height. */
+@supports (field-sizing: content) {
+  .ui-field__textarea {
+    field-sizing: content;
+    min-block-size: calc(3lh + 2 * var(--space-3));
+    max-block-size: calc(12lh + 2 * var(--space-3));
+    overflow-y: auto;
+  }
 }
 
 .ui-field__suffix {
@@ -189,6 +223,7 @@ legend.ui-field__label {
 }
 
 .ui-field__helper {
+  max-inline-size: 60ch;
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
@@ -197,7 +232,8 @@ legend.ui-field__label {
 
 .ui-field__error {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  max-inline-size: 60ch;
   gap: var(--space-1);
   margin: 0;
   color: var(--status-danger-fg);
@@ -219,4 +255,22 @@ legend.ui-field__label {
 
 .ui-field__number {
   font-variant-numeric: tabular-nums;
+}
+
+/* FormError: the form's own error belongs to no field, so no field track limits it. */
+.form-error {
+  max-inline-size: none;
+}
+
+/* The error icon sits on the first line of a two-line error. */
+.ui-field__error > svg {
+  flex: none;
+  block-size: var(--text-meta-line);
+}
+
+/* SAFE-04: focusFirstInvalid scrolls an invalid control (or a section with no single control) to the centre; the margin keeps it
+   clear of the app bar and a sticky action bar when the centre is not reachable. */
+[aria-invalid='true'],
+[data-invalid-target] {
+  scroll-margin-block: var(--space-14);
 }

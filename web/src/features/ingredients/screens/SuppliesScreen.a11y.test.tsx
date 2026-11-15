@@ -120,15 +120,14 @@ describe('the how-much sheet', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('button', { name: 'Use some Dish soap' })).toHaveFocus()
   })
-  it('announces a refused amount as an alert tied to the field', async () => {
+  it('shows a refused amount as the field error, tied to the field (SAFE-04: not an alert)', async () => {
     const dialog = await open()
     const field = within(dialog).getByRole('textbox', { name: 'How much' })
     await waitFor(() => expect(field).toHaveValue('500'))
     await userEvent.clear(field)
     await userEvent.type(field, '900')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Use' }))
-    const alert = within(dialog).getByRole('alert')
-    expect(alert).toHaveTextContent('Only 800 ml in Stock')
+    await waitFor(() => expect(field).toHaveAttribute('aria-invalid', 'true'))
     expect(field).toHaveAccessibleDescription(expect.stringContaining('Only 800 ml in Stock'))
   })
 })

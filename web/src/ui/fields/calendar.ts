@@ -88,3 +88,11 @@ export function moveIso(iso: string, key: string): string | null {
       return null
   }
 }
+
+/** PC-08: where a day sits in a range from `rangeStart` to `value` (both ISO dates): its first day, strictly between, or neither. */
+export function rangeMark(iso: string, rangeStart: string | null | undefined, value: string | null | undefined): 'start' | 'in' | undefined {
+  if (!rangeStart) return undefined
+  if (iso === rangeStart) return 'start'
+  if (value && iso > rangeStart && iso < value) return 'in'
+  return undefined
+}

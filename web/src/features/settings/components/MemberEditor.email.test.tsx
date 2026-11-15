@@ -80,18 +80,15 @@ describe('MemberEditor: Email', () => {
     expect(onSave).not.toHaveBeenCalled()
     const input = screen.getByLabelText('Email')
     expect(input).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByRole('alert')).toHaveTextContent(/email/i)
-    expect(input.getAttribute('aria-describedby')).toContain(screen.getByRole('alert').id)
+    expect(input).toHaveAccessibleDescription(/email/i)
   })
 
   it('shows a server refusal for the email inline under the field (emailError), not as the form alert', () => {
     open({ emailError: 'That email already belongs to a Member, a User or the allowlist.' })
     const input = screen.getByLabelText('Email')
     expect(input).toHaveAttribute('aria-invalid', 'true')
-    const alert = screen.getByRole('alert')
-    expect(alert).toHaveTextContent('That email already belongs to a Member, a User or the allowlist.')
-    expect(input.getAttribute('aria-describedby')).toContain(alert.id)
-    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(input).toHaveAccessibleDescription(expect.stringContaining('That email already belongs to a Member, a User or the allowlist.'))
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
   })
 
   it('has no email error until there is one', () => {

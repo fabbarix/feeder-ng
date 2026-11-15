@@ -60,11 +60,9 @@ describe('MembersPage: Member email', () => {
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Nonna')
     await userEvent.type(within(dialog).getByLabelText('Email'), 'cook@example.test')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save Member' }))
-    const alert = await within(dialog).findByRole('alert')
-    expect(alert).toHaveTextContent('That email already belongs to a Member, a User or the allowlist.')
     const email = within(dialog).getByLabelText('Email')
+    await waitFor(() => expect(email).toHaveAccessibleDescription(expect.stringContaining('That email already belongs to a Member, a User or the allowlist.')))
     expect(email).toHaveAttribute('aria-invalid', 'true')
-    expect(email.getAttribute('aria-describedby')).toContain(alert.id)
     expect(email).toHaveValue('cook@example.test')
     expect(screen.getByRole('dialog', { name: 'Add Member' })).toBeInTheDocument()
   })
@@ -77,9 +75,8 @@ describe('MembersPage: Member email', () => {
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Nonna')
     await userEvent.type(within(dialog).getByLabelText('Email'), 'a@b.c') // passes the client check; the server disagrees
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save Member' }))
-    const alert = await within(dialog).findByRole('alert')
-    expect(alert).toHaveTextContent(/email/i)
-    expect(within(dialog).getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true')
+    await waitFor(() => expect(within(dialog).getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true'))
+    expect(within(dialog).getByLabelText('Email')).toHaveAccessibleDescription(/email/i)
   })
 
   it('an error about something else (a 422 about the name) stays the form\'s own alert, not an email error', async () => {
@@ -101,9 +98,10 @@ describe('MembersPage: Member email', () => {
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Nonna')
     await userEvent.type(within(dialog).getByLabelText('Email'), 'cook@example.test')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save Member' }))
-    await within(dialog).findByRole('alert')
+    await waitFor(() => expect(within(dialog).getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true'))
     await userEvent.type(within(dialog).getByLabelText('Email'), 'x')
-    expect(within(dialog).queryByRole('alert')).toBeNull()
+    expect(within(dialog).getByLabelText('Email')).not.toHaveAttribute('aria-invalid')
+    expect(within(dialog).queryByText(/That email already belongs/)).toBeNull()
   })
 
   it('the Members list shows each Member\'s email', async () => {

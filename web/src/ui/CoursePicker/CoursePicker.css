@@ -64,10 +64,7 @@
 }
 
 .course-picker__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-inline-start: auto;
+  margin-inline-start: auto; /* an IconSet: its gap keeps the up, down and remove rings apart (A11Y-09) */
 }
 
 /* Phone: the extras take a line of their own under the name; the actions stay on the first line. */

@@ -1,4 +1,5 @@
-/* RadioCards: one card per choice, the checked card takes the soft fill and accent outline. Tokens only. */
+/* RadioCards: one card per choice; the checked card is the selected container with the selected ring (A11Y-06), and its mark is
+   filled. Tokens only. */
 .radio-cards {
   display: grid;
   gap: var(--space-2);
@@ -19,8 +20,9 @@
 }
 
 .radio-card[aria-checked='true'] {
-  border-color: var(--color-accent);
-  background: var(--color-soft);
+  border-color: var(--selected-ring);
+  background: var(--selected-bg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
 }
 
 .radio-card:focus-visible {

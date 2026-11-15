@@ -26,6 +26,7 @@ import { CalendarCheckIcon } from '@phosphor-icons/react/dist/csr/CalendarCheck'
 import { CalendarDotsIcon } from '@phosphor-icons/react/dist/csr/CalendarDots'
 import { CameraIcon } from '@phosphor-icons/react/dist/csr/Camera'
 import { CameraSlashIcon } from '@phosphor-icons/react/dist/csr/CameraSlash'
+import { CaretDownIcon } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { CaretRightIcon } from '@phosphor-icons/react/dist/csr/CaretRight'
 import { CaretUpDownIcon } from '@phosphor-icons/react/dist/csr/CaretUpDown'
 import { CarrotIcon } from '@phosphor-icons/react/dist/csr/Carrot'
@@ -180,6 +181,8 @@ export const icons = {
   sort: SortAscendingIcon,
   expand: CaretUpDownIcon,
   chevron: CaretRightIcon,
+  caretDown: CaretDownIcon,
+  selected: CheckIcon,
   copy: CopyIcon,
   undo: ArrowCounterClockwiseIcon,
   camera: CameraIcon,
