@@ -1,4 +1,5 @@
-import { useFieldIds, FieldFrame } from './FieldFrame'
+import { useFieldIds, FieldFrame, describedBy } from './FieldFrame'
+import { Icon } from '../Icon'
 import type { FieldProps, FieldSizeProps } from './Field'
 import { useRovingRadios } from './useRovingRadios'
 import './Field.css'
@@ -31,7 +32,8 @@ export function Segmented<V extends string>({ size, label, helper, error, disabl
       <div
         role="radiogroup"
         aria-labelledby={ids.labelId}
-        aria-describedby={helper ? ids.helperId : undefined}
+        aria-describedby={describedBy(ids, helper, error)}
+        aria-invalid={error ? true : undefined}
         className="segmented"
         data-disabled={disabled || undefined}
         data-compact={compact || undefined}
@@ -52,6 +54,7 @@ export function Segmented<V extends string>({ size, label, helper, error, disabl
               onClick={() => onChange(option.value)}
               onKeyDown={(e) => roving.onKeyDown(e, option.value)}
             >
+              {checked && !compact ? <Icon name="selected" size={16} weight="bold" className="segmented__check" /> : null}
               {option.label}
             </button>
           )

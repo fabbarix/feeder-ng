@@ -24,14 +24,27 @@
   color: var(--color-muted);
 }
 
+/* A11Y-06: pressed is the accent container with a ring inside the edge, and the Check before the label (a non-colour cue). */
 .choice-chip[aria-pressed='true'] {
-  background: var(--color-primary-container);
-  border-color: var(--color-primary-container);
-  color: var(--color-on-primary-container);
+  background: var(--selected-bg);
+  border-color: var(--selected-ring);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
 }
 
 .choice-chip:hover:not(:disabled) {
   box-shadow: inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
+}
+
+/* The hover layer goes under the pressed ring, never in place of it. */
+.choice-chip[aria-pressed='true']:hover:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 var(--selected-ring-width) var(--selected-ring),
+    inset 0 0 0 999px color-mix(in oklab, currentColor 8%, transparent);
+}
+
+.choice-chip__check {
+  flex: none;
 }
 
 /* Inside the pill: a sheet body scrolls (overflow) and would clip a ring drawn outside it. */
@@ -52,7 +65,8 @@
   margin-inline-start: calc(var(--space-2) - var(--space-4));
 }
 
-.choice-chip__lead:has(> svg) {
+.choice-chip__lead:has(> svg),
+.choice-chip__check + .choice-chip__lead {
   margin-inline-start: 0;
 }
 

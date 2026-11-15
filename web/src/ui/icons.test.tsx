@@ -65,6 +65,8 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['sort', 'SortAscending'],
   ['expand', 'CaretUpDown'],
   ['chevron', 'CaretRight'],
+  ['caretDown', 'CaretDown'],
+  ['selected', 'Check'],
   ['copy', 'Copy'],
   ['undo', 'ArrowCounterClockwise'],
   ['import', 'DownloadSimple'],

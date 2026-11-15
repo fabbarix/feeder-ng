@@ -32,6 +32,7 @@ export function ChoiceChip({ pressed, thumb, icon, note, variant = 'filled', dis
   else if (icon) lead = <Icon name={icon} size={20} />
   return (
     <button type="button" className="choice-chip" data-variant={variant} aria-pressed={pressed} aria-label={label} disabled={disabled} onClick={onClick}>
+      {pressed ? <Icon name="selected" size={16} weight="bold" className="choice-chip__check" /> : null}
       {lead ? (
         <span className="choice-chip__lead" aria-hidden="true">
           {lead}
