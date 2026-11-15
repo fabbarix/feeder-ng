@@ -84,8 +84,9 @@ export interface ToastApi {
    */
   show: (arg: string | ToastContent, options?: ToastOptions) => ToastHandle
   /**
-   * SSP-12: while any hold is on, new toasts are not rendered (nothing is announced); on the last release only the latest held
-   * toast shows, with its full duration. Errors and sticky toasts are never held. Returns the release (calling it twice is harmless).
+   * SSP-12: while any hold is on, new toasts are not rendered (nothing is announced); on the last release the latest held toast
+   * of each lane shows, with its full duration (a held Undo is never dropped by a later ordinary toast). Errors and sticky toasts
+   * are never held. Returns the release (calling it twice is harmless).
    */
   hold: () => () => void
 }
@@ -161,11 +162,21 @@ function normalise(arg: string | ToastContent, options: ToastOptions = {}): Norm
 
 const pageHidden = () => typeof document !== 'undefined' && document.hidden
 
-/** Ctrl+Z / Cmd+Z belongs to the browser while focus is in something that edits text. */
-function editsText(el: EventTarget | Element | null): boolean {
+/**
+ * Ctrl+Z / Cmd+Z is not the toast's while focus is in something that edits text (the browser undoes typing), or inside an open
+ * sheet, dialog or popover: that surface is what the person is working in (the Price keypad, a form sheet), and an Undo behind
+ * it would change the screen under it.
+ */
+function keepsUndoKey(el: EventTarget | Element | null): boolean {
   if (!(el instanceof Element)) return false
-  if (el.closest('input, textarea, select')) return true
+  if (el.closest('input, textarea, select, dialog[open], [role="dialog"], [role="alertdialog"]')) return true
   return (el instanceof HTMLElement && el.isContentEditable) || el.closest('[contenteditable]:not([contenteditable="false"])') !== null
+}
+
+interface Held {
+  item: ToastItem
+  durationMs?: number
+  sticky: boolean
 }
 
 export function ToastProvider({ children }: { children?: ReactNode }) {
@@ -176,7 +187,8 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
   const clocks = useRef(new Map<number, Clock>())
   const holds = useRef(new Set<number>())
   const nextHold = useRef(1)
-  const held = useRef<{ item: ToastItem; durationMs?: number; sticky: boolean } | null>(null)
+  // SSP-12: the latest held toast of each lane, so a held Undo is not dropped by a later ordinary toast (lanes, SAFE R1).
+  const held = useRef(new Map<Lane, Held>())
   const alive = useRef(true)
 
   const commit = useCallback((next: ToastItem[]) => {
@@ -192,7 +204,7 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
 
   const dismiss = useCallback(
     (id: number) => {
-      if (held.current?.item.id === id) held.current = null
+      for (const [lane, h] of held.current) if (h.item.id === id) held.current.delete(lane)
       stopClock(id)
       if (items.current.some((t) => t.id === id)) commit(items.current.filter((t) => t.id !== id))
     },
@@ -248,7 +260,7 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
       const id = nextId.current++
       const { item: content, durationMs, sticky } = normalise(arg, options)
       const item: ToastItem = { id, lane: laneOf(content, sticky), ...content }
-      if (holds.current.size > 0 && item.lane !== 'error' && !sticky) held.current = { item, durationMs, sticky }
+      if (holds.current.size > 0 && item.lane !== 'error' && !sticky) held.current.set(item.lane, { item, durationMs, sticky })
       else place(item, durationMs, sticky)
       return { id, dismiss: () => dismiss(id) }
     },
@@ -260,9 +272,9 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
     holds.current.add(token)
     return () => {
       if (!holds.current.delete(token) || holds.current.size > 0) return
-      const pending = held.current
-      held.current = null
-      if (pending && alive.current) place(pending.item, pending.durationMs, pending.sticky)
+      const pending = [...held.current.values()].sort((a, b) => a.item.id - b.item.id)
+      held.current.clear()
+      if (alive.current) for (const h of pending) place(h.item, h.durationMs, h.sticky)
     }
   }, [place])
 
@@ -284,7 +296,7 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
       alive.current = false
       for (const clock of all.values()) if (clock.handle !== undefined) clearTimeout(clock.handle)
       all.clear()
-      held.current = null
+      held.current.clear()
     }
   }, [])
 
@@ -300,11 +312,11 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [pause, resume])
 
-  // SAFE R1: Ctrl+Z / Cmd+Z runs the newest Undo on screen, unless focus is in a text field (the browser undoes typing there).
+  // SAFE R1: Ctrl+Z / Cmd+Z runs the newest Undo on screen, unless focus is in a text field or an open sheet (keepsUndoKey).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== 'z' || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return
-      if (e.defaultPrevented || editsText(e.target) || editsText(document.activeElement)) return
+      if (e.defaultPrevented || keepsUndoKey(e.target) || keepsUndoKey(document.activeElement)) return
       const target = [...items.current].reverse().find((t) => t.actions.some((a) => a.role === 'undo'))
       const undo = target?.actions.find((a) => a.role === 'undo')
       if (!target || !undo) return

@@ -5,8 +5,8 @@
 //   any toast with a timer pauses on pointerenter / mouseenter, on focusin inside it, and while document.hidden;
 //   it resumes with its remaining time, but never with less than 2000 ms (RESUME_MIN_MS) so Undo cannot vanish as the pointer leaves
 //   Ctrl+Z / Cmd+Z, when focus is not in a text field, runs the newest visible Undo and closes that toast
-//   useToast().hold(): () => void   no toast is shown until every holder has released; on release only the latest held toast shows
-//                                   (full duration); errors and sticky toasts are never held
+//   useToast().hold(): () => void   no toast is shown until every holder has released; on release the latest held toast of each lane
+//                                   shows (full duration); errors and sticky toasts are never held
 import { act, fireEvent, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Fire, Grab, fireButton, setHidden, setupTimed, titles, toasts, type Api } from './Toast.test-helper'
@@ -215,6 +215,31 @@ describe('Ctrl+Z / Cmd+Z runs the newest visible Undo', () => {
     expect(toasts()).toHaveLength(1)
   })
 
+  // B9-18 review: a sheet or dialog open over the page owns the key (the Price keypad, a form sheet with its own fields).
+  it('does nothing while focus is inside an open sheet or dialog: the Undo behind it would change the screen under it', async () => {
+    const onUndo = vi.fn()
+    const { user, mount } = setupTimed()
+    mount(
+      <>
+        <Fire arg={undoToast(onUndo)} />
+        <dialog open aria-label="Price">
+          <button type="button">7</button>
+        </dialog>
+        <div role="dialog" aria-label="Filters">
+          <button type="button">Clear</button>
+        </div>
+      </>,
+    )
+    await user.click(fireButton())
+    for (const name of ['7', 'Clear']) {
+      const el = screen.getByRole('button', { name })
+      act(() => el.focus())
+      expect(press({ ctrlKey: true }, el).defaultPrevented).toBe(false)
+    }
+    expect(onUndo).not.toHaveBeenCalled()
+    expect(toasts()).toHaveLength(1)
+  })
+
   it('Shift+Ctrl+Z (redo), Alt+Ctrl+Z and plain Z are not Undo', async () => {
     const onUndo = vi.fn()
     const { user, mount } = setupTimed()
@@ -253,6 +278,23 @@ describe('hold() and release (SSP-12: no toast over the Price keypad)', () => {
     })
     act(() => release())
     expect(titles()).toEqual(['three'])
+  })
+
+  // B9-18 review: lanes hold while held too, so a later ordinary toast never drops a pending Undo (SAFE R1).
+  it('a held Undo is not dropped by a later ordinary toast: on release each lane shows its latest', () => {
+    const into: { api?: Api } = {}
+    const { mount } = setupTimed()
+    mount(<Grab into={into} />)
+    let release!: () => void
+    act(() => void (release = into.api!.hold()))
+    act(() => {
+      into.api!.show(undoToast())
+      into.api!.show('Price saved')
+      into.api!.show('Added Passata')
+    })
+    expect(toasts()).toHaveLength(0)
+    act(() => release())
+    expect(titles()).toEqual(['Sam removed', 'Added Passata'])
   })
 
   it('the timer of a held toast starts at release, with its full duration', () => {
