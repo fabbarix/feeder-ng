@@ -15,9 +15,10 @@ describe('StickyActionBar column="form"', () => {
     )
     expect(container.querySelector('.sticky-action-bar')).toHaveAttribute('data-column', 'form')
   })
-  it('caps the inner row at the editor column (840 px) and keeps it centred', () => {
+  it('SHORT-08: caps the box (not its inner row) at the editor column (840 px) and keeps it centred', () => {
     const css = readUiCss('StickyActionBar.css')
-    expect(declarations(css, ".sticky-action-bar[data-column='form'] .sticky-action-bar__inner")['max-inline-size']).toBe('840px')
-    expect(declarations(css, '.sticky-action-bar__inner')['margin-inline']).toBe('auto')
+    const box = declarations(css, ".sticky-action-bar[data-column='form']")
+    expect(box['max-inline-size']).toBe('840px')
+    expect(box['margin-inline']).toBe('auto')
   })
 })

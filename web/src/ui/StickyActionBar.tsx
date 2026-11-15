@@ -9,6 +9,8 @@ export interface StickyActionBarProps {
   label?: string
   /** Where the inner row aligns: the whole Page column (default), the narrow form column (720) or the editor form column (840). */
   column?: 'page' | 'narrow' | 'form'
+  /** STUB (B9-19): false ends the form instead of floating (data-sticky). */
+  sticky?: boolean
 }
 
 /**

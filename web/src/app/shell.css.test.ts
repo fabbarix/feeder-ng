@@ -61,7 +61,9 @@ describe('bottom clearance (acceptance: nothing hidden behind the nav)', () => {
     const top = d(':root')['--nav-top'] ?? ''
     expect(top).toMatch(/var\(--nav-height\).*var\(--nav-inset\).*env\(safe-area-inset-bottom/)
     expect(top).not.toMatch(/--space-/)
-    expect(media('min-width: 64em')).toMatch(/--nav-top\s*:\s*0/)
+    // SHORT-04: where no bottom bar floats (the rail from 1024, the keyboard up, the compact rail) the top edge is the bottom inset alone,
+    // so a sticky bar's one formula (--nav-top + --bar-gap + --keyboard-inset) holds at every size.
+    expect(media('min-width: 64em')).toMatch(/--nav-top\s*:\s*var\(--safe-bottom\)/)
   })
   it('QA-4: the bottom bar is placed with the same tokens --nav-top is built from', () => {
     const bar = d('.bottom-bar')
@@ -108,37 +110,28 @@ describe('bottom bar (plan 4.5)', () => {
     expect(bar['background']).toBe('var(--color-surface)')
     expect(code).toMatch(/\.bottom-bar[^{}]*\{[^{}]*(margin-inline\s*:\s*auto|margin\s*:[^;]*auto)/)
   })
-  it('items are 54 high (PN: the width comes from the grid track, no longer a fixed 62), radius 16, icon over a 11/800 label', () => {
+  it('R-F: a link is the whole track (no fill, no ring of its own, the radius the focus ring follows), icon over a 11/800 label', () => {
+    // DS-02: the tap target is the whole track; the highlight and Scan's fill moved onto the inner .bottom-bar__icon (shell.chrome.css.test.ts).
     const link = d('.bottom-bar__link')
-    expect(link['width']).toBe('100%')
-    expect(link['height']).toBe('54px')
-    expect(link['border-radius']).toBe('var(--radius-button)')
     expect(link['flex-direction']).toBe('column')
-    expect(link['gap']).toBe('var(--space-half)') // B9-07 (DS-11): the 2 px micro gap token
     expect(link['color']).toBe('var(--color-muted)')
     const label = d('.bottom-bar__label')
     expect(label['font-size']).toBe('var(--text-nav-size)')
     expect(label['font-weight']).toBe('var(--text-nav-weight)')
   })
-  it('the current tab has a soft pill and accent text (via aria-current, not a class)', () => {
+  it('the current destination has accent text (via aria-current, not a class); its soft fill is on the icon span, never on the link', () => {
     const active = d(".bottom-bar__link[aria-current='page']")
-    expect(active['background']).toBe('var(--color-soft)')
     expect(active['color']).toBe('var(--color-accent-text)')
+    expect(active['background']).not.toBe('var(--color-soft)')
   })
-  it('Scan is a 58 high accent button, at most 58 wide (never wider than its slot), radius 20, in the bar (no upward translate)', () => {
+  it('Scan is no longer a 58 px accent button on the link: no 58 px box, no accent fill, no 3 px soft ring on the link (R-F)', () => {
     const scan = d(".bottom-bar__link[data-accent='true']")
-    expect(scan['width']).toMatch(/^min\(\s*58px\s*,\s*100%\s*\)$/)
-    expect(scan['height']).toBe('58px')
-    expect(scan['border-radius']).toBe('var(--radius-button-lg)')
-    expect(scan['background']).toBe('var(--color-accent)')
-    expect(scan['color']).toBe('var(--color-on-accent)')
+    expect(`${scan['width'] ?? ''}${scan['height'] ?? ''}`).not.toMatch(/58px/)
+    expect(scan['background'] ?? 'none').not.toBe('var(--color-accent)')
     expect(Object.keys(scan)).not.toContain('transform')
     expect(code).not.toMatch(/translateY\(\s*-/)
-  })
-  it('on /scan the Scan button gets a 3 px soft ring', () => {
     const ring = d(".bottom-bar__link[data-accent='true'][aria-current='page']")
-    expect(`${ring['box-shadow'] ?? ''} ${ring['outline'] ?? ''}`).toMatch(/3px/)
-    expect(`${ring['box-shadow'] ?? ''} ${ring['outline'] ?? ''}`).toMatch(/var\(--color-soft/)
+    expect(`${ring['box-shadow'] ?? ''} ${ring['outline'] ?? ''}`).not.toMatch(/3px/)
   })
   it('is hidden from 1024 up, where the side rail takes over', () => {
     expect(media('min-width: 64em')).toMatch(/\.bottom-bar\s*\{[^}]*display\s*:\s*none/)
@@ -300,12 +293,21 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
   }
   const gapOf = () => (bar()['column-gap'] ?? bar()['gap'] ?? '0').trim().split(/\s+/).pop()
 
+  /** The narrow band (width < 23.5em, 375 px and below: amendment A1) overrides the side inset, the padding and the gap (DS-02). */
+  const narrowBlock = () => /\.bottom-bar\s*\{([^}]*)\}/.exec(media('width < 23.5em'))?.[1] ?? ''
+  const narrowPx = (prop: string) => {
+    const m = new RegExp(`(^|[;\\s])${prop}\\s*:\\s*([^;]+)`).exec(narrowBlock())
+    return m ? m[2]!.trim() : undefined
+  }
+
   /** Pixel width of the slots at a viewport width, no safe-area inset (env() is 0 on these phones). */
   function layout(viewport: number) {
     const px = spaceTokens()
-    const pad = px(padInline())
-    const gap = px(gapOf())
-    const barW = Math.min(viewport - 2 * 12, 480)
+    const narrow = viewport < 376
+    const pad = narrow ? px(narrowPx('padding-inline') ?? padInline()) : px(padInline())
+    const gap = narrow ? px(narrowPx('column-gap') ?? gapOf()) : px(gapOf())
+    const side = narrow ? px(/^calc\((var\(--space-\d\))/.exec(narrowPx('left') ?? '')?.[1] ?? '12px') : 12
+    const barW = Math.min(viewport - 2 * side, 480)
     const inner = barW - 2 - 2 * pad // 1 px border each side
     const slot = (inner - 6 * gap) / 7
     const scanCentre = 1 + pad + 3 * (slot + gap) + slot / 2
@@ -331,26 +333,26 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     expect(px(padInline())).toBeGreaterThanOrEqual(px(gapOf()))
     expect(px(gapOf())).toBeGreaterThanOrEqual(0)
   })
-  it.each([360, 375, 390, 412, 430, 480, 600, 820])('at %i px the Scan centre is the bar centre (within 0.5 px)', (vw) => {
+  it.each([375, 390, 412, 430, 480, 600, 820])('at %i px the Scan centre is the bar centre (within 0.5 px)', (vw) => {
     const l = layout(vw)
     expect(Number.isFinite(l.slot)).toBe(true)
     expect(Math.abs(l.scanCentre - l.barCentre)).toBeLessThanOrEqual(0.5)
   })
-  it.each([360, 375, 390, 412, 430])('at %i px every slot is at least 44 px wide (seven of them)', (vw) => {
+  it.each([375, 390, 412, 430])('at %i px every slot is at least 44 px wide (seven of them; the narrow band keeps 6 px of padding and no gap)', (vw) => {
     const l = layout(vw)
     expect(l.slot).toBeGreaterThanOrEqual(44)
   })
-  it('the Scan button is centred in its slot', () => {
-    expect(d(".bottom-bar__link[data-accent='true']")['justify-self']).toBe('center')
+  it('the active highlight inside its track: the link is the whole track and Scan sits in the middle one (all three variants stretch)', () => {
+    for (const sel of ['.bottom-bar__link', ".bottom-bar__link[data-accent='true']"]) {
+      const v = d(sel)
+      expect(`${v['justify-self'] ?? 'stretch'} ${v['align-self'] ?? 'stretch'}`, sel).toBe('stretch stretch')
+    }
   })
-  it('every button keeps a 44 x 44 minimum target (min-width, and height >= 44)', () => {
+  it('every link keeps a 44 x 44 minimum target: the whole track, 70 px tall inside the bar, never narrower than the track', () => {
+    // At 375 px a track is 50.4 px (narrow band) and from 390 px 49.1 px: the layout() tests above hold the 44 px floor.
     const link = d('.bottom-bar__link')
-    expect(link['min-width']).toBe('44px')
-    expect(Number.parseFloat(link['height'] ?? '0')).toBeGreaterThanOrEqual(44)
-    expect(Number.parseFloat(d(".bottom-bar__link[data-accent='true']")['height'] ?? '0')).toBeGreaterThanOrEqual(44)
-  })
-  it('tracks may not shrink below the target: no track is a bare 0-based fr that can collapse (grid items min-width 44 px holds them)', () => {
-    expect(d('.bottom-bar__link')['min-width']).toBe('44px')
+    expect(link['min-width'] ?? '0').toBe('0')
+    expect(link['block-size'] ?? 'auto').toBe('auto')
   })
   it('labels never wrap or truncate: nowrap, no ellipsis, no clipping', () => {
     const label = d('.bottom-bar__label')
@@ -381,6 +383,6 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
 describe('chromeless ui Pages', () => {
   it('pads a chromeless .page by the gutter and zeroes the bar offsets', () => {
     expect(d('.app-shell--chromeless .page')['padding-block']).toBe('var(--page-gutter)')
-    expect(d('.app-shell--chromeless')['--nav-top']).toBe('0px')
+    expect(d('.app-shell--chromeless')['--nav-top']).toBe('var(--safe-bottom)') // SHORT-04: no bottom bar, the bottom inset alone
   })
 })
