@@ -63,7 +63,7 @@ function Answers({ match, prompt, onUseExisting, onCreate, onAnswerConversion }:
   if (match.status === 'conflict' && match.match) {
     const existing = match.match
     return (
-      <div className="import-row__answers import-row__answers--conflict">
+      <div className="import-row__answers">
         <ChoiceChip
           pressed={match.effective?.action === 'use'}
           icon={match.effective?.action === 'use' ? 'tick' : undefined}

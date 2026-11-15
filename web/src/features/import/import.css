@@ -469,7 +469,12 @@
 
 /* ---- B9-28: the two paths (RX-11), Import Review's rows (RX-01, RX-12), the Import actions bar, the result, Export's bar (RX-15). ---- */
 
-/* RX-11: two choices, stacked below 45 em and side by side from 45 em. No step numbers. */
+/* RX-11: two choices, stacked below 45 rem of page width and side by side from 45 rem (a container query: the page column, not the
+   viewport, decides). No step numbers. */
+.import-start-frame {
+  container: import-start / inline-size;
+}
+
 .import-start {
   display: grid;
   gap: var(--bento-gap);
@@ -477,7 +482,7 @@
   min-inline-size: 0;
 }
 
-@media (width >= 45em) {
+@container import-start (min-width: 45rem) {
   .import-start {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -585,7 +590,7 @@
 
 .import-notice__text > svg {
   flex: none;
-  margin-block-start: 2px;
+  margin-block-start: var(--space-half);
 }
 
 .import-tile-head {
@@ -663,7 +668,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding-inline-start: calc(40px + var(--space-3));
+  padding-inline-start: calc(var(--space-10) + var(--space-3));
   padding-block-end: var(--space-3);
 }
 
@@ -706,6 +711,11 @@
   transform: rotate(-90deg);
 }
 
+/* The panel of a Recipe row opens under its answers. */
+.recipe-preview__panel-frame {
+  min-inline-size: 0;
+}
+
 /* The read-only panel of a Recipe row: Ingredients and Steps as R-E rows, then one meta line. */
 .recipe-preview__panel {
   display: grid;
@@ -720,6 +730,11 @@
   font-weight: var(--text-overline-weight);
   letter-spacing: var(--text-overline-tracking);
   text-transform: uppercase;
+}
+
+.recipe-preview__lines,
+.recipe-preview__steps {
+  min-inline-size: 0;
 }
 
 .recipe-preview__step {
@@ -776,12 +791,6 @@
 
 .list-row[data-expanded='true'] .import-caret svg {
   transform: rotate(-90deg);
-}
-
-.ingredient-matches__exact {
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 /* The Import actions bar: one row at every width. The meta shrinks; the buttons keep their size. */
@@ -853,6 +862,11 @@
   font-weight: var(--text-overline-weight);
   letter-spacing: var(--text-overline-tracking);
   text-transform: uppercase;
+}
+
+.import-result__added {
+  display: grid;
+  gap: var(--space-1);
 }
 
 .import-result__actions {

@@ -64,9 +64,7 @@ export function IngredientMatchList({ plan, onUseExisting, onCreate, onAnswerCon
             expanded={showExact}
             onToggle={() => setShowExact((on) => !on)}
             panel={
-              <ul className="ingredient-matches__exact" aria-label={t.exactMatches(exact.length)}>
-                {exact.map((m) => row(m))}
-              </ul>
+              <ListGroup label={t.exactMatches(exact.length)}>{exact.map((m) => row(m))}</ListGroup>
             }
             data-row="exact"
           />

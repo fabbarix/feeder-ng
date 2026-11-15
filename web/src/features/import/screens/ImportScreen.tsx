@@ -130,7 +130,9 @@ export function ImportScreen(): ReactNode {
               {s.baseRecipes.readingFor(r.readNextFor.name)}
             </p>
           ) : null}
-          <div className="import-start">{readFirst ? [readTile, fileTile] : [fileTile, readTile]}</div>
+          <div className="import-start-frame">
+            <div className="import-start">{readFirst ? [readTile, fileTile] : [fileTile, readTile]}</div>
+          </div>
         </>
       ) : null}
       {reviewing && r.plan ? <Reviewing plan={r.plan} stale={r.stale} screen={r} courses={courses} baseLines={baseLines} startRef={reviewStart} /> : null}
