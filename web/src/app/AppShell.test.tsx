@@ -7,7 +7,7 @@ import { buildRoutes, type FeatureModule } from './features'
 import type { NavItem } from './nav'
 
 // B9-25 (PC-04): the shell's timer pill polls the household's timers through react-query; the shell tests have no QueryClient (AppShell.timers.test.tsx covers it).
-vi.mock('./ShellTimers', () => ({ ShellTimers: () => null }))
+vi.mock('./ShellTimers', () => ({ ShellTimers: () => null, ShellTimerAlert: () => null }))
 
 // Icon calls are recorded as data attributes so the tests can assert name, size and weight (the `fill` weight of the active tab).
 vi.mock('../ui', async (importOriginal) => ({

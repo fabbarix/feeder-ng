@@ -145,6 +145,31 @@ describe('useCookSession resume (PC-04)', () => {
     window.localStorage.removeItem('feeder.cook.resume.recipe:12')
   })
 
+  it('a Recipe session cooked with 2 Batches stores them beside the Step (ruling 3: the pill reopens the same Batches)', async () => {
+    window.localStorage.removeItem('feeder.cook.resume.recipe:12')
+    api.view.mockResolvedValue({ ...view, scope: 'recipe:12', meal: null, batches: 2 })
+    const hook = renderHook(() => useCookSession({ kind: 'recipe', recipeId: 12, batches: 2 }), { wrapper: wrapper() })
+    await waitFor(() => expect(hook.result.current.step).not.toBeNull())
+    await waitFor(() => expect(window.localStorage.getItem('feeder.cook.resume.recipe:12')).toBe('1@2'))
+    act(() => hook.result.current.next())
+    expect(window.localStorage.getItem('feeder.cook.resume.recipe:12')).toBe('2@2')
+    window.localStorage.removeItem('feeder.cook.resume.recipe:12')
+  })
+
+  it('a stored value with Batches still opens on its Step ("4+@2" opens after Step 4)', async () => {
+    window.localStorage.setItem('feeder.cook.resume.recipe:12', '4+@2')
+    api.view.mockResolvedValue({ ...view, scope: 'recipe:12', meal: null, batches: 2 })
+    const hook = renderHook(() => useCookSession({ kind: 'recipe', recipeId: 12, batches: 2 }), { wrapper: wrapper() })
+    await waitFor(() => expect(hook.result.current.step).not.toBeNull())
+    expect(hook.result.current.step?.text).toBe('Plate up')
+    window.localStorage.removeItem('feeder.cook.resume.recipe:12')
+  })
+
+  it('a Planned Meal Course stores no Batches (its Course sets them)', async () => {
+    await open()
+    await waitFor(() => expect(window.localStorage.getItem(KEY)).toBe('1'))
+  })
+
   it('blocked storage: opens on the first Step and walking still works', async () => {
     const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked')

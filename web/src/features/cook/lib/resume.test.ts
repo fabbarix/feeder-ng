@@ -179,3 +179,52 @@ describe('timerOpenPlan: where tapping a timer goes, and what Step Cook Mode the
     expect(timerOpenPlan({ scope: 'bogus', step: 1, state: 'running' }, 60)).toBeNull()
   })
 })
+
+// Main-session ruling 3 (B9-25): resume also keeps a Recipe cook's Batches, so tapping the pill reopens Cook Mode with the same Batches.
+// The stored value is extended additively: "<step>[+]@<batches>". Values without "@" (stored before) still read, with no Batches.
+describe('resume keeps a Recipe cook\'s Batches (ruling 3)', () => {
+  it('stores "<step>@<batches>" (and "<step>+@<batches>") and reads the Batches back', () => {
+    const s = memory()
+    saveResume('recipe:12', 4, { batches: 2 }, s)
+    expect(s.data.get('feeder.cook.resume.recipe:12')).toBe('4@2')
+    expect(readResume('recipe:12', s)).toEqual({ step: 4, after: false, batches: 2 })
+    saveResume('recipe:12', 2, { after: true, batches: 1.5 }, s)
+    expect(s.data.get('feeder.cook.resume.recipe:12')).toBe('2+@1.5')
+    expect(readResume('recipe:12', s)).toEqual({ step: 2, after: true, batches: 1.5 })
+  })
+
+  it('1 Batch (the default) and no Batches are not written: the value stays the old "<step>" form', () => {
+    const s = memory()
+    saveResume('recipe:12', 4, { batches: 1 }, s)
+    expect(s.data.get('feeder.cook.resume.recipe:12')).toBe('4')
+    saveResume('recipe:12', 4, { batches: 0 }, s)
+    expect(s.data.get('feeder.cook.resume.recipe:12')).toBe('4')
+    expect(readResume('recipe:12', s)).not.toHaveProperty('batches')
+  })
+
+  it('old values still parse ("4", "2+"): no Batches', () => {
+    expect(readResume('recipe:12', memory({ 'feeder.cook.resume.recipe:12': '4' }))).toEqual({ step: 4, after: false })
+    expect(readResume('recipe:12', memory({ 'feeder.cook.resume.recipe:12': '2+' }))).toEqual({ step: 2, after: true })
+  })
+
+  it('a malformed Batches part makes the whole value nothing (never a half-read)', () => {
+    for (const bad of ['4@', '4@x', '4@-2', '4@2@3', '4+@', '@2', '4@1e3']) {
+      expect(readResume('recipe:12', memory({ 'feeder.cook.resume.recipe:12': bad })), bad).toBeNull()
+    }
+  })
+
+  it('timerOpenPlan with Batches: /cook/recipe/<id>?batches=<n>, and the resume carries them', () => {
+    expect(timerOpenPlan({ scope: 'recipe:12', step: 2, state: 'running' }, 600, { batches: 2 })).toEqual({
+      path: '/cook/recipe/12?batches=2',
+      resume: { scope: 'recipe:12', step: 2, after: false, batches: 2 },
+    })
+  })
+
+  it('timerOpenPlan with 1 Batch is the plain path; a Planned Meal Course ignores Batches (its Course sets them)', () => {
+    expect(timerOpenPlan({ scope: 'recipe:12', step: 2, state: 'running' }, 600, { batches: 1 })?.path).toBe('/cook/recipe/12')
+    expect(timerOpenPlan({ scope: 'meal:2026-11-09/3/1', step: 4, state: 'running' }, 300, { batches: 2 })).toEqual({
+      path: '/cook/meal/2026-11-09/3/1',
+      resume: { scope: 'meal:2026-11-09/3/1', step: 4, after: false },
+    })
+  })
+})

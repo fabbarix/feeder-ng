@@ -16,7 +16,7 @@ import type { HouseholdTimers } from './hooks/useHouseholdTimers'
 const state = vi.hoisted(() => ({ value: null as unknown }))
 vi.mock('./hooks/useHouseholdTimers', () => ({ useHouseholdTimers: () => state.value }))
 
-import { ShellTimers } from './ShellTimers'
+import { ShellTimerAlert, ShellTimers } from './ShellTimers'
 
 const tm = (over: Partial<ShellTimer> = {}): ShellTimer => ({
   id: 1, scope: 'recipe:12', step: 2, recipeName: 'Roast chicken with rice and a sauce', title: 'Roast the chicken', stepNumber: 3, seconds: 1122, state: 'running', ...over,
@@ -374,5 +374,113 @@ describe('A timer finishing on another screen alerts me in the app: the banner',
       </MemoryRouter>,
     )
     expect(banner(view.container)).toBeNull()
+  })
+})
+
+// Main-session ruling 3 (B9-25): a Recipe cook's Batches are kept with the resume Step, so the pill reopens the same Batches.
+describe('the pill reopens a Recipe cook with the same Batches (ruling 3)', () => {
+  function WhereFull() {
+    const { pathname, search } = useLocation()
+    return <p data-testid="where-full">{pathname + search}</p>
+  }
+  const mountFull = () =>
+    render(
+      <MemoryRouter initialEntries={['/plan']}>
+        <ShellTimers />
+        <WhereFull />
+      </MemoryRouter>,
+    )
+
+  it('Cook Mode was opened with 2 Batches: the tap goes to /cook/recipe/<id>?batches=2 and keeps them stored', async () => {
+    window.localStorage.setItem('feeder.cook.resume.recipe:12', '1@2')
+    set(hh({ head: tm({ scope: 'recipe:12', step: 2 }) }))
+    mountFull()
+    await userEvent.click(pillBtn())
+    expect(screen.getByTestId('where-full').textContent).toBe('/cook/recipe/12?batches=2')
+    expect(window.localStorage.getItem('feeder.cook.resume.recipe:12')).toBe('2@2')
+  })
+
+  it('a finished timer with Batches stored: the next Step and the same Batches ("2+@2")', async () => {
+    window.localStorage.setItem('feeder.cook.resume.recipe:12', '2@2')
+    set(hh({ all: [tm({ state: 'finished', seconds: 0, step: 2 })] }))
+    mountFull()
+    await userEvent.click(pillBtn())
+    expect(screen.getByTestId('where-full').textContent).toBe('/cook/recipe/12?batches=2')
+    expect(window.localStorage.getItem('feeder.cook.resume.recipe:12')).toBe('2+@2')
+  })
+
+  it('an old stored value without Batches opens with 1 Batch (the plain path)', async () => {
+    window.localStorage.setItem('feeder.cook.resume.recipe:12', '3')
+    set(hh({ head: tm({ scope: 'recipe:12', step: 2 }) }))
+    mountFull()
+    await userEvent.click(pillBtn())
+    expect(screen.getByTestId('where-full').textContent).toBe('/cook/recipe/12')
+  })
+})
+
+// Main-session ruling 7 (B9-25): the banner's bell is the status, so it sits on the headline line, never as a separate success icon.
+describe('the banner\'s icon (ruling 7)', () => {
+  it('the bell is inside the headline line, beside the headline text; no other icon in the banner outside its buttons', () => {
+    set(hh({ all: [tm({ state: 'finished', seconds: 0 })] }))
+    const { container } = mount()
+    const b = banner(container)!
+    const icons = [...b.querySelectorAll('svg')].filter((svg) => !svg.closest('button'))
+    expect(icons).toHaveLength(1)
+    const line = icons[0]!.parentElement!
+    expect(line).toBe(b.querySelector('.shell-timer-banner__title')!.parentElement)
+  })
+})
+
+// Main-session ruling 1 (B9-25): on the receipt screens (chromeless: no pill) the finish banner still shows. AppShell mounts
+// ShellTimerAlert there instead of ShellTimers (AppShell.timers.test.tsx), so there is one poll and one alarm.
+describe('ShellTimerAlert: the receipt screens\' finish banner (ruling 1)', () => {
+  const mountAlert = (path = '/scan/receipt') =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <ShellTimerAlert />
+        <Where />
+      </MemoryRouter>,
+    )
+
+  it('a running timer: nothing at all (no pill on the receipt screens)', () => {
+    set(hh({ head: tm() }))
+    const { container } = mountAlert()
+    expect(container.querySelector('.shell-timer')).toBeNull()
+    expect(banner(container)).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Timer/ })).toBeNull()
+  })
+
+  it('a finished timer: the banner, role alert, with Open Cook Mode and Dismiss, and still no pill', () => {
+    set(hh({ all: [tm({ state: 'finished', seconds: 0 })] }))
+    const { container } = mountAlert()
+    const b = banner(container)!
+    expect(b).toHaveAttribute('role', 'alert')
+    expect(within(b).getByRole('button', { name: 'Open Cook Mode' })).toHaveAttribute('data-variant', 'primary')
+    expect(within(b).getByRole('button', { name: 'Dismiss' })).toHaveAttribute('data-variant', 'secondary')
+    expect(container.querySelector('.shell-timer')).toBeNull()
+  })
+
+  it('Open Cook Mode goes to the finished timer\'s Cook Mode on the next Step', async () => {
+    set(hh({ all: [tm({ state: 'finished', seconds: 0 })] }))
+    const { container } = mountAlert()
+    await userEvent.click(within(banner(container)!).getByRole('button', { name: 'Open Cook Mode' }))
+    expect(where()).toBe('/cook/recipe/12')
+    expect(window.localStorage.getItem('feeder.cook.resume.recipe:12')).toBe('2+')
+  })
+
+  it('Dismiss and Esc dismiss it through the hook', async () => {
+    const v = set(hh({ all: [tm({ state: 'finished', seconds: 0 })] }))
+    const { container } = mountAlert()
+    await userEvent.click(within(banner(container)!).getByRole('button', { name: 'Dismiss' }))
+    await userEvent.keyboard('{Escape}')
+    expect(v.dismissFinished).toHaveBeenCalledTimes(2)
+  })
+
+  it('finished timers of several scopes: Open Cook Mode opens the Timers sheet', async () => {
+    set(hh({ all: [tm({ state: 'finished', seconds: 0 }), tm({ id: 2, state: 'finished', seconds: 0, scope: 'recipe:13', title: 'Boil' })] }))
+    const { container } = mountAlert()
+    await userEvent.click(within(banner(container)!).getByRole('button', { name: 'Open Cook Mode' }))
+    expect(screen.getByRole('dialog', { name: /Timers/ })).toBeInTheDocument()
+    expect(where()).toBe('/scan/receipt')
   })
 })
