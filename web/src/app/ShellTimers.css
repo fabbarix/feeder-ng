@@ -64,6 +64,14 @@ html:has(.sticky-action-bar) .shell-timer {
   }
 }
 
+/* A short landscape phone (below 64em wide, under 500 px tall) on Scan with the camera on: the pill's corner is where the strip's
+   Mute, torch and Type a barcode sit (SHORT-04: never covered). It steps aside there; the finish banner still shows. */
+@media (width < 64em) and (height < 31.25em) {
+  :root:has(.viewfinder-strip:not([data-size='bar'])) .shell-timer {
+    display: none;
+  }
+}
+
 /* From 64em: in the top bar (64 px below the top inset), centred in it as the mock's 1440 render draws it (main-session call,
    w4a), 6 px above and below the pill; at 1024 its 24rem cap keeps it clear of the brand and Your menu. No drop shadow: it sits
    on the bar. Toasts no longer need to make room for it. */

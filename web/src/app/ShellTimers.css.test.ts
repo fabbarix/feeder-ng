@@ -76,6 +76,10 @@ describe('.shell-timer (the pill\'s place)', () => {
     expect(at(":root:has(.sheet[data-modal='false'][open]) .shell-timer", ['@media (width < 48em)'])['display']).toBe('none')
   })
 
+  it('in short landscape below 64em it steps aside on Scan with the camera strip (its controls sit in the pill\'s corner)', () => {
+    expect(at(":root:has(.viewfinder-strip:not([data-size='bar'])) .shell-timer", ['@media (width < 64em) and (height < 31.25em)'])['display']).toBe('none')
+  })
+
   it('the width queries are table widths in em (the breakpoint guard): 64em, nothing in px', () => {
     for (const b of blocks) for (const a of b.atrules) expect(a, a).not.toMatch(/\d+px\)/)
   })
