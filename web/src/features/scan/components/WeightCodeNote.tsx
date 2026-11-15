@@ -16,7 +16,7 @@ export function WeightCodeNote({ id, shopName, admin, onSetUp }: WeightCodeNoteP
   const s = newProductStrings.weightCode
   return (
     <Tile as="section" variant="status" status="info" className="weight-code-note" id={id}>
-      <Icon name="info" size={20} />
+      <Icon name="weigh" size={20} />
       <div>
         <p className="weight-code-note__title">{s.title(shopName)}</p>
         <p className="weight-code-note__text">{s.text(shopName)}</p>
