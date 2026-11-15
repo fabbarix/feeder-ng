@@ -7,7 +7,9 @@ import type { SelectOption } from './lib'
 
 export interface SelectPanelProps<V extends string | number> {
   listboxId: string
-  labelId: string
+  /** The field's label: the listbox's name. Given as text, not by id, because in a modal sheet the field's own label is outside the
+   *  dialog (inert), and a name taken from an inert element is dropped from the accessibility tree. */
+  label: string
   multi: boolean
   showSearch: boolean
   searchLabel: string
@@ -129,7 +131,7 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
         ref={p.listRef}
         id={p.listboxId}
         role="listbox"
-        aria-labelledby={p.labelId}
+        aria-label={p.label}
         aria-multiselectable={p.multi || undefined}
         aria-activedescendant={p.activeId}
         // A Tab stop after the search and the tools, so the list is reached by Tab as well as by the arrows from the search.

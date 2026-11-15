@@ -354,7 +354,7 @@ function SelectCore<V extends string | number>({
   const panel = (
     <SelectPanel<V>
       listboxId={listboxId}
-      labelId={ids.labelId}
+      label={label}
       multi={multi}
       showSearch={showSearch}
       searchLabel={selectStrings.searchFor(entity)}
