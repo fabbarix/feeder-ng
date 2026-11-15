@@ -138,9 +138,9 @@ export default {
     async planSheetWhosEating() {
       await withSnapshot(async () => {
         await until(PLAN_READY, 'the Plan rows')
-        const menus = await evaluate(`document.querySelectorAll('main button[aria-label$=" actions"][aria-haspopup="menu"]').length`)
+        const menus = await evaluate(`document.querySelectorAll('main button[aria-label^="More for "][aria-haspopup="menu"]').length`)
         for (let i = 0; i < menus; i++) {
-          await evaluate(`document.querySelectorAll('main button[aria-label$=" actions"][aria-haspopup="menu"]')[${i}]?.click()`)
+          await evaluate(`document.querySelectorAll('main button[aria-label^="More for "][aria-haspopup="menu"]')[${i}]?.click()`)
           const has = await until(`!!(${named('document', "Who's eating")})`, "the Who's eating item", 1200).then(() => true, () => false)
           if (has) {
             await press(named('document', "Who's eating"), "Who's eating in the slot ⋮")
@@ -149,7 +149,7 @@ export default {
             if (why) throw new Error(`setup: ${why}`)
             return
           }
-          await evaluate(`document.querySelectorAll('main button[aria-label$=" actions"][aria-haspopup="menu"]')[${i}]?.click()`) // the same ⋮ again closes its menu
+          await evaluate(`document.querySelectorAll('main button[aria-label^="More for "][aria-haspopup="menu"]')[${i}]?.click()`) // the same ⋮ again closes its menu
         }
         throw new Error("setup: no slot ⋮ offered Who's eating")
       })
