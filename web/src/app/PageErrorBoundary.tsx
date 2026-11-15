@@ -5,6 +5,8 @@ import { Button, Cluster, EmptyState } from '../ui'
 import { overlayStrings } from '../ui/overlayStrings'
 import { NotFound } from './NotFound'
 import { routeQueryKeys } from './routeQueryKeys'
+import { retryFailedChunks } from './routeChunks'
+import { tryAgainMove } from './staleChunk'
 import { shellStrings } from './strings'
 
 /** B9-20 (RES-09): on Today, "Go to Today" would do nothing; the second action reloads Feeder instead. */
@@ -39,6 +41,12 @@ function ErrorPage({ onReset }: { onReset: () => void }) {
   }, [])
 
   const tryAgain = () => {
+    // B9-59: the page's code failed to load and the server now runs a newer version: only the new version can load it.
+    if (tryAgainMove() === 'reload') {
+      window.location.reload()
+      return
+    }
+    retryFailedChunks() // a route chunk that failed to load is imported again (offline then back, a passing fault)
     if (client) for (const queryKey of routeQueryKeys(pathname)) void client.resetQueries({ queryKey })
     onReset()
   }
@@ -84,7 +92,10 @@ export class PageErrorBoundary extends Component<PageErrorBoundaryProps, Boundar
   }
 
   componentDidUpdate(previous: PageErrorBoundaryProps) {
-    if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false })
+    if (this.state.failed && previous.resetKey !== this.props.resetKey) {
+      retryFailedChunks() // B9-59: a new visit is a new attempt at a route chunk that failed to load
+      this.setState({ failed: false })
+    }
   }
 
   private reset = () => this.setState({ failed: false })
