@@ -50,9 +50,35 @@
   color: var(--color-accent-text);
 }
 
-/* A why chip on a hero follows the hero's colour, in light and dark alike. */
+/* B9-17 (TB-05): the hero follows the NEAREST scheme scope, not only the root's: a Gallery panel (or any subtree) that sets its own
+   data-scheme paints its own hero. These tie with the root rules above (0,4,0) and come later, so inside a scope they win; on a page
+   with no scope below the root they never match. */
+:root [data-scheme='dark'] .tile[data-variant='hero'] {
+  background: var(--color-soft-strong);
+  color: var(--color-text);
+  --focus-ring-color: var(--color-text);
+}
+
+:root [data-scheme='dark'] .tile[data-variant='hero'] .button[data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+:root [data-scheme='light'] .tile[data-variant='hero'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  --focus-ring-color: var(--color-on-accent);
+}
+
+:root [data-scheme='light'] .tile[data-variant='hero'] .button[data-variant='primary'] {
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+}
+
+/* A why chip on a hero follows the hero's colour, in light and dark alike. 11 % is the highest tint that keeps its label at 4.5:1
+   on every accent preset in both schemes (TB-05 drew 14 %: 4.25:1 on the light Basil hero; theme/contrast.tiles.test.ts). */
 .tile[data-variant='hero'] .chip[data-kind='why'] {
-  background: color-mix(in srgb, currentColor 14%, transparent);
+  background: color-mix(in srgb, currentColor 11%, transparent);
   color: inherit;
 }
 
@@ -104,6 +130,13 @@
   border: 1px solid var(--color-info-fg);
   background: var(--color-info-bg);
   color: var(--color-info-fg);
+}
+
+/* DS-06: warn, a rule or a setting that needs a decision (mustard, fixed). */
+.tile[data-variant='status'][data-status='warn'] {
+  border: 1px solid var(--status-warn-fg);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
 }
 
 /* Media tile: photo header at 16:9, the text below keeps the tile padding. */
