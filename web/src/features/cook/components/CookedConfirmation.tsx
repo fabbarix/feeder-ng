@@ -4,7 +4,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { leftoverTile, type LeftoverOutcome } from '../../plan/lib/cook'
 import { Button, Icon, Tile } from '../../../ui'
-import { cookedLine } from '../lib/cooked'
+import { cookedLine, type CookedLeftover } from '../lib/cooked'
 import { cookStrings } from '../strings'
 
 export interface CookedConfirmationProps {
@@ -13,6 +13,8 @@ export interface CookedConfirmationProps {
   mealLabel?: string
   /** Where the Leftover went (plan/lib/cook leftoverTile); no tile for kind "none". */
   outcome?: LeftoverOutcome | null
+  /** Several Leftovers (a Mark all Cooked): one tile each, named by its Recipe; wins over `outcome`. */
+  leftovers?: CookedLeftover[]
   /** "Back to Plan" or "Back to Today" (lib/origin backLabel); default "Back to Today". */
   leaveLabel?: string
   /** Undo Cooked (SAFE-03), named `undoLabel`; no button without it. */
@@ -26,10 +28,13 @@ export interface CookedConfirmationProps {
   onLeave: () => void
 }
 
-export function CookedConfirmation({ recipeName, mealLabel, outcome, leaveLabel, onUndo, undoLabel, undoBusy, children, onLeave }: CookedConfirmationProps): ReactNode {
+export function CookedConfirmation({ recipeName, mealLabel, outcome, leftovers, leaveLabel, onUndo, undoLabel, undoBusy, children, onLeave }: CookedConfirmationProps): ReactNode {
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => heading.current?.focus(), [])
-  const tile = outcome ? leftoverTile(outcome) : null
+  const tiles = (leftovers ?? (outcome ? [{ outcome }] : [])).flatMap((l, i) => {
+    const tile = leftoverTile(l.outcome)
+    return tile ? [{ key: i, title: tile.title, meta: l.recipeName ? `${l.recipeName} · ${tile.meta}` : tile.meta }] : []
+  })
   const line = mealLabel ? cookedLine(recipeName, mealLabel) : (recipeName ?? '')
   return (
     <section className="cook-confirmation" aria-labelledby="cook-confirmation-title">
@@ -42,8 +47,8 @@ export function CookedConfirmation({ recipeName, mealLabel, outcome, leaveLabel,
         </h1>
         {line ? <p className="cook-confirmation__recipe">{line}</p> : null}
       </div>
-      {tile ? (
-        <Tile as="section" variant="status" status="leftover" span="full" className="cook-confirmation__leftover">
+      {tiles.map((tile) => (
+        <Tile key={tile.key} as="section" variant="status" status="leftover" span="full">
           <p className="cook-confirmation__outcome">
             <Icon name="leftover" size={28} />
             <span className="cook-confirmation__outcome-text">
@@ -52,7 +57,7 @@ export function CookedConfirmation({ recipeName, mealLabel, outcome, leaveLabel,
             </span>
           </p>
         </Tile>
-      ) : null}
+      ))}
       {children}
       <div className="cook-confirmation__actions">
         {onUndo ? (

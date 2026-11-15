@@ -1,4 +1,4 @@
-import { useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { Button, Icon, IconButton, Tile } from '../../../ui'
 import { describeUse, nbspUnits, stepOverline, stepTextSize } from '../lib/steps'
 import { tileTap } from '../lib/tapZone'
@@ -26,6 +26,8 @@ export interface StepTileProps {
   ready?: string[]
   /** Lines that belong to the Step, at the tile's end (the Base recipes Stock covers). */
   children?: ReactNode
+  /** B9-45 (PC-05): take focus when it mounts (Start cooking moves focus to Step 1). */
+  focusOnMount?: boolean
 }
 
 /** The selector of what inside the tile is a control: a click there is the control's, never a tap zone's. */
@@ -57,8 +59,14 @@ export function StepTile({
   clock = null,
   ready = [],
   children,
+  focusOnMount = false,
 }: StepTileProps): ReactNode {
   const down = useRef<{ x: number; y: number } | null>(null)
+  const tile = useRef<HTMLElement>(null)
+  const focusFirst = useRef(focusOnMount)
+  useEffect(() => {
+    if (focusFirst.current) tile.current?.focus({ preventScroll: false })
+  }, [])
   const [photoOpen, setPhotoOpen] = useState(false)
   // React events bubble through portals: a press inside the photo dialog is not the tile's.
   const inTile = (e: { target: EventTarget; currentTarget: HTMLElement }) => e.target instanceof Node && e.currentTarget.contains(e.target)
@@ -82,6 +90,8 @@ export function StepTile({
       as="article"
       className="cook-step"
       aria-label={cookStrings.stepOf(step.number, step.of)}
+      ref={tile}
+      tabIndex={-1}
       overline={<span role="status">{stepOverline(step)}</span>}
       onPointerDownCapture={onPointerDown}
       onClickCapture={onTap}

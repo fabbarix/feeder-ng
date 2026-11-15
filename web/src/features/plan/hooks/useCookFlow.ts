@@ -22,8 +22,8 @@ export interface CookFlow {
   open: (key: SlotKey) => void
   close: () => void
   cook: MarkCookedController
-  /** Sheet "Mark as Cooked": confirms with the edited Leftover and closes on success; the Cooked toast offers Undo (SAFE-03). */
-  confirm: () => Promise<void>
+  /** Sheet "Mark as Cooked": confirms with the edited Leftover and closes on success; the Cooked toast offers Undo (SAFE-03). Resolves the result (null on failure). */
+  confirm: () => Promise<CookedResult | null>
   /** Sheet "Not cooked"; the toast offers Undo. */
   skip: () => Promise<void>
   /**
@@ -67,7 +67,7 @@ export function useCookFlow(options: { toast?: boolean } = {}): CookFlow {
   /** The meal's group in the ONE notice, and (unless Cook Mode) the Cooked toast whose Undo also takes that group away (SAFE-03). */
   const afterCooked = useCallback(
     (key: SlotKey, result: CookedResult, recipeName: string) => {
-      const name = result.meal.recipeName || recipeName
+      const name = recipeName || result.meal.recipeName
       const group = shortfallGroupFor(cachedSlots(client), key, name, result.warnings)
       add(group)
       if (!withToast) return
@@ -105,9 +105,10 @@ export function useCookFlow(options: { toast?: boolean } = {}): CookFlow {
     confirm: async () => {
       const key = cookKey
       const result = await cook.confirm()
-      if (!result || !key) return
+      if (!result || !key) return null
       setCookKey(null)
       afterCooked(key, result, cook.preview?.meal.recipeName ?? '')
+      return result
     },
     skip: async () => {
       const key = cookKey

@@ -1,5 +1,5 @@
-// B9-45 (PC-05): the Ingredient list of "Get ready", scaled to what is cooked. Plain TypeScript, no React. STUBS: the developer builds them.
-import type { UnitSystem } from '../../../lib/units'
+// B9-45 (PC-05): the Ingredient list of "Get ready", scaled to what is cooked. Plain TypeScript, no React.
+import { formatLineQuantity, type UnitSystem } from '../../../lib/units'
 import type { RecipeLine } from '../../recipes/types'
 import type { StockLot } from '../../stock/types'
 
@@ -46,29 +46,53 @@ export interface ReadySection {
   rows: ReadyRow[]
 }
 
-export function readyRows(_source: ReadySource, _ctx: ReadyContext): ReadyRow[] {
-  throw new Error('B9-45: not built yet')
+const num = (n: number): string => String(Number(n.toFixed(2)))
+const portionsText = (n: number): string => (n === 1 ? '1 portion' : `${num(n)} portions`)
+
+export function readyRows(source: ReadySource, ctx: ReadyContext, keyPrefix = ''): ReadyRow[] {
+  return source.lines.map((line, i) => {
+    const name = line.ingredient ?? line.baseRecipe?.name ?? ''
+    const amount = formatLineQuantity(line.quantity * source.batches, line.unit, ctx.system).trim()
+    const where = line.ingredientId ? soonestPlace(ctx.lots, line.ingredientId, ctx.places) : null
+    const place = line.optional ? (where ? `${where} · optional` : 'optional') : where
+    return { key: `${keyPrefix}${i}:${line.ingredientId}`, ingredientId: line.ingredientId, name, amount, place, optional: line.optional }
+  })
 }
 
 /** One section for one Recipe (no title); a section per Course, titled "Main · Roast chicken", for several. */
-export function readySections(_sources: ReadySource[], _ctx: ReadyContext): ReadySection[] {
-  throw new Error('B9-45: not built yet')
+export function readySections(sources: ReadySource[], ctx: ReadyContext): ReadySection[] {
+  const several = sources.length > 1
+  return sources.flatMap((source, i) => {
+    const key = `${source.courseId ?? 'r'}-${i}`
+    const rows = readyRows(source, ctx, `${key}/`)
+    if (rows.length === 0) return []
+    const title = several ? [source.courseName, source.recipeName].filter(Boolean).join(' · ') : null
+    return [{ key, title, rows }]
+  })
 }
 
 /** The Storage Place name of the soonest Lot of the Ingredient: not spoiled, with some left, the earliest `goesOff` first (no date last); "Not sorted" for a Lot with no place; null with no Lot. */
-export function soonestPlace(_lots: ReadyLot[], _ingredientId: number, _places: ReadyPlace[]): string | null {
-  throw new Error('B9-45: not built yet')
+export function soonestPlace(lots: ReadyLot[], ingredientId: number, places: ReadyPlace[]): string | null {
+  const usable = lots.filter((l) => l.ingredientId === ingredientId && !l.spoiled && l.quantity > 0)
+  if (usable.length === 0) return null
+  const first = [...usable].sort((a, b) => (a.goesOff ?? '9999-99-99').localeCompare(b.goesOff ?? '9999-99-99'))[0]!
+  return places.find((p) => p.id === first.storagePlaceId)?.name ?? 'Not sorted'
 }
 
 /**
  * The line under "Get ready": a Planned Meal "For 2.75 portions: 1 Batch of 4 portions, 1.25 kept as a Leftover" (the kept part only when
  * batches x yield is above the portions); a Recipe cook (portions null) "For 8 portions: 2 Batches of 4 portions".
  */
-export function readyMeta(_opts: { portions: number | null; batches: number; yield: number }): string {
-  throw new Error('B9-45: not built yet')
+export function readyMeta(opts: { portions: number | null; batches: number; yield: number }): string {
+  const made = opts.batches * opts.yield
+  const portions = opts.portions ?? made
+  const batches = opts.batches === 1 ? '1 Batch' : `${num(opts.batches)} Batches`
+  const base = `For ${portionsText(portions)}: ${batches} of ${portionsText(opts.yield)}`
+  const kept = Number((made - portions).toFixed(2))
+  return opts.portions !== null && kept > 0 ? `${base}, ${num(kept)} kept as a Leftover` : base
 }
 
 /** The checkbox's name: "Chicken, 1.2 kg". */
-export function readyLabel(_row: ReadyRow): string {
-  throw new Error('B9-45: not built yet')
+export function readyLabel(row: ReadyRow): string {
+  return row.amount ? `${row.name}, ${row.amount}` : row.name
 }

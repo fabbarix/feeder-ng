@@ -64,7 +64,9 @@ const TIMELINE_KEY = ['cook', 'view', 'timeline'] as const
  * item's scope; reaching a Reheat item starts the free Reheat timer of its Course unless that Course already has one.
  */
 /** `today` is the household date (usePlan): a future meal's Course menu has no "Mark <Course> as Cooked" (PC-12). */
-export function useCookTimeline(target: CookTimelineTarget, today = ''): UseCookTimeline {
+/** B9-45 (PC-05): `hold` (Cook Mode is on Get ready) starts no timer until it is let go. */
+export function useCookTimeline(target: CookTimelineTarget, today = '', options: { hold?: boolean } = {}): UseCookTimeline {
+  const hold = options.hold === true
   const client = useQueryClient()
   const key = [...TIMELINE_KEY, target.date, target.mealSlotId] as const
   const query = useQuery({
@@ -108,7 +110,7 @@ export function useCookTimeline(target: CookTimelineTarget, today = ''): UseCook
   // the timers are known and that Course has none (the Reheat screen may have started one).
   const started = useRef<Set<string>>(new Set())
   useEffect(() => {
-    if (!item || !item.timer) return
+    if (hold || !item || !item.timer) return
     if (item.kind === 'passive' && item.step !== null) {
       const id = `${item.scope}#${item.step}`
       if (started.current.has(id)) return
@@ -129,7 +131,7 @@ export function useCookTimeline(target: CookTimelineTarget, today = ''): UseCook
         .then(() => client.invalidateQueries({ queryKey: ['cook', 'timers'] }))
         .catch(() => started.current.delete(id))
     }
-  }, [item, timers.isLoading, timers.timers, client])
+  }, [item, timers.isLoading, timers.timers, client, hold])
 
   const gate = useItemGate(items, nav.index, timers.items, () => {})
   const step = current ? toCookStep(current) : null

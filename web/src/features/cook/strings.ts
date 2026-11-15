@@ -62,6 +62,9 @@ export const cookStrings = {
   coveredHeading: 'Already in Stock',
   // B9-40 (PC-03, PC-12, PC-15, PC-16, SHORT-01, A11Y-01)
   ingredients: 'Ingredients',
+  /** B9-45 (PC-05): the Get ready tile and its way into the Steps. */
+  getReady: 'Get ready',
+  startCooking: 'Start cooking',
   /** A11Y-01: the document title while Cook Mode loads, and with its h1 ("Cook Mode · Roast chicken"); the shell adds " · Feeder". */
   documentTitle: 'Cook Mode',
   enlargePhoto: 'Enlarge the photo',
