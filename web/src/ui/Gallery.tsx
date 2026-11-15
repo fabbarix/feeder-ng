@@ -43,6 +43,7 @@ import { Tile, TileMetric } from './Tile'
 import { TimerTile } from './TimerTile'
 import { WhyChip } from './WhyChip'
 import { OverlayGalleryGroups } from './GalleryOverlays'
+import { RowsGalleryGroup } from './GalleryRows'
 import './focusLayer.css'
 import './Gallery.css'
 
@@ -810,6 +811,7 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <PageHeaderGroup />
       <ListPageGroup />
       <ListGroupExample />
+      <RowsGalleryGroup />
       <RecipeThumbGroup />
       <ProgressGroup />
       <TimerGroup />

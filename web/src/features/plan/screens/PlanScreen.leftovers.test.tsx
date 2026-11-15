@@ -38,7 +38,7 @@ describe('PlanScreen: Leftovers', () => {
     setup([soup, asked, frozenChilli({ id: 5 })])
     expect(await screen.findByRole('heading', { name: 'Leftovers to use' })).toBeInTheDocument()
     expect(screen.getByText(QUESTION)).toBeInTheDocument()
-    expect(screen.getByText('2 portions · Use by Sat')).toBeInTheDocument()
+    expect(screen.getByText('Use by Sat · 2 portions')).toBeInTheDocument()
     expect(screen.queryByText('Garage Freezer')).toBeNull() // a frozen Leftover that is not to answer lives on the Pantry
   })
 
@@ -116,14 +116,14 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
 
   it("the From link opens that Leftover's own sheet: portions, Use-by, Storage Place when frozen, and its actions", async () => {
     const sheet = await openLink([chilliFrozen], "From Mon's Chilli")
-    expect(within(sheet).getByText('3 portions · Use by 10 Feb')).toBeInTheDocument()
+    expect(within(sheet).getByText('Use by 10 Feb · 3 portions')).toBeInTheDocument()
     expect(within(sheet).getByText('Garage Freezer')).toBeInTheDocument()
     expect(within(sheet).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== 'Close')).toEqual(['Had it', 'Threw it out', 'Take out'])
   })
 
   it('a Leftover that is not frozen shows no Storage Place and offers Freeze it', async () => {
     const sheet = await openLink([{ ...chilliFrozen, frozen: false, frozenOn: null, storagePlaceId: null, storagePlaceName: null, useBy: '2026-11-14' }], "From Mon's Chilli")
-    expect(within(sheet).getByText('3 portions · Use by Sat')).toBeInTheDocument()
+    expect(within(sheet).getByText('Use by Sat · 3 portions')).toBeInTheDocument()
     expect(within(sheet).queryByText('Garage Freezer')).toBeNull()
     expect(within(sheet).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== 'Close')).toEqual(['Had it', 'Threw it out', 'Freeze it'])
   })
@@ -184,7 +184,7 @@ describe('PlanScreen: a Leftover a Planned Meal is served from', () => {
       },
     })
     const section = (await screen.findByRole('heading', { name: 'Leftovers to use' })).closest('section') as HTMLElement
-    expect(within(section).getByText('2 portions · Use by Sat')).toBeInTheDocument()
+    expect(within(section).getByText('Use by Sat · 2 portions')).toBeInTheDocument()
     expect(within(section).getByRole('button', { name: 'Actions for Soup' })).toBeInTheDocument()
   })
 })

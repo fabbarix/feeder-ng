@@ -67,7 +67,7 @@ describe('Pantry: frozen Leftovers', () => {
     setup()
     const freezer = await waitFor(() => group(/^Garage Freezer/))
     expect(await within(freezer).findByText('Chilli')).toBeInTheDocument()
-    expect(within(freezer).getByText('3 portions · Use by 10 Feb')).toBeInTheDocument()
+    expect(within(freezer).getByText('Use by 10 Feb · 3 portions')).toBeInTheDocument()
     expect(within(freezer).getByText('Peas')).toBeInTheDocument() // its Stock Lots stay in the same group
     expect(within(group(/^Kitchen Pantry/)).queryByText('Chilli')).toBeNull()
   })
@@ -128,7 +128,7 @@ describe('Pantry: frozen Leftovers', () => {
     await userEvent.click(within(panel()).getByRole('switch', { name: 'Group by Storage Place' }))
     await closeFilters()
     const row = screen.getByText('Chilli').closest('li') as HTMLElement
-    expect(row).toHaveTextContent('3 portions · Use by 10 Feb · Garage Freezer')
+    expect(row).toHaveTextContent('Use by 10 Feb · 3 portions · Garage Freezer')
   })
 
   it('By Ingredient never lists Leftovers', async () => {

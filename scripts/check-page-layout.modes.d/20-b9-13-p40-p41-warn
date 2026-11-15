@@ -1,0 +1,9 @@
+# B9-13: P40 and P41 (by mode) find today's screens, so they warn on these routes, and only these two rules, until the packages
+# that clear them land; every other rule keeps the route's mode. Each package deletes its own line when its route is clean.
+#   /pantry: P41, the Storage Place groups are named only by aria-label ("Kitchen Fridge, 1 Stock Lot"); B9-29 gives them a
+#            ListGroup title (SSP-03).
+P41@/pantry = warn until B9-29
+#   /settings/tags: P40, a .list-row__title "2 Recipes" 76-81 px wide at 375-390 px; B9-51 (Tags).
+P40@/settings/tags = warn until B9-51
+#   /settings/recipe-assistant: P40, a .list-row__title "Key saved" 79-94 px wide at 375-390 px; B9-51 (Recipe Assistant).
+P40@/settings/recipe-assistant = warn until B9-51

@@ -36,7 +36,7 @@ function setup() {
       </ToastProvider>
     </QueryClientProvider>,
   )
-  return screen.findByText('4 pieces · below Restock level 6')
+  return screen.findByText('Below 6 · 4 in Stock')
 }
 
 beforeEach(() => vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(true))
@@ -66,9 +66,9 @@ describe('names and roles', () => {
     expect(use.textContent).toBe('')
     expect(use.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
-  it('says "below Restock level" in words, so the info tone is never the only signal', async () => {
+  it('says "Below 6" in words, so the info tone is never the only signal', async () => {
     await setup()
-    expect(screen.getByText('4 pieces · below Restock level 6')).toBeInTheDocument()
+    expect(screen.getByText('Below 6 · 4 in Stock')).toBeInTheDocument()
   })
   it('disables a Use button natively when there is no Stock, so it leaves the tab order', async () => {
     await setup()

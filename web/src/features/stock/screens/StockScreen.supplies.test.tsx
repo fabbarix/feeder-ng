@@ -68,16 +68,16 @@ describe('the Pantry by default (D6): Supplies beside food', () => {
     expect(within(utility).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('Dish soap'), expect.stringContaining('Toilet paper')])
     expect(within(await groupNamed(/^Kitchen Pantry, 2 Stock Lots/)).getByText('Rice')).toBeInTheDocument()
   })
-  it('a Supply row says its quantity and Restock level: "4 pieces · below Restock level 6" and "1.5 l · restocks below 1 l"', async () => {
+  it('a Supply row says its quantity and Restock level: "4 pieces · Below 6 · 4 in Stock" and "1.5 l · Restocks below 1 l"', async () => {
     setup()
     await groupNamed(/^Utility cupboard/)
-    await waitFor(() => expect(rowOf(/Toilet paper/)).toHaveTextContent('4 pieces · below Restock level 6'))
-    expect(rowOf(/Dish soap/)).toHaveTextContent('1.5 l · restocks below 1 l')
+    await waitFor(() => expect(rowOf(/Toilet paper/)).toHaveTextContent('4 pieces · Below 6 · 4 in Stock'))
+    expect(rowOf(/Dish soap/)).toHaveTextContent('1.5 l · Restocks below 1 l')
   })
   it('a Supply below its Restock level is marked info, not spoil; the other is not marked', async () => {
     setup()
     await groupNamed(/^Utility cupboard/)
-    await waitFor(() => expect(rowOf(/Toilet paper/)).toHaveTextContent('below Restock level'))
+    await waitFor(() => expect(rowOf(/Toilet paper/)).toHaveTextContent('Below 6 ·'))
     expect(rowOf(/Toilet paper/).querySelector('.list-row__meta')).toHaveAttribute('data-status', 'info')
     expect(rowOf(/Dish soap/).querySelector('.list-row__meta')).not.toHaveAttribute('data-status')
   })
@@ -161,7 +161,7 @@ describe('the Food or Supplies filter', () => {
     const row = await screen.findByRole('button', { name: 'Toilet paper, 1 Stock Lot' })
     expect(screen.queryByRole('button', { name: /^Rice/ })).toBeNull()
     const li = row.closest('li') as HTMLElement
-    await waitFor(() => expect(li).toHaveTextContent('1 Stock Lot · below Restock level 6'))
+    await waitFor(() => expect(li).toHaveTextContent('1 Stock Lot · Below 6 · 4 in Stock'))
     expect(li).toHaveTextContent('4 pieces')
     expect(li).not.toHaveTextContent(/good until|go-off|use soon/i)
   })

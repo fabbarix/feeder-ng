@@ -1,5 +1,5 @@
 // Pantry: frozen Leftovers in their Freezer group (U4). Pure.
-import { leftoverStrings, portionsLabel, useByPhrase } from '../../../lib/leftovers/copy'
+import { leftoverStrings } from '../../../lib/leftovers/copy'
 import { dayDiff } from '../../../lib/leftovers/dates'
 import { NOT_SORTED_PLACE, type Leftover } from '../../../lib/leftovers'
 import type { StockLot, StorageKind, StoragePlace } from '../types'
@@ -52,11 +52,6 @@ export function filterPantryLeftovers(leftovers: Leftover[], places: StoragePlac
     if (view.kinds.length > 0 && (place === null || !view.kinds.includes(place.kind))) return false
     return query === '' || fold(l.recipeName).includes(query)
   })
-}
-
-/** "Chilli", "3 portions · Use by 10 Feb". */
-export function pantryLeftoverText(l: Leftover, today: string): { title: string; meta: string } {
-  return { title: l.recipeName, meta: `${portionsLabel(l.portions)} · ${useByPhrase(l.useBy, today)}` }
 }
 
 /** The Stock Lot "Use soon" window: today and the three days after (the same rule as the Lots). */

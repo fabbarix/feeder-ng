@@ -35,7 +35,7 @@
  "couldntPlanTitle": "Couldn't plan",
  "leftoversTitle": "Leftovers to use",
  "leftoversOverline": "Leftovers",
- "leftoverRowMeta": "__fn__(portions, useBy) => `${portions} · ${useBy}`",
+ "leftoverRowMeta": "__fn__(portions, useBy) => `${useBy} · ${portions}`",
  "cookedCheer": "Cooked, nice one!",
  "swapTitle": "Swap for…",
  "swapAlternatives": "Alternatives",

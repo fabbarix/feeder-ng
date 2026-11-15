@@ -18,9 +18,9 @@ function setup(lot: StockLot, over: Partial<PantryLotRowProps> = {}) {
 }
 
 describe('PantryLotRow for a Supply', () => {
-  it('shows the quantity and the Restock level: "4 pieces · restocks below 6"', () => {
+  it('shows the quantity and the Restock level: "4 pieces · Restocks below 6"', () => {
     const { meta } = setup(makeSupplyLot({ quantity: 4 }), { restock: { level: 6, stock: 9 } })
-    expect(meta).toHaveTextContent('4 pieces · restocks below 6')
+    expect(meta).toHaveTextContent('4 pieces · Restocks below 6')
   })
   it('shows only the quantity when the Supply has no Restock level', () => {
     const { meta } = setup(makeSupplyLot({ quantity: 1 }))
@@ -38,17 +38,17 @@ describe('PantryLotRow for a Supply', () => {
   })
   it('a Supply below its Restock level is marked in words and with the info status, never spoil or danger', () => {
     const { meta } = setup(makeSupplyLot({ quantity: 2 }), { restock: { level: 6, stock: 2 } })
-    expect(meta).toHaveTextContent('2 pieces · below Restock level 6')
+    expect(meta).toHaveTextContent('2 pieces · Below 6 · 2 in Stock')
     expect(meta).toHaveAttribute('data-status', 'info')
   })
   it('at the level it is not marked', () => {
     const { meta } = setup(makeSupplyLot({ quantity: 6 }), { restock: { level: 6, stock: 6 } })
-    expect(meta).toHaveTextContent('6 pieces · restocks below 6')
+    expect(meta).toHaveTextContent('6 pieces · Restocks below 6')
     expect(meta).not.toHaveAttribute('data-status')
   })
   it('measures a liquid in its Base Unit', () => {
     const { meta } = setup(makeSupplyLot({ baseUnit: 'ml', quantity: 500 }), { restock: { level: 1000, stock: 1500 } })
-    expect(meta).toHaveTextContent('500 ml · restocks below 1 l')
+    expect(meta).toHaveTextContent('500 ml · Restocks below 1 l')
   })
   it('shows the Storage Place at the end when not grouped, as for food', () => {
     const { row } = setup(makeSupplyLot(), { placeName: 'Utility cupboard' })

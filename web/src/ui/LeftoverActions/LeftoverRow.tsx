@@ -30,7 +30,7 @@ export function LeftoverRow({ leftover, today, onAction, showPlace = true }: Lef
       meta={place ? `${row.text} · ${place}` : row.text}
       metaStatus={row.tone === 'info' ? undefined : row.tone}
       icon={row.icon}
-      trailing={entries.length > 0 ? <Menu label={`Actions for ${leftover.recipeName}`} items={entries} /> : undefined}
+      trailing={entries.length > 0 ? <Menu label={`Actions for ${leftover.recipeName}`} title={leftover.recipeName} items={entries} /> : undefined}
     />
   )
 }

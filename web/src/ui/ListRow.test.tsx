@@ -130,9 +130,9 @@ describe('ListRow whole-row target (plan 4.13: the row is the tap target)', () =
     expect(d.position).toBe('relative')
     expect(d['z-index']).toBe('1')
   })
-  it('only interactive content inside .list-row__trailing is lifted and clickable', () => {
+  it('only interactive content inside .list-row__trailing is lifted and clickable (B9-13, DS-01: scoped to the row’s own trailing slot)', () => {
     const lifted = ruleBlocks(css).filter(
-      (b) => b.selectors.every((s) => s.startsWith('.list-row__trailing ')) && /pointer-events\s*:\s*auto/.test(b.body) && /z-index\s*:\s*1\b/.test(b.body),
+      (b) => b.selectors.every((s) => s.startsWith('.list-row__trailing ') || s.startsWith('.list-row > .list-row__trailing ')) && /pointer-events\s*:\s*auto/.test(b.body) && /z-index\s*:\s*1\b/.test(b.body),
     )
     expect(lifted.length).toBeGreaterThan(0)
     for (const b of lifted) expect(b.selectors.join(','), 'targets interactive elements only').toMatch(/button|\ba\b|input|select|role/)

@@ -1,12 +1,11 @@
 // H7′: the Supplies group and the Restock reason of a Line (docs/dev/design/household-items.md §4.4). Plain TypeScript, no React.
-import { amountOfText } from '../../../lib/amountOf'
+import { restockReason } from '../../../lib/restock'
 import type { BaseUnit, UnitSystem } from '../../../lib/units'
 import type { ListEntry } from './lines'
 
 /**
- * The Restock reason of a Line, Stock of the Restock level, bare like the Scan rows: "2 of 6", "0 of 20" (no Stock at all,
- * float dust included). Metric g and ml name the unit once when both amounts share it ("200 of 500 ml") and keep both when
- * they do not ("800 g of 1.2 kg"); imperial always keeps both ("7.1 oz of 1 lb 2 oz"). The rule is lib/amountOf.
+ * The Restock reason of a Line (SSP-05, decision SSP 4; the rule is lib/restock): "Below 4 · 2 in Stock", or with `compact`
+ * "2 in Stock". A piece count is bare; g and ml read as formatQuantity ("Below 1 l · 400 ml in Stock").
  */
 export function restockText(
   restock: { level: number; stock: number },
@@ -14,7 +13,8 @@ export function restockText(
   system: UnitSystem,
   opts: { compact?: boolean } = {},
 ): string {
-  return amountOfText(restock.stock, restock.level, baseUnit, system, { compact: opts.compact })
+  const reason = restockReason(restock.stock, restock.level, baseUnit, system)
+  return opts.compact ? reason.compact : reason.long
 }
 
 /** The food entries and the Supply entries of a list, each in the order given. Does not mutate its input. */
