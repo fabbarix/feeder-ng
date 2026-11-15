@@ -29,6 +29,9 @@ const SHOW_SAVE_FAILED_TOAST = `(() => {
 })()`
 
 const BAR = `document.querySelector('[role="group"][aria-label="Recipe Assistant actions"]')`
+// A group by its accessible name: aria-label, or the text of its aria-labelledby (the TimeField's group is labelled by its label).
+const GROUP = (root, name) =>
+  `[...${root}.querySelectorAll('[role="group"]')].find((g) => (g.getAttribute('aria-label') || (g.getAttribute('aria-labelledby') && document.getElementById(g.getAttribute('aria-labelledby'))?.textContent.trim())) === ${JSON.stringify(name)})`
 
 export default {
   order: 340,
@@ -107,7 +110,7 @@ export default {
     async cookingTimes() {
       await until(`[...document.querySelectorAll('main h2')].some((h) => h.textContent.trim() === 'Cooking times') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Cooking times tile')
       const tile = `(() => [...document.querySelectorAll('main h2')].find((h) => h.textContent.trim() === 'Cooking times').closest('section'))()`
-      await until(`!!${tile}.querySelector('[role="group"][aria-label="Earliest start time"]') && !!${tile}.querySelector('[role="group"][aria-label="Latest start time"]')`, 'both time fields')
+      await until(`!!${GROUP(tile, 'Earliest start time')} && !!${GROUP(tile, 'Latest start time')}`, 'both time fields')
       const seen = await evaluate(`(() => {
         const t = ${tile}
         return { switches: [...t.querySelectorAll('[role="switch"]')].map((s) => s.getAttribute('aria-label') || s.getAttribute('aria-labelledby') && document.getElementById(s.getAttribute('aria-labelledby'))?.textContent.trim()), example: /can be planned for|can't be planned/.test(t.textContent), native: !!t.querySelector('input[type="time"], select') }
@@ -116,19 +119,19 @@ export default {
       if (seen.native) throw new Error('setup: the tile uses a native time input or select')
       // Latest start Off hides its field, On brings it back.
       await press(byText('[role="switch"]', 'Latest start'), 'the Latest start switch')
-      await until(`!${tile}.querySelector('[role="group"][aria-label="Latest start time"]')`, 'the Latest start field going away')
+      await until(`!${GROUP(tile, 'Latest start time')}`, 'the Latest start field going away')
       await press(byText('[role="switch"]', 'Latest start'), 'the Latest start switch again')
-      await until(`!!${tile}.querySelector('[role="group"][aria-label="Latest start time"]')`, 'the Latest start field coming back')
+      await until(`!!${GROUP(tile, 'Latest start time')}`, 'the Latest start field coming back')
       // Move the Earliest start to 23:00 with the arrow keys and Save: the Latest start (22:00) is now not later.
       await evaluate(`(() => {
-        const hour = ${tile}.querySelector('[role="group"][aria-label="Earliest start time"] [aria-label="Hour"]')
+        const hour = ${GROUP(tile, 'Earliest start time')}.querySelector('[aria-label="Hour"]')
         hour.focus()
         for (let i = 0; i < 17; i++) hour.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
       })()`)
       await press(byText('button', 'Save Cooking times'), 'Save Cooking times')
-      await until(`${tile}.querySelector('[role="group"][aria-label="Latest start time"]')?.getAttribute('aria-invalid') === 'true'`, 'the Latest start error')
+      await until(`${GROUP(tile, 'Latest start time')}?.getAttribute('aria-invalid') === 'true'`, 'the Latest start error')
       const err = await evaluate(`(() => {
-        const g = ${tile}.querySelector('[role="group"][aria-label="Latest start time"]')
+        const g = ${GROUP(tile, 'Latest start time')}
         const msg = g.closest('.ui-field')?.querySelector('.ui-field__error')
         const r = msg && msg.getBoundingClientRect(), bar = document.querySelector('nav.bottom-bar, nav[aria-label="Bottom bar"]')
         const barTop = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().top : window.innerHeight
