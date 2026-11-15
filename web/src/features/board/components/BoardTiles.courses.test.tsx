@@ -1,5 +1,5 @@
 // CRS F (spec 7.5): Tomorrow writes one line per slot. (The hero's Courses moved to BoardHeroTile.test.tsx, B9-47.)
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { CourseLike, NextAdvance, SlotLike } from '../types'

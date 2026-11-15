@@ -119,6 +119,7 @@ const ADDED = {
   // scan-price-keypad (scenarios/scan.mjs) is also a P43 scenario now: its setup shows a toast while the Price keypad is open.
   // B9-32: scenarios/b9-32.mjs (order 332): plan-grid (PC-11, PC-06, A11Y-08, A11Y-09) and plan-couldnt (PC-07); rules/P38-unique-names.mjs (A11Y-08).
   // B9-39: scenarios/b9-39.mjs (order 336): today-after-lunch (TB-01, TB-10, TB-15b: the hero at 14:44, the eyebrow, the ⋮ never over the name) and today-after-swap.
+  // B9-47: scenarios/b9-47.mjs (order 350): the Kitchen board on real screens (TB-04, TB-07, TB-08, TB-15c/d, SHORT-03, A11Y-12, RES-09): board-wall, board-portrait, board-short, board-phone (the board's share of the 375 bridge), board-close, board-error.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
@@ -139,6 +140,7 @@ const ADDED = {
     'timer-pill', 'timer-pill-editor',
     'shop-ticked', 'shop-focus-after-tick',
     'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',
+    'board-wall', 'board-portrait', 'board-short', 'board-phone', 'board-close', 'board-error',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',

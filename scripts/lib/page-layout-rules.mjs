@@ -51,6 +51,10 @@ export const SCENARIO_VIEWPORTS = {
   '1024x768': { width: 1024, height: 768, mobile: false },
   '1280x800': { width: 1280, height: 800, mobile: false },
   '1920x1080': { width: 1920, height: 1080, mobile: false },
+  // B9-47 (the Kitchen board's acceptance sizes): a wall tablet in landscape, a 2560 px wall display, and a portrait tablet.
+  '1180x820': { width: 1180, height: 820, mobile: false },
+  '2560x1440': { width: 2560, height: 1440, mobile: false },
+  '820x1180': { width: 820, height: 1180, mobile: false },
 }
 
 // B9-03: a scenario module that names a viewport this table lacks fails on load, not halfway through a run.
