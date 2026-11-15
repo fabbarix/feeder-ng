@@ -73,6 +73,6 @@ export default {
   key: 'sheetMetrics',
   order: 200,
   soft: true,
-  scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400'],
+  scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'bottom-bar'],
   source,
 }

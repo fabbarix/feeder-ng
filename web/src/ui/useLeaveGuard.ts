@@ -3,6 +3,7 @@
 // or a closed tab is covered by the reload draft (lib/drafts). Needs a data router and a ConfirmProvider.
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useBlocker, type BlockerFunction } from 'react-router-dom'
+import { useReportUnsavedChanges } from './lib/unsavedChanges'
 import { useConfirm, type ConfirmOptions } from './ConfirmDialog'
 
 export interface LeaveGuardOptions {
@@ -72,6 +73,7 @@ function pageTitle(): HTMLElement | null {
 
 export function useLeaveGuard(dirty: boolean, { what, isNew, onDiscard, lead, note }: LeaveGuardOptions): LeaveGuard {
   const confirmApi = useConfirm()
+  useReportUnsavedChanges(dirty) // B9-31: every guarded editor holds the "new version" prompt while dirty
   const dirtyRef = useRef(dirty)
   const bypassing = useRef(false)
   const asking = useRef(false)

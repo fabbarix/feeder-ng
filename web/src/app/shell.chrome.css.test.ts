@@ -48,15 +48,17 @@ const VISUALLY_HIDDEN = (d: Record<string, string>) => {
 }
 
 describe('DS-02 / R-F: one squircle system in the bottom bar', () => {
-  it('every link is the whole track: stretched, no fill, no shadow, the button radius (the focus ring follows the whole target)', () => {
+  it('every link is the whole track: stretched, no fill, no shadow, the button radius (the focus ring is on the squircle, below)', () => {
     for (const sel of ['.bottom-bar__link', ".bottom-bar__link[aria-current='page']", ".bottom-bar__link[data-accent='true']"]) {
       const d = at(sel)
       expect(d['align-self'], sel).toBe('stretch')
       expect(d['justify-self'], sel).toBe('stretch')
-      expect(d['inline-size'], sel).toBe('100%')
+      // B9-19 review: auto, so the link fills its track plus the half-gap margins (it was 100%, which a negative margin cannot widen).
+      expect(d['inline-size'], sel).toBe('auto')
       expect(d['block-size'], sel).toBe('auto')
       expect(d['min-width'], sel).toBe('0')
-      expect(d['gap'], sel).toBe('2px')
+      // USER w2c: 6 px, so the current Scan's outline (4 px outside its squircle) keeps 2 px off the label (DS-11: tokens, never raw px).
+      expect(d['gap'], sel).toBe('calc(var(--space-1) + var(--space-half))')
       expect(d['background'], sel).toBe('none')
       expect(d['box-shadow'], sel).toBe('none')
       expect(d['border-radius'], sel).toBe('var(--radius-button)')
@@ -79,10 +81,17 @@ describe('DS-02 / R-F: one squircle system in the bottom bar', () => {
     expect(at('.bottom-bar__icon')['background']).toBeUndefined() // the others are a bare muted icon
   })
 
-  it('Scan, when it is the current page, keeps its accent fill with no ring, and its label turns accent text', () => {
+  // USER (w2c): the current Scan also gets an outer 2 px outline in the selected-ring colour, 2 px off its squircle (1 px in the 52 px bar).
+  it('Scan, when it is the current page, keeps its accent fill, gets an outer 2 px selected-ring ring 2 px off the squircle, and its label turns accent text', () => {
     expect(at(".bottom-bar__link[data-accent='true']")['color']).toBe('var(--color-text)') // the label under Scan
     expect(at(".bottom-bar__link[data-accent='true'][aria-current='page']")['color']).toBe('var(--color-accent-text)')
-    expect(at(".bottom-bar__link[data-accent='true'][aria-current='page'] .bottom-bar__icon")['background'] ?? 'var(--color-accent)').toBe('var(--color-accent)')
+    const icon = at(".bottom-bar__link[data-accent='true'][aria-current='page'] .bottom-bar__icon")
+    expect(icon['background'] ?? 'var(--color-accent)').toBe('var(--color-accent)')
+    // box-shadow spreads (surface gap, then the ring), so the focus ring (the squircle's outline) shows with it when Scan is also focused
+    expect(icon['box-shadow']).toBe('0 0 0 var(--space-half) var(--color-surface), 0 0 0 calc(2 * var(--space-half)) var(--selected-ring)')
+    expect(at(".bottom-bar__link[data-accent='true'][aria-current='page'] .bottom-bar__icon", SHORT_NARROW)['box-shadow']).toBe('0 0 0 calc(var(--space-half) / 2) var(--color-surface), 0 0 0 calc(3 * var(--space-half) / 2) var(--selected-ring)')
+    expect(at(".bottom-bar__icon")['outline']).toBeUndefined() // no squircle has an outline at rest
+    expect(at(".bottom-bar__icon")['box-shadow']).toBeUndefined()
     expect(css).not.toMatch(/0 0 0 3px var\(--color-soft\)[^}]*bottom-bar/)
   })
 
@@ -90,15 +99,39 @@ describe('DS-02 / R-F: one squircle system in the bottom bar', () => {
     expect(at(".bottom-bar__link[aria-current='page']")['color']).toBe('var(--color-accent-text)')
   })
 
-  it('B9-07 kept: a link rings inside itself with the inner width, so a focused link never overruns its neighbour; the ring is the normal ring colour on every link (the accent fill moved to the span, so the on-accent colour would vanish on the bar)', () => {
-    const d = at('.bottom-bar__link:focus-visible')
-    expect(d['outline']).toBe('var(--focus-ring-inner-width) solid var(--focus-ring-color)')
-    expect(d['outline-offset']).toBe('calc(-1 * var(--focus-ring-inner-width))')
-    expect(at(".bottom-bar__link[data-accent='true']")['--focus-ring-color']).toBeUndefined()
+  // USER (w2c): keyboard focus rings the icon only: a 2 px ring inside the 40 px squircle's edge, never round the link (which touched
+  // the labels and the neighbours at 376 to 389 px); the focused item's label turns accent text. On Scan's accent fill the ring is the
+  // on-accent colour, 2 px further in, so the current outline outside and the focus ring inside never fuse.
+  it('focus rings the 40 px squircle from inside (2 px), never the link, and the focused label turns accent text; on Scan it is on-accent, 2 px further in', () => {
+    const link = at('.bottom-bar__link:focus-visible')
+    expect(link['outline']).toBe('none')
+    expect(link['color']).toBe('var(--color-accent-text)')
+    const icon = at('.bottom-bar__link:focus-visible .bottom-bar__icon')
+    expect(icon['outline']).toBe('var(--focus-ring-inner-width) solid var(--focus-ring-color)')
+    expect(icon['outline-offset']).toBe('calc(-1 * var(--focus-ring-inner-width))')
+    const scan = at(".bottom-bar__link[data-accent='true']:focus-visible .bottom-bar__icon")
+    expect(scan['--focus-ring-color']).toBe('var(--color-on-accent)')
+    expect(scan['outline-offset']).toBe('calc(-2 * var(--focus-ring-inner-width))')
+    expect(at('.bottom-bar__link:focus-visible', SHORT_NARROW)['outline-offset']).toBeUndefined()
   })
 
   it('B9-07 kept: scroll padding above the bars leaves the focused control a small gap', () => {
     expect(at('html')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1))')
+  })
+})
+
+describe('B9-19 review: the bar link and its focus ring', () => {
+  const LINKS = ['.bottom-bar__link', ".bottom-bar__link[aria-current='page']", ".bottom-bar__link[data-accent='true']"]
+  it('a link starts 4 px under the bar border (down to the bottom border), and reaches halfway into the 2 px gap on each side (neighbours meet, never overlap)', () => {
+    expect(at('.bottom-bar')['column-gap']).toBe('var(--space-half)')
+    for (const sel of LINKS) {
+      expect(at(sel)['margin-block'], sel).toBe('var(--space-1) 0')
+      expect(at(sel)['margin-inline'], sel).toBe('calc(var(--space-half) / -2)')
+    }
+  })
+  it('in the gapless narrow band the links are exactly their tracks, 4 px in from the border top and bottom (the squircle centred), the current link and Scan included', () => {
+    for (const sel of LINKS) expect(at(sel, [NARROW])['margin'], sel).toBe('var(--space-1) 0')
+    for (const sel of LINKS) expect(at(sel, SHORT_NARROW)['margin'], sel).toBe('0')
   })
 })
 
@@ -114,7 +147,7 @@ describe('A1: icons only at 375 px and below (width < 23.5em)', () => {
     const d = at('.bottom-bar', [NARROW])
     expect(d['left']).toBe('calc(var(--space-1) + env(safe-area-inset-left, 0px))')
     expect(d['right']).toBe('calc(var(--space-1) + env(safe-area-inset-right, 0px))')
-    expect(d['padding-inline']).toBe('6px')
+    expect(d['padding-inline']).toBe('calc(var(--space-1) + var(--space-half))') // 6 px (DS-11)
     expect(d['column-gap']).toBe('0')
   })
 
@@ -134,7 +167,7 @@ describe('SHORT-04: short narrow, a phone window under 500 px tall and under 600
   it('the bar is 52 px tall with an 8 px inset, 6 px of inline padding and no gap', () => {
     expect(at(':root', SHORT_NARROW)).toMatchObject({ '--nav-height': '52px', '--nav-inset': '8px' })
     const d = at('.bottom-bar', SHORT_NARROW)
-    expect(d['padding-inline']).toBe('6px')
+    expect(d['padding-inline']).toBe('calc(var(--space-1) + var(--space-half))') // 6 px (DS-11)
     expect(d['column-gap']).toBe('0')
   })
 
@@ -208,14 +241,14 @@ describe('SHORT-04 / SHORT 1: a 64 px compact rail in phone landscape (height < 
     const pill = at('.side-rail__pill', COMPACT)
     expect(pill['width'] ?? pill['inline-size']).toBe('44px')
     expect(pill['height'] ?? pill['block-size']).toBe('26px')
-    expect(pill['border-radius']).toBe('13px')
+    expect(pill['border-radius']).toBe('var(--radius-pill)') // 13 px on the 26 px box (DS-11)
     expect(at(".side-rail__link[aria-current='page'] .side-rail__pill", COMPACT)['background']).toBe('var(--color-soft)')
   })
 
   it('Scan is a 56 x 44 rounded rectangle (radius 14; 56 x 40 under 360 px tall) in the accent fill, never stretched, and has no ring when current', () => {
     const scan = at(".side-rail__link[data-accent='true']", COMPACT)
     expect(scan['background']).toBe('var(--color-accent)')
-    expect(scan['border-radius']).toBe('14px')
+    expect(scan['border-radius']).toBe('var(--radius-control)') // 14 px (DS-11)
     expect(scan['width'] ?? scan['inline-size']).toBe('56px')
     expect(scan['height'] ?? scan['block-size']).toBe('44px')
     const short = at(".side-rail__link[data-accent='true']", [...COMPACT, '(max-height: 359px)'])
@@ -298,5 +331,24 @@ describe('the clearance tokens other packages read (B9-18 Toast, B9-25 timers, B
     expect(root['--nav-height']).toBe('70px')
     expect(root['--nav-inset']).toBe('12px')
     expect(root['--nav-top']).toMatch(/var\(--nav-height\).*var\(--nav-inset\).*env\(safe-area-inset-bottom/)
+  })
+})
+
+// USER (w2c): on the rails the ring stays where it is clean; Scan's ring is inside its accent fill (on-accent); the compact rail rings the
+// icon capsule from inside and turns the focused label accent text.
+describe('USER w2c: rail focus rings', () => {
+  const COMPACT = ['(max-height: 499px)', '(min-width: 37.5em)', '(width < 64em)']
+  it("Scan's ring is drawn inside its accent fill, on-accent, 2 px in", () => {
+    const d = at(".side-rail__link[data-accent='true']:focus-visible")
+    expect(d['--focus-ring-color']).toBe('var(--color-on-accent)')
+    expect(d['outline']).toBe('var(--focus-ring-inner-width) solid var(--focus-ring-color)')
+    expect(d['outline-offset']).toBe('calc(-2 * var(--focus-ring-inner-width))')
+  })
+  it('the compact rail rings the icon capsule from inside, never the link, and the focused label turns accent text', () => {
+    expect(at('.side-rail__link:focus-visible', COMPACT)['outline']).toBe('none')
+    expect(at(".side-rail__link:focus-visible:not([data-accent='true'])", COMPACT)['color']).toBe('var(--color-accent-text)')
+    const pill = at('.side-rail__link:focus-visible .side-rail__pill', COMPACT)
+    expect(pill['outline']).toBe('var(--focus-ring-inner-width) solid var(--focus-ring-color)')
+    expect(pill['outline-offset']).toBe('calc(-1 * var(--focus-ring-inner-width))')
   })
 })

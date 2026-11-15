@@ -80,7 +80,7 @@ describe("B9-13's drop-in", () => {
   })
 })
 
-describe("w2a's drop-in (rulings: P36 on Your preferences until B9-19, P41 on Scan until B9-41)", () => {
+describe("w2a's drop-in (rulings: P41 on Scan until B9-41; P36 on Your preferences was removed in w2c, B9-19's 44 px Your menu button)", () => {
   const dir = resolve(cwd, '../scripts/check-page-layout.modes.d')
   const own = readFileSync(resolve(dir, '30-b9-w2a-warn'), 'utf8')
   const base = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
@@ -89,16 +89,13 @@ describe("w2a's drop-in (rulings: P36 on Your preferences until B9-19, P41 on Sc
     .sort()
     .map((n) => readFileSync(resolve(dir, n), 'utf8'))
     .join('\n')}`
-  it('is the two lines P36@/settings/preferences until B9-19 and P41@/scan until B9-41, and no whole route', () => {
+  it('is the one line P41@/scan until B9-41 (B9-19 landed, so its P36 line is gone), and no whole route', () => {
     expect(rules.parseModes(own).errors).toEqual([])
-    expect(rules.parseModes(own).ruleWarn).toEqual([
-      { rule: 'P36', pattern: '/settings/preferences', until: 'B9-19' },
-      { rule: 'P41', pattern: '/scan', until: 'B9-41' },
-    ])
+    expect(rules.parseModes(own).ruleWarn).toEqual([{ rule: 'P41', pattern: '/scan', until: 'B9-41' }])
     expect(own).not.toMatch(/^\s*(warn_routes|fail_routes|default|width)\b/m)
   })
-  it('covers P36 in the touch-targets-controls scenario and nothing else there or on other Settings pages', () => {
-    expect(rules.ruleWarnFor(all, 'P36', '/settings/preferences#touch-targets-controls')).not.toBeNull()
+  it('P36 on Your preferences fails again (touch-targets-controls), and nothing else there or on other Settings pages is warned', () => {
+    expect(rules.ruleWarnFor(all, 'P36', '/settings/preferences#touch-targets-controls')).toBeNull()
     expect(rules.ruleWarnFor(all, 'P1', '/settings/preferences#touch-targets-controls')).toBeNull()
     expect(rules.ruleWarnFor(all, 'P36', '/settings/household')).toBeNull()
     expect(rules.modeFor(all, '/settings/preferences')).toBe('fail')

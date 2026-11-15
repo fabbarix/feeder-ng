@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PICKED_ID } from '../../../ui/ImagePicker/fake.test-helper'
 import { flour, garlic } from '../fixtures.test-helper'
@@ -19,11 +19,13 @@ vi.mock('../../../ui', async (orig) => ({
 }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter, safeEditorFields } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const step = (key: string, image = '') => ({ key, text: key, kind: 'active', durationMinutes: '5', leadTimeMinutes: '', after: [], uses: [], image })
 
 beforeEach(() => {
   h.editor = {
+    ...safeEditorFields(),
     draft: { ...emptyDraft(), name: 'Aioli', image: 'cover1', steps: [step('s1', 'one'), step('s2')] },
     setDraft: vi.fn(), errors: {}, saving: false, isLoading: false, unitPrompt: null,
     save: vi.fn(), answerUnitPrompt: vi.fn(), dismissUnitPrompt: vi.fn(),
@@ -33,9 +35,9 @@ beforeEach(() => {
 const view = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter>
-        <RecipeEditorScreen />
-      </MemoryRouter>
+      <EditorRouter>
+        <Route path="*" element={<RecipeEditorScreen />} />
+      </EditorRouter>
     </QueryClientProvider>,
   )
 

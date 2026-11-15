@@ -84,3 +84,14 @@ describe('StickyActionBar.css, floating only while it has something to do (SHORT
     }
   })
 })
+
+// w2c: the short-viewport padding (8 px, a 62 px bar) must come after the base rule's 12 px, or the base rule wins at equal specificity.
+describe('SHORT-04: the short bar is 62 px', () => {
+  it('the max-height: 499px padding rule comes after the base .sticky-action-bar rule', () => {
+    const css = readUiCss('StickyActionBar.css').replace(/\/\*[\s\S]*?\*\//g, '')
+    const base = css.search(/\n\.sticky-action-bar \{/)
+    const short = css.indexOf('@media (max-height: 499px)')
+    expect(base).toBeGreaterThan(-1)
+    expect(short).toBeGreaterThan(base)
+  })
+})

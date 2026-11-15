@@ -1,44 +1,47 @@
-import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useCallback, useEffect, useId, useMemo, useRef, type ReactNode, type RefObject } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { BentoGrid, Button, PageHeader, Tile } from '../../../ui'
+import { BentoGrid, Button, DetailList, DetailRow, PageHeader, Tile } from '../../../ui'
 import { TakeOverDialog } from '../../recipes/components/TakeOverDialog'
-import { AgentPromptStep } from '../components/AgentPromptStep'
 import { BaseRecipeLineTile } from '../components/BaseRecipeLineTile'
 import { ConfirmProblemTile } from '../components/ConfirmProblemTile'
-import { ConfirmTile } from '../components/ConfirmTile'
 import { ConvertBaseDialog } from '../components/ConvertBaseDialog'
 import { CourseMatchTile } from '../components/CourseMatchTile'
 import { ImageWarningsTile } from '../components/ImageWarningsTile'
+import { ImportBar } from '../components/ImportBar'
 import { ImportFollowUps } from '../components/ImportFollowUps'
-import { ImportSource } from '../components/ImportSource'
-import { IngredientMatchTile } from '../components/IngredientMatchTile'
+import { ImportResult } from '../components/ImportResult'
+import { ImportReviewNotice } from '../components/ImportReviewNotice'
+import { IngredientMatchList } from '../components/IngredientMatchList'
 import { ReadNote } from '../components/ReadNote'
 import { ReadRecipeStep } from '../components/ReadRecipeStep'
-import { RecipeConflictTile } from '../components/RecipeConflictTile'
+import { RecipeFileTile } from '../components/RecipeFileTile'
+import { RecipePreviewList } from '../components/RecipePreviewList'
 import { ReviewPhotoChoice } from '../components/ReviewPhotoChoice'
+import { StartOverButton } from '../components/StartOverButton'
 import { TakeOverQuestion } from '../components/TakeOverQuestion'
-import { UnitPromptTile } from '../components/UnitPromptTile'
 import { ValidationErrorsTile } from '../components/ValidationErrorsTile'
 import { useBaseRecipeLines, type UseBaseRecipeLines } from '../hooks/useBaseRecipeLines'
 import { useImportCourses } from '../hooks/useImportCourses'
 import { useImportReview } from '../hooks/useImportReview'
+import { useQuestionJump } from '../hooks/useQuestionJump'
 import { useReadAvailability } from '../hooks/useReadAvailability'
 import { usePhotoReadEnd } from '../hooks/usePhotoReadEnd'
 import { useRecipeRead } from '../hooks/useRecipeRead'
-import { confirmNeedsAnswer, genericProblems, standaloneAsks } from '../lib/baseRecipeLines'
+import { genericProblems, standaloneAsks } from '../lib/baseRecipeLines'
 import { hasFollowUps } from '../lib/confirmFollowUps'
 import { questionRows, splitProblems, usedByRecipes } from '../lib/courseRows'
-import { canConfirm, openCount } from '../lib/reviewSummary'
+import { answersGiven, courseRowId, openQuestions, reviewCounts, takeOverRowId } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
 import type { Plan } from '../types'
 import { MAX_COURSES } from '../../../lib/courses'
 import '../import.css'
 
 /**
- * Route /recipes/import: four numbered steps. 1: Read a recipe (Recipe Assistant: page, text or photo). 2: the Agent Prompt.
- * 3: the Recipe File (FileDrop or pasted JSON). 4: the review (from useImportReview): a tile per open question (Ingredient match, Unit Conversion, Recipe conflict),
- * image warnings, and the sticky Confirm bar. Phase 'done' says what was imported. All state comes from useImportReview.
+ * Route /recipes/import (RX-01, RX-11, RX-12). Before a review: two paths, "Read a recipe" (the Recipe Assistant) and "Import a Recipe File",
+ * the File first when the Recipe Assistant is unavailable. While reviewing: the notice, the Recipes, the Base recipe lines and Courses, the
+ * Ingredients, the image warnings and the photo choice, with the sticky "Import actions" bar; "Start over" in the header. When done: the
+ * result, naming each Recipe. All state comes from useImportReview; the questions and their order from lib/reviewSummary.
  */
 export function ImportScreen(): ReactNode {
   const r = useImportReview()
@@ -54,10 +57,10 @@ export function ImportScreen(): ReactNode {
   const baseLines = useBaseRecipeLines({ plan: r.plan, onAnswer: r.chooseBaseRecipeLine })
   const readNoteId = useId()
   const readHeading = useRef<HTMLHeadingElement>(null)
-  const reviewHeading = useRef<HTMLHeadingElement>(null)
+  const reviewStart = useRef<HTMLDivElement>(null)
   const { hash } = useLocation()
 
-  // The Recipes More sheet links to #read: land on the step's heading.
+  // The Recipes More sheet links to #read: land on the Read a recipe heading.
   useEffect(() => {
     if (hash !== '#read') return
     const heading = readHeading.current
@@ -65,20 +68,20 @@ export function ImportScreen(): ReactNode {
     heading?.focus({ preventScroll: true })
   }, [hash])
 
-  // BR-E: "Read Béchamel now" lands on the Read step's heading, which says which Base recipe the read is for.
+  // BR-E: "Read Béchamel now" lands on the Read a recipe heading, which says which Base recipe the read is for.
   const readNextFor = r.readNextFor
   useEffect(() => {
     if (readNextFor) readHeading.current?.focus({ preventScroll: true })
   }, [readNextFor])
 
-  // A finished read opens the review below the fold on a phone: move focus there so the result is not missed. A file does not.
+  // A finished read opens the review where the read was: move focus to the review's start so the result is not missed. A file does not.
   const fromRead = r.readNote !== undefined
   const reviewing = r.phase === 'reviewing'
   const wasReviewing = useRef(false)
   useEffect(() => {
     if (reviewing && !wasReviewing.current && fromRead) {
-      reviewHeading.current?.scrollIntoView?.({ block: 'start' })
-      reviewHeading.current?.focus({ preventScroll: true })
+      reviewStart.current?.scrollIntoView?.({ block: 'start' })
+      reviewStart.current?.focus({ preventScroll: true })
     }
     wasReviewing.current = reviewing
   }, [reviewing, fromRead])
@@ -92,64 +95,47 @@ export function ImportScreen(): ReactNode {
     wasBusy.current = busy
   }, [busy, refreshStatus])
 
+  const readFirst = availability.loading || availability.enabled
+  const readTile =
+    r.phase === 'source' ? (
+      <ReadRecipeStep
+        key="read"
+        read={read}
+        availability={availability}
+        headingRef={readHeading}
+        headingDescribedBy={r.readNextFor ? readNoteId : undefined}
+        photosFinished={photosFinished}
+      />
+    ) : null
+  const fileTile = <RecipeFileTile key="file" busy={r.busy} onSubmit={(text) => void r.open(text)} />
+
   return (
     <section className="import-screen">
-      <PageHeader title={s.importTitle} breadcrumbs={useBreadcrumbs()} />
+      <PageHeader
+        title={s.importTitle}
+        breadcrumbs={useBreadcrumbs()}
+        actions={reviewing ? <StartOverButton answered={answersGiven(r.decisions)} onStartOver={() => void r.reset()} /> : undefined}
+      />
       {r.error ? <ValidationErrorsTile error={r.error} /> : null}
-      {r.phase === 'done' ? (
+      {r.phase === 'done' && r.result ? (
         <>
-          <Tile as="section" className="import-done">
-            <p>{s.done(r.result?.recipes.length ?? 0)}</p>
-            {(r.result?.coursesCreated ?? 0) > 0 ? <p>{s.courses.created(r.result?.coursesCreated ?? 0)}</p> : null}
-            {(r.result?.coursesUnarchived ?? 0) > 0 ? <p>{s.courses.unarchived(r.result?.coursesUnarchived ?? 0)}</p> : null}
-            <Link className="button" data-variant="primary" data-size="md" to="/recipes">
-              {s.openRecipes}
-            </Link>
-            <Button variant="secondary" onClick={() => void r.reset()}>
-              {s.startOver}
-            </Button>
-          </Tile>
-          {r.result && hasFollowUps(r.result) ? <ImportFollowUps result={r.result} onReadNext={(target) => void r.startReadNext(target)} /> : null}
+          <ImportResult result={r.result} plan={r.plan ?? emptyPlan} onImportMore={() => void r.reset()} />
+          {hasFollowUps(r.result) ? <ImportFollowUps result={r.result} onReadNext={(target) => void r.startReadNext(target)} /> : null}
         </>
-      ) : (
+      ) : null}
+      {r.phase === 'source' ? (
         <>
-          {r.phase === 'source' && r.readNextFor ? (
+          {r.readNextFor ? (
             <p id={readNoteId} className="read-step__muted">
               {s.baseRecipes.readingFor(r.readNextFor.name)}
             </p>
           ) : null}
-          {r.phase === 'source' ? (
-            <ReadRecipeStep
-              read={read}
-              availability={availability}
-              headingRef={readHeading}
-              headingDescribedBy={r.readNextFor ? readNoteId : undefined}
-              photosFinished={photosFinished}
-            />
-          ) : null}
-          <AgentPromptStep step={r.phase === 'source' ? 2 : 1} />
-          {r.phase === 'source' ? <ImportSource busy={r.busy} onSubmit={(text) => void r.open(text)} /> : null}
-          <Tile as="section" className="import-review" overline={s.stepOverline(r.phase === 'source' ? 4 : 2)}>
-            <h2 ref={reviewHeading} tabIndex={-1}>
-              {s.stepThreeTitle}
-            </h2>
-            {r.phase === 'reviewing' && r.plan ? (
-              <Reviewing plan={r.plan} stale={r.stale} screen={r} courses={courses} baseLines={baseLines} />
-            ) : (
-              <p className="import-review__empty">{s.reviewEmpty}</p>
-            )}
-          </Tile>
-          {r.phase === 'reviewing' && r.plan ? (
-            <ConfirmTile
-              canConfirm={canConfirm(r.plan, r.busy)}
-              busy={r.busy}
-              open={openCount(r.plan)}
-              needs={confirmNeedsAnswer(r.plan)}
-              onConfirm={() => void r.confirm()}
-            />
-          ) : null}
+          <div className="import-start-frame">
+            <div className="import-start">{readFirst ? [readTile, fileTile] : [fileTile, readTile]}</div>
+          </div>
         </>
-      )}
+      ) : null}
+      {reviewing && r.plan ? <Reviewing plan={r.plan} stale={r.stale} screen={r} courses={courses} baseLines={baseLines} startRef={reviewStart} /> : null}
       <ConvertBaseDialog
         state={baseLines.convert}
         canConfirm={baseLines.canConfirmConvert}
@@ -168,60 +154,71 @@ export function ImportScreen(): ReactNode {
   )
 }
 
+const emptyPlan: Plan = { ingredients: [], unitPrompts: [], recipes: [], courses: [], baseRecipeLines: [], takeOvers: [], problems: [], warnings: [], ready: false }
+
 interface ReviewingProps {
   plan: Plan
   stale: boolean
   screen: ReturnType<typeof useImportReview>
   courses: ReturnType<typeof useImportCourses>
   baseLines: UseBaseRecipeLines
+  /** The start of the review, which takes focus after a read. */
+  startRef: RefObject<HTMLDivElement | null>
 }
 
-function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps): ReactNode {
-  // CRS E2: the too_many_courses Problem and a refused Course answer are inline danger Tiles beside the Course tiles; each follows its
-  // state. The other Problems stay in the generic list. BR-E: a Problem on a Base recipe line is shown on that line's tile.
+function Reviewing({ plan, stale, screen, courses, baseLines, startRef }: ReviewingProps): ReactNode {
+  const root = useRef<HTMLDivElement>(null)
+  const questions = useMemo(() => openQuestions(plan), [plan])
+  const jump = useQuestionJump(root, questions)
+  const counts = reviewCounts(plan)
+  // CRS E2: the too_many_courses Problem and a refused Course answer sit beside the Course tiles; the other Problems stay in the generic list.
+  // BR-E: a Problem on a Base recipe line is shown on that line's tile.
   const { courseLimit, others } = splitProblems(plan.problems)
+  const problems = genericProblems(plan, others)
   const names = questionRows(plan.courses)
   const forbidden = screen.courseForbidden
   const limited = courseLimit !== undefined
   // A take-over ask whose Base recipe has no line of its own (an exported Base recipe imported on its own) gets its own tile.
   const asks = standaloneAsks(plan)
   return (
-    <>
+    <div ref={root} className="import-review">
+      <div ref={startRef} tabIndex={-1} className="import-review__start">
+        <ImportReviewNotice
+          recipes={counts.recipes}
+          ingredients={counts.ingredients}
+          questions={questions.length}
+          allSkipped={plan.recipes.length > 0 && counts.recipes === 0}
+          onGoToFirst={jump.goToFirst}
+        />
+      </div>
       <ConfirmProblemTile problem={screen.confirmProblem} />
-      {screen.readNote ? <ReadNote note={screen.readNote} /> : null}
       {stale ? (
-        <Tile variant="status" status="danger" role="alert" as="section">
+        <Tile variant="status" status="warn" role="alert" as="section">
           <p>{s.stale}</p>
           <Button variant="secondary" onClick={() => void screen.reset()}>
             {s.startOver}
           </Button>
         </Tile>
       ) : null}
-      {genericProblems(plan, others).length > 0 ? (
-        <Tile variant="status" status="spoil" as="section">
-          <h3>{s.errorsTitle}</h3>
-          <ul className="import-list">
-            {genericProblems(plan, others).map((p, i) => (
-              <li key={`${p.path}-${i}`}>
-                <code>{p.path}</code> {p.message}
-              </li>
+      {problems.length > 0 ? (
+        <Tile variant="status" status="warn" as="section">
+          <h2>{s.errorsTitle}</h2>
+          <DetailList tone="warn">
+            {problems.map((p, i) => (
+              <DetailRow key={`${p.path}-${i}`} label={<code>{p.path}</code>} detail={p.message} />
             ))}
-          </ul>
+          </DetailList>
         </Tile>
       ) : null}
-      <section aria-label={s.ingredientsTitle}>
-        <BentoGrid min="card">
-          {plan.ingredients.map((m) => (
-            <IngredientMatchTile key={m.key} match={m} onUseExisting={(id) => screen.chooseExisting(m.key, id)} onCreate={(opts) => screen.chooseCreate(m.key, opts)} />
-          ))}
-        </BentoGrid>
-      </section>
+      {screen.readNote ? <ReadNote note={screen.readNote} /> : null}
+      <RecipePreviewList recipes={plan.recipes} onChoose={screen.chooseRecipeAction} />
       {plan.baseRecipeLines.length > 0 || asks.length > 0 ? (
         <section aria-label={s.baseRecipes.title}>
           <BentoGrid min="card">
             {baseLines.rows.map((row) => (
               <BaseRecipeLineTile
                 key={row.path}
+                question={row.path}
                 row={row}
                 ask={baseLines.askFor(row.path)}
                 problems={plan.problems}
@@ -232,33 +229,27 @@ function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps):
               />
             ))}
             {asks.map((ask) => (
-              <TakeOverQuestion key={ask.path} ask={ask} onTakeOver={(yes) => screen.chooseTakeOver(ask.path, yes)} />
+              <TakeOverQuestion key={ask.path} question={takeOverRowId(ask.path)} ask={ask} onTakeOver={(yes) => screen.chooseTakeOver(ask.path, yes)} />
             ))}
           </BentoGrid>
         </section>
       ) : null}
-      {plan.unitPrompts.length > 0 ? (
-        <BentoGrid min="card" label={s.unitsTitle}>
-          {plan.unitPrompts.map((p) => (
-            <UnitPromptTile key={`${p.key}-${p.unit}`} prompt={p} onAnswer={(toBase) => screen.answerConversion(p.key, p.unit, toBase)} />
-          ))}
-        </BentoGrid>
-      ) : null}
       {names.length > 0 || limited || forbidden ? (
         <BentoGrid min="card" label={s.courses.title}>
           {limited ? (
-            <Tile variant="status" status="danger" role="alert" as="section">
+            <Tile variant="status" status="warn" role="alert" as="section">
               <p>{s.courses.tooMany(MAX_COURSES)}</p>
             </Tile>
           ) : null}
           {forbidden ? (
-            <Tile variant="status" status="danger" role="alert" as="section">
+            <Tile variant="status" status="warn" role="alert" as="section">
               <p>{s.courses.forbidden}</p>
             </Tile>
           ) : null}
           {names.map((m) => (
             <CourseMatchTile
               key={m.key}
+              question={courseRowId(m.key)}
               match={m}
               usedBy={usedByRecipes(m.usedBy, plan.recipes)}
               courses={courses.courses}
@@ -271,11 +262,7 @@ function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps):
           ))}
         </BentoGrid>
       ) : null}
-      {plan.recipes
-        .filter((r) => r.status === 'conflict')
-        .map((r) => (
-          <RecipeConflictTile key={r.index} recipe={r} onChoose={(action) => screen.chooseRecipeAction(r.index, action)} />
-        ))}
+      <IngredientMatchList plan={plan} onUseExisting={screen.chooseExisting} onCreate={screen.chooseCreate} onAnswerConversion={screen.answerConversion} />
       <ImageWarningsTile warnings={plan.warnings.filter((w) => w.code === 'image_failed')} />
       {screen.reviewId ? (
         <ReviewPhotoChoice
@@ -288,6 +275,7 @@ function Reviewing({ plan, stale, screen, courses, baseLines }: ReviewingProps):
           onRecipe={screen.choosePhotoRecipe}
         />
       ) : null}
-    </>
+      <ImportBar recipes={counts.recipes} questions={questions.length} busy={screen.busy} onNext={jump.next} onFirst={jump.goToFirst} onImport={() => void screen.confirm()} />
+    </div>
   )
 }

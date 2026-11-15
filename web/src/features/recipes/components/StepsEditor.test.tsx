@@ -105,7 +105,10 @@ describe('StepsEditor', () => {
 
   it('shows the message for a Step error', () => {
     render(<StepsEditor {...props([step({ kind: 'passive', durationMinutes: '' })], { errors: { 'steps.0.durationMinutes': 'passive_needs_duration' } })} />)
-    expect(screen.getByRole('alert')).toHaveTextContent(/duration/i)
+    // B9-31 (SAFE-04): a field's error sits under the field and is not an alert; the field is aria-invalid.
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByText(/needs a duration/i)).toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: /Duration/ })).toHaveAttribute('aria-invalid', 'true')
   })
 })
 

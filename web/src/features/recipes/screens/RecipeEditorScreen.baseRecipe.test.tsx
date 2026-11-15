@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { Route, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { candidateJSON, mockApi, summaryJSON } from '../../../lib/baseRecipes/test-utils'
 import { ConfirmProvider, ToastProvider } from '../../../ui'
@@ -22,6 +22,7 @@ vi.mock('../../../ui', async (orig) => ({ ...(await orig<object>()), ImagePicker
 vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter, safeEditorFields } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const Where = () => <p data-testid="where">{useLocation().pathname}</p>
 const view = (path = '/recipes/new') =>
@@ -29,13 +30,11 @@ const view = (path = '/recipes/new') =>
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ToastProvider>
         <ConfirmProvider>
-          <MemoryRouter initialEntries={[path]}>
-            <Routes>
+          <EditorRouter providers={false} initialEntries={[path]}>
               <Route path="/recipes/new" element={<RecipeEditorScreen />} />
               <Route path="/recipes/:id/edit" element={<RecipeEditorScreen />} />
               <Route path="*" element={<Where />} />
-            </Routes>
-          </MemoryRouter>
+          </EditorRouter>
         </ConfirmProvider>
       </ToastProvider>
     </QueryClientProvider>,
@@ -46,6 +45,7 @@ const baseLine: LineDraft = { key: 'l2', ingredientId: 30, ingredientName: 'Béc
 const step = { key: 's1', text: 'Layer the lasagne', kind: 'active' as const, durationMinutes: '10', leadTimeMinutes: '', after: [], uses: [], image: '' }
 const boil = { ...step, key: 's0', text: 'Boil the pasta' }
 const editorOf = (draft: Partial<RecipeDraft>, over: Record<string, unknown> = {}) => ({
+  ...safeEditorFields(),
   draft: { ...emptyDraft(), name: 'Lasagne', lines: [plainLine], steps: [boil, step], ...draft },
   setDraft: vi.fn(), errors: {}, saving: false, isLoading: false, unitPrompt: null,
   save: vi.fn().mockResolvedValue({ id: 11 }), answerUnitPrompt: vi.fn(), dismissUnitPrompt: vi.fn(),

@@ -98,3 +98,53 @@ describe('StickyActionBar scrolls a field frame clear when focus puts its ring u
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
 })
+
+describe('StickyActionBar re-checks the focused field when the keyboard comes up (B9-19 developer)', () => {
+  it('a visual-viewport resize after the focus scrolls the frame clear when the bar has ridden up over it', async () => {
+    const listeners: (() => void)[] = []
+    vi.stubGlobal('visualViewport', { height: 844, offsetTop: 0, addEventListener: (_t: string, cb: () => void) => listeners.push(cb), removeEventListener: () => {} })
+    const { getByLabelText, getByTestId, container } = page(560)
+    await userEvent.click(getByLabelText('Step text'))
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    vi.spyOn(container.querySelector('.sticky-action-bar')!, 'getBoundingClientRect').mockReturnValue(rect(400, 470))
+    listeners.forEach((cb) => cb())
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView.mock.contexts[0]).toBe(getByTestId('frame'))
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('StickyActionBar scrolls a Checkbox clear by its visible box (B9-19 developer, P39 on the Recipe editor at 1440)', () => {
+  it('a visually hidden input (opacity 0) is measured and scrolled by the box beside it that draws its ring', async () => {
+    const { container, getByRole } = render(
+      <>
+        <label className="checkbox__control">
+          <input type="checkbox" className="checkbox__input" style={{ opacity: 0 }} aria-label="Ready Meal" />
+          <span className="checkbox__box" data-testid="box" />
+        </label>
+        <StickyActionBar>
+          <FormActions primary={<Button>Save</Button>} />
+        </StickyActionBar>
+      </>,
+    )
+    const box = container.querySelector('.checkbox__box')!
+    vi.spyOn(box, 'getBoundingClientRect').mockReturnValue(rect(580, 604))
+    vi.spyOn(container.querySelector('.checkbox__input')!, 'getBoundingClientRect').mockReturnValue(rect(500, 501))
+    vi.spyOn(container.querySelector('.sticky-action-bar')!, 'getBoundingClientRect').mockReturnValue(rect(600, 670))
+    await userEvent.click(getByRole('checkbox', { name: 'Ready Meal' }))
+    expect(scrollIntoView.mock.contexts[0]).toBe(box)
+  })
+})
+
+describe('a ring that only touches the bar is scrolled clear too (B9-19 developer, P39 counts touching)', () => {
+  it('a frame whose ring ends exactly on the bar top, or within the 4 px gap, is scrolled', async () => {
+    const { getByLabelText } = page(595, 600) // 595 + 5 = 600: touching
+    await userEvent.click(getByLabelText('Step text'))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  })
+  it('a frame whose ring ends 4 px or more above the bar is left where it is', async () => {
+    const { getByLabelText } = page(591, 600) // 591 + 5 + 4 = 600
+    await userEvent.click(getByLabelText('Step text'))
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+})

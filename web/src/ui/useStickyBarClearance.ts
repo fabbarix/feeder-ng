@@ -27,12 +27,12 @@ function publish(): void {
 /**
  * FU-1: publishes the rendered height of the sticky action bar `ref` is attached to. The height varies per page and width (one
  * row or two stacked rows on a phone), so it is measured, not assumed. Without ResizeObserver nothing is published and the
- * stylesheet default stands. StrictMode-safe: each effect run registers its own entry and removes it on cleanup.
+ * stylesheet default stands. A bar that does not float (`enabled` false) publishes nothing. StrictMode-safe: each effect run registers its own entry and removes it on cleanup.
  */
-export function useStickyBarClearance(ref: RefObject<HTMLElement | null>): void {
+export function useStickyBarClearance(ref: RefObject<HTMLElement | null>, enabled = true): void {
   useEffect(() => {
     const el = ref.current
-    if (!el || typeof ResizeObserver === 'undefined') return
+    if (!enabled || !el || typeof ResizeObserver === 'undefined') return
     const bar: MountedBar = { height: el.offsetHeight }
     mounted.add(bar)
     publish()
@@ -46,10 +46,57 @@ export function useStickyBarClearance(ref: RefObject<HTMLElement | null>): void 
       mounted.delete(bar)
       publish()
     }
-  }, [ref])
+  }, [ref, enabled])
 }
 
-/** STUB (B9-19 test author): the developer implements this (see StickyActionBar.focus.test.tsx). */
-export function ringCrossesBarTop(_a: { frameBottom: number; barTop: number; ring?: number }): boolean {
-  return false
+/** The focus ring's reach outside a field frame: the 3 px outline at its 2 px offset. */
+const RING_PX = 5
+/** The gap the scroll padding keeps between a focused ring and the bar (--space-1). */
+const RING_GAP_PX = 4
+
+/** Whether a field frame, grown by its focus ring, reaches below the sticky bar's top edge (touching is not crossing). */
+export function ringCrossesBarTop({ frameBottom, barTop, ring = RING_PX }: { frameBottom: number; barTop: number; ring?: number }): boolean {
+  return frameBottom + ring > barTop
+}
+
+/**
+ * The element that draws a focused control's ring: its field frame (`.ui-field__control`), the visual sibling of a visually hidden
+ * input (the Checkbox's `input + .checkbox__box`), else the control itself.
+ */
+function ringOwner(target: Element): Element {
+  const frame = target.closest('.ui-field__control')
+  if (frame) return frame
+  const sibling = target.nextElementSibling
+  if (target.tagName === 'INPUT' && sibling && getComputedStyle(target).opacity === '0') return sibling
+  return target
+}
+
+/**
+ * B9-19 (SHORT-04): while the bar floats, a control that takes focus with its ring under the bar is scrolled clear of it. The
+ * browser scrolls the caret of a textarea, not its box, and leaves a partly visible control where it is, so scroll-padding alone
+ * leaves the frame's bottom and ring under the bar. A visual-viewport resize (the keyboard coming up) checks the focused field again. The field frame (`.ui-field__control`) is scrolled, else the control itself;
+ * `scroll-padding-block-end` then decides where it stops. Focus inside the bar never scrolls.
+ */
+export function useScrollFocusClearOfBar(ref: RefObject<HTMLElement | null>, enabled: boolean): void {
+  useEffect(() => {
+    if (!enabled) return
+    const clear = (target: EventTarget | Element | null) => {
+      const bar = ref.current
+      if (!bar || !(target instanceof Element) || target === document.body || bar.contains(target)) return
+      const frame = ringOwner(target)
+      // The ring and the 4 px the scroll padding keeps between it and the bar: a ring that only touches the bar is scrolled too (P39).
+      if (!ringCrossesBarTop({ frameBottom: frame.getBoundingClientRect().bottom, barTop: bar.getBoundingClientRect().top, ring: RING_PX + RING_GAP_PX })) return
+      frame.scrollIntoView?.({ block: 'nearest' })
+    }
+    const onFocusIn = (e: FocusEvent) => clear(e.target)
+    // The on-screen keyboard comes up after the focus: the bar then rides up onto it, so the focused field is checked again.
+    const onViewport = () => clear(document.activeElement)
+    const vv = globalThis.visualViewport
+    document.addEventListener('focusin', onFocusIn)
+    vv?.addEventListener('resize', onViewport)
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      vv?.removeEventListener('resize', onViewport)
+    }
+  }, [ref, enabled])
 }

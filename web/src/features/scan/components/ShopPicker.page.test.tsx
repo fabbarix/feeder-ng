@@ -11,6 +11,10 @@ describe('ShopPicker page structure', () => {
     expect(document.querySelector('.shop-picker__title')).toBeNull()
     expect(document.querySelector('.page-header')).toHaveTextContent('Pick the Shop')
   })
+  it('A11Y-01 (B9-19): the document is named "Scan · Feeder", not the question in the h1', () => {
+    render(<ShopPicker shops={[{ id: 1, name: 'Aldi' }]} lastShopId={null} onPick={() => {}} onStockTake={() => {}} />)
+    expect(document.title).toBe('Scan · Feeder')
+  })
   it('with no Shops it shows an EmptyState, not a bare paragraph, and still offers Stock-take at home', () => {
     render(<ShopPicker shops={[]} lastShopId={null} onPick={() => {}} onStockTake={() => {}} />)
     expect(document.querySelector('.empty-state')).toHaveTextContent('No Shops yet')

@@ -277,11 +277,19 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
   const tracks = () => (bar()['grid-template-columns'] ?? '').trim()
   const spaceTokens = () => {
     const root = declarations(readStylesCss().replace(/\/\*[\s\S]*?\*\//g, ''), ':root')
-    return (v: string | undefined): number => {
-      const raw = (v ?? '0').trim()
+    // DS-11: lengths are tokens, so a value is var(--space-N), a px length, 0, or a calc() sum of those
+    // (calc(var(--space-1) + var(--space-half)) is 6 px). Anything else is NaN, so a geometry test fails rather than passes on it.
+    const term = (raw: string): number => {
       const t = /^var\((--space-(?:\d+|half))\)$/.exec(raw) // B9-07 (DS-11): --space-half is the 2 px micro gap
       if (t) return Number.parseFloat(root[t[1]!] ?? 'NaN')
-      return /^0(px)?$/.test(raw) ? 0 : Number.parseFloat(raw)
+      if (/^0(px)?$/.test(raw)) return 0
+      return /^-?\d+(\.\d+)?px$/.test(raw) ? Number.parseFloat(raw) : Number.NaN
+    }
+    return (v: string | undefined): number => {
+      const raw = (v ?? '0').trim()
+      const sum = /^calc\((.*)\)$/.exec(raw)
+      if (!sum) return term(raw)
+      return sum[1]!.split(/\s+\+\s+/).reduce((total, part) => total + term(part.trim()), 0)
     }
   }
   /** The horizontal padding: padding-inline, else the padding shorthand's second (or only) value. */
@@ -307,6 +315,7 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     const pad = narrow ? px(narrowPx('padding-inline') ?? padInline()) : px(padInline())
     const gap = narrow ? px(narrowPx('column-gap') ?? gapOf()) : px(gapOf())
     const side = narrow ? px(/^calc\((var\(--space-\d\))/.exec(narrowPx('left') ?? '')?.[1] ?? '12px') : 12
+    expect(Number.isFinite(pad) && Number.isFinite(gap), `padding ${pad} and gap ${gap} resolve to px`).toBe(true)
     const barW = Math.min(viewport - 2 * side, 480)
     const inner = barW - 2 - 2 * pad // 1 px border each side
     const slot = (inner - 6 * gap) / 7
@@ -338,7 +347,20 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     expect(Number.isFinite(l.slot)).toBe(true)
     expect(Math.abs(l.scanCentre - l.barCentre)).toBeLessThanOrEqual(0.5)
   })
-  it.each([375, 390, 412, 430])('at %i px every slot is at least 44 px wide (seven of them; the narrow band keeps 6 px of padding and no gap)', (vw) => {
+  // B9-19 review: the longest end label, "Settings" (43.2 px), and its neighbour "Recipes" (40.5 px), as Chrome sets them in the
+  // nav type. A label's bottom sits 7.5 px above the bar's inner bottom; the inner outline's rounded end (radius 24 - 1 border) is
+  // 6 px further in at that height. The shell guard (rule 15) measures the real labels at 376, 390 and 820.
+  it.each([376, 390, 430])('at %i px the end label keeps 8 px from the rounded end and 4 px from its neighbour (labels show from 376 px)', (vw) => {
+    const l = layout(vw)
+    const ri = 23
+    const dy = ri - 7.5
+    const curveIn = ri - Math.sqrt(ri * ri - dy * dy)
+    const endRoom = l.pad + (l.slot - 43.2) / 2 - curveIn
+    const neighbour = l.slot + l.gap - (43.2 + 40.5) / 2
+    expect(endRoom).toBeGreaterThanOrEqual(8)
+    expect(neighbour).toBeGreaterThanOrEqual(4)
+  })
+  it.each([375, 376, 390, 412, 430])('at %i px every slot is at least 44 px wide (seven of them; the narrow band keeps 6 px of padding and no gap)', (vw) => {
     const l = layout(vw)
     expect(l.slot).toBeGreaterThanOrEqual(44)
   })

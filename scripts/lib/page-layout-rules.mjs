@@ -32,6 +32,8 @@ export const SCENARIO_VIEWPORTS = {
   // 360x780 to 375x667, the profiles' smallest viewport.
   375: { width: 375, height: 667, mobile: true },
   390: { width: 390, height: 844, mobile: true },
+  // B9-19 (DS-02): the largest phone, where the bottom bar's labelled tracks are widest.
+  430: { width: 430, height: 932, mobile: true },
   834: { width: 834, height: 1194, mobile: false },
   1440: { width: 1440, height: 900, mobile: false },
   // B9-03 (plan section 9; the user's ruling of 2026-11-14: no guard viewport is narrower than 375 px), scenario-only: the smallest

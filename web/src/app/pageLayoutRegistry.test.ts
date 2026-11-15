@@ -107,10 +107,24 @@ const ADDED = {
   // B9-16: scenarios/b9-16.mjs (order 310, after b9-14 by file name): P36's touch-targets-controls and the household-errors check.
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
   // B9-42: scenarios/b9-42.mjs (order 320, after b9-18 by file name): the Meal Slots cards, editor, Remove confirm, Removed tile, Change a date.
-  // B9-19: scenarios/b9-19.mjs (order 330): the bottom bar, the landscape and zoom chrome, and the safe gutters.
+  // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
+  // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
+  // B9-36: scenarios/b9-36.mjs (order 330): preferences-preview (SAFE-08).
   // B9-52: scenarios/b9-52.mjs (order 330): allowlist-actions, allowlist-share and access-requests-rows (SET-03, SET-12).
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
-  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'toast-pricing', 'toast-over-bar', 'meal-slots-cards', 'meal-slot-editor', 'meal-slot-editor-narrow', 'meal-slot-editor-short', 'meal-slot-remove-confirm', 'removed-meal-slots', 'change-date', 'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop', 'preferences-preview', 'allowlist-actions', 'allowlist-share', 'access-requests-rows', 'offline-unknown', 'error-state-fast'],
+  // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
+  scenarios: [
+    'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
+    'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
+    'planning-recipe-select', 'toast-pricing', 'toast-over-bar',
+    'meal-slots-cards', 'meal-slot-editor', 'meal-slot-editor-narrow', 'meal-slot-editor-short', 'meal-slot-remove-confirm', 'removed-meal-slots', 'change-date',
+    'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
+    'recipe-editor-guard', 'recipe-new-empty-save',
+    'preferences-preview',
+    'allowlist-actions', 'allowlist-share', 'access-requests-rows',
+    'offline-unknown', 'error-state-fast',
+    'import-review', 'import-result',
+  ],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {

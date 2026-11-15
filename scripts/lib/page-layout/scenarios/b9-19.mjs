@@ -1,5 +1,5 @@
 // B9-19 (DS-02, SHORT-04, SHORT-05, SHORT-08; plan section 9): the scenarios of P31, P32 and P35.
-//   bottom-bar               Today at 375 and 390 px (430 joins when the shared SCENARIO_VIEWPORTS table gets a 430 key: the main session adds it, see the hand-back): the bar's current page and Scan are 40 px squircles inside the bar (P31). At 375 the bar
+//   bottom-bar               Today at 375, 390 and 430 px: the bar's current page and Scan are 40 px squircles inside the bar (P31). At 375 the bar
 //                            shows icons only (amendment A1), above it icon and label.
 //   chrome-landscape         Today in a phone held sideways (667x375): the compact rail, no bottom bar, chrome budget (P32).
 //   chrome-landscape-editor  the Recipe editor at 667x375: one 62 px Save bar only (P32).
@@ -13,7 +13,7 @@ const noSkeleton = `!document.querySelector('[aria-busy="true"], .skeleton')`
 export default {
   order: 330,
   scenarios: [
-    { name: 'bottom-bar', route: '/', start: '/', setup: 'shellChromeToday', widths: [375, 390], rules: ['P31'] },
+    { name: 'bottom-bar', route: '/', start: '/', setup: 'shellChromeToday', widths: [375, 390, 430], rules: ['P31'] },
     { name: 'chrome-landscape', route: '/', start: '/', setup: 'shellChromeToday', widths: ['667x375'], rules: ['P32'] },
     { name: 'chrome-landscape-editor', route: '/recipes/:id/edit', start: '/recipes/:id/edit', setup: 'shellChromeEditor', widths: ['667x375'], rules: ['P32'] },
     { name: 'chrome-landscape-detail', route: '/recipes/:id', start: '/recipes/:id', setup: 'shellChromeDetail', widths: ['667x375'], rules: ['P32'] },

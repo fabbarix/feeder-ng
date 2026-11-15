@@ -58,6 +58,23 @@ has "> 3" "rule 16 must allow at most 3 px between a handle and its place on the
 has "crop-editor__readout|data-fixture-below|overlaps" "rule 16 must check that no handle sits on the controls below the editor"
 grep -q "_editor-fixture" "$ROOT/web/src/main.tsx" && grep -q "import.meta.env.DEV" "$ROOT/web/src/main.tsx" && ok || bad "main.tsx must register /_editor-fixture only under import.meta.env.DEV"
 grep -Eq "^\\s*import .*EditorFixture|from '\\./dev/EditorFixture'" "$ROOT/web/src/main.tsx" && bad "main.tsx must load the fixture lazily (dynamic import), never statically" || ok
+# B9-19 review: pages are awaited by a condition with a generous cap, never a fixed wait after a navigation (a loaded machine
+# rendered pages later than the old fixed 1.5 s waits, and the rules measured an empty frame)
+has "LOAD_CAP_MS" "the page load must be capped by LOAD_CAP_MS"
+has "async function load\\(" "a load() helper must wait for the page to render"
+has "nav\\.bottom-bar, nav\\.side-rail" "load() must wait for the shell's navigation"
+has "__shellLayoutPrevious" "load() must not take the previous document for the new one"
+grep -Eq "Page\.navigate.*\}\)\s*$" "$F" && grep -A1 "Page.navigate" "$F" | grep -Eq "setTimeout\(r, [0-9]{4}\)" && bad "no fixed multi-second wait may follow a navigation; use load()" || ok
+has "did not render within" "a page that never renders must be a failure, not a silent pass"
+has "process.on\\('exit', \\(\\) => chrome.kill\\(\\)\\)" "Chrome must be stopped on every exit path"
+# USER (w2c): keyboard focus rings the bar's 40 px squircle only, the current Scan gets an outline; rule 15 measures both
+has "ringProbe" "rule 15 must measure the focus rings and the current Scan outline (USER w2c)"
+has "\\[375, 376, 390, 430\\]" "the rings are measured at 375, 376, 390 and 430"
+has "rings the link; the ring is on the squircle only" "a ring round the whole link must fail"
+has "the current Scan's squircle has no outline" "a current Scan without its outline must fail"
+has "from the label .*less than 1.5" "a ring touching a label must fail"
+has "from the current Scan outline, less than 1.5" "a focus ring touching the current Scan's outline must fail"
+has "inside the bar's inner outline, less than 2" "a ring touching the bar border must fail"
 node --check "$F" 2>/dev/null && ok || bad "check-shell-layout.mjs must be valid"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"
