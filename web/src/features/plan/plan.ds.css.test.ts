@@ -110,8 +110,8 @@ describe('Course rows and their chips', () => {
   // ds-plan round 3: round 2 made this `flex: none` + 40 % (every chip became "L…"); the cap (2 + "+N") keeps the line short, so a
   // chip shrinks (flex 0 1 auto, min-inline-size 0) only when the full-width line is really full. See plan.round3.css.test.ts.
   it('a chip in the line is flex 0 1 auto with min-inline-size 0, and never wraps', () => {
-    expect(d('.plan-row__chips .chip')['flex']).toBe('0 1 auto')
-    expect(d('.plan-row__chips .chip')['min-inline-size']).toBe('0')
+    expect(d(".plan-row__chips .chip:not([data-kind='count'])")['flex']).toBe('0 1 auto')
+    expect(d(".plan-row__chips .chip:not([data-kind='count'])")['min-inline-size']).toBe('0')
   })
 
   it('Swap and Pin are a non-shrinking icon group at the end of the row (B9-32, A11Y-09: the shared IconSet)', () => {

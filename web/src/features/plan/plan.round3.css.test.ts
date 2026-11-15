@@ -14,7 +14,7 @@ describe('the chip line has room, so a lone chip is never an ellipsis', () => {
   })
 
   it('a chip is flex 0 1 auto with min-inline-size 0: its natural width, shrinking only when the line is full', () => {
-    const c = d('.plan-row__chips .chip')
+    const c = d(".plan-row__chips .chip:not([data-kind='count'])")
     expect(c['flex']).toBe('0 1 auto')
     expect(c['min-inline-size']).toBe('0')
   })

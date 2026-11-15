@@ -106,8 +106,9 @@ describe('DS-06: Plan tones in plan.css', () => {
 })
 
 describe('the "+N" chip of a row', () => {
-  it('keeps its 26 px minimum width on the chip line (VC6: one digit is a circle, never squashed by the line\'s min-inline-size 0)', () => {
-    expect(bodyOf(".plan-row__chips .chip[data-kind='count']")).toMatch(/min-inline-size\s*:\s*1\.625rem/)
+  it('keeps ui/Chip\'s minimum width on the chip line (VC6: one digit is a circle): the line\'s min-inline-size 0 skips it', () => {
+    expect(bodyOf(".plan-row__chips .chip[data-kind='count']")).not.toMatch(/min-inline-size/)
+    expect(bodyOf(".plan-row__chips .chip:not([data-kind='count'])")).toMatch(/min-inline-size\s*:\s*0/)
   })
 })
 
