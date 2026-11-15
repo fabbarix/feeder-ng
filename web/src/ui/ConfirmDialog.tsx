@@ -148,7 +148,7 @@ function ConfirmGroupView({ group }: { group: ConfirmGroup }) {
   }, [id])
   return (
     <div ref={ref} className="confirm-dialog__group">
-      <Overline id={id} className="confirm-dialog__label">
+      <Overline id={id}>
         {group.label}
       </Overline>
       <ConfirmRows rows={group.rows} />

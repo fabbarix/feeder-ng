@@ -24,7 +24,7 @@ const MAX_ACTIONS = 2
 export function DraftNotice({ title, meta, actions }: DraftNoticeProps) {
   const titleId = useId()
   return (
-    <Tile variant="status" status="info" span="full" role="status" aria-labelledby={titleId} className="draft-notice">
+    <Tile variant="status" status="info" span="full" role="status" aria-labelledby={titleId}>
       <p id={titleId} className="draft-notice__title">
         {title}
       </p>
