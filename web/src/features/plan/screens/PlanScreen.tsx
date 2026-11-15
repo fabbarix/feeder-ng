@@ -1,7 +1,8 @@
 import { useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
-import { BentoGrid, Button, EmptyState, ErrorState, LoadState, PageHeader, Skeleton } from '../../../ui'
+import { BentoGrid, Button, EmptyState, ErrorState, LoadState, PageHeader } from '../../../ui'
+import { PlanSkeleton } from '../components/PlanSkeleton'
 import { CookFlowSheets } from '../components/CookFlowSheets'
 import { CouldntPlanNotice } from '../components/CouldntPlanNotice'
 import { DayTile } from '../components/DayTile'
@@ -41,7 +42,7 @@ export function PlanScreen(): ReactNode {
 
   // B9-20 (RES-02): one state model; offline with nothing loaded is a LoadState, never an error or an empty plan.
   let body: ReactNode
-  if (plan.state === 'loading') body = <Skeleton variant="tile" count={3} label={planStrings.loading} />
+  if (plan.state === 'loading') body = <PlanSkeleton label={planStrings.loading} />
   else if (plan.state === 'offlineUnknown') body = <LoadState title={planStrings.offlineUnknownTitle} text={planStrings.offlineUnknownText} />
   else if (plan.state === 'failed') body = <ErrorState message={planStrings.loadError} onRetry={() => void plan.refetch()} />
   else if (days.length === 0) body = <EmptyState title={planStrings.empty} />
@@ -70,17 +71,16 @@ export function PlanScreen(): ReactNode {
 
   return (
     <div className="plan">
-      {plan.isLoading ? null : (
-        <PageHeader
-          title={planStrings.title}
-          subtitle={range}
-          actions={
-            <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating || s.regeneratePreviewing} onClick={() => void s.askRegenerate()}>
-              {planStrings.regenerate}
-            </Button>
-          }
-        />
-      )}
+      {/* B9-20: the header is there from the first frame; while loading, an empty subtitle line holds the week's place. */}
+      <PageHeader
+        title={planStrings.title}
+        subtitle={plan.state === 'loading' ? '\u00a0' : range}
+        actions={
+          <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating || s.regeneratePreviewing} onClick={() => void s.askRegenerate()}>
+            {planStrings.regenerate}
+          </Button>
+        }
+      />
       {plan.updating ? <p className="plan__note">{planStrings.updating}</p> : null}
       {actions.error ? (
         <p role="alert" className="plan__error">

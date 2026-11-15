@@ -6,6 +6,7 @@ import type { PantryMode } from '../lib/pantryFilters'
 import type { UsePantryFilters } from './usePantryFilters'
 import type { StockLot, StoragePlace } from '../types'
 import { usePantryLeftovers, type PantryLeftovers } from './usePantryLeftovers'
+import type { ScreenState } from '../../../lib/dataState'
 import { useAllLots, type LotsState } from './useStock'
 import { useStoragePlaces } from './useStoragePlaces'
 
@@ -18,7 +19,8 @@ export interface UsePantryInput {
 }
 
 export interface UsePantry {
-  lots: LotsState
+  /** B9-20: `state` is the Lots' screen state (the Storage Place view lists them). */
+  lots: LotsState & { state: ScreenState }
   places: StoragePlace[]
   groups: PantryGroup[]
   placeOf: (lot: StockLot) => StoragePlace | null

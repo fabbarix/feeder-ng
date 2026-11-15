@@ -16,7 +16,9 @@
  * A failed change shows an error toast. No `<main>`: the shell provides it. No tile grid.
  */
 import { useId, useMemo, useRef, useState, type ReactElement } from 'react'
-import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, LoadState, PageHeader, SearchField, Skeleton, useToast } from '../../../ui'
+import { combineScreenStates } from '../../../lib/dataState'
+import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, LoadState, PageHeader, SearchField, useToast } from '../../../ui'
+import { SkeletonGroup, SkeletonList } from '../../../ui/Skeleton'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { IngredientLotsRow } from '../components/IngredientLotsRow'
 import { LotEditSheet } from '../components/LotEditSheet'
@@ -83,6 +85,8 @@ export function StockScreen(): ReactElement | null {
   const { restockFor, hasSupplies } = useSupplyRestock(choices.choices, pantry.lots.data)
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
+  // B9-20 (RES-02): the Storage Place view lists the Lots, so it waits for them as well as for the totals.
+  const listState = mode === 'places' ? combineScreenStates(totals.state, pantry.lots.state) : totals.state
   const ready = totals.status === 'ready'
   // No empty aside: it exists when something is spoiled or the filter header is shown.
   const showAside = spoiledLots.length > 0 || ready
@@ -155,13 +159,13 @@ export function StockScreen(): ReactElement | null {
         ) : null}
 
         <div className="stock-screen__main">
-          {totals.state === 'loading' ? (
-            <div aria-busy="true">
-              <Skeleton variant="row" count={5} />
-            </div>
-          ) : totals.state === 'failed' ? (
-            <ErrorState message={strings.errorMessage} onRetry={() => void totals.refetch()} />
-          ) : totals.state === 'offlineUnknown' ? (
+          {listState === 'loading' ? (
+            <SkeletonGroup label={strings.loading}>
+              <SkeletonList rows={6} />
+            </SkeletonGroup>
+          ) : listState === 'failed' ? (
+            <ErrorState message={strings.errorMessage} onRetry={() => void Promise.all([totals.refetch(), pantry.lots.refetch()])} />
+          ) : listState === 'offlineUnknown' ? (
             <LoadState title={strings.offlineTitle} text={strings.offlineHint} />
           ) : totals.state === 'empty' && leftovers.frozenCount === 0 ? (
             <EmptyState icon="stock" title={strings.empty} description={strings.emptyHint} />

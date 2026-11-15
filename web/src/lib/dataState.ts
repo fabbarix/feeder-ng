@@ -36,6 +36,19 @@ export function screenState(q: QueryShape, o: ScreenStateOptions): ScreenState {
   return o.online ? 'ready' : 'offlineSaved'
 }
 
+/** States in which the screen has nothing of its own to show yet, from the least to the most telling. */
+const NOT_KNOWN: readonly ScreenState[] = ['loading', 'failed', 'offlineUnknown']
+
+/**
+ * The state of a screen that needs several answers: `primary` (the one that decides empty and ready), unless another
+ * answer it needs is not known yet; then the most telling of those (offlineUnknown, then failed, then loading).
+ */
+export function combineScreenStates(primary: ScreenState, ...needed: ScreenState[]): ScreenState {
+  const all = [primary, ...needed]
+  for (const s of [...NOT_KNOWN].reverse()) if (all.includes(s)) return s
+  return primary
+}
+
 /** One retry, only for what a second try can fix: a network error, a timeout or a 5xx. Never a 4xx or a bug. */
 export function retryPolicy(failureCount: number, error: unknown): boolean {
   if (failureCount >= 1 || !(error instanceof ApiError)) return false

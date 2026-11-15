@@ -94,10 +94,12 @@ export function useStockLots(ingredientId: number | null): LotsState {
 }
 
 /** Pantry: every Stock Lot (all Ingredients) with the household's date. Refetches on `stock` events. */
-export function useAllLots(): LotsState {
+export function useAllLots(): LotsState & { state: ScreenState } {
   useStockLiveUpdates()
   const query = useQuery({ queryKey: [...STOCK_KEY, 'lots', 'all'], queryFn: () => stockApi.lots() })
-  return lotsState(query)
+  // B9-20 (RES-02): the Storage Place view lists these Lots, so it needs their state too.
+  const state = useScreenState(query, { isEmpty: query.data !== undefined && query.data.lots.length === 0, hasFilter: false })
+  return { ...lotsState(query), state }
 }
 
 /** Spoiled lots plus the two answers to "Throw out or keep?". Both invalidate ['stock']; refetches on `stock` events. */

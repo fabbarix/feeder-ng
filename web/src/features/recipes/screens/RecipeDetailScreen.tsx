@@ -21,6 +21,7 @@ import { StepsList } from '../components/StepsList'
 import { useHashTarget } from '../hooks/useHashTarget'
 import { useHouseholdPreferences } from '../hooks/useHouseholdPreferences'
 import { useIngredientRefs } from '../hooks/useIngredientRefs'
+import { RecipeDetailSkeleton } from '../components/RecipeDetailSkeleton'
 import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
 import { useRecipeTags } from '../hooks/useRecipeTags'
@@ -70,13 +71,13 @@ export function RecipeDetailScreen(): ReactNode {
     const title = recipe.knownName ?? recipeStrings.title
     return (
       <section className="recipe-detail">
-        <PageHeader title={title} breadcrumbs={crumbs} />
+        <PageHeader title={title} breadcrumbs={crumbs} actions={recipe.state === 'loading' ? <RecipeDetailSkeleton.Actions /> : undefined} />
         {recipe.state === 'offlineUnknown' ? (
           <LoadState title={recipeStrings.detailOfflineTitle} text={recipeStrings.detailOfflineText} />
         ) : recipe.state === 'failed' ? (
           <ErrorState message={recipeStrings.loadError} onRetry={() => recipe.refetch()} />
         ) : (
-          <Skeleton variant="tile" count={3} label={recipeStrings.loading} />
+          <RecipeDetailSkeleton label={recipeStrings.loading} />
         )}
       </section>
     )

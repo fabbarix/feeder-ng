@@ -1,6 +1,6 @@
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ActiveFilterChips, BentoGrid, Button, EmptyState, ErrorState, FiltersButton, ListPage, LoadState, PageHeader, SearchField, Skeleton } from '../../../ui'
+import { ActiveFilterChips, BentoGrid, Button, Cluster, EmptyState, ErrorState, FiltersButton, ListPage, LoadState, PageHeader, SearchField } from '../../../ui'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { RecipeFiltersPanel } from '../components/RecipeFiltersPanel'
 import { RecipesOverflowMenu } from '../components/RecipesOverflowMenu'
@@ -15,6 +15,7 @@ import { lastCookedLabel, localToday } from '../lib/lastCooked'
 import { courseNamesOf, showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
 import type { RecipeFilter } from '../types'
+import { RecipesSkeleton } from '../components/RecipesSkeleton'
 import '../recipes-list.css'
 
 /**
@@ -59,7 +60,7 @@ export function RecipesScreen(): ReactNode {
   let body: ReactNode
   switch (state) {
     case 'loading':
-      body = <Skeleton variant="tile" count={4} label={recipeStrings.loading} />
+      body = <RecipesSkeleton label={recipeStrings.loading} />
       break
     case 'offlineUnknown':
       body = <LoadState title={recipeStrings.offlineUnknownTitle} text={recipeStrings.offlineUnknownText} />
@@ -76,12 +77,12 @@ export function RecipesScreen(): ReactNode {
           title={recipeStrings.empty}
           description={recipeStrings.emptyText}
           action={
-            <>
+            <Cluster>
               <Button onClick={() => navigate('/recipes/new')}>{recipeStrings.newRecipe}</Button>
               <Button variant="secondary" onClick={() => navigate('/recipes/import')}>
                 {recipeStrings.importRecipes}
               </Button>
-            </>
+            </Cluster>
           }
         />
       )
