@@ -41,7 +41,7 @@ describe('CoursesPage: the list', () => {
     routes()
     await show()
     expect(rows().map(nameOf)).toEqual(['Main', 'Side', 'Starter', 'Dessert'])
-    expect(rows().map((r) => within(r).getByText(/^(main Course · )?\d+ Recipes? · \d+ Meal Slots?$/).textContent)).toEqual([
+    expect(rows().map((r) => within(r).getByText(/^(main\sCourse · )?\d+\sRecipes? · \d+\sMeal\sSlots?$/).textContent?.replace(/\u00a0/g, ' '))).toEqual([
       'main Course · 12 Recipes · 5 Meal Slots', '8 Recipes · 3 Meal Slots', '1 Recipe · 1 Meal Slot', '4 Recipes · 2 Meal Slots',
     ])
     expect(screen.queryAllByTestId('course-main-chip')).toHaveLength(0)

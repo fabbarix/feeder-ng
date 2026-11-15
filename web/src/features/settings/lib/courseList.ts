@@ -9,10 +9,11 @@ export interface CourseAction {
   tone?: 'danger'
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+/** "28 Meal Slots" never breaks inside (no-break spaces), so a two-line meta wraps only at its " · " (seen at 375: "28 Meal / Slots"). */
+const plural = (n: number, one: string, many: string) => `${n}\u00a0${(n === 1 ? one : many).replace(/ /g, '\u00a0')}`
 
 /** SET-14c: the main Course says so at the start of its meta, instead of a "Main" badge (GLOSSARY: main Course). */
-const MAIN_COURSE = 'main Course'
+const MAIN_COURSE = 'main\u00a0Course'
 
 /**
  * "12 Recipes · 5 Meal Slots" (singular for 1, zeros shown); an unknown count is left out; '' when both are unknown.
