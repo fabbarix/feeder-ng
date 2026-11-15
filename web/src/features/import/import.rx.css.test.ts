@@ -40,9 +40,13 @@ describe('import.css (B9-28)', () => {
     // hidden visually only: the label stays in the accessible name
     expect(narrow).not.toMatch(/\.import-bar__next-label\s*\{[^}]*display:\s*none/)
   })
-  it('the two paths stack below 45 em and sit side by side from 45 em', () => {
+  // Ruling (main session): the page column decides, so the split is a container query at 45 rem on .import-start-frame, not a media query.
+  it('the two paths stack below 45 rem of column and sit side by side from 45 rem', () => {
     expect(rule('.import-start')).toMatch(/display:\s*grid/)
-    expect(inMedia('(width >= 45em)')).toMatch(/\.import-start\s*\{[^}]*grid-template-columns:\s*(repeat\(2|1fr 1fr)/)
+    expect(rule('.import-start-frame')).toMatch(/container:\s*import-start\s*\/\s*inline-size/)
+    const at = css.indexOf('@container import-start (min-width: 45rem)')
+    expect(at).toBeGreaterThan(-1)
+    expect(css.slice(at, css.indexOf('}', css.indexOf('}', at) + 1) + 1)).toMatch(/\.import-start\s*\{[^}]*grid-template-columns:\s*(repeat\(2|1fr 1fr)/)
   })
   it('a question row reached by "Next question" keeps clear of the sticky bar (scroll-margin) and shows no ring of its own', () => {
     const r = rule(".import-review [tabindex='-1']")

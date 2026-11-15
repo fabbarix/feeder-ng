@@ -9,7 +9,7 @@ const show = (over: Partial<Parameters<typeof ImportBar>[0]> = {}) => {
   const view = render(<ImportBar recipes={2} questions={0} busy={false} {...on} {...over} />)
   return { ...on, ...view }
 }
-const bar = () => screen.getByRole('region', { name: 'Import actions' })
+const bar = () => screen.getByRole('group', { name: 'Import actions' })
 
 describe('ImportBar', () => {
   it('is the "Import actions" bar with a primary "Import 2 Recipes" (1 Recipe in the singular)', () => {
