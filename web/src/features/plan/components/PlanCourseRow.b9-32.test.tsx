@@ -55,11 +55,12 @@ describe('A11Y-08: names and Pin as one toggle', () => {
     expect(after).toHaveFocus()
   })
 
-  it('the row target keeps the Recipe as its name and describes itself by the meta (ListRow aria-describedby)', () => {
+  it('the row target keeps the Recipe as its name and describes itself by the meta AND the day and Meal Slot, so the same Recipe on two days reads differently', () => {
     setup(main(), {}, 'Main')
     const target = screen.getByRole('button', { name: 'Pasta al pomodoro' })
-    const described = target.getAttribute('aria-describedby')!.split(' ').map((id) => document.getElementById(id)?.textContent)
-    expect(described.join(' ')).toContain('Main')
+    const described = target.getAttribute('aria-describedby')!.split(' ').map((id) => document.getElementById(id)?.textContent).join(' ')
+    expect(described).toContain('Main')
+    expect(described).toContain('Tue 17 Breakfast')
   })
 })
 

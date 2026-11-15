@@ -109,7 +109,7 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
       'POST /api/plan/leftovers/5/had-it?dryRun=1': { replanned: [friLunch] },
       'POST /api/plan/leftovers/5/take-out?dryRun=1': { replanned: [friLunch] },
     })
-    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /Chilli/ }))
+    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /^Chilli$/ }))
     await userEvent.click(await screen.findByRole('button', { name: link }))
     return screen.findByRole('dialog', { name: 'Chilli Leftover' })
   }
@@ -150,7 +150,7 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
       'GET /api/recipes?course=1': [{ id: 10, name: 'Chilli', tags: [], courses: [{ id: 1 }] }, { id: 7, name: 'Roast chicken', tags: [], courses: [{ id: 1 }] }],
       'PUT /api/plan/2026-11-12/2/1': meal({ recipeId: 10, recipeName: 'Chilli', batches: 0, pinned: true }),
     })
-    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /Roast chicken/ }))
+    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /^Roast chicken$/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
     const dialog = await screen.findByRole('dialog', { name: 'Choose a Recipe' })
     const freezer = await within(dialog).findByRole('list', { name: 'From the freezer' })
@@ -166,7 +166,7 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
       'GET /api/recipes?course=1': [{ id: 10, name: 'Chilli', tags: [], courses: [{ id: 1 }] }],
       'PUT /api/plan/2026-11-12/2/1': { status: 422, json: { error: { code: 'leftover_too_small', message: 'x' } } },
     })
-    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /Roast chicken/ }))
+    await userEvent.click(within(await dayTile('Today')).getByRole('button', { name: /^Roast chicken$/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
     const freezer = await screen.findByRole('list', { name: 'From the freezer' })
     await userEvent.click(within(freezer).getByRole('button', { name: /Chilli/ }))

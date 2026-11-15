@@ -48,7 +48,7 @@ describe('TonightHero with several Courses', () => {
     expect(screen.queryByRole('heading', { name: 'Green beans' })).not.toBeInTheDocument()
     const row = screen.getByRole('listitem', { name: 'Side' })
     expect(row).toHaveAttribute('data-compact', 'true')
-    expect(within(row).getByRole('button', { name: /Green beans/ })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /^Green beans$/ })).toBeInTheDocument()
     expect(screen.queryByRole('listitem', { name: 'Main' })).not.toBeInTheDocument()
   })
 
@@ -66,11 +66,11 @@ describe('TonightHero with several Courses', () => {
     const h = setup(dinner([main(), side()]))
     const row = screen.getByRole('listitem', { name: 'Side' })
     const course = { ...slotKey, courseId: 2 }
-    await userEvent.click(within(row).getByRole('button', { name: 'Swap' }))
-    await userEvent.click(within(row).getByRole('button', { name: 'Pin' }))
+    await userEvent.click(within(row).getByRole('button', { name: /^Swap / }))
+    await userEvent.click(within(row).getByRole('button', { name: /^Pin / }))
     await userEvent.click(within(row).getByRole('button', { name: 'More for Side' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Mark as Cooked' }))
-    await userEvent.click(within(row).getByRole('button', { name: /Green beans/ }))
+    await userEvent.click(within(row).getByRole('button', { name: /^Green beans$/ }))
     expect(h.rowHandlers.onSwap).toHaveBeenCalledWith(course)
     expect(h.rowHandlers.onPin).toHaveBeenCalledWith(course)
     expect(h.rowHandlers.onMarkCooked).toHaveBeenCalledWith(course)

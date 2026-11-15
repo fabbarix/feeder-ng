@@ -34,7 +34,7 @@ describe('one Course looks exactly as before (regression guards)', () => {
   it('a slot whose other Courses are covered, optional-and-empty or not served shows no caption and no menu', () => {
     setup(courseSlot([main(), side({ meal: null, coveredBy: { courseId: 1, recipeId: 7, recipeName: 'Lasagne' } })]))
     expect(screen.queryByText('Main')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Dinner actions' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^More for .* Dinner$/ })).not.toBeInTheDocument()
   })
 })
 
@@ -45,8 +45,8 @@ describe('several Courses: one slot block', () => {
     setup(twoCourses())
     expect(screen.getAllByText('Dinner')).toHaveLength(1)
     expect(screen.getAllByRole('listitem').map((li) => li.querySelector('.list-row__meta')?.textContent)).toEqual(['Main', 'Side'])
-    expect(within(rowOf('Main')).getByRole('button', { name: /Roast chicken/ })).toBeInTheDocument()
-    expect(within(rowOf('Side')).getByRole('button', { name: /Green beans/ })).toBeInTheDocument()
+    expect(within(rowOf('Main')).getByRole('button', { name: /^Roast chicken$/ })).toBeInTheDocument()
+    expect(within(rowOf('Side')).getByRole('button', { name: /^Green beans$/ })).toBeInTheDocument()
   })
 
   it('the list is named after the slot', () => {
@@ -56,7 +56,7 @@ describe('several Courses: one slot block', () => {
 
   it('has Cook ONCE, on the slot head, and it reports the slot (the cooking timeline), not a Course', async () => {
     const h = setup(twoCourses())
-    const cooks = screen.getAllByRole('button', { name: 'Cook' })
+    const cooks = screen.getAllByRole('button', { name: /^Cook / })
     expect(cooks).toHaveLength(1)
     await userEvent.click(cooks[0]!)
     expect(h.onCook).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2 })
@@ -64,13 +64,13 @@ describe('several Courses: one slot block', () => {
 
   it('Swap is per Course and reports that Course', async () => {
     const h = setup(twoCourses())
-    await userEvent.click(within(rowOf('Side')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(rowOf('Side')).getByRole('button', { name: /^Swap / }))
     expect(h.onSwap).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2, courseId: 2 })
   })
 
   it('tapping a Recipe name opens that Course\'s sheet', async () => {
     const h = setup(twoCourses())
-    await userEvent.click(within(rowOf('Main')).getByRole('button', { name: /Roast chicken/ }))
+    await userEvent.click(within(rowOf('Main')).getByRole('button', { name: /^Roast chicken$/ }))
     expect(h.onOpen).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2, courseId: 1 })
   })
 
@@ -105,17 +105,17 @@ describe('several Courses: one slot block', () => {
 describe('the slot menu', () => {
   it('Add <Course> for an empty optional Course, reporting the empty Course', async () => {
     const h = setup(courseSlot([main(), dessert()]))
-    await userEvent.click(screen.getByRole('button', { name: 'Dinner actions' }))
+    await userEvent.click(screen.getByRole('button', { name: /^More for .* Dinner$/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Add Dessert' }))
     expect(h.onAddCourse).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2, courseId: 3 })
   })
 
   it('Not cooked: whole slot and Mark all Cooked report the slot', async () => {
     const h = setup(courseSlot([main(), side()]))
-    await userEvent.click(screen.getByRole('button', { name: 'Dinner actions' }))
+    await userEvent.click(screen.getByRole('button', { name: /^More for .* Dinner$/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Not cooked: whole slot' }))
     expect(h.onNotCookedSlot).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2 })
-    await userEvent.click(screen.getByRole('button', { name: 'Dinner actions' }))
+    await userEvent.click(screen.getByRole('button', { name: /^More for .* Dinner$/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Mark all Cooked' }))
     expect(h.onMarkAllCooked).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2 })
   })

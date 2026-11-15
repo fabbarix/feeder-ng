@@ -37,7 +37,7 @@ async function markAll(result: CookedAllResult = allCookedResult()) {
     'PUT /api/stock/ingredients/11/total': { ingredient: {}, lots: [] },
   })
   renderWithProviders(<PlanScreen />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Dinner actions' }))
+  await userEvent.click(await screen.findByRole('button', { name: /^More for .* Dinner$/ }))
   await userEvent.click(screen.getByRole('menuitem', { name: 'Mark all Cooked' }))
   const sheet = await screen.findByRole('dialog', { name: 'Mark all Cooked' })
   await within(sheet).findByRole('spinbutton', { name: 'Side Leftover portions' })

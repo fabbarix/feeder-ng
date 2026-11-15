@@ -20,6 +20,11 @@ export interface SlotMenuProps {
   dateActions?: SlotDateActions
   /** ds-plan round 2: the trigger is compact (32 px) in a day tile's header; the Today hero keeps the default size. */
   size?: 'md' | 'compact'
+  /**
+   * B9-32 (A11Y-08): the day label ("Sun 15") the trigger names with the slot: "More for Sun 15 Breakfast". Without it the trigger keeps
+   * "<Slot> actions" (Today's hero until B9-39 passes one). Test-author stub: not used yet.
+   */
+  dayLabel?: string
   /** DS-TODAY round 3: Not cooked is the first item (the hero after the slot time). Default: after Mark all Cooked. */
   notCookedFirst?: boolean
 }

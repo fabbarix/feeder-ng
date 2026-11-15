@@ -36,9 +36,9 @@ describe('MealTile structure', () => {
     const rows = root.querySelectorAll('li.list-row')
     expect(rows[0]!.querySelector('.list-row__meta')).toHaveTextContent('Main')
     expect(rows[1]!.querySelector('.list-row__meta')).toHaveTextContent('Side')
-    await userEvent.click(within(rows[1] as HTMLElement).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(rows[1] as HTMLElement).getByRole('button', { name: /^Swap / }))
     expect(h.onSwap).toHaveBeenCalledWith({ date: today, mealSlotId: 2, courseId: 2 })
-    await userEvent.click(within(rows[0] as HTMLElement).getByRole('button', { name: 'Pin' }))
+    await userEvent.click(within(rows[0] as HTMLElement).getByRole('button', { name: /^Pin / }))
     expect(h.onPin).toHaveBeenCalledWith({ date: today, mealSlotId: 2, courseId: 1 })
   })
 
@@ -47,13 +47,13 @@ describe('MealTile structure', () => {
     const rows = root.querySelectorAll('li.list-row')
     expect(rows).toHaveLength(1)
     expect(rows[0]!.querySelector('.list-row__meta')).toBeNull()
-    expect(within(rows[0] as HTMLElement).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
-    expect(within(root.querySelector('.plan-slot-head') as HTMLElement).queryByRole('button', { name: 'Swap' })).toBeNull()
+    expect(within(rows[0] as HTMLElement).getByRole('button', { name: /^Swap / })).toBeInTheDocument()
+    expect(within(root.querySelector('.plan-slot-head') as HTMLElement).queryByRole('button', { name: /^Swap / })).toBeNull()
   })
 
   it('the header Cook (today) starts Cook Mode for the slot', async () => {
     const { h } = setup(courseSlot([main(), side()]))
-    await userEvent.click(within(document.querySelector('.plan-slot-head') as HTMLElement).getByRole('button', { name: 'Cook' }))
+    await userEvent.click(within(document.querySelector('.plan-slot-head') as HTMLElement).getByRole('button', { name: /^Cook / }))
     expect(h.onCook).toHaveBeenCalledWith({ date: today, mealSlotId: 2 })
   })
 

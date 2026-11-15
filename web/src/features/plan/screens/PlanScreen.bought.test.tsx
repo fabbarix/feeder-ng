@@ -45,7 +45,7 @@ describe('PlanScreen: Bought', () => {
   it('Swap notes what stays in Stock', async () => {
     mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-09/2/1/alternatives': { alternatives: [] } })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Today')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Today')).getByRole('button', { name: /^Swap / }))
     expect(await screen.findByText('You bought chicken thighs, cream for this; it stays in Stock.')).toBeInTheDocument()
   })
 })

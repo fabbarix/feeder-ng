@@ -28,7 +28,7 @@ describe('CourseRow', () => {
     setup()
     const item = screen.getByRole('listitem', { name: 'Side' })
     expect(within(item).getByText('Side')).toBeInTheDocument()
-    expect(within(item).getByRole('button', { name: /Green beans/ })).toBeInTheDocument()
+    expect(within(item).getByRole('button', { name: /^Green beans$/ })).toBeInTheDocument()
   })
 
   it('with no caption (a lone row) shows no Course name at all', () => {
@@ -43,30 +43,31 @@ describe('CourseRow', () => {
 
   it('tapping the Recipe name opens the Planned Meal sheet of that Course', async () => {
     const h = setup()
-    await userEvent.click(screen.getByRole('button', { name: /Green beans/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Green beans$/ }))
     expect(h.onOpen).toHaveBeenCalledWith(key)
   })
 
   it('offers Swap by default, labelled, and nothing else', async () => {
     const h = setup()
-    expect(screen.queryByRole('button', { name: 'Pin' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Pin / })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Swap' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Swap / }))
     expect(h.onSwap).toHaveBeenCalledWith(key)
   })
 
   it('offers Swap, Pin and Mark as Cooked for a planned meal when asked, each reporting that Course', async () => {
     const h = setup(sideCourse(), { actions: ['swap', 'pin', 'cooked'] })
-    await userEvent.click(screen.getByRole('button', { name: 'Pin' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Pin / }))
     expect(h.onPin).toHaveBeenCalledWith(key)
     await userEvent.click(screen.getByRole('button', { name: 'Mark as Cooked' }))
     expect(h.onMarkCooked).toHaveBeenCalledWith(key)
   })
 
-  it('a Pinned meal offers Unpin instead of Pin', async () => {
+  it('a Pinned meal shows the same Pin button pressed; there is no Unpin button (A11Y-08)', async () => {
     const h = setup(sideCourse({ meal: courseMeal(2, 'Side', { pinned: true }) }), { actions: ['pin'] })
-    expect(screen.queryByRole('button', { name: 'Pin' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Unpin' }))
+    expect(screen.queryByRole('button', { name: /^Unpin/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Pin / })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: /^Pin / }))
     expect(h.onUnpin).toHaveBeenCalledWith(key)
   })
 
@@ -78,8 +79,8 @@ describe('CourseRow', () => {
   it('a Cooked or Not cooked Course is muted and has no buttons besides its name', () => {
     setup(sideCourse({ meal: courseMeal(2, 'Side', { state: 'cooked' }) }), { actions: ['swap', 'pin', 'cooked'] })
     expect(screen.getByRole('listitem', { name: 'Side' }).querySelector('[data-state="cooked"]')).not.toBeNull()
-    expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Pin' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Swap / })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Pin / })).not.toBeInTheDocument()
   })
 
   it('an empty Course is the dashed Not planned block with Choose a Recipe for that Course', async () => {
@@ -100,13 +101,13 @@ describe('CourseRow', () => {
   it('Tab walks through the Recipe name, then Swap, Pin and Mark as Cooked; Enter and Space press them', async () => {
     const h = setup(sideCourse(), { actions: ['swap', 'pin', 'cooked'] })
     await userEvent.tab()
-    expect(screen.getByRole('button', { name: /Green beans/ })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^Green beans$/ })).toHaveFocus()
     await userEvent.tab()
-    expect(screen.getByRole('button', { name: 'Swap' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^Swap / })).toHaveFocus()
     await userEvent.keyboard('{Enter}')
     expect(h.onSwap).toHaveBeenCalledTimes(1)
     await userEvent.tab()
-    expect(screen.getByRole('button', { name: 'Pin' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^Pin / })).toHaveFocus()
     await userEvent.keyboard(' ')
     expect(h.onPin).toHaveBeenCalledTimes(1)
     await userEvent.tab()
