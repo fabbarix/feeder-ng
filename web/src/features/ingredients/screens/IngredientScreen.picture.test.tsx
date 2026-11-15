@@ -1,7 +1,7 @@
 // IM2: the Ingredient page has a Picture Tile with the shared ImagePicker (4:3); changes save at once through the hook.
-import { render, screen, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { alerts, findAlert, renderRoutes } from '../ingredient.test-helper'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PICKED_ID } from '../../../ui/ImagePicker/fake.test-helper'
 import { CROP_ASPECTS } from '../../../ui/ImagePicker/lib/crop'
@@ -24,6 +24,7 @@ const hook = {
   remove: vi.fn().mockResolvedValue(undefined),
 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
+vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false }) }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
 vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))
@@ -35,8 +36,7 @@ vi.mock('../../../ui', async (orig) => ({
 import { IngredientScreen } from './IngredientScreen'
 
 function setup() {
-  const router = createMemoryRouter([{ path: '/ingredients/:id', element: <IngredientScreen /> }], { initialEntries: ['/ingredients/7'] })
-  render(<RouterProvider router={router} />)
+  renderRoutes([{ path: '/ingredients/:id', element: <IngredientScreen /> }], '/ingredients/7')
 }
 const picker = () => screen.getByRole('group', { name: strings.pictureLabel })
 
@@ -84,7 +84,9 @@ describe('IngredientScreen: Picture', () => {
     hook.setImage.mockRejectedValueOnce(new ApiError(400, 'invalid_ingredient', 'image: That image has not been uploaded'))
     setup()
     await userEvent.click(screen.getByRole('button', { name: `pick ${strings.pictureLabel}` }))
-    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    // B9-48 (SAFE-04): a save failure with no field of its own is the page's one FormError.
+    expect(await findAlert()).toHaveClass('form-error')
+    expect(alerts()).toHaveLength(1)
   })
 
   it('does not lock with the Base Unit: an Ingredient in use can still change its picture', async () => {

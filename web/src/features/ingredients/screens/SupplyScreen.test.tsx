@@ -1,7 +1,7 @@
 // H5: /supplies/:id (decision D5): the Ingredient page with kind="supply": Restock level Tile, kind Tile, no Shelf Life, no Excluded by.
-import { render, screen, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { alerts, findAlert, renderRoutes } from '../ingredient.test-helper'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
 import { detail, dishSoapJSON, garlicJSON, toiletPaperJSON } from '../supply.test-helper'
@@ -23,10 +23,15 @@ const hook = {
   setRestockLevel: vi.fn().mockResolvedValue({}),
   setKind: vi.fn().mockResolvedValue({}),
   remove: vi.fn().mockResolvedValue(undefined),
+  save: vi.fn().mockResolvedValue({}),
 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
+vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false }) }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => system.value }))
-vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
+vi.mock('../../products', async () => {
+  const { Tile } = await import('../../../ui')
+  return { IngredientProducts: () => <Tile as="section" aria-label="Products">products tile</Tile> }
+})
 vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))
 vi.mock('../components/MergeSheet', () => ({
   MergeSheet: ({ open, sourceId, kind }: { open: boolean; sourceId: number; kind?: string }) => (open ? <p>merge sheet for {sourceId} ({kind})</p> : null),
@@ -35,17 +40,22 @@ vi.mock('../components/MergeSheet', () => ({
 import { SupplyScreen } from './SupplyScreen'
 
 function setup(entry = '/supplies/21') {
-  const router = createMemoryRouter(
+  renderRoutes(
     [
       { path: '/supplies', element: <p>supplies list</p> },
       { path: '/supplies/:id', element: <SupplyScreen /> },
       { path: '/ingredients/:id', element: <p>ingredient page</p> },
     ],
-    { initialEntries: [entry] },
+    entry,
   )
-  render(<RouterProvider router={router} />)
 }
-const tile = (name: string) => screen.getByRole('region', { name })
+const keeping = () => screen.getByRole('region', { name: 'Keeping' })
+const restockField = () => within(keeping()).getByRole('textbox', { name: /Restock level/ })
+// B9-48 (SET-05): Merge, Change kind and Delete live in the header's More menu, named for the Supply.
+const more = async (name = 'More for Dish soap') => {
+  await userEvent.click(screen.getByRole('button', { name }))
+  return screen.getByRole('menu', { name })
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -57,47 +67,57 @@ beforeEach(() => {
 })
 
 describe('SupplyScreen: what a Supply has', () => {
-  it('is headed with its name under Settings > Supplies', () => {
+  it('is headed with its name and "Supply" under Settings > Supplies', () => {
     setup()
     expect(screen.getByRole('heading', { level: 1, name: 'Dish soap' })).toBeInTheDocument()
+    expect(document.querySelector('.page-header__subtitle')).toHaveTextContent('Supply')
     const trail = screen.getByRole('navigation', { name: 'Breadcrumb' })
     expect(within(trail).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
     expect(within(trail).getByRole('link', { name: 'Supplies' })).toHaveAttribute('href', '/supplies')
     expect(trail).toHaveTextContent('Dish soap')
   })
-  it('shows the Base Unit, Picture, Unit Conversions, Products, Merge and Delete', () => {
+  it('shows the Base Unit and Restock level in Keeping, Picture, Unit Conversions and Products; Merge and Delete are in More', async () => {
     setup()
-    expect(screen.getByRole('radiogroup', { name: 'Base Unit' })).toBeInTheDocument()
+    expect(within(keeping()).getByRole('radiogroup', { name: 'Base Unit' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Picture' })).toBeInTheDocument()
     expect(screen.getByText('1 bottle = 500 ml')).toBeInTheDocument()
     expect(screen.getByText('products tile')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Merge into another Supply' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Delete Supply' })).toBeEnabled()
+    const menu = await more()
+    expect(within(menu).getByRole('menuitem', { name: 'Merge into another Supply' })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: 'Delete Supply' })).not.toHaveAttribute('aria-disabled', 'true')
+  })
+  it('lays out Keeping first and full width, then the Unit Conversions and Products pair, then Picture; no lone half-width tile (SET-05)', () => {
+    setup()
+    const tiles = [...document.querySelectorAll('[role="group"][aria-label="Supply details"] > .tile')] as HTMLElement[]
+    const name = (t: HTMLElement) => t.getAttribute('aria-label') ?? t.querySelector('h2')?.textContent
+    expect(tiles.map(name)).toEqual(['Keeping', 'Unit Conversions', 'Products', 'Picture'])
+    expect(tiles.filter((t) => t.getAttribute('data-span') !== 'full').map(name)).toEqual(['Unit Conversions', 'Products'])
   })
   it('names its regions for a Supply, not an Ingredient', () => {
     setup()
     expect(screen.getByRole('group', { name: 'Supply details' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Merge Supply' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: /Ingredient/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Rename Dish soap' })).toBeInTheDocument()
   })
   it('has no Shelf Life, Frozen Shelf Life or Excluded by Tile', () => {
     setup()
     expect(screen.queryByLabelText(/Shelf Life/)).toBeNull()
     expect(screen.queryByRole('region', { name: /Shelf Life/ })).toBeNull()
-    expect(screen.queryByRole('region', { name: 'Frozen Shelf Life' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Excluded by' })).toBeNull()
     expect(screen.queryByText('exclusion list')).toBeNull()
     expect(screen.queryByText(/Shelf Life|Freezer/)).toBeNull()
   })
   it('opens the merge sheet for a Supply, in its kind', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Merge into another Supply' }))
+    await userEvent.click(within(await more()).getByRole('menuitem', { name: 'Merge into another Supply' }))
     expect(screen.getByText('merge sheet for 21 (supply)')).toBeInTheDocument()
   })
-  it('deletes after a confirm, then returns to /supplies', async () => {
+  it('deletes after a confirm that names the Supply ("Delete Supply" on the button), then returns to /supplies', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Supply' }))
-    await userEvent.click(screen.getAllByRole('button', { name: 'Delete Supply' }).at(-1)!)
+    await userEvent.click(within(await more()).getByRole('menuitem', { name: 'Delete Supply' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Dish soap?' })
+    expect(hook.remove).not.toHaveBeenCalled()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete Supply' }))
     expect(hook.remove).toHaveBeenCalled()
     expect(await screen.findByText('supplies list')).toBeInTheDocument()
   })
@@ -115,77 +135,71 @@ describe('SupplyScreen: what a Supply has', () => {
   })
 })
 
-describe('SupplyScreen: the Restock level Tile', () => {
+describe('SupplyScreen: the Restock level row of Keeping', () => {
   it('shows the level in the Base Unit, in the Household unit display', () => {
     setup()
-    const t = tile('Restock level')
-    expect(t).toHaveClass('tile')
-    expect(within(t).getByRole('textbox', { name: /Restock level/ })).toHaveValue('500')
-    expect(within(t).getByText('Below 500 ml')).toBeInTheDocument()
+    expect(restockField()).toHaveValue('500')
+    expect(within(keeping()).getByText('Below 500 ml')).toBeInTheDocument()
   })
   it('labels the field in metric Base Units while the summary follows the Household (imperial)', () => {
     system.value = 'imperial'
     setup()
-    const t = tile('Restock level')
-    expect(within(t).getByRole('textbox', { name: /Restock level/ })).toHaveValue('500')
-    expect(within(t).getByText('ml')).toBeInTheDocument() // the stored value is always metric, as the conversion amount field
-    expect(within(t).getByText('Below 2 cups')).toBeInTheDocument()
+    expect(restockField()).toHaveValue('500')
+    expect(within(restockField().closest('.ui-field') as HTMLElement).getByText('ml')).toBeInTheDocument() // the suffix, not the Base Unit option
+    expect(within(keeping()).getByText('Below 2 cups')).toBeInTheDocument()
   })
   it('counts the field\'s unit with the level ("6 pieces", not "6 piece")', () => {
     hook.ingredient = detail(toiletPaperJSON)
     setup('/supplies/22')
-    const t = tile('Restock level')
-    expect(within(t).getByRole('textbox', { name: /Restock level/ })).toHaveValue('6')
-    expect(within(t).getByText('pieces')).toBeInTheDocument()
+    expect(restockField()).toHaveValue('6')
+    expect(within(keeping()).getByText('pieces')).toBeInTheDocument()
   })
-  it('saves a new level in Base Units on Enter', async () => {
+  it('saves a new level in Base Units with Save changes (Enter in the field submits too)', async () => {
     setup()
-    const field = within(tile('Restock level')).getByRole('textbox', { name: /Restock level/ })
-    await userEvent.clear(field)
-    await userEvent.type(field, '750{Enter}')
-    expect(hook.setRestockLevel).toHaveBeenCalledWith(750)
+    await userEvent.clear(restockField())
+    await userEvent.type(restockField(), '750{Enter}')
+    expect(hook.save).toHaveBeenCalledWith({ restockLevel: 750 })
+    expect(hook.setRestockLevel).not.toHaveBeenCalled()
   })
   it('clears the level when the field is emptied', async () => {
     setup()
-    const field = within(tile('Restock level')).getByRole('textbox', { name: /Restock level/ })
-    await userEvent.clear(field)
-    await userEvent.keyboard('{Enter}')
-    expect(hook.setRestockLevel).toHaveBeenCalledWith(null)
+    await userEvent.clear(restockField())
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(hook.save).toHaveBeenCalledWith({ restockLevel: null })
   })
   it('says there is no level when it is null', () => {
     hook.ingredient = detail({ ...dishSoapJSON, restockLevel: null })
     setup()
-    const t = tile('Restock level')
-    expect(within(t).getByRole('textbox', { name: /Restock level/ })).toHaveValue('')
-    expect(within(t).getByText('No Restock level')).toBeInTheDocument()
+    expect(restockField()).toHaveValue('')
+    expect(within(keeping()).getByText('No Restock level')).toBeInTheDocument()
   })
-  it('shows a failed save in words', async () => {
-    hook.setRestockLevel.mockRejectedValueOnce(new ApiError(422, 'validation_failed', 'x', { reason: 'restock_level_on_food' }))
+  it('shows a failed save in words, as the one form-level alert', async () => {
+    hook.save.mockRejectedValueOnce(new ApiError(422, 'validation_failed', 'x', { reason: 'restock_level_on_food' }))
     setup()
-    const field = within(tile('Restock level')).getByRole('textbox', { name: /Restock level/ })
-    await userEvent.clear(field)
-    await userEvent.type(field, '5{Enter}')
-    expect(await screen.findByRole('alert')).toHaveTextContent('Only a Supply has a Restock level')
+    await userEvent.clear(restockField())
+    await userEvent.type(restockField(), '5{Enter}')
+    expect(await findAlert()).toHaveTextContent('Only a Supply has a Restock level')
+    expect(alerts()).toHaveLength(1)
   })
 })
 
-describe('SupplyScreen: the kind Tile', () => {
-  it('says "This is a Supply" and offers "Change to food"', () => {
+describe('SupplyScreen: changing kind (More menu)', () => {
+  it('offers "Change to food" and no Kind tile', async () => {
     setup()
-    const t = tile('Kind')
-    expect(within(t).getByText('This is a Supply')).toBeInTheDocument()
-    expect(within(t).getByRole('button', { name: 'Change to food' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Kind' })).toBeNull()
+    expect(screen.queryByText('This is a Supply')).toBeNull()
+    expect(within(await more()).getByRole('menuitem', { name: 'Change to food' })).toBeInTheDocument()
   })
   it('changes to food at once (always allowed) and follows it to /ingredients/:id', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Change to food' }))
+    await userEvent.click(within(await more()).getByRole('menuitem', { name: 'Change to food' }))
     expect(hook.setKind).toHaveBeenCalledWith('food')
     expect(await screen.findByText('ingredient page')).toBeInTheDocument()
   })
   it('stays put and shows the reasons in words in a dialog when the change is refused (409 kind_in_use)', async () => {
     hook.setKind.mockRejectedValueOnce(new ApiError(409, 'kind_in_use', 'kind_in_use', { reasons: ['recipe_lines', 'exclusions', 'base_recipe'] }))
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Change to food' }))
+    await userEvent.click(within(await more()).getByRole('menuitem', { name: 'Change to food' }))
     const dialog = await screen.findByRole('dialog', { name: "It can't become food yet" })
     const items = within(dialog).getAllByRole('listitem').map((li) => li.textContent)
     expect(items).toEqual(['It is on a Recipe line', 'A Member excludes it', "It is a Base recipe's Ingredient"])

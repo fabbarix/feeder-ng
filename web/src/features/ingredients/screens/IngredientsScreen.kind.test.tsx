@@ -25,6 +25,6 @@ describe('IngredientsScreen is food only (decision D5)', () => {
     render(<RouterProvider router={createMemoryRouter([{ path: '/ingredients', element: <IngredientsScreen /> }], { initialEntries: ['/ingredients'] })} />)
     await userEvent.click(screen.getByRole('button', { name: 'New Ingredient' }))
     expect(screen.queryByRole('radiogroup', { name: 'Kind' })).toBeNull()
-    expect(screen.getByLabelText(/Shelf Life/)).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Shelf Life' })).toBeInTheDocument()
   })
 })

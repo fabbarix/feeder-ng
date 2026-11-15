@@ -1,5 +1,5 @@
 // R2-3 (F-01, F-04; guard P4 "Amount in g"): the add form is one FieldRow: Unit (sm) and "Amount in g" (sm) with the Add button
-// aligned to the controls. The error appears only after Add (it already does), as an alert.
+// aligned to the controls. The error appears only after Add (it already does), at its field (B9-48, SAFE-04).
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -21,10 +21,11 @@ describe('ConversionEditor add form (R2-3)', () => {
     expect(row).toContainElement(screen.getByLabelText('Amount in g'))
     expect(row).toContainElement(screen.getByRole('button', { name: 'Add conversion' }))
   })
-  it('shows no error before the first Add, and an alert after an empty Add', async () => {
+  it('shows no error before the first Add, and a field error (not an alert, SAFE-04) after an empty Add', async () => {
     setup()
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByLabelText('Unit')).not.toHaveAttribute('aria-invalid', 'true')
     await userEvent.click(screen.getByRole('button', { name: 'Add conversion' }))
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByLabelText('Unit')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })

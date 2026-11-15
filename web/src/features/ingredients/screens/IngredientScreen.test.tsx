@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react'
+// The Ingredient page with a mocked useIngredient (B9-48 rewrote it for SET-05: header Rename and More, one Keeping tile, Delete as a confirm).
+// The integration test with the real hooks and the HTTP stub is IngredientScreen.page.test.tsx.
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../../lib/http'
+import { alerts, renderRoutes } from '../ingredient.test-helper'
 import { strings } from '../strings'
 import type { IngredientDetail } from '../types'
 
@@ -16,6 +18,7 @@ const hook = {
   error: null as Error | null,
   referenceCount: 0,
   rename: vi.fn().mockResolvedValue({}),
+  save: vi.fn().mockResolvedValue({}),
   setBaseUnit: vi.fn().mockResolvedValue({}),
   setShelfLife: vi.fn().mockResolvedValue({}),
   setConversion: vi.fn().mockResolvedValue({}),
@@ -28,6 +31,7 @@ const hook = {
   },
 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
+vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false }) }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
 vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))
@@ -38,14 +42,17 @@ vi.mock('./../components/MergeSheet', () => ({
 import { IngredientScreen } from './IngredientScreen'
 
 function setup() {
-  const router = createMemoryRouter(
+  return renderRoutes(
     [
       { path: '/ingredients', element: <p>list page</p> },
       { path: '/ingredients/:id', element: <IngredientScreen /> },
     ],
-    { initialEntries: ['/ingredients/7'] },
+    '/ingredients/7',
   )
-  render(<RouterProvider router={router} />)
+}
+const openMore = async () => {
+  await userEvent.click(screen.getByRole('button', { name: 'More for Garlic' }))
+  return screen.getByRole('menu', { name: 'More for Garlic' })
 }
 
 describe('IngredientScreen', () => {
@@ -56,64 +63,87 @@ describe('IngredientScreen', () => {
     hook.isLoading = false
     hook.referenceCount = 0
   })
-  it('shows the name, Base Unit, Shelf Life and conversions', () => {
+  it('shows the name with its kind, the Keeping tile and the conversions', () => {
     setup()
-    expect(screen.getByRole('heading', { name: 'Garlic' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Shelf Life')).toHaveValue('30')
+    expect(screen.getByRole('heading', { level: 1, name: 'Garlic' })).toBeInTheDocument()
+    expect(document.querySelector('.page-header__subtitle')).toHaveTextContent('Food')
+    const keeping = screen.getByRole('region', { name: 'Keeping' })
+    expect(within(keeping).getByRole('spinbutton', { name: 'Shelf Life' })).toHaveTextContent('30')
     expect(screen.getByText('1 clove = 5 g')).toBeInTheDocument()
   })
-  it('renames', async () => {
+  it('Rename and More are the header\'s two outline IconButtons (no text Rename button, no Kind, Merge or Delete tile)', () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: strings.rename }))
-    const field = screen.getByLabelText(strings.nameLabel)
+    const actions = document.querySelector('.page-header__actions') as HTMLElement
+    expect(within(actions).getByRole('button', { name: 'Rename Garlic' })).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(within(actions).getByRole('button', { name: 'More for Garlic' })).toHaveAttribute('aria-haspopup', 'menu')
+    expect(screen.queryByRole('button', { name: strings.rename })).toBeNull()
+    for (const name of ['Kind', 'Merge Ingredient', 'Delete Ingredient']) expect(screen.queryByRole('region', { name })).toBeNull()
+  })
+  it('renames in a sheet: the typed name goes to the hook', async () => {
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Rename Garlic' }))
+    const dialog = screen.getByRole('dialog', { name: 'Rename Garlic' })
+    const field = within(dialog).getByRole('textbox', { name: strings.nameLabel })
     await userEvent.clear(field)
     await userEvent.type(field, 'Garlic bulb')
-    await userEvent.click(screen.getByRole('button', { name: strings.saveName }))
+    await userEvent.click(within(dialog).getByRole('button', { name: strings.saveName }))
     expect(hook.rename).toHaveBeenCalledWith('Garlic bulb')
+    await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Rename Garlic' })).toBeNull())
   })
-  it('shows a duplicate-name error on rename', async () => {
+  it('shows a duplicate-name error at the Name field of the Rename sheet, and keeps the sheet open', async () => {
     hook.rename.mockRejectedValueOnce(new ApiError(409, 'name_taken', 'exists'))
     setup()
-    await userEvent.click(screen.getByRole('button', { name: strings.rename }))
-    await userEvent.type(screen.getByLabelText(strings.nameLabel), 'x')
-    await userEvent.click(screen.getByRole('button', { name: strings.saveName }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(strings.nameTaken)
+    await userEvent.click(screen.getByRole('button', { name: 'Rename Garlic' }))
+    const dialog = screen.getByRole('dialog', { name: 'Rename Garlic' })
+    await userEvent.type(within(dialog).getByRole('textbox', { name: strings.nameLabel }), 'x')
+    await userEvent.click(within(dialog).getByRole('button', { name: strings.saveName }))
+    expect(await within(dialog).findByText(strings.nameTaken)).toBeInTheDocument()
+    expect(within(dialog).getByRole('textbox', { name: strings.nameLabel })).toHaveAttribute('aria-invalid', 'true')
   })
-  it('forwards conversion and Shelf Life edits to the hook', async () => {
+  it('removes a conversion at once (no confirm): the hook is asked, and an Undo toast follows', async () => {
     setup()
     await userEvent.click(screen.getByRole('button', { name: strings.removeConversion('clove') }))
     expect(hook.removeConversion).toHaveBeenCalledWith('clove')
-    await userEvent.click(screen.getByRole('button', { name: strings.clearShelfLife }))
-    expect(hook.setShelfLife).toHaveBeenCalledWith(null)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(await screen.findByText('1 clove removed')).toBeInTheDocument()
   })
-  it('lets the Base Unit change while nothing uses the Ingredient', async () => {
+  it('lets the Base Unit be chosen in Keeping while nothing uses the Ingredient; it is saved with Save changes, in one save', async () => {
     setup()
     await userEvent.click(screen.getByRole('radio', { name: 'ml' }))
-    expect(hook.setBaseUnit).toHaveBeenCalledWith('ml')
-    expect(screen.getByRole('button', { name: strings.deleteIngredient })).toBeEnabled()
+    expect(hook.setBaseUnit).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(hook.save).toHaveBeenCalledWith({ baseUnit: 'ml' })
+    const menu = await openMore()
+    expect(within(menu).getByRole('menuitem', { name: strings.deleteIngredient })).not.toHaveAttribute('aria-disabled', 'true')
   })
-  it('locks the Base Unit and deletion while referenced', async () => {
+  it('locks the Base Unit and Delete while referenced', async () => {
     hook.referenceCount = 3
     hook.ingredient = { ...base, references: { 'recipe lines': 3 } }
     setup()
-    expect(screen.getByText(strings.baseUnitLocked(3))).toBeInTheDocument()
-    expect(screen.queryByRole('radio', { name: 'ml' })).toBeNull() // locked: a read-only value row, not disabled options
-    expect(screen.getByRole('button', { name: strings.deleteIngredient })).toBeDisabled()
-    expect(screen.getByText(strings.deleteLocked(3))).toBeInTheDocument()
+    expect(screen.getByText("Used in 3 places, so it can't change")).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'ml' })).toBeNull()
+    const menu = await openMore()
+    const del = within(menu).getByRole('menuitem', { name: strings.deleteIngredient })
+    expect(del).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(del)
+    expect(screen.queryByRole('dialog', { name: /Delete/ })).toBeNull()
   })
-  it('confirms before deleting, then returns to the list', async () => {
+  it('Delete is a confirm: Cancel is focused, the lead names what uses it, and confirming deletes and returns to the list', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: strings.deleteIngredient }))
+    await userEvent.click(within(await openMore()).getByRole('menuitem', { name: strings.deleteIngredient }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Garlic?' })
+    expect(dialog).toHaveTextContent('It is on no Recipe, Product or Shopping List.')
+    expect(dialog).toHaveTextContent("Nothing else changes. This can't be undone.")
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    expect(within(dialog).queryByRole('button', { name: 'Close' })).toBeNull()
     expect(hook.remove).not.toHaveBeenCalled()
-    expect(screen.getByText(strings.deleteConfirm('garlic'))).toBeInTheDocument()
-    const confirm = screen.getAllByRole('button', { name: strings.deleteIngredient }).at(-1)!
-    await userEvent.click(confirm)
+    await userEvent.click(within(dialog).getByRole('button', { name: strings.deleteIngredient }))
     expect(hook.remove).toHaveBeenCalled()
     expect(await screen.findByText('list page')).toBeInTheDocument()
   })
-  it('opens the merge sheet for this Ingredient', async () => {
+  it('opens the merge sheet for this Ingredient from More', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: strings.mergeInto }))
+    await userEvent.click(within(await openMore()).getByRole('menuitem', { name: strings.mergeInto }))
     expect(screen.getByText('merge sheet for 7')).toBeInTheDocument()
   })
   it('handles an unknown id', () => {
@@ -127,14 +157,14 @@ describe('IngredientScreen', () => {
     hook.ingredient = undefined
     hook.isLoading = true
     setup()
-    expect(screen.getByRole('status')).toHaveTextContent(strings.loading)
+    expect(screen.getByText(strings.loading)).toBeInTheDocument()
     expect(screen.queryByText(strings.notFoundTitle)).not.toBeInTheDocument()
   })
   it('shows a failure with Try again (B9-20), not "does not exist", when the load fails for another reason', () => {
     hook.ingredient = undefined
     hook.error = new ApiError(500, 'server_error', 'boom')
     setup()
-    expect(screen.getByRole('alert')).toHaveTextContent(strings.itemError)
+    expect(alerts()[0]!).toHaveTextContent(strings.itemError)
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(screen.queryByText(strings.notFoundTitle)).not.toBeInTheDocument()
   })
@@ -142,6 +172,6 @@ describe('IngredientScreen', () => {
     setup()
     expect(screen.getByRole('group', { name: strings.detailsLabel })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: strings.conversionsTitle })).toHaveClass('tile')
-    expect(screen.getByRole('region', { name: strings.mergeTitle })).toHaveClass('tile')
+    expect(screen.getByRole('region', { name: 'Keeping' })).toHaveClass('tile')
   })
 })
