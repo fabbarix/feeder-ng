@@ -113,3 +113,25 @@ describe('StickyActionBar re-checks the focused field when the keyboard comes up
     vi.unstubAllGlobals()
   })
 })
+
+describe('StickyActionBar scrolls a Checkbox clear by its visible box (B9-19 developer, P39 on the Recipe editor at 1440)', () => {
+  it('a visually hidden input (opacity 0) is measured and scrolled by the box beside it that draws its ring', async () => {
+    const { container, getByRole } = render(
+      <>
+        <label className="checkbox__control">
+          <input type="checkbox" className="checkbox__input" style={{ opacity: 0 }} aria-label="Ready Meal" />
+          <span className="checkbox__box" data-testid="box" />
+        </label>
+        <StickyActionBar>
+          <FormActions primary={<Button>Save</Button>} />
+        </StickyActionBar>
+      </>,
+    )
+    const box = container.querySelector('.checkbox__box')!
+    vi.spyOn(box, 'getBoundingClientRect').mockReturnValue(rect(580, 604))
+    vi.spyOn(container.querySelector('.checkbox__input')!, 'getBoundingClientRect').mockReturnValue(rect(500, 501))
+    vi.spyOn(container.querySelector('.sticky-action-bar')!, 'getBoundingClientRect').mockReturnValue(rect(600, 670))
+    await userEvent.click(getByRole('checkbox', { name: 'Ready Meal' }))
+    expect(scrollIntoView.mock.contexts[0]).toBe(box)
+  })
+})

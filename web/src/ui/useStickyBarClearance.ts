@@ -58,6 +58,18 @@ export function ringCrossesBarTop({ frameBottom, barTop, ring = RING_PX }: { fra
 }
 
 /**
+ * The element that draws a focused control's ring: its field frame (`.ui-field__control`), the visual sibling of a visually hidden
+ * input (the Checkbox's `input + .checkbox__box`), else the control itself.
+ */
+function ringOwner(target: Element): Element {
+  const frame = target.closest('.ui-field__control')
+  if (frame) return frame
+  const sibling = target.nextElementSibling
+  if (target.tagName === 'INPUT' && sibling && getComputedStyle(target).opacity === '0') return sibling
+  return target
+}
+
+/**
  * B9-19 (SHORT-04): while the bar floats, a control that takes focus with its ring under the bar is scrolled clear of it. The
  * browser scrolls the caret of a textarea, not its box, and leaves a partly visible control where it is, so scroll-padding alone
  * leaves the frame's bottom and ring under the bar. A visual-viewport resize (the keyboard coming up) checks the focused field again. The field frame (`.ui-field__control`) is scrolled, else the control itself;
@@ -69,7 +81,7 @@ export function useScrollFocusClearOfBar(ref: RefObject<HTMLElement | null>, ena
     const clear = (target: EventTarget | Element | null) => {
       const bar = ref.current
       if (!bar || !(target instanceof Element) || target === document.body || bar.contains(target)) return
-      const frame = target.closest('.ui-field__control') ?? target
+      const frame = ringOwner(target)
       if (!ringCrossesBarTop({ frameBottom: frame.getBoundingClientRect().bottom, barTop: bar.getBoundingClientRect().top })) return
       frame.scrollIntoView?.({ block: 'nearest' })
     }
