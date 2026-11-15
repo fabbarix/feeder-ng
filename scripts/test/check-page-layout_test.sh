@@ -33,7 +33,7 @@ fi
 # --- check.sh wiring: after vite build (the binary embeds web/dist), before go vet, in its own step
 CH="$ROOT/scripts/check.sh"
 grep -q 'check-page-layout.sh' "$CH" && ok || bad "check.sh must run scripts/check-page-layout.sh"
-l_build=$(grep -n 'step "vite build"' "$CH" | cut -d: -f1); l_pl=$(grep -n 'check-page-layout.sh' "$CH" | head -1 | cut -d: -f1); l_vet=$(grep -n 'step "go vet"' "$CH" | cut -d: -f1)
+l_build=$(grep -n 'step "vite build"' "$CH" | cut -d: -f1); l_pl=$(grep -n 'check-page-layout.sh' "$CH" | head -1 | cut -d: -f1); l_vet=$(grep -n 'step_bg "go vet"' "$CH" | cut -d: -f1)
 [ -n "$l_pl" ] && [ "$l_build" -lt "$l_pl" ] && [ "$l_pl" -lt "$l_vet" ] && ok || bad "the page layout step must sit between vite build and go vet"
 
 # --- modes file and the guard files

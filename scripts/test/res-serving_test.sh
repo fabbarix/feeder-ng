@@ -126,8 +126,16 @@ l_build=$(grep -n 'step "vite build"' "$CH" | cut -d: -f1); l_b=$(grep -n 'check
 [ "$(grep -c 'check-bundle-budget.sh' "$CH")" -eq 1 ] && ok || bad "check.sh gets ONE budget line"
 
 # ---------------------------------------------------------------- the build writes the precompressed siblings (RES-04)
-if (cd "$WEB" && pnpm exec vite build --outDir "$SCRATCH/dist" --emptyOutDir >"$SCRATCH/build.log" 2>&1); then
+# fast-checks: scripts/check.sh gives its own web build (FEEDER_WEB_DIST), so the check builds the web once; run alone, it builds.
+web_build() {
+  if [ -n "${FEEDER_WEB_DIST:-}" ] && [ -f "$FEEDER_WEB_DIST/index.html" ]; then
+    D="$FEEDER_WEB_DIST"
+    return 0
+  fi
   D="$SCRATCH/dist"
+  (cd "$WEB" && pnpm exec vite build --outDir "$SCRATCH/dist" --emptyOutDir >"$SCRATCH/build.log" 2>&1)
+}
+if web_build; then
   entry="$(grep -oE 'src="/assets/index-[^"]+\.js"' "$D/index.html" | head -1 | sed -E 's|src="/(.*)"|\1|')"
   # the app's one stylesheet, as index.html names it (B9-59: cssCodeSplit is off, so it is style-*.css, no longer index-*.css)
   css="$(grep -oE '<link[^>]*rel="stylesheet"[^>]*href="/assets/[^"]+\.css"' "$D/index.html" | grep -oE 'href="/assets/[^"]+"' | head -1 | sed -E 's|href="/(.*)"|\1|')"

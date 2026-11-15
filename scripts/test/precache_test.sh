@@ -9,7 +9,11 @@ WEB="$HERE/../../web"
 OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT"' EXIT
 
-if ! (cd "$WEB" && pnpm exec vite build --outDir "$OUT" --emptyOutDir >"$OUT/build.log" 2>&1); then
+# fast-checks: scripts/check.sh gives its own web build (FEEDER_WEB_DIST), so the check builds the web once; run alone, it builds.
+if [ -n "${FEEDER_WEB_DIST:-}" ] && [ -f "$FEEDER_WEB_DIST/sw.js" ]; then
+  OUT="$FEEDER_WEB_DIST"
+  trap - EXIT
+elif ! (cd "$WEB" && pnpm exec vite build --outDir "$OUT" --emptyOutDir >"$OUT/build.log" 2>&1); then
   cat "$OUT/build.log"
   echo "FAIL: vite build failed"
   exit 1

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Runs every check for this worktree, in order, and stops at the first failure.
+# Runs every check for this worktree and fails if any fails. The web steps run in order and stop at the first failure; after the
+# web build, the guards, the Go steps, the release preflight and the shell tests run side by side (each into its own log under
+# build/check-steps/), and the check fails after all of them have finished if any of them failed.
 # Output is teed to <worktree>/build/check.log. Exits non-zero on any failure. How to run which: docs/dev/checks.md.
 #
 # CHECK_PROFILE  full (the default): every step. This is the check to run locally before a tag.
@@ -10,8 +12,10 @@
 #                the profile: CHECK_PROFILE=ci CHECK_SINCE=main leaves the browser work out too. Unset: the profile's full coverage.
 # CHECK_ONLY     ui: the UI guards only (scripts/test/check-ui_test.sh).
 #                web: the UI guards, pnpm install, typecheck, vitest and the vite build (the workflows' web job).
-#                go: pnpm install (the shell tests run vite), go vet, go test and the shell tests (the workflows' Go and shell job).
+#                go: pnpm install (the shell tests run vite), go vet, go test, the release preflight and the shell tests (the workflows' Go and
+#                shell job).
 #                Unset: every step of the profile.
+# CHECK_SERIAL=1 runs the steps one after the other (as before fast-checks), to read one step's output as it comes.
 # CHECK_LIST=1   prints the steps (and the shell tests) this run would take, runs nothing and leaves the lock and the log alone.
 set -uo pipefail
 
@@ -22,6 +26,7 @@ PROFILE="${CHECK_PROFILE:-full}"
 ONLY="${CHECK_ONLY:-}"
 LIST="${CHECK_LIST:-}"
 SINCE="${CHECK_SINCE:-}"
+SERIAL="${CHECK_SERIAL:-}"
 case "$PROFILE" in full | ci) ;; *) echo "check.sh FAILED: unknown CHECK_PROFILE '$PROFILE' (full or ci)" >&2; exit 2 ;; esac
 case "$ONLY" in "" | ui | web | go) ;; *) echo "check.sh FAILED: unknown CHECK_ONLY '$ONLY' (ui, web or go)" >&2; exit 2 ;; esac
 
@@ -64,7 +69,10 @@ plans() {
     layout) [ "$PLAN_LAYOUT" = 1 ] ;;
     shell-layout) [ "$PLAN_SHELL_LAYOUT" = 1 ] ;;
     go) [ -n "$PLAN_GO" ] ;;
+    bdd) [ -n "$PLAN_BDD" ] ;;
     shell) [ -n "$PLAN_SHELL" ] ;;
+    # The release preflight is cheap and guards what no diff shows (a file only this checkout has): it runs whenever Go runs.
+    preflight) [ -n "$PLAN_GO" ] ;;
     install) [ "$PLAN_TYPECHECK" = 1 ] || [ "$PLAN_VITEST" != none ] || [ "$PLAN_BUILD" = 1 ] || [ -n "$PLAN_SHELL" ] ;;
   esac
 }
@@ -76,7 +84,7 @@ shopt -s nullglob
 for f in "$ROOT"/scripts/test/*_test.sh; do
   if [ "$PROFILE" = ci ] && grep -q '^# check-profile: browser' "$f"; then continue; fi
   if [ -n "$CHANGED" ] && ! grep -qw -- "${f#"$ROOT"/}" <<<"$PLAN_SHELL"; then continue; fi
-  SHELL_TESTS+=("$f")
+  SHELL_TESTS+=("${f#"$ROOT"/}")
 done
 shopt -u nullglob
 
@@ -97,7 +105,12 @@ if [ -z "$LIST" ] && ! { exec 8>"$ROOT/build/check.lock" && flock -n 8; }; then
 fi
 
 LOG="$ROOT/build/check.log"
-[ -n "$LIST" ] || : >"$LOG"
+STEPS="$ROOT/build/check-steps"
+if [ -z "$LIST" ]; then
+  : >"$LOG"
+  rm -rf "$STEPS"
+  mkdir -p "$STEPS"
+fi
 [ -z "$LIST" ] && [ -n "$SINCE" ] && printf '%s\n' "$PLAN_TEXT" | tee -a "$LOG"
 CHECK_START=$SECONDS
 
@@ -119,6 +132,69 @@ step() {
   printf '<== %s: %ss\n' "$name" "$((SECONDS - t0))" | tee -a "$LOG"
 }
 
+# step_bg NAME CMD...: a step that runs beside the others (CHECK_SERIAL=1: an ordinary step). Its output goes to its own log, which
+# join_steps appends to the check log, in the order the steps were started, once all of them have finished.
+BG_PIDS=()
+BG_NAMES=()
+BG_LOGS=()
+step_bg() {
+  if [ -n "$SERIAL" ] || [ -n "$LIST" ]; then
+    step "$@"
+    return
+  fi
+  local name="$1" log
+  shift
+  log="$STEPS/$((${#BG_PIDS[@]} + 1)).log"
+  printf '... %s (started at %ss)\n' "$name" "$((SECONDS - CHECK_START))" | tee -a "$LOG"
+  (
+    t0=$SECONDS
+    "$@"
+    rc=$?
+    echo "$((SECONDS - t0))" >"$log.time"
+    exit "$rc"
+  ) 8>&- >"$log" 2>&1 &
+  BG_PIDS+=($!)
+  BG_NAMES+=("$name")
+  BG_LOGS+=("$log")
+}
+kill_tree() {
+  local c
+  for c in $(pgrep -P "$1" 2>/dev/null); do kill_tree "$c"; done
+  kill -TERM "$1" 2>/dev/null
+}
+stop_bg() {
+  local p
+  for p in "${BG_PIDS[@]}"; do kill_tree "$p"; done
+}
+trap stop_bg EXIT
+trap 'exit 130' INT TERM HUP
+# join_steps: waits for every step_bg step, prints each one's output and time, and fails the check if any of them failed.
+join_steps() {
+  [ "${#BG_PIDS[@]}" -eq 0 ] && return 0
+  local i rc failed=()
+  for i in "${!BG_PIDS[@]}"; do
+    wait "${BG_PIDS[$i]}"
+    rc=$?
+    {
+      printf '\n==> %s\n' "${BG_NAMES[$i]}"
+      cat "${BG_LOGS[$i]}"
+      if [ "$rc" -ne 0 ]; then
+        printf 'CHECK FAILED: %s (exit %s, %ss)\n' "${BG_NAMES[$i]}" "$rc" "$(cat "${BG_LOGS[$i]}.time" 2>/dev/null || echo '?')"
+      else
+        printf '<== %s: %ss\n' "${BG_NAMES[$i]}" "$(cat "${BG_LOGS[$i]}.time")"
+      fi
+    } | tee -a "$LOG"
+    [ "$rc" -ne 0 ] && failed+=("${BG_NAMES[$i]}")
+  done
+  BG_PIDS=()
+  BG_NAMES=()
+  BG_LOGS=()
+  if [ "${#failed[@]}" -gt 0 ]; then
+    printf '\nCHECK FAILED: %s\n' "$(printf '%s; ' "${failed[@]}")" | tee -a "$LOG"
+    exit 1
+  fi
+}
+
 # vitest: every file, or (changed mode) `vitest related` on the plan's files: the tests that import them, and the tests that read them.
 run_vitest() {
   if [ -z "$CHANGED" ] || [ "$PLAN_VITEST" = all ]; then
@@ -131,37 +207,138 @@ run_vitest() {
   pnpm -C web exec vitest related --run --passWithNoTests "${files[@]}"
 }
 
-# go vet and go test: every package, or (changed mode) the plan's packages and the packages that import them.
+# The Go packages of this run: every one, or (changed mode) the plan's packages and the packages that import them. bdd/ is its own step.
 go_packages() {
   if [ -z "$CHANGED" ] || [ "$PLAN_GO" = all ]; then
-    echo ./...
+    go list -buildvcs=false ./... | grep -v '/bdd$'
     return
   fi
   local d
-  for d in $PLAN_GO; do echo "./$d"; done
+  for d in $PLAN_GO; do [ "$d" = bdd ] || echo "./$d"; done
 }
 run_go_vet() {
-  # shellcheck disable=SC2046
-  go vet $(go_packages)
+  local pkgs
+  pkgs="$(go_packages)"
+  { [ -z "$CHANGED" ] || [ "$PLAN_GO" = all ] || grep -qw bdd <<<"$PLAN_GO"; } && pkgs="$pkgs ./bdd"
+  # shellcheck disable=SC2086
+  go vet $pkgs
 }
+# Unit packages use the test cache: a package whose sources, test files, read files and environment have not changed is not run
+# again ("(cached)"). The BDD suite (bdd/, the API driven in-process, scenario by scenario) always runs (-count=1).
 run_go_test() {
-  # shellcheck disable=SC2046
-  go test $(go_packages)
+  local pkgs
+  pkgs="$(go_packages)"
+  if [ -z "$pkgs" ]; then
+    echo "no Go package besides bdd/ to test"
+    return 0
+  fi
+  # shellcheck disable=SC2086
+  go test $pkgs
+}
+run_bdd() {
+  local tags="" a
+  if [ -n "$CHANGED" ] && [ "$PLAN_BDD" != all ]; then
+    # godog: "," is OR, "&&" is AND; every alternative keeps the @wip features parked.
+    for a in $PLAN_BDD; do tags="${tags:+$tags,}~@wip && @area-$a"; done
+    echo "BDD areas: $PLAN_BDD"
+  fi
+  if [ -n "$tags" ]; then
+    GODOG_TAGS="$tags" go test -count=1 ./bdd/
+  else
+    go test -count=1 ./bdd/
+  fi
+}
+
+# fast-checks (release preflight): a clean copy of the tree (the files git tracks, and the untracked ones it does not ignore, as they
+# are on disk; nothing ignored: no web build, no build/, no local drop-in), at build/clean. The Go module must vet and build there
+# with no web build (web/dist holds only what git tracks): a local web/dist once hid a deleted web/dist/.gitkeep (v1.0.0-beta.9).
+# The shell tests then run from that copy, so a local file cannot make one pass (v1.0.0-beta.10), with the copy's web/node_modules a
+# link to this checkout's and its web/dist this check's own build (shared by res-serving_test and precache_test: FEEDER_WEB_DIST).
+CLEAN="$ROOT/build/clean"
+make_clean_copy() {
+  rm -rf "$CLEAN"
+  mkdir -p "$CLEAN"
+  git -C "$ROOT" ls-files -z --cached --others --exclude-standard \
+    | (cd "$ROOT" && while IFS= read -r -d '' f; do [ -e "$f" ] && printf '%s\0' "$f"; done) \
+    | (cd "$ROOT" && tar --null -T - -cf -) | tar -xf - -C "$CLEAN" || return 1
+  local dirty
+  dirty="$(git -C "$ROOT" status --porcelain | wc -l)"
+  echo "clean copy: $(find "$CLEAN" -type f | wc -l) files at build/clean${dirty:+ ($dirty changed or untracked file(s) of the working tree included)}"
+}
+run_preflight() {
+  [ -d "$CLEAN" ] || { echo "no clean copy"; return 1; }
+  echo "go vet ./... and go build ./... in build/clean, which has no web build (web/dist: $(ls -A "$CLEAN/web/dist" 2>/dev/null | tr '\n' ' '))"
+  (cd "$CLEAN" && go vet ./... && go build -buildvcs=false -o /dev/null ./...)
+}
+# The copy's web side for the shell tests: the installed packages, and this check's web build (when it made one).
+finish_clean_copy() {
+  ln -sfn "$ROOT/web/node_modules" "$CLEAN/web/node_modules"
+  if [ -f "$ROOT/web/dist/index.html" ] && plans build && wants web; then
+    (cd "$ROOT/web/dist" && tar --exclude='./.*' -cf - .) | tar -xf - -C "$CLEAN/web/dist"
+    export FEEDER_WEB_DIST="$CLEAN/web/dist"
+  fi
+}
+
+# Every shell test of the profile runs (SHELL_TESTS), from the clean copy; the step fails if any of them fails. The tests that start
+# Chrome (`# check-profile: browser`: servers on this checkout's port, the guard's lock) run one after the other in one lane; the
+# others, CHECK_SHELL_JOBS at a time (default 4), beside that lane: each writes under its own mktemp dir. The output is printed per
+# test, in file order.
+run_one_shell_test() {
+  local t="$1" log="$2" rc
+  bash "$CLEAN/$t" 8>&- >"$log" 2>&1
+  rc=$?
+  echo "$rc" >"$log.rc"
+  return "$rc"
+}
+run_shell_tests() {
+  if [ "${#SHELL_TESTS[@]}" -eq 0 ]; then
+    echo "no scripts/test/*_test.sh files"
+    return 0
+  fi
+  local jobs="${CHECK_SHELL_JOBS:-4}" status=0 t i dir="$STEPS/shell" browser=() others=()
+  rm -rf "$dir"
+  mkdir -p "$dir"
+  for i in "${!SHELL_TESTS[@]}"; do
+    if grep -q '^# check-profile: browser' "$CLEAN/${SHELL_TESTS[$i]}"; then browser+=("$i"); else others+=("$i"); fi
+  done
+  (for i in "${browser[@]}"; do run_one_shell_test "${SHELL_TESTS[$i]}" "$dir/$i.log"; done) &
+  local lane=$!
+  for i in "${others[@]}"; do
+    while [ "$(jobs -rp | wc -l)" -gt "$jobs" ]; do wait -n; done
+    run_one_shell_test "${SHELL_TESTS[$i]}" "$dir/$i.log" &
+  done
+  wait
+  for i in "${!SHELL_TESTS[@]}"; do
+    t="${SHELL_TESTS[$i]}"
+    printf -- '--> %s\n' "$t"
+    cat "$dir/$i.log" 2>/dev/null
+    if [ "$(cat "$dir/$i.log.rc" 2>/dev/null)" != 0 ]; then
+      printf 'FAILED: %s\n' "$t"
+      status=1
+    fi
+  done
+  : "$lane"
+  return "$status"
 }
 
 # UI guards first: they are instant. Each rule's mode lives in scripts/check-ui.rules.
-if wants ui && plans ui; then step "UI guards (scripts/check-ui.sh)" bash "$ROOT/scripts/check-ui.sh"; fi
 if [ "$ONLY" = ui ]; then # used by scripts/test/check-ui_test.sh
+  step "UI guards (scripts/check-ui.sh)" bash "$ROOT/scripts/check-ui.sh"
   [ -n "$LIST" ] && exit 0
   printf '\nCHECK PASSED (ui guards only)\n' | tee -a "$LOG"
   exit 0
 fi
+if wants ui && plans ui; then step_bg "UI guards (scripts/check-ui.sh)" bash "$ROOT/scripts/check-ui.sh"; fi
 
 if wants install && plans install; then step "pnpm install (frozen lockfile)" pnpm -C web install --frozen-lockfile; fi
 if wants web && plans typecheck; then step "typecheck" pnpm -C web typecheck; fi
 if wants web && plans vitest; then step "vitest" run_vitest; fi
 if wants web && plans build; then step "vite build" pnpm -C web build
   step "bundle budget" bash scripts/check-bundle-budget.sh
+fi
+join_steps
+if [ -z "$LIST" ] && { { wants go && plans preflight; } || { wants shell && plans shell; }; }; then
+  step "clean copy (build/clean)" make_clean_copy
 fi
 # Page-layout guard (R2-L): a route x viewport that is not inspected, or a refused run (a concurrent one), fails the run in every mode.
 # Rule findings are WARN until a route is flipped in scripts/check-page-layout.modes. Missing Chrome or a missing frontend (the 503 'frontend not built' page) is a WARN here; a failed vite build already failed at the vite step above.
@@ -170,41 +347,28 @@ fi
 # The changed mode runs only the routes and scenarios the diff can affect (--changed-since).
 LAYOUT_ARGS=()
 [ -n "$CHANGED" ] && LAYOUT_ARGS=(--changed-since "$SINCE")
-if wants layout && plans layout; then step "page layout guard" bash "$ROOT/scripts/check-page-layout.sh" "${LAYOUT_ARGS[@]}"; fi
+if wants layout && plans layout; then step_bg "page layout guard" bash "$ROOT/scripts/check-page-layout.sh" "${LAYOUT_ARGS[@]}"; fi
 # int1: the shell guard (bottom bar, rails, wide screens; scripts/check-shell-layout.mjs) against a production build, on its own server.
-if wants layout && plans shell-layout; then step "shell layout guard" bash "$ROOT/scripts/check-shell-layout.sh"; fi
+if wants layout && plans shell-layout; then step_bg "shell layout guard" bash "$ROOT/scripts/check-shell-layout.sh"; fi
 if wants go && plans go; then
-  step "go vet" run_go_vet
-  step "go test" run_go_test
+  step_bg "go vet" run_go_vet
+  step_bg "go test" run_go_test
 fi
-
-# Every shell test of the profile runs (SHELL_TESTS); the step fails if any of them fails.
-run_shell_tests() {
-  local status=0 f
-  if [ "${#SHELL_TESTS[@]}" -eq 0 ]; then
-    echo "no scripts/test/*_test.sh files"
-    return 0
-  fi
-  for f in "${SHELL_TESTS[@]}"; do
-    printf -- '--> %s\n' "${f#"$ROOT"/}"
-    if ! bash "$f" 8>&-; then
-      printf 'FAILED: %s\n' "${f#"$ROOT"/}"
-      status=1
-    fi
-  done
-  return "$status"
-}
+if wants go && plans bdd; then step_bg "go test (BDD, bdd/)" run_bdd; fi
+if wants go && plans preflight; then step_bg "release preflight (go vet and go build in build/clean, no web build)" run_preflight; fi
 
 if wants shell && plans shell; then
+  [ -z "$LIST" ] && finish_clean_copy
   if [ "$PROFILE" = ci ]; then
-    step "shell tests (scripts/test, no browser tests)" run_shell_tests
+    step_bg "shell tests (scripts/test, no browser tests)" run_shell_tests
   else
-    step "shell tests (scripts/test)" run_shell_tests
+    step_bg "shell tests (scripts/test)" run_shell_tests
   fi
   if [ -n "$LIST" ]; then
-    for f in "${SHELL_TESTS[@]}"; do printf -- '    --> %s\n' "${f#"$ROOT"/}"; done
+    for f in "${SHELL_TESTS[@]}"; do printf -- '    --> %s\n' "$f"; done
   fi
 fi
+join_steps
 
 [ -n "$LIST" ] && exit 0
 if [ "$PROFILE" = full ] && [ -z "$ONLY" ] && [ -z "$CHANGED" ]; then
