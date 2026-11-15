@@ -58,6 +58,9 @@ func mount(r *app.Router, d app.Deps) {
 	r.Admin("DELETE /api/meal-slots/{id}", a.deleteSlot)
 	r.Admin("GET /api/meal-slots/{id}/impact", a.slotImpact)
 	r.Admin("POST /api/meal-slots/{id}/restore", a.restoreSlot)
+	// B9-42: Remove and Put back of several Meal Slots at once, all or nothing.
+	r.Admin("POST /api/meal-slots/remove", a.removeSlots)
+	r.Admin("POST /api/meal-slots/restore", a.restoreSlots)
 
 	r.User("GET /api/meal-slots/{id}/attendance", a.getAttendance)
 	r.User("PUT /api/meal-slots/{id}/attendance", a.putAttendance)

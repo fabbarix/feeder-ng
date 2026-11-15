@@ -1,6 +1,12 @@
 package household
 
-import "time"
+import (
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+)
 
 // B9-04 removals (SAFE-02, ADR 0021): what Remove Member and Remove Meal Slot report and keep. The reads and the
 // writes are in store.
@@ -41,5 +47,63 @@ func WeekdayName(weekday int) string { return time.Weekday(weekday % 7).String()
 
 // SlotNameTakenMessage is what a refused Put back says (409 meal_slot_name_taken): "There is already a Dinner on Monday."
 func SlotNameTakenMessage(name string, weekday int) string {
-	return "There is already a " + name + " on " + WeekdayName(weekday) + "."
+	return (&SlotNameTakenError{Name: name, Weekdays: []int{weekday}}).Message()
+}
+
+// ErrSlotRemoved: a batch Remove names a Meal Slot that is already removed (409 meal_slot_removed). The single
+// DELETE answers 404 for it, as before.
+var ErrSlotRemoved = errors.New("household: the Meal Slot is already removed")
+
+// SlotIDError is a batch call refused because of one of its Meal Slots (B9-42): the whole call changes nothing, and
+// the answer names the slot. Err is ErrNotFound or ErrSlotRemoved.
+type SlotIDError struct {
+	ID  int64
+	Err error
+}
+
+func (e *SlotIDError) Error() string { return fmt.Sprintf("meal slot %d: %v", e.ID, e.Err) }
+func (e *SlotIDError) Unwrap() error { return e.Err }
+
+// SlotNameTakenError is a batch Put back refused because an active Meal Slot has the name on some of its weekdays
+// (409 meal_slot_name_taken). Weekdays (ascending) and IDs (in the same order) are the slots that cannot come back.
+type SlotNameTakenError struct {
+	Name     string
+	Weekdays []int
+	IDs      []int64
+}
+
+func (e *SlotNameTakenError) Error() string { return "household: " + e.Message() }
+func (e *SlotNameTakenError) Unwrap() error { return ErrSlotNameTaken }
+
+// Message is the sentence the refusal shows: "There is already a Dinner on Monday and Wednesday."
+func (e *SlotNameTakenError) Message() string {
+	days := append([]int(nil), e.Weekdays...)
+	sort.Ints(days)
+	names := make([]string, len(days))
+	for i, d := range days {
+		names[i] = WeekdayName(d)
+	}
+	list := strings.Join(names, ", ")
+	if n := len(names); n > 1 {
+		list = strings.Join(names[:n-1], ", ") + " and " + names[n-1]
+	}
+	return "There is already a " + e.Name + " on " + list + "."
+}
+
+// ValidateSlotIDs checks the ids of a batch Remove or Put back: at least one, each positive, none twice.
+func ValidateSlotIDs(ids []int64) error {
+	if len(ids) == 0 {
+		return &ValidationError{Field: "ids", Message: "Name at least one Meal Slot."}
+	}
+	seen := make(map[int64]bool, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			return &ValidationError{Field: "ids", Message: "A Meal Slot id is a positive number."}
+		}
+		if seen[id] {
+			return &ValidationError{Field: "ids", Message: "Name each Meal Slot once."}
+		}
+		seen[id] = true
+	}
+	return nil
 }
