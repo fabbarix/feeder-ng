@@ -17,6 +17,7 @@ import { AppProviders } from './app/providers'
 import { RouteErrorBoundary } from './app/PageErrorBoundary'
 import { announceNewVersion, registerServiceWorker } from './app/serviceWorker'
 import { browserStaleCheckEnv, watchChunkFailures } from './app/staleChunk'
+import { applyCachedTheme } from './theme/applyCachedTheme'
 
 const modules = discoverFeatures()
 const { navItems, statusHooks } = collectFeatures(modules)
@@ -48,6 +49,9 @@ const router = createBrowserRouter([
 ])
 
 registerServiceWorker()
+
+// B9-49 (RES-08): the User's cached theme, whole, on <html> before React's first frame (index.html painted only its six boot colours).
+applyCachedTheme(document.documentElement, window.matchMedia('(prefers-color-scheme: dark)').matches)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
