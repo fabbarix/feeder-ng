@@ -93,3 +93,20 @@ export function timerPlace(timerScope: string | null, currentScope: string, reci
   if (meal) return `${weekdayName(meal[1]!, 'short')} Planned Meal`
   return 'another Recipe'
 }
+
+// ---- B9-40 stubs (PC-03, SHORT-01; the developer replaces them; tests in lib/timers.strip.test.ts) ----
+
+/** Short landscape shows whole pills only: two from 700 px wide, one below. */
+export function visiblePillCount(_width: number): number {
+  return 0
+}
+
+/** The timers that hold Next first (keeping their order), then the rest in the order given. Does not mutate. */
+export function stripOrder<T extends { timer: CookTimer }>(items: T[], _holdingIds: number[]): T[] {
+  return items
+}
+
+/** The first `max` items and how many are left over ("+N"); no `max` shows them all. */
+export function splitPills<T>(items: T[], _max?: number): { shown: T[]; more: number } {
+  return { shown: items, more: 0 }
+}

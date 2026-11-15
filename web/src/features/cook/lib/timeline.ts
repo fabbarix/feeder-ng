@@ -146,7 +146,7 @@ export interface CourseMenuEntry {
  * The Course menu: for each unresolved Course (state planned) in the slot's order, "Mark <Course> as Cooked" then
  * "Not cooked: <Course>". Empty when the slot has fewer than two unresolved Courses (the menu is not shown then).
  */
-export function courseMenuEntries(view: TimelineView): CourseMenuEntry[] {
+export function courseMenuEntries(view: TimelineView, _mayMark = true): CourseMenuEntry[] {
   const open = unresolvedCourses(view)
   if (open.length < 2) return []
   return open.flatMap(({ courseId }) => {
@@ -215,7 +215,7 @@ export function leaveIfNothingLeft(unresolvedCount: number, cookedAny: boolean):
 }
 
 /** The header of Cook Mode: the slot name for several Courses, else the Recipe of the Course still to cook (or the slot name). */
-export function title(view: TimelineView, several: boolean): string {
+export function title(view: TimelineView, several: boolean, _today?: string): string {
   if (several) return view.slotName
   return view.courses.find((c) => c.state === 'planned')?.recipeName ?? view.slotName
 }

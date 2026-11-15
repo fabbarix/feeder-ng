@@ -59,7 +59,7 @@ export function describeUse(use: StepUse): string {
  * The overline of the Step tile: "Active", "Passive · 15 min timer" (a Passive Step), upper-cased by CSS. An
  * Active Step with a duration reads "Active · 10 min".
  */
-export function stepOverline(step: { kind: 'active' | 'passive' | string; durationMinutes: number }): string {
+export function stepOverline(step: { kind: 'active' | 'passive' | string; durationMinutes: number; number?: number; of?: number }): string {
   if (step.kind === 'passive') return `Passive · ${step.durationMinutes} min timer`
   return step.durationMinutes > 0 ? `Active · ${step.durationMinutes} min` : 'Active'
 }
@@ -73,4 +73,26 @@ export function holdingTimers<T extends { timer: CookTimer; seconds: number }>(s
   const after = step?.after ?? []
   if (after.length === 0) return []
   return items.filter((i) => i.timer.scope === scope && i.timer.step !== null && after.includes(i.timer.step) && i.timer.state !== 'finished' && i.seconds > 0)
+}
+
+// ---- B9-40 stubs (the developer replaces them; the tests are in lib/steps.b9-40.test.ts) ----
+
+/** PC-16 item 1: joins a number to its unit with a no-break space ("220 °C"). */
+export function nbspUnits(text: string): string {
+  return text
+}
+
+/** PC-03: 'long' for a Step of more than 25 words (it uses a smaller type size), else 'short'. */
+export function stepTextSize(_text: string): 'short' | 'long' {
+  return 'short'
+}
+
+/** PC-16 item 3: 45 -> "45 min", 90 -> "1 h 30 min", 360 -> "6 h". */
+export function formatStepDuration(minutes: number): string {
+  return String(minutes)
+}
+
+/** PC-16 item 2: the phrase the held line names the timer by ("the oven"). */
+export function shortTimerLabel(label: string): string {
+  return label
 }
