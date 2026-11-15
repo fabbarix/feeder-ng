@@ -4,8 +4,10 @@
 //                            these itself, so the check holds whatever the rules say.
 //   supply-keeping           the same for /supplies/:id.
 //   ingredient-rename-sheet  the Rename sheet open at 375 and 834: sheet rules only.
-//   ingredient-delete-confirm  Delete Ingredient's confirm open (More > Delete Ingredient) at 375 and 1440.
-// The seeded Ingredient (ids.ingredientId) has no references, so Delete is enabled; the seeded Supply is ids.supplyId.
+//   ingredient-delete-confirm  Delete Ingredient's confirm open (More > Delete Ingredient) at 375 and 1440, on the seeded Ingredient
+//                            that nothing uses (page-layout-seed/ingredients.mjs, "Star anise"; the setup opens its page, since
+//                            ids.ingredientId, Flour, is used by Recipes and its Delete is disabled). At 375 More is a sheet of rows.
+// The seeded Supply is ids.supplyId.
 import { evaluate, js, press, until } from '../helpers.mjs'
 
 // P25 judges tap targets on a touch emulation (the coarse ::after hit areas apply), as b9-14's sheets do.
@@ -58,11 +60,17 @@ export default {
       if (state.close) throw new Error('setup: the Rename sheet has a Close beside its Cancel')
     },
     async deleteConfirm() {
-      await until(`!!document.querySelector('main .page-header__actions button[aria-label^="More for "]') && ${settled}`, 'the More button')
+      // The unused Ingredient's page (found by name through the API the page itself uses).
+      const id = await evaluate(`fetch('/api/ingredients').then((r) => r.json()).then((j) => { const list = Array.isArray(j) ? j : Object.values(j).find(Array.isArray) ?? []; return list.find((i) => i.name === 'star anise')?.id ?? null })`)
+      if (!id) throw new Error('setup: the seeded unused Ingredient "star anise" is missing (page-layout-seed/ingredients.mjs)')
+      await evaluate(`(location.assign('/ingredients/${id}'), true)`)
+      await until(`location.pathname === '/ingredients/${id}' && !!document.querySelector('main .page-header__actions button[aria-label^="More for "]') && ${settled}`, 'the More button')
       await press(`document.querySelector('main .page-header__actions button[aria-label^="More for "]')`, 'More button')
-      await until(`!!document.querySelector('[role="menuitem"][aria-disabled!="true"]')`, 'the More menu')
-      await press(`[...document.querySelectorAll('[role="menuitem"]')].find((e) => /^Delete /.test(e.textContent.trim()))`, 'Delete menu item')
-      await until(`!!document.querySelector('dialog[open] .confirm-dialog__note, dialog[open] .dialog__actions')`, 'the Delete confirm')
+      // From 768 px a popover of menuitems; below, a sheet of rows whose own stretched button is pressed.
+      const DELETE_ITEM = `([...document.querySelectorAll('[role="menuitem"]')].find((e) => /^Delete /.test(e.textContent.trim()) && e.getAttribute('aria-disabled') !== 'true') ?? [...document.querySelectorAll('dialog[open] .list-row')].find((r) => /^Delete /.test(r.querySelector('.list-row__title')?.textContent.trim() ?? ''))?.querySelector('.list-row__target'))`
+      await until(`!!${DELETE_ITEM}`, 'an enabled Delete in the More menu')
+      await press(DELETE_ITEM, 'Delete menu item')
+      await until(`!!document.querySelector('dialog[open] .confirm-dialog__note, dialog[open] .dialog__actions') && !document.querySelector('[aria-busy="true"]')`, 'the Delete confirm')
     },
   },
 }
