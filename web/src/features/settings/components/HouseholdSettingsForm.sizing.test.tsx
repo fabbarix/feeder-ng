@@ -1,6 +1,6 @@
 // R2-3 (ui-review-2 F-01 adoption, L-06, F-03): the Household form uses field sizes, FieldRow and FormActions.
-//   Time zone md . Planning Horizon / Cool-down / Leftover Use-by xs, side by side in one FieldRow . Quiet hours start+end sm in one
-//   FieldRow . Location lg . Currency xs . "Save Household settings" in FormActions (auto width from 600 px), only for an Admin.
+//   Time zone md (B9-36: a TimeZoneSelect) . Planning Horizon / Cool-down / Leftover Use-by xs, side by side in one FieldRow . Quiet hours start+end sm in one
+//   FieldRow . Location lg . Currency sm (B9-36: a CurrencySelect, SET-07) . "Save Household settings" in FormActions (auto width from 600 px), only for an Admin.
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { householdSettings } from './fixtures'
@@ -24,7 +24,7 @@ describe('HouseholdSettingsForm sizing (R2-3)', () => {
     expect(sizeOf(screen.getByRole('group', { name: 'Quiet hours start' }))).toBe('sm')
     expect(sizeOf(screen.getByRole('group', { name: 'Quiet hours end' }))).toBe('sm')
     expect(sizeOf(screen.getByLabelText('Location'))).toBe('lg')
-    expect(sizeOf(screen.getByLabelText('Currency'))).toBe('xs')
+    expect(sizeOf(screen.getByLabelText('Currency'))).toBe('sm')
   })
 
   it('puts the three day counts on one FieldRow, and the quiet hours on another', () => {

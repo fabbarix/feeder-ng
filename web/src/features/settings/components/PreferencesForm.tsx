@@ -9,7 +9,13 @@ import type { ColourMode, Preferences } from '../types'
 import '../settings.css'
 
 export interface PreferencesFormProps {
+  /** What the controls show: the effective value (the preview, else the saved one). */
   value: Preferences
+  /** B9-36 (SAFE-08) STUB props, pinned by PreferencesForm.test.tsx; the body below still is the old draft form. */
+  saved?: Preferences
+  dirty?: boolean
+  onChange?: (next: Preferences) => void
+  onRevert?: () => void
   saving?: boolean
   onSave: (next: Preferences) => void | Promise<void>
 }

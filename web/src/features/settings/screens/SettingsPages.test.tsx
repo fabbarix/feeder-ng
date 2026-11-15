@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { findNotice } from '../../../test/notices'
 import { admin, anna, cook, householdSettings, marco, mondayLunch, sam, thursdayDinner } from '../components/fixtures'
-import { ADMIN_ME, mockApi, openOptionNames, renderWithProviders, USER_ME } from '../test-utils'
+import { ADMIN_ME, mockApi, openOptionNames, renderWithDataRouter, renderWithProviders, USER_ME } from '../test-utils'
 import { AllowlistPage } from './AllowlistPage'
 import { HouseholdPage } from './HouseholdPage'
 import { MealSlotsPage } from './MealSlotsPage'
@@ -41,7 +41,8 @@ describe('every Settings sub-page', () => {
     ['Your preferences', PreferencesPage, '/settings/preferences'],
   ] as const)('%s has its own h1 and a Settings breadcrumb to the index', async (title, Page, path) => {
     routes(ADMIN_ME)
-    renderWithProviders(<Page />, path)
+    // B9-36: Your preferences blocks leaving while it has a preview (useLeaveGuard), which needs a data router.
+    renderWithDataRouter(<Page />, path)
     expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
     expect(screen.queryByRole('link', { name: /^back to/i })).toBeNull()
@@ -273,12 +274,12 @@ describe('AllowlistPage', () => {
 describe('PreferencesPage', () => {
   it('saves own preferences with Segmented controls', async () => {
     const api = routes(USER_ME, { 'PUT /api/me/preferences': (c: { body: object }) => c.body })
-    renderWithProviders(<PreferencesPage />)
+    renderWithDataRouter(<PreferencesPage />, '/settings/preferences')
     await userEvent.click(await screen.findByRole('radio', { name: 'Dark' }))
     await userEvent.click(screen.getByRole('radio', { name: 'Imperial' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/me/preferences')).toHaveLength(1))
     expect(api.callsTo('PUT', '/api/me/preferences')[0]!.body).toEqual({ ...prefs, scheme: 'dark', units: 'imperial' })
-    expect(await findNotice('status', 'Preferences saved')).toBeInTheDocument()
+    expect(await findNotice('status', 'Your preferences are saved')).toBeInTheDocument()
   })
 })

@@ -13,6 +13,12 @@ export interface PreferencesState {
   refetch: () => void
   /** The server's value, or the defaults while loading. */
   preferences: Preferences
+  /** B9-36 (SAFE-08): the server's value (same as `preferences`). */
+  saved: Preferences
+  /** B9-36: the previewed value, else the saved one. Every consumer that shows the User's look reads this. STUB: equals `saved`. */
+  effective: Preferences
+  /** B9-36: a preview differs from the saved value. STUB: always false. */
+  dirty: boolean
   isPending: boolean
   save: (next: Preferences) => Promise<Preferences>
   saving: boolean
@@ -30,6 +36,9 @@ export function usePreferences(enabled = true): PreferencesState {
     state,
     refetch: () => void query.refetch(),
     preferences: query.data ?? DEFAULT_PREFERENCES,
+    saved: query.data ?? DEFAULT_PREFERENCES,
+    effective: query.data ?? DEFAULT_PREFERENCES,
+    dirty: false,
     isPending: enabled && query.isPending,
     save: mutation.mutateAsync,
     saving: mutation.isPending,
