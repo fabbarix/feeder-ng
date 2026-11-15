@@ -39,11 +39,6 @@
   color: var(--color-muted);
 }
 
-.camera-failure {
-  display: grid;
-  gap: var(--space-3);
-}
-
 .shop-picker {
   display: grid;
   gap: var(--space-3);
@@ -66,6 +61,31 @@
 .scan-sheet-form {
   display: grid;
   gap: var(--space-3);
+}
+
+/* SSP-06: the typed entry is one row: the Barcode field takes the room, Use its own width, level with the field's box (the label
+   above it is one meta line and the field's gap; the helper and an error run on below). Back to the camera takes a row of its own. */
+.typed-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.typed-entry__use {
+  align-self: start;
+  margin-block-start: calc(var(--text-meta-line) + var(--space-1));
+  min-block-size: 48px;
+}
+
+.typed-entry__back {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* SSP-06: a new row scrolled into view stays clear of the bottom bar. */
+.scan-screen__list .list-row {
+  scroll-margin-block-end: var(--nav-clearance);
 }
 
 /* Shop Location: "You seem to be at Coop (40 m)." with a switch button, under the header. */
