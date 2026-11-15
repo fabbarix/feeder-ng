@@ -1,10 +1,11 @@
 // DS-SHOP (docs/design/system.md §3): a Shop Line is a ListRow: [tick] [Thumb] [name over one meta line] [quantity column].
 // The whole row opens the Line's sheet; the tick is the only other control. Render only: the rules are in lib/rows.
+// B9-34: the meta says what a tick did to Stock (SSP-01) or that more is needed since a tick (SSP-02); its compact form is ListRow's own
+// (shown by the width of the row's text column, SSP-05); the row carries its key for focus after it leaves its list (A11Y-07).
 import { ListRow } from '../../../ui/ListRow'
 import { Icon } from '../../../ui/Icon'
 import { Thumb } from '../../../ui/Thumb'
-import '../../../ui/fields/Field.css' // the shared .visually-hidden utility (the full Restock reason of a compact row)
-import { rowMeta, rowValue, type RowGroup, type RowMeta } from '../lib/rows'
+import { rowMeta, rowValue, type RowGroup } from '../lib/rows'
 import type { ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
 
@@ -15,17 +16,16 @@ export interface LineRowProps {
   onUntick?: (entry: ListEntry) => void
   /** the row was tapped: open its sheet with the group it is in */
   onOpen: (entry: ListEntry, group: RowGroup) => void
-  /** b8-polish: the narrow layout shows the short Restock reason; the screen decides (useCompactRows) */
-  compact?: boolean
   /** B9-34: this row's tick is in flight (aria-busy and aria-disabled; it stays focusable) */
   pending?: boolean
 }
 
-export function LineRow({ entry, group, onTick, onUntick, onOpen, compact }: LineRowProps) {
+export function LineRow({ entry, group, onTick, onUntick, onOpen, pending }: LineRowProps) {
   const ticked = group === 'ticked'
-  const meta = rowMeta(entry, { compact })
+  const meta = rowMeta(entry)
   const { value, subValue } = rowValue(entry)
-  // round 2: the label is stable ("Tick X") and the state is aria-pressed; the ticked mark is a plain check in a CSS circle
+  // round 2: the label is stable ("Tick X") and the state is aria-pressed; the ticked mark is a plain check in a CSS circle.
+  // A pending tick is aria-disabled, never disabled: it keeps the focus (A11Y-07) and a second press does nothing.
   const control =
     group === 'not-needed' ? undefined : (
       <button
@@ -33,7 +33,13 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, compact }: Lin
         className="line-row__tick"
         aria-label={shopStrings.tickTitle(entry.title)}
         aria-pressed={ticked}
-        onClick={() => (ticked ? onUntick?.(entry) : onTick?.(entry))}
+        aria-busy={pending ? true : undefined}
+        aria-disabled={pending ? true : undefined}
+        onClick={() => {
+          if (pending) return
+          if (ticked) onUntick?.(entry)
+          else onTick?.(entry)
+        }}
       >
         {ticked ? <Icon name="tick" size={24} weight="bold" /> : null}
       </button>
@@ -44,29 +50,15 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, compact }: Lin
       onActivate={() => onOpen(entry, group)}
       haspopup="dialog"
       data-state={group}
+      data-focus-key={entry.key}
       leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={40} />}
       control={control}
-      meta={metaNode(meta)}
-      metaCompact={meta.fullText ? undefined : entry.restockCompact}
+      meta={meta.text || undefined}
+      metaCompact={meta.compact}
       metaStatus={meta.status}
+      metaIcon={meta.icon}
       value={value}
       subValue={subValue}
     />
-  )
-}
-
-/**
- * The meta text. With a fullText (b8-polish) the compact text is painted and hidden from assistive technology, and the full one is
- * read instead through the shared .visually-hidden text (the pattern of CourseChips and MealSlotWeekStrip). The hidden text comes
- * last: it is absolutely positioned at the end of the painted text, so it adds nothing to the width P23 measures.
- */
-function metaNode(meta: RowMeta) {
-  if (!meta.text) return undefined
-  if (!meta.fullText) return meta.text
-  return (
-    <>
-      <span aria-hidden="true">{meta.text}</span>
-      <span className="visually-hidden">{meta.fullText}</span>
-    </>
   )
 }

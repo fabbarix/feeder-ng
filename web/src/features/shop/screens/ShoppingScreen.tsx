@@ -1,7 +1,8 @@
 // The Shop screen (bottom bar "Shop", route /shop). Wires hooks to components; no fetching or domain maths here.
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { markSlotPath } from '../../plan'
+import { useMe } from '../../../app/useMe'
 import { actionFailed, failureToast } from '../../../lib/errorCopy'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { useIngredientChoices } from '../../stock/hooks/useIngredientChoices'
@@ -10,18 +11,20 @@ import { LoadState } from '../../../ui/LoadState'
 import { IconButton } from '../../../ui/IconButton'
 import { PageHeader } from '../../../ui/PageHeader'
 import { ShopSelect } from '../../../ui/Select/ShopSelect'
-import { Skeleton } from '../../../ui/Skeleton'
+import { SkeletonGroup, SkeletonList } from '../../../ui/Skeleton'
 import { useToast } from '../../../ui/Toast'
 import { CelebrationTile } from '../components/CelebrationTile'
 import { ExtraSheet } from '../components/ExtraSheet'
 import { LineSheet } from '../components/LineSheet'
 import { RangePicker } from '../components/RangePicker'
 import { ShoppingBody } from '../components/ShoppingBody'
-import { TickSheet } from '../components/TickSheet'
+import { TickChangeSheet } from '../components/TickChangeSheet'
 import { ANY_SHOP_ID, shopPickerChoices } from '../lib/anyShop'
-import type { ListEntry } from '../lib/lines'
+import { listEntries, notNeededEntries, type ListEntry } from '../lib/lines'
+import type { RowGroup } from '../lib/rows'
+import { changeTargetOf } from '../lib/tickAmount'
 import { useLineSheet } from '../hooks/useLineSheet'
-import { useCompactRows } from '../hooks/useCompactRows'
+import { useTickFlow } from '../hooks/useTickFlow'
 import { useShopChoice } from '../hooks/useShopChoice'
 import { useShopHere } from '../hooks/useShopHere'
 import { AddShopSheet } from '../../shops/components/AddShopSheet'
@@ -30,7 +33,7 @@ import { useShoppingList } from '../hooks/useShoppingList'
 import { shopStrings } from '../strings'
 import '../shop.css'
 
-type Sheet = { kind: 'tick'; entry: ListEntry } | { kind: 'extra' } | { kind: 'addShop'; name: string } | null
+type Sheet = { kind: 'extra' } | { kind: 'addShop'; name: string } | null
 
 export function ShoppingScreen() {
   const system = useDisplayUnitSystem()
@@ -47,8 +50,10 @@ export function ShoppingScreen() {
   const shopName = choice.shops.find((s) => s.id === choice.shopId)?.name ?? null
   // b8-shop, B9-15: the Shop chip shows "Any" when its own row has no room for "Any Shop" (the chip Select fits it); the list keeps "Any Shop".
   const shopOptions = useMemo(() => shopPickerChoices(choice.shops, shopStrings.anyShop, shopStrings.anyShopShort), [choice.shops])
-  // b8-polish: the compact Restock reason on a narrow screen (lib/compactRows).
-  const compactRows = useCompactRows()
+  // B9-34: times of ticks are the Household's; while its zone is unknown no time is shown (never the device's).
+  const timeZone = useMe().data?.householdTimeZone ?? null
+  // B9-34 (SSP-01): one tap ticks; the toast offers Change and Undo; the ticked sheet's Take back, Change amount and Untick.
+  const flow = useTickFlow({ to: data?.to, shopId: choice.shopId, system })
 
   // B9-20 (RES-06): a failed action is a toast that names it ("Couldn’t mark Passata Not needed"), with Try again running
   // the same action; a refusal with its own message is that one line. The inline ErrorState is for load failures only.
@@ -56,17 +61,17 @@ export function ShoppingScreen() {
     fn().catch((err: unknown) => toast.show(failureToast(actionFailed(phrase, err, { serverMessage: true }), () => run(phrase, fn))))
   }
 
-  const onTick = (entry: ListEntry) => {
-    if (entry.kind === 'extra' && entry.ingredientId === null) {
-      run(shopStrings.failed.tick(entry.title), () => actions.tickExtra(entry.extraId as number, 0, choice.shopId))
-      return
-    }
-    setSheet({ kind: 'tick', entry })
-  }
+  const onTick = (entry: ListEntry) => run(shopStrings.failed.tick(entry.title), () => flow.tick(entry))
 
-  const onUntick = (entry: ListEntry) => {
-    if (!data) return
-    run(shopStrings.failed.untick(entry.title), () => (entry.kind === 'extra' ? actions.untickExtra(entry.extraId as number) : actions.untick(entry.ingredientId as number, data.to)))
+  // The row's own tick on a ticked row, and Untick in its sheet: every hand addition is taken back; no toast (main-session ruling).
+  const onUntick = (entry: ListEntry) => run(shopStrings.failed.untick(entry.title), () => flow.untick(entry))
+
+  const onTakeBack = (entry: ListEntry, addition: Parameters<typeof flow.takeBack>[1]) =>
+    run(shopStrings.failed.takeBack(entry.title), () => flow.takeBack(entry, addition))
+
+  const onChangeAmount = (entry: ListEntry) => {
+    const target = changeTargetOf(entry)
+    if (target) flow.openChange(target)
   }
 
   const onDelete = (entry: ListEntry) => run(shopStrings.failed.delete(entry.title), () => actions.deleteExtra(entry.extraId as number))
@@ -91,24 +96,32 @@ export function ShoppingScreen() {
     run(shopStrings.failed.neededAfterAll(entry.title), () => actions.neededAfterAll(entry.ingredientId as number, data.to, choice.shopId))
   }
 
-  // DS-SHOP: a row opens its sheet; the sheet's actions run the handlers above.
-  const lineSheet = useLineSheet({
-    onNotNeeded,
-    onNeededAfterAll,
-    onMarkIt: (entry) => {
-      if (entry.markIt) navigate(markSlotPath(entry.markIt))
-    },
-    onDelete,
-  })
+  // The open sheet follows the list: after a Take back the refreshed entry replaces the one it opened with.
+  const groups = useMemo(() => {
+    if (!data) return null
+    const { open, ticked } = listEntries(data, system)
+    return { open, ticked, 'not-needed': notNeededEntries(data, system) } satisfies Record<RowGroup, ListEntry[]>
+  }, [data, system])
+  const resolve = useCallback((entry: ListEntry, group: RowGroup) => groups?.[group].find((e) => e.key === entry.key) ?? null, [groups])
 
-  const onTickSubmit = (entry: ListEntry, quantity: number) => {
-    if (!data) return
-    setSheet(null)
-    run(shopStrings.failed.tick(entry.title), () =>
-      entry.kind === 'extra'
-        ? actions.tickExtra(entry.extraId as number, quantity, choice.shopId)
-        : actions.tick({ ingredientId: entry.ingredientId as number, to: data.to, quantity, shopId: choice.shopId }),
-    )
+  // DS-SHOP: a row opens its sheet; the sheet's actions run the handlers above.
+  const lineSheet = useLineSheet(
+    {
+      onNotNeeded,
+      onNeededAfterAll,
+      onMarkIt: (entry) => {
+        if (entry.markIt) navigate(markSlotPath(entry.markIt))
+      },
+      onDelete,
+      onChangeAmount,
+      onUntick,
+    },
+    resolve,
+  )
+
+  const onChangeFailed = (err: unknown) => {
+    const title = flow.changing?.entry.title ?? ''
+    toast.show(failureToast(actionFailed(shopStrings.failed.change(title), err, { serverMessage: true })))
   }
 
   const onExtraSubmit = (input: Parameters<typeof actions.addExtra>[0]) => {
@@ -146,7 +159,11 @@ export function ShoppingScreen() {
           ) : null}
         </div>
       </div>
-      {list.state === 'loading' ? <Skeleton variant="tile" count={2} /> : null}
+      {list.state === 'loading' ? (
+        <SkeletonGroup className="shop-skeleton">
+          <SkeletonList rows={6} />
+        </SkeletonGroup>
+      ) : null}
       {list.state === 'offlineUnknown' ? <LoadState title={shopStrings.offlineUnknownTitle} text={shopStrings.offlineUnknownText} /> : null}
       {list.state === 'failed' ? <ErrorState message={shopStrings.loadFailed} onRetry={list.retry} /> : null}
       {data?.complete ? <CelebrationTile summary={data.summary} currency={data.currency} /> : null}
@@ -161,21 +178,19 @@ export function ShoppingScreen() {
           onOpenLine={lineSheet.open}
           onScan={() => navigate('/scan')}
           onMarkIt={(slot) => navigate(markSlotPath(slot))}
-          compact={compactRows}
+          pendingKeys={flow.pendingKeys}
         />
       ) : null}
-      <LineSheet entry={lineSheet.entry} actions={lineSheet.actions} onAction={lineSheet.run} onClose={lineSheet.close} />
-      {sheet?.kind === 'tick' && data ? (
-        <TickSheet
-          key={sheet.entry.key}
-          open
-          onClose={() => setSheet(null)}
-          name={sheet.entry.title}
-          baseUnit={sheet.entry.baseUnit ?? 'piece'}
-          defaultQuantity={sheet.entry.quantity}
-          onSubmit={(quantity) => onTickSubmit(sheet.entry, quantity)}
-        />
-      ) : null}
+      <LineSheet
+        entry={lineSheet.entry}
+        actions={lineSheet.actions}
+        onAction={lineSheet.run}
+        onClose={lineSheet.close}
+        system={system}
+        timeZone={timeZone}
+        onTakeBack={onTakeBack}
+      />
+      <TickChangeSheet flow={flow} system={system} timeZone={timeZone ?? undefined} onFailed={onChangeFailed} />
       <AddShopSheet
         open={sheet?.kind === 'addShop'}
         initialName={sheet?.kind === 'addShop' ? sheet.name : ''}

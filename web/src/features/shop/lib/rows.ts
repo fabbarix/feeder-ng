@@ -1,8 +1,10 @@
 // DS-SHOP (docs/design/system.md §3): what a Shop row says and what its sheet offers. Plain TypeScript, no React.
+import type { IconName } from '../../../ui/icons'
 import { weekdayShortName } from '../../../ui/WeekdayPicker/weekdays'
 import { shopStrings } from '../strings'
 import type { PastPlannedMeal } from '../types'
 import type { ListEntry } from './lines'
+import { changeTargetOf } from './tickAmount'
 
 /** Where a row sits: the open list, the Ticked section or the collapsed Not needed group. */
 export type RowGroup = 'open' | 'ticked' | 'not-needed'
@@ -12,10 +14,15 @@ export type LineAction = 'mark-it' | 'not-needed' | 'needed-after-all' | 'delete
 
 export interface RowMeta {
   text: string
-  /** the tone of the meta line; an info marker for unconfirmed past meals */
-  status?: 'info'
-  /** b8-polish: the full text when `text` is the compact form; the row gives it as its accessible name */
-  fullText?: string
+  /**
+   * SSP-05: the short form of `text`, which ListRow shows while the row's own text column is narrow (under 12 rem); the long text stays
+   * the accessible one. Absent when the meta has no shorter form.
+   */
+  compact?: string
+  /** the tone of the meta line: info (unconfirmed past meals, a Restock reason, more since a tick), success (a tick that added Stock) */
+  status?: 'info' | 'success'
+  /** B9-34: the meta's own glyph (a ticked row's Package, MinusCircle or Barcode; ArrowBendDownRight for more since a tick) */
+  icon?: IconName
 }
 
 export interface RowValue {
@@ -54,15 +61,27 @@ export function slotsLabel(meals: PastPlannedMeal[] | undefined, withCourses = t
 }
 
 /**
- * The one meta line: the Restock reason of a Supply Line (info tone), else the pack suggestion, or the info marker that names
- * the slots (never the Courses: it has to fit one line). `compact` shows the short reason ("400 ml/1 l", "2/6") with the full one as
- * `fullText` (b8-polish); the other metas do not change.
+ * The one meta line, and its compact form when it has one (SSP-05: the row shows it by the width of its own text column, so there is
+ * no viewport option):
+ * - a "more since your tick" row: "More since your tick" (compact "More needed"), info;
+ * - a ticked row: what the tick did to Stock (lib/tickAmount tickedMeta), success when it added Stock, else muted;
+ * - a Supply's Restock reason ("Below 1 l · 400 ml in Stock", compact "400 ml in Stock"), info;
+ * - the unconfirmed past meals ("Tue Dinner +1"), info; else the pack line.
  */
-export function rowMeta(entry: ListEntry, opts: { compact?: boolean } = {}): RowMeta {
-  if (entry.restockText && opts.compact && entry.restockCompact) {
-    return { text: entry.restockCompact, status: 'info', fullText: entry.restockText }
+export function rowMeta(entry: ListEntry): RowMeta {
+  if (entry.moreSince) return { text: shopStrings.moreSince, compact: shopStrings.moreSinceCompact, status: 'info', icon: 'moreSince' }
+  if (entry.ticked && entry.tickMeta) {
+    const m = entry.tickMeta
+    return {
+      text: m.text,
+      ...(m.compact ? { compact: m.compact } : {}),
+      ...(m.tone === 'success' ? { status: 'success' as const } : {}),
+      icon: m.icon,
+    }
   }
-  if (entry.restockText) return { text: entry.restockText, status: 'info' }
+  if (entry.restockText) {
+    return { text: entry.restockText, ...(entry.restockCompact ? { compact: entry.restockCompact } : {}), status: 'info' }
+  }
   if (entry.hintShort) return { text: entry.hintShort, status: 'info' }
   return { text: entry.packLine }
 }
@@ -76,12 +95,18 @@ export function rowValue(entry: ListEntry): RowValue {
 }
 
 /**
- * What the row's sheet offers, in order. "Mark it" first when the Line has unconfirmed past meals; then Not needed on an
- * open Line, Needed after all on a Not needed one, and Delete on an extra (open or ticked). A ticked Line has nothing else.
+ * What the row's sheet offers, in order. "Mark it" first when the Line has unconfirmed past meals; then Not needed on an open
+ * Line (a "more since your tick" row included: it takes only the difference off), Needed after all on a Not needed one. A ticked
+ * entry (SSP-18) offers Change amount when the viewer has a hand addition on it, then Untick. Delete stays last on an extra (open or
+ * ticked).
  */
 export function lineActions(entry: ListEntry, group: RowGroup): LineAction[] {
   const out: LineAction[] = []
   if (entry.markIt) out.push('mark-it')
+  if (group === 'ticked') {
+    if (changeTargetOf(entry)) out.push('change-amount')
+    out.push('untick')
+  }
   if (entry.kind === 'extra') {
     if (group !== 'not-needed') out.push('delete')
   } else if (group === 'open') {

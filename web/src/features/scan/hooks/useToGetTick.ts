@@ -1,56 +1,60 @@
-// Beta.8 (scan): tick a Line by hand from the To get tab. The Shop screen's tick (useShoppingActions, with the Line's remaining
-// quantity and a fresh client id), a toast with Undo, and a failure (offline included) that changes nothing and can be tried
-// again. A row in flight is pending and ignores further taps.
-import { useCallback, useRef, useState } from 'react'
+// Beta.8 (scan): tick a Line by hand from the To get tab. B9-34 (SSP-01): it is the Shop's tick (shop/hooks/useTickFlow): the same
+// default amount, the same Undo toast with Change (5 s here, the Shop's is 8 s), the same Change sheet (the screen mounts it from `flow`).
+// A failure (offline included) changes nothing, shows Scan's own error toast and can be tried again. A row in flight is pending.
+import { useCallback, useMemo } from 'react'
+import { actionFailed, failureToast } from '../../../lib/errorCopy'
+import { shopStrings } from '../../shop/strings'
 import type { UnitSystem } from '../../../lib/units'
-import type { TickFlow } from '../../shop/hooks/useTickFlow'
-import { useShoppingActions } from '../../shop/hooks/useShoppingActions'
+import { useTickFlow, type TickFlow } from '../../shop/hooks/useTickFlow'
 import type { ListEntry } from '../../shop/lib/lines'
 import { useToast } from '../../../ui/Toast'
 import { tickRequest } from '../lib/toGet'
 import { scanStrings } from '../strings'
 
+/** Scan's Undo toast lasts 5 s (the Shop's lasts the Undo default, 8 s). */
+export const SCAN_UNDO_MS = 5000
+
 export interface ToGetTick {
   tick(entry: ListEntry): Promise<void>
-  /** the keys ("line:<ingredientId>") of the rows whose tick is in flight */
+  /** the keys ("line:<ingredientId>", "more:<ingredientId>") of the rows whose tick is in flight */
   pendingKeys: ReadonlySet<string>
   /** B9-34: the shared tick flow (optional only so the ScanController test doubles of other packages still compile; the real hook always returns it) (its `changing` / `change` / `closeChange` drive the Change sheet the screen mounts) */
   flow?: Pick<TickFlow, 'changing' | 'change' | 'closeChange'>
 }
 
-export function useToGetTick({ to, shopId }: { to: string | undefined; shopId: number | null; system?: UnitSystem }): ToGetTick {
-  const actions = useShoppingActions()
+export function useToGetTick({ to, shopId, system = 'metric' }: { to: string | undefined; shopId: number | null; system?: UnitSystem }): ToGetTick {
+  const flow = useTickFlow({ to, shopId, system, durationMs: SCAN_UNDO_MS })
   const toast = useToast()
-  const [pendingKeys, setPendingKeys] = useState<ReadonlySet<string>>(() => new Set())
-  // A ref answers the "already in flight" question at once, so a second tap before a re-render is still ignored.
-  const inFlight = useRef(new Set<string>())
-
-  const setPending = () => setPendingKeys(new Set(inFlight.current))
+  const flowTick = flow.tick
 
   const tick = useCallback(
     async (entry: ListEntry) => {
-      const request = tickRequest(entry)
-      if (to === undefined || request === null || inFlight.current.has(entry.key)) return
-      const { ingredientId } = request
-      inFlight.current.add(entry.key)
-      setPending()
+      if (to === undefined || tickRequest(entry) === null) return
       try {
-        await actions.tick({ ingredientId, to, quantity: request.quantity, shopId })
-        toast.show(scanStrings.lineTicked(entry.title), {
-          actionLabel: scanStrings.undoAction,
-          onAction: () => {
-            actions.untick(ingredientId, to).catch(() => toast.show(scanStrings.untickFailed, { status: 'error' }))
-          },
-        })
+        await flowTick(entry)
       } catch {
         toast.show(scanStrings.tickFailed(entry.title), { status: 'error' })
-      } finally {
-        inFlight.current.delete(entry.key)
-        setPending()
       }
     },
-    [actions, toast, to, shopId],
+    [flowTick, toast, to],
   )
 
-  return { tick, pendingKeys, flow: { changing: null, change: async () => {}, closeChange: () => {} } }
+  // A failed Save or "Tick without adding" in the Change sheet: the failure toast; the sheet stays open on its subject for a retry.
+  const { changing, change: flowChange, closeChange } = flow
+  const sheetFlow = useMemo(
+    () => ({
+      changing,
+      closeChange,
+      change: async (quantity: number) => {
+        try {
+          await flowChange(quantity)
+        } catch (err) {
+          toast.show(failureToast(actionFailed(shopStrings.failed.change(changing?.entry.title ?? ''), err, { serverMessage: true })))
+        }
+      },
+    }),
+    [changing, closeChange, flowChange, toast],
+  )
+
+  return { tick, pendingKeys: flow.pendingKeys, flow: sheetFlow }
 }
