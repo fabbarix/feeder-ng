@@ -1,0 +1,102 @@
+/* TimerPill (B9-17, PC-03, PC-04): one timer as a pill. A surface fill, a 1 px outline boundary and a light shadow, 52 px high. It
+   is a focus scope (ui/focusLayer.css): a focused control rings inside itself on the soft fill, with the pill's 4 px of fill between
+   that ring and the boundary. Placement (fixed above the bottom bar, in the top bar, in Cook Mode's strip) is the caller's. */
+.timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: 52px;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-outline), var(--elev-1);
+}
+
+/* The open button fills the pill: 16 px from the pill's start to the icon, the "+N" badge 12 px from its end. */
+.timer-pill__open {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  min-block-size: var(--target-min);
+  padding-block: 0;
+  padding-inline: var(--space-3) var(--space-2);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.timer-pill__open > svg {
+  flex: none;
+}
+
+.timer-pill__label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.timer-pill__time {
+  flex: none;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "+N": its own round badge, a 28 px circle for one digit, never touching the pill's edge or a ring. */
+.timer-pill__more {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  min-inline-size: 28px;
+  block-size: 28px;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  font-size: var(--text-meta-size);
+  line-height: 1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-pill__toggle {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--radius-pill);
+}
+
+/* The timer that holds Next: a 2 px accent boundary, only while nothing inside has focus (one accent ring at a time, R-C+). */
+.timer-pill[data-gate]:not(:has(:focus-visible)) {
+  box-shadow: inset 0 0 0 2px var(--color-accent), var(--elev-1);
+}
+
+.timer-pill[data-state='paused'] .timer-pill__time {
+  color: var(--color-muted);
+}
+
+/* Finished: the success tone with a 2 px boundary (7.3 / 9.0); the badge turns to a surface fill. */
+.timer-pill[data-state='finished'] {
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+  box-shadow: inset 0 0 0 2px var(--status-success-fg), var(--elev-1);
+}
+
+.timer-pill[data-state='finished'] .timer-pill__more {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
