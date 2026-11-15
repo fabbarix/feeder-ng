@@ -261,11 +261,6 @@ try {
   await openTab()
   await cdp('Page.navigate', { url: base + '/sign-in' })
   await sleep(1200)
-  // Under load the sign-in page may not have committed after 1.2 s; a fetch from about:blank fails ("Failed to fetch"). Wait for the origin (10 s cap).
-  const origin = new URL(base).origin
-  for (const end = Date.now() + 10000; Date.now() < end; await sleep(100)) {
-    if ((await evaluate('location.origin').catch(() => '')) === origin) break
-  }
   await evaluate(
     `fetch('/api/dev/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: ${JSON.stringify(email)} }) }).then((r) => r.status)`,
   )
