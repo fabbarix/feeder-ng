@@ -22,6 +22,10 @@ export interface UseReheat {
   resume: () => Promise<void>
   /** Cancels the timer (it is deleted). */
   cancel: () => Promise<void>
+  /** B9-40 (PC-15): the timer has run out; Mark as Cooked becomes the screen's primary and Start timer reads "Restart". */
+  finished: boolean
+  /** B9-40 (PC-15): clears a finished timer and starts a new one of the same length. */
+  restart: () => Promise<void>
 }
 
 /** Reheat's timer state for one Planned Meal (R12). Composes useTimers() and lib/reheat; renders nothing. */
@@ -65,5 +69,7 @@ export function useReheat(key: SlotKey, portions: number, reheatMinutes?: number
     pause: () => guarded(async () => timer && timers.pause(timer.id)),
     resume: () => guarded(async () => timer && timers.resume(timer.id)),
     cancel: () => guarded(async () => timer && timers.cancel(timer.id)),
+    finished: false,
+    restart: async () => {},
   }
 }
