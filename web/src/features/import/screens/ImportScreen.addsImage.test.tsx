@@ -1,4 +1,4 @@
-// IM3: the review screen shows "Adds a picture to <name>" on the Ingredient rows the server flags.
+// IM3: the review screen shows "Adds a Picture to <name>" (GLOSSARY: an Ingredient's picture is its Picture; RX-12) on the Ingredient rows the server flags.
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -34,8 +34,8 @@ describe('ImportScreen: adds a picture', () => {
       ...courseExtras(),
     } as UseImportReview
     render(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
-    expect(screen.getAllByText(/Adds a picture to/)).toHaveLength(1)
-    expect(screen.getByText('Adds a picture to Garlic')).toBeInTheDocument()
+    expect(screen.getAllByText(/Adds a Picture to/)).toHaveLength(1)
+    expect(screen.getByText('Adds a Picture to Garlic')).toBeInTheDocument()
   })
 })
 

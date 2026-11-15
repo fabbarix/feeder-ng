@@ -67,16 +67,20 @@ describe('ImportScreen, Base recipe line tiles', () => {
     expect(screen.queryByRole('heading', { name: 'Is this another recipe?' })).toBeNull()
   })
 
-  it('shows one tile per marked or matched line, after the Ingredient tiles and before a Recipe conflict', () => {
+  // RX-01 changed the order of the review: the Recipes (a conflict sits on its own row) come first, then the Base recipe lines and the
+  // Courses, then the Ingredients. The pre-RX test pinned Ingredients, Base recipe lines, then the separate conflict tile.
+  it('shows one tile per marked or matched line, after the Recipes (a conflict on its row) and before the Ingredients (RX-01 order)', () => {
     h.review = state({
       plan: open({ ingredients: [match({ key: 'onion' })], recipes: [recipe({ index: 0, name: 'Lasagne', status: 'conflict', resolved: false })] }),
     })
     view()
     const tile = screen.getByRole('region', { name: '500 ml béchamel' })
     const onion = screen.getByRole('region', { name: 'Ingredients' })
-    const conflict = screen.getByRole('heading', { name: 'Lasagne already exists' })
-    expect(onion.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(tile.compareDocumentPosition(conflict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const recipes = screen.getByRole('region', { name: 'Recipes' })
+    expect(within(recipes).getByText('Already exists')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Lasagne already exists' })).toBeNull()
+    expect(recipes.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(tile.compareDocumentPosition(onion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('groups the tiles in a labelled area', () => {

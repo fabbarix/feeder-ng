@@ -44,11 +44,11 @@ describe('ImportResult', () => {
   })
   it('has one row per imported Recipe: its name, what happened to it and its detail', () => {
     show()
-    const tikka = screen.getByRole('link', { name: /Chicken tikka traybake/ })
+    const tikka = screen.getByRole('link', { name: /^Chicken tikka traybake/ })
     expect(tikka).toHaveAttribute('href', '/recipes/11')
     expect(within(tikka.closest('li')!).getByText('Created')).toBeInTheDocument()
     expect(within(tikka.closest('li')!).getByText('Main · 4 portions · 2 Steps')).toBeInTheDocument()
-    const lasagne = screen.getByRole('link', { name: /Lasagne \(ready meal\)/ })
+    const lasagne = screen.getByRole('link', { name: /^Lasagne \(ready meal\)/ })
     expect(lasagne).toHaveAttribute('href', '/recipes/12')
     expect(within(lasagne.closest('li')!).getByText('Replaced')).toBeInTheDocument()
     expect(within(lasagne.closest('li')!).getByText('Ready Meal · 2 portions')).toBeInTheDocument()

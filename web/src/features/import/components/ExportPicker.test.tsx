@@ -30,7 +30,9 @@ describe('ExportPicker', () => {
     render(<ExportPicker {...p} />)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Porridge' }))
     expect(p.onToggle).toHaveBeenCalledWith(2)
-    await userEvent.click(screen.getByText('Pancakes'))
+    // The rest of the row is ListRow's target, a button stretched over it (CSS) and named after the title; jsdom has no layout, so the
+    // click goes to that target rather than to the title text under it.
+    await userEvent.click(screen.getByRole('button', { name: 'Pancakes' }))
     expect(p.onToggle).toHaveBeenCalledWith(1)
   })
   it('says there is nothing to export when there are no Recipes', () => {

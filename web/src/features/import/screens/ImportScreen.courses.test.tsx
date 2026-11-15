@@ -175,16 +175,18 @@ describe('ImportScreen: 403 and the Course limit', () => {
 describe('ImportScreen done', () => {
   const done = (result: Partial<NonNullable<UseImportReview['result']>>) =>
     state({ phase: 'done', result: { recipes: [{ index: 0, id: 1, name: 'A', action: 'created' }], ingredientsCreated: 0, conversionsAdded: 0, ...result } })
-  it('says which Courses were added and brought back', () => {
+  // RX-01: the result lists what the import also added as rows under "Also added" (label, count as the state), not as sentences.
+  it('says which Courses were added and brought back, as rows of Also added', () => {
     h.review = done({ coursesCreated: 2, coursesUnarchived: 1 })
     view()
-    expect(screen.getByText('Added 2 Courses')).toBeInTheDocument()
-    expect(screen.getByText('Brought back 1 Course')).toBeInTheDocument()
+    const row = (label: string) => screen.getByText(label).closest('.detail-row, li, div') as HTMLElement
+    expect(row('Courses added')).toHaveTextContent('2')
+    expect(row('Courses brought back')).toHaveTextContent('1')
   })
   it('says nothing about Courses when none changed', () => {
     h.review = done({ coursesCreated: 0 })
     view()
-    expect(screen.queryByText(/Added \d+ Course/)).toBeNull()
-    expect(screen.queryByText(/Brought back/)).toBeNull()
+    expect(screen.queryByText('Courses added')).toBeNull()
+    expect(screen.queryByText('Courses brought back')).toBeNull()
   })
 })
