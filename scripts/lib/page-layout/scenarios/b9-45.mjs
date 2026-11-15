@@ -90,7 +90,8 @@ async function cookGetReady() {
 
 async function cookedConfirmation() {
   const target = await openCookOfFirstToConfirm()
-  // Past Get ready, then to the last item, then Mark as Cooked or Mark all Cooked.
+  // The nav is drawn after the heading: wait for one of its buttons, then go past Get ready, to the last item, and Mark as Cooked or Mark all Cooked.
+  await until(`!!(${BUTTON('Start cooking')}) || !!(${BUTTON('Next')}) || !!(${BUTTON('Mark as Cooked')}) || !!(${BUTTON('Mark all Cooked')})`, 'the Cook Mode navigation')
   if (await evaluate(`!!(${BUTTON('Start cooking')})`)) await press(BUTTON('Start cooking'), 'Start cooking')
   for (let i = 0; i < 80; i++) {
     if (await evaluate(`!!(${BUTTON('Mark as Cooked')}) || !!(${BUTTON('Mark all Cooked')})`)) break
