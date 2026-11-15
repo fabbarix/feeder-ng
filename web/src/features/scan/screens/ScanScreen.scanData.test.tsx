@@ -32,7 +32,8 @@ vi.mock('../components/NewProductSheet', () => ({
 import { ScanScreen } from './ScanScreen'
 
 function Where() {
-  return <p data-testid="where">{useLocation().pathname}</p>
+  const { pathname, hash } = useLocation()
+  return <p data-testid="where">{pathname + hash}</p>
 }
 function open(c: ScanController) {
   controllerHook.useScanController.mockReturnValue(c)
@@ -100,7 +101,8 @@ describe('ScanScreen: a weight-style code at a Shop with no rule (SSP-15)', () =
     open(controllerFake({ flow: hinted() }))
     expect(sheet.props!.weightCodeHint).toMatchObject({ admin: true })
     sheet.props!.weightCodeHint!.onSetUp()
-    expect(await screen.findByTestId('where')).toHaveTextContent(/^\/settings\/shops\/2/)
+    // batch w5a: at its Weight Barcode Rules (the Shop page's section anchor)
+    expect(await screen.findByTestId('where')).toHaveTextContent(/^\/settings\/shops\/2#weight-barcode-rules$/)
   })
 
   it('a User gets the hint without the way in', () => {

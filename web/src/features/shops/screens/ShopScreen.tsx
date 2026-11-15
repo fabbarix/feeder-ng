@@ -16,6 +16,7 @@ import { ShopLocationTile } from '../components/ShopLocationTile'
 import { ShopPricesTile } from '../components/ShopPricesTile'
 import { WeightRuleEditor } from '../components/WeightRuleEditor'
 import { WeightRuleList } from '../components/WeightRuleList'
+import { useHashSection, WEIGHT_RULES_ANCHOR } from '../hooks/useHashSection'
 import { useShop } from '../hooks/useShop'
 import { useShopPrices } from '../hooks/useShopPrices'
 import { soldAtIds } from '../lib/productChoices'
@@ -46,6 +47,8 @@ export function ShopScreen() {
   const [deleting, setDeleting] = useState(false)
   const [adding, setAdding] = useState(false)
   const { error, attempt } = useAttempt()
+  // B9-41 (SSP-15): Scan's "Set up the rule" opens this page at its Weight Barcode Rules
+  useHashSection()
   useProductsLiveUpdates()
 
   if (!shop.shop) {
@@ -102,7 +105,7 @@ export function ShopScreen() {
           </Button>
         </Tile>
 
-        <Tile as="section" span="full" aria-label={strings.weightRulesTitle}>
+        <Tile as="section" span="full" aria-label={strings.weightRulesTitle} id={WEIGHT_RULES_ANCHOR}>
           <SectionTitle>{strings.weightRulesTitle}</SectionTitle>
           <WeightRuleList
             rules={shop.rules}
