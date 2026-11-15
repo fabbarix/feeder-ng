@@ -2,7 +2,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, wrapper } from '../settings/test-utils'
-import { settings } from './lib/setup.fixtures'
+import { settings } from '../../test/setupFacts'
 import { useSetupFacts } from './setupSeam'
 
 afterEach(() => vi.unstubAllGlobals())

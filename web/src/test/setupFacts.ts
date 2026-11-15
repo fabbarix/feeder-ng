@@ -1,5 +1,5 @@
 // B9-53 (TB-06): test fixtures for the first-run checklist's facts. Not product code: only the tests import this.
-import type { SetupFacts } from './setup'
+import type { SetupFacts } from '../features/today/lib/setup'
 
 /** A brand new Household as GET /api/household/settings and the lists report it: the default zone and currency, not yet confirmed. */
 export const FRESH: SetupFacts = {

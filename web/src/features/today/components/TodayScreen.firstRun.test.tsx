@@ -7,7 +7,7 @@ import { createElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { findToast } from '../../../test/notices'
 import { ADMIN_ME, mockApi, renderWithProviders, USER_ME } from '../../settings/test-utils'
-import { settings } from '../lib/setup.fixtures'
+import { settings } from '../../../test/setupFacts'
 import { TodayScreen } from './TodayScreen'
 
 vi.mock('../seams', () => ({

@@ -1,6 +1,6 @@
 // CRS G2 (spec 7.4, First run): the setup checklist reads the plan per Course, and Courses never make a step look missing.
 import { describe, expect, it } from 'vitest'
-import { THREE_DONE } from './setup.fixtures'
+import { THREE_DONE } from '../../../test/setupFacts'
 import { planFacts, setupChecklist, type SetupFacts } from './setup'
 
 const course = (state: 'meal' | 'reason' | 'covered' | 'unserved') => ({

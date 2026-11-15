@@ -2,7 +2,7 @@
 // and the new `compact` and `visible`. A step is done by its own fact; the current step is the first not done. The Recipes step is done at 5
 // Recipes, and the checklist stays until every step is done or the Admin hides it (Settings > Household shows it again).
 import { describe, expect, it } from 'vitest'
-import { ESTABLISHED, FRESH, THREE_DONE, facts } from './setup.fixtures'
+import { ESTABLISHED, FRESH, THREE_DONE, facts } from '../../../test/setupFacts'
 import { needsSetup, setupChecklist, setupCompact } from './setup'
 
 const ids = (f = FRESH) => setupChecklist(f).steps.map((s) => s.id)

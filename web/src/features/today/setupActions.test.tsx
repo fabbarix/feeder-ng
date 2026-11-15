@@ -8,7 +8,7 @@ import { findToast } from '../../test/notices'
 import { mockApi, newQueryClient } from '../settings/test-utils'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '../../ui'
-import { settings } from './lib/setup.fixtures'
+import { settings } from '../../test/setupFacts'
 import { useSetupActions } from './setupActions'
 
 afterEach(() => vi.unstubAllGlobals())

@@ -5,7 +5,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { THREE_DONE, FRESH } from '../lib/setup.fixtures'
+import { THREE_DONE, FRESH } from '../../../test/setupFacts'
 import { setupChecklist, type SetupFacts } from '../lib/setup'
 import { SetupChecklistTile, type SetupTileActions } from './SetupChecklistTile'
 

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PlanEntry } from '../../plan/types'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import type { SetupFacts } from '../lib/setup'
-import { THREE_DONE } from '../lib/setup.fixtures'
+import { THREE_DONE } from '../../../test/setupFacts'
 import { TodayScreen } from './TodayScreen'
 
 const h = vi.hoisted(() => ({ couldnt: [] as unknown[], all: [] as unknown[], facts: null as unknown }))
