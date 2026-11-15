@@ -64,6 +64,66 @@
   border-radius: var(--radius-pill);
 }
 
+/* The photo of a media SkeletonTile fills the Tile's 16:9 header. */
+.skeleton[data-variant='media'] {
+  block-size: 100%;
+  border-radius: 0;
+}
+
+/* A skeleton Tile is a Tile (the same box); its blocks keep their own widths beside the Tile's inline margins. */
+.skeleton-tile > .skeleton {
+  inline-size: auto;
+}
+
+.skeleton-tile > .skeleton[data-variant='line'] {
+  inline-size: 60%;
+}
+
+.skeleton-tile > .skeleton[data-variant='meta'] {
+  inline-size: 7em;
+}
+
+/* A ListRow-shaped row at the row's 72 px: the 40 px leading thumb, then a title and a meta line. */
+.skeleton-list {
+  display: grid;
+  border-radius: var(--radius-tile);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  min-block-size: 72px;
+  padding-inline: var(--space-4);
+}
+
+.skeleton-list > .skeleton-row + .skeleton-row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.skeleton-row .skeleton[data-variant='circle'] {
+  border-radius: var(--radius-tile-sm);
+}
+
+.skeleton-row__text {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-row__text .skeleton[data-variant='line'] {
+  block-size: 14px;
+  inline-size: 55%;
+}
+
+.skeleton-row__text .skeleton[data-variant='meta'] {
+  block-size: 12px;
+  inline-size: 35%;
+}
+
 @media (min-width: 37.5em) /* 600px */ {
   :root {
     --skeleton-hero: 208px;
