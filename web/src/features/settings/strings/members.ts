@@ -32,5 +32,28 @@ export const settingsMembersStrings = {
     noLinkedUser: 'No linked User',
     save: 'Save Member',
     remove: 'Remove Member',
+    // B9-36 (SAFE-04): the Member sheet.
+    cancel: 'Cancel',
+    nameRequired: 'Enter a name for the Member.',
+    // B9-36 (SAFE-02, SAFE 4): Remove Member asks with what goes, then offers Undo.
+    removal: {
+      title: (name: string) => `Remove ${name}?`,
+      lead: (name: string) => `${name} no longer counts towards portions.`,
+      confirm: (name: string) => `Remove ${name}`,
+      group: (name: string) => `Goes with ${name}`,
+      preferences: 'Preferences',
+      preferencesDetail: 'Favourites, Dislikes and Exclusions',
+      attendance: 'Attendance',
+      mealSlots: (n: number) => (n === 1 ? '1 Meal Slot' : `${n} Meal Slots`),
+      attendanceDetail: (name: string) => `Every Meal Slot ${name} eats at`,
+      signIn: 'Sign-in',
+      signInEnds: 'Ends',
+      signInDetail: (email: string) => `${email} · not on the Allowlist`,
+      note: 'Planned Meals from today are worked out again. You can undo it straight after.',
+      removed: (name: string) => `${name} removed`,
+      undoAria: (name: string) => `Undo: put ${name} back`,
+      restored: (name: string) => `${name} is back`,
+      impactFailed: (name: string) => `Couldn’t check what goes with ${name}. Nothing was removed.`,
+    },
   },
 }

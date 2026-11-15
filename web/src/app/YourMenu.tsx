@@ -2,6 +2,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AccessBadge } from '../features/access/components/AccessBadge'
+import { preferencePreview } from '../features/settings/lib/preferencePreview'
 import { accessStrings } from '../features/access/strings'
 import { Avatar, Icon, useMenuKeys } from '../ui'
 import { menuIconFor, type NavItem } from './nav'
@@ -73,7 +74,10 @@ export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: 
               data-tone="danger"
               onClick={() => {
                 setOpen(false)
-                onSignOut()
+                // B9-36 (SAFE-08): with an unsaved preview of Your preferences, "Leave without saving?" comes first.
+                void preferencePreview.confirmLeave().then((leave) => {
+                  if (leave) onSignOut()
+                })
               }}
             >
               <Icon name="signOut" size={20} />

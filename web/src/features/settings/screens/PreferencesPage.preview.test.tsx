@@ -180,11 +180,15 @@ describe('Your preferences: the "Leave without saving?" guard', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('names what is unsaved in the shared dialog ("Your changes to your preferences are not saved.")', async () => {
+  // Decision SAFE 6 (main-session ruling 3): the body names what is previewed and what comes back, not the shared fixed copy.
+  it('names what is previewed and what comes back ("Dark is only a preview." / "If you leave, Feeder goes back to System.")', async () => {
     mount()
     await pick('Dark')
     await userEvent.click(screen.getByRole('link', { name: 'Plan' }))
-    expect(within(await dialog()).getByText('Your changes to your preferences are not saved.')).toBeInTheDocument()
+    const d = await dialog()
+    expect(within(d).getByText('Dark is only a preview.')).toBeInTheDocument()
+    expect(within(d).getByText('If you leave, Feeder goes back to System.')).toBeInTheDocument()
+    expect(d).not.toHaveTextContent('Your changes to your preferences are not saved.')
   })
 
   it('registers its check for Sign out while dirty, and unregisters it when clean or gone', async () => {
