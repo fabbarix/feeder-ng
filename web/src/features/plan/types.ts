@@ -69,6 +69,22 @@ export interface PlannedMeal {
   bought?: BoughtInfo | null
   /** B5-BOW: a Pinned or Bought meal that breaks a hard rule; sent on slot views only. */
   warning?: MealWarning | null
+  /** B9-11 / B9-26 (SAFE-03): how a Cooked or Not cooked meal was marked and whether it can still be undone; absent while planned and from an older server. */
+  resolution?: MealResolution
+}
+
+/** `meal.resolution` of GET /api/plan (B9-11): present on a Cooked or Not cooked meal. */
+export interface MealResolution {
+  kind: 'cooked' | 'not_cooked'
+  /** Household date, YYYY-MM-DD. */
+  markedOn?: string
+  /** RFC 3339, UTC. */
+  markedAt?: string
+  markedBy?: string
+  leftoverPortions: number
+  canUndo: boolean
+  /** 'window_over' in the read; the reopen error names it 'reopen_window_over' (both are mapped). */
+  cannotUndo?: 'leftover_used' | 'window_over'
 }
 
 export type UnfilledReason = 'no_attendance' | 'no_candidates' | 'no_course_recipes'

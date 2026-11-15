@@ -1,17 +1,35 @@
 // CRS F: the sheets Today opens on the Tonight slot (the Planned Meal sheet, Swap, Choose a Recipe, Mark all Cooked).
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useConnectivity } from '../../../app/useConnectivity'
+import { useMe } from '../../../app/useMe'
 import { courseOf, unresolvedCourseIds } from '../lib/courses'
 import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
 import { useAllCookedFlow } from './useAllCookedFlow'
 import { useAlternatives } from './useAlternatives'
 import { usePlanActions } from './usePlanActions'
+import { usePlanLiveUpdates } from './usePlanLiveUpdates'
+import { useReplanReview } from './useReplanReview'
+import { useResolvedUndo } from './useResolvedUndo'
+
+const noop = () => {}
 import { useRecipeChoices } from './useRecipeChoices'
 
-/** The sheets of the Tonight slot on Today, one at a time per kind; `slot` is the hero slot the keys must match. */
-export function useTonightSheets(slot: PlanSlot | null) {
+/**
+ * The sheets of the Tonight slot on Today, one at a time per kind; `slot` is the hero slot the keys must match. B9-26 (PC-01): its
+ * writes show What changed, another User's edit is announced here (once for Today), and `review` drives TodayScreen's
+ * ReplanReviewSheet.
+ */
+export function useTonightSheets(slot: PlanSlot | null, openMarkCooked: (key: SlotKey) => void = noop) {
   const actions = usePlanActions()
+  usePlanLiveUpdates({ announce: true })
+  const review = useReplanReview()
   const [plannedKey, setPlannedKey] = useState<SlotKey | null>(null)
+  const closePlanned = useCallback(() => setPlannedKey(null), [])
+  // B9-26 (SAFE-03): the Planned Meal sheet of a Cooked or Not cooked meal offers its Undo (not offline).
+  const resolvedUndo = useResolvedUndo(closePlanned, openMarkCooked)
+  const { offline } = useConnectivity()
+  const timeZone = useMe().data?.householdTimeZone
   const [swapKey, setSwapKey] = useState<SlotKey | null>(null)
   const [chooseKey, setChooseKey] = useState<SlotKey | null>(null)
   const alternatives = useAlternatives(swapKey)
@@ -30,7 +48,11 @@ export function useTonightSheets(slot: PlanSlot | null) {
       slot: matches(plannedKey),
       courseId: plannedKey?.courseId,
       open: setPlannedKey,
-      close: () => setPlannedKey(null),
+      close: closePlanned,
+      /** B9-26 (SAFE-03): what the sheet of a Cooked or Not cooked meal needs for its Undo. */
+      timeZone,
+      offline,
+      resolvedUndo,
       /** The Planned Meal sheet's routes: each closes the sheet, then navigates. */
       markRecipes: (courseId: number) => {
         setPlannedKey(null)
@@ -50,7 +72,7 @@ export function useTonightSheets(slot: PlanSlot | null) {
       pick: async (recipeId: number) => {
         const key = swapKey
         setSwapKey(null)
-        if (key) await actions.setMeal(key, recipeId)
+        if (key) await actions.setMeal(key, recipeId, 'swap')
       },
     },
     choose: {
@@ -62,10 +84,12 @@ export function useTonightSheets(slot: PlanSlot | null) {
       pick: async (recipeId: number) => {
         const key = chooseKey
         setChooseKey(null)
-        if (key) await actions.setMeal(key, recipeId)
+        if (key) await actions.setMeal(key, recipeId, 'choose')
       },
     },
     allCooked,
+    /** The What changed sheet of Today (PC-01). */
+    review,
     /** Mark all Cooked for the Courses still to cook of a slot (the Tonight slot menu). */
     openAllCooked: (key: SlotDayKey) => {
       if (slot) allCooked.open({ date: key.date, mealSlotId: key.mealSlotId }, unresolvedCourseIds(slot))

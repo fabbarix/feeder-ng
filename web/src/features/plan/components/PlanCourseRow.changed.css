@@ -1,0 +1,30 @@
+/* B9-26 (PC-01): a row the last edit changed, until the Plan is left or Review is opened. An info-tone bar on its start edge
+   (an inset shadow, never a border: nothing moves) and "was Lentil soup" in its meta line. info-fg on surface is 9.0 (light) and
+   10.8 (dark). The "was" text is the muted meta; its ArrowsClockwise glyph carries the info tone. */
+.list-row[data-changed] {
+  box-shadow: inset 3px 0 0 var(--color-info-fg);
+  padding-inline-start: var(--space-3);
+}
+
+.plan-row__was {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  vertical-align: bottom;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+/* A long Recipe name ends in an ellipsis on the one meta line; the whole text stays in the row's accessible name. */
+.plan-row__was-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-row__was svg {
+  flex: none;
+  color: var(--color-info-fg);
+}

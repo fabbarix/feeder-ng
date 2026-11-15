@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { findNotice } from '../../../test/notices'
+import { findNotice, findToast } from '../../../test/notices'
 import { meal, mockApi, wrapper } from '../test-utils'
 import type { CookedResult, CookPreview } from '../types'
 import { useCookFlow } from './useCookFlow'
@@ -26,7 +26,9 @@ describe('useCookFlow', () => {
       await result.current.quickCook(key)
     })
     expect(api.callsTo('POST', '/api/plan/2026-11-10/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2 })
-    expect(await findNotice('status', 'Cooked, nice one! 2 portions → Wed Lunch')).toBeDefined()
+    // B9-26: the Cooked toast is the rich one (R-D): headline, the meal, where the Leftover went, and Undo.
+    const toast = await findToast('Cooked, nice one!')
+    expect(toast.querySelector('.toast__body')).toHaveTextContent('2 portions planned for Wed Lunch.')
     expect(result.current.warnings.map((w) => w.ingredientId)).toEqual([11])
     expect(result.current.quickBusy).toBeNull()
   })
