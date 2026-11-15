@@ -26,7 +26,6 @@ if [ -z "$CHROME_BIN" ]; then
   exit 0
 fi
 
-PORT=$((40000 + $(printf '%s' "$ROOT$$" | cksum | cut -d' ' -f1) % 9000))
 cat >"$TMP/server.cjs" <<'JS'
 const http = require('http'), fs = require('fs'), path = require('path')
 const dir = process.env.FIX
@@ -36,9 +35,20 @@ http.createServer((q, s) => {
   s.end(fs.readFileSync(path.join(dir, q.url.startsWith('/settings') ? 'roomy.html' : 'clipped.html')))
 }).listen(Number(process.env.PORT), '127.0.0.1')
 JS
-FIX="$FIX" PORT="$PORT" node "$TMP/server.cjs" >/dev/null 2>&1 &
-SERVER=$!
-for _ in $(seq 1 25); do curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$PORT/" && break; sleep 0.2; done
+# A free port (as page-layout-recipes-header_test.sh does): one already in use (another worktree's server) would answer the guard
+# instead of these fixtures, and its sign-in would fail ("could not start the session"). A taken port is skipped, and a server
+# that died on start is replaced.
+PORT=""
+for try in 0 1 2 3 4 5 6 7; do
+  p=$((40000 + ($(printf '%s' "$ROOT$$chips$try" | cksum | cut -d' ' -f1) % 9000)))
+  curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$p/" && continue
+  FIX="$FIX" PORT="$p" node "$TMP/server.cjs" >/dev/null 2>&1 &
+  SERVER=$!
+  for _ in $(seq 1 25); do curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$p/" && break; sleep 0.2; done
+  if kill -0 "$SERVER" 2>/dev/null; then PORT=$p; break; fi
+  SERVER=""
+done
+[ -n "$PORT" ] || { echo "FAIL: no free port for the fixture server"; exit 1; }
 echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1}' >"$TMP/ids.json"
 OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
 
