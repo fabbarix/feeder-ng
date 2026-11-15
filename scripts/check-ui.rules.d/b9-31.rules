@@ -1,0 +1,2 @@
+# B9-31 (plan section 9, rule 25): no-history-back fails everywhere; the Recipe editor's Cancel goes to editorExitRoute with replace.
+no-history-back=fail

@@ -48,9 +48,9 @@ describe('import.css, Base recipe tiles', () => {
     expect(block).not.toMatch(/font-size:\s*(?!var\(--text-)\S/)
   })
 
-  it('the Problem and take-over tiles are shared status Tiles, in their tone', async () => {
+  it('the Problem and take-over tiles are shared status Tiles, in their tone (warn for a Problem: B9-28, DS-06 says danger is for loss or destruction)', async () => {
     const tiles = readSource('features/import/components/BaseRecipeLineTile.tsx') + readSource('features/import/components/TakeOverQuestion.tsx')
-    expect(tiles).toMatch(/variant="status" status="danger" role="alert"/)
+    expect(tiles).toMatch(/variant="status" status="warn" role="alert"/)
     expect(tiles).toMatch(/variant="status" status="info"/)
   })
 

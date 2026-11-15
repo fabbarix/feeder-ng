@@ -33,7 +33,7 @@ export function ConfirmProblemTile({ problem }: ConfirmProblemTileProps): ReactN
     }
   })()
   return (
-    <Tile variant="status" status="danger" role="alert" as="section">
+    <Tile variant="status" status="warn" role="alert" as="section">
       <p>{text}</p>
     </Tile>
   )

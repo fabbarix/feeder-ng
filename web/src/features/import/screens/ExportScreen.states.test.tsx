@@ -44,7 +44,7 @@ describe('ExportScreen states', () => {
     view()
     const bar = screen.getByRole('group', { name: 'Export actions' })
     expect(bar).toHaveClass('sticky-action-bar')
-    const link = screen.getByRole('link', { name: 'Export Recipe File' })
+    const link = screen.getByRole('link', { name: 'Export 1 Recipe' })
     expect(link.closest('.form-actions__primary')).not.toBeNull()
     expect(link).toHaveAttribute('href', '/api/recipe-file/export?ids=1')
   })

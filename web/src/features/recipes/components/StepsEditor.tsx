@@ -30,6 +30,10 @@ export interface StepsEditorProps {
   ingredients?: IngredientRef[]
   /** PE: a Step's photo picker started or stopped uploading (the editor holds Save), by the Step's key. */
   onPhotoBusyChange?: (stepKey: string, busy: boolean) => void
+  /** SAFE-10: Remove Step calls it instead of onChange (the screen removes the Step and offers Undo). Without it, onChange as before. */
+  onRemoveStep?: (index: number) => void
+  /** SAFE-10: the same for Remove ingredient use. */
+  onRemoveUse?: (stepIndex: number, useIndex: number) => void
 }
 
 const kindOptions: { value: StepKind; label: string }[] = [
@@ -38,14 +42,16 @@ const kindOptions: { value: StepKind; label: string }[] = [
   { value: 'advance', label: recipeStrings.steps.advance },
 ]
 
-const STEP_FIELDS = ['text', 'kind', 'durationMinutes', 'leadTimeMinutes', 'after']
+/** Step-level problems with no field of their own (SAFE-04: the text, Duration and Lead time show theirs under the field). */
+const STEP_FIELDS = ['kind', 'after']
 
 /**
  * The Steps editor: one card per Step with its text, kind (Segmented: Active, Passive, Advance Step), Duration or
  * Lead time (NumberField), "After" as filter Chips (lib/steps.afterOptions), its `uses` (Ingredient, quantity, unit)
  * and photo, plus reorder and remove. Every change goes through lib/steps and lib/stepUses; this only renders.
  */
-export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhotoBusyChange }: StepsEditorProps): ReactNode {
+export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhotoBusyChange, onRemoveStep, onRemoveUse }: StepsEditorProps): ReactNode {
+  const fieldError = (i: number, field: string) => (errors[`steps.${i}.${field}`] ? codeMessage(errors[`steps.${i}.${field}`]!) : undefined)
   const patch = (i: number, change: Partial<StepDraft>) => onChange(steps.map((s, j) => (j === i ? { ...s, ...change } : s)))
   const patchUse = (i: number, j: number, change: Partial<UseDraft>) => onChange(updateUse(steps, i, j, change))
   const pickUse = (i: number, j: number, ing: IngredientRef) =>
@@ -72,7 +78,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
         renderItem={(s, { index: i, position, positionOf, handle, itemProps }) => {
           const afterChoices = afterOptions(steps, i)
           return (
-            <li {...itemProps} className={`step-card ${itemProps.className ?? ''}`.trim()}>
+            <li {...itemProps} className={`step-card ${itemProps.className ?? ''}`.trim()} data-focus-key={s.key}>
               <div className="step-card__head">
                 <div className="step-card__lead">
                   <span className="step-card__number" data-step-number="">
@@ -100,10 +106,10 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                       },
                     ]}
                   />
-                  <IconButton icon="delete" label={recipeStrings.steps.remove} onClick={() => onChange(removeStep(steps, i))} />
+                  <IconButton icon="delete" label={recipeStrings.steps.remove} onClick={() => (onRemoveStep ? onRemoveStep(i) : onChange(removeStep(steps, i)))} />
                 </div>
               </div>
-              <TextArea label={recipeStrings.steps.text} rows={2} value={s.text} onChange={(text) => patch(i, { text })} />
+              <TextArea label={recipeStrings.steps.text} rows={2} value={s.text} error={fieldError(i, 'text')} onChange={(text) => patch(i, { text })} />
               <FieldRow className="step-card__timing">
                 <Segmented
                   compact
@@ -117,6 +123,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     size="xs"
                     unit={recipeStrings.units.min}
                     label={recipeStrings.steps.lead}
+                    error={fieldError(i, 'leadTimeMinutes')}
                     hideStepper
                     value={numberValue(s.leadTimeMinutes)}
                     onChange={(n) => patch(i, { leadTimeMinutes: numberText(n) })}
@@ -126,6 +133,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     size="xs"
                     unit={recipeStrings.units.min}
                     label={recipeStrings.steps.duration}
+                    error={fieldError(i, 'durationMinutes')}
                     hideStepper
                     value={numberValue(s.durationMinutes)}
                     onChange={(n) => patch(i, { durationMinutes: numberText(n) })}
@@ -162,7 +170,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                           index={{ step: i, use: j }}
                           onPick={(ing) => pickUse(i, j, ing)}
                           onChange={(change) => patchUse(i, j, change)}
-                          onRemove={() => onChange(removeUse(steps, i, j))}
+                          onRemove={() => (onRemoveUse ? onRemoveUse(i, j) : onChange(removeUse(steps, i, j)))}
                         />
                       ))}
                     </ul>
@@ -180,7 +188,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
               />
 
               {errorsFor(i).map((code) => (
-                <p role="alert" key={code} className="step-card__error">
+                <p key={code} className="step-card__error">
                   {codeMessage(code)}
                 </p>
               ))}

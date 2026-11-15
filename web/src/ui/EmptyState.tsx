@@ -10,14 +10,14 @@ export interface EmptyStateProps {
   icon?: IconName
   /** @deprecated use `icon`. */
   illustration?: ReactNode
-  /** Heading level of the title (default 2). */
-  headingLevel?: 2 | 3
+  /** Heading level of the title (default 2); 1 where the state is the whole page (the not-found page), with the same look. */
+  headingLevel?: 1 | 2 | 3
   action?: ReactNode
 }
 
 /** Inside the empty region, not a page takeover (docs/design/ui-fix-plan.md 4.11). */
 export function EmptyState({ title, description, icon, illustration, headingLevel = 2, action }: EmptyStateProps) {
-  const Heading = headingLevel === 3 ? 'h3' : 'h2'
+  const Heading = headingLevel === 3 ? 'h3' : headingLevel === 1 ? 'h1' : 'h2'
   return (
     <section className="empty-state">
       {icon ? (

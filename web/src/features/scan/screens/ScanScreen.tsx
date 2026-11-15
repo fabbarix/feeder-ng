@@ -297,10 +297,11 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   return (
     <section className="scan-screen" data-price-entry={pricingRow ? 'open' : undefined}>
       {shop ? (
-        <PageHeader title={shop.name} actions={<Button variant="secondary" onClick={changeShop}>{scanStrings.changeShop}</Button>} />
+        <PageHeader title={shop.name} documentTitle={scanStrings.title} actions={<Button variant="secondary" onClick={changeShop}>{scanStrings.changeShop}</Button>} />
       ) : (
         <PageHeader
           title={scanStrings.stockTakeHeading}
+          documentTitle={scanStrings.title}
           subtitle={scanStrings.stockTakeHint}
           leading={<IconButton icon="back" label={scanStrings.back} onClick={changeShop} />}
         />

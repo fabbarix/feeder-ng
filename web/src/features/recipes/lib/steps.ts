@@ -91,3 +91,26 @@ export function toggleAfter<T extends Ordered>(steps: T[], i: number, j: number,
     return { ...s, after }
   })
 }
+
+/** B9-31 (SAFE-10): a removed Step, its index, and the keys of the Steps that waited for it ("After step N"). */
+export interface RemovedStep {
+  step: StepDraft
+  index: number
+  waiters: string[]
+}
+
+/** Removes the Step at `index` and reports what an Undo needs; an index out of range removes nothing (removed: null). */
+export function removeStepWithUndo(steps: StepDraft[], index: number): { steps: StepDraft[]; removed: RemovedStep | null } {
+  const step = steps[index]
+  if (!step || index < 0) return { steps, removed: null }
+  const waiters = steps.filter((s) => s.after.includes(index)).map((s) => s.key)
+  return { steps: removeStep(steps, index), removed: { step, index, waiters } }
+}
+
+/** Puts a removed Step back at its index (clamped) with its own `after`; the Steps that waited for it wait for it again. */
+export function restoreStep(steps: StepDraft[], removed: RemovedStep): StepDraft[] {
+  const index = Math.max(0, Math.min(removed.index, steps.length))
+  return insertStep(steps, index, removed.step).map((s) =>
+    removed.waiters.includes(s.key) && s.kind !== 'advance' && !s.after.includes(index) ? { ...s, after: [...s.after, index].sort((a, b) => a - b) } : s,
+  )
+}

@@ -2,9 +2,8 @@
 // Recipe detail and the Recipe editor show Breadcrumbs above the h1 and no back IconButton.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider } from '../../../ui'
 import { garlic, recipe } from '../fixtures.test-helper'
 import { emptyDraft } from '../lib/draft'
 
@@ -21,19 +20,16 @@ vi.mock('../../import/hooks/useAgentPrompt', () => ({ useAgentPrompt: () => ({ s
 
 import { RecipeDetailScreen } from './RecipeDetailScreen'
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter, safeEditorFields } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const view = (path: string) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={[path]}>
-        <ConfirmProvider>
-          <Routes>
-            <Route path="/recipes/new" element={<RecipeEditorScreen />} />
-            <Route path="/recipes/:id/edit" element={<RecipeEditorScreen />} />
-            <Route path="/recipes/:id" element={<RecipeDetailScreen />} />
-          </Routes>
-        </ConfirmProvider>
-      </MemoryRouter>
+      <EditorRouter initialEntries={[path]}>
+        <Route path="/recipes/new" element={<RecipeEditorScreen />} />
+        <Route path="/recipes/:id/edit" element={<RecipeEditorScreen />} />
+        <Route path="/recipes/:id" element={<RecipeDetailScreen />} />
+      </EditorRouter>
     </QueryClientProvider>,
   )
 
@@ -42,6 +38,7 @@ const trail = () => screen.getByRole('navigation', { name: 'Breadcrumb' })
 beforeEach(() => {
   h.recipe = { recipe: recipe(), isLoading: false, error: null, setArchived: vi.fn(), remove: vi.fn() }
   h.editor = {
+    ...safeEditorFields(),
     draft: { ...emptyDraft(), name: 'Roast tray' },
     setDraft: vi.fn(), errors: {}, saving: false, isLoading: false, unitPrompt: null,
     save: vi.fn(), answerUnitPrompt: vi.fn(), dismissUnitPrompt: vi.fn(), addLine: vi.fn(), updateLine: vi.fn(), pickIngredient: vi.fn(), removeLine: vi.fn(), setSteps: vi.fn(),
@@ -77,7 +74,8 @@ describe('RecipeDetailScreen breadcrumbs', () => {
 
 describe('RecipeEditorScreen breadcrumbs', () => {
   it('editing: Recipes > name (a link back to the detail page) > Edit', () => {
-    h.editor = { ...h.editor, draft: { ...emptyDraft(), name: 'Roast tray' } }
+    h.editor = {
+    ...safeEditorFields(), ...h.editor, draft: { ...emptyDraft(), name: 'Roast tray' } }
     view('/recipes/3/edit')
     const nav = trail()
     expect([...nav.querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')])).toEqual([['Recipes', '/recipes'], ['Roast tray', '/recipes/3']])
