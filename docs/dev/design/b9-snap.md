@@ -26,7 +26,7 @@ the plan's table.
 | 1576 | `1576_shopping_tick_additions.sql` | B9-23 | additive plus a data move |
 | 1577 | `1577_member_away.sql` | B9-24 | additive |
 | 1578 | `1578_latest_start.sql` | B9-58 | additive (Latest start Off where the stored Earliest start is 22:00 or later) |
-| 1579 | `1579_user_signed_in.sql` | B9-52 | additive (`users.signed_in_at`, from the User's earliest session where there is one) |
+| 1579 | `1579_user_signed_in.sql` | B9-52 | additive (`users.signed_in_at`, from the earliest record only a signed-in User writes: a session, push subscription, Leftover event, Cooked mark, Not needed, tick, audit event; saved preferences stand in with created_at; a User with none reads "Not signed in yet" until the next sign-in) |
 
 **1570** (a removed Meal Slot keeps its history, ADR 0021) rebuilds `meal_slots` with `removed_at TEXT` (NULL while
 active), with the procedure of 1100 and 1400: its first line is `-- feeder:foreign-keys=off`, so the runner applies it on
