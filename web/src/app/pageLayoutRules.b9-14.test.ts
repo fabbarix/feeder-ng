@@ -23,6 +23,7 @@ const api = req(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
   ALWAYS_FAIL: string[]
   PROBES: { name: string; key: string | null; source: string; scenarios?: string[] }[]
   SCENARIOS: { name: string; route: string; start?: string; widths?: (number | string)[]; rules?: string[]; setup?: string }[]
+  SCENARIO_VIEWPORTS: Record<string, { width: number; height: number; mobile: boolean; safeArea?: unknown }>
   evaluateMetrics: (m: unknown, c: Ctx) => Finding[]
 }
 interface Ctx { width: number; route: string; kind: string }
@@ -123,8 +124,14 @@ describe('probes and scenarios', () => {
       expect(s!.widths?.length, n).toBeGreaterThan(0)
     }
     expect(api.SCENARIOS.find((s) => s.name === 'leftover-menu-sheet')?.widths).toEqual([375, 390])
-    expect(api.SCENARIOS.find((s) => s.name === 'sheet-planned-meal')?.widths).toContain('844x390-inset')
+    expect(api.SCENARIOS.find((s) => s.name === 'sheet-planned-meal')?.widths).toContain('844x390')
+    expect(api.SCENARIOS.find((s) => s.name === 'sheet-add-member')?.widths).toContain('390x400')
+    expect(api.SCENARIOS.find((s) => s.name === 'sheet-short-landscape')?.widths).toContain('844x390-inset')
     expect(api.SCENARIOS.find((s) => s.name === 'sheet-zoom-400')?.widths).toEqual(['375x256'])
+  })
+  it("SHORT-02's sizes are scenario viewports: phone landscape 844x390 and a 390 px phone with the keyboard up (390x400)", () => {
+    expect(api.SCENARIO_VIEWPORTS['844x390']).toEqual({ width: 844, height: 390, mobile: true })
+    expect(api.SCENARIO_VIEWPORTS['390x400']).toEqual({ width: 390, height: 400, mobile: true })
   })
   it('each scenario reports only its own rules: P25/P33 for the sheets, P39 for the ring room', () => {
     expect(api.SCENARIOS.find((s) => s.name === 'focus-ring-room-sheet')?.rules).toEqual(['P39'])
