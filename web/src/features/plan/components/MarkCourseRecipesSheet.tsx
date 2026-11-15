@@ -35,8 +35,11 @@ function CheckRow({ row, onToggle }: { row: MarkRow; onToggle: (id: number) => v
         onClick={() => onToggle(row.id)}
       />
       <span className="list-row__control">
-        <span className="checkbox__box" data-state={row.checked ? 'checked' : 'unchecked'} aria-hidden="true">
-          {row.checked ? <Icon name="tick" size={16} /> : null}
+        {/* .checkbox carries the box size token; the box is the shared Checkbox's look. */}
+        <span className="checkbox" aria-hidden="true">
+          <span className="checkbox__box" data-state={row.checked ? 'checked' : 'unchecked'}>
+            {row.checked ? <Icon name="tick" size={16} /> : null}
+          </span>
         </span>
       </span>
       <span className="list-row__text">

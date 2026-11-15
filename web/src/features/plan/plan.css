@@ -146,7 +146,9 @@
 /* Mark Recipes as <Course>: the context line, the lede, the search and the Recipes as checkbox rows. */
 .mark-recipes {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
+  min-width: 0;
 }
 .mark-recipes__context,
 .mark-recipes__lede,
@@ -229,8 +231,21 @@
 .plan-day[data-today='true'] .plan-day__title {
   color: var(--color-accent-text);
 }
+/* A Meal Slot on a day: its header, then its Course rows. */
+.plan-meal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  min-width: 0;
+}
+/* The divider between Meal Slots shows only on a day with 3 or more (data-dividers): a 1 px line. */
+.plan-day[data-dividers='true'] .plan-meal + .plan-meal {
+  padding-block-start: var(--space-3);
+  border-top: 1px solid var(--color-line);
+}
+
 /* A day that has the whole row lays its Meal Slots side by side: one column per Meal Slot under the one title, a 1 px line
-   between them. */
+   between them. (After the dividers rule, which it overrides.) */
 .plan-day[data-row='true'] {
   display: grid;
   grid-template-columns: repeat(var(--plan-slots, 3), minmax(0, 1fr));
@@ -249,19 +264,6 @@
   border-inline-start: 1px solid var(--color-line);
   padding-inline-start: var(--space-4);
   margin-inline-start: calc(-1 * var(--space-3));
-}
-
-/* A Meal Slot on a day: its header, then its Course rows. */
-.plan-meal {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
-  min-width: 0;
-}
-/* The divider between Meal Slots shows only on a day with 3 or more (data-dividers): a 1 px line. */
-.plan-day[data-dividers='true'] .plan-meal + .plan-meal {
-  padding-block-start: var(--space-3);
-  border-top: 1px solid var(--color-line);
 }
 
 /* The Meal Slot header: icon and full name, the time, then Cook and ⋮ grouped at the end. One nowrap row. */
@@ -380,6 +382,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* The chip line's slot holds the measuring copy: it clips it, so a long copy never widens the page (no horizontal scroll). */
+.plan-meal__courses > .list-row > .list-row__below {
+  position: relative;
+  overflow: clip;
 }
 /* The measuring copy of every chip: out of the layout, unseen, each chip at its natural width on one line. */
 .plan-row__measure {
