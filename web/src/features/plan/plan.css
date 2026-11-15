@@ -385,11 +385,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The chip line's slot holds the measuring copy in an unseen box of its own width that clips it, so a long copy never widens
-   the page (no horizontal scroll) and nothing visible is clipped. */
-.plan-meal__courses > .list-row > .list-row__below {
-  position: relative;
-}
+/* The measuring copy sits in an unseen box over the row (the row is the positioned ancestor) that clips it, so a long copy never
+   widens the page (no horizontal scroll) and nothing visible is clipped. The chip line itself stays in flow, unpositioned, so the
+   row's target (its ::after covers the row) takes a pointer press on the chips too (w4d review: a positioned chip line sat over it). */
 .plan-row__measure-box {
   position: absolute;
   inset: 0;

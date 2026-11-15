@@ -119,3 +119,10 @@ describe('the "Show which meals" sheet', () => {
     expect(b).not.toMatch(/font-weight\s*:\s*(6|7|8)00/)
   })
 })
+
+describe('the chip line never covers the row target', () => {
+  it('the row\'s below slot is not positioned (a positioned chip line painted over the target, so pressing a chip opened nothing)', () => {
+    expect(bodyOf('.plan-meal__courses > .list-row > .list-row__below')).not.toMatch(/position\s*:/)
+    expect(d('.plan-row__measure-box')['pointer-events']).toBe('none')
+  })
+})
