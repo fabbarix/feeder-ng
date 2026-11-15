@@ -8,6 +8,7 @@ import { slotRuleName, varietyRuleName } from '../lib/ruleForms'
 import { describeSlotRule, describeVarietyRule, mealSlotLabel, ruleCourseName, slotRuleTitle } from '../lib/rules'
 import { findTag, tagPill } from '../lib/tagPill'
 import { rulesStrings } from '../lib/rulesStrings'
+import '../planning-rules.css'
 import { planStrings as s } from '../strings'
 import type { MealSlotChoice, RecipeChoice, SlotRule, VarietyRule } from '../types'
 import '../plan.css'
@@ -67,7 +68,7 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemo
     return slot ? mealSlotLabel(slot.weekday, slot.name) : s.unknownMealSlot
   }
   return (
-    <div className="plan__stack">
+    <div className="plan__stack planning-rules__editor">
       <p className="plan__muted">{s.slotRulesHelp}</p>
       {rules.length === 0 ? <p className="plan__muted">{s.slotRuleEmpty}</p> : null}
       {rules.length > 0 ? (
@@ -153,7 +154,7 @@ export interface VarietyRulesEditorProps {
 export function VarietyRulesEditor({ rules, tags, onSave, onRemove, error }: VarietyRulesEditorProps): ReactNode {
   const form = useVarietyRuleForm(onSave)
   return (
-    <div className="plan__stack">
+    <div className="plan__stack planning-rules__editor">
       <p className="plan__muted">{s.varietyRulesHelp}</p>
       {rules.length === 0 ? <p className="plan__muted">{s.varietyRuleEmpty}</p> : null}
       {rules.length > 0 ? (

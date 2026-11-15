@@ -41,3 +41,16 @@
   display: flex;
   justify-content: flex-end;
 }
+
+/* A rule row's detail ("Recipe: Cauliflower al gorgonzola with walnuts", "At most 2 a week, not on consecutive days") is the rule
+   itself, so it is never cut: it wraps at a word under the Meal Slot instead of ending in an ellipsis (375 to 430 px). */
+.planning-rules__editor .list-row__meta,
+.planning-rules__editor .list-row__meta-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.planning-rules__editor .list-row__meta {
+  align-items: flex-start;
+}
