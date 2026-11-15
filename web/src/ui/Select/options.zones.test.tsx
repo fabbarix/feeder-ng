@@ -8,7 +8,7 @@ import { currencyOptions, supportedCurrencies, supportedTimeZones, timeZoneOptio
 // 2026-11-14 20:14 UTC: Rome (CET, UTC+1) reads 21:14, Kolkata (UTC+5:30) 01:44, New York (EST, UTC-5) 15:14.
 const NOW = new Date('2026-11-14T20:14:00Z')
 const zones = ['Europe/Rome', 'Europe/London', 'America/New_York', 'America/Argentina/Buenos_Aires', 'Asia/Kolkata', 'UTC']
-const byValue = <V extends string | number>(list: { value: V }[], value: V) => list.find((o) => o.value === value)!
+const byValue = <T extends { value: unknown }>(list: T[], value: T['value']) => list.find((o) => o.value === value)!
 
 describe('timeZoneOptions({ zones, now, deviceZone })', () => {
   const list = timeZoneOptions({ zones, now: NOW, deviceZone: 'Europe/Rome' })

@@ -22,6 +22,11 @@ export interface SelectOption<V extends string | number = string> {
   clear?: boolean
   /** R11a: what the closed trigger shows for this option when it differs from `label` ("Tue · Dinner"). */
   triggerLabel?: string
+  /**
+   * B9-15: what a chip shows instead of its value when its own row has no room for the value ("Any" for "Any Shop"); the title is then
+   * the full label. The open list always shows the label.
+   */
+  shortLabel?: string
 }
 
 export interface OptionGroup<V extends string | number = string> {

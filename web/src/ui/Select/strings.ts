@@ -10,4 +10,21 @@ export const selectStrings = {
   baseUnitMeta: (unit: string) => `Base Unit: ${unit}`,
   /** BR-D: the badge of a Base recipe's Ingredient option. */
   baseRecipeBadge: 'Base recipe',
+  /** SET-06: the "+N" of the filter line. Its name starts with its visible text ("+3"), so it can be spoken to (WCAG 2.5.3). */
+  moreFilters: (n: number) => (n === 1 ? '+1 more filter' : `+${n} more filters`),
+  /** SET-06: the same button once the line is expanded. */
+  fewerFilters: 'Fewer',
+  /** DS-03: the name and title of an icon-only chip: "Sort: Good until". */
+  iconOnlyName: (label: string, value: string) => (value ? `${label}: ${value}` : label),
+  /** SET-07: TimeZoneSelect. */
+  timeZone: 'Time zone',
+  timeZoneEntity: 'time zone',
+  thisDevice: 'This device',
+  otherZones: 'Other',
+  /** SET-07: CurrencySelect. */
+  currency: 'Currency',
+  currencyEntity: 'currency',
+  commonCurrencies: 'Common',
+  allCurrencies: 'All currencies',
+  readyMeal: 'Ready Meal',
 }

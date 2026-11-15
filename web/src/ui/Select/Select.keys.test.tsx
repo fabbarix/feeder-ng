@@ -2,7 +2,7 @@
 // End was never wrong; the option was just never shown (OptionList did this, SelectCore did not).
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Select } from './Select'
 
 const scrolled: { id: string; arg: unknown }[] = []

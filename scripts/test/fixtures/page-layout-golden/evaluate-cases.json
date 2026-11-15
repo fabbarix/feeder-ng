@@ -443,7 +443,7 @@
    },
    {
     "rule": "P22",
-    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value; a chip Select shows its value in full or, when it cannot, is icon-only with its value in its name (system.md 6)"
    },
    {
     "rule": "P23",
@@ -753,7 +753,7 @@
    },
    {
     "rule": "P22",
-    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value; a chip Select shows its value in full or, when it cannot, is icon-only with its value in its name (system.md 6)"
    },
    {
     "rule": "P23",
@@ -1079,7 +1079,7 @@
    },
    {
     "rule": "P22",
-    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value; a chip Select shows its value in full or, when it cannot, is icon-only with its value in its name (system.md 6)"
    },
    {
     "rule": "P23",
@@ -1409,7 +1409,7 @@
    },
    {
     "rule": "P22",
-    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value with an ellipsis; a chip Select shows its value in full: give its row room or take it from what sits beside it"
+    "message": "P22 .select \"Sort\" shows 60 px and cuts 20 px of its value; a chip Select shows its value in full or, when it cannot, is icon-only with its value in its name (system.md 6)"
    },
    {
     "rule": "P23",

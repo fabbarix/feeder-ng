@@ -5,7 +5,11 @@ import { RecipeThumb } from '../RecipeThumb'
 import { Thumb } from '../Thumb'
 import { mealSlotIcon } from '../lib/mealSlotIcon'
 import type { SelectOption } from './lib'
+import { COMMON_CURRENCIES, currencyFacts, deviceTimeZone, supportedCurrencies, supportedTimeZones, zoneFacts } from './intlChoices'
 import { selectStrings } from './strings'
+
+export { supportedCurrencies, supportedTimeZones } from './intlChoices'
+export type { IntlLike } from './intlChoices'
 
 export interface RecipeChoice {
   id: number
@@ -15,6 +19,8 @@ export interface RecipeChoice {
   totalMinutes?: number
   /** ISO date of the last Cooked Meal, if any. */
   lastCookedAt?: string | null
+  /** B9-15: a Ready Meal reads "Ready Meal" instead of a time. */
+  readyMeal?: boolean
 }
 export interface IngredientChoice {
   /** Absent for a not-yet-saved Ingredient; then `key` identifies it. */
@@ -38,7 +44,7 @@ export interface UnitChoices {
 export interface ShopChoice {
   id: number
   name: string
-  /** b8-shop: the value a narrow chip shows instead of the name (the list keeps the name). */
+  /** b8-shop: the value a chip shows instead of the name when its row has no room for the name (B9-15: the option's shortLabel). */
   shortName?: string
 }
 export interface MealSlotChoice {
@@ -61,12 +67,22 @@ export interface MemberChoice {
 
 export const ENGLISH_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-/** meta "35 min"; keywords = tags; leading = RecipeThumb. */
+/** SET-06: "30 min", "1 h", "1 h 15 min", "6 h"; 0 or no time gives nothing (never "0 min"). */
+export function recipeTime(minutes: number | undefined): string | undefined {
+  if (minutes === undefined || !Number.isFinite(minutes) || minutes <= 0) return undefined
+  const m = Math.round(minutes)
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  const rest = m % 60
+  return rest === 0 ? `${h} h` : `${h} h ${rest} min`
+}
+
+/** meta "35 min", "1 h 15 min" or "Ready Meal"; keywords = tags; leading = RecipeThumb. */
 export function recipeOptions(recipes: RecipeChoice[]): SelectOption<number>[] {
   return recipes.map((r) => ({
     value: r.id,
     label: r.name,
-    meta: r.totalMinutes !== undefined ? `${r.totalMinutes} min` : undefined,
+    meta: r.readyMeal ? selectStrings.readyMeal : recipeTime(r.totalMinutes),
     keywords: r.tags,
     leading: <RecipeThumb name={r.name} photoUrl={r.imageUrl} tags={r.tags} size={40} initial={false} />,
   }))
@@ -133,7 +149,7 @@ export function shopOptions(shops: ShopChoice[]): SelectOption<number>[] {
   return shops.map((s) => ({
     value: s.id,
     label: s.name,
-    ...(s.shortName ? { triggerLabel: s.shortName } : {}),
+    ...(s.shortName ? { shortLabel: s.shortName } : {}),
     leading: <Icon name="shops" size={20} />,
   }))
 }
@@ -158,4 +174,82 @@ export function memberOptions(members: MemberChoice[]): SelectOption<number>[] {
     label: m.name,
     leading: <Avatar name={m.name} imageUrl={m.photoUrl} glyph={m.avatar} colour={m.colour} size="sm" />,
   }))
+}
+
+export interface TimeZoneOptionsInput {
+  /** The IANA names to list. Default: Intl.supportedValuesOf('timeZone'), or the static list. */
+  zones?: string[]
+  /** The moment the offsets and clocks are read at. Default: now. */
+  now?: Date
+  /** Listed first, under "This device". */
+  deviceZone?: string
+  /** A stored zone that must be listed even if it is not in `zones` (so the trigger can show it). */
+  include?: string
+}
+
+/**
+ * SET-07: one option per zone. Value = the IANA name; label = the city; meta "Europe/Rome · UTC+1 · 21:14"; the trigger reads
+ * "Rome · Europe/Rome"; leading = a neutral globe. Groups: "This device", then the regions in order of first appearance, then "Other"
+ * (names without a region, such as UTC). A zone is listed once. Search reads the label and the meta: the city, the IANA name, the offset.
+ */
+export function timeZoneOptions({ zones, now = new Date(), deviceZone, include }: TimeZoneOptionsInput = {}): SelectOption<string>[] {
+  const names = [...(zones ?? supportedTimeZones())]
+  if (include && !names.includes(include)) names.push(include)
+  const option = (iana: string, group: string): SelectOption<string> => {
+    const z = zoneFacts(iana, now)
+    return {
+      value: iana,
+      label: z.city,
+      meta: [iana, z.offset, z.time].filter(Boolean).join(' · '),
+      triggerLabel: z.city === iana ? iana : `${z.city} · ${iana}`,
+      group,
+      leading: <Icon name="globe" size={20} />,
+    }
+  }
+  const out: SelectOption<string>[] = []
+  if (deviceZone) out.push(option(deviceZone, selectStrings.thisDevice))
+  const rest = names.filter((n) => n !== deviceZone)
+  const region = (iana: string) => (iana.includes('/') ? iana.slice(0, iana.indexOf('/')) : null)
+  for (const iana of rest) {
+    const r = region(iana)
+    if (r) out.push(option(iana, r))
+  }
+  for (const iana of rest) if (!region(iana)) out.push(option(iana, selectStrings.otherZones))
+  return out
+}
+
+/** The default device zone for TimeZoneSelect. */
+export { deviceTimeZone }
+
+export interface CurrencyOptionsInput {
+  /** ISO 4217 codes. Default: Intl.supportedValuesOf('currency'), or the static list. */
+  codes?: string[]
+  /** The locale of the names and symbols. Default: the browser's. */
+  locale?: string
+  /** A stored code that must be listed even if it is not in `codes`. */
+  include?: string
+}
+
+/**
+ * SET-07: label = the name ("Euro"); meta "EUR · €", or just "CHF" when the symbol is the code; the trigger reads "Euro · EUR".
+ * Groups: "Common" (in COMMON_CURRENCIES order), then "All currencies" by name. A code is listed once.
+ */
+export function currencyOptions({ codes, locale, include }: CurrencyOptionsInput = {}): SelectOption<string>[] {
+  const all = [...new Set([...(codes ?? supportedCurrencies()), ...(include ? [include] : [])])]
+  const option = (code: string, group: string): SelectOption<string> => {
+    const c = currencyFacts(code, locale)
+    return {
+      value: code,
+      label: c.name,
+      meta: c.symbol === code ? code : `${code} · ${c.symbol}`,
+      triggerLabel: c.name === code ? code : `${c.name} · ${code}`,
+      group,
+    }
+  }
+  const common = COMMON_CURRENCIES.filter((code) => all.includes(code)).map((code) => option(code, selectStrings.commonCurrencies))
+  const others = all
+    .filter((code) => !COMMON_CURRENCIES.includes(code))
+    .map((code) => option(code, selectStrings.allCurrencies))
+    .sort((a, b) => a.label.localeCompare(b.label, locale))
+  return [...common, ...others]
 }

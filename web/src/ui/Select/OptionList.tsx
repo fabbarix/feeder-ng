@@ -3,7 +3,8 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from '../Icon'
 import { SearchField } from '../fields/SearchField'
-import { firstEnabledIndex, nextEnabledIndex, type SelectOption } from './lib'
+import { firstEnabledIndex, nextEnabledIndex, normalise, type SelectOption } from './lib'
+import { selectStrings } from './strings'
 import './Select.css'
 
 export interface OptionListProps<V extends string | number> {
@@ -21,16 +22,49 @@ export interface OptionListProps<V extends string | number> {
   emptyText?: string | null
   /** Several options may be selected at once (pantry-filter: Storage Places): the listbox says so (aria-multiselectable). */
   multiple?: boolean
+  /**
+   * RX-09: adds a create row (last) while the trimmed query matches no option exactly (case, accents and spaces aside). Choosing it, or
+   * Enter or a comma with no active option and no exact match, calls this with the trimmed query and clears the query.
+   */
+  onCreate?: (query: string) => void
+  /** The create row's label: "Add Tag "spic"". Default: Create "spic". */
+  createLabel?: (query: string) => string
+  /** The create row's second line: "New Tag, gets the next Tag colour". */
+  createMeta?: string
+}
+
+/** The option whose label is the query, case, accents and spaces aside. */
+function exactMatch<V extends string | number>(options: SelectOption<V>[], query: string): SelectOption<V> | undefined {
+  const q = normalise(query).replace(/\s+/g, '')
+  return q === '' ? undefined : options.find((o) => !o.disabled && normalise(o.label).replace(/\s+/g, '') === q)
 }
 
 /** A search combobox over a listbox of options, always open. Arrows, Home and End move the active option; Enter toggles it. */
-export function OptionList<V extends string | number>({ label, searchLabel, query, onQueryChange, options, selected, onToggle, emptyText = null, multiple = false }: OptionListProps<V>): ReactNode {
+export function OptionList<V extends string | number>({
+  label,
+  searchLabel,
+  query,
+  onQueryChange,
+  options,
+  selected,
+  onToggle,
+  emptyText = null,
+  multiple = false,
+  onCreate,
+  createLabel = selectStrings.createDefault,
+  createMeta,
+}: OptionListProps<V>): ReactNode {
   const baseId = useId()
   const listId = `${baseId}-listbox`
   const optionId = (index: number) => `${baseId}-option-${index}`
   const [active, setActive] = useState(-1)
   const search = useRef<HTMLInputElement>(null)
-  const activeId = active >= 0 && active < options.length ? optionId(active) : undefined
+  const trimmed = query.trim()
+  const exact = exactMatch(options, trimmed)
+  // The create row is navigated as one more option, after the last one.
+  const createAt = onCreate && trimmed !== '' && !exact ? options.length : -1
+  const nav: SelectOption<V | '__create'>[] = createAt >= 0 ? [...options, { value: '__create', label: trimmed }] : options
+  const activeId = active >= 0 && active < nav.length ? optionId(active) : undefined
 
   // The active option scrolls into view whenever it changes (the list is capped and scrolls inside).
   useEffect(() => {
@@ -39,34 +73,60 @@ export function OptionList<V extends string | number>({ label, searchLabel, quer
     // optionId is stable for this list (it depends only on baseId), so only the active index drives the scroll.
   }, [active])
 
+  const create = () => {
+    if (!onCreate || trimmed === '') return
+    onCreate(trimmed)
+    onQueryChange('')
+    setActive(-1)
+  }
+
   const pick = (index: number) => {
+    if (index === createAt) return create()
     const option = options[index]
     if (option && !option.disabled) onToggle(option.value)
+  }
+
+  /** Enter or a comma with no active option: the exact match is toggled, else the query is added. */
+  const commit = () => {
+    if (exact) {
+      onToggle(exact.value)
+      onQueryChange('')
+      setActive(-1)
+    } else create()
   }
 
   const onKey = (e: KeyboardEvent<HTMLElement>) => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setActive((a) => nextEnabledIndex(options, a, 1))
+        setActive((a) => nextEnabledIndex(nav, a, 1))
         return
       case 'ArrowUp':
         e.preventDefault()
-        setActive((a) => nextEnabledIndex(options, a, -1))
+        setActive((a) => nextEnabledIndex(nav, a, -1))
         return
       case 'Home':
         e.preventDefault()
-        setActive(firstEnabledIndex(options))
+        setActive(firstEnabledIndex(nav))
         return
       case 'End':
         e.preventDefault()
-        setActive(lastEnabledIndex(options))
+        setActive(lastEnabledIndex(nav))
         return
       case 'Enter':
-        if (active >= 0) {
+        if (active >= 0 && active < nav.length) {
           e.preventDefault()
           pick(active)
+        } else if (onCreate && trimmed !== '') {
+          e.preventDefault()
+          commit()
         }
+        return
+      case ',':
+        // RX-09: a comma commits the text before it, so "quick, family" types fast. Without onCreate it is just a character.
+        if (!onCreate) return
+        e.preventDefault()
+        commit()
     }
   }
 
@@ -125,8 +185,34 @@ export function OptionList<V extends string | number>({ label, searchLabel, quer
             </div>
           )
         })}
+        {createAt >= 0 ? (
+          <div
+            id={optionId(createAt)}
+            role="option"
+            aria-selected={false}
+            aria-labelledby={`${optionId(createAt)}-label`}
+            aria-describedby={createMeta ? `${optionId(createAt)}-meta` : undefined}
+            data-active={createAt === active || undefined}
+            className="select__option select__option--create"
+            onClick={create}
+          >
+            <span className="select__leading" aria-hidden="true">
+              <Icon name="add" size={20} />
+            </span>
+            <span className="select__text">
+              <span id={`${optionId(createAt)}-label`} className="select__label">
+                {createLabel(trimmed)}
+              </span>
+              {createMeta ? (
+                <span id={`${optionId(createAt)}-meta`} className="select__meta">
+                  {createMeta}
+                </span>
+              ) : null}
+            </span>
+          </div>
+        ) : null}
       </div>
-      {emptyText ? <p className="select__empty">{emptyText}</p> : null}
+      {emptyText && createAt < 0 ? <p className="select__empty">{emptyText}</p> : null}
     </div>
   )
 }

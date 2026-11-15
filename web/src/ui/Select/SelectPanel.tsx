@@ -1,10 +1,8 @@
 import type { KeyboardEvent, RefObject } from 'react'
-import { Chip } from '../Chip'
 import { Icon } from '../Icon'
-import { IconButton } from '../IconButton'
 import { SearchField } from '../fields/SearchField'
 import type { BuiltList, SelectFilter, SelectSort } from './buildList'
-import { selectStrings } from './strings'
+import { SelectTools } from './SelectTools'
 import type { SelectOption } from './lib'
 
 export interface SelectPanelProps<V extends string | number> {
@@ -18,12 +16,17 @@ export interface SelectPanelProps<V extends string | number> {
   searchRef: RefObject<HTMLInputElement | null>
   listRef: RefObject<HTMLDivElement | null>
   onKey: (e: KeyboardEvent<HTMLElement>) => void
+  /** Escape from a control the search and the list do not handle (a filter chip, "+N", the sort button) closes the list. */
+  onEscape: () => void
   filters: SelectFilter<V>[]
   activeFilters: string[]
   onToggleFilter: (id: string) => void
   sorts: SelectSort<V>[]
   sortIndex: number
   onCycleSort: () => void
+  /** SET-06: "+N" has expanded the filter line. */
+  toolsExpanded: boolean
+  onToggleTools: () => void
   list: BuiltList<V>
   createDisabledReason?: string
   selected: V[]
@@ -91,7 +94,14 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
   const createIndex = p.list.flat.length
   const hasTools = p.filters.length > 0 || p.sorts.length > 0
   return (
-    <div className="select__panel">
+    <div
+      className="select__panel"
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape' || e.defaultPrevented) return
+        e.preventDefault()
+        p.onEscape()
+      }}
+    >
       {p.showSearch ? (
         <SearchField
           ref={p.searchRef}
@@ -105,14 +115,15 @@ export function SelectPanel<V extends string | number>(p: SelectPanelProps<V>) {
         />
       ) : null}
       {hasTools ? (
-        <div className="select__tools">
-          {p.filters.map((f) => (
-            <Chip key={f.id} kind="filter" selected={p.activeFilters.includes(f.id)} onClick={() => p.onToggleFilter(f.id)}>
-              {f.label}
-            </Chip>
-          ))}
-          {sort ? <IconButton icon="sort" label={selectStrings.sort(sort.label)} onClick={p.onCycleSort} className="select__sort" /> : null}
-        </div>
+        <SelectTools<V>
+          filters={p.filters}
+          activeFilters={p.activeFilters}
+          onToggleFilter={p.onToggleFilter}
+          sort={sort}
+          onCycleSort={p.onCycleSort}
+          expanded={p.toolsExpanded}
+          onToggleExpanded={p.onToggleTools}
+        />
       ) : null}
       <div
         ref={p.listRef}

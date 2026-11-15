@@ -54,6 +54,7 @@ import { FlashlightIcon } from '@phosphor-icons/react/dist/csr/Flashlight'
 import { ForkKnifeIcon } from '@phosphor-icons/react/dist/csr/ForkKnife'
 import { FunnelSimpleIcon } from '@phosphor-icons/react/dist/csr/FunnelSimple'
 import { GearSixIcon } from '@phosphor-icons/react/dist/csr/GearSix'
+import { GlobeIcon } from '@phosphor-icons/react/dist/csr/Globe'
 import { HeartIcon } from '@phosphor-icons/react/dist/csr/Heart'
 import { HourglassMediumIcon } from '@phosphor-icons/react/dist/csr/HourglassMedium'
 import { HourglassSimpleIcon } from '@phosphor-icons/react/dist/csr/HourglassSimple'
@@ -176,6 +177,7 @@ export const icons = {
   search: MagnifyingGlassIcon,
   filter: FunnelSimpleIcon,
   sort: SortAscendingIcon,
+  globe: GlobeIcon, // B9-15 SET-07: the neutral leading of a TimeZoneSelect option
   expand: CaretUpDownIcon,
   chevron: CaretRightIcon,
   copy: CopyIcon,

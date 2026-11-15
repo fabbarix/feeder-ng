@@ -58,8 +58,9 @@ describe('Select.css: options and the list', () => {
 })
 
 describe('Select.css: ring room', () => {
+  // Main session ruling (B9-15): the 5 px is written with the ring tokens, not a raw 5px.
   it('the panel keeps 5 px around the search field so its 3 px ring at a 2 px offset shows in full', () => {
-    expect(declarations(css, '.select__panel')['padding']).toBe('5px')
+    expect(declarations(css, '.select__panel')['padding']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
   })
 })
 
