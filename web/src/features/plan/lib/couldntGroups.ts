@@ -17,7 +17,11 @@ export type Cause =
 /** info = setup is missing; warn = a rule conflict. Never danger: nothing is on fire. */
 export type Tone = 'info' | 'warn'
 
-export type FixAction = { kind: 'link'; label: string; to: string } | { kind: 'choose'; label: string }
+export type FixAction =
+  | { kind: 'link'; label: string; to: string }
+  | { kind: 'choose'; label: string }
+  /** B9-32 (PC-07): mark Recipes with the Course from the Plan (the sheet), instead of leaving it for /recipes?notCourse=. */
+  | { kind: 'mark'; label: string; courseId: number; courseName: string }
 
 /** CRS G2: one line of a tile's "Show all" list. */
 export interface CauseItem {
@@ -41,6 +45,10 @@ export interface CauseGroup {
   items: CauseItem[]
   /** "Couldn't plan 9 Meal Slots. Nobody is set to attend." */
   headline: string
+  /** B9-32 (PC-07): the compact tile's row title, "7 Desserts" / "9 Meal Slots". STUB: '' until built. */
+  title: string
+  /** B9-32: the row's meta, the cause in one sentence ("No Recipes are marked as Dessert."). STUB: '' until built. */
+  meta: string
   hint: string
   tone: Tone
   icon: IconName
@@ -198,6 +206,8 @@ export function groupByCause(slots: PlanEntry[], all: PlanEntry[] = slots): Caus
       slots: list,
       items: cause === 'excluded' ? items.map((i) => ({ ...i, to: `/plan/couldnt-plan/excluded#${i.id}` })) : items,
       headline: `${s.couldntHeadline(count, noun)} ${textOf(cause, list, count)}`,
+      title: '',
+      meta: '',
       hint: s.couldntHint[cause],
       tone: meta.tone,
       icon: meta.icon,
@@ -255,4 +265,9 @@ export function courseCells(slots: Array<PlanSlot | PlanEntry>): PlanEntry[] {
 /** A flat entry already names its Course: it is a cell as it is. */
 function isEntry(slot: PlanSlot | PlanEntry): slot is PlanEntry {
   return (slot as PlanEntry).courseId !== undefined
+}
+
+/** B9-32 (PC-07): the short cause an unfilled Course row names in its one chip ("No Dessert Recipes", "Excluded"). STUB. */
+export function shortCause(_cause: Cause, _courseName?: string | null): string {
+  throw new Error('B9-32: shortCause is not built yet')
 }

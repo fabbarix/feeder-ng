@@ -67,6 +67,13 @@ export const planApi = {
   leftovers: () => http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers'),
   regenerate: () => http.post<RegenerateResult>('/api/plan/regenerate'),
   /** B9-11: POST /api/plan/restore { undoToken }: writes the plan back exactly, no replan. 409 `plan_changed`, 404 `not_found`. */
+  /**
+   * B9-32 (PC-07): POST /api/courses/<id>/recipes `{ recipeIds }` marks Recipes with a Course and replans once: `marked` is how many Recipes
+   * gained it. STUB (test author): throws until built.
+   */
+  markRecipes: (_courseId: number, _recipeIds: number[]): Promise<{ marked: number; changes: PlanChange[]; undoToken?: string }> => {
+    throw new Error('B9-32: planApi.markRecipes is not built yet')
+  },
   restore: (undoToken: string) => http.post<{ changes: PlanChange[] }>('/api/plan/restore', { undoToken }),
   /** B9-11: POST .../{courseId}/reopen: Cooked or Not cooked taken back (every Course of the same Mark all). 409 `leftover_used`, `reopen_window_over`. */
   reopen: (key: SlotKey) => http.post<ReopenResult>(`${slotPath(key)}/reopen`),
