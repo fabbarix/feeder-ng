@@ -188,6 +188,8 @@ export const recipeEditorStrings = {
     after: 'After',
     afterStep: (n: number) => `After step ${n}`,
     image: 'Step photo',
+    /** B9-37: the empty compact Step picker (GLOSSARY: a Step's picture is its Photo). */
+    noPhotoYet: 'No Photo yet.',
     usesTitle: 'Uses',
     addUse: 'Add ingredient use',
     /** B9-37: the visible words of the Step's chips (their names stay addUse and addPhoto). */
