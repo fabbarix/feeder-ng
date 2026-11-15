@@ -32,7 +32,7 @@
   inset-block-start: 50%;
   inset-inline-start: 0;
   block-size: 6px;
-  margin-block-start: -3px;
+  translate: 0 -50%; /* B9-55: centred on the track by its own height (was a -3px margin; raw-spacing reads negatives) */
   border-radius: var(--radius-pill);
   background: var(--color-accent);
 }
@@ -42,7 +42,7 @@
   inset-block-start: 0;
   inline-size: 24px;
   block-size: 24px;
-  margin-inline-start: -12px;
+  translate: -50% 0; /* B9-55: centred on its value by its own width (was a -12px margin) */
   border-radius: 50%;
   background: var(--color-accent);
   box-shadow: var(--elev-1);

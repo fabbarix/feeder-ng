@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, DetailList, DetailRow, Icon, ListGroup, ListRow, RecipeThumb, Tile } from '../../../ui'
+import { Button, DetailList, DetailRow, Icon, IconButton, ListGroup, ListRow, RecipeThumb, Tile } from '../../../ui'
 import { addedRows, resultRowMeta, resultRowState } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
 import type { ImportResult as ImportResultData, Plan } from '../types'
@@ -50,9 +50,7 @@ export function ImportResult({ result, plan, onImportMore }: ImportResultProps):
               wrapTitle
               value={resultRowState(r, status)}
               trailing={
-                <Link className="icon-button" data-size="md" to={`/recipes/${r.id}/edit`} aria-label={t.edit(r.name)}>
-                  <Icon name="edit" size={20} />
-                </Link>
+                <IconButton icon="edit" label={t.edit(r.name)} to={`/recipes/${r.id}/edit`} />
               }
             />
           )

@@ -29,7 +29,8 @@ describe('replacement choices', () => {
   })
   it('default to the main Course, else the first choice, else nothing', () => {
     expect(defaultReplacement(replacementChoices(choices, sideCourse))).toBe(1)
-    expect(defaultReplacement([{ id: 7, name: 'Cheese', main: false }])).toBe(7)
+    // B9-55 (SAFE-11, check-ui no-first-choice-default): with no main Course among the choices the select starts on its placeholder.
+    expect(defaultReplacement([{ id: 7, name: 'Cheese', main: false }])).toBeNull()
     expect(defaultReplacement([])).toBeNull()
   })
 })

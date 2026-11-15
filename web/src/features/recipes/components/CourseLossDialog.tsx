@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button, Dialog } from '../../../ui'
+import { ConfirmDialog } from '../../../ui'
 import { courseStrings } from '../strings'
 import { joinNames } from '../lib/recipeCourses'
 import type { CourseLoss } from '../types'
@@ -11,29 +11,22 @@ export interface CourseLossDialogProps {
   onCancel: () => void
 }
 
-/** CRS E2: the confirm before a save that takes a Course off and so removes Slot Rules: a modal dialog that names each rule. */
+/**
+ * CRS E2: the confirm before a save that takes a Course off and so removes Slot Rules. A danger ConfirmDialog (SAFE R1: Cancel focused,
+ * outline Cancel, no Close); each Slot Rule that goes is a row (R-E), not a bullet.
+ */
 export function CourseLossDialog({ open, loss, onConfirm, onCancel }: CourseLossDialogProps): ReactNode {
   return (
-    <Dialog
+    <ConfirmDialog
       open={open}
-      onClose={onCancel}
-      title={courseStrings.lossTitle(joinNames(loss.courseNames), loss.rules.length)}
       tone="danger"
-      onCancel={onCancel}
+      title={courseStrings.lossTitle(joinNames(loss.courseNames), loss.rules.length)}
+      body={courseStrings.lossBody}
+      groups={[{ label: courseStrings.lossRulesHeading, rows: loss.rules.map((r) => ({ key: r.label })) }]}
       cancelLabel={courseStrings.lossCancel}
-      cancelProps={{ 'data-autofocus': true }}
-      actions={
-        <Button variant="danger" onClick={onConfirm}>
-          {courseStrings.lossConfirm}
-        </Button>
-      }
-    >
-      <p>{courseStrings.lossBody}</p>
-      <ul className="course-loss__rules">
-        {loss.rules.map((r) => (
-          <li key={r.id}>{r.label}</li>
-        ))}
-      </ul>
-    </Dialog>
+      confirmLabel={courseStrings.lossConfirm}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   )
 }

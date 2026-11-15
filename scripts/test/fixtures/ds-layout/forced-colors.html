@@ -1,0 +1,78 @@
+<!doctype html><html data-scheme="dark"><head><meta charset="utf-8"><title>pending</title>
+<!-- B9-55 (A11Y-04, docs/design/ui-review-3/a11y.md): the primitives in forced colours, with the app's real stylesheets and the real markup of
+     Button, IconButton (pressed and not), Segmented, ColorSwatches, Switch, Checkbox, TextField, the NumberField stepper, SearchField (with
+     a value, so Clear search shows) and Select. Chrome runs with forced colours emulated (scripts/test/forced-colors-run.mjs, CDP
+     Emulation.setEmulatedMedia), walks the page with Tab and reads window.__focus() after each stop and window.__static() once.
+     ui/forcedColors.css is linked LAST, as ui/index.ts imports it last. Read by ds-layout_test.sh. -->
+<link rel="stylesheet" href="../../../../web/src/styles.css">
+<link rel="stylesheet" href="../../../../web/src/ui/focusLayer.css">
+<link rel="stylesheet" href="../../../../web/src/ui/Button.css"><link rel="stylesheet" href="../../../../web/src/ui/IconButton.css">
+<link rel="stylesheet" href="../../../../web/src/ui/Tile.css"><link rel="stylesheet" href="../../../../web/src/ui/ListRow.css">
+<link rel="stylesheet" href="../../../../web/src/ui/fields/Field.css"><link rel="stylesheet" href="../../../../web/src/ui/fields/Segmented.css">
+<link rel="stylesheet" href="../../../../web/src/ui/fields/Switch.css"><link rel="stylesheet" href="../../../../web/src/ui/fields/Checkbox.css">
+<link rel="stylesheet" href="../../../../web/src/ui/fields/SearchField.css"><link rel="stylesheet" href="../../../../web/src/ui/fields/ColorSwatches.css">
+<link rel="stylesheet" href="../../../../web/src/ui/Select/Select.css">
+<link rel="stylesheet" href="../../../../web/src/ui/forcedColors.css">
+<style>body { margin: 16px; font-family: sans-serif; } .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 16px; } .box { inline-size: 340px; }</style>
+</head><body>
+<div class="row">
+  <button type="button" class="button" data-variant="primary" data-size="md" data-probe="button-primary">Save</button>
+  <button type="button" class="button" data-variant="secondary" data-size="md" data-probe="button-secondary">Adjust</button>
+  <button type="button" class="button" data-variant="secondary" data-size="md" disabled id="off">Off</button>
+  <button type="button" class="icon-button" aria-label="Edit" data-size="md" data-probe="icon-button"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 2h16v16H2z" fill="currentColor"/></svg></button>
+  <button type="button" class="icon-button" aria-label="Pinned" aria-pressed="true" data-size="md" data-probe="icon-button-pressed" id="pressed"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 2h16v16H2z" fill="currentColor"/></svg></button>
+</div>
+<div class="row"><div class="ui-field box"><span id="seg-label" class="ui-field__label">Colour mode</span>
+  <div role="radiogroup" aria-labelledby="seg-label" class="segmented" id="seg">
+    <button type="button" role="radio" aria-checked="false" tabindex="-1" class="segmented__option">Light</button>
+    <button type="button" role="radio" aria-checked="true" tabindex="0" class="segmented__option" data-probe="segmented" id="seg-on"><svg class="segmented__check" width="16" height="16" viewBox="0 0 16 16"><path d="M2 8l4 4 8-8" stroke="currentColor" fill="none"/></svg>Dark</button>
+    <button type="button" role="radio" aria-checked="false" tabindex="-1" class="segmented__option">System</button></div></div></div>
+<div class="row"><div class="ui-field box"><span id="sw-label" class="ui-field__label">Accent colour</span>
+  <div role="radiogroup" aria-labelledby="sw-label" class="colour-swatches">
+    <button type="button" role="radio" aria-label="Basil" aria-checked="true" tabindex="0" class="colour-swatch" data-probe="swatch" style="background: rgb(63, 125, 88);"></button>
+    <button type="button" role="radio" aria-label="Tomato" aria-checked="false" tabindex="-1" class="colour-swatch" style="background: rgb(192, 57, 43);"></button></div></div></div>
+<div class="row">
+  <div class="switch-row"><div class="switch-row__text"><span id="sw1" class="switch-row__label">Notify</span></div>
+    <button type="button" role="switch" aria-checked="true" aria-labelledby="sw1" class="switch" data-probe="switch" id="sw-on"><span class="switch__thumb" aria-hidden="true"></span></button></div>
+  <div class="checkbox"><label class="checkbox__control"><input class="checkbox__input" type="checkbox" checked data-probe="checkbox"><span class="checkbox__box" data-state="checked" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8l4 4 8-8" stroke="currentColor" fill="none"/></svg></span><span class="checkbox__label">Done</span></label></div>
+</div>
+<div class="row"><div class="ui-field box" data-size="md"><label id="tf-label" for="tf" class="ui-field__label">Name</label><span class="ui-field__control"><input id="tf" class="ui-field__input" type="text" value="Soup" data-probe="text-field"></span></div></div>
+<div class="row"><div class="ui-field ui-field--stepper box" data-size="sm"><label id="nf-label" for="nf" class="ui-field__label">Days</label><span class="ui-field__control">
+  <button type="button" class="icon-button" aria-label="Decrease Days" data-size="md" data-probe="stepper-minus"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 10h12" stroke="currentColor"/></svg></button>
+  <input id="nf" inputmode="decimal" role="spinbutton" class="ui-field__input ui-field__number" aria-valuenow="3" type="text" value="3" data-probe="stepper-input"><span class="ui-field__suffix">days</span>
+  <button type="button" class="icon-button" aria-label="Increase Days" data-size="md" data-probe="stepper-plus"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 10h12M10 4v12" stroke="currentColor"/></svg></button></span></div></div>
+<div class="row"><div class="search-field box" data-size="full"><span class="visually-hidden">Search</span><span class="search-field__control" id="search"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="9" cy="9" r="6" stroke="currentColor" fill="none"/></svg>
+  <input role="searchbox" aria-label="Search" class="search-field__input" placeholder="Search" type="search" value="soup" data-probe="search-input">
+  <button type="button" class="icon-button" aria-label="Clear search" data-size="compact" data-probe="search-clear"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor"/></svg></button></span></div></div>
+<div class="row"><div class="ui-field box" data-size="md"><span id="sel-label" class="ui-field__label">Sort</span><div class="select">
+  <button type="button" role="combobox" class="select__trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sel-label" data-probe="select"><span class="select__value">A</span><svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 8l6 6 6-6" stroke="currentColor" fill="none"/></svg></button></div></div></div>
+<script>
+  // the focus stop: which box shows the ring (the control itself, or the frame that rings instead of it)
+  window.__focus = () => {
+    const el = document.activeElement
+    if (!el || el === document.body) return null
+    const cands = [el, el.closest('.ui-field__control'), el.closest('.search-field__control'), el.closest('.segmented')].filter(Boolean)
+    for (const c of cands) {
+      const s = getComputedStyle(c)
+      if (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) return { probe: el.dataset.probe || null, ring: c === el ? 'self' : c.className, style: s.outlineStyle, width: s.outlineWidth, color: s.outlineColor }
+    }
+    return { probe: el.dataset.probe || null, ring: null, style: 'none', width: '0px', color: '' }
+  }
+  window.__static = () => {
+    const sys = (prop, v) => { const t = document.createElement('span'); t.style[prop] = v; document.body.append(t); const out = getComputedStyle(t)[prop]; t.remove(); return out }
+    const cs = (id) => getComputedStyle(document.getElementById(id))
+    const sw = [...document.querySelectorAll('.colour-swatch')].map((e) => { const s = getComputedStyle(e); return { w: s.borderTopWidth, style: s.borderTopStyle, bg: s.backgroundColor } })
+    const sc = getComputedStyle(document.getElementById('search'))
+    const seg = getComputedStyle(document.getElementById('seg'))
+    const on = getComputedStyle(document.getElementById('seg-on'))
+    return {
+      forced: matchMedia('(forced-colors: active)').matches,
+      highlight: sys('backgroundColor', 'Highlight'), highlightText: sys('color', 'HighlightText'), grayText: sys('color', 'GrayText'), buttonText: sys('color', 'ButtonText'),
+      segOnBg: on.backgroundColor, segOnColor: on.color, segBorder: seg.borderTopWidth + ' ' + seg.borderBlockEndWidth, segBorderColor: seg.borderTopColor,
+      pressedBg: cs('pressed').backgroundColor, switchOnBg: cs('sw-on').backgroundColor, swatches: sw,
+      searchBorderBottom: sc.borderBottomWidth, searchBorderTop: sc.borderTopWidth,
+      buttonBorder: getComputedStyle(document.querySelector('.button[data-variant=secondary]')).borderTopWidth, disabledColor: cs('off').color,
+    }
+  }
+  document.title = 'ready'
+</script></body></html>

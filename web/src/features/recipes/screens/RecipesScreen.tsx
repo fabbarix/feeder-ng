@@ -105,6 +105,7 @@ export function RecipesScreen(): ReactNode {
             <RecipeTile
               key={r.id}
               recipe={r}
+              label={list.tileNames?.get(r.id)}
               onOpen={(id) => navigate(`/recipes/${id}`)}
               colourOf={colourOf}
               courseNames={courseNamesOf(r.courseIds, choices)}

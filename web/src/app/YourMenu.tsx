@@ -74,7 +74,6 @@ export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: 
               type="button"
               role="menuitem"
               className="your-menu__item"
-              data-tone="danger"
               onClick={() => {
                 setOpen(false)
                 // B9-36 (SAFE-08): with an unsaved preview of Your preferences, "Leave without saving?" comes first.

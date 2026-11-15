@@ -134,9 +134,9 @@ describe('P6 lines a capped sticky bar up with its column (SHORT-08, B9-19 devel
 
 describe('P32: fixed and sticky chrome covers more than 35 % of the viewport height at load (SHORT-04)', () => {
   const budget = (innerHeight: number, boxes: { sel: string; y: number; b: number }[]) => ({ chromeBudget: { innerHeight, boxes } })
-  it('is active and by mode, not always-fail (plan section 9, until B9-55)', () => {
-    expect(api.RULES.find((r) => r.id === 'P32')?.always).toBe(false)
-    expect(api.ALWAYS_FAIL).not.toContain('P32')
+  it('is active and always fail since B9-55 (plan section 9)', () => {
+    expect(api.RULES.find((r) => r.id === 'P32')?.always).toBe(true)
+    expect(api.ALWAYS_FAIL).toContain('P32')
   })
 
   it('reports the beta.8 Recipe detail at 844x390: a 88 px Cook bar and the 70 px bottom bar, 41 %', () => {

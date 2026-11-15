@@ -64,7 +64,7 @@ export function ReceiptReviewScreen({ renderAdd, products }: ReceiptReviewScreen
   }, [highlightId])
 
   const header = (
-    <ReceiptPageHeader title={t.reviewTitle} leading={<IconButton icon="back" label={t.back} onClick={() => void leave()} />} />
+    <ReceiptPageHeader title={t.reviewTitle} documentTitle={t.reviewDocumentTitle} leading={<IconButton icon="back" label={t.back} onClick={() => void leave()} />} />
   )
 
   // Back with rows checked asks first; the read stays kept for its 10 minutes.

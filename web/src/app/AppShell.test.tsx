@@ -306,14 +306,15 @@ describe('avatar menu', () => {
     expect(iconOf(within(menu).getByRole('menuitem', { name: 'Household' })).name).toBe('chevron')
   })
 
-  it('Sign out is last, in the danger tone, and calls onSignOut then closes', async () => {
+  // B9-55 (DS-06, decision DS 3): signing out loses nothing, so Sign out is a neutral item, not danger.
+  it('Sign out is last, in the neutral tone, and calls onSignOut then closes', async () => {
     const onSignOut = vi.fn()
     setup({ onSignOut })
     const menu = await open()
     const items = within(menu).getAllByRole('menuitem')
     const signOut = items[items.length - 1]!
     expect(signOut).toHaveTextContent('Sign out')
-    expect(signOut).toHaveAttribute('data-tone', 'danger')
+    expect(signOut).not.toHaveAttribute('data-tone')
     expect(within(menu).getByRole('menuitem', { name: 'Kitchen board' })).not.toHaveAttribute('data-tone')
     await userEvent.click(signOut)
     expect(onSignOut).toHaveBeenCalledOnce()

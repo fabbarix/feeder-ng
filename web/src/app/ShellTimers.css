@@ -85,6 +85,19 @@ html:has(.sticky-action-bar) .shell-timer[data-docked] {
   box-shadow: inset 0 0 0 2px var(--status-success-fg);
 }
 
+/* B9-55 (int2 finding 2): below 64em, where the bottom bar, a sticky action bar and the floating pill would take more than 35 % of the
+   height (P32's budget; 375 x 667 on a Recipe), the pill sits in the top bar between the brand and Your menu, as it does from 64em
+   (useTimerPillTop measures where and how wide). Its label ellipses first. Toasts need no room for it. */
+:root:has(.shell-timer[data-top]) {
+  --timer-pill-clearance: 0px;
+}
+
+.shell-timer[data-top],
+html:has(.sticky-action-bar) .shell-timer[data-top] {
+  inset: calc(var(--safe-top) + var(--space-1) + var(--space-half)) auto auto var(--timer-pill-top-x);
+  max-inline-size: var(--timer-pill-top-width);
+}
+
 /* A short landscape phone (below 64em wide, under 500 px tall) on Scan with the camera on: the pill's corner is where the strip's
    Mute, torch and Type a barcode sit (SHORT-04: never covered). It steps aside there; the finish banner still shows. */
 @media (width < 64em) and (height < 31.25em) {

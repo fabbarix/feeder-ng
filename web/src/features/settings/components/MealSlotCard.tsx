@@ -1,7 +1,8 @@
-import { Button, Chip, Icon, Tile, mealSlotIcon, weekdayLongName } from '../../../ui'
+import { Button, Icon, Tile, mealSlotIcon, weekdayLongName } from '../../../ui'
 import { AttendanceStack } from './AttendanceStack'
 import { MealSlotDifferences } from './MealSlotDifferences'
 import { MealSlotWeekStrip } from './MealSlotWeekStrip'
+import { UsualCourseChips } from './UsualCourseChips'
 import { courseEatersText, daysLabel, type MealSlotCard as Card } from '../lib/mealSlotCards'
 import { documentLocale } from '../lib/locale'
 import { settingsStrings } from '../strings'
@@ -55,13 +56,7 @@ export function MealSlotCard({ card, members, canEdit, addDisabled = false, loca
           {card.usualCourses.length > 0 ? (
             <div className="ms-fact">
               <span className="ms-fact__label">{text.usualCourses}</span>
-              <ul className="ms-courses" aria-label={text.usualCourses}>
-                {card.usualCourses.map((c) => (
-                  <li key={c.id} className="ms-course" data-optional={c.optional || undefined}>
-                    <Chip kind="tag">{c.optional ? `${c.name} (${text.optionalSuffix})` : c.name}</Chip>
-                  </li>
-                ))}
-              </ul>
+              <UsualCourseChips courses={card.usualCourses} />
               {card.usualCourses.map((c) => {
                 const eaters = courseEatersText(c, members, card.usualAttendance)
                 return eaters ? (

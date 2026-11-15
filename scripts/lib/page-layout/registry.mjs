@@ -47,26 +47,27 @@ function modulesIn(dir) {
 }
 
 /** Plan section 9: the rule numbers a package of beta.9 adds, with its owner and its mode ('mode' = by the route mode, until B9-55). */
+// B9-55: every rule planned "by mode -> B9-55" is always fail at release (plan section 9).
 const PLANNED = [
   ['P24', 'B9-13', 'always', "A row's title paints over its meta (DS-05)"],
   ['P25', 'B9-14', 'always', 'A target under 44 px in an open sheet, two overlapping targets, or touching bottom-bar labels (DS-01, DS-02)'],
   ['P26', 'B9-07', 'always', 'A BentoGrid loses a column as the window widens (resize walk) (DS-09)'],
-  ['P27', 'B9-02', 'mode', 'At a 24 px text size: off-role text, or a heading larger than the page title (DS-07, DS-08)'],
-  ['P28', 'B9-13', 'mode', 'A two-line navigation description is cut (DS-10)'],
+  ['P27', 'B9-02', 'always', 'At a 24 px text size: off-role text, or a heading larger than the page title (DS-07, DS-08)'],
+  ['P28', 'B9-13', 'always', 'A two-line navigation description is cut (DS-10)'],
   ['P29', 'B9-01', 'always', 'An action in a tile, toast, sheet footer, dialog or banner whose boundary is under 3:1 (R-A)'],
   ['P30', 'B9-01', 'always', 'A Segmented option on two lines (and [data-one-line] buttons)'],
   ['P31', 'B9-19', 'always', 'A bottom-bar squircle that is not square, or not 6 px inside the bar (R-F)'],
-  ['P32', 'B9-19', 'mode', 'Fixed and sticky chrome covers more than 35 % of the viewport height at load (SHORT)'],
+  ['P32', 'B9-19', 'always', 'Fixed and sticky chrome covers more than 35 % of the viewport height at load (SHORT)'],
   ['P33', 'B9-14', 'always', 'A sheet body under min(96px, 30 % of innerHeight), or a footer visible while the first required control is clipped (SHORT-02)'],
   ['P34', 'B9-40', 'always', 'Cook Step text not visible outside the Back/Next tiles at load (SHORT-01)'],
   ['P35', 'B9-19', 'always', 'Content inside a safe-area inset (SHORT-05; the inset scenario)'],
-  ['P36', 'B9-16', 'mode', 'A target under 44 px on touch profiles (A11Y-09)'],
+  ['P36', 'B9-16', 'always', 'A target under 44 px on touch profiles (A11Y-09)'],
   ['P37', 'B9-49', 'always', 'document.title is "Feeder", or does not match the h1 (A11Y-01)'],
-  ['P38', 'B9-32', 'mode', 'Two visible buttons in main share a name (A11Y-08)'],
+  ['P38', 'B9-32', 'always', 'Two visible buttons in main share a name (A11Y-08)'],
   ['P39', 'B9-07', 'always', "A focused control's ring box is clipped, or touches a neighbour or a sticky bar (A11Y-02)"],
-  ['P40', 'B9-13', 'mode', 'A .list-row__title or a field error narrower than 120 px (SET)'],
-  ['P41', 'B9-13', 'mode', 'A grouped list without a visible ListGroup title (SSP-03)'],
-  ['P42', 'B9-44', 'mode', 'A .page-header__subtitle other than the household date on Today (RES-05)'],
+  ['P40', 'B9-13', 'always', 'A .list-row__title or a field error narrower than 120 px (SET)'],
+  ['P41', 'B9-13', 'always', 'A grouped list without a visible ListGroup title (SSP-03)'],
+  ['P42', 'B9-44', 'always', 'A .page-header__subtitle other than the household date on Today (RES-05)'],
   ['P43', 'B9-18', 'always', 'A toast covers the row being acted on ([data-pricing], the focused row) (SSP-12)'],
 ]
 const MAX_RULE = 43

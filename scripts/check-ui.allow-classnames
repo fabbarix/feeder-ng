@@ -2,11 +2,11 @@
 # third-party classes). One token per line; a trailing * allows a prefix. Say why.
 # B9-49 (RES-08): the boot shell skeleton. app/BootShell.tsx draws the same markup as web/index.html, whose inline <style> styles it
 # (no app stylesheet has loaded when index.html paints it), so the rules are there, not in a .css file the guard reads.
-boot-shell__top
-boot-shell__brand
-boot-shell__avatar
-boot-shell__rail
-boot-shell__page
-boot-shell__title
-boot-shell__tile
-boot-shell__bar
+boot-shell__top   # B9-49 (RES-08): styled by the inline <style> of web/index.html, which paints before any app stylesheet loads
+boot-shell__brand   # B9-49 (RES-08): styled by the inline <style> of web/index.html, which paints before any app stylesheet loads
+boot-shell__avatar   # B9-49 (RES-08): styled by the inline <style> of web/index.html, which paints before any app stylesheet loads
+boot-shell__rail   # B9-49 (RES-08): styled by the inline <style> of web/index.html, which paints before any app stylesheet loads
+boot-shell__page   # B9-49 (RES-08): styled by the inline <style> of web/index.html, which paints before any app stylesheet loads
+boot-shell__title   # B9-49 (RES-08): styled by the inline <style> of web/index.html, which paints before any app stylesheet loads
+boot-shell__tile   # B9-49 (RES-08): styled by the inline <style> of web/index.html, which paints before any app stylesheet loads
+boot-shell__bar   # B9-49 (RES-08): styled by the inline <style> of web/index.html, which paints before any app stylesheet loads

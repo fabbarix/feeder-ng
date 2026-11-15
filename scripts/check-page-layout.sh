@@ -16,7 +16,8 @@
 #   scripts/check-page-layout.sh --mode-of ROUTE              warn|fail for a route
 # Modes: scripts/check-page-layout.modes, then every file of scripts/check-page-layout.modes.d/ (a package's own lines; B9-03).
 # A "width<=N = warn [until B9-NN]" line (the warn bridge) makes every finding at a profile viewport N px wide or less a warning,
-# always-fail rules included, and the run prints how many ("375 px: 4 findings, warn until B9-55"). An unknown line FAILS the run.
+# always-fail rules included, and the run prints how many ("N px: K findings, warn until B9-NN"). None ships at release (B9-55).
+# An unknown line FAILS the run.
 # Overrides (tests): PAGE_LAYOUT_BUILD_DIR, PAGE_LAYOUT_PORT, PAGE_LAYOUT_MODES, PAGE_LAYOUT_SERVER_CMD, PAGE_LAYOUT_SEED_CMD,
 # PAGE_LAYOUT_GUARD_CMD, PAGE_LAYOUT_GUARD_TIMEOUT (600 s), PAGE_LAYOUT_SEED_TIMEOUT (90 s), CHROME, PAGE_LAYOUT_FAKE_CMD.
 # beta.7 (RR5): the real run also starts the fake Anthropic API (cmd/fakeanthropic, loopback, detached, stopped by its PID) and

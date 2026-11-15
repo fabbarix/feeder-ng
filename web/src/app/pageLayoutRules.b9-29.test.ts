@@ -67,7 +67,8 @@ describe('P23 reads every visible meta', () => {
 })
 
 describe('the mode lines', () => {
-  const modes = () => read('scripts/check-page-layout.modes.d/20-b9-13-p40-p41-warn')
+  // B9-55 deleted the drop-in (no per-rule warn line is left at release): a missing file names no line.
+  const modes = () => (existsSync(resolve(cwd, '../scripts/check-page-layout.modes.d/20-b9-13-p40-p41-warn')) ? read('scripts/check-page-layout.modes.d/20-b9-13-p40-p41-warn') : '')
   it('P41 on /pantry is gone: the Storage Place groups have visible titles, so the route fails on P41 again', () => {
     expect(modes()).not.toMatch(/^P41@\/pantry/m)
   })

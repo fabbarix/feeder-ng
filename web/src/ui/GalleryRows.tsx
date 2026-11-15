@@ -35,8 +35,8 @@ function SwitchAction({ name }: { name: string }) {
 
 // Oldest first, as the stack takes them: the newest three show (n1 with its R-E rows on top), then "and 1 more".
 const NOTICES = [
-  { id: 'n2', tone: 'danger' as const, title: "Couldn't sync the Tick of Milk", subtitle: 'The Line was deleted on another device.', actions: [{ label: 'Add it again', onClick: noop }, { label: 'Dismiss', onClick: noop }] },
-  { id: 'n3', tone: 'danger' as const, title: "Couldn't sync the Scan of Eggs", actions: [{ label: 'Retry', onClick: noop }] },
+  { id: 'n2', tone: 'warn' as const, title: "Couldn't sync the Tick of Milk", subtitle: 'The Line was deleted on another device.', actions: [{ label: 'Add it again', onClick: noop }, { label: 'Dismiss', onClick: noop }] },
+  { id: 'n3', tone: 'warn' as const, title: "Couldn't sync the Scan of Eggs", actions: [{ label: 'Retry', onClick: noop }] },
   { id: 'n4', tone: 'info' as const, title: 'Bread was ticked twice' },
   { id: 'n1', tone: 'info' as const, title: 'Carrot was ticked twice', subtitle: 'Both Stock Lots were added.', rows: [{ key: 'Sam', amount: '+1 kg', time: '10:02' }, { key: 'You', amount: '+1 kg', time: '10:05' }] },
 ]

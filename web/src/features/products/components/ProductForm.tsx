@@ -68,7 +68,7 @@ export function ProductForm({ ingredientId, ingredientName, baseUnit, ingredient
           error={form.errors.packSize}
         />
         <TextField size="md" label={strings.barcodeLabel} helper={strings.barcodeOptional} inputMode="numeric" data-size-intent="long" value={form.values.barcode} onChange={form.setBarcode} error={form.errors.barcode} />
-        <ImagePicker label={strings.pictureLabel} value={form.values.image ?? ''} onChange={form.setImage} onBusyChange={form.setPictureBusy} aspect={CROP_ASPECTS.landscape} />
+        <ImagePicker label={strings.pictureLabel} noun="Picture" value={form.values.image ?? ''} onChange={form.setImage} onBusyChange={form.setPictureBusy} aspect={CROP_ASPECTS.landscape} />
         <FormError>{form.serverError}</FormError>
         {hideActions ? null : (
           <FormActions

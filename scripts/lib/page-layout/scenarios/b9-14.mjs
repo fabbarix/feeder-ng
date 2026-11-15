@@ -1,5 +1,5 @@
 // B9-14 (plan section 9; DS-01, SHORT-02, SHORT-07, A11Y-02): the sheet scenarios of P25, P33 and the sheet half of P39.
-//   leftover-menu-sheet       Today's Leftover ⋮ opens the Menu sheet (DS-01), at 375 and 390; P25 and P33. Its setup makes the Leftover
+//   leftover-menu-sheet       Today's Leftover row opens its actions sheet (DS-01; a row press since B9-44), at 375 and 390; P25 and P33. Its setup makes the Leftover
 //                             and the next b9-14 setup undoes it: Today's default state (the seed) is unchanged for other scenarios.
 //   sheet-planned-meal        /plan: a Planned Meal sheet, portrait and phone landscape (844x390); P25 and P33.
 //   sheet-add-member          /settings/members: the Add Member form sheet, portrait, with the keyboard up (390x400) and at 1440; P25 and P33.
@@ -67,9 +67,11 @@ export default {
         cookedForLeftover = made
         await evaluate('location.reload()')
       }
-      await until(`!!document.querySelector('main button[aria-label^="Actions for"]')`, 'a Leftover row with its ⋮ ("Actions for <Recipe>") on Today')
-      await press(`document.querySelector('main button[aria-label^="Actions for"]')`, 'the Leftover ⋮')
-      await until(dialogOpen, 'the Leftover Menu sheet')
+      // B9-55: since B9-44 (TB-11) a Leftover row on Today has no ⋮: pressing the row opens its Leftover's actions in a sheet.
+      const row = `document.querySelector('main .plan-leftovers li.list-row .list-row__target')`
+      await until(`!!${row}`, "a Leftover row on Today that opens its Leftover's actions")
+      await press(row, 'the Leftover row')
+      await until(`!!document.querySelector('dialog[open]')`, "the Leftover's actions (a Dialog since B9-44)")
     },
     // A Planned Meal sheet: the first Course row of /plan whose press opens a sheet.
     async plannedMealSheet() {

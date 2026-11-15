@@ -211,7 +211,9 @@
 }
 
 .receipt-context .detail-row__label {
-  overflow-wrap: anywhere;
+  overflow: hidden; /* B9-55 (word-break): wrap at a word; a single word too long ends in an ellipsis */
+  text-overflow: ellipsis;
+  min-inline-size: 0;
 }
 
 .new-product__match[aria-checked='true'] {

@@ -232,7 +232,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
           error={errors.restock}
         />
       )}
-      <ImagePicker label={strings.sheet.pictureLabel} value={image} onChange={setImage} onBusyChange={onPictureBusy} aspect={CROP_ASPECTS.landscape} listenOn="dialog" />
+      <ImagePicker label={strings.sheet.pictureLabel} noun="Picture" value={image} onChange={setImage} onBusyChange={onPictureBusy} aspect={CROP_ASPECTS.landscape} listenOn="dialog" />
       {guard.kind === 'exists' ? (
         <div className="new-ingredient__guard" role="status">
           <p>{strings.sheet.alreadyExists(guard.ingredient.name)}</p>

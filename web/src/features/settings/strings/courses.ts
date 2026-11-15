@@ -46,6 +46,7 @@ export const coursesStrings = {
     plannedRefusal: (name: string) =>
       `${name} has been used in the plan, so it cannot be deleted. Archive it instead: it leaves the list and every picker, and the plan keeps its name in history.`,
     replacementLabel: 'Replacement Course',
+    replacementPlaceholder: 'Choose a Course',
     plannedHeading: 'Planned Meals that go, from today on',
     rulesHeading: 'Slot Rules that go',
     pinned: 'Pinned',

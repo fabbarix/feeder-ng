@@ -1,6 +1,6 @@
 // B9-32 (PC-07, PLAN-19): "Leftovers to use" on the Plan is the same bordered leftover tile as Today. From 1024 px (the `desktop` band, 64 em) it lists
 // its rows; below, one summary row ("3 Leftovers", the names, "first Use by Tue") with Show, which opens the Leftovers sheet. A question waiting for
-// an answer is never hidden in the summary. TEST-AUTHOR tests. Today is Thursday 2026-11-12.
+// an answer is counted on that row and asked first in the sheet (B9-55). TEST-AUTHOR tests. Today is Thursday 2026-11-12.
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -89,10 +89,16 @@ describe('below 1024 it is one summary row', () => {
     expect(within(sheet).getByText('Slow cooker beef')).toBeInTheDocument()
   })
 
-  it('a question waiting for an answer is never hidden in the summary: it stays in the tile with its answers', async () => {
+  // B9-55 (PC-07's first-viewport rule at 375 x 667; the mock draws one summary row): a question is no longer asked inline below 1024. It is
+  // never hidden: the summary row counts it ("· 1 to answer") and the sheet asks it first, with its answers. (Was: asked in the tile.)
+  it('a question waiting for an answer is counted on the summary row and asked first in the sheet, with its answers', async () => {
     setup(834, [asked, gorgonzola, stew])
     const t = await tile()
-    expect(within(t).getByText(/Chilli was to be used by Tue/)).toBeInTheDocument()
-    expect(within(t).getByText('2 Leftovers')).toBeInTheDocument() // the summary counts the rest
+    expect(within(t).queryByText(/Chilli was to be used by Tue/)).toBeNull()
+    expect(within(t).getByText('3 Leftovers · 1 to answer')).toBeInTheDocument()
+    await userEvent.click(within(t).getByRole('button', { name: 'Show 3 Leftovers' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Leftovers to use' })
+    expect(within(sheet).getByText(/Chilli was to be used by Tue/)).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Had it' })).toBeInTheDocument()
   })
 })

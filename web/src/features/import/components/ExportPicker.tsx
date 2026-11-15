@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react'
-import { Button, Checkbox, EmptyState, FormActions, Icon, ListGroup, ListRow, RecipeThumb, SearchField, StickyActionBar, Tile } from '../../../ui'
+import { Button, Checkbox, DetailList, DetailRow, EmptyState, FormActions, Icon, ListGroup, ListRow, RecipeThumb, SearchField, StickyActionBar, Tile } from '../../../ui'
+import { distinctNames } from '../../../lib/distinctNames'
 import { alsoExportLabel } from '../lib/exportAlso'
 import { EXPORT_SEARCH_FROM, searchRecipes, selectionState } from '../lib/exportSelection'
 import { importStrings as s } from '../strings'
@@ -35,6 +36,8 @@ export function ExportPicker({ recipes, selected, onToggle, onSelectAll, onClear
   const state = selectionState(ids, selected)
   const chosen = ids.filter((id) => selected.includes(id)).length
   const shown = searchRecipes(recipes, query)
+  // B9-55 (P38): two Recipes of one name get names that tell them apart ("…, 2 of 2").
+  const names = distinctNames(recipes)
   const allMeta = state === 'none' ? t.chosenNone : state === 'all' ? t.chosenAll(ids.length) : t.chosenOf(chosen, ids.length)
   const toggleAll = () => (state === 'all' ? onClear() : onSelectAll())
   return (
@@ -58,12 +61,13 @@ export function ExportPicker({ recipes, selected, onToggle, onSelectAll, onClear
             <ListRow
               key={r.id}
               title={r.name}
+              aria-label={names.get(r.id) ?? r.name}
               leading={<RecipeThumb name={r.name} photoUrl={r.imageUrl || undefined} size={40} />}
               wrapTitle
               onActivate={() => onToggle(r.id)}
               control={
                 <span className="export-picker__check">
-                  <Checkbox label={r.name} checked={selected.includes(r.id)} onChange={() => onToggle(r.id)} />
+                  <Checkbox label={names.get(r.id) ?? r.name} checked={selected.includes(r.id)} onChange={() => onToggle(r.id)} />
                 </span>
               }
             />
@@ -71,11 +75,11 @@ export function ExportPicker({ recipes, selected, onToggle, onSelectAll, onClear
         </ListGroup>
         {shown.length === 0 ? <p className="export-picker__none">{t.noMatch}</p> : null}
         {also.length > 0 ? (
-          <ul className="export-picker__also" aria-label={s.baseRecipes.alsoExports}>
+          <DetailList className="export-picker__also" aria-label={s.baseRecipes.alsoExports}>
             {also.map((b) => (
-              <li key={b.id}>{alsoExportLabel(b.name)}</li>
+              <DetailRow key={b.id} label={alsoExportLabel(b.name)} />
             ))}
-          </ul>
+          </DetailList>
         ) : null}
       </Tile>
       <StickyActionBar label={s.exportActions}>

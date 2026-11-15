@@ -3,7 +3,7 @@
 // planZone, then switches to confirmZone, where those slots are more than 2 h 15 min past and wait to be confirmed.
 //
 // Every day has three Meal Slots (Breakfast, Lunch, Dinner). The planZone is Etc/GMT+12 (UTC-12), the confirmZone is Etc/GMT-14
-// (UTC+14): the same wall-clock slot is 26 h later there. pickZones(nowMs) returns the local slot instances that can still be
+// (UTC+14) or, near its midnight, UTC+13, +12 or +11 (B9-55): the same wall-clock slot is 23 to 26 h later there. pickZones(nowMs) returns the local slot instances that can still be
 // planned (at least 30 min ahead in planZone) and are past To-confirm (more than 2 h 30 min past in confirmZone). That window is
 // 23 h long, so it always holds at least two of the three daily slots, at any hour.
 
@@ -13,9 +13,14 @@ const MIN = 60e3
 const HOUR = 60 * MIN
 const DAY = 24 * HOUR
 const PLAN_ZONE = 'Etc/GMT+12'
-const CONFIRM_ZONE = 'Etc/GMT-14'
 const PLAN_OFFSET_H = -12
-const CONFIRM_OFFSET_H = 14
+// B9-55 (int1 finding): the confirm zone is the first of UTC+14, +13, +12, +11 whose local date stays the same for the next 90 minutes,
+// so a run never crosses the Household's midnight. The four midnights are an hour apart, so one is always more than 90 minutes away;
+// from UTC+11 up the window (offset + 9 h) still holds at least two of the three daily slots.
+const CONFIRM_OFFSETS_H = [14, 13, 12, 11]
+const KEEP_DATE = 90 * MIN
+const localDay = (ms, offsetH) => Math.floor((ms + offsetH * HOUR) / DAY)
+const confirmOffset = (nowMs) => CONFIRM_OFFSETS_H.find((o) => localDay(nowMs, o) === localDay(nowMs + KEEP_DATE, o)) ?? CONFIRM_OFFSETS_H[0]
 // margins: the slot is at least 30 min ahead when planned, and more than 2 h 30 min past when confirmed (To confirm starts at 2 h)
 const AHEAD_MIN = 30 * MIN
 const PAST_MIN = 150 * MIN
@@ -30,7 +35,8 @@ export function pickZones(nowMs) {
   // plannable (planZone):    L >= now + AHEAD + PLAN_OFFSET_H*HOUR
   // confirmable (confirmZone): L <= now - PAST + CONFIRM_OFFSET_H*HOUR
   const lo = nowMs + AHEAD_MIN + PLAN_OFFSET_H * HOUR
-  const hi = nowMs - PAST_MIN + CONFIRM_OFFSET_H * HOUR
+  const confirm = confirmOffset(nowMs)
+  const hi = nowMs - PAST_MIN + confirm * HOUR
   const targets = []
   const firstDay = Math.floor(lo / DAY) * DAY - DAY
   const lastDay = Math.floor(hi / DAY) * DAY + DAY
@@ -41,5 +47,5 @@ export function pickZones(nowMs) {
       if (local >= lo && local <= hi) targets.push({ date: new Date(day).toISOString().slice(0, 10), time })
     }
   }
-  return { planZone: PLAN_ZONE, confirmZone: CONFIRM_ZONE, targets }
+  return { planZone: PLAN_ZONE, confirmZone: `Etc/GMT-${confirm}`, targets }
 }

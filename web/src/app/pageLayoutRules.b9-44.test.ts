@@ -22,9 +22,9 @@ const base = (vw: number) => ({ vw, scrollW: vw, clientW: vw, over: [], content:
 const run = (todaySubtitle: unknown, route = '/') => api.evaluateMetrics({ ...base(390), todaySubtitle }, { width: 390, route, kind: 'default' }).filter((f) => f.rule === 'P42')
 
 describe('registration', () => {
-  it('P42 is active, by mode, and no longer reserved', () => {
-    expect(api.RULES.find((r) => r.id === 'P42')?.always).toBe(false)
-    expect(api.ALWAYS_FAIL).not.toContain('P42')
+  it('P42 is active, always fail since B9-55, and no longer reserved', () => {
+    expect(api.RULES.find((r) => r.id === 'P42')?.always).toBe(true)
+    expect(api.ALWAYS_FAIL).toContain('P42')
     expect(api.RESERVED.map((r) => r.id)).not.toContain('P42')
   })
   it('the probe fills todaySubtitle and is an in-page IIFE that reads only main and /api/me', () => {

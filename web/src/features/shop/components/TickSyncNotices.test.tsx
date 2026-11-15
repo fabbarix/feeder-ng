@@ -26,7 +26,7 @@ const twice = (id: string): TickNotice => ({
 const refused = (id: string): TickNotice => ({
   id,
   kind: 'refused',
-  tone: 'danger',
+  tone: 'warn', // B9-55 (DS-06)
   title: 'Couldn’t sync the Tick of Carrot.',
   subtitle: 'It is no longer on the Shopping List for this range. Its Stock Lot was not added.',
   actions: [

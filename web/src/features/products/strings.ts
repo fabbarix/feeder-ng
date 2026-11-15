@@ -87,6 +87,8 @@ export const strings = {
   priceHistory: 'Price history',
   latestPrices: 'Latest Price per Shop',
   deletePrice: 'Delete Price',
+  /** B9-55 (P38): Delete Price's accessible name; it holds the visible words and tells two Prices of one Shop on one day apart. */
+  deletePriceName: (shop: string, date: string, amount: string) => `Delete Price: ${shop}, ${date}, ${amount}`,
   priceAt: (shop: string) => `Price at ${shop}`,
   priceRemoved: (shop: string) => `Price at ${shop} removed`,
   barcodeRemoved: (code: string) => `Barcode ${code} removed`,

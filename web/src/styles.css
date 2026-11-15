@@ -164,6 +164,11 @@
 
 :root,
 [data-scheme='light'] {
+  /* B9-55: the selected-state tokens again where a scheme subtree starts, so they resolve to this scheme's colours (the Gallery's
+     dark panel), not the root's. */
+  --selected-bg: var(--color-soft);
+  --selected-fg: var(--color-accent-text);
+  --selected-ring: var(--color-accent-text);
   /* A11Y-02: a custom property resolves where it is declared, so a subtree that sets its own scheme (and accent) declares the
      ring colour again, or it would inherit the root's accent (the Gallery's light and dark panels side by side). */
   --focus-ring-color: var(--color-accent);
@@ -364,11 +369,18 @@
     --elev-1: none;
     --elev-2: none;
     --elev-3: none;
+    /* B9-55 (w6a note 3): a dialog or sheet backdrop dims a dark page too; the light scrim barely shows on a near-black ground. */
+    --scrim: rgb(0 0 0 / .66);
   }
 }
 
 :root[data-scheme='dark'],
 [data-scheme='dark'] {
+  /* B9-55: the selected-state tokens again where a scheme subtree starts, so they resolve to this scheme's colours (the Gallery's
+     dark panel), not the root's. */
+  --selected-bg: var(--color-soft);
+  --selected-fg: var(--color-accent-text);
+  --selected-ring: var(--color-accent-text);
   --focus-ring-color: var(--color-accent);
   --color-bg: #090f0b;
   --color-surface: #131c16;
@@ -435,6 +447,8 @@
   --elev-1: none;
   --elev-2: none;
   --elev-3: none;
+  /* B9-55 (w6a note 3): a dialog or sheet backdrop dims a dark page too; the light scrim barely shows on a near-black ground. */
+  --scrim: rgb(0 0 0 / .66);
 }
 
 * {

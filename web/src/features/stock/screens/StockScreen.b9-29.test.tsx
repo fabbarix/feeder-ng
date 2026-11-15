@@ -104,7 +104,7 @@ describe('SSP-03: every Storage Place group has a visible title', () => {
     setup()
     await screen.findByText('Minced beef')
     const row = within(section('Kitchen Fridge')).getByRole('button', { name: /Minced beef/ }).closest('li')!
-    expect(row.querySelector('.list-row__value')).toHaveTextContent(/^1 kg$/)
+    expect(row.querySelector('.list-row__value [aria-hidden="true"]')).toHaveTextContent(/^1 kg$/) // B9-55: the shown text of <Quantity>
     expect(row.querySelector('.list-row__meta')).toHaveTextContent(/^Good until Thu$/)
   })
   it('grouping off keeps one untitled list with its aria-label', async () => {

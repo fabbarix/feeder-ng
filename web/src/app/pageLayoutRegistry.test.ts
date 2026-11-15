@@ -139,6 +139,8 @@ const ADDED = {
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
   // B9-50: scenarios/b9-50.mjs (order 500): receipt-review-add and receipt-add-sheet (SSP-08), receipt-photos-bar (SSP-19, A11Y-09).
   // B9-54: scenarios/b9-54.mjs (order 540): shop-offline-tick and shop-offline-sheet (RES-03), the Shop ticked offline.
+  // B9-55: scenarios/b9-55.mjs (order 550): cook-three-timers (the Cook Mode timer strip at 375), recipe-timer-pill (the floating pill over the hero chip line) and
+  // receipt-add-sheet-again (the receipt Add... sheet once more after every other receipt scenario). The setups measure and throw.
   scenarios: [
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
@@ -174,6 +176,7 @@ const ADDED = {
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',
     'receipt-review-add', 'receipt-add-sheet', 'receipt-photos-bar',
     'shop-offline-tick', 'shop-offline-sheet',
+    'cook-three-timers', 'recipe-timer-pill', 'receipt-add-sheet-again',
   ],
 }
 
@@ -261,10 +264,11 @@ describe('one module per rule', () => {
 
 describe('P24..P43 are reserved with their owners (plan section 9)', () => {
   const planned: [string, string, 'always' | 'mode'][] = [
-    ['P24', 'B9-13', 'always'], ['P25', 'B9-14', 'always'], ['P26', 'B9-07', 'always'], ['P27', 'B9-02', 'mode'], ['P28', 'B9-13', 'mode'],
-    ['P29', 'B9-01', 'always'], ['P30', 'B9-01', 'always'], ['P31', 'B9-19', 'always'], ['P32', 'B9-19', 'mode'], ['P33', 'B9-14', 'always'],
-    ['P34', 'B9-40', 'always'], ['P35', 'B9-19', 'always'], ['P36', 'B9-16', 'mode'], ['P37', 'B9-49', 'always'], ['P38', 'B9-32', 'mode'],
-    ['P39', 'B9-07', 'always'], ['P40', 'B9-13', 'mode'], ['P41', 'B9-13', 'mode'], ['P42', 'B9-44', 'mode'], ['P43', 'B9-18', 'always'],
+    // B9-55 (plan section 9, "by mode -> always fail at B9-55"): every rule is always-fail at release, so PLANNED says 'always' for all of them.
+    ['P24', 'B9-13', 'always'], ['P25', 'B9-14', 'always'], ['P26', 'B9-07', 'always'], ['P27', 'B9-02', 'always'], ['P28', 'B9-13', 'always'],
+    ['P29', 'B9-01', 'always'], ['P30', 'B9-01', 'always'], ['P31', 'B9-19', 'always'], ['P32', 'B9-19', 'always'], ['P33', 'B9-14', 'always'],
+    ['P34', 'B9-40', 'always'], ['P35', 'B9-19', 'always'], ['P36', 'B9-16', 'always'], ['P37', 'B9-49', 'always'], ['P38', 'B9-32', 'always'],
+    ['P39', 'B9-07', 'always'], ['P40', 'B9-13', 'always'], ['P41', 'B9-13', 'always'], ['P42', 'B9-44', 'always'], ['P43', 'B9-18', 'always'],
   ]
   const want = planned.filter(([id]) => !ADDED.rules.includes(id))
   it('a rule a package has added is active with its planned mode, and no longer reserved', () => {
@@ -324,7 +328,8 @@ describe('a package adds its own files and edits no shared one', () => {
   // Review of B9-03: the mistakes a later package can make with its own files all fail on load, naming the file.
   it('a reserved rule with the wrong mode, a second probe for a metrics key, a viewport that does not exist, a setup without widths, and a stray non-.mjs file all throw on load', () => {
     const cases: [string, string, RegExp][] = [
-      ['page-layout/rules/P42-demo.mjs', demoRule('P42'), /P42 is planned as by the route mode/],
+      // B9-55: no rule is planned "by mode" any more; the check is the same for an always-fail one declared by mode.
+      ['page-layout/rules/P43-demo.mjs', demoRule('P43').replace('always: true', 'always: false'), /P43 is planned as always fail/],
       ['page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'cutMeta', source: '[]' }\n", /metrics key "cutMeta"/],
       ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', start: '/shop', setup: 's', widths: ['568x320'] }], setups: { s: async () => {} } }\n", /no viewport "568x320"/],
       ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', setup: 's' }], setups: { s: async () => {} } }\n", /setup but no widths/],

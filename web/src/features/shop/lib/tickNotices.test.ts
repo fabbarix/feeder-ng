@@ -114,7 +114,7 @@ describe('a refused Tick', () => {
     expect(n).toMatchObject({
       id: 'c-1',
       kind: 'refused',
-      tone: 'danger',
+      tone: 'warn', // B9-55 (DS-06): a refused sync is warn, not danger
       title: 'Couldn’t sync the Tick of Carrot.',
       subtitle: 'It is no longer on the Shopping List for this range. Its Stock Lot was not added.',
     })
@@ -137,7 +137,7 @@ describe('a refused Tick', () => {
 
   it('a refused untick is never silent', () => {
     const [n] = run({ results: [refused('validation_failed')], sent: [{ clientUuid: 'c-1', scannedAt: '2026-11-14T10:20:00Z', kind: 'shop_untick', tickClientUuid: 'old' }] })
-    expect(n).toMatchObject({ kind: 'untickRefused', tone: 'danger', title: 'Couldn’t sync taking Carrot off.', subtitle: 'Its tick is still there.' })
+    expect(n).toMatchObject({ kind: 'untickRefused', tone: 'warn', title: 'Couldn’t sync taking Carrot off.', subtitle: 'Its tick is still there.' })
     expect(n!.actions).toEqual([{ id: 'dismiss', label: 'Dismiss' }])
   })
 

@@ -23,8 +23,8 @@ describe('page-layout guard modes (R2-1)', () => {
     const line = /^fail_routes=(.*)$/m.exec(modes)?.[1] ?? ''
     for (const pattern of ['/recipes/:id', '/recipes/:id/edit', '/recipes/new']) expect(line.split(/\s+/)).toContain(pattern)
   })
-  it('the Recipes list stays warn (R2-L); import and export are fail routes since R2-4 and stay fail', () => {
-    expect(rules.modeFor(modes, '/recipes')).toBe('warn')
+  it('the Recipes list is a fail route too since B9-55 (every route fails); import and export are fail routes since R2-4 and stay fail', () => {
+    expect(rules.modeFor(modes, '/recipes')).toBe('fail')
     for (const route of ['/recipes/import', '/recipes/export']) expect(rules.modeFor(modes, route)).toBe('fail')
     expect(modes).not.toMatch(/^warn_routes=/m)
   })
@@ -40,7 +40,7 @@ describe('page-layout guard modes (R2-1)', () => {
     for (const route of ['/recipes/7', '/plan', '/stock']) expect(rules.modeFor(text, route)).toBe('fail')
     for (const route of ['/recipes/import', '/recipes/export', '/shop']) expect(rules.modeFor(text, route)).toBe('warn')
   })
-  it('keeps the default in warn mode', () => {
-    expect(modes).toMatch(/^default=warn$/m)
+  it('the default is fail since B9-55 (a route nobody listed is guarded too)', () => {
+    expect(modes).toMatch(/^default=fail$/m)
   })
 })

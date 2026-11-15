@@ -5,7 +5,7 @@ import '../recipe-assistant.css'
 /** The server has no FEEDER_SECRET_KEY: says who sets it and where to read more. Announced; everything else is unavailable. */
 export function SecretKeyMissingTile() {
   return (
-    <Tile variant="status" status="spoil" span="full" role="status">
+    <Tile variant="status" status="warn" span="full" role="status">
       <p className="ra__line">
         <Icon name="warning" size={20} />
         <span>

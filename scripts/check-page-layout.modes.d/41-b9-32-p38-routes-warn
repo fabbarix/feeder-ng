@@ -1,7 +1,0 @@
-# w4d batch review (main-session ruling): B9-32 adds P38 (A11Y-08: two visible buttons in main share a name), by route mode. The first
-# full run found repeated names on fail routes B9-32 does not own. Only P38 warns on each, until the package that builds the screen
-# names its buttons by what they act on; each package deletes its own line, and the last one deletes this file. /plan and / stay
-# in fail mode for P38.
-# w6a: the /recipes/:id/edit, /shop, /scan and /scan/receipt/review lines are deleted (clean since w4b and w5a).
-#   /products/:id: two Prices of one Shop on one day, both "Delete Price: Coop 2026-11-15".
-P38@/products/:id = warn until B9-55

@@ -1,10 +1,11 @@
 import { useId, type ReactNode } from 'react'
-import { ActionGroup, Tile, TileHeader } from '../../../ui'
-import { toConfirmRows, type ToConfirmRow } from '../lib/toConfirm'
-import { toConfirmRowKey, toConfirmRowView, type ToConfirmRowView } from '../lib/toConfirmView'
+import { Tile, TileHeader } from '../../../ui'
+import { toConfirmRows } from '../lib/toConfirm'
+import { toConfirmRowKey } from '../lib/toConfirmView'
 import { useRowFocusAfterRemoval } from '../hooks/useRowFocusAfterRemoval'
 import { planStrings as s } from '../strings'
 import type { PlanEntry, SlotDayKey, SlotKey } from '../types'
+import { ToConfirmList } from './ToConfirmList'
 import '../plan.css'
 import './TonightHero.css'
 
@@ -31,46 +32,6 @@ export interface ToConfirmTileProps {
 
 const noop = (): void => {}
 
-type RowHandlers = Required<Omit<ToConfirmTileProps, 'slots' | 'today'>>
-
-/** One row of To confirm: day and slot, the Main Recipe with its "+ Side" line, and the one decision (ActionGroup). */
-function ToConfirmRowItem({ row, view, handlers }: { row: ToConfirmRow; view: ToConfirmRowView; handlers: RowHandlers }): ReactNode {
-  const single = row.single
-  const group =
-    single !== undefined
-      ? {
-          primary: { label: view.primaryLabel, 'aria-label': view.primaryName, onClick: () => handlers.onYesCooked(single) },
-          secondary: { label: s.adjust, 'aria-label': view.secondaryName, onClick: () => handlers.onAdjust(single) },
-          more: [{ id: 'not-cooked', label: s.notCooked, onSelect: () => handlers.onNotCooked(single) }],
-        }
-      : {
-          primary: { label: view.primaryLabel, 'aria-label': view.primaryName, onClick: () => handlers.onAllCooked(row.slot) },
-          secondary: { label: s.adjust, 'aria-label': view.secondaryName, onClick: () => handlers.onMarkAllCooked(row.slot) },
-          more: [{ id: 'not-cooked', label: s.notCooked, onSelect: () => handlers.onNotCookedSlot(row.slot) }],
-        }
-  const meta = view.meta
-  return (
-    // The row is the ActionGroup's container (action-group-host): the group is its direct child (DS-A round 2).
-    <li className="to-confirm__row action-group-host" data-fresh={view.fresh ? 'true' : undefined} data-row-focus-key={toConfirmRowKey(row)}>
-      <p className="to-confirm__when">
-        <span>{view.dayLabel}</span>
-        <span>{row.slotName}</span>
-      </p>
-      <div className="to-confirm__text">
-        <p className="to-confirm__title">{row.main}</p>
-        {meta ? (
-          <p className="to-confirm__meta">
-            {meta.emphasis !== null ? <strong>{meta.emphasis}</strong> : null}
-            {meta.emphasis !== null ? ' · ' : null}
-            {meta.text}
-          </p>
-        ) : null}
-      </div>
-      <ActionGroup label={view.groupLabel} primary={group.primary} secondary={group.secondary} more={group.more} />
-    </li>
-  )
-}
-
 /**
  * Today: Planned Meals still unconfirmed (docs/design/system.md §9): the slots of today whose time has come first (TB-01), then the
  * server's (two hours after their slot time). One row per Meal Slot: "Cooked" (or "All Cooked" for several Courses) is the primary,
@@ -87,11 +48,7 @@ export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onAll
     <Tile as="section" span="full" aria-labelledby={titleId}>
       {/* B9-44 (TB-09): the shared tile header (an info badge, the title that names the section, a count). */}
       <TileHeader icon="markCooked" {...INFO_BADGE} title={s.toConfirmTitle} titleId={titleId} count={rows.length} countLabel={s.toConfirmCount(rows.length)} />
-      <ul className="to-confirm__list" onFocus={focus.onFocus}>
-        {rows.map((row) => (
-          <ToConfirmRowItem key={toConfirmRowKey(row)} row={row} view={toConfirmRowView(row, slots, today)} handlers={handlers} />
-        ))}
-      </ul>
+      <ToConfirmList rows={rows} slots={slots} today={today} handlers={handlers} onFocus={focus.onFocus} />
     </Tile>
   )
 }

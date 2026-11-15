@@ -1,9 +1,8 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Avatar, Button, ListGroup, ListRow, MemberPill, Tile } from '../../../ui'
-import { optOutLine, recordAction, recordDetail, recordText, type ExplanationGroup, type RecordPart } from '../lib/couldntExclusions'
+import { Button, Tile } from '../../../ui'
+import { optOutLine, type ExplanationGroup } from '../lib/couldntExclusions'
 import { planStrings as s } from '../strings'
-import type { ExclusionRecord } from '../types'
+import { EaterPills, ExclusionCells, ExclusionRecords } from './CouldntPlanExclusionLists'
 import '../plan.css'
 
 export interface CouldntPlanExclusionTileProps {
@@ -47,69 +46,15 @@ export function CouldntPlanExclusionTile({ group, expanded, onToggle, focusId = 
           </Button>
         </div>
       )}
-      {showList ? (
-        <ul id={listId} aria-label={s.couldntExclusions.whereApplies} className="plan__list">
-          {group.items.map((item) => (
-            <li key={item.key} id={item.id} tabIndex={-1}>
-              {item.text}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {showList ? <ExclusionCells id={listId} items={group.items} /> : null}
       <p className="plan__caption">{s.couldntExclusions.whoEatsIt}</p>
-      <ul aria-label={s.couldntExclusions.whoEatsIt} className="plan__pills">
-        {group.attendance.map((m) => (
-          <li key={m.id}>
-            <MemberPill name={m.name} colour={m.colour} glyph={m.avatar} photoUrl={m.photoUrl} />
-          </li>
-        ))}
-      </ul>
+      <EaterPills members={group.attendance} />
       {optOut ? <p className="plan__muted">{optOut}</p> : null}
       {group.exclusions === null ? (
         <p className="plan__muted">{s.couldntExclusions.stillWorking}</p>
       ) : (
-        <ListGroup label={s.couldntExclusions.exclusions}>
-          {group.exclusions.map((record) => (
-            <ExclusionRow key={exclusionKey(record)} record={record} />
-          ))}
-          {group.moreExclusions > 0 ? <li className="plan__muted">{s.couldntExclusions.moreExclusions(group.moreExclusions)}</li> : null}
-        </ListGroup>
+        <ExclusionRecords records={group.exclusions} more={group.moreExclusions} />
       )}
     </Tile>
-  )
-}
-
-/** A stable key within one Tile: a Member's Exclusion of one Ingredient, or the Recipes they rule out directly. */
-function exclusionKey(record: ExclusionRecord): string {
-  const what = record.ingredient ? `ingredient-${record.ingredient.id}` : `recipes-${record.recipes.map((r) => r.id).join('-')}`
-  return `${record.member.id}-${what}`
-}
-
-/** The Recipes and names of a first line: links where the parts have a `to`. */
-function Parts({ parts }: { parts: RecordPart[] }): ReactNode {
-  return parts.map((p, i) => {
-    if (p.to) return <Link key={`${i}-${p.text}`} to={p.to}>{p.text}</Link>
-    return p.strong ? <strong key={`${i}-${p.text}`}>{p.text}</strong> : <span key={`${i}-${p.text}`}>{p.text}</span>
-  })
-}
-
-/** One Exclusion: the Member's Avatar, the first line, what an Ingredient rules out, and "Review garlic". */
-function ExclusionRow({ record }: { record: ExclusionRecord }): ReactNode {
-  const detail = recordDetail(record)
-  const action = recordAction(record)
-  return (
-    <ListRow
-      wrapTitle
-      title={<Parts parts={recordText(record)} />}
-      meta={detail ?? undefined}
-      leading={<Avatar name={record.member.name} imageUrl={record.member.photoUrl} size="md" colour={record.member.colour} glyph={record.member.avatar} />}
-      trailing={
-        action ? (
-          <Link className="button" data-variant="secondary" data-size="sm" to={action.to}>
-            {action.label}
-          </Link>
-        ) : undefined
-      }
-    />
   )
 }

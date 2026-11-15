@@ -1,4 +1,4 @@
-/* RES-03 SyncNotice: a notice tile in the danger or info tone. Tokens only. */
+/* RES-03 SyncNotice: a notice tile in the warn or info tone (DS-06). Tokens only. */
 .sync-notice {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -8,9 +8,10 @@
   border-radius: var(--radius-tile-sm);
 }
 
-.sync-notice[data-tone='danger'] {
-  background: var(--status-danger-bg);
-  color: var(--status-danger-fg);
+.sync-notice[data-tone='warn'] {
+  border: 1px solid var(--status-warn-fg);
+  background: var(--status-warn-bg);
+  color: var(--status-warn-fg);
 }
 
 .sync-notice[data-tone='info'] {

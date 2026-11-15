@@ -9,7 +9,8 @@ import { heroChipLine, heroCookLabel, heroEyebrow, heroHint, isStartPart, slotCo
 import { heroMenuItems, type HeroMenuItem } from '../lib/heroMenu'
 import { planStrings as s } from '../strings'
 import type { PlannedMeal, PlanSlot, SlotDateActions, SlotDayKey, SlotKey } from '../types'
-import { CourseRow, type CourseRowHandlers } from './CourseRow'
+import type { CourseRowHandlers } from './CourseRow'
+import { HeroCourseList } from './HeroCourseList'
 import { PlanChipView } from './PlanChipView'
 import { RuleWarningLine } from './RuleWarningLine'
 import type { SlotMenuProps } from './SlotMenu'
@@ -181,24 +182,7 @@ export function TonightHero(props: TonightHeroProps): ReactNode {
         </div>
       </div>
       {others.length > 0 ? (
-        <ul aria-label={`${slot.name} Courses`} className="plan-hero__courses">
-          {others.map((row) => (
-            <CourseRow
-              key={row.course.courseId}
-              row={row}
-              slot={slot}
-              today={today}
-              compact
-              actions={['swap', 'pin', 'more']}
-              onOpen={(k) => rowHandlers?.onOpen(k)}
-              onSwap={rowHandlers?.onSwap}
-              onPin={rowHandlers?.onPin}
-              onUnpin={rowHandlers?.onUnpin}
-              onMarkCooked={rowHandlers?.onMarkCooked}
-              onChoose={rowHandlers?.onChoose}
-            />
-          ))}
-        </ul>
+        <HeroCourseList slot={slot} rows={others} today={today} rowHandlers={rowHandlers} />
       ) : null}
       {hint ? <p className="plan-hero__hint">{hint}</p> : null}
       {action === 'cook' ? (

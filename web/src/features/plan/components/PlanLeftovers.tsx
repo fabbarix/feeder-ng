@@ -1,6 +1,6 @@
 // B9-32 (PC-07, PLAN-19): the Plan's "Leftovers to use": the bordered leftover tile, as on Today. From 1024 px it lists its
-// rows (questions first, then each Leftover with its row menu); below, the questions and one summary row with Show, which
-// opens the same rows in a sheet. Presentational: the summary is lib/planLeftovers.
+// rows (questions first, then each Leftover with its row menu); below, one summary row with Show (a question is counted on it,
+// "· 1 to answer", B9-55), which opens the same rows, questions first, in a sheet. Presentational: the summary is lib/planLeftovers.
 import { useId, useState, type ReactNode } from 'react'
 import { BottomSheet, Button, Icon, Tile } from '../../../ui'
 import { tileRows } from '../../../lib/leftovers/rows'
@@ -52,7 +52,6 @@ export function PlanLeftovers({ flow }: PlanLeftoversProps): ReactNode {
         <div className="plan-leftovers__rows">{items(flow.leftovers)}</div>
       ) : (
         <>
-          {summary.questions.length > 0 ? <div className="plan-leftovers__rows">{items(summary.questions)}</div> : null}
           {summary.title ? (
             <div className="plan-leftovers__summary">
               <p className="plan-leftovers__summary-text">

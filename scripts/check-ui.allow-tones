@@ -16,3 +16,24 @@ web/src/features/ingredients/screens/IngredientScreen.tsx   # the More menu's De
 web/src/features/import/components/StartOverButton.tsx   # the Start over confirm loses every answer given so far: a destructive confirm keeps its danger tone (main-session ruling, B9-28)
 web/src/features/recipes/lib/editorExit.ts   # B9-31: "Discard your changes?" is a destructive confirm (the changes are lost), danger as R1 and the safe-06 mock draw it
 web/src/features/today/components/UseSoonTile.tsx   # B9-44 (TB-11, DS-06): Use soon is food about to go off: the spoil tile and its spoil meta
+web/src/ui/GalleryControls.tsx   # B9-55: the Gallery's tile specimens show the danger and spoil tiles beside the others (specimens, as Gallery.tsx)
+web/src/ui/GallerySheets.tsx   # B9-55: the Gallery's More menu specimen shows a destructive item (Remove Meal Slot), a loss
+web/src/ui/GalleryToasts.tsx   # B9-55: the Gallery's specimen of a danger confirm (a loss), drawn from a toast's action
+web/src/ui/useLeaveGuard.ts   # B9-55: "Leave without saving?" loses the unsaved changes: a destructive confirm, danger as safe-01 draws it (like editorExit)
+web/src/features/access/hooks/useAccessRequestsPage.ts   # B9-55: Deny a sign-in request is a destructive confirm (the request is gone), danger
+web/src/features/board/components/BoardLists.tsx   # B9-55: the board's Use soon chips are food about to go off (spoil)
+web/src/features/plan/lib/leftovers.ts   # B9-55: a Leftover whose Use-by is today or tomorrow is food about to go off (spoil)
+web/src/features/receipt/screens/ReceiptPhotosScreen.tsx   # B9-55: leaving with photos loses them: a destructive confirm, danger
+web/src/features/recipe-assistant/hooks/useRecipeAssistantPage.ts   # B9-55: Remove the API key is a destructive confirm (the key is deleted), danger
+web/src/features/recipes/components/CourseLossDialog.tsx   # B9-55: the save removes Slot Rules: a destructive confirm, danger
+web/src/features/recipes/lib/deleteDialogs.ts   # B9-55: Delete Recipe is a destructive confirm (a loss), danger
+web/src/features/recipes/screens/RecipeDetailScreen.tsx   # B9-55: the More menu's Delete Recipe item is the destructive action (a loss)
+web/src/features/scan/screens/ScanScreen.tsx   # B9-55: removing the Scans of this session is a destructive confirm (a loss), danger
+web/src/features/settings/components/AllowlistPanel.tsx   # B9-55: Remove an allowed email is a destructive confirm (that person loses sign-in), danger
+web/src/features/settings/components/CourseRemoveDialog.tsx   # B9-55: Delete / Archive a Course removes Planned Meals and Slot Rules: a destructive confirm
+web/src/features/settings/components/MealSlotEditor.tsx   # B9-55: the More menu's Remove Meal Slot item is the destructive action (a loss)
+web/src/features/settings/components/RowSignInActions.tsx   # B9-55: the More menu's Remove sign-in item is the destructive action (a loss)
+web/src/features/settings/hooks/useMealSlotsPage.ts   # B9-55: Remove a Meal Slot is a destructive confirm (its Planned Meals go), danger
+web/src/features/settings/lib/courseList.ts   # B9-55: a Course's Delete action is the destructive item (a loss)
+web/src/features/settings/lib/memberRemoval.ts   # B9-55: Remove a Member is a destructive confirm (attendance and sign-in go), danger
+web/src/features/tags/hooks/useTagsPage.ts   # B9-55: Delete a Tag is a destructive confirm (it comes off every Recipe), danger

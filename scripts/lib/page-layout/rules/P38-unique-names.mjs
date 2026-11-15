@@ -7,7 +7,7 @@ const f = (text) => ({ rule: 'P38', message: `P38 ${text}` })
 export default {
   id: 'P38',
   title: 'Two visible buttons in main share a name (A11Y-08)',
-  always: false,
+  always: true, // B9-55: always fail at release (plan section 9)
   evaluate(m, _ctx) {
     const out = []
     for (const d of m.duplicateButtonNames ?? []) {

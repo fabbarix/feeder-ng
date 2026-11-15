@@ -75,6 +75,13 @@ describe('P37: the document title names the page (A11Y-01)', () => {
     expect(p37('Receipt review · Feeder', 'Check the receipt', '/scan/receipt/review')).toEqual([])
     expect(p37('Which Shop are you in? · Feeder', 'Which Shop are you in?', '/scan')).toHaveLength(1)
   })
+  // B9-55: a scenario that starts on /scan and opens the receipt review is judged by the page it is on (pageTitle.path), not its start.
+  it('the page the probe saw (pageTitle.path) wins over the route the scenario started on', () => {
+    const at = (title: string, h1: string, path: string, route: string) =>
+      api.evaluateMetrics({ ...base(390), pageTitle: { title, h1, path } }, { width: 390, route, kind: 'default' }).filter((f) => f.rule === 'P37')
+    expect(at('Receipt review · Feeder', 'Review the receipt', '/scan/receipt/review', '/scan')).toEqual([])
+    expect(at('Scan · Feeder', 'Review the receipt', '/scan/receipt/review', '/scan')).toHaveLength(1)
+  })
 
   it('Cook Mode is "Cook Mode · <Recipe> · Feeder"', () => {
     expect(p37('Cook Mode · Pasta al pomodoro · Feeder', 'Pasta al pomodoro', '/cook/recipe/:id')).toEqual([])

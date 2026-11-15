@@ -151,7 +151,9 @@ async function planCouldnt() {
   try {
     await withSnapshot(async () => {
       const finding = await evaluate(`(() => {
-        const regions = [...document.querySelectorAll('main [role="region"], main section[aria-label]')].filter((e) => e.getAttribute('aria-label') === "Couldn't plan")
+        // B9-55: since B9-44 the tile is named by its TileHeader h2 (aria-labelledby), not an aria-label: read the name either way.
+        const nameOf = (e) => e.getAttribute('aria-label') ?? (e.getAttribute('aria-labelledby') ?? '').split(/\\s+/).map((id) => document.getElementById(id)?.textContent.trim() ?? '').join(' ').trim()
+        const regions = [...document.querySelectorAll('main [role="region"], main section[aria-label], main section[aria-labelledby]')].filter((e) => /^Couldn't plan\\b/.test(nameOf(e)))
         if (regions.length !== 1) return 'Couldn\\'t plan is ' + regions.length + ' regions, not one compact tile (PC-07)'
         const first = document.querySelector('.plan-day')
         if (!first) return 'no day tile'

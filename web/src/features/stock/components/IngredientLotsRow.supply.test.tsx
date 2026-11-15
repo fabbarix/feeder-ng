@@ -25,7 +25,7 @@ function setup(over: Partial<IngredientLotsRowProps> = {}) {
 describe('IngredientLotsRow for a Supply', () => {
   it('shows the total, the Lot count and "Restocks below 6"; no go-off phrase, no Use soon tone', () => {
     const { row } = setup({ restock: { level: 6, stock: 9 } })
-    expect(screen.getByText('9 pieces')).toBeInTheDocument()
+    expect(screen.getByText('9 pieces', { selector: '[aria-hidden="true"]' })).toBeInTheDocument() // B9-55: <Quantity> also says it, visually hidden
     const meta = row.querySelector('.list-row__meta') as HTMLElement
     expect(meta).toHaveTextContent('2 Stock Lots · Restocks below 6')
     expect(meta).not.toHaveAttribute('data-status', 'spoil')

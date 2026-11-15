@@ -196,6 +196,7 @@ function MemberForm({ id, member, users, members, currentUserId, error, emailErr
       {mode === 'photo' ? (
         <ImagePicker
           label={text.photoLabel}
+          noun="Photo"
           helper={text.photoHelper}
           size={72}
           aspect={CROP_ASPECTS.square}

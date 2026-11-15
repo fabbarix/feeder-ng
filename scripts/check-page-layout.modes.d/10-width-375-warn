@@ -1,4 +1,0 @@
-# B9-03, the warn bridge: findings at 375 px (the smallest profile viewport, 375x667) are warnings until the packages of waves 1-9
-# fix them. At B9-03 the 375 px run found P13 on /board (an li spilling 7 px past its section.tile, three times).
-# Removed by B9-55; the release run must be clean at 375. Delete this file and every 375 px finding counts again.
-width<=375 = warn until B9-55

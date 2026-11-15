@@ -22,7 +22,7 @@ const union = (boxes) => {
 export default {
   id: 'P32',
   title: 'Fixed and sticky chrome covers more than 35 % of the viewport height at load (SHORT)',
-  always: false,
+  always: true, // B9-55: always fail at release (plan section 9)
   evaluate(m, _ctx) {
     const c = m.chromeBudget
     if (!c || !(c.innerHeight > 0)) return []

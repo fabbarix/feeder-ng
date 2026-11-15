@@ -60,7 +60,7 @@ describe('Pantry list', () => {
     expect(names).toEqual(['Garage Freezer', 'Garage Fridge', 'Kitchen Pantry', 'Not sorted'])
     expect(within(group(/^Garage Fridge/)).getByText('Minced beef')).toBeInTheDocument()
     expect(within(group(/^Garage Fridge/)).getByText('Good until tomorrow')).toBeInTheDocument()
-    expect(within(group(/^Garage Fridge/)).getByText('1 kg')).toHaveClass('list-row__value')
+    expect(within(group(/^Garage Fridge/)).getByText('1 kg').closest('.list-row__value')).not.toBeNull() // B9-55: inside <Quantity>
   })
 
   it('filters by Storage Place and kind, and searches', async () => {

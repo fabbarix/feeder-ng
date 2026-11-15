@@ -165,6 +165,8 @@ export const gridStrings = {
   leftoverSummary: {
     count: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
     firstUseBy: (weekday: string) => `first Use by ${weekday}`,
+    /** B9-55: Leftovers whose Use-by has passed and wait for Had it, Threw it out or Wasn't there. */
+    toAnswer: (n: number) => `${n} to answer`,
     showLabel: (n: number) => (n === 1 ? 'Show 1 Leftover' : `Show ${n} Leftovers`),
     show: 'Show',
   },

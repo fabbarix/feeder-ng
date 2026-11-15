@@ -278,7 +278,8 @@
   line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   color: var(--color-muted);
-  overflow-wrap: anywhere;
+  overflow: hidden; /* B9-55 (word-break): wrap at a word; a single word too long ends in an ellipsis */
+  text-overflow: ellipsis;
 }
 
 .preference-table__note {

@@ -53,7 +53,14 @@ export default {
         else if (badge.getBoundingClientRect().width < 14) problems.push('RES-03: the clock badge is ' + badge.getBoundingClientRect().width + ' px, not 14')
         const meta = row.querySelector('.list-row__meta-text')
         if (!meta || !/^Waiting to sync/.test(meta.textContent.trim())) problems.push('RES-03: the meta is "' + (meta ? meta.textContent.trim() : '') + '", not "Waiting to sync …"')
-        else if (meta.scrollWidth > meta.clientWidth + 1 && getComputedStyle(meta).display !== 'none') problems.push('P23: the waiting meta is cut ("' + meta.textContent.trim() + '")')
+        else {
+          // B9-55: in a narrow row text (ListRow's row-text container under 12 rem) the long meta is visually hidden, still the accessible
+          // text, and its compact form shows: judge the line the User sees.
+          const hidden = (e) => { const cs = getComputedStyle(e); return cs.display === 'none' || (cs.position === 'absolute' && e.getBoundingClientRect().width <= 1) }
+          const compact = row.querySelector('.list-row__meta-compact')
+          const shown = hidden(meta) && compact && !hidden(compact) ? compact : meta
+          if (!hidden(shown) && shown.scrollWidth > shown.clientWidth + 1) problems.push('P23: the waiting meta is cut ("' + shown.textContent.trim() + '")')
+        }
         if (document.querySelector('.error-state')) problems.push('RES-03: an .error-state shows (the raw "The network is unreachable" tile)')
         const toasts = document.querySelectorAll('.toast').length
         if (toasts > 1) problems.push('RES-03: ' + toasts + ' toasts show for one tick (no toast storm)')

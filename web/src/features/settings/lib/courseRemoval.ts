@@ -18,9 +18,12 @@ export function replacementChoices(courses: readonly CourseChoice[], course: { i
   return courses.filter((c) => c.id !== course.id)
 }
 
-/** The select's starting value: the main Course among the choices, else the first choice, else null. */
+/**
+ * The select's starting value: the main Course among the choices, else null, so the select starts on its placeholder ("Choose a
+ * Course") and never on an arbitrary first option (SAFE-11, B9-55).
+ */
 export function defaultReplacement(choices: readonly CourseChoice[]): number | null {
-  return (choices.find((c) => c.main) ?? choices[0])?.id ?? null
+  return choices.find((c) => c.main)?.id ?? null
 }
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`

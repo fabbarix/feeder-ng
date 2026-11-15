@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react'
-import { Button, ListRow, Switch, Tile } from '../../../ui'
+import { Button, Tile } from '../../../ui'
 import { notificationStrings as s } from '../strings'
-import { NOTIFICATION_TYPES, type NotificationType, type PushDevice, type PushSupport } from '../types'
+import type { NotificationType, PushDevice, PushSupport } from '../types'
+import { DeviceRows, TypeSwitches } from './NotificationLists'
 import '../notifications.css'
 
 export interface NotificationSettingsViewProps {
@@ -73,11 +74,7 @@ function ThisDevice({
   return (
     <div className="notifications__this">
       <h2 className="notifications__heading">{s.thisDeviceHeading}</h2>
-      <ul className="notifications__types">
-        {NOTIFICATION_TYPES.map((type) => (
-          <TypeSwitch key={type} type={type} on={device.types[type]} onChange={(on) => onSetType(device.id, type, on)} />
-        ))}
-      </ul>
+      <TypeSwitches types={device.types} onChange={(type, on) => onSetType(device.id, type, on)} />
       <Button type="button" variant="secondary" onClick={onDisable} disabled={busy}>
         {s.disable}
       </Button>
@@ -85,35 +82,11 @@ function ThisDevice({
   )
 }
 
-function TypeSwitch({ type, on, onChange }: { type: NotificationType; on: boolean; onChange: (on: boolean) => void }) {
-  const copy = s.types[type]
-  return (
-    <li className="notifications__type">
-      <div>
-        <p className="notifications__muted">{copy.hint}</p>
-      </div>
-      <Switch label={copy.label} checked={on} onChange={onChange} />
-    </li>
-  )
-}
-
 function OtherDevices({ devices, onRemove }: { devices: PushDevice[]; onRemove: (id: number) => void }) {
   return (
     <section>
       <h2 className="notifications__heading">{s.otherDevices}</h2>
-      <ul className="notifications__devices">
-        {devices.map((d) => (
-          <ListRow
-            key={d.id}
-            title={d.label}
-            trailing={
-              <Button type="button" variant="secondary" onClick={() => onRemove(d.id)} aria-label={s.remove(d.label)}>
-                {s.removeShort}
-              </Button>
-            }
-          />
-        ))}
-      </ul>
+      <DeviceRows devices={devices} onRemove={onRemove} />
     </section>
   )
 }
