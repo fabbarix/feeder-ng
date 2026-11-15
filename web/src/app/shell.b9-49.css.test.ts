@@ -105,6 +105,14 @@ describe('RES-07 / SHORT-05: .app-status, the sticky banner slot', () => {
   })
 })
 
+describe('the toast region on a chromeless screen (B9-25/B9-49 follow-up)', () => {
+  it('--nav-top is the bottom inset alone wherever a chromeless frame is on the page: the toast region lives outside .app-shell, so a rule on the frame never reached it (it floated 82 px up over nothing)', () => {
+    const d = { ...at('html:has(.app-shell--chromeless)'), ...at(':root:has(.app-shell--chromeless)') }
+    expect(d['--nav-top']).toBe('var(--safe-bottom)')
+    expect(d['--nav-clearance'] ?? '0px').toMatch(/^0(px)?$/)
+  })
+})
+
 describe('OfflineBanner.css: the pill reads over scrolled content', () => {
   const banner = parseCss(readFileSync(`${cwd}/src/ui/OfflineBanner.css`, 'utf8'), 'ui/OfflineBanner.css')
   const rule = (sel: string, cond: string[] = []) => {

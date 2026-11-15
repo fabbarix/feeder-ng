@@ -8,6 +8,8 @@
 //   nav-current-recipe / nav-current-recipe-edit / nav-current-ingredient
 //                            /recipes/:id, /recipes/:id/edit and /ingredients/:id at 390 and 1440: exactly one link of the visible nav is
 //                            current, and it is Recipes, Recipes, Settings (TB-13).
+//   toast-region-chromeless  /board at 390: the toast region sits at the bottom edge (a 12 px gap), not 82 px up where the bottom bar would be: there
+//                            is no bar on the Kitchen board or in Cook Mode (the B9-25/B9-49 follow-up).
 //   boot-theme               / at 390: a returning User's cached theme (localStorage feeder.theme) is already on <html> in a fresh document's
 //                            first moment, before React renders (RES-08).
 import { evaluate, until } from '../helpers.mjs'
@@ -73,6 +75,14 @@ const navCurrent = (expected) => `(() => {
   return out
 })()`
 
+const TOAST_REGION = `(() => {
+  const region = document.querySelector('.toast-region')
+  if (!region) return ['no .toast-region in the document']
+  if (!document.querySelector('.app-shell--chromeless')) return ['the page is not a chromeless screen']
+  const bottom = parseFloat(getComputedStyle(region).bottom)
+  return bottom > 24 ? ['the toast region floats ' + Math.round(bottom) + ' px above the bottom edge on a screen with no bottom bar (at most 24)'] : []
+})()`
+
 const BOOT_THEME = `(async () => {
   const cache = { scheme: 'dark', accent: '#d9503f',
     light: { bg: '#fbf1ef', surface: '#fffaf9', surface2: '#f5e3e0', line: '#e6cbc7', text: '#2a1512', accent: '#b8402f' },
@@ -114,6 +124,7 @@ export default {
     { name: 'nav-current-recipe', route: '/recipes/:id', start: '/recipes/:id', setup: 'navCurrentRecipe', widths: [390, 1440], rules: ['P1'] },
     { name: 'nav-current-recipe-edit', route: '/recipes/:id/edit', start: '/recipes/:id/edit', setup: 'navCurrentRecipeEdit', widths: [390, 1440], rules: ['P1'] },
     { name: 'nav-current-ingredient', route: '/ingredients/:id', start: '/ingredients/:id', setup: 'navCurrentIngredient', widths: [390, 1440], rules: ['P1'] },
+    { name: 'toast-region-chromeless', route: '/board', start: '/board', setup: 'toastRegionChromeless', widths: [390], rules: ['P1'] },
     { name: 'boot-theme', route: '/', start: '/', setup: 'bootTheme', widths: [390], rules: ['P1'] },
   ],
   setups: {
@@ -136,6 +147,10 @@ export default {
     async navCurrentIngredient() {
       await until(ready, 'the Ingredient page')
       await check(navCurrent('Settings'), 'nav current on an Ingredient page')
+    },
+    async toastRegionChromeless() {
+      await until(`!!document.querySelector('.app-shell--chromeless h1, .app-shell--chromeless main')`, 'the Kitchen board')
+      await check(TOAST_REGION, 'toast region on a chromeless screen')
     },
     async bootTheme() {
       await until(ready, 'Today')

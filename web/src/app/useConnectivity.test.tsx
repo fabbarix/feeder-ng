@@ -53,7 +53,7 @@ describe('useConnectivity', () => {
     expect(result.current).toEqual({ offline: true, lastContact: new Date(2026, 10, 9, 18, 5) })
   })
 
-  it('offline with nothing ever answered: lastContact is null (the banner then says only "showing what was saved")', () => {
+  it('offline with nothing ever answered: lastContact is null (the banner then says only "Offline")', () => {
     setOnline(false)
     const { result } = renderHook(() => useConnectivity())
     expect(result.current).toEqual({ offline: true, lastContact: null })

@@ -112,6 +112,7 @@ describe('the B9-49 scenarios', () => {
     ['nav-current-recipe', '/recipes/:id', [390, 1440]],
     ['nav-current-recipe-edit', '/recipes/:id/edit', [390, 1440]],
     ['nav-current-ingredient', '/ingredients/:id', [390, 1440]],
+    ['toast-region-chromeless', '/board', [390]],
     ['boot-theme', '/', [390]],
   ])('%s: route %s at %j, with a setup that measures and throws', (name, route, widths) => {
     const s = by(name)!
@@ -123,7 +124,7 @@ describe('the B9-49 scenarios', () => {
   })
 
   it('no width below 375 (amendment A1)', () => {
-    for (const name of ['shell-skip-link', 'shell-offline-banner', 'nav-current-recipe', 'nav-current-recipe-edit', 'nav-current-ingredient', 'boot-theme']) {
+    for (const name of ['shell-skip-link', 'shell-offline-banner', 'nav-current-recipe', 'nav-current-recipe-edit', 'nav-current-ingredient', 'toast-region-chromeless', 'boot-theme']) {
       for (const w of by(name)!.widths ?? []) expect(Number(w), name).toBeGreaterThanOrEqual(375)
     }
   })

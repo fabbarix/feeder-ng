@@ -119,7 +119,7 @@ const ADDED = {
   // scan-price-keypad (scenarios/scan.mjs) is also a P43 scenario now: its setup shows a toast while the Price keypad is open.
   // B9-51: scenarios/b9-51.mjs (order 340, after b9-35 by file name): tags-rows (SET-11), assistant-bar (SHORT-06), toast-over-preferences-bar, planning-cooking-times (PC-14, A2, SAFE-04).
   // B9-49: scenarios/b9-49.mjs (order 350, after b9-51 by file name): shell-skip-link (A11Y-10), shell-offline-banner (RES-07), nav-current-recipe,
-  // nav-current-recipe-edit and nav-current-ingredient (TB-13), boot-theme (RES-08). No rule number but P37 (titles): the setups measure and throw on a finding.
+  // nav-current-recipe-edit and nav-current-ingredient (TB-13), toast-region-chromeless, boot-theme (RES-08). No rule number but P37 (titles): the setups measure and throw on a finding.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
@@ -139,7 +139,7 @@ const ADDED = {
     'shop-ticked', 'shop-focus-after-tick',
     'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',
     'tags-rows', 'assistant-bar', 'toast-over-preferences-bar', 'planning-cooking-times',
-    'shell-skip-link', 'shell-offline-banner', 'nav-current-recipe', 'nav-current-recipe-edit', 'nav-current-ingredient', 'boot-theme',
+    'shell-skip-link', 'shell-offline-banner', 'nav-current-recipe', 'nav-current-recipe-edit', 'nav-current-ingredient', 'toast-region-chromeless', 'boot-theme',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',

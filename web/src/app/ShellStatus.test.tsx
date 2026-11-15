@@ -57,11 +57,11 @@ describe('ShellStatus', () => {
     }
   })
 
-  it('offline with no contact ever recorded: "showing what was saved" with no time', () => {
+  it('offline with no contact ever recorded: just "Offline" (nothing was saved on this phone, and a LoadState may say so)', () => {
     connectivity = { offline: true, lastContact: null }
     render(<ShellStatus />)
-    expect(screen.getByRole('status')).toHaveTextContent('Offline · showing what was saved')
-    expect(screen.getByRole('status')).not.toHaveTextContent(/\d\d:\d\d/)
+    expect(screen.getByRole('status')).toHaveTextContent(/^Offline$/)
+    expect(screen.getByRole('status')).not.toHaveTextContent(/saved/)
   })
 
   it('feeds the back-online notice with the connection and the queue, so the toast can say what synced', () => {
