@@ -68,7 +68,10 @@ describe('below 1024 it is one summary row', () => {
     setup(834, [stew, gorgonzola, soup])
     const t = await tile()
     expect(within(t).getByText('3 Leftovers')).toBeInTheDocument()
-    expect(within(t).getByText('Cauliflower al gorgonzola, Slow cooker beef, Soup · first Use by Tue')).toBeInTheDocument()
+    const meta = t.querySelector('.plan-leftovers__summary-meta')!
+    expect(meta).toHaveTextContent('Cauliflower al gorgonzola, Slow cooker beef, Soup · first Use by Tue')
+    // the names may be cut; "first Use by Tue" sits apart and never shrinks
+    expect(meta.querySelector('.plan-leftovers__summary-useby')).toHaveTextContent('· first Use by Tue')
     expect(within(t).getByRole('button', { name: 'Show 3 Leftovers' })).toHaveAttribute('data-variant', 'secondary')
     expect(within(t).queryByText('Slow cooker beef', { selector: '.list-row__title' })).not.toBeInTheDocument() // the rows are not listed
   })

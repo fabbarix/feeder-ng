@@ -11,6 +11,9 @@ export interface LeftoverSummary {
   title: string | null
   /** "Cauliflower al gorgonzola, Slow cooker beef · first Use by Tue". */
   meta: string
+  /** The meta in two parts: the names (which may be cut) and "first Use by Tue" (which never is). */
+  names: string
+  useBy: string
   /** "Show 3 Leftovers". */
   showLabel: string
 }
@@ -21,12 +24,15 @@ export function leftoverSummary(leftovers: Leftover[], today: string): LeftoverS
   const rows = tileRows(leftovers, today)
   const questions = rows.filter((r) => r.kind === 'question').map((r) => byId.get(r.id)!)
   const rest = rows.filter((r) => r.kind !== 'question').map((r) => byId.get(r.id)!)
-  if (rest.length === 0) return { questions, title: null, meta: '', showLabel: '' }
+  if (rest.length === 0) return { questions, title: null, meta: '', names: '', useBy: '', showLabel: '' }
   const names = rest.map((l) => l.recipeName).join(', ')
+  const useBy = s.leftoverSummary.firstUseBy(weekdayShort(rest[0]!.useBy))
   return {
     questions,
     title: s.leftoverSummary.count(rest.length),
-    meta: `${names} · ${s.leftoverSummary.firstUseBy(weekdayShort(rest[0]!.useBy))}`,
+    meta: `${names} · ${useBy}`,
+    names,
+    useBy,
     showLabel: s.leftoverSummary.showLabel(rest.length),
   }
 }

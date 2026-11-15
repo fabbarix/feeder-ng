@@ -56,7 +56,11 @@ export function PlanLeftovers({ flow }: PlanLeftoversProps): ReactNode {
             <div className="plan-leftovers__summary">
               <p className="plan-leftovers__summary-text">
                 <span className="plan-leftovers__summary-title">{summary.title}</span>
-                <span className="plan-leftovers__summary-meta">{summary.meta}</span>
+                {/* The names may end in an ellipsis; "first Use by Tue", the point of the line, is never cut. */}
+                <span className="plan-leftovers__summary-meta" title={summary.meta}>
+                  <span className="plan-leftovers__summary-names">{summary.names}</span>
+                  <span className="plan-leftovers__summary-useby">{` · ${summary.useBy}`}</span>
+                </span>
               </p>
               <Button variant="secondary" size="sm" aria-label={summary.showLabel} onClick={() => setSheetOpen(true)}>
                 {planStrings.leftoverSummary.show}

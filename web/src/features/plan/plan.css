@@ -596,12 +596,20 @@
   font-weight: 700;
 }
 .plan-leftovers__summary-meta {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  min-width: 0;
   white-space: nowrap;
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   color: var(--status-leftover-fg);
+}
+.plan-leftovers__summary-names {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plan-leftovers__summary-useby {
+  flex: none;
 }
 .plan-leftovers__summary > .button {
   flex: none;
