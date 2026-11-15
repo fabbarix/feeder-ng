@@ -28,9 +28,10 @@ export function KindChips({ kind, onKind }: KindChipsProps) {
   )
   return (
     <>
-      <p id={labelId} className="new-product__label">
+      {/* A11Y-07: the step's heading; "Something else" focuses it (tabIndex -1, no ring) */}
+      <h3 id={labelId} className="new-product__label" tabIndex={-1} data-step-heading="">
         {newProductStrings.kindLabel}
-      </p>
+      </h3>
       <div role="radiogroup" aria-labelledby={labelId} className="new-product__chips">
         {KINDS.map((k) => (
           <button

@@ -6,7 +6,7 @@
 //   toast-over-bar  /scan right after a typed scan, its "Added … Undo" toast on screen: it sits clear of the bottom bar (the Scan button
 //                   included) at the phone widths and of the focused row on the tablet.
 // Both only report P43 (probes/toast-cover.mjs fills `toastCover`).
-import { byText, evaluate, ids, press, scannedList, typeInto, until } from '../helpers.mjs'
+import { SCANNED_UL, byText, evaluate, ids, press, scannedList, typeInto, until } from '../helpers.mjs'
 
 /** Any .toast with a box and not hidden. */
 const VISIBLE_TOAST = `[...document.querySelectorAll('.toast')].some((e) => { const r = e.getBoundingClientRect(); const s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' })`
@@ -38,7 +38,7 @@ export default {
   setups: {
     async toastPricing() {
       await scannedList()
-      await press(`document.querySelector('ul[aria-label="Scanned list"] > .list-row .list-row__target')`, 'the first Scanned row')
+      await press(`(${SCANNED_UL})?.querySelector(':scope > .list-row .list-row__target')`, 'the first Scanned row')
       await until(`!!document.querySelector('.scanned-row__strip')`, 'the active row strip')
       await press(byText('.scanned-row__strip button', 'Price'), 'Price on the active row')
       await until(`document.querySelector('.scan-screen')?.dataset.priceEntry === 'open' && !!document.querySelector('[data-pricing]')`, 'the Price keypad and the priced row')

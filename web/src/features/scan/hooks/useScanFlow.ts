@@ -4,12 +4,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import type { Scanned } from '../lib/barcode'
+import { isInStoreCode, type Scanned } from '../lib/barcode'
 import type { Feedback } from '../lib/feedback'
 import { archivedOwnerId, type ArchivedProduct } from '../lib/archivedProduct'
 import { planScan, applyAskedWeight, type ScanPlan } from '../lib/resolveScan'
-import { stockTakeMessage } from '../lib/stockTakeToast'
-import { toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
+import { stockTakeMessage, stockTakeUndoLabel } from '../lib/stockTakeToast'
+import { newRowKey, toUnknownOp, validateUnknownForm, type UnknownFormValues, type UnknownMode, type UnknownTarget } from '../lib/unknownForm'
 import { scanStrings } from '../strings'
 import { entryPrice, planPriceEntry, type PriceEntry, type PriceIntent, type PriceLine } from '../lib/priceEntry'
 import { buildScannedRows, displayOrder, nextWithoutPrice, repriceEntries, rowByKey, type PriceUpdate, type ScannedRow } from '../lib/scannedList'
@@ -30,6 +30,8 @@ const ADDED_TOAST_MS = 5000
 /** B9-35: what the flow asks the "Added" toast to say and do. */
 export interface AddedToast {
   headline: string
+  /** B9-41 (SAFE-09): the Undo button's accessible name; omitted = the default "Undo: <headline>" */
+  undoAriaLabel?: string
   undo: () => unknown
   durationMs: number
 }
@@ -79,7 +81,7 @@ export interface ScanFlowDeps {
 }
 
 export type FlowSheet =
-  | { kind: 'unknown'; mode: UnknownMode; target: UnknownTarget; priceText?: string }
+  | { kind: 'unknown'; mode: UnknownMode; target: UnknownTarget; priceText?: string; /** B9-41 (SSP-15) */ weightCodeHint?: boolean }
   | { kind: 'ask_weight'; plan: Extract<ScanPlan, { kind: 'ask_weight' }> }
   | { kind: 'stock_take'; product: OfflineProduct }
   /** R8: an Archived Product owns the barcode; offered before (or after a barcode_archived rejection of) a new Product */
@@ -225,8 +227,10 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
   /** SSP-12: the Price entry opens on `key`: the "Added" toast of that row's last Scan is dropped (the outlined row confirms it). */
   const dropAddedFor = (key: string) => {
     const last = lastAdded.current
-    const row = last ? rowByKey(depsRef.current.session?.rows ?? [], key) : undefined
-    if (!last || !row?.clientUuids.includes(last.clientUuid)) return
+    if (!last) return
+    // B9-41 (SSP-07): a new Product's row is asked for by `new:<uuid>` right after its save, before the Scanned list has its row.
+    const row = rowByKey(depsRef.current.session?.rows ?? [], key)
+    if (key !== newRowKey(last.clientUuid) && !row?.clientUuids.includes(last.clientUuid)) return
     lastAdded.current = null
     last.handle?.dismiss()
   }
@@ -268,7 +272,10 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
 
   const openUnknown = (plan: Extract<ScanPlan, { kind: 'unknown' | 'unknown_weighed' }>) => {
     if (plan.kind === 'unknown') {
-      setSheet({ kind: 'unknown', mode: 'pack', target: { mode: 'pack', code: plan.code } })
+      // B9-41 (SSP-15): an in-store code at a Shop with no Weight Barcode Rule at all says so in the sheet.
+      const rules = depsRef.current.offline?.catalog.weightRules ?? []
+      const hint = rules.length === 0 && isInStoreCode(plan.code)
+      setSheet({ kind: 'unknown', mode: 'pack', target: { mode: 'pack', code: plan.code }, ...(hint ? { weightCodeHint: true } : {}) })
       return
     }
     if (plan.needsWeight) {
@@ -406,9 +413,16 @@ export function useScanFlow(deps: ScanFlowDeps): ScanFlow {
     }
     d.feedback.confirm()
     const s = result.scan
-    if (s?.total !== undefined) {
-      d.notify?.(stockTakeMessage(action, s.ingredientName, formatQuantity(s.total, s.baseUnit, d.system)), 'success')
+    if (s?.total === undefined) return
+    // B9-41 (SAFE-09): the action is done at once; its toast has Undo, the server Undo of that scan (B9-05), run once. A refusal
+    // rejects, so the Undo toast says "Nothing was undone" with the reason.
+    const headline = stockTakeMessage(action, s.ingredientName, formatQuantity(s.total, s.baseUnit, d.system))
+    const undo = once(() => d.undo(op.clientUuid))
+    if (d.announceAdded) {
+      d.announceAdded({ headline, undoAriaLabel: stockTakeUndoLabel(action, s.ingredientName), undo, durationMs: ADDED_TOAST_MS })
+      return
     }
+    d.notify?.(headline, 'success', { actionLabel: scanStrings.undo, onAction: undo, durationMs: ADDED_TOAST_MS })
   }
 
   /**

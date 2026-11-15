@@ -42,7 +42,7 @@ export function ScannedList({ rows, currency, system, pricingKey, onPrice, onInc
       {rows.length === 0 ? (
         <EmptyState title={scanStrings.nothingScanned} description={noCamera ? scanStrings.nothingScannedHintNoCamera : scanStrings.nothingScannedHint} />
       ) : (
-        <ListGroup label={scanStrings.scannedListLabel}>
+        <ListGroup title={scanStrings.scannedListLabel}>
           {rows.map((row) => (
             <ScannedRow
               key={row.key}

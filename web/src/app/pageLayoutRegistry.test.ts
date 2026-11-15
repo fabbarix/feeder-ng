@@ -116,6 +116,7 @@ const ADDED = {
   // B9-25: scenarios/b9-25.mjs (order 340): timer-pill and timer-pill-editor (PC-04). No rule number: the setup measures the pill and throws on a finding.
   // B9-34: scenarios/b9-34.mjs (order 340, after b9-25 by file name): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
   // B9-35: scenarios/b9-35.mjs (order 340, after b9-34 by file name): scan-typed (no camera, P12 and P30), scan-camera-typed and scan-camera-landscape (a fake camera).
+  // B9-41: scenarios/b9-41.mjs (order 341, after b9-35): scan-weighed (SSP-07, SSP-20: the weighed header, the keypad on per kg, the focused key's ring).
   // scan-price-keypad (scenarios/scan.mjs) is also a P43 scenario now: its setup shows a toast while the Price keypad is open.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
@@ -134,7 +135,7 @@ const ADDED = {
     'allowlist-actions', 'allowlist-share', 'access-requests-rows',
     'timer-pill', 'timer-pill-editor',
     'shop-ticked', 'shop-focus-after-tick',
-    'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',
+    'scan-typed', 'scan-camera-typed', 'scan-camera-landscape', 'scan-weighed',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',

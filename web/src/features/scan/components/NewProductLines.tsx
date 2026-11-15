@@ -11,20 +11,23 @@ export interface NewProductLinesProps {
   /** the units of the amounts on the chips */
   system: UnitSystem
   expanded: boolean
+  /** the hint under the heading (a weighed code: "Lines in grams are listed first.") */
+  hint?: string
   onExpand: () => void
   onPick: (line: LineChip) => void
   onSomethingElse: () => void
 }
 
-export function NewProductLines({ chips, system, expanded, onExpand, onPick, onSomethingElse }: NewProductLinesProps) {
+export function NewProductLines({ chips, system, expanded, hint = newProductStrings.whichLineHint, onExpand, onPick, onSomethingElse }: NewProductLinesProps) {
   const labelId = useId()
   const shown = expanded ? [...chips.chips, ...chips.more] : chips.chips
   return (
     <div role="group" aria-labelledby={labelId} className="new-product__lines">
-      <p id={labelId} className="new-product__label">
+      {/* A11Y-07: the step's heading; a step change focuses it (tabIndex -1, no ring) */}
+      <h3 id={labelId} className="new-product__label" tabIndex={-1} data-step-heading="">
         {newProductStrings.whichLine}
-      </p>
-      <p className="new-product__hint">{newProductStrings.whichLineHint}</p>
+      </h3>
+      <p className="new-product__hint">{hint}</p>
       <div className="new-product__chips">
         {shown.map((line) => (
           <ChoiceChip

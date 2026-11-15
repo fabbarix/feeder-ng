@@ -42,7 +42,9 @@ export const byText = (sel, text) => `[...document.querySelectorAll(${js(sel)})]
 /** Sets a React-controlled input's value as typing does. */
 export const typeInto = (sel, value) =>
   `(() => { const e = document.querySelector(${js(sel)}); if (!e) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(e, ${js(value)}); e.dispatchEvent(new Event('input', { bubbles: true })); return true })()`
-export const SCANNED_ROWS = `document.querySelectorAll('ul[aria-label="Scanned list"] > .list-row').length`
+// B9-41 (P41): the Scanned list is named by its visible heading (aria-labelledby) now, not by an aria-label; the name is the same.
+export const SCANNED_UL = `[...document.querySelectorAll('.scan-screen__list ul.list-group__list')].find((u) => (u.getAttribute('aria-label') || document.getElementById(u.getAttribute('aria-labelledby') || '')?.textContent || '').trim() === 'Scanned list')`
+export const SCANNED_ROWS = `((${SCANNED_UL})?.querySelectorAll(':scope > .list-row').length ?? 0)`
 export const READ_ROW = `[...document.querySelectorAll('.scan-screen__list .list-row')].find((r) => r.querySelector('.list-row__title')?.textContent.trim() === 'Read the receipt')`
 
 /** A Shop session of the seeded Shop on /scan, the barcodes typed through the no-camera block (the storage was cleared first). */

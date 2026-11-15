@@ -81,7 +81,7 @@ describe("B9-13's drop-in", () => {
   })
 })
 
-describe("w2a's drop-in (rulings: P41 on Scan until B9-41; P36 on Your preferences was removed in w2c, B9-19's 44 px Your menu button)", () => {
+describe("w2a's drop-in (P36 on Your preferences was removed in w2c, B9-19; P41 on Scan in B9-41)", () => {
   const dir = resolve(cwd, '../scripts/check-page-layout.modes.d')
   const own = readFileSync(resolve(dir, '30-b9-w2a-warn'), 'utf8')
   const base = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
@@ -90,9 +90,10 @@ describe("w2a's drop-in (rulings: P41 on Scan until B9-41; P36 on Your preferenc
     .sort()
     .map((n) => readFileSync(resolve(dir, n), 'utf8'))
     .join('\n')}`
-  it('is the one line P41@/scan until B9-41 (B9-19 landed, so its P36 line is gone), and no whole route', () => {
+  it('has no P41@/scan line any more (B9-41 gave the Scanned list and the Receipt group visible titles), and no whole route', () => {
     expect(rules.parseModes(own).errors).toEqual([])
-    expect(rules.parseModes(own).ruleWarn).toEqual([{ rule: 'P41', pattern: '/scan', until: 'B9-41' }])
+    expect(own).not.toMatch(/^P41@\/scan/m)
+    expect(rules.parseModes(own).ruleWarn).toEqual([])
     expect(own).not.toMatch(/^\s*(warn_routes|fail_routes|default|width)\b/m)
   })
   it('P36 on Your preferences fails again (touch-targets-controls), and nothing else there or on other Settings pages is warned', () => {
@@ -101,17 +102,15 @@ describe("w2a's drop-in (rulings: P41 on Scan until B9-41; P36 on Your preferenc
     expect(rules.ruleWarnFor(all, 'P36', '/settings/household')).toBeNull()
     expect(rules.modeFor(all, '/settings/preferences')).toBe('fail')
   })
-  it('covers P41 in the three Scan scenarios, and no other rule there, and not P41 on other routes', () => {
-    for (const name of ['scan-scanned-list', 'scan-row-active', 'scan-price-keypad']) {
-      expect(rules.ruleWarnFor(all, 'P41', `/scan#${name}`), name).toMatchObject({ rule: 'P41', pattern: '/scan', until: 'B9-41' })
-      expect(rules.ruleWarnFor(all, 'P13', `/scan#${name}`), name).toBeNull()
+  it('P41 is not bridged on any Scan scenario any more: a P41 finding on /scan fails, like every other rule', () => {
+    for (const name of ['scan-scanned-list', 'scan-row-active', 'scan-price-keypad', 'scan-weighed']) {
+      expect(rules.ruleWarnFor(all, 'P41', `/scan#${name}`), name).toBeNull()
     }
     expect(rules.ruleWarnFor(all, 'P41', '/shop')).toBeNull()
     // batch w3e: B9-34's Shop cards keep their titles over 120 px at 1180x820, so w2c's P40@/shop line is gone
     expect(rules.ruleWarnFor(all, 'P40', '/shop')).toBeNull()
     expect(rules.modeFor(all, '/scan')).toBe('fail')
     const out = ['scan-scanned-list', 'scan-row-active', 'scan-price-keypad'].map((n) => line(`/scan#${n}`, 'P41', 375)).join('\n')
-    expect(rules.countFindings(all, out).fail).toBe(0)
-    expect(rules.countFindings(all, line('/scan#scan-scanned-list', 'P1', 375)).fail).toBe(1)
+    expect(rules.countFindings(all, out).fail).toBe(3)
   })
 })

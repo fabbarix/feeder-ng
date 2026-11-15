@@ -46,5 +46,5 @@ export function ReadReceiptFooter({ shopId, clientUuids, online, assistantAvaila
   if (!online) return <ListRow title={t.readTitle} meta={t.needsConnection} icon="receipt" />
   if (pendingScans > 0) return <ListRow title={t.readTitle} meta={waitingText(pendingScans)} icon="receipt" />
   // Batch w3e (P23 at 375 to 834): a navigation row's description may take two lines (DS 4), so it is never cut.
-  return <ListRow title={t.readTitle} meta={t.readMeta} metaLines={2} icon="receipt" chevron onActivate={() => open('/scan/receipt')} />
+  return <ListRow title={t.readTitle} meta={t.readMeta} metaLines={2} icon="receipt" chevron onActivate={() => open('/scan/receipt')} data-receipt-read="" />
 }

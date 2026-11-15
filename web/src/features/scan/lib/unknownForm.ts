@@ -131,7 +131,7 @@ export function toUnknownOp(values: UnknownFormValues, target: UnknownTarget, me
     return { ...op, barcode: target.code, quantity: size, packSize: size, scope: values.scope }
   }
   if (target.mode === 'weighed') {
-    const weighed: Op = { ...op, ruleId: target.ruleId, itemCode: target.itemCode, quantity: target.weightGrams }
+    const weighed: Op = { ...op, ruleId: target.ruleId, itemCode: target.itemCode, quantity: target.weightGrams, weighed: true }
     if (target.priceCents !== undefined) weighed.priceCents = target.priceCents
     return weighed
   }
@@ -144,6 +144,7 @@ export function toUnknownOp(values: UnknownFormValues, target: UnknownTarget, me
     quantity: grams,
     priceCents: target.priceCents,
     ...(perKg.ok ? { pricePerKgCents: perKg.pricePerKgCents } : {}),
+    weighed: true,
   }
 }
 

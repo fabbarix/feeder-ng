@@ -6,7 +6,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ScanController } from '../hooks/useScanController'
 import { lineEntry } from '../../shop/lib/lines'
-import { makeLine } from '../../shop/testData'
+import { makeLine, makeList } from '../../shop/testData'
 import { controllerFake, scannedFake, sessionEntries } from './scanScreen.testKit'
 
 const controllerHook = vi.hoisted(() => ({ useScanController: vi.fn() }))
@@ -64,7 +64,7 @@ describe('Scan screen: To get ticks by hand', () => {
 
   it('once every Line is ticked the tab says "Nothing left to get"', () => {
     const scanned = { ...scannedFake(sessionEntries()), toGet: [], toGetCount: 0 }
-    open(controllerFake({ scanned }))
+    open(controllerFake({ scanned, list: makeList({ lines: [], extras: [] }) }))
     expect(screen.getByText('Nothing left to get')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'To get 0' })).toBeChecked()
   })
