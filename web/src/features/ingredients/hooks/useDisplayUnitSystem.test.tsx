@@ -6,7 +6,8 @@ import type { Preferences } from '../../settings/types'
 
 const prefs = vi.hoisted(() => ({ value: { units: 'metric' } as Partial<Preferences> }))
 vi.mock('../../settings/hooks/usePreferences', () => ({
-  usePreferences: () => ({ preferences: prefs.value }),
+  // B9-36: the consumers read `effective` (the preview, else the saved value).
+  usePreferences: () => ({ preferences: prefs.value, effective: prefs.value }),
 }))
 
 import { useDisplayUnitSystem } from './useDisplayUnitSystem'
