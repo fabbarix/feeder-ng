@@ -319,8 +319,8 @@
  "addSlotRule": "Add Slot Rule",
  "mealSlotField": "Meal Slot",
  "ruleKindField": "Rule is for",
- "ruleKindRecipe": "a Recipe",
- "ruleKindTag": "a Tag",
+ "ruleKindRecipe": "Recipe",
+ "ruleKindTag": "Tag",
  "recipeField": "Recipe",
  "tagField": "Tag",
  "noTags": "Add Tags to your Recipes to use them here.",
@@ -332,10 +332,8 @@
  "maxPerWeekField": "At most per week",
  "notConsecutive": "Not on consecutive days",
  "ruleSaveError": "The rule could not be saved.",
- "errorTagRequired": "Choose a Tag.",
  "errorNothingLimited": "Choose a weekly limit or not on consecutive days.",
  "errorMaxRange": "The weekly limit is 1 to 21.",
- "errorRecipeRequired": "Choose a Recipe.",
  "errorMealSlotRequired": "Choose a Meal Slot.",
  "unknownMealSlot": "Meal Slot",
  "duplicateRule": "That Slot Rule already exists.",
@@ -344,5 +342,8 @@
  "ruleTag": "__fn__(tag) => `Tag: ${tag}`",
  "ruleAtMostPerWeek": "__fn__(n) => `At most ${n} a week`",
  "ruleNotConsecutive": "Not on consecutive days",
- "ruleNotConsecutiveLower": "not on consecutive days"
+ "ruleNotConsecutiveLower": "not on consecutive days",
+ "errorSlotTagRequired": "Choose the Tag this Meal Slot always gets.",
+ "errorVarietyTagRequired": "Choose a Tag for the rule.",
+ "errorSlotRecipeRequired": "Choose the Recipe this Meal Slot always gets."
 }
