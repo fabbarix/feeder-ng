@@ -1428,5 +1428,86 @@
     "message": "P15 .action-group runs 6 px under the actions; give the row a real actions track (max-content) and let the group take its own line on a phone"
    }
   ]
+ },
+ {
+  "name": "capped-bar lines up with its form column at 1440px /recipes/:id/edit",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1440,
+   "clientW": 1440,
+   "over": [],
+   "content": {
+    "x": 480,
+    "r": 1200
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "pageWidthAttr": "default",
+   "fields": [],
+   "bars": [
+    {
+     "cls": "sticky-action-bar",
+     "x": 490,
+     "r": 1190,
+     "bgAlpha": 1,
+     "column": "form",
+     "cap": 700
+    }
+   ],
+   "railContrast": 7,
+   "dialog": null
+  },
+  "ctx": {
+   "width": 1440,
+   "route": "/recipes/:id/edit",
+   "kind": "default"
+  },
+  "findings": []
+ },
+ {
+  "name": "capped-bar off its form column at 1440px /recipes/:id/edit",
+  "metrics": {
+   "vw": 1440,
+   "scrollW": 1440,
+   "clientW": 1440,
+   "over": [],
+   "content": {
+    "x": 480,
+    "r": 1200
+   },
+   "railR": 240,
+   "container": {
+    "x": 440,
+    "r": 1240
+   },
+   "pageWidthAttr": "default",
+   "fields": [],
+   "bars": [
+    {
+     "cls": "sticky-action-bar",
+     "x": 440,
+     "r": 1140,
+     "bgAlpha": 1,
+     "column": "form",
+     "cap": 700
+    }
+   ],
+   "railContrast": 7,
+   "dialog": null
+  },
+  "ctx": {
+   "width": 1440,
+   "route": "/recipes/:id/edit",
+   "kind": "default"
+  },
+  "findings": [
+   {
+    "rule": "P6",
+    "message": "P6 sticky bar .sticky-action-bar (440-1140) does not line up with its form column (490-1190)"
+   }
+  ]
  }
 ]

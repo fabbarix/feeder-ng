@@ -18,7 +18,8 @@ const { resolve } = (await import(/* @vite-ignore */ nodePath)) as { resolve: (.
 const cwd = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd()
 const req = createRequire(resolve(cwd, 'package.json'))
 const api = req(resolve(cwd, '../scripts/lib/page-layout-rules.mjs')) as {
-  RULES: { id: string; always: boolean; title: string }[]
+  RULES: { id: string; always: boolean; title: string; evaluate: (m: unknown, c: Ctx) => Finding[] }[]
+  SCENARIO_VIEWPORTS: Record<string, { width: number; height: number; mobile: boolean }>
   ALWAYS_FAIL: string[]
   PROBES: { name: string; key: string | null; source: string; scenarios?: string[] }[]
   SCENARIOS: { name: string; route: string; start?: string; widths?: (number | string)[]; rules?: string[]; setup?: string }[]
@@ -105,6 +106,29 @@ describe('P31: a bottom-bar squircle that is not square, or not 6 px inside the 
     expect(s).toMatchObject({ route: '/', start: '/', rules: ['P31'] })
     expect(s?.widths).toEqual(expect.arrayContaining([375, 390]))
     expect(s?.widths?.every((w) => typeof w === 'number' ? w >= 375 : true)).toBe(true)
+  })
+
+  it('B9-19 developer: the shared viewport table has the 430 px phone (430x932), and the bottom-bar scenario runs there too (DS-02)', () => {
+    expect(api.SCENARIO_VIEWPORTS[430]).toEqual({ width: 430, height: 932, mobile: true })
+    expect(api.SCENARIOS.find((x) => x.name === 'bottom-bar')?.widths).toEqual([375, 390, 430])
+  })
+})
+
+describe('P6 lines a capped sticky bar up with its column (SHORT-08, B9-19 developer)', () => {
+  const p6 = () => api.RULES.find((r) => r.id === 'P6')!
+  const inner = { x: 440, r: 1240 }
+  const m = (bars: unknown[]) => ({ container: { x: 428, r: 1252 }, containerInner: inner, bars })
+  const ctx = { width: 1440, route: '/recipes/:id/edit', kind: 'default' }
+  it('a bar capped at 700 px and centred in an 800 px content box is no finding', () => {
+    expect(p6().evaluate(m([{ cls: 'sticky-action-bar', x: 490, r: 1190, bgAlpha: 1, column: 'form', cap: 700 }]), ctx)).toEqual([])
+  })
+  it('a capped bar off its column is a finding that names the column', () => {
+    const out = p6().evaluate(m([{ cls: 'sticky-action-bar', x: 440, r: 1140, bgAlpha: 1, column: 'form', cap: 700 }]), ctx)
+    expect(out.map((f) => f.message)).toEqual(['P6 sticky bar .sticky-action-bar (440-1140) does not line up with its form column (490-1190)'])
+  })
+  it('a cap wider than the content box means the content box (a narrow page), and a bar without a column keeps the old check', () => {
+    expect(p6().evaluate(m([{ cls: 'sticky-action-bar', x: 440, r: 1240, bgAlpha: 1, column: 'form', cap: 840 }]), ctx)).toEqual([])
+    expect(p6().evaluate(m([{ cls: 'sticky-action-bar', x: 490, r: 1190, bgAlpha: 1 }]), ctx)).toHaveLength(1)
   })
 })
 
