@@ -43,6 +43,10 @@ export function usePlanGrid(count: number): PlanGridLayout & { ref: RefCallback<
     })
     ro.observe(el)
     observer.current = ro
+    // w4d review (CLS): measure once now, in the commit, so the first paint already has the real columns (a ResizeObserver
+    // answers only after a paint, and the week then jumped from one column to its own).
+    const width = el.getBoundingClientRect().width
+    if (width > 0) setMeasure({ width, ...metricsOf() })
   }, [])
 
   useEffect(() => () => observer.current?.disconnect(), [])
