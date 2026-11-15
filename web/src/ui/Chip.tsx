@@ -59,6 +59,12 @@ const DEFAULT_ICON: Partial<Record<ChipStatus, { state: IconName; status: IconNa
   warn: { state: 'warning', status: 'warning' },
 }
 
+/** VC6: how many digits a count chip shows ("+2" is one, "12" two): one is a circle, more a pill wide enough to read as one. */
+function countDigits(children: ReactNode): number {
+  if (Array.isArray(children)) return children.reduce<number>((n, c) => n + countDigits(c as ReactNode), 0) // `+{n}` is ['+', n]
+  return typeof children === 'string' || typeof children === 'number' ? (String(children).match(/\d/g) ?? []).length : 0
+}
+
 /** The icon a status shows by default (a `state` chip's glyph; the status chip and ListRow meta use the same). */
 export function defaultStatusIcon(status: ChipStatus): IconName | undefined {
   return DEFAULT_ICON[status]?.status
@@ -119,6 +125,7 @@ export function Chip({ kind, status, as, overdue, whole, outline, tone, icon, se
     'data-outline': outline ? 'true' : undefined,
     'data-overdue': isOverdue ? 'true' : undefined,
     'data-whole': whole ? 'true' : undefined,
+    'data-wide': finalKind === 'count' && countDigits(children) > 1 ? 'true' : undefined,
     title: title ?? (typeof children === 'string' ? children : label),
   }
 

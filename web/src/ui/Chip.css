@@ -63,10 +63,13 @@ button.chip:focus-visible {
   color: var(--color-muted);
 }
 
+/* VC6: one digit ("3", "+2") is a circle; two or more ("12", "128") are a pill with real straight sides (Chip.tsx sets data-wide),
+   never a 31 by 26 near-circle that reads as a squashed one. */
 .chip[data-kind='count'] {
   flex: none;
   justify-content: center;
   min-inline-size: 1.625rem;
+  padding-inline: var(--space-1);
   border-radius: var(--radius-pill);
   background: var(--color-surface-2);
   color: var(--color-text);
@@ -74,6 +77,10 @@ button.chip:focus-visible {
 }
 
 /* Keep the whole text (a Plan row's "Leftover for Fri"): never shrink below it, still never past the line. */
+.chip[data-kind='count'][data-wide='true'] {
+  padding-inline: var(--space-3);
+}
+
 .chip[data-whole='true'] {
   flex: none;
   max-inline-size: 100%;
