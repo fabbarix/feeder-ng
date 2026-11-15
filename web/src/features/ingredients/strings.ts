@@ -34,6 +34,9 @@ export const strings = {
   emptyTitle: 'No Ingredients yet',
   emptyText: 'Ingredients appear here as you add Recipes, or you can create one now.',
   noMatches: 'No Ingredient matches that search',
+  /** SET-14e: the empty search names the query and offers to create it. */
+  noMatchFor: (q: string) => `No Ingredient matches “${q}”.`,
+  newFromSearch: (q: string) => `New Ingredient “${q}”`,
   loading: 'Loading…',
   detailsLabel: 'Ingredient details',
   notFoundTitle: 'That Ingredient does not exist',
@@ -92,6 +95,50 @@ export const strings = {
   mergeKeepNoShelfLife: 'Keep no Shelf Life',
   mergeChangeTarget: 'Choose another Ingredient',
   mergeConfirm: 'Merge',
+  /** B9-48 (SET-05): the one "Keeping" tile, its Save and the Rename sheet. */
+  keeping: {
+    title: 'Keeping',
+    days: 'days',
+    notSet: 'Not set',
+    notSetLower: 'not set',
+    clear: 'Clear',
+    clearLabel: (row: string) => `Clear ${row}`,
+    save: 'Save changes',
+    cancel: 'Cancel',
+    noChanges: 'No changes to save',
+    saved: (name: string) => `Saved Keeping for ${name}`,
+    changedFrom: (was: string) => `Changed from ${was}`,
+    frozenNotSet: 'Not set: moving a Stock Lot into a Freezer does not change when it goes off',
+    baseUnitLocked: (n: number) => `Used in ${n} place${n === 1 ? '' : 's'}, so it can't change`,
+  },
+  renameSheet: {
+    title: (name: string) => `Rename ${name}`,
+    helper: 'Recipes, Stock and the Shopping List show the new name.',
+  },
+  /** The header's two IconButtons. */
+  header: {
+    rename: (name: string) => `Rename ${name}`,
+    more: (name: string) => `More for ${name}`,
+  },
+  /** B9-48 (SAFE-02): the Delete confirm and the merge step's rows. */
+  impact: {
+    unused: 'It is on no Recipe, Product or Shopping List.',
+    usedIn: (n: number) => `It is used in ${n} place${n === 1 ? '' : 's'}.`,
+    usedBy: 'Used by',
+    cannotUndo: "Nothing else changes. This can't be undone.",
+    mergeInstead: (kind: 'food' | 'supply') =>
+      kind === 'supply'
+        ? 'To remove it, merge it into another Supply: these move to that one.'
+        : 'To remove it, merge it into another Ingredient: these move to that one.',
+    close: 'Close',
+    movesTo: (name: string) => `Moves to ${name}`,
+  },
+  /** SAFE-02: a removed Unit Conversion, with Undo. */
+  conversionRemoved: {
+    headline: (unit: string) => `1 ${unit} removed`,
+    undoAria: (unit: string) => `Undo: put back 1 ${unit}`,
+    restored: (unit: string) => `1 ${unit} is back`,
+  },
   /** H5: the Supplies (kind 'supply') words; the food words above stay as they are. */
   supply: {
     title: 'Supplies',
@@ -104,6 +151,8 @@ export const strings = {
     emptyTitle: 'No Supplies yet',
     emptyText: "Toilet paper, batteries or laundry pods: things you buy and keep in Stock but don't cook with.",
     noMatches: 'No Supply matches that search',
+    noMatchFor: (q: string) => `No Supply matches “${q}”.`,
+    newFromSearch: (q: string) => `New Supply “${q}”`,
     listError: 'The Supplies could not be loaded.',
     itemError: 'The Supply could not be loaded.',
     offlineListTitle: 'Your Supplies aren’t on this phone yet',
@@ -140,12 +189,11 @@ export const strings = {
     helper: 'Shopping List asks for it when Stock falls below this amount.',
     none: 'No Restock level',
     below: (amount: string) => `Below ${amount}`,
-    metaBelow: (amount: string) => `restocks below ${amount}`,
     save: 'Save Restock level',
     clear: 'Clear Restock level',
   },
   errors: {
-    unitRequired: 'Enter a unit',
+    unitRequired: 'Enter a unit, for example clove.',
     unitIsBase: (base: string) => `That is already the Base Unit (${base})`,
     unitTaken: 'This Ingredient already has a conversion for that unit',
     amountInvalid: 'Enter an amount greater than 0',

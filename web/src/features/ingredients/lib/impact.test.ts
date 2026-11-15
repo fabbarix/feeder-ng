@@ -56,6 +56,14 @@ describe('deleteConfirm: Delete Ingredient and Delete Supply are a confirm only 
     expect(o.body).not.toBe('It is on no Recipe, Product or Shopping List.')
     expect(o.body).toBe('It is used in 3 places.')
   })
+  // User decision (B9-48): a still-used Ingredient cannot be deleted, so the dialog explains and offers only Close and the way
+  // forward, Merge; no Delete button that would just be refused.
+  it('when it is still used: Close and "Merge into another Ingredient" (Supply: "...Supply"), no Delete, not the danger tone', () => {
+    const used = { references: { products: 2 }, total: 2 }
+    expect(deleteConfirm('food', 'passata', used)).toMatchObject({ title: 'Delete Passata?', cancelLabel: 'Close', confirmLabel: 'Merge into another Ingredient', tone: 'default' })
+    expect(deleteConfirm('supply', 'soap', used)).toMatchObject({ confirmLabel: 'Merge into another Supply' })
+    expect(deleteConfirm('food', 'passata', used).note).not.toMatch(/can't be undone/)
+  })
   it('while the read has not come back: no claim about its use, and still the note', () => {
     const o = deleteConfirm('food', 'x', undefined)
     expect(o.body).toBeUndefined()
