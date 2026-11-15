@@ -51,7 +51,7 @@ describe('useSpoiledLots', () => {
     const { result } = renderHook(() => useSpoiledLots(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.data).toBeDefined())
     await act(() => result.current.keep(3))
-    expect(api.keep).toHaveBeenCalledWith(3)
+    expect(api.keep).toHaveBeenCalledWith(3, undefined)
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['stock'] }))
   })
 
