@@ -7,6 +7,9 @@ import { rulesStrings } from '../lib/rulesStrings'
 import { PlanningRulesScreen } from './PlanningRulesScreen'
 
 const base = {
+  // B9-51: the Cooking times tile reads the Household settings and who is signed in.
+  'GET /api/me': { id: 1, email: 'admin@example.test', displayName: 'Admin', isAdmin: true },
+  'GET /api/household/settings': { timeZone: 'UTC', timeZoneConfigured: true, planningHorizonDays: 7, defaultCooldownDays: 7, defaultLeftoverUseByDays: 3, quietHours: { start: '22:00', end: '07:00' }, plannerStyle: 0.5, location: null, currency: 'EUR', earliestStart: '06:30', latestStart: '22:00' },
   'GET /api/slot-rules': [{ id: 9, mealSlotId: 5, courseId: 1, tag: 'fish' }],
   'GET /api/variety-rules': [{ tag: 'fish', maxPerWeek: 2, notConsecutiveDays: false }, { tag: 'soup', maxPerWeek: 1, notConsecutiveDays: false }],
   'GET /api/meal-slots': [
@@ -47,7 +50,7 @@ describe('PlanningRulesScreen with Tag colours and Courses', () => {
     const api = mockApi({ ...base, 'POST /api/slot-rules': { id: 10, mealSlotId: 5, courseId: 2, tag: 'fish' } })
     renderWithProviders(<PlanningRulesScreen />)
     await screen.findByText('Friday Dinner · Starter')
-    await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Tag' }))
     await userEvent.click(screen.getAllByRole('combobox', { name: 'Tag' })[0]!)
     await userEvent.click(await screen.findByRole('option', { name: /Fish/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
@@ -58,7 +61,7 @@ describe('PlanningRulesScreen with Tag colours and Courses', () => {
     mockApi({ ...base, 'POST /api/slot-rules': { status: 422, json: { error: { code: 'tag_unknown', message: 'No such Tag' } } } })
     renderWithProviders(<PlanningRulesScreen />)
     await screen.findByText('Friday Dinner · Starter')
-    await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Tag' }))
     await userEvent.click(screen.getAllByRole('combobox', { name: 'Tag' })[0]!)
     await userEvent.click(await screen.findByRole('option', { name: /Fish/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))

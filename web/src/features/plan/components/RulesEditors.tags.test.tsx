@@ -36,7 +36,7 @@ describe('Slot Rule rows', () => {
 describe('Tag pickers', () => {
   it('the Slot Rule Tag select shows a colour dot on each Tag', async () => {
     render(<SlotRulesEditor rules={[]} mealSlots={mealSlots} recipes={[]} tags={tags} onAdd={noop} onRemove={noop} error={null} />)
-    await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Tag' }))
     await userEvent.click(screen.getByRole('combobox', { name: 'Tag' }))
     const options = screen.getAllByRole('option')
     expect(options.map((o) => o.textContent)).toEqual(['Fish2 Recipes', 'Fish Pie1 Recipe'])
@@ -46,7 +46,7 @@ describe('Tag pickers', () => {
   it('picking a Tag adds the rule with the Tag key, not its name', async () => {
     const onAdd = vi.fn()
     render(<SlotRulesEditor rules={[]} mealSlots={mealSlots} recipes={[]} tags={tags} onAdd={onAdd} onRemove={noop} error={null} />)
-    await userEvent.click(screen.getByRole('radio', { name: 'a Tag' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Tag' }))
     await userEvent.click(screen.getByRole('combobox', { name: 'Tag' }))
     await userEvent.click(await screen.findByRole('option', { name: /Fish Pie/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Add Slot Rule' }))
