@@ -31,6 +31,12 @@ export function decideDraft({ draft, currentUpdatedAt, now }: { draft: DraftReco
   if (baseUpdatedAt === null) return { kind: 'offer', savedAt }
   if (currentUpdatedAt === null) return { kind: 'orphaned', savedAt }
   // Instants, not strings: the same moment in another offset is no change, and an older updatedAt (clock skew) is none either.
-  if (Date.parse(currentUpdatedAt) > Date.parse(baseUpdatedAt)) return { kind: 'ask', savedAt, changedAt: currentUpdatedAt }
+  const current = Date.parse(currentUpdatedAt)
+  const base = Date.parse(baseUpdatedAt)
+  // A stamp that does not parse cannot prove the record is unchanged: unless the two are the same text, ask (never restore over it).
+  if (Number.isNaN(current) || Number.isNaN(base)) {
+    return currentUpdatedAt === baseUpdatedAt ? { kind: 'restore', savedAt } : { kind: 'ask', savedAt, changedAt: currentUpdatedAt }
+  }
+  if (current > base) return { kind: 'ask', savedAt, changedAt: currentUpdatedAt }
   return { kind: 'restore', savedAt }
 }

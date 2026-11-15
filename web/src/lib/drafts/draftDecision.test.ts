@@ -45,6 +45,14 @@ describe('decideDraft', () => {
     expect(decideDraft({ draft: rec(), currentUpdatedAt: '2026-11-14T09:59:00Z', now: NOW }).kind).toBe('restore')
   })
 
+  // B9-18 review: a draft never restores over a record that may have changed without asking.
+  it('a stamp that does not parse is never taken as unchanged: ask, unless both are the same text', () => {
+    const r = rec()
+    expect(decideDraft({ draft: r, currentUpdatedAt: 'garbage', now: NOW })).toEqual({ kind: 'ask', savedAt: r.savedAt, changedAt: 'garbage' })
+    expect(decideDraft({ draft: rec({ baseUpdatedAt: '' }), currentUpdatedAt: '2026-11-14T10:00:00Z', now: NOW }).kind).toBe('ask')
+    expect(decideDraft({ draft: rec({ baseUpdatedAt: 'v7' }), currentUpdatedAt: 'v7', now: NOW }).kind).toBe('restore')
+  })
+
   it('a draft of a new record is offered, whatever the (absent) stored record says', () => {
     const r = rec({ baseUpdatedAt: null })
     expect(decideDraft({ draft: r, currentUpdatedAt: null, now: NOW })).toEqual({ kind: 'offer', savedAt: r.savedAt })
