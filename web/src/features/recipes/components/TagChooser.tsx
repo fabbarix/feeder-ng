@@ -28,6 +28,11 @@ export function TagChooser({ tags, onChange, known = NO_TAGS, colourOf }: TagCho
   const addRef = useRef<HTMLButtonElement>(null)
   const labelId = useId()
   const panelId = useId()
+  // The panel floats from "Add Tag": bring the button into view first, so the popover always has its room on the screen.
+  const show = () => {
+    addRef.current?.scrollIntoView?.({ block: 'center' })
+    chooser.show()
+  }
   const close = () => {
     chooser.close()
     addRef.current?.focus()
@@ -62,7 +67,7 @@ export function TagChooser({ tags, onChange, known = NO_TAGS, colourOf }: TagCho
             </Chip>
           )
         })}
-        <Button ref={addRef} variant="secondary" size="sm" icon="add" aria-haspopup="dialog" aria-expanded={chooser.open} aria-controls={chooser.open ? panelId : undefined} onClick={chooser.show}>
+        <Button ref={addRef} variant="secondary" size="sm" icon="add" aria-haspopup="dialog" aria-expanded={chooser.open} aria-controls={chooser.open ? panelId : undefined} onClick={show}>
           {t.add}
         </Button>
       </div>
