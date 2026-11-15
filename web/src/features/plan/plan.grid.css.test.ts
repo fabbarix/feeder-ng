@@ -54,3 +54,24 @@ describe('A11Y-09: Swap and Pin are an IconSet, and the plan.css has no gap of i
     expect(bodyOf('.plan-slot-head__actions')).not.toMatch(/(^|;)\s*gap\s*:/)
   })
 })
+
+describe('PC-06: the chip line', () => {
+  it('the measuring copy (.plan-row__measure) is out of the layout and unseen: absolute, hidden, no pointer, chips on one line at their natural width', () => {
+    const b = bodyOf('.plan-row__measure')
+    expect(b).toMatch(/position\s*:\s*absolute/)
+    expect(b).toMatch(/visibility\s*:\s*hidden/)
+    expect(b).toMatch(/pointer-events\s*:\s*none/)
+    expect(b).toMatch(/white-space\s*:\s*nowrap|flex-wrap\s*:\s*nowrap/)
+  })
+
+  it('only a cut line ([data-cut]) may end a chip in an ellipsis', () => {
+    const b = bodyOf(".plan-row__chips[data-cut='true'] .chip__label") || bodyOf(".plan-row__chips[data-cut='true'] .chip")
+    expect(b).toMatch(/text-overflow\s*:\s*ellipsis/)
+    expect(css.match(/text-overflow\s*:\s*ellipsis/g)?.length ?? 0).toBeGreaterThan(0)
+  })
+
+  it('the unfilled row title ("Not planned") is muted and body-strong', () => {
+    const b = bodyOf('.plan-meal .list-row[data-unfilled] .list-row__title')
+    expect(b).toMatch(/color\s*:\s*var\(--color-muted\)/)
+  })
+})

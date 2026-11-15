@@ -61,10 +61,11 @@ describe('PlanCourseRow: anatomy', () => {
 describe('PlanCourseRow: chips on one line', () => {
   const chipsOf = (li: Element) => li.querySelector('.plan-row__chips')
 
-  it('the chips sit in one .plan-row__chips line under the meta, inside the row text', () => {
+  it('the chips sit in one .plan-row__chips line in the row\'s `below` slot, under the title and the icon set (B9-32, PC-06)', () => {
     const { li } = setup(side({ meal: courseMeal(2, 'Side', { servedFromLeftover: { date: '2026-11-09' } as never, why: [{ code: 'leftover_fits', date: '2026-11-13' }, { code: 'favourite', members: ['Mia'] }] }) }))
     const line = chipsOf(li)!
-    expect(line.closest('.list-row__text')).not.toBeNull()
+    expect(line.closest('.list-row__below')).not.toBeNull()
+    expect(line.closest('.list-row__text')).toBeNull()
     expect(line.querySelectorAll('.chip')).toHaveLength(3)
     expect(line.children).toHaveLength(3) // direct chips only: no second line, no wrapper rows
   })
@@ -99,10 +100,10 @@ describe('PlanCourseRow: chips on one line', () => {
 })
 
 describe('PlanCourseRow: icon actions', () => {
-  it('Swap then Pin, in a group at the end of the row, after the text', () => {
+  it('Swap then Pin, in an IconSet at the end of the row, after the text (names: the Recipe, the day and the Meal Slot, A11Y-08)', () => {
     const { li } = setup()
-    const group = li.querySelector('.plan-row__actions')!
-    expect(within(group as HTMLElement).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Swap', 'Pin'])
+    const group = li.querySelector('.icon-set')!
+    expect(within(group as HTMLElement).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([`Swap Two-colour cauliflower with peppers, Tue 10 Dinner`, `Pin Two-colour cauliflower with peppers, Tue 10 Dinner`])
     const text = li.querySelector('.list-row__text')!
     expect(text.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(group.closest('.list-row__trailing')).not.toBeNull()
@@ -110,17 +111,19 @@ describe('PlanCourseRow: icon actions', () => {
 
   it('Swap and Pin report that Course and do not open the sheet', async () => {
     const { h } = setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Swap' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Pin' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Swap / }))
+    await userEvent.click(screen.getByRole('button', { name: /^Pin / }))
     expect(h.onSwap).toHaveBeenCalledWith(key)
     expect(h.onPin).toHaveBeenCalledWith(key)
     expect(h.onOpen).not.toHaveBeenCalled()
   })
 
-  it('a Pinned meal offers Unpin instead of Pin', async () => {
+  it('a Pinned meal shows the same Pin button pressed (aria-pressed), there is no separate Unpin button; pressing it unpins (A11Y-08)', async () => {
     const { h } = setup(side({ meal: courseMeal(2, 'Side', { pinned: true }) }))
-    expect(screen.queryByRole('button', { name: 'Pin' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Unpin' }))
+    expect(screen.queryByRole('button', { name: /^Unpin/ })).not.toBeInTheDocument()
+    const pin = screen.getByRole('button', { name: /^Pin / })
+    expect(pin).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(pin)
     expect(h.onUnpin).toHaveBeenCalledWith(key)
   })
 
@@ -129,35 +132,35 @@ describe('PlanCourseRow: icon actions', () => {
     await userEvent.tab()
     expect(screen.getByRole('button', { name: 'Two-colour cauliflower with peppers' })).toHaveFocus()
     await userEvent.tab()
-    expect(screen.getByRole('button', { name: 'Swap' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^Swap / })).toHaveFocus()
     await userEvent.tab()
-    expect(screen.getByRole('button', { name: 'Pin' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^Pin / })).toHaveFocus()
   })
 
   it('a Cooked row is muted (data-state), says Cooked, and has no Swap or Pin', () => {
     const { li } = setup(side({ meal: courseMeal(2, 'Side', { state: 'cooked' }) }))
     expect(li).toHaveAttribute('data-state', 'cooked')
     expect(screen.getByText('Cooked')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Pin' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Swap / })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Pin / })).not.toBeInTheDocument()
   })
 })
 
 describe('PlanCourseRow: an empty Course', () => {
-  it('is a dashed row (data-unfilled) whose whole target is "Choose a Recipe" for that Course', async () => {
+  it('is a dashed row (data-unfilled) with one trailing "Choose a Recipe for Side, Tue 10 Dinner" button (B9-32, PC-07, A11Y-08)', async () => {
     const { h, li } = setup(side({ meal: null }))
     expect(li).toHaveAttribute('data-unfilled')
-    await userEvent.click(screen.getByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Choose a Recipe for Side, Tue 10 Dinner' }))
     expect(h.onChoose).toHaveBeenCalledWith(key)
   })
 
-  it('the short reason is the row title, the "Not planned" chip (in the tone of its cause) is the one chip line, no sentence line', () => {
+  it('the title is "Not planned", the Course is the meta, the short cause is the one chip (in the tone of its cause); no sentence (B9-32, PC-07)', () => {
     const { li } = setup(side({ meal: null, unfilled: { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 2, exclusion: 2, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }))
-    expect(li.querySelector('.list-row__title')).toHaveTextContent('Every Recipe is excluded.')
+    expect(li.querySelector('.list-row__title')).toHaveTextContent('Not planned')
+    expect(li.querySelector('.list-row__meta')).toHaveTextContent('Side')
     const chip = li.querySelector('.plan-row__chips .chip')!
-    expect(chip).toHaveTextContent('Not planned')
-    expect(chip).toHaveAttribute('data-status', 'warn') // a rule conflict: amber, never danger
-    expect(li.querySelectorAll('.list-row__text > *').length).toBeLessThanOrEqual(3) // title, meta, chip line
+    expect(chip).toHaveTextContent('Excluded')
+    expect(chip).toHaveAttribute('data-status', 'warn') // a rule conflict: warn, never spoil or danger
   })
 
   it('an empty Course with no reason says "Nothing planned"', () => {
@@ -167,8 +170,9 @@ describe('PlanCourseRow: an empty Course', () => {
 
   it('nobody attending: no Choose a Recipe (there is nobody to cook for)', () => {
     const { li } = setup(side({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }))
-    expect(screen.queryByRole('button', { name: 'Choose a Recipe' })).not.toBeInTheDocument()
-    expect(li.querySelector('.list-row__title')).toHaveTextContent('Nobody is set to attend.')
+    expect(screen.queryByRole('button', { name: /^Choose a Recipe/ })).not.toBeInTheDocument()
+    expect(li.querySelector('.list-row__title')).toHaveTextContent('Not planned')
+    expect(li.querySelector('.plan-row__chips .chip')).toHaveTextContent('Nobody attending')
     expect(li.querySelector('.plan-row__chips .chip')).toHaveAttribute('data-status', 'info')
   })
 })
