@@ -11,8 +11,9 @@
 //   recipe-new-flow               /recipes/new at 375 and 1440: the Name has the cursor, one empty line and one empty Step, the Yield 4, the
 //                                 Ingredients heading within the first screen, Enter in the last field adds a line and puts the cursor in its picker.
 //   recipe-editor-ring-room       the editor with both Disclosures open and a Step with a use, every control focused in turn (P39 only; probes/focus-rings.mjs).
-//   recipe-editor-restored-focus  the restored-draft screen at 375 and 390 (the known issue: the floating Save bar covered the Name): each of Name, the first
-//                                 Ingredient, its Quantity and the first Step text, focused, scrolls clear of the Save bar and of the top bar.
+//   recipe-editor-restored-focus  the restored-draft screen at 375 and 390 (the known issue: the floating Save bar covered the Name): at rest the Name field is
+//                                 whole above the Save bar on the first screen; and each of Name, the first Ingredient, its Quantity and the first Step text,
+//                                 focused, scrolls clear of the Save bar and of the top bar.
 //   recipe-editor-tag-chooser     Planning open, "Add Tag" pressed, "e" typed: options are listed, not covered by the Save bar (P12 extended; probes/option-cover.mjs);
 //                                 "zzweekend" offers the "Add Tag" row.
 import { byText, evaluate, press, typeInto, until } from '../helpers.mjs'
@@ -190,6 +191,18 @@ export default {
       await until(`${LOADED} && (${NAME_INPUT}).value === ${JSON.stringify(changed)}`, 'the reloaded editor with the kept Name', 15000)
       await until(`[...document.querySelectorAll('[role="status"]')].some((s) => /Your unsaved changes are back/.test(s.textContent ?? ''))`, 'the "Your unsaved changes are back" notice')
       await evaluate(`document.documentElement.style.scrollBehavior = 'auto'; true`)
+      // At rest, before anything is focused: the first screen of the restored editor shows the Name field whole, above the Save bar (the notice
+      // must not push the Name under the floating bar: the developer of B9-31 saw it at 375).
+      const rest = await evaluate(`(() => {
+        scrollTo(0, 0)
+        const e = ${NAME_INPUT}
+        const bar = document.querySelector('.sticky-action-bar')
+        if (!e || !bar) return { missing: true }
+        const r = (e.closest('.ui-field') ?? e).getBoundingClientRect()
+        return { bottom: r.bottom, barTop: bar.getBoundingClientRect().top }
+      })()`)
+      if (rest.missing) throw new Error('setup: no Name field or no Save bar on the restored editor')
+      if (rest.bottom > rest.barTop - 4) throw new Error(`setup: on the first screen the Name field ends at y ${px(rest.bottom)}, ${px(rest.bottom - rest.barTop)} px under the Save bar's top (${px(rest.barTop)}): the restored-changes notice pushes it under the bar`)
       const targets = [
         ['the Name field', NAME_INPUT],
         ['the first Ingredient picker', `document.querySelector('.line-row [role="combobox"]')`],
