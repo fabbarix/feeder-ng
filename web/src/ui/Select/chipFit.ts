@@ -1,7 +1,8 @@
 // B9-15 (SET-06; replaces the Shop's 26.25 em window query): whether a chip Select shows its option's full label or its `shortLabel`.
 // The rule is pure; the measure reads the chip's own room in its row (the row's inner width minus its other items and the gaps), so the
-// window width plays no part. A chip Select sibling in the same row counts at its full width, so two chips that shorten never flip
-// each other back and forth.
+// window width plays no part. Items before the chip count at their width now, items after it at their full width (a chip Select sibling
+// with its full value), so the first chips yield first and each answer depends only on answers already settled: two chips that shorten
+// never flip each other back and forth.
 
 export interface ChipFitMetrics {
   /** The chip's width with its full label shown. */
@@ -35,12 +36,17 @@ export function measureChipFit(frame: HTMLElement): ChipFitMetrics | null {
   const gap = parseFloat(cs.columnGap) || 0
   let others = 0
   let items = 1
+  let after = false
   for (const child of row.children) {
-    if (child === frame || !(child instanceof HTMLElement) || child.getClientRects().length === 0) continue
+    if (child === frame) {
+      after = true
+      continue
+    }
+    if (!(child instanceof HTMLElement) || child.getClientRects().length === 0) continue
     const position = getComputedStyle(child).position
     if (position === 'absolute' || position === 'fixed') continue
     items += 1
-    others += naturalWidth(child) ?? child.getBoundingClientRect().width
+    others += (after ? naturalWidth(child) : null) ?? child.getBoundingClientRect().width
   }
   return { natural, room: row.clientWidth - padding - others - gap * (items - 1) }
 }

@@ -12,8 +12,9 @@ describe('Select.css: the chip strip', () => {
     const t = declarations(css, '.select__tools')
     expect(t['flex-wrap']).toBe('nowrap')
     expect(t['overflow']).toBe('hidden')
-    expect(t['padding']).toBe('5px')
-    expect(t['margin']).toBe('-5px')
+    // B9-15 developer: written with the ring tokens (3 px + 2 px), as the main session ruled for the panel; check-ui raw-spacing fails a raw 5px.
+    expect(t['padding']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
+    expect(t['margin']).toBe('calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)))')
   })
   it('wraps once "+N" has expanded it', () => {
     expect(declarations(css, ".select__tools[data-expanded='true']")['flex-wrap']).toBe('wrap')

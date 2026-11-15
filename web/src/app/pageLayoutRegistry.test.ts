@@ -98,9 +98,10 @@ const ADDED = {
   rules: ['P26', 'P27', 'P29', 'P30', 'P39'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
-  // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning and in the Add Shop Barcode sheet.
+  // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning. Its shop-barcode-sheet (the Add Shop Barcode
+  // sheet) is held until B9-30 builds the sheet's Product Select (B9_15_DEFERRED); B9-30 adds its name here.
   // B9-10: scenarios/recipe-editor.mjs (order 40): the Recipe editor with the 36-character Tag (DS-04).
-  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'planning-recipe-select', 'shop-barcode-sheet'],
+  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'planning-recipe-select'],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {

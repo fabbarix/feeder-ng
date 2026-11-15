@@ -95,6 +95,11 @@
   padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 }
 
+/* In a bottom sheet the body already keeps the ring room on every side (BottomSheet.css), so the panel adds none of its own. */
+.sheet__body > .select__panel {
+  padding: 0;
+}
+
 /* SET-06: the filter chips are one line: what does not fit is "+N" (SelectTools). The line clips its overflow, so it is padded by the
    ring room and pulled back by it: a chip's ring stays inside the clip and the chips still line up with the search field. */
 .select__tools {
@@ -103,8 +108,8 @@
   align-items: center;
   gap: var(--space-1);
   overflow: hidden;
-  padding: 5px;
-  margin: -5px;
+  padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  margin: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
 }
 
 /* "+N" has expanded the line in place: it wraps, and ends with "Fewer" and the sort button. */
@@ -241,7 +246,6 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-  overflow-wrap: break-word;
   font-size: var(--text-body-strong-size);
   line-height: var(--text-body-strong-line);
   font-weight: var(--text-body-strong-weight);
@@ -305,6 +309,11 @@
    its value (FilterBar.css, under 24 rem); its value is visually hidden and carried in its name. */
 .filter-bar__sort .select__trigger[data-icon-only='true'] .select__leading {
   display: inline-grid;
+}
+
+/* DS-03: an icon-only Sort never shrinks: its glyph and chevron are all it shows (VC6, nothing squished). */
+.filter-bar__sort:has(.select__trigger[data-icon-only='true']) {
+  flex: none;
 }
 
 /* DS-03: the FilterBar view row's hidden copy of the Sort with its value shown (FilterBarViewRow); useSortFits reads its width. Fixed and

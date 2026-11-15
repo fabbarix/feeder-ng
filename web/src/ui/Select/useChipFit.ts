@@ -21,8 +21,10 @@ export function useChipFit(anchor: RefObject<HTMLElement | null>, enabled: boole
   useLayoutEffect(() => {
     const row = frameOf(anchor.current)?.parentElement
     if (!enabled || !row || typeof ResizeObserver === 'undefined') return
+    // The row and its items: a sibling that shortens or grows changes this chip's room without resizing the row.
     const observer = new ResizeObserver(() => fitRef.current())
     observer.observe(row)
+    for (const item of row.children) observer.observe(item)
     return () => observer.disconnect()
   }, [anchor, enabled])
 
