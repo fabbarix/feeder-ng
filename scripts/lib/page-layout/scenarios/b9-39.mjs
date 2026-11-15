@@ -31,17 +31,21 @@ const CLOCK = `(() => {
     const view = JSON.parse(x.responseText)
     const planned = (s) => (s.courses ?? []).some((c) => c.meal && c.meal.state === 'planned')
     const slots = view.slots.filter(planned).sort((p, q) => RealDate.parse(p.at) - RealDate.parse(q.at))
-    for (const a of slots.filter((s) => s.date === view.today)) {
+    // The chapter's case first: the next slot is on the same day (Lunch gone, Dinner ahead). Only when the seed has no such pair at this hour
+    // is the next slot on a later day, and then the eyebrow rightly leads with its day word ("Tomorrow · Breakfast").
+    const pairs = slots.filter((s) => s.date === view.today).map((a) => {
       const target = RealDate.parse(a.at) + 44 * 60000
-      const b = slots.find((s) => RealDate.parse(s.at) > target)
-      if (!b) continue
+      return { a, target, b: slots.find((s) => RealDate.parse(s.at) > target) }
+    }).filter((p) => p.b)
+    const pick = pairs.find((p) => p.b.date === p.a.date) ?? pairs[0]
+    for (const { a, b, target } of pick ? [pick] : []) {
       const offset = target - RealDate.now()
       class FakeDate extends RealDate {
         constructor(...args) { if (args.length === 0) super(RealDate.now() + offset); else super(...args) }
         static now() { return RealDate.now() + offset }
       }
       window.Date = FakeDate
-      window.__b939 = { a: a.name, aRecipe: a.courses.find((c) => c.meal)?.meal.recipeName, b: b.name, bRecipe: b.courses.find((c) => c.meal)?.meal.recipeName, at: new RealDate(target).toISOString() }
+      window.__b939 = { a: a.name, aRecipe: a.courses.find((c) => c.meal)?.meal.recipeName, b: b.name, bRecipe: b.courses.find((c) => c.meal)?.meal.recipeName, sameDay: b.date === a.date, at: new RealDate(target).toISOString() }
       return
     }
     fail('the seed has no planned slot of ' + view.today + ' with another planned slot after it')
@@ -76,7 +80,9 @@ async function todayAfterLunch() {
       if (!hero) return 'Today has no hero (.plan-hero)'
       const parts = [...hero.querySelectorAll('.tile__overline .plan-hero__eyebrow-part')]
       if (parts.length === 0) return 'the eyebrow has no .plan-hero__eyebrow-part (TB-15b)'
-      if (parts[0].textContent.trim() !== clock.b) return 'the hero\\'s eyebrow starts with "' + parts[0].textContent.trim() + '", not the next slot "' + clock.b + '" (TB-01: the hero moves on at the slot time, and a today slot has no "Today" word)'
+      // a today slot has no day word on Today; a slot of a later day leads with its day word, then "· <slot>"
+      const slotPart = clock.sameDay ? parts[0]?.textContent.trim() : parts[1]?.textContent.trim().replace(/^·\\s*/, '')
+      if (slotPart !== clock.b) return 'the hero\\'s eyebrow is "' + parts.map((p) => p.textContent.trim()).join(' ') + '", not the next slot "' + clock.b + '"' + (clock.sameDay ? ' first' : ' after its day word') + ' (TB-01: the hero moves on at the slot time, and a today slot has no "Today" word)'
       if (parts.some((p) => p.textContent.trim() === 'Today')) return 'the eyebrow says "Today" on Today'
       for (const p of parts.slice(1)) if (!p.textContent.trim().startsWith('·')) return 'the eyebrow part "' + p.textContent.trim() + '" does not start with its separator'
       for (const p of parts) {
