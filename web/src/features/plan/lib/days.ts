@@ -115,3 +115,26 @@ export function heroMeal(slots: PlanSlot[], now: Date): PlanSlot | null {
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
   return open[0] ?? null
 }
+
+// B9-32 (PC-11 option B, decision PC 2): the week grid's columns and spans.
+/** The most columns the week grid has, and its tracks. */
+export const GRID_MAX_COLUMNS = 4
+export const GRID_TRACKS = 12
+/** The narrowest a day tile may be, in rem (`min="day"`). */
+const DAY_MIN_REM = 21
+
+/** Columns of the week grid for a container `px` wide: min(4, floor((px + gap) / (21 rem + gap))), at least 1. */
+export function gridColumns(containerPx: number, opts: { remPx?: number; gapPx?: number } = {}): number {
+  const rem = opts.remPx ?? 16
+  const gap = opts.gapPx ?? 12
+  const fit = Math.floor((containerPx + gap) / (DAY_MIN_REM * rem + gap))
+  return Math.max(1, Math.min(GRID_MAX_COLUMNS, Number.isFinite(fit) ? fit : 1))
+}
+
+/** The span (of 12 tracks) of each of `count` days in `columns` columns; the days of an incomplete last row share it. */
+export function daySpans(count: number, columns: number): number[] {
+  const cols = Math.max(1, Math.min(GRID_MAX_COLUMNS, Math.floor(columns)))
+  const full = count - (count % cols)
+  const rest = count - full
+  return Array.from({ length: Math.max(0, count) }, (_, i) => (i < full ? GRID_TRACKS / cols : GRID_TRACKS / rest))
+}

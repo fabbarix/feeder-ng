@@ -37,7 +37,7 @@ async function markAll(result: CookedAllResult = allCookedResult()) {
     'PUT /api/stock/ingredients/11/total': { ingredient: {}, lots: [] },
   })
   renderWithProviders(<PlanScreen />)
-  await userEvent.click(await screen.findByRole('button', { name: 'Dinner actions' }))
+  await userEvent.click(await screen.findByRole('button', { name: /^More for .* Dinner$/ }))
   await userEvent.click(screen.getByRole('menuitem', { name: 'Mark all Cooked' }))
   const sheet = await screen.findByRole('dialog', { name: 'Mark all Cooked' })
   await within(sheet).findByRole('spinbutton', { name: 'Side Leftover portions' })
@@ -49,13 +49,15 @@ async function markAll(result: CookedAllResult = allCookedResult()) {
 describe('PlanScreen: Mark all Cooked outcome', () => {
   it('cheers and says where each Leftover went (a success toast, as for one Course)', async () => {
     await markAll()
-    expect(await findToast('Cooked, nice one! Roast chicken: 2 portions → Thu Lunch; Green beans: 1 portion kept, good until Fri')).toBeInTheDocument()
+    // B9-26: the rich toast: headline, the slot, each Leftover by its Recipe, and one Undo for all the Courses.
+    const toast = await findToast('Cooked, nice one!')
+    expect(toast.querySelector('.toast__body')).toHaveTextContent('Roast chicken: 2 portions planned for Thu Lunch. Green beans: 1 portion kept as a Leftover, good until Fri.')
   })
 
   it('one Leftover reads exactly as the single path does', async () => {
     const one = allCookedResult()
     await markAll({ ...one, leftovers: [one.leftovers[0]!], warnings: [] })
-    expect(await findToast('Cooked, nice one! 2 portions → Thu Lunch')).toBeInTheDocument()
+    expect((await findToast('Cooked, nice one!')).querySelector('.toast__body')).toHaveTextContent(/^2 portions planned for Thu Lunch\.$/)
   })
 
   it('no Leftover: just the cheer', async () => {

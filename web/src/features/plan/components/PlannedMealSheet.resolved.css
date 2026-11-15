@@ -1,0 +1,16 @@
+/* B9-26 (SAFE-03): the Planned Meal sheet of a Cooked or Not cooked meal: how it was marked (body), then what Undo does or why it
+   can no longer (a muted hint). */
+.plan-sheet__resolved {
+  margin: 0;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-line);
+  color: var(--color-text);
+}
+
+.plan-sheet__undo-hint {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}

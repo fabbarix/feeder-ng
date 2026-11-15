@@ -98,7 +98,7 @@ describe('useMarkCooked', () => {
 
 describe('usePlanActions', () => {
   it('Regenerate posts and toggles the busy flag', async () => {
-    const api = mockApi({ 'POST /api/plan/regenerate': undefined })
+    const api = mockApi({ 'POST /api/plan/regenerate': { placed: 2, kept: 0, unfilled: 0, changed: 2, changes: [] } })
     const { result } = renderHook(() => usePlanActions(), { wrapper })
     await act(async () => {
       await result.current.regenerate()

@@ -1,7 +1,8 @@
 import type { IconName } from '../../../ui/icons'
 import { slotHash } from '../../settings/lib/slotAnchor'
 import { planStrings as s } from '../strings'
-import type { PlanEntry, PlanSlot } from '../types'
+import type { PlanEntry, PlanSlot, SlotKey } from '../types'
+import { actionName, dayLabel } from './actionNames'
 import { weekdayName } from './phrase'
 
 export type Cause =
@@ -12,12 +13,18 @@ export type Cause =
   | 'slot_rule'
   | 'excluded'
   | 'advance_step'
+  /** B9-32 (PC-14, A2): every Recipe would start outside the cooking times (`eliminated.tooEarly`). */
+  | 'too_early'
   | 'no_fit'
 
 /** info = setup is missing; warn = a rule conflict. Never danger: nothing is on fire. */
 export type Tone = 'info' | 'warn'
 
-export type FixAction = { kind: 'link'; label: string; to: string } | { kind: 'choose'; label: string }
+export type FixAction =
+  | { kind: 'link'; label: string; to: string }
+  | { kind: 'choose'; label: string }
+  /** B9-32 (PC-07): mark Recipes with the Course from the Plan (the sheet), instead of leaving it for /recipes?notCourse=. */
+  | { kind: 'mark'; label: string; courseId: number; courseName: string }
 
 /** CRS G2: one line of a tile's "Show all" list. */
 export interface CauseItem {
@@ -41,6 +48,10 @@ export interface CauseGroup {
   items: CauseItem[]
   /** "Couldn't plan 9 Meal Slots. Nobody is set to attend." */
   headline: string
+  /** B9-32 (PC-07): the compact tile's row title, "7 Desserts" / "9 Meal Slots". STUB: '' until built. */
+  title: string
+  /** B9-32: the row's meta, the cause in one sentence ("No Recipes are marked as Dessert."). STUB: '' until built. */
+  meta: string
   hint: string
   tone: Tone
   icon: IconName
@@ -50,7 +61,7 @@ export interface CauseGroup {
 }
 
 /** Display order: setup gaps first, then rule conflicts. */
-const ORDER: Cause[] = ['nobody_attending', 'no_recipes', 'no_course_recipes', 'slot_rule', 'excluded', 'advance_step', 'no_fit']
+const ORDER: Cause[] = ['nobody_attending', 'no_recipes', 'no_course_recipes', 'slot_rule', 'excluded', 'advance_step', 'too_early', 'no_fit']
 
 /** Where a cause's fix goes; `first` is the earliest cell of the group. */
 type FixFor = (label: string, first: PlanEntry | undefined) => FixAction
@@ -69,13 +80,14 @@ const META: Record<Cause, { tone: Tone; icon: IconName; fix: FixFor }> = {
     icon: 'recipes',
     fix: (label, first) =>
       first && first.courseId !== undefined && first.courseName
-        ? { kind: 'link', label: s.markRecipesAs(first.courseName), to: `/recipes?notCourse=${first.courseId}` }
+        ? { kind: 'mark', label: s.markRecipesAs(first.courseName), courseId: first.courseId, courseName: first.courseName }
         : { kind: 'link', label, to: '/recipes' },
   },
   slot_rule: { tone: 'warn', icon: 'slotRule', fix: (label) => ({ kind: 'link', label, to: '/settings/planning' }) },
   // CRS G2: open to every User (preferences are not Admin-only), so never "Ask an Admin".
   excluded: { tone: 'warn', icon: 'exclusion', fix: (label) => ({ kind: 'link', label, to: '/plan/couldnt-plan/excluded' }) },
   advance_step: { tone: 'warn', icon: 'advanceStep', fix: (label) => ({ kind: 'choose', label }) },
+  too_early: { tone: 'warn', icon: 'timer', fix: (label) => ({ kind: 'choose', label }) },
   no_fit: { tone: 'warn', icon: 'info', fix: (label) => ({ kind: 'choose', label }) },
 }
 
@@ -98,7 +110,8 @@ export function causeOf(slot: Pick<PlanEntry, 'unfilled'>): Cause {
   if (e.considered === 0) return 'no_recipes'
   // The filter that removed the most options; a tie goes to Exclusion.
   if (e.exclusion > 0 && e.exclusion >= e.advanceStep) return 'excluded'
-  if (e.advanceStep > 0) return 'advance_step'
+  if (e.advanceStep > 0 && e.advanceStep >= (e.tooEarly ?? 0)) return 'advance_step'
+  if ((e.tooEarly ?? 0) > 0) return 'too_early'
   return 'no_fit'
 }
 
@@ -198,6 +211,8 @@ export function groupByCause(slots: PlanEntry[], all: PlanEntry[] = slots): Caus
       slots: list,
       items: cause === 'excluded' ? items.map((i) => ({ ...i, to: `/plan/couldnt-plan/excluded#${i.id}` })) : items,
       headline: `${s.couldntHeadline(count, noun)} ${textOf(cause, list, count)}`,
+      title: `${count} ${noun}`,
+      meta: textOf(cause, list, count),
       hint: s.couldntHint[cause],
       tone: meta.tone,
       icon: meta.icon,
@@ -221,14 +236,14 @@ export function slotLine(slot: PlanEntry): string {
 }
 
 export interface ToneStyle {
-  tile: { variant: 'status'; status: 'info' | 'spoil' }
-  chip: { kind: 'status'; status: 'info' | 'spoil' }
+  tile: { variant: 'status'; status: 'info' | 'warn' }
+  chip: { kind: 'status'; status: 'info' | 'warn' }
 }
 
-/** Existing tokens only: info is the blue status tile and chip, warn the amber status. */
+/** DS-06: info is the blue status tile and chip, warn the warn (mustard) status; never spoil or danger. */
 export function toneStyle(tone: Tone): ToneStyle {
   if (tone === 'info') return { tile: { variant: 'status', status: 'info' }, chip: { kind: 'status', status: 'info' } }
-  return { tile: { variant: 'status', status: 'spoil' }, chip: { kind: 'status', status: 'spoil' } }
+  return { tile: { variant: 'status', status: 'warn' }, chip: { kind: 'status', status: 'warn' } }
 }
 
 /**
@@ -255,4 +270,76 @@ export function courseCells(slots: Array<PlanSlot | PlanEntry>): PlanEntry[] {
 /** A flat entry already names its Course: it is a cell as it is. */
 function isEntry(slot: PlanSlot | PlanEntry): slot is PlanEntry {
   return (slot as PlanEntry).courseId !== undefined
+}
+
+/** B9-32 (PC-07): the short cause an unfilled Course row names in its one chip ("No Dessert Recipes", "Excluded"). */
+export function shortCause(cause: Cause, courseName?: string | null): string {
+  if (cause === 'no_course_recipes') return courseName ? s.causeChip.course(courseName) : s.causeChip.no_course_recipes
+  return s.causeChip[cause]
+}
+
+/** B9-32 (PC-07): one affected meal in the "Show which meals" sheet. */
+export interface CouldntMeal {
+  id: string
+  key: SlotKey
+  slotName: string
+  /** The Course of the cell; null when the line stands for the whole Meal Slot. */
+  courseName: string | null
+  /** "Choose a Recipe for Dessert, Wed 11 Dinner"; null when nobody attends (nobody to cook for). */
+  chooseLabel: string | null
+  /** Excluded: the cell on Review Exclusions, and the link's name ("Wed 11 Nov · Dinner · Side"). */
+  to?: string
+  linkLabel?: string
+}
+
+export interface CouldntDay {
+  date: string
+  /** "Tue 10 Nov". */
+  label: string
+  meals: CouldntMeal[]
+}
+
+/** B9-32 (PC-07): a cause's affected meals by day, in plan order: one line per cell, or per Meal Slot when the line stands for it (`cellItems`). */
+export function mealsByDay(group: CauseGroup): CouldntDay[] {
+  const days: CouldntDay[] = []
+  const done = new Set<string>()
+  for (const cell of group.slots) {
+    if (cell.courseId === undefined) continue // every cell names its Course (courseCells)
+    const item = group.items.find((i) => i.id === cellId(cell) || i.key === cellId(cell) || i.key === slotKey(cell))
+    const lineKey = item?.key ?? cellId(cell)
+    if (done.has(lineKey)) continue
+    done.add(lineKey)
+    const wholeSlot = item !== undefined && item.key === slotKey(cell)
+    const key: SlotKey = { date: cell.date, mealSlotId: cell.mealSlotId, courseId: cell.courseId }
+    const day = dayLabel(cell.date)
+    const meal: CouldntMeal = {
+      id: lineKey,
+      key,
+      slotName: cell.name,
+      courseName: wholeSlot && group.cause === 'nobody_attending' ? null : (cell.courseName ?? null),
+      chooseLabel: group.cause === 'nobody_attending' ? null : actionName('choose', { course: cell.courseName ?? '', day, slot: cell.name }),
+      ...(item?.to ? { to: item.to, linkLabel: item.text } : {}),
+    }
+    const label = dayMonthOf(cell.date)
+    const last = days[days.length - 1]
+    if (last && last.date === cell.date) last.meals.push(meal)
+    else days.push({ date: cell.date, label, meals: [meal] })
+  }
+  return days
+}
+
+/** "Tue 10 Nov". */
+function dayMonthOf(date: string): string {
+  const [, m, d] = date.split('-').map(Number)
+  return s.dayMonth(weekdayName(date, 'short'), d, MONTHS[(m ?? 1) - 1]!)
+}
+
+/** B9-32 (PC-07): how many cells could not be planned because no Recipe is marked with the Course (the Mark sheet's context). */
+export function unmarkedCount(cells: PlanEntry[], courseId: number): number {
+  return cells.filter((c) => c.courseId === courseId && c.meal === null && c.unfilled && causeOf(c) === 'no_course_recipes').length
+}
+
+/** The name of a Course as the plan's cells give it; '' when no cell names it. */
+export function courseNameIn(cells: PlanEntry[], courseId: number): string {
+  return cells.find((c) => c.courseId === courseId && c.courseName)?.courseName ?? ''
 }

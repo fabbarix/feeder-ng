@@ -681,3 +681,56 @@ func boughtNames(ctx context.Context, q dbtx, mealID int64) ([]string, error) {
 	}
 	return out, rows.Err()
 }
+
+// RecipeMarks is the state Mark and Unmark Recipes decide from: the Course, and which of the asked Recipes have it.
+type RecipeMarks struct {
+	Course course.Course
+	Has    map[int64]bool // asked Recipe id -> already marked with the Course
+}
+
+// RecipeMarksTx reads the Course and the asked Recipes inside q (a transaction or the database). course.ErrNotFound
+// for an unknown Course; course.ErrRecipeIDs when an id is not a Recipe.
+func RecipeMarksTx(ctx context.Context, q dbtx, courseID int64, ids []int64) (RecipeMarks, error) {
+	c, err := getCourse(ctx, q, courseID)
+	if err != nil {
+		return RecipeMarks{}, err
+	}
+	out := RecipeMarks{Course: c, Has: make(map[int64]bool, len(ids))}
+	for _, id := range ids {
+		var known, has int
+		if err := q.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM recipes WHERE id = ?),
+			EXISTS (SELECT 1 FROM recipe_courses WHERE recipe_id = ? AND course_id = ?)`, id, id, courseID).Scan(&known, &has); err != nil {
+			return RecipeMarks{}, err
+		}
+		if known == 0 {
+			return RecipeMarks{}, course.ErrRecipeIDs
+		}
+		out.Has[id] = has == 1
+	}
+	return out, nil
+}
+
+// RecipeMarks reads the same state outside a transaction (the check before a write).
+func (s *Store) RecipeMarks(ctx context.Context, courseID int64, ids []int64) (RecipeMarks, error) {
+	return RecipeMarksTx(ctx, s.db, courseID, ids)
+}
+
+// MarkRecipesTx adds the Course to each Recipe of ids inside q; Recipes that have it already are left alone.
+func MarkRecipesTx(ctx context.Context, q dbtx, courseID int64, ids []int64) error {
+	for _, id := range ids {
+		if _, err := q.ExecContext(ctx, `INSERT OR IGNORE INTO recipe_courses (recipe_id, course_id) VALUES (?, ?)`, id, courseID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// UnmarkRecipesTx takes the Course off each Recipe of ids inside q. A Recipe may be left with no Course ("No Course yet").
+func UnmarkRecipesTx(ctx context.Context, q dbtx, courseID int64, ids []int64) error {
+	for _, id := range ids {
+		if _, err := q.ExecContext(ctx, `DELETE FROM recipe_courses WHERE recipe_id = ? AND course_id = ?`, id, courseID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
