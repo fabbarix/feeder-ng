@@ -18,6 +18,8 @@ const TOUCH = [
   { method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } },
 ]
 const DIALOG = `document.querySelector('dialog.sheet[open]:modal')`
+/** The Leftover portions stepper of Mark as Cooked (named by its <label>, not an aria-label). */
+const STEPPER = `[...(${DIALOG})?.querySelectorAll('[role="spinbutton"]') ?? []].find((e) => [...(e.labels ?? [])].some((l) => l.textContent.trim() === 'Leftover portions') || e.getAttribute('aria-label') === 'Leftover portions')`
 const PLAN_READY = `document.querySelectorAll('main .list-row__target').length > 0 && !document.querySelector('[aria-busy="true"], .skeleton')`
 /** The element (button, menu item or list-row target) whose text or aria-label is `text`, as page code, inside `root`. */
 const named = (root, text) => `[...${root}.querySelectorAll('button, [role="menuitem"], a[href]')].find((e) => (e.getAttribute('aria-label') || e.textContent).trim() === ${JSON.stringify(text)})`
@@ -106,9 +108,9 @@ export default {
       await withSnapshot(async () => {
         await openPlannedSheet('Mark as Cooked')
         await press(named(`${DIALOG}.querySelector('.sheet__footer')`, 'Mark as Cooked'), 'Mark as Cooked in the sheet\'s footer')
-        await until(`!!(${DIALOG}?.querySelector('[role="spinbutton"][aria-label="Leftover portions"]'))`, 'the Mark as Cooked sheet with its Leftover portions stepper', 8000)
+        await until(`!!(${STEPPER})`, 'the Mark as Cooked sheet with its Leftover portions stepper', 8000)
         await assertChrome(false) // Mark as Cooked has no context line (the mock has none): only the footer and Close guards apply
-        const hidden = await evaluate(`(() => { const d = ${DIALOG}; const s = d.querySelector('[role="spinbutton"][aria-label="Leftover portions"]').getBoundingClientRect(); const f = d.querySelector('.sheet__footer').getBoundingClientRect(); return s.bottom > f.top + 1 })()`)
+        const hidden = await evaluate(`(() => { const d = ${DIALOG}; const s = (${STEPPER}).getBoundingClientRect(); const f = d.querySelector('.sheet__footer').getBoundingClientRect(); return s.bottom > f.top + 1 })()`)
         if (hidden) throw new Error('setup: the Leftover portions stepper is hidden behind the footer')
       })
     },
