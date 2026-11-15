@@ -85,24 +85,11 @@
   color: var(--color-muted);
 }
 
-/* A busy trigger (an item's action waits on a read): progress cursor and a pulsing glyph; still and dimmed with reduced motion. */
+/* A busy trigger (an item's action waits on a read): the progress cursor and a muted glyph until the read answers. */
 .icon-button[data-busy] {
   cursor: progress;
 }
 
 .icon-button[data-busy] > svg {
-  animation: menu-busy 0.8s ease-in-out infinite alternate;
-}
-
-@keyframes menu-busy {
-  to {
-    opacity: 0.35;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .icon-button[data-busy] > svg {
-    animation: none;
-    opacity: 0.5;
-  }
+  color: var(--color-muted);
 }

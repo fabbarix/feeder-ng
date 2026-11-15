@@ -42,7 +42,7 @@ export interface MenuProps {
   trigger?: ReactNode
   /** BR-D: the item that takes the focus on open (default: the first). */
   initialFocusId?: string
-  /** An item's action is waiting on a read before it can show (Delete Ingredient's impact read): the trigger is aria-busy and its glyph pulses. */
+  /** An item's action is waiting on a read before it can show (Delete Ingredient's impact read): the trigger is aria-busy and its glyph muted. */
   busy?: boolean
 }
 
