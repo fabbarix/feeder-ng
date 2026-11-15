@@ -10,6 +10,7 @@ export const heroStrings = {
   couldntPlanTitle: "Couldn't plan",
   leftoversTitle: 'Leftovers to use',
   leftoversOverline: 'Leftovers',
-  leftoverRowMeta: (portions: string, useBy: string) => `${portions} · ${useBy}`,
+  /** DS 5: the Use-by leads, so the deciding fact survives a cut ("Use by Thu · 2 portions"). */
+  leftoverRowMeta: (portions: string, useBy: string) => `${useBy} · ${portions}`,
   cookedCheer: 'Cooked, nice one!',
 } as const

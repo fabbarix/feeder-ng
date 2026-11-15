@@ -116,14 +116,14 @@ describe('PlanScreen: Leftovers on a Planned Meal', () => {
 
   it("the From link opens that Leftover's own sheet: portions, Use-by, Storage Place when frozen, and its actions", async () => {
     const sheet = await openLink([chilliFrozen], "From Mon's Chilli")
-    expect(within(sheet).getByText('3 portions · Use by 10 Feb')).toBeInTheDocument()
+    expect(within(sheet).getByText('Use by 10 Feb · 3 portions')).toBeInTheDocument()
     expect(within(sheet).getByText('Garage Freezer')).toBeInTheDocument()
     expect(within(sheet).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== 'Close')).toEqual(['Had it', 'Threw it out', 'Take out'])
   })
 
   it('a Leftover that is not frozen shows no Storage Place and offers Freeze it', async () => {
     const sheet = await openLink([{ ...chilliFrozen, frozen: false, frozenOn: null, storagePlaceId: null, storagePlaceName: null, useBy: '2026-11-14' }], "From Mon's Chilli")
-    expect(within(sheet).getByText('3 portions · Use by Sat')).toBeInTheDocument()
+    expect(within(sheet).getByText('Use by Sat · 3 portions')).toBeInTheDocument()
     expect(within(sheet).queryByText('Garage Freezer')).toBeNull()
     expect(within(sheet).getAllByRole('button').map((b) => b.textContent).filter((t) => t !== 'Close')).toEqual(['Had it', 'Threw it out', 'Freeze it'])
   })
