@@ -3,7 +3,9 @@ import type { CookedAllResult, CookedResult, PlanSlot, SlotDayKey, StockWarning 
 import { planStrings as s } from '../strings'
 import { weekdayName } from './phrase'
 
-export const LEFTOVER_STEP = 0.5
+/** B9-45 (PC-13, decision: quarter portions everywhere): Mark as Cooked's and Mark all Cooked's Leftover move in quarter portions, as the
+ * Leftover sheets do (lib/leftovers PORTION_STEP); 0.25 shows as "0.25", never rounded. */
+export const LEFTOVER_STEP = 0.25
 
 /** The ± control: moves value by direction x step, clamped to [0, max]. */
 export function adjustLeftover(value: number, direction: 1 | -1, max: number, step: number = LEFTOVER_STEP): number {

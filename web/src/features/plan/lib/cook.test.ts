@@ -3,11 +3,11 @@ import type { CookedResult, Leftover } from '../types'
 import { adjustLeftover, cookPath, cookedSuccessText, formatPortions, leftoverOutcome, leftoverOutcomeText } from './cook'
 
 describe('adjustLeftover', () => {
-  it('moves by half a portion and clamps to 0..max', () => {
-    expect(adjustLeftover(2, 1, 4)).toBe(2.5)
-    expect(adjustLeftover(2, -1, 4)).toBe(1.5)
+  it('moves by a quarter portion (B9-45, PC-13) and clamps to 0..max', () => {
+    expect(adjustLeftover(2, 1, 4)).toBe(2.25)
+    expect(adjustLeftover(2, -1, 4)).toBe(1.75)
     expect(adjustLeftover(4, 1, 4)).toBe(4)
-    expect(adjustLeftover(0.5, -1, 4)).toBe(0)
+    expect(adjustLeftover(0.25, -1, 4)).toBe(0)
     expect(adjustLeftover(0, -1, 4)).toBe(0)
   })
 
