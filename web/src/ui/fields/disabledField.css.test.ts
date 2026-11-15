@@ -1,9 +1,8 @@
 // w6a (B9-46 follow-up): a disabled field looks disabled in every shared field, not only with paler text: no fill, a faint outline.
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { readSource } from '../../features/plan/test-css'
 
-const read = (p: string) => readFileSync(resolve(__dirname, p), 'utf8')
+const read = (p: string) => readSource(`ui/fields/${p}`)
 const block = (css: string, selector: string) => {
   const i = css.indexOf(`${selector} {`)
   return i < 0 ? '' : css.slice(i, css.indexOf('}', i))

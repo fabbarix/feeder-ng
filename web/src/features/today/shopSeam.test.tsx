@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({ list: { data: undefined, isLoading: false } as Rec
 vi.mock('../shop/hooks/useShoppingList', () => ({ useShoppingList: () => h.list })) // w6a: shopSeam imports it by path
 
 import { useLinesToGet } from './shopSeam'
+import { readSource } from '../plan/test-css'
 
 const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
 
@@ -27,12 +28,10 @@ describe('useLinesToGet', () => {
 })
 
 describe('Today keeps the Shopping List screen out of the entry chunk (w6a, B9-44 TB-12)', () => {
-  it('no Today module imports the shop barrel (it re-exports ShoppingScreen); hooks come by path', async () => {
-    const { readFileSync, readdirSync } = await import('node:fs')
-    const { join, resolve } = await import('node:path')
-    const root = resolve(__dirname)
-    const files = (dir: string): string[] =>
-      readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(join(dir, e.name)) : /\.tsx?$/.test(e.name) && !/\.test\./.test(e.name) ? [join(dir, e.name)] : []))
-    for (const f of files(root)) expect(readFileSync(f, 'utf8'), f).not.toMatch(/from '(\.\.\/)+shop'/)
+  it('no Today module imports the shop barrel, and the barrel re-exports no screen (the router loads every index eagerly)', () => {
+    const sources = import.meta.glob(['./**/*.ts', './**/*.tsx', '!./**/*.test.*'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+    expect(Object.keys(sources).length).toBeGreaterThan(20)
+    for (const [f, text] of Object.entries(sources)) expect(text, f).not.toMatch(/from '(\.\.\/)+shop'/)
+    expect(readSource('features/shop/index.ts')).not.toMatch(/export \{[^}]*Screen[^}]*\} from/)
   })
 })

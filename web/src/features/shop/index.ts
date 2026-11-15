@@ -5,5 +5,5 @@ import { lazyScreen } from '../../app/lazyScreen'
 export const routes: RouteObject[] = [{ path: '/shop', element: lazyScreen(() => import('./screens/ShoppingScreen'), 'ShoppingScreen') }]
 
 export { useShoppingList } from './hooks/useShoppingList'
-// The Shopping List screen, which Today shows while a scan session is active.
-export { ShoppingScreen } from './screens/ShoppingScreen'
+// w6a: no `export { ShoppingScreen }` here: the router imports this index eagerly, so a static re-export kept the screen (and its
+// stylesheet) in the entry chunk. Today no longer shows the screen (B9-44, TB-12); the route loads it on demand.
