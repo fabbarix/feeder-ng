@@ -13,8 +13,6 @@ export const settingsPreferencesStrings = {
     accent: 'Accent colour',
     customAccent: 'Custom accent colour',
     save: 'Save preferences',
-    preview: 'Preview',
-    previewSample: 'Sample',
     // B9-36 (SAFE-08): the live preview with an explicit Save.
     intro: 'You see each choice across the app at once. Save keeps it on every phone and computer you sign in on.',
     revert: 'Revert',

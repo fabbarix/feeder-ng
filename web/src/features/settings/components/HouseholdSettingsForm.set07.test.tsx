@@ -8,6 +8,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { householdSettings } from './fixtures'
 import { HouseholdSettingsForm } from './HouseholdSettingsForm'
 
+// jsdom has no scrollIntoView; useFocusFirstInvalid scrolls the first invalid field into view before focusing it (B9-36 developer).
+if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {}
+
 const zone = () => screen.getByRole('combobox', { name: 'Time zone' })
 const saveButton = () => screen.getByRole('button', { name: 'Save Household settings' })
 const mount = (props: Record<string, unknown> = {}) => {

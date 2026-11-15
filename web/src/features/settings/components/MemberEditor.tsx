@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { BottomSheet, Button, ColorSwatches, CROP_ASPECTS, EmojiPicker, ImagePicker, Segmented, Select, StepperField, TextField } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
+import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { avatarMode, keepOnLeaving, withAvatarMode, type AvatarMode } from '../lib/memberAvatar'
-import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft, memberEmailProblem, memberFromDraft, memberProblem } from '../lib/memberForm'
+import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft, memberFieldErrors, memberFromDraft, type MemberFieldErrors } from '../lib/memberForm'
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP } from '../lib/portions'
 import { settingsStrings } from '../strings'
 import type { AllowedUser, Member, MemberInput } from '../types'
@@ -17,12 +19,14 @@ export interface MemberEditorProps {
   /** R11a: the signed-in User's id. Their entry in Linked User reads "<name> (you)" and a "This is me" button links them. */
   currentUserId?: number
   saving?: boolean
+  /** A server refusal that belongs to no field: the form's one alert (FormError), above the footer. */
   error?: string
   /** A server refusal of the email (422 / 409 email_taken), shown under the Email field. */
   emailError?: string
   /** Called when the Admin edits the Email field, so the page can clear `emailError`. */
   onEmailEdit?: () => void
   onSave: (input: MemberInput, userId: number | null) => void | Promise<void>
+  /** Remove Member (editing only). The page asks first (the impact confirm). */
   onDelete?: () => void | Promise<void>
   onClose: () => void
 }
@@ -30,54 +34,98 @@ export interface MemberEditorProps {
 const text = settingsStrings.member
 const NO_USER = ''
 
-/** A BottomSheet "Add Member" / "Edit Member": Name, Colour (named swatches, Custom), Avatar (Initials, Emoji or Photo), Portion Factor
- *  stepper (0.25..3, step 0.25), Linked User Select; buttons "Save Member" and "Remove Member" (editing only). */
+/**
+ * A BottomSheet "Add Member" / "Edit Member": Name, Colour (named swatches, Custom), Avatar (Initials, Emoji or Photo), Portion Factor
+ * stepper (0.25..3, step 0.25), Email, Linked User Select. B9-36 (SAFE-02, SAFE-04, SHORT-02): the footer is Cancel and Save Member
+ * (bound to the form), with Remove Member as an outlined danger button when editing (its own row under a divider on a phone, the far
+ * start from 600 px); no Close; a changed sheet asks "Discard changes?" before it goes.
+ */
 export function MemberEditor({ open, member, users, members, currentUserId, saving, error, emailError, onEmailEdit, onSave, onDelete, onClose }: MemberEditorProps) {
+  const formId = useId()
+  const [dirty, setDirty] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  // A fresh sheet starts clean (the form below is keyed by the Member, so its own state starts again too).
+  useEffect(() => {
+    if (!open) setDirty(false)
+  }, [open])
   return (
-    <BottomSheet open={open} onClose={onClose} title={member ? text.editTitle : text.addTitle}>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      onCancel={onClose}
+      confirmDismiss={dirty}
+      title={member ? text.editTitle : text.addTitle}
+      submit={{ label: text.save, form: formId, loading: saving, disabled: photoBusy }}
+      footer={
+        member && onDelete ? (
+          <div className="member-sheet__remove">
+            <Button variant="danger-secondary" disabled={saving} onClick={() => void onDelete()}>
+              {text.remove}
+            </Button>
+          </div>
+        ) : undefined
+      }
+    >
       <MemberForm
         key={member?.id ?? 'new'}
+        id={formId}
         member={member}
         users={users}
         members={members}
         currentUserId={currentUserId}
-        saving={saving}
         error={error}
         emailError={emailError}
         onEmailEdit={onEmailEdit}
         onSave={onSave}
-        onDelete={onDelete}
+        onDirtyChange={setDirty}
+        onPhotoBusy={setPhotoBusy}
       />
     </BottomSheet>
   )
 }
 
-type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'currentUserId' | 'saving' | 'error' | 'emailError' | 'onEmailEdit' | 'onSave' | 'onDelete'>
+type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'currentUserId' | 'error' | 'emailError' | 'onEmailEdit' | 'onSave'> & {
+  id: string
+  onDirtyChange: (dirty: boolean) => void
+  onPhotoBusy: (busy: boolean) => void
+}
 
-function MemberForm({ member, users, members, currentUserId, saving, error, emailError, onEmailEdit, onSave, onDelete }: FormProps) {
-  // PE: Save waits for a Photo that is still uploading.
-  const [photoBusy, setPhotoBusy] = useState(false)
-  const [draft, setDraft] = useState<MemberInput>(() => memberDraft(member))
+function MemberForm({ id, member, users, members, currentUserId, error, emailError, onEmailEdit, onSave, onDirtyChange, onPhotoBusy }: FormProps) {
+  const formRef = useRef<HTMLFormElement>(null)
+  const [initial] = useState<MemberInput>(() => memberDraft(member))
+  const [draft, setDraft] = useState<MemberInput>(initial)
   const [userId, setUserId] = useState<number | null>(member?.userId ?? null)
-  const [problem, setProblem] = useState<string | null>(null)
-  const [emailProblem, setEmailProblem] = useState<string | null>(null)
+  const [errors, setErrors] = useState<MemberFieldErrors>({})
+  const [submitCount, setSubmitCount] = useState(0)
   const [mode, setMode] = useState<AvatarMode>(() => avatarMode(memberDraft(member)))
   const [kept, setKept] = useState<Pick<MemberInput, 'avatar' | 'photo'>>({ avatar: '', photo: '' })
   const set = (patch: Partial<MemberInput>) => setDraft((d) => ({ ...d, ...patch }))
   const offered = availableUsers(users, members, member)
+  const fieldErrors = { ...errors, email: errors.email ?? emailError }
+  useFocusFirstInvalid(formRef, fieldErrors, submitCount)
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial) || userId !== (member?.userId ?? null)
+  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange])
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    const found = memberProblem({ ...draft, email: '' })
-    const bad = found ? null : memberEmailProblem(draft.email ?? '')
-    setProblem(found)
-    setEmailProblem(bad)
-    if (!found && !bad) void onSave(memberFromDraft(draft), userId)
+    const found = memberFieldErrors(draft)
+    setErrors(found)
+    setSubmitCount((n) => n + 1)
+    if (!found.name && !found.portionFactor && !found.email) void onSave(memberFromDraft(draft), userId)
   }
 
   return (
-    <form className="settings__stack" onSubmit={submit} noValidate>
-      <TextField label={text.name} value={draft.name} onChange={(name) => set({ name })} />
+    <form ref={formRef} id={id} className="settings__stack" onSubmit={submit} noValidate>
+      <TextField
+        label={text.name}
+        value={draft.name}
+        error={errors.name}
+        onChange={(name) => {
+          set({ name })
+          setErrors((e) => ({ ...e, name: undefined }))
+        }}
+      />
       <ColorSwatches label={text.colour} swatches={[...MEMBER_COLOURS]} value={draft.colour} onChange={(colour) => set({ colour })} allowCustom />
       <Segmented
         label={text.avatar}
@@ -107,7 +155,7 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
           listenOn="dialog"
           value={draft.photo ?? ''}
           onChange={(photo) => set({ photo })}
-          onBusyChange={setPhotoBusy}
+          onBusyChange={onPhotoBusy}
         />
       ) : null}
       <StepperField
@@ -117,17 +165,21 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
         min={MIN_PORTION_FACTOR}
         max={MAX_PORTION_FACTOR}
         step={PORTION_STEP}
-        onChange={(portionFactor) => set({ portionFactor })}
+        error={errors.portionFactor}
+        onChange={(portionFactor) => {
+          set({ portionFactor })
+          setErrors((e) => ({ ...e, portionFactor: undefined }))
+        }}
       />
       <TextField
         label={text.email}
         type="email"
         helper={text.emailHelper}
-        error={emailProblem ?? emailError}
+        error={fieldErrors.email}
         value={draft.email ?? ''}
         onChange={(email) => {
           set({ email })
-          setEmailProblem(null)
+          setErrors((e) => ({ ...e, email: undefined }))
           onEmailEdit?.()
         }}
       />
@@ -142,21 +194,7 @@ function MemberForm({ member, users, members, currentUserId, saving, error, emai
           {text.thisIsMe}
         </Button>
       ) : null}
-      {problem ?? error ? (
-        <p role="alert" className="settings__error">
-          {problem ?? error}
-        </p>
-      ) : null}
-      <div className="settings__row">
-        <Button type="submit" loading={saving} disabled={photoBusy}>
-          {text.save}
-        </Button>
-        {member && onDelete ? (
-          <Button variant="danger-secondary" disabled={saving} onClick={() => void onDelete()}>
-            {text.remove}
-          </Button>
-        ) : null}
-      </div>
+      <FormError>{error}</FormError>
     </form>
   )
 }

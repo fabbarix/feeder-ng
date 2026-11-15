@@ -8,6 +8,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { anna, marco, sam } from './fixtures'
 import { MemberEditor } from './MemberEditor'
 
+// jsdom has no scrollIntoView; useFocusFirstInvalid scrolls the first invalid field into view before focusing it (B9-36 developer).
+if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {}
+
 const all = [anna, marco, sam]
 const open = (props: Record<string, unknown> = {}) => {
   const handlers = { onSave: vi.fn(), onClose: vi.fn(), onDelete: vi.fn() }

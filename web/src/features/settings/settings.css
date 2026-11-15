@@ -38,8 +38,8 @@
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
 }
-/* "Not saved yet": the info status pair, a 16 px icon and one line of meta text in a bordered box. */
-.prefs__pending {
+/* An info notice ("Not saved yet", the changed time zone): the info status pair, a 16 px icon and one line of meta text in a bordered box. */
+.settings__notice {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
@@ -54,9 +54,13 @@
   /* A sentence of running text: weight 500, never bold (standing ruling). */
   font-weight: 500;
 }
-.prefs__pending > svg {
+.settings__notice > svg {
   flex: none;
   margin-block-start: calc((var(--text-meta-line) - 16px) / 2);
+}
+.settings__field-with-notice {
+  display: grid;
+  gap: var(--space-2);
 }
 .prefs__actions {
   margin-block-start: var(--space-2);

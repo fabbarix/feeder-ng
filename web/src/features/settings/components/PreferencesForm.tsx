@@ -74,7 +74,7 @@ export function PreferencesForm({ value, saved, dirty, onChange, onRevert, savin
         <div className="settings__stack">
           <p className="prefs__intro">{text.intro}</p>
           {summary ? (
-            <p className="prefs__pending" role="status" data-tone="info">
+            <p className="settings__notice" role="status" data-tone="info">
               <Icon name="info" size={16} />
               <span>{summary}</span>
             </p>

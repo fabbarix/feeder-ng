@@ -34,7 +34,6 @@ export const settingsMembersStrings = {
     remove: 'Remove Member',
     // B9-36 (SAFE-04): the Member sheet.
     cancel: 'Cancel',
-    nameRequired: 'Enter a name for the Member.',
     // B9-36 (SAFE-02, SAFE 4): Remove Member asks with what goes, then offers Undo.
     removal: {
       title: (name: string) => `Remove ${name}?`,
@@ -53,7 +52,8 @@ export const settingsMembersStrings = {
       removed: (name: string) => `${name} removed`,
       undoAria: (name: string) => `Undo: put ${name} back`,
       restored: (name: string) => `${name} is back`,
-      impactFailed: (name: string) => `Couldn’t check what goes with ${name}. Nothing was removed.`,
+      /** actionFailed's phrase: "Couldn’t check what goes with Sam". */
+      impactPhrase: (name: string) => `check what goes with ${name}`,
     },
   },
 }

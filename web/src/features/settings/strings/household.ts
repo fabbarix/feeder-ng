@@ -5,6 +5,9 @@ export const settingsHouseholdStrings = {
   form: {
     timeZone: 'Time zone',
     timeZoneFromBrowser: 'Suggested from your browser. Save to confirm it.',
+    // B9-36 (SET-07): what the zone is for and the time there now; the notice once it differs from the stored zone.
+    timeZoneHelper: (clock: string | null) => `Today, the Plan and notifications use it.${clock ? ` It is ${clock} there now.` : ''}`,
+    timeZoneChanged: "Changing the time zone can move today's meals to another day.",
     planningHorizon: 'Planning Horizon (days)',
     cooldown: 'Default Cool-down (days)',
     leftoverUseBy: 'Default Leftover Use-by (days)',

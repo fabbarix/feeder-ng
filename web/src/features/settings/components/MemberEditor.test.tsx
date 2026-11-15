@@ -5,6 +5,9 @@ import { openOptionNames, pickOption } from '../test-utils'
 import { anna, marco, sam } from './fixtures'
 import { MemberEditor } from './MemberEditor'
 
+// jsdom has no scrollIntoView; useFocusFirstInvalid scrolls the first invalid field into view before focusing it (B9-36 developer).
+if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {}
+
 const users = [
   { id: 1, displayName: 'Admin', email: 'admin@example.test' },
   { id: 2, displayName: 'Cook', email: 'cook@example.test' },

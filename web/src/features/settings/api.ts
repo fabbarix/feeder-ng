@@ -16,6 +16,7 @@ import type {
   Preferences,
   SettingsInput,
 } from './types'
+import type { MemberImpact } from './lib/memberRemoval'
 
 export const settingsApi = {
   getSettings: () => http.get<HouseholdSettings>('/api/household/settings'),
@@ -53,4 +54,8 @@ export const settingsApi = {
   removeAllowedUser: (id: number) => http.delete<void>(`/api/allowlist/${id}`),
   getPreferences: () => http.get<Preferences>('/api/me/preferences'),
   savePreferences: (body: Preferences) => http.put<Preferences>('/api/me/preferences', body),
+
+  // B9-36 (SAFE-02, B9-04's routes): what goes with a Member before Remove, and Undo of a removal (restore by id, 10 min).
+  memberImpact: (id: number) => http.get<MemberImpact>(`/api/members/${id}/impact`),
+  restoreMember: (id: number) => http.post<Member>(`/api/members/${id}/restore`),
 }
