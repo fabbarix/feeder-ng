@@ -52,16 +52,18 @@ export async function scanSession(codes) {
     await press(`document.querySelector('.shop-picker .list-row__target[aria-label=' + ${js(js(ids.shopName ?? ''))} + ']')`, `Shop "${ids.shopName}" in the picker`)
   }
   await until(`!!document.querySelector('.scan-screen__split')`, 'the shop session')
-  await until(`!!document.querySelector('.camera-failure')`, 'the no-camera block (a headless Chrome has no camera)', 15000)
+  // B9-35 (SSP-06): a headless Chrome has no camera, so the camera bar shows and the typed entry is open under it (no button to press).
+  // With a camera (a scenario's fake one) the entry opens with "Type a barcode".
+  await until(`!!document.querySelector('.scan-screen__split [data-typed-entry]') || !!document.querySelector('.scan-screen__split button[aria-controls][aria-expanded]')`, 'the typed entry (a headless Chrome has no camera)', 15000)
   for (const code of codes) {
     const before = await evaluate(SCANNED_ROWS)
-    if (!(await evaluate(`!!document.querySelector('.camera-failure input')`))) await press(byText('.camera-failure button', 'Type the barcode instead'), '"Type the barcode instead"')
-    await until(`!!document.querySelector('.camera-failure input')`, 'the barcode field')
-    if (!(await evaluate(typeInto('.camera-failure input', code)))) throw new Error('setup: the barcode field went away')
-    await press(`document.querySelector('.camera-failure button[type=submit]')`, '"Use this barcode"')
+    if (!(await evaluate(`!!document.querySelector('[data-typed-entry] input')`))) await press(byText('button[aria-controls][aria-expanded]', 'Type a barcode'), '"Type a barcode"')
+    await until(`!!document.querySelector('[data-typed-entry] input')`, 'the barcode field')
+    if (!(await evaluate(typeInto('[data-typed-entry] input', code)))) throw new Error('setup: the barcode field went away')
+    await press(`document.querySelector('[data-typed-entry] button[type=submit]')`, '"Use this barcode"')
     const t0 = Date.now()
     await until(`${SCANNED_ROWS} > ${before} || !!document.querySelector('dialog.sheet[open]')`, `the scan of ${code}`).catch(async (e) => {
-      const seen = await evaluate(`JSON.stringify({ rows: ${SCANNED_ROWS}, before: ${before}, input: document.querySelector('.camera-failure input')?.value, main: (document.querySelector('main')?.innerText || '').replace(/\\s+/g, ' ').slice(0, 400), toasts: [...document.querySelectorAll('.toast')].map((t) => t.innerText) })`).catch(() => '?')
+      const seen = await evaluate(`JSON.stringify({ rows: ${SCANNED_ROWS}, before: ${before}, input: document.querySelector('[data-typed-entry] input')?.value, main: (document.querySelector('main')?.innerText || '').replace(/\\s+/g, ' ').slice(0, 400), toasts: [...document.querySelectorAll('.toast')].map((t) => t.innerText) })`).catch(() => '?')
       throw new Error(`${e.message} [${seen}]`)
     })
     if (process.env.PAGE_LAYOUT_DEBUG) console.error(`   scan ${code}: ${Date.now() - t0}ms`)

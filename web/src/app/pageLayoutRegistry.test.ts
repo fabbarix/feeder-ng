@@ -107,12 +107,15 @@ const ADDED = {
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
   // B9-25: scenarios/b9-25.mjs (order 340): timer-pill and timer-pill-editor (PC-04). No rule number: the setup measures the pill and throws on a finding.
+  // B9-35: scenarios/b9-35.mjs (order 340, after b9-25 by file name): scan-typed (no camera, P12 and P30), scan-camera-typed and scan-camera-landscape (a fake camera).
+  // scan-price-keypad (scenarios/scan.mjs) is also a P43 scenario now: its setup shows a toast while the Price keypad is open.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   scenarios: [
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'toast-pricing', 'toast-over-bar',
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
     'timer-pill', 'timer-pill-editor',
+    'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',
     'offline-unknown', 'error-state-fast',
   ],
 }

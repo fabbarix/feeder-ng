@@ -34,10 +34,11 @@ const NOTHING_TYPED: PriceEntry = { basis: 'pack', cents: null, packCents: null,
 
 export function PriceEntrySheet({ row, shopName, currency, locale, pack, last, weighed, initialPerKgCents, hasNext, error, onNext, onSave, onClose, entryKey }: PriceEntrySheetProps) {
   const keypad = useRef<PriceKeypadHandle>(null)
-  // The header X closes like Escape and the keypad's Close: through the keypad, which keeps a valid typed Price.
+  // Escape closes like the keypad's Close: through the keypad, which keeps a valid typed Price.
   const close = () => (keypad.current ? keypad.current.close() : onClose(NOTHING_TYPED))
   return (
-    <BottomSheet open modal={false} size="half" title={scanStrings.priceOf(row.name)} onClose={close}>
+    // SSP-12 (R-B): the keypad's own footer Close is the only Close; the header has none. Escape still closes with what was typed.
+    <BottomSheet open modal={false} size="half" title={scanStrings.priceOf(row.name)} onClose={close} closeButton={false}>
       <PriceKeypad
         ref={keypad}
         key={entryKey ?? row.key}

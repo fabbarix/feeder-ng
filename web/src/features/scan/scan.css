@@ -39,11 +39,6 @@
   color: var(--color-muted);
 }
 
-.camera-failure {
-  display: grid;
-  gap: var(--space-3);
-}
-
 .shop-picker {
   display: grid;
   gap: var(--space-3);
@@ -66,6 +61,48 @@
 .scan-sheet-form {
   display: grid;
   gap: var(--space-3);
+}
+
+/* SSP-06: the typed entry is one row: the Barcode field takes the room, Use its own width, level with the field's box. The field's
+   frame steps aside (display: contents), so its label sits above the row and its helper and error run under both, as one line where
+   they fit. Back to the camera takes a row of its own. */
+.typed-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  row-gap: var(--space-1);
+}
+
+.typed-entry > .ui-field {
+  display: contents;
+}
+
+.typed-entry .ui-field__label,
+.typed-entry .ui-field__helper,
+.typed-entry .ui-field__error {
+  grid-column: 1 / -1;
+}
+
+.typed-entry .ui-field__control {
+  grid-column: 1;
+}
+
+.typed-entry__use {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  min-block-size: 48px;
+}
+
+.typed-entry__back {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-block-start: var(--space-2);
+}
+
+/* SSP-06: a new row scrolled into view stays clear of the bottom bar. */
+.scan-screen__list .list-row {
+  scroll-margin-block-end: var(--nav-clearance);
 }
 
 /* Shop Location: "You seem to be at Coop (40 m)." with a switch button, under the header. */

@@ -29,9 +29,8 @@ function setup(over: Partial<PriceEntrySheetProps> = {}) {
   const view = render(<PriceEntrySheet {...props} />)
   return { props, ...view }
 }
-// The sheet has two buttons named "Close": the BottomSheet header's X and the keypad's own Close. Each query is scoped.
+// B9-35: the sheet has one button named "Close", the keypad's own (the BottomSheet header has none).
 const keypadClose = () => within(document.querySelector<HTMLElement>('.price-keypad')!).getByRole('button', { name: 'Close' })
-const headerClose = () => within(document.querySelector<HTMLElement>('.sheet__header')!).getByRole('button', { name: 'Close' })
 const tap = async (keys: string) => {
   for (const k of keys) await userEvent.click(screen.getByRole('button', { name: k === '.' ? 'Decimal separator' : k }))
 }
@@ -116,23 +115,22 @@ describe('PriceEntrySheet', () => {
     expect(props.onSave).not.toHaveBeenCalled()
   })
 
-  it('Close, the sheet header Close and Escape each fire onClose once', async () => {
+  // B9-35 (SSP-12, R-B): the keypad footer is Close (outlined secondary) and the primary; the sheet header has no Close. Escape and the
+  // keypad's Close keep the typed Price. (Before: the header X also closed it; the two "Close" buttons are now one.)
+  it('Close and Escape each fire onClose once, and the sheet header has no Close', async () => {
     const first = setup()
+    expect(document.querySelector('.sheet__header .close-button')).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(1)
+    expect(keypadClose()).toHaveAttribute('data-variant', 'secondary')
     await userEvent.click(keypadClose())
     expect(first.props.onClose).toHaveBeenCalledTimes(1)
     first.unmount()
 
-    // beta.7 polish: the header X keeps the typed Price like Escape and the keypad's Close (it closed with nothing typed before).
-    const header = setup()
-    await tap('2')
-    await userEvent.click(headerClose())
-    expect(header.props.onClose).toHaveBeenCalledTimes(1)
-    expect(header.props.onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 200, packCents: 200, perKgCents: null })
-    header.unmount()
-
     const escape = setup()
+    await tap('2')
     await userEvent.keyboard('{Escape}')
     expect(escape.props.onClose).toHaveBeenCalledTimes(1)
+    expect(escape.props.onClose).toHaveBeenCalledWith({ basis: 'pack', cents: 200, packCents: 200, perKgCents: null })
   })
 
   it('Close hands over the typed entry (the screen saves a valid one and discards an empty one)', async () => {
