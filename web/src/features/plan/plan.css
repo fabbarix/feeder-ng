@@ -115,10 +115,11 @@
 .couldnt-meals__day-title {
   margin: 0;
 }
+/* A running sentence ("Side at Friday dinner, plus Dessert at Friday dinner") is never set bold; the section's title is. */
 .couldnt-meals__summary {
-  font-size: var(--text-body-strong-size);
-  line-height: var(--text-body-strong-line);
-  font-weight: 700;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: 500;
 }
 .couldnt-meals__hint {
   font-size: var(--text-body-size);

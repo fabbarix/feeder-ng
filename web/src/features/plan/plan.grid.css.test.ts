@@ -110,3 +110,11 @@ describe('the "+N" chip of a row', () => {
     expect(bodyOf(".plan-row__chips .chip[data-kind='count']")).toMatch(/min-inline-size\s*:\s*1\.625rem/)
   })
 })
+
+describe('the "Show which meals" sheet', () => {
+  it('sets its summary sentence at weight 500, never bold (no running sentence is bold)', () => {
+    const b = bodyOf('.couldnt-meals__summary')
+    expect(b).toMatch(/font-weight\s*:\s*500/)
+    expect(b).not.toMatch(/font-weight\s*:\s*(6|7|8)00/)
+  })
+})
