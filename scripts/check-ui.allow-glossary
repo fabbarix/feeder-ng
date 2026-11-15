@@ -52,3 +52,6 @@ web/src/features/import/strings.ts bill  # "Anthropic reports a billing problem"
 web/src/features/ingredients/strings.ts food  # kind label (Food | Supply, "This is food", "Change to food") and the kind_differs merge copy
 web/src/lib/baseRecipes/strings.ts food  # differentKinds: "not both food or both Supplies" (kind_differs merge toast)
 web/src/features/stock/strings.ts food  # stockFilter kind label (Food | Supplies) of the Pantry's Food or Supplies filter
+# "unit" is on Portion's Avoid list (a Portion is never "a unit"). RX-08's DurationField names its time-unit Select "<label> unit"
+# ("Lead time unit", "Duration unit"), as the chapter requires: there "unit" is min, h or d, never a Portion.
+web/src/ui/fields/strings.ts unit  # durationUnit: the accessible name of DurationField's min | h | d Select
