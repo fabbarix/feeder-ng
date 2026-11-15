@@ -36,7 +36,8 @@
   .segmented,
   .stepper__value,
   .price-keypad__key,
-  .switch {
+  .switch,
+  :root .your-menu-button {
     border: 1px solid ButtonText;
   }
 
@@ -87,8 +88,18 @@
     color: HighlightText;
   }
 
-  .side-rail__link[aria-current='page'] {
+  /* app/shell.css loads after this layer and keeps the link box unfilled (R-F: the shape is the squircle or the pill), so the shell's
+     own shapes are named with :root in front: the squircle and the rail pill are Highlight, their label stays CanvasText on Canvas. */
+  :root .bottom-bar__link[aria-current='page'] .bottom-bar__icon,
+  :root .side-rail__link[aria-current='page'] .side-rail__pill {
+    forced-color-adjust: none;
+    background: Highlight;
     color: HighlightText;
+  }
+
+  :root .bottom-bar__link[aria-current='page'],
+  :root .side-rail__link[aria-current='page'] {
+    color: CanvasText;
   }
 
   /* Switch thumb. */

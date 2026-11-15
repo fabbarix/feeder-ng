@@ -9,6 +9,7 @@ import { useEscapeKey } from './hooks/useEscapeKey'
 import { useHouseholdTimers, type HouseholdTimers } from './hooks/useHouseholdTimers'
 import { useShellTimerOpen, type ShellTimerOpen } from './hooks/useShellTimerOpen'
 import { useTimerPillDock } from './hooks/useTimerPillDock'
+import { useTimerPillTop } from './hooks/useTimerPillTop'
 import { ShellTimerBanner } from './ShellTimerBanner'
 import { TimersSheet } from './TimersSheet'
 import './ShellTimers.css'
@@ -30,9 +31,15 @@ function Alert({ timers, open }: { timers: HouseholdTimers; open: ShellTimerOpen
 function Pill({ head, more, nameSeconds, onOpen }: { head: ShellTimer; more: number; nameSeconds: number; onOpen: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   const dock = useTimerPillDock(ref, true)
-  const style = dock ? ({ '--timer-pill-dock-x': `${dock.x}px`, '--timer-pill-dock-y': `${dock.y}px` } as CSSProperties) : undefined
+  // B9-55: where the bottom stack would pass the chrome budget, the pill sits in the top bar instead (not while it docks in the bar).
+  const top = useTimerPillTop(ref, dock === null)
+  const style = dock
+    ? ({ '--timer-pill-dock-x': `${dock.x}px`, '--timer-pill-dock-y': `${dock.y}px` } as CSSProperties)
+    : top
+      ? ({ '--timer-pill-top-x': `${top.x}px`, '--timer-pill-top-width': `${top.maxWidth}px` } as CSSProperties)
+      : undefined
   return (
-    <div ref={ref} className="shell-timer" data-state={head.state} data-docked={dock ? '' : undefined} style={style}>
+    <div ref={ref} className="shell-timer" data-state={head.state} data-docked={dock ? '' : undefined} data-top={!dock && top ? '' : undefined} style={style}>
       <TimerPill label={head.title} seconds={head.seconds} running={head.state !== 'paused'} nameSeconds={nameSeconds} more={more} onOpen={onOpen} />
     </div>
   )
