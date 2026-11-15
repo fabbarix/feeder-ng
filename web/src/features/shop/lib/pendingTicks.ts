@@ -95,8 +95,28 @@ function applyToExtra(extra: ShoppingExtra, op: Op, who: string): ShoppingExtra 
   return withAdditions(extra, all.filter((a) => a.clientUuid !== op.tickClientUuid), extra.tick)
 }
 
-/** The list as the phone shows it with the queued Ticks applied, in queue order; never mutates `list`. `complete` stays the server's. */
-export function applyPending(list: ShoppingList, ops: readonly Op[], ctx: { who: string }): ShoppingList {
+/**
+ * On the phone `syncedAt: null` means "waiting in the offline queue". The server sends null for a Tick made online (it never waited), so
+ * every addition the server sent reads as synced at the time it was ticked. The same list when there is nothing to change; never mutates it.
+ */
+export function markSynced(list: ShoppingList): ShoppingList {
+  const fix = <T extends Ticked>(item: T): T => {
+    const adds = item.tick?.additions
+    if (!adds || !adds.some((a) => a.syncedAt === null)) return item
+    return { ...item, tick: { ...item.tick!, additions: adds.map((a) => (a.syncedAt === null ? { ...a, syncedAt: a.tickedAt } : a)) } }
+  }
+  const lines = list.lines.map(fix)
+  const extras = list.extras.map(fix)
+  const changed = lines.some((l, i) => l !== list.lines[i]) || extras.some((e, i) => e !== list.extras[i])
+  return changed ? { ...list, lines, extras } : list
+}
+
+/**
+ * The list as the phone shows it with the queued Ticks applied, in queue order (the server's additions read as synced: markSynced); never
+ * mutates `list`. `complete` stays the server's.
+ */
+export function applyPending(server: ShoppingList, ops: readonly Op[], ctx: { who: string }): ShoppingList {
+  const list = markSynced(server)
   const ticks = ops.filter(isTickOp)
   if (ticks.length === 0) return list
   let lines = list.lines
