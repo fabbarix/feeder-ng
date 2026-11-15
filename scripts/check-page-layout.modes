@@ -1,6 +1,9 @@
 # Per-route mode of the page-layout guard (scripts/check-page-layout.sh). warn = findings are printed, the run passes.
-# An adoption package flips its routes to fail when it merges (patterns: exact, :id, trailing /*).
-default=warn
+# B9-55 (release state, plan section 6 "Done"): every route fails on every rule, at every viewport, 375 included. A route added later
+# is guarded too (default=fail). scripts/check-page-layout.modes.d/ holds no file; the mechanisms (warn_routes, the width bridge,
+# Pnn@/route) stay for a later wave and are described in scripts/lib/page-layout/README.md.
+default=fail
+# The fail lists the adoption packages wrote stay as their record; with default=fail they change nothing.
 fail_routes=/settings /settings/household /settings/preferences /settings/members /settings/courses /settings/notifications /settings/tags /settings/allowlist /settings/shops /settings/shops/:id /ingredients /ingredients/:id /products /products/:id /settings/recipe-assistant /settings/meal-slots /pantry /shop /scan /recipes/import /recipes/export /board /cook/* /recipes/:id /recipes/:id/edit /recipes/new / /plan /plan/couldnt-plan/excluded
 # beta.7 (H8, RR5): the Supplies pages and the receipt screens fail on their findings from the start.
 fail_routes=/supplies /supplies/:id /scan/receipt /scan/receipt/review

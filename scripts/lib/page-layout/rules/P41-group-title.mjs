@@ -7,7 +7,7 @@ const f = (text) => ({ rule: 'P41', message: `P41 ${text}` })
 export default {
   id: 'P41',
   title: 'A grouped list without a visible ListGroup title (SSP-03)',
-  always: false,
+  always: true, // B9-55: always fail at release (plan section 9)
   evaluate(m, _ctx) {
     const out = []
     for (const g of m.untitledGroups ?? []) out.push(f(`${g.sel} "${g.label}" is one of several lists but has no visible heading; pass a title to ListGroup (a group is never named only for assistive technology)`))

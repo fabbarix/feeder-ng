@@ -22,19 +22,20 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   ruleWarnFor: (text: string, rule: string, label: string) => { rule: string; pattern: string; until: string | null } | null
 }
 
-const modes = 'default=warn\nfail_routes=/pantry /settings/*\nP41@/pantry = warn until B9-29\nP40@/settings/tags = warn\n'
+// B9-55: P40 and P41 are always fail at release, so the mechanism is shown with two rules that are still by mode (P11, P12).
+const modes = 'default=warn\nfail_routes=/pantry /settings/*\nP11@/pantry = warn until B9-29\nP12@/settings/tags = warn\n'
 const line = (route: string, rule: string, w = 390) => `  - ${w}px ${route}: ${rule} something`
 
 describe('parseModes: Pnn@/route = warn', () => {
   it('reads the rule, the pattern and the optional until', () => {
     expect(rules.parseModes(modes).errors).toEqual([])
     expect(rules.parseModes(modes).ruleWarn).toEqual([
-      { rule: 'P41', pattern: '/pantry', until: 'B9-29' },
-      { rule: 'P40', pattern: '/settings/tags', until: null },
+      { rule: 'P11', pattern: '/pantry', until: 'B9-29' },
+      { rule: 'P12', pattern: '/settings/tags', until: null },
     ])
   })
   it('a malformed line, a fail mode or an always-fail rule is an error, never dropped', () => {
-    for (const bad of ['P41@pantry = warn', 'P41@/pantry = fail', 'P41@/pantry', 'P41 @ /pantry = warn later', 'P1@/pantry = warn']) {
+    for (const bad of ['P11@pantry = warn', 'P11@/pantry = fail', 'P11@/pantry', 'P11 @ /pantry = warn later', 'P1@/pantry = warn']) {
       expect(rules.parseModes(bad).errors, bad).toHaveLength(1)
     }
   })
@@ -45,17 +46,17 @@ describe('parseModes: Pnn@/route = warn', () => {
 
 describe('countFindings with a per-rule line', () => {
   it('the named rule warns on the named route and its scenarios; it is counted per line', () => {
-    const out = [line('/pantry', 'P41'), line('/pantry#text-spacing', 'P41'), line('/settings/tags', 'P40')].join('\n')
+    const out = [line('/pantry', 'P11'), line('/pantry#text-spacing', 'P11'), line('/settings/tags', 'P12')].join('\n')
     expect(rules.countFindings(modes, out).fail).toBe(0)
     expect(rules.countRuleWarned(modes, out)).toEqual([
-      { rule: 'P41', pattern: '/pantry', until: 'B9-29', n: 2 },
-      { rule: 'P40', pattern: '/settings/tags', until: null, n: 1 },
+      { rule: 'P11', pattern: '/pantry', until: 'B9-29', n: 2 },
+      { rule: 'P12', pattern: '/settings/tags', until: null, n: 1 },
     ])
   })
   it('another rule on that route, or the rule on another route, keeps the route mode', () => {
-    expect(rules.countFindings(modes, line('/pantry', 'P40')).fail).toBe(1)
-    expect(rules.countFindings(modes, line('/settings/members', 'P40')).fail).toBe(1)
-    expect(rules.countFindings(modes, line('/supplies', 'P41')).fail).toBe(0) // default warn
+    expect(rules.countFindings(modes, line('/pantry', 'P12')).fail).toBe(1)
+    expect(rules.countFindings(modes, line('/settings/members', 'P12')).fail).toBe(1)
+    expect(rules.countFindings(modes, line('/supplies', 'P11')).fail).toBe(0) // default warn
   })
   it('a line with no finding is still reported, with 0', () => {
     expect(rules.countRuleWarned(modes, '').map((w) => w.n)).toEqual([0, 0])
@@ -115,22 +116,21 @@ describe("w2a's drop-in is gone (B9-19 removed P36 on Your preferences in w2c; B
   })
 })
 
-describe("w4d's drop-in (ruling: P38 warns on /products/:id until B9-55; w6a deleted the four routes clean since w4b and w5a; /plan and / keep failing on it)", () => {
+// B9-55 (release state): the drop-in is deleted; P38 is always fail, so /products/:id fails on it too (strings.deletePriceName).
+describe("w4d's drop-in is deleted at B9-55 (ruling: P38 warned on /products/:id until B9-55; /plan and / keep failing on it)", () => {
   const dir = resolve(cwd, '../scripts/check-page-layout.modes.d')
-  const own = readFileSync(resolve(dir, '41-b9-32-p38-routes-warn'), 'utf8')
   const base = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
   const all = `${base}\n${readdirSync(dir)
     .filter((n) => !n.startsWith('.'))
     .sort()
     .map((n) => readFileSync(resolve(dir, n), 'utf8'))
     .join('\n')}`
-  it('is exactly the one P38 line left with its owner, and no whole route', () => {
-    expect(rules.parseModes(own).errors).toEqual([])
-    expect(rules.parseModes(own).ruleWarn).toEqual([{ rule: 'P38', pattern: '/products/:id', until: 'B9-55' }])
-    expect(own).not.toMatch(/^\s*(warn_routes|fail_routes|default|width)\b/m)
+  it('is gone: no P38 line is left', () => {
+    expect(existsSync(resolve(dir, '41-b9-32-p38-routes-warn'))).toBe(false)
+    expect(rules.parseModes(all).ruleWarn).toEqual([])
   })
-  it('warns P38 on /products/:id only; the four routes w6a cleared fail on it again', () => {
-    expect(rules.ruleWarnFor(all, 'P38', '/products/:id')).not.toBeNull()
+  it('P38 fails on /products/:id too; the four routes w6a cleared fail on it', () => {
+    expect(rules.ruleWarnFor(all, 'P38', '/products/:id')).toBeNull()
     expect(rules.ruleWarnFor(all, 'P1', '/products/:id')).toBeNull()
     for (const route of ['/recipes/:id/edit', '/recipes/:id/edit#recipe-editor-guard', '/shop', '/shop#shop-hints', '/scan#scan-price-keypad', '/scan/receipt/review#receipt-review']) {
       expect(rules.ruleWarnFor(all, 'P38', route), route).toBeNull()

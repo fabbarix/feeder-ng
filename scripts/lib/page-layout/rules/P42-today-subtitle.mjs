@@ -7,7 +7,7 @@ const f = (text) => ({ rule: 'P42', message: `P42 ${text}` })
 export default {
   id: 'P42',
   title: 'A .page-header__subtitle other than the Household date on Today (RES-05)',
-  always: false,
+  always: true, // B9-55: always fail at release (plan section 9)
   evaluate(m, ctx) {
     const s = m.todaySubtitle
     if (!s || ctx?.route !== '/') return []

@@ -15,7 +15,7 @@ const px = (n) => String(Math.round(n * 10) / 10)
 export default {
   id: 'P36',
   title: 'A target under 44 px on touch profiles, or two overlapping targets (A11Y-09)',
-  always: false,
+  always: true, // B9-55: always fail at release (plan section 9)
   evaluate(m, _ctx) {
     const t = m.targets
     if (!t || !t.coarse || !Array.isArray(t.items)) return []

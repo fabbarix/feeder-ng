@@ -7,7 +7,7 @@ const f = (text) => ({ rule: 'P40', message: `P40 ${text}` })
 export default {
   id: 'P40',
   title: 'A .list-row__title or a field error narrower than 120 px (SET)',
-  always: false,
+  always: true, // B9-55: always fail at release (plan section 9)
   evaluate(m, _ctx) {
     const out = []
     for (const n of m.narrowText ?? []) {

@@ -106,7 +106,7 @@ export function collectP27Metrics() {
 export default {
   id: 'P27',
   title: 'At a 24 px text size: off-role text, or a heading larger than the page title (DS-07, DS-08)',
-  always: false,
+  always: true, // B9-55: always fail at release (plan section 9)
   evaluate(m, ctx) {
     return m.p27Census ? evaluate(m.p27Census, ctx) : []
   },

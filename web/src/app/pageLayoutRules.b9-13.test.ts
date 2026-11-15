@@ -25,12 +25,13 @@ const run = (extra: Record<string, unknown>, rule: string, width = 390, route = 
   api.evaluateMetrics({ ...base(width), ...extra }, { width, route, kind: 'wide' }).filter((f) => f.rule === rule)
 
 describe('registration', () => {
-  it('P24 always fails; P28, P40 and P41 are by mode (plan section 9)', () => {
+  // B9-55 (plan section 9, "by mode -> B9-55"): P28, P40 and P41 are always fail at release.
+  it('P24 always fails; P28, P40 and P41 always fail since B9-55 (plan section 9)', () => {
     const by = Object.fromEntries(api.RULES.map((r) => [r.id, r]))
     expect(by.P24!.always).toBe(true)
-    for (const id of ['P28', 'P40', 'P41']) expect(by[id]!.always, id).toBe(false)
+    for (const id of ['P28', 'P40', 'P41']) expect(by[id]!.always, id).toBe(true)
     expect(api.ALWAYS_FAIL).toContain('P24')
-    for (const id of ['P28', 'P40', 'P41']) expect(api.ALWAYS_FAIL).not.toContain(id)
+    for (const id of ['P28', 'P40', 'P41']) expect(api.ALWAYS_FAIL).toContain(id)
   })
   it('the four probes fill their keys', () => {
     const keys = Object.fromEntries(api.PROBES.map((p) => [p.name, p.key]))

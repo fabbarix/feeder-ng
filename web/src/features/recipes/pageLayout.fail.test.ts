@@ -40,7 +40,7 @@ describe('page-layout guard modes (R2-1)', () => {
     for (const route of ['/recipes/7', '/plan', '/stock']) expect(rules.modeFor(text, route)).toBe('fail')
     for (const route of ['/recipes/import', '/recipes/export', '/shop']) expect(rules.modeFor(text, route)).toBe('warn')
   })
-  it('keeps the default in warn mode', () => {
-    expect(modes).toMatch(/^default=warn$/m)
+  it('the default is fail since B9-55 (a route nobody listed is guarded too)', () => {
+    expect(modes).toMatch(/^default=fail$/m)
   })
 })

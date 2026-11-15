@@ -1,3 +1,0 @@
-# B9-13: P40 and P41 (by mode) find today's screens, so they warn on these routes, and only these two rules, until the packages
-# that clear them land; every other rule keeps the route's mode. Each package deletes its own line when its route is clean.
-#   (B9-29 cleared P41 on /pantry; B9-51 cleared P40 on /settings/tags and /settings/recipe-assistant. All lines are deleted.)

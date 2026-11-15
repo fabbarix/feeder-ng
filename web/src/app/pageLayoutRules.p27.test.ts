@@ -152,9 +152,9 @@ describe('P27 and font-24 in the page-layout registry', () => {
     scenarios: string[]
     source: string
   }
-  it('the rule is P27, by mode, and reads the census from its own metrics key', () => {
+  it('the rule is P27, always fail since B9-55, and reads the census from its own metrics key', () => {
     expect(rule.id).toBe('P27')
-    expect(rule.always).toBe(false)
+    expect(rule.always).toBe(true)
     expect(probe.key).toBe('p27Census')
     expect(rule.evaluate({}, ctx)).toEqual([])
     expect(rule.evaluate({ p27Census: at(24, { texts: [{ sel: 'p.x', px: 21 }] }) }, ctx).map((f) => f.rule)).toEqual(['P27'])

@@ -6,7 +6,7 @@ const f = (text) => ({ rule: 'P28', message: `P28 ${text}` })
 export default {
   id: 'P28',
   title: 'A two-line navigation description is cut (DS-10)',
-  always: false,
+  always: true, // B9-55: always fail at release (plan section 9)
   evaluate(m, _ctx) {
     const out = []
     for (const c of m.cutNavMeta ?? []) out.push(f(`${c.sel} "${c.label}" is cut at its second line; shorten the description (system.md 3)`))

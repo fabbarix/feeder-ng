@@ -28,11 +28,11 @@ const run = (targets: unknown, width = 390) => api.evaluateMetrics({ ...base(wid
 const item = (i: number, sel: string, x: number, y: number, w: number, h: number, extra: Partial<Item> = {}): Item => ({ i, sel, w, h, hit: { x, y, r: x + w, b: y + h }, anc: [], inline: false, ...extra })
 
 describe('P36: a touch target under 44 px, or two that overlap (A11Y-09)', () => {
-  it('is active and by mode, not always-fail (plan section 9)', () => {
+  it('is active and always fail since B9-55 (plan section 9, "by mode -> B9-55")', () => {
     const rule = api.RULES.find((r) => r.id === 'P36')
     expect(rule).toBeDefined()
-    expect(rule!.always).toBe(false)
-    expect(api.ALWAYS_FAIL).not.toContain('P36')
+    expect(rule!.always).toBe(true)
+    expect(api.ALWAYS_FAIL).toContain('P36')
     expect(rule!.title).toMatch(/44 px/)
   })
 
