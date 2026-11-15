@@ -1,46 +1,43 @@
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { MarkCookedSheet, ShortfallNotice, StockCorrectionSheet, useMarkCooked, useStockSheet } from '../../plan'
-import { mayResolve } from '../../plan/lib/resolve'
-import { leftoverOutcomeText } from '../../plan/lib/cook'
+import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createBrowserSpeech } from '../adapters/speech'
 import { createWakeLock } from '../adapters/wakeLock'
 import { createWebAudioAlarm } from '../adapters/alarm'
 import { AdvanceStepsTile } from '../components/AdvanceStepsTile'
 import { CookNavTiles } from '../components/CookNavTiles'
-import { CookedConfirmation } from '../components/CookedConfirmation'
-import { CookTimerStrip } from '../components/CookTimerStrip'
+import { CookIngredientsSheet, RailIngredients } from '../components/CookReadyParts'
+import { GetReadyTile } from '../components/GetReadyTile'
+import { CookTimers, CookTimerSheets } from '../components/CookTimers'
 import { BaseCoveredLines } from '../components/BaseCoveredLines'
 import { CookTopRow } from '../components/CookTopRow'
 import { StepTile } from '../components/StepTile'
 import { useCoachMark } from '../hooks/useCoachMark'
+import { useCookReady } from '../hooks/useCookReady'
 import { useCookSession } from '../hooks/useCookSession'
 import { useFormatUse } from '../hooks/useFormatUse'
 import { useTimerAlarm, useVoiceCommands, useVoicePreference, useWakeLock } from '../hooks/useDevice'
+import { useCookTimerPanel } from '../hooks/useCookTimerPanel'
 import { useStepGate } from '../hooks/useStepGate'
 import { useTimers } from '../hooks/useTimers'
-import { advanceOnScreen } from '../lib/advance'
-import { cookSourceFrom, exitPathFor, timelineTargetFrom, type CookRouteParams } from '../lib/scope'
+import { originOf, returnTarget } from '../lib/origin'
+import { cookSourceFrom, exitPathFor, scopeOf, timelineTargetFrom, type CookRouteParams } from '../lib/scope'
 import { TimelineCookScreen } from './TimelineCookScreen'
 import type { VoiceCommand } from '../lib/voice'
+import type { CookView } from '../types'
 import { cookStrings } from '../strings'
-import { Button, EmptyState, useBreakpoint } from '../../../ui'
+import { Button, EmptyState } from '../../../ui'
+import { useDocumentTitle } from '../../../ui/lib/useDocumentTitle'
 import '../cook.css'
 
 /**
- * Cook Mode. Routes: /cook/meal/:date/:slotId and /cook/recipe/:id (?batches=, default 1).
- * Composes (render + wire only) useCookSession, useTimers() (every household timer), useTimerAlarm,
- * useWakeLock(createWakeLock()), useVoiceCommands(createBrowserSpeech()) with
- * useVoicePreference, useCoachMark, and: CookTopRow (Exit, the Step pill, voice), AdvanceStepsTile (before Step 1
- * only), StepTile (tapZones and the coach mark on a tablet-width viewport), CookTimerStrip, CookNavTiles.
- * Exit goes to exitPathFor(source). Voice commands: next/back
- * call the session, repeat bumps repeat, startTimer calls startStepTimer, pauseTimer
- * pauses the first running timer. Mark as Cooked opens T11's MarkCookedSheet through
- * useMarkCooked(markCookedKey) from features/plan. useStepGate holds Next (tile, tap zone and voice) while the next
- * Step waits for a Step whose timer is still counting down; cancelling that timer frees it. A Planned Meal is offered
- * Mark as Cooked only once it is due (mayResolve). After a successful Mark as Cooked, CookedConfirmation replaces the Step and leaves with "Back to
- * Today" (no timed redirect). A not_cookable meal shows an EmptyState. Wake Lock is held while the screen is mounted.
+ * Cook Mode. Routes: /cook/meal/:date/:slotId (the slot's timeline, TimelineCookScreen) and /cook/recipe/:id (?batches=, default 1).
+ * A Recipe cook composes (render + wire only) useCookReady (B9-45, PC-05: the Get ready tile before Step 1, then the Ingredients
+ * sheet or the rail list), useCookSession (held while on Get ready), useTimers, useTimerAlarm, useWakeLock, useVoiceCommands,
+ * useCoachMark, useCookTimerPanel, and: CookTopRow (Exit, Ingredients, Voice), AdvanceStepsTile, StepTile, CookTimers and
+ * CookNavTiles. Exit goes back to where Cook Mode was opened from (location.state.from, lib/origin), else the Recipe; the last
+ * Step's "Back to Recipe" forgets the resume Step. The document title is "Cook Mode · <Recipe> · Feeder" (A11Y-01).
  */
 /**
  * Cook Mode. A Planned Meal route (/cook/meal/:date/:slotId[/:courseId]) opens the slot's cooking timeline (CRS F); a
@@ -53,14 +50,27 @@ export function CookScreen(): ReactNode {
   return <SessionCookScreen />
 }
 
+/** The cook view as the session's query holds it (read in the render before the session, to place Get ready). */
+function useQueryClientView(source: ReturnType<typeof cookSourceFrom>) {
+  return useQueryClient().getQueryData<CookView>(['cook', 'view', scopeOf(source)])
+}
+
 function SessionCookScreen(): ReactNode {
   const params = useParams() as CookRouteParams
   const [search] = useSearchParams()
   const navigate = useNavigate()
   const batches = search.get('batches')
   const source = useMemo(() => cookSourceFrom(params, batches), [params, batches])
+  const location = useLocation()
 
-  const session = useCookSession(source)
+  // B9-45 (PC-05): Get ready first (the Recipe's lines times the Batches, at its Yield); the session holds its timers and resume Step meanwhile.
+  const cachedView = useQueryClientView(source)
+  const sources = useMemo(
+    () => (cachedView ? [{ recipeId: cachedView.recipeId, recipeName: cachedView.recipeName, batches: cachedView.batches }] : []),
+    [cachedView],
+  )
+  const ready = useCookReady(scopeOf(source), sources, null, cachedView !== undefined)
+  const session = useCookSession(source, { hold: ready.hold })
   const timers = useTimers()
   const gate = useStepGate(session.view?.steps ?? [], session.nav.index, timers.items, session.scope, session.next)
   const alarm = useMemo(() => createWebAudioAlarm(), [])
@@ -69,14 +79,21 @@ function SessionCookScreen(): ReactNode {
   useWakeLock(wake)
   useTimerAlarm(timers.timers, alarm)
   const [voiceOn, setVoiceOn] = useVoicePreference()
-  const tapZones = useBreakpoint('md')
   const [coachOn, dismissCoach] = useCoachMark()
-  const marked = useMarkCooked(session.markCookedKey)
-  const stock = useStockSheet((id) => marked.dismissWarning(id))
+  const panel = useCookTimerPanel(timers, gate.holdingIds)
+  useDocumentTitle([cookStrings.documentTitle, session.view?.recipeName])
   const formatUse = useFormatUse()
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const finishCook = () => navigate('/')
-  const leaveCook = () => navigate(exitPathFor(source))
+  // B9-45 (PC-02): Exit returns to where Cook Mode was opened from, else the Recipe.
+  const leaveCook = () => navigate(returnTarget(originOf(location.state), { path: exitPathFor(source), label: 'Recipe' }).path)
+  const [focusStep, setFocusStep] = useState(false)
+  useEffect(() => {
+    if (focusStep) setFocusStep(false)
+  }, [focusStep])
+  // A Recipe cook's "Back to Recipe" ends it: the resume Step is forgotten (standing ruling), then the Recipe opens.
+  const doneWithRecipe = () => {
+    session.clearResume()
+    if (session.view) navigate(`/recipes/${session.view.recipeId}`)
+  }
 
   const onCommand = (command: VoiceCommand) => {
     if (command === 'next') gate.next()
@@ -90,113 +107,81 @@ function SessionCookScreen(): ReactNode {
   }
   useVoiceCommands({ adapter: speech, enabled: voiceOn, onCommand })
 
-  if (marked.result && marked.outcome) {
-    return (
-      <div className="cook-screen">
-        <CookedConfirmation recipeName={marked.result.meal.recipeName} outcomeText={leftoverOutcomeText(marked.outcome)} onLeave={finishCook}>
-          {marked.warnings.map((w) => (
-            <ShortfallNotice key={w.ingredientId} warning={w} onCorrect={stock.open} onDismiss={(x) => marked.dismissWarning(x.ingredientId)} />
-          ))}
-          <StockCorrectionSheet
-            open={stock.correction !== null}
-            onClose={stock.close}
-            correction={stock.correction}
-            onSave={(t) => void stock.save(t)}
-            busy={stock.busy}
-            error={stock.error}
-          />
-        </CookedConfirmation>
-      </div>
-    )
-  }
   if (session.notCookable) {
     return <EmptyState title={cookStrings.notCookable} action={<Button variant="secondary" onClick={() => navigate('/')}>{cookStrings.back}</Button>} />
   }
   if (session.error) return <EmptyState title={cookStrings.loadError} />
   const view = session.view
-  if (!view) return <EmptyState title={cookStrings.loading} />
+  if (!view || ready.stage === 'loading') return <EmptyState title={cookStrings.loading} />
 
+  const onReady = ready.stage === 'ready'
+  const listWhileCooking = !onReady && ready.list.available
+  const holdingIds = gate.holdingIds
+  const timerProps = { panel, scope: session.scope, items: timers.items, holdingIds }
   return (
-    <div className="cook-screen">
-      <CookTopRow
-        number={session.step?.number ?? 0}
-        of={session.step?.of ?? 0}
-        speechSupported={speech.supported}
-        voiceOn={voiceOn}
-        onVoiceChange={setVoiceOn}
-        onExit={leaveCook}
-      />
-      <header className="cook-screen__header">
-        <h1 className="cook-screen__title">{view.recipeName}</h1>
-        {view.batches > 1 ? <p className="cook-screen__batches">{cookStrings.batches(view.batches)}</p> : null}
-      </header>
-      <AdvanceStepsTile
-        summary={advanceOnScreen(session.advance, session.nav.index)}
-        onMarkDone={(stepIndex) => void session.markAdvanceDone(stepIndex)}
-      />
-      {session.step ? (
-        <StepTile
-          key={`${session.step.index}-${session.repeatCount}`}
-          step={session.step}
-          formatUse={formatUse}
-          tapZones={tapZones}
-          coachMark={tapZones && coachOn}
-          onCoachDismiss={dismissCoach}
+    <div className="cook-screen" data-layout={panel.short ? 'short' : panel.rail ? 'rail' : 'strip'}>
+      <div className="cook-main">
+        <CookTopRow
+          speechSupported={speech.supported}
+          voiceOn={voiceOn}
+          onVoiceChange={setVoiceOn}
+          onExit={leaveCook}
+          onIngredients={listWhileCooking && !panel.rail ? ready.openSheet : undefined}
+        />
+        <header className="cook-screen__header">
+          <h1 className="cook-screen__title">{view.recipeName}</h1>
+          {view.batches > 1 ? <p className="cook-screen__batches">{cookStrings.batches(view.batches)}</p> : null}
+        </header>
+        <AdvanceStepsTile
+          summary={session.advance}
+          compact={panel.short}
+          collapsed={session.nav.index > 0}
+          onMarkDone={(stepIndex) => void session.markAdvanceDone(stepIndex)}
+        />
+        {onReady ? (
+          <GetReadyTile sections={ready.list.sections} meta={ready.list.meta} ticked={ready.ticks.ticked} onToggle={ready.ticks.toggle} />
+        ) : session.step ? (
+          <StepTile
+            key={`${session.step.index}-${session.repeatCount}`}
+            focusOnMount={focusStep}
+            step={session.step}
+            formatUse={formatUse}
+            tapZones
+            coachMark={coachOn}
+            onCoachDismiss={dismissCoach}
+            onBack={session.back}
+            onNext={gate.next}
+            ready={session.ready}
+          >
+            <BaseCoveredLines lines={session.covered} />
+          </StepTile>
+        ) : (
+          <p className="cook-screen__empty">{cookStrings.noSteps}</p>
+        )}
+        <CookNavTiles
+          isFirst={onReady || session.isFirst}
+          isLast={onReady ? false : session.isLast}
           onBack={session.back}
-          onNext={gate.next}
-          ready={session.ready}
-        />
-      ) : (
-        <p className="cook-screen__empty">{cookStrings.noSteps}</p>
-      )}
-      <BaseCoveredLines lines={session.covered} />
-      <CookTimerStrip
-        scope={session.scope}
-        items={timers.items}
-        onPause={(id) => void timers.pause(id)}
-        onResume={(id) => void timers.resume(id)}
-        onCancel={(id) => void timers.cancel(id)}
-      />
-      <CookNavTiles
-        isFirst={session.isFirst}
-        isLast={session.isLast}
-        onBack={session.back}
-        onNext={gate.next}
-        heldText={gate.heldText}
-        onMarkCooked={view.meal && mayResolve(view.meal.date, view.today) ? () => setSheetOpen(true) : undefined}
-        onDone={
-          view.meal
-            ? undefined
-            : () => {
-                // PC-04 (main-session call, w4a): finishing a Recipe cook forgets its resume Step, as Mark as Cooked does for a meal.
-                session.clearResume()
-                navigate(`/recipes/${view.recipeId}`)
-              }
-        }
-      />
-      {view.meal ? (
-        <MarkCookedSheet
-          open={sheetOpen}
-          onClose={() => setSheetOpen(false)}
-          preview={marked.preview}
-          isLoading={marked.isLoading}
-          leftover={marked.leftover}
-          onLeftoverChange={marked.setLeftover}
-          onConfirm={async () => {
-            if (await marked.confirm()) {
-              session.clearResume()
-              setSheetOpen(false)
-            }
-          }}
-          onNotCooked={async () => {
-            if (await marked.notCooked()) finishCook()
-          }}
-          busy={marked.busy}
-          error={marked.error}
-          courseId={marked.courseId}
-          usedFrom={marked.usedFrom}
-        />
-      ) : null}
+          onNext={
+            onReady
+              ? () => {
+                  ready.start()
+                  setFocusStep(true)
+                }
+              : gate.next
+          }
+          nextLabel={onReady ? cookStrings.startCooking : undefined}
+          heldText={onReady ? null : gate.heldText}
+          onDone={doneWithRecipe}
+        >
+          <CookTimers {...timerProps} placement="strip" />
+        </CookNavTiles>
+      </div>
+      <CookTimers {...timerProps} placement="rail">
+        {listWhileCooking ? <RailIngredients ready={ready} /> : null}
+      </CookTimers>
+      <CookTimerSheets {...timerProps} />
+      {listWhileCooking ? <CookIngredientsSheet ready={ready} /> : null}
     </div>
   )
 }

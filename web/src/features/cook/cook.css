@@ -9,15 +9,30 @@
   margin: 0 auto;
 }
 
+/* B9-40: the Step column. It only places its children (the screen's flex column, or the short-landscape grid) until 64 em, where
+   it is the first column beside the rail. */
+.cook-main {
+  display: contents;
+}
+
 .cook-top {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-3);
 }
 
-.cook-top__step {
-  display: inline-flex;
+/* PC-03: Exit at the start; Ingredients and Voice at the row's end (Voice is circular, outlined). */
+.cook-top .cook-ingredients {
+  margin-inline-start: auto;
+}
+
+.cook-top .cook-voice {
+  flex: none;
+}
+
+.cook-top > .cook-exit + .cook-voice {
+  margin-inline-start: auto;
 }
 
 .cook-screen__header {
@@ -52,12 +67,25 @@
 }
 
 /* §2.7: 30 px on the phone, 58 px on the tablet (see the 48 em block). DS-07 (system.md 1): display text read at length is not
-   extra-bold, so the Step text is Medium, --text-step-weight (500; the user's choice, decisions.md). */
+   extra-bold, so the Step text is Medium, --text-step-weight (500; the user's choice, decisions.md). PC-03: a Step of more than 25
+   words (lib/steps stepTextSize) uses title-2 on a phone and display from 48 em, still Medium. A long word wraps inside the tile. */
 .cook-step__text {
   margin: 0;
   font-size: 1.875rem;
   font-weight: var(--text-step-weight);
   line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+.cook-step__text[data-length="long"] {
+  font-size: var(--text-title-2-size);
+  line-height: var(--text-title-2-line);
+}
+
+/* The Step count leads the overline in sentence case ("Step 2 of 5 · Active · 2 min"), never upper case. */
+.cook-step > .tile__overline {
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .cook-step__uses {
@@ -66,10 +94,68 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* PC-03: the photo is capped so Back and Next stay on screen (min(40dvh, 26rem) from 64 em); Enlarge sits over its bottom end. */
+.cook-step__photo {
+  position: relative;
+  margin: 0;
+}
+
 .cook-step__image {
-  width: 100%;
+  display: block;
+  inline-size: 100%;
+  max-block-size: min(32dvh, 22rem);
   border-radius: var(--radius-tile);
   object-fit: cover;
+}
+
+/* `.cook-step` raises the specificity over ui/IconButton.css's own `position: relative` (loaded later). */
+.cook-step__photo .icon-button,
+.cook-step .cook-step__photo > .icon-button {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+
+/* The whole photo, full screen, over a deep scrim; the one round Close at the top end (StepPhotoDialog). */
+.cook-photo-dialog {
+  position: fixed;
+  inset: 0;
+  inline-size: 100vw;
+  max-inline-size: none;
+  block-size: 100dvh;
+  max-block-size: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  /* the scrim three times over (backdrop, fill, inset shadow): about 85 % dark, so the photo reads on its own */
+  background: var(--scrim);
+  box-shadow: inset 0 0 0 100vmax var(--scrim);
+  color: var(--color-text);
+}
+
+.cook-photo-dialog[open] {
+  display: grid;
+  place-items: center;
+}
+
+.cook-photo-dialog::backdrop {
+  background: var(--scrim);
+}
+
+.cook-photo-dialog__image {
+  display: block;
+  max-inline-size: 100vw;
+  max-block-size: 100dvh;
+  object-fit: contain;
+}
+
+.cook-photo-dialog__close {
+  position: absolute;
+  inset-block-start: calc(var(--safe-top) + var(--space-3));
+  inset-inline-end: calc(var(--safe-right) + var(--space-3));
+  background: var(--color-surface);
 }
 
 .cook-step__zone {
@@ -87,7 +173,7 @@
 .cook-step__zone--back {
   left: 0;
   justify-content: flex-start;
-  padding-inline-start: var(--space-2);
+  padding-inline-start: var(--space-half);
 }
 
 .cook-step__zone--back svg {
@@ -97,7 +183,7 @@
 .cook-step__zone--next {
   right: 0;
   justify-content: flex-end;
-  padding-inline-end: var(--space-2);
+  padding-inline-end: var(--space-half);
 }
 
 .cook-step__coach {
@@ -115,6 +201,11 @@
   margin: 0;
 }
 
+/* The Base recipes Stock covers, at the tile's end. */
+.cook-step .cook-covered {
+  margin-block-start: var(--space-1);
+}
+
 /* L-08: Back/Next stay pinned to the bottom of the screen, clear of the home indicator, over an opaque band. */
 .cook-nav {
   position: sticky;
@@ -128,18 +219,80 @@
   background: var(--color-bg);
 }
 
+/* R-C: the page scrolls a focused control clear of the sticky nav, so its ring is never under the band. */
+:root:has(.cook-nav) {
+  scroll-padding-block-end: 12rem;
+  /* Toasts sit above the sticky nav (Undo of a cancelled timer must not cover the strip or Next). Cook Mode mounts no shell pill,
+     so it publishes the nav's room through the pill's clearance, which ui/Toast.css adds: tiles 64 + padding 8 + 12, plus the strip
+     (52 + 2 x 5 + 12) when there is one. */
+  --timer-pill-clearance: 84px;
+}
+
+:root:has(.cook-nav .cook-strip) {
+  --timer-pill-clearance: 158px;
+}
+
 .cook-nav__tile {
   width: 100%;
   min-height: 64px;
 }
 
-/* Why Next is held: a full-width line under the tiles; empty (no height) when Next is free. */
+/* A forward arrow follows its label ("Next →"); short landscape stacks it above the label instead. */
+.cook-nav__tile[data-arrow='end'] {
+  flex-direction: row-reverse;
+}
+
+/* Why Next is held, or when a future meal can be marked (PC-12): a full-width line under the tiles, an icon on its first line;
+   empty (no height) when Next is free. */
 .cook-nav__held {
   grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
+}
+
+.cook-nav__held > svg {
+  flex: none;
+}
+
+/* PC-03: the timer strip, one line of TimerPills at the top of the sticky nav. It scrolls sideways and keeps 5 px of room for the
+   focus ring of its first and last control (R-C). */
+.cook-strip {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+}
+
+.cook-nav .cook-strip {
+  grid-column: 1 / -1;
+}
+
+.cook-strip .timer-pill {
+  flex: none;
+  max-inline-size: 78%;
+}
+
+/* The rail is drawn from 64 em only (the screen mounts it there). */
+.cook-rail {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.cook-rail__timers {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* The timer that holds Next: its time in the accent text colour. */
+.cook-rail__timer[data-gate] .timer-tile__time {
+  color: var(--color-accent-text);
 }
 
 .cook-nav__held:empty {
@@ -153,82 +306,319 @@
 
 .cook-advance__heading,
 .cook-timers__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
   font-size: var(--text-label-size);
   line-height: var(--text-label-line);
 }
 
-.cook-advance__list,
-.cook-timers__list {
+/* PC-03, DS 3: after the first Step the Advance Steps are one info line. */
+.cook-advance-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
-  padding: 0;
-  list-style: none;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-info-fg);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.cook-advance-line > svg {
+  flex: none;
+}
+
+/* SHORT-01: the Advance Steps chip of short landscape, a 40 px info pill that opens their sheet. */
+.cook-advance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: 40px;
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+  box-shadow: inset 0 0 0 1px var(--color-info-fg);
+  font: inherit;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cook-advance-chip > svg {
+  flex: none;
+}
+
+.cook-advance-chip__short {
+  display: none;
+}
+
+
+
+
+
+/* The timer sheet (CookTimerSheet): the time, the place line, then Add 1 minute and Cancel timer side by side. */
+.cook-timer-sheet {
   display: grid;
   gap: var(--space-2);
 }
 
-.cook-advance__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.cook-advance__row p,
-.cook-advance__done p {
+.cook-timer-sheet__time {
   margin: 0;
+  font-size: var(--text-display-size);
+  line-height: var(--text-display-line);
+  font-weight: var(--text-display-weight);
+  font-variant-numeric: tabular-nums;
 }
 
-.cook-advance__done {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+.cook-timer-sheet__place {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.cook-timer-sheet__actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+
+
+
+/* B9-45 (PC-02): the Cooked moment. A centred column of at most 40 rem: a 96 px success check that pops in (it simply appears with
+   reduced motion), "Cooked, nice one!" in title-1, the Recipe and meal muted, the Leftover tile, the ONE shortfall notice, then the
+   footer: Undo Cooked and the way back, whole buttons that wrap, at the bottom of the screen on a phone. */
+.cook-screen[data-layout='confirmation'] {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+}
+
+.cook-confirmation {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  gap: var(--space-4);
+  inline-size: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+.cook-confirmation__hero {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-6) var(--space-2);
+  text-align: center;
+}
+
+.cook-confirmation__mark {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+  box-shadow: 0 0 0 var(--space-2) color-mix(in srgb, var(--status-success-bg) 50%, transparent);
+  animation: cook-confirmation-pop var(--dur-3) var(--ease-spring) both;
+}
+
+@keyframes cook-confirmation-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cook-confirmation__mark {
+    animation: none;
+  }
+}
+
+.cook-confirmation__title {
+  margin: 0;
+  font-size: var(--text-title-1-size);
+  font-weight: var(--text-title-1-weight);
+  line-height: var(--text-title-1-line);
+}
+
+/* The heading takes focus so a screen reader starts there; it is not a control, so it draws no ring. */
+.cook-confirmation__title:focus {
+  outline: none;
+}
+
+.cook-confirmation__recipe {
+  margin: 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
   color: var(--color-muted);
 }
 
-.cook-timers {
+.cook-confirmation__outcome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--status-leftover-fg);
+}
+
+.cook-confirmation__outcome > svg {
+  flex: none;
+}
+
+.cook-confirmation__outcome-text {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.cook-confirmation__outcome-title {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  color: var(--color-text);
+}
+
+.cook-confirmation__outcome-meta {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  line-height: var(--text-meta-line);
+}
+
+/* The footer: secondary Undo Cooked then the primary way back, side by side when they fit, else stacked whole. On a phone it sits at
+   the bottom (and stays in view while the notice is long). */
+.cook-confirmation__actions {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-start: auto;
+  padding-block: var(--space-3) calc(env(safe-area-inset-bottom, 0px) + var(--space-3));
+  background: var(--color-bg);
+}
+
+.cook-confirmation__actions > .button {
+  flex: 1 1 9rem;
+}
+
+/* From tablet the column is centred and the footer follows the tiles. */
+@media (min-width: 48em) {
+  .cook-confirmation__actions {
+    position: static;
+    margin-block-start: 0;
+  }
+}
+
+/* B9-45 (PC-05): Get ready, the Ingredients before the first Step (and the same rows in the sheet and the rail). A row is our own
+   checkbox, the name, the Storage Place muted under it and the amount at the end; a ticked row is muted, its name struck through. */
+.get-ready {
   display: grid;
   gap: var(--space-2);
 }
 
-.cook-timers__list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.cook-timers__item {
+.get-ready__head {
   display: grid;
-  gap: var(--space-1);
-  align-content: start;
+  gap: var(--space-half);
 }
 
-.cook-timers__place {
+.get-ready__title {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  font-weight: var(--text-title-3-weight);
+  line-height: var(--text-title-3-line);
+}
+
+.get-ready__meta {
+  margin: 0;
   font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
   line-height: var(--text-meta-line);
   color: var(--color-muted);
 }
 
-.cook-confirmation {
+.get-ready__sections {
   display: grid;
   gap: var(--space-3);
 }
 
-.cook-confirmation__title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
+.get-ready__section {
+  display: grid;
 }
 
-.cook-confirmation__recipe,
-.cook-confirmation__outcome {
+.get-ready__course {
   margin: 0;
+  padding-block: var(--space-2) var(--space-1);
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
+  color: var(--color-muted);
 }
 
-.cook-confirmation__actions {
-  display: flex;
-  justify-content: flex-end;
+.get-ready__list {
+  container-type: inline-size;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.get-ready__list > .list-row {
+  min-block-size: 52px;
+  padding-inline: 0;
+}
+
+/* The checkbox's name ("Chicken, 1.2 kg") is read, not shown: the row's title already shows it. */
+.get-ready__check .checkbox__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.get-ready__list > .list-row > .list-row__control {
+  justify-items: start;
+}
+
+.get-ready__check .checkbox__control {
+  justify-content: flex-start;
+  min-inline-size: 44px;
+}
+
+.get-ready__list > .list-row[data-ticked="true"] .list-row__title,
+.get-ready__list > .list-row[data-ticked="true"] .list-row__value {
+  color: var(--color-muted);
+}
+
+.get-ready__list > .list-row[data-ticked="true"] .list-row__title {
+  text-decoration: line-through;
+}
+
+.cook-rail__ingredients {
+  align-content: start;
+  padding: var(--space-4);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface);
+  box-shadow: var(--elev-1);
 }
 
 /* Tablet and up (§2.7): the Step tile fills the height, the timers sit 2-up beneath it, the nav last. */
@@ -247,26 +637,62 @@
   .cook-step__text {
     font-size: 3.625rem;
   }
+
+  .cook-step__text[data-length="long"] {
+    font-size: var(--text-display-size);
+    line-height: var(--text-display-line);
+  }
 }
 
-/* Reheat: the timer-only screen of a Planned Meal served from a Leftover. */
+/* Reheat (PC-15): the timer-only screen of a Planned Meal served from a Leftover. The same centred column at every width, 40 rem
+   at most: the tile (overline, Recipe, meta, one lg Stepper or the time, the tile's one action), then Mark as Cooked. */
+.reheat-tile {
+  display: grid;
+  gap: var(--space-3);
+  inline-size: 100%;
+  max-inline-size: 40rem;
+  margin-inline: auto;
+}
+
+.reheat-name {
+  margin: 0;
+  font-size: var(--text-title-2-size);
+  line-height: var(--text-title-2-line);
+  font-weight: var(--text-title-2-weight);
+}
+
+.reheat-meta,
+.reheat-status {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+
 .reheat-time {
   margin: 0;
   font-size: 3.5rem;
   line-height: 1.2;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .reheat-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
 }
 
-.reheat-tile {
-  display: grid;
-  gap: var(--space-3);
+.reheat-tile .button {
+  inline-size: 100%;
+}
+
+.reheat-foot {
+  inline-size: 100%;
+  max-inline-size: 40rem;
+  margin-inline: auto;
+  margin-block-start: auto;
+  padding-block-end: calc(env(safe-area-inset-bottom) + var(--space-3));
 }
 
 /* CRS F: the cooking timeline (Course filter chips, the Step's Course and planned clock, Advance Steps by Course). */
@@ -274,15 +700,30 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-block: var(--space-2);
 }
-/* Secondary lines of the Step: the muted colour (not a fade). */
+
+/* The Course chips are the header's second line. */
+.cook-screen__header > .cook-courses {
+  flex-basis: 100%;
+}
+/* Secondary lines of the Step: the muted colour (not a fade). PC-16 item 4: the planned time is a labelled meta line with a clock. */
 .cook-step__course,
 .cook-step__clock {
   margin: 0;
   color: var(--color-muted);
-  font-size: 0.875rem;
-  line-height: 1.2;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 600;
+}
+
+.cook-step__clock {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.cook-step__clock > svg {
+  flex: none;
 }
 .cook-advance__course {
   margin: var(--space-2) 0 var(--space-1);
@@ -315,10 +756,266 @@
   line-height: var(--text-meta-line);
 }
 
-.cook-advance__text {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-inline-size: 0;
+
+
+/* ---- B9-40 (PC-03, SHORT-01): the top row on a phone, the rail from 64 em, short landscape ---- */
+
+/* The top row is one line at 375 px: Ingredients is icon-only (its name stays "Ingredients"). */
+@media (width < 37.5em) {
+  .cook-ingredients__label {
+    display: none;
+  }
+
+  .cook-ingredients {
+    inline-size: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+/* From 1024 px: the Step column plus a 22 rem sticky rail (timers, then Get ready), at most 1480 px wide. */
+@media (min-width: 64em) {
+  .cook-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    column-gap: var(--space-6);
+    align-items: start;
+    max-width: 1480px;
+  }
+
+  /* No rail (no timers, Reheat, the confirmation): one column. */
+  .cook-screen:not(:has(> .cook-rail)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cook-screen > :not(.cook-rail) {
+    grid-column: 1;
+  }
+
+  .cook-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-block-size: calc(100dvh - 2 * var(--space-4));
+  }
+
+  .cook-rail {
+    position: sticky;
+    top: var(--space-4);
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    max-block-size: calc(100dvh - 2 * var(--space-4));
+    overflow: auto;
+    /* R-C: the rail scrolls, so it keeps 5 px of room for the rings of its controls */
+    padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  }
+
+  .cook-step__image {
+    max-block-size: min(40dvh, 26rem);
+  }
+}
+
+/* SHORT-01: a phone on its side. Back and Next are the side columns, the Step fills the middle and scrolls inside itself; the top row,
+   the strip and the held line take only the lines they need. 560 px in the chapter is the table's 37.5 em (choice). */
+@media (max-height: 499px) and (min-width: 37.5em) {
+  .cook-screen {
+    display: grid;
+    grid-template-columns: clamp(88px, 11vw, 104px) minmax(0, 1fr) auto auto clamp(104px, 16vw, 144px);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: var(--space-2) var(--space-3);
+    block-size: 100dvh;
+    min-block-size: 0;
+    max-width: none;
+    box-sizing: border-box;
+    padding: max(var(--space-2), var(--safe-top)) max(var(--space-3), var(--safe-right)) max(var(--space-2), var(--safe-bottom)) max(var(--space-3), var(--safe-left));
+  }
+
+  .cook-main {
+    display: contents;
+  }
+
+  .cook-top {
+    display: contents;
+  }
+
+  .cook-top > :first-child {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: stretch;
+  }
+
+  .cook-top > .cook-ingredients {
+    grid-row: 1;
+    grid-column: 4;
+  }
+
+  .cook-top > .cook-voice {
+    grid-row: 1;
+    grid-column: 5;
+    justify-self: end;
+  }
+
+  .cook-screen__header {
+    grid-row: 1;
+    grid-column: 2;
+    flex-wrap: nowrap;
+    align-items: center;
+    align-self: center;
+    min-inline-size: 0;
+  }
+
+  .cook-screen__title {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    font-size: var(--text-title-3-size);
+    line-height: var(--text-title-3-line);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cook-screen__header > .cook-courses {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  }
+
+  .cook-advance-chip {
+    grid-row: 1;
+    grid-column: 3;
+    align-self: center;
+  }
+
+  .cook-step,
+  .cook-screen__empty {
+    grid-row: 2;
+    grid-column: 2 / 5;
+  }
+
+  .cook-step {
+    min-block-size: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    align-content: safe center;
+    padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  }
+
+  .cook-step__text {
+    font-size: 1.875rem;
+    line-height: 1.2;
+  }
+
+  .cook-step__image {
+    max-block-size: 40dvh;
+  }
+
+  /* the side columns are the visible Back and Next; the tap-zone chevrons would sit on the text (the zones still work) */
+  .cook-step__zone {
+    display: none;
+  }
+
+  .cook-nav {
+    display: contents;
+  }
+
+  .cook-nav > .cook-strip {
+    grid-row: 3;
+    grid-column: 2 / 5;
+  }
+
+  /* whole pills only, sharing the width (two from 48 em, one below: lib/timers visiblePillCount) */
+  .cook-strip {
+    overflow: visible;
+    padding: 0;
+  }
+
+  .cook-strip > .timer-pill {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    max-inline-size: none;
+    min-block-size: 48px;
+  }
+
+  .cook-nav__tile {
+    grid-row: 2 / -1;
+    flex-direction: column;
+    gap: var(--space-2);
+    block-size: 100%;
+    min-height: 0;
+    border-radius: var(--radius-tile);
+  }
+
+  .cook-nav__tile[data-arrow='end'] {
+    flex-direction: column;
+  }
+
+  .cook-nav__tile:nth-of-type(1) {
+    grid-column: 1;
+  }
+
+  .cook-nav__tile:nth-of-type(2) {
+    grid-column: 5;
+  }
+
+  .cook-nav__held {
+    grid-row: 4;
+    grid-column: 2 / 5;
+  }
+}
+
+/* In short landscape the nav is the side columns: toasts clear the strip and the held line only. */
+@media (max-height: 499px) and (min-width: 37.5em) {
+  :root:has(.cook-nav),
+  :root:has(.cook-nav .cook-strip) {
+    --timer-pill-clearance: 56px;
+  }
+}
+
+/* Short landscape between 37.5 em and 48 em: the Advance Steps chip shows its count only. */
+@media (max-height: 499px) and (min-width: 37.5em) and (width < 48em) {
+  .cook-advance-chip__long {
+    display: none;
+  }
+
+  .cook-advance-chip__short {
+    display: inline;
+  }
+}
+
+/* Short and narrow (zoom, split screen): portrait's layout stays, compact, with 52 px Back and Next. */
+@media (max-height: 499px) and (width < 37.5em) {
+  .cook-screen {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .cook-screen__title {
+    font-size: var(--text-title-3-size);
+    line-height: var(--text-title-3-line);
+  }
+
+  .cook-nav__tile {
+    min-height: 52px;
+  }
+}
+
+/* Any short viewport: the coach mark is one row, and a long Step stays at title-2. */
+@media (max-height: 499px) {
+  .cook-step__coach {
+    flex-wrap: nowrap;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .cook-step__coach .button {
+    white-space: nowrap;
+  }
+
+  .cook-step__text[data-length="long"] {
+    font-size: var(--text-title-2-size);
+    line-height: var(--text-title-2-line);
+  }
 }

@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { meal, mockApi, renderWithProviders } from '../../plan/test-utils'
-import type { CookedResult, CookPreview } from '../../plan/types'
+import type { CookPreview } from '../../plan/types'
 import type { CookTimer, CookView } from '../types'
 import { CookScreen } from './CookScreen'
-import { noticeWith, findNotice } from '../../../test/notices'
+import { noticeWith } from '../../../test/notices'
 import { oneCourseTimeline } from '../timeline-fixtures'
 
 vi.mock('../../../lib/sse', () => ({
@@ -25,15 +25,6 @@ const preview: CookPreview = {
   meal: meal({ date: '2026-11-09', mealSlotId: 2, recipeName: 'Chicken' }), fresh: true, batches: 1, yield: 4, portionsNeeded: 2,
   proposedLeftover: 2, maxLeftover: 4, leftoverUseBy: '2026-11-12', needs: [],
 }
-const shortfall = {
-  ingredientId: 11, name: 'chicken thighs', baseUnit: 'g' as const, have: 300, need: 400, shortfall: 100,
-  message: 'Stock shows only 300 g chicken thighs, the recipe uses 400 g',
-}
-const tuesday = { date: '2026-11-10', mealSlotId: 3, mealSlotName: 'Dinner', recipeName: 'Chicken' }
-const cooked = (warnings: CookedResult['warnings'], over: Partial<CookedResult> = {}): CookedResult => ({
-  meal: meal({ state: 'cooked' }), leftover: null, warnings, plannedFor: [], ...over,
-})
-const leftover2 = { id: 3, recipeId: 7, recipeName: 'Chicken', portions: 2, cookedOn: '2026-11-09', useBy: '2026-11-12', fromDate: '2026-11-09', fromMealSlotId: 2 }
 
 const planStub = { today: '2026-11-09', horizonDays: 3, updating: false, slots: [] }
 // The timeline is server-driven: once the only Course is Cooked (or skipped) the refetched timeline lists it resolved, with no items.
@@ -63,98 +54,12 @@ function renderMeal() {
   )
 }
 
-async function confirmCooked() {
-  await userEvent.click(await screen.findByRole('button', { name: 'Mark as Cooked' }))
-  const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
-  await userEvent.click(await within(sheet).findByRole('button', { name: 'Mark as Cooked' }))
-}
-
 beforeEach(() => {
   resolved = false
   vi.stubGlobal('matchMedia', undefined)
 })
 
 describe('CookScreen: Mark as Cooked', () => {
-  it('B13: confirms where the Leftover went, then leaves on Back to Today', async () => {
-    const api = mockApi({
-      ...mealRoutes,
-      'POST /api/plan/2026-11-09/2/1/cooked': resolves(cooked([], { leftover: leftover2, plannedFor: [tuesday] })),
-    })
-    renderMeal()
-    await confirmCooked()
-    expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    expect(await findNotice('status', '2 portions planned for Tue Dinner')).toHaveTextContent('2 portions planned for Tue Dinner')
-    expect(screen.queryByText('Home page')).not.toBeInTheDocument()
-    expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')).toHaveLength(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Back to Today' }))
-    expect(await screen.findByText('Home page')).toBeInTheDocument()
-  })
-
-  it('B13: says a Leftover nothing is planned for is kept, and when there is none', async () => {
-    mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/1/cooked': resolves(cooked([], { leftover: { ...leftover2, portions: 1 } })) })
-    renderMeal()
-    await confirmCooked()
-    expect(await findNotice('status', '1 portion kept, good until Thu')).toHaveTextContent('1 portion kept, good until Thu')
-  })
-
-  it('B13: reports no Leftovers when none were recorded', async () => {
-    mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/1/cooked': resolves(cooked([])) })
-    renderMeal()
-    await confirmCooked()
-    expect(await findNotice('status', 'No Leftovers')).toHaveTextContent('No Leftovers')
-  })
-
-  it('B13: Mark as Cooked is not offered again, even when the Step view is refreshed as no longer cookable', async () => {
-    let viewCalls = 0
-    mockApi({
-      ...mealRoutes,
-      'GET /api/cook/meals/2026-11-09/2/all': () => (++viewCalls === 1 ? timelineNow() : { status: 409, json: { error: { code: 'not_cookable', message: 'x' } } }),
-      'POST /api/plan/2026-11-09/2/1/cooked': resolves(cooked([])),
-    })
-    renderMeal()
-    await confirmCooked()
-    expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
-    expect(screen.queryByText('This meal has already been cooked or skipped')).not.toBeInTheDocument()
-  })
-
-  it('stays with the Stock warning next to the confirmation, and shows Back to Today as well', async () => {
-    const api = mockApi({
-      ...mealRoutes,
-      'POST /api/plan/2026-11-09/2/1/cooked': resolves(cooked([shortfall])),
-      'PUT /api/stock/ingredients/11/total': { ingredient: {}, lots: [] },
-    })
-    renderMeal()
-    await confirmCooked()
-
-    expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
-    expect(notice).toHaveTextContent('Stock shows only 300 g chicken thighs, the recipe uses 400 g')
-
-    await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
-    const correct = await screen.findByRole('dialog', { name: 'How much chicken thighs do you have?' })
-    const input = within(correct).getByLabelText('Total in Stock')
-    await userEvent.clear(input)
-    await userEvent.type(input, '250')
-    await userEvent.click(within(correct).getByRole('button', { name: 'Set total' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 }))
-    // The confirmation stays until the User leaves.
-    expect(screen.getByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Back to Today' }))
-    expect(await screen.findByText('Home page')).toBeInTheDocument()
-  })
-
-  it('dismissing a warning leaves Stock alone and keeps the confirmation', async () => {
-    const api = mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/1/cooked': resolves(cooked([shortfall])) })
-    renderMeal()
-    await confirmCooked()
-    expect(await findNotice('alert', 'Stock shows only 300 g chicken thighs')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
-    expect(screen.getByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    expect(api.calls.some((c) => c.path.startsWith('/api/stock'))).toBe(false)
-  })
-
   it('Not cooked leaves immediately', async () => {
     const api = mockApi({ ...mealRoutes, 'POST /api/plan/2026-11-09/2/1/not-cooked': resolves(meal({ state: 'skipped' })) })
     renderMeal()
@@ -185,6 +90,8 @@ describe('CookScreen: timers (B14)', () => {
     endsAt: '2026-11-09T12:10:00Z', startedAt: '2026-11-09T12:00:00Z', ...over,
   })
 
+  // B9-40 (PC-03): one "Timers" region for every timer (this scope's and the household's others, this scope's first); Pause on the tile or
+  // pill, Cancel in the timer's sheet.
   it('shows this scope\'s timers and the household\'s other running timers, with pause and cancel', async () => {
     const api = mockApi({
       ...mealRoutes,
@@ -193,12 +100,13 @@ describe('CookScreen: timers (B14)', () => {
       'DELETE /api/cook/timers/1': undefined,
     })
     renderMeal()
-    expect(await screen.findByRole('region', { name: 'Timers' })).toBeInTheDocument()
-    const other = await screen.findByRole('region', { name: 'Other timers' })
-    expect(within(other).getByRole('timer', { name: 'Step 1: Boil rice' })).toBeInTheDocument()
-    await userEvent.click(within(within(other).getByRole('timer', { name: 'Step 1: Boil rice' })).getByRole('button', { name: 'Pause Step 1: Boil rice' }))
+    const region = await screen.findByRole('region', { name: 'Timers' })
+    expect(screen.queryByRole('region', { name: 'Other timers' })).not.toBeInTheDocument()
+    expect(within(region).getAllByRole('timer').map((x) => x.getAttribute('aria-label'))).toEqual(['Simmer', 'Boil rice'])
+    await userEvent.click(within(within(region).getByRole('timer', { name: 'Boil rice' })).getByRole('button', { name: 'Pause Boil rice' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/cook/timers/2/pause')).toHaveLength(1))
-    await userEvent.click(within(screen.getByRole('timer', { name: 'Step 3: Simmer' })).getByRole('button', { name: 'Cancel Step 3: Simmer' }))
+    await userEvent.click(within(within(region).getByRole('timer', { name: 'Simmer' })).getByRole('button', { name: 'Options for Simmer' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel timer' }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/cook/timers/1')).toHaveLength(1))
   })
 })

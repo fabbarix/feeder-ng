@@ -1,3 +1,4 @@
+import type { BaseUnit } from '../../lib/units'
 // Shapes of the planning API (docs/dev/design/t11-planning.md). Dates are YYYY-MM-DD in household time.
 
 import type { BoughtInfo, MealWarning } from './lib/bought'
@@ -285,7 +286,8 @@ export interface CookPreview {
 export interface StockWarning {
   ingredientId: number
   name: string
-  baseUnit: string
+  /** B9-45: the Base Unit (g, ml or piece), as the stock feature's warning has it; the notice formats it in the User's unit system. */
+  baseUnit: BaseUnit
   have: number
   need: number
   shortfall: number

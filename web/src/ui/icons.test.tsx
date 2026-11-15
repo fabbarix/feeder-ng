@@ -127,6 +127,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['cameraOff', 'CameraSlash'],
   ['camera', 'Camera'], // UF1: ImagePicker take-a-photo
   ['photos', 'Images'], // photo-read: Choose photos
+  ['enlarge', 'ArrowsOut'], // B9-40 PC-03: Enlarge the Step photo
   ['clipboard', 'ClipboardText'], // UF1: ImagePicker paste
   ['link', 'LinkSimple'], // UF1: ImagePicker from a link
   ['rotateRight', 'ArrowClockwise'], // UF1: ImagePicker crop rotate

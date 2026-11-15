@@ -53,7 +53,9 @@ const VIEW_KEY = ['cook', 'view'] as const
  * Step), and saves the Step on screen (with a Recipe cook's Batches) on open and on every next/back. Cooked, or 409 not_cookable,
  * forgets it.
  */
-export function useCookSession(source: CookSource): UseCookSession {
+/** B9-45 (PC-05): `hold` (Cook Mode is on Get ready) starts no Step timer and saves no resume Step until it is let go. */
+export function useCookSession(source: CookSource, options: { hold?: boolean } = {}): UseCookSession {
+  const hold = options.hold === true
   const client = useQueryClient()
   const scope = scopeOf(source)
   const query = useQuery({
@@ -110,15 +112,15 @@ export function useCookSession(source: CookSource): UseCookSession {
 
   // Reaching a Passive Step starts its timer, once per Step.
   useEffect(() => {
-    if (step) void startFor(step)
-  }, [step, startFor])
+    if (step && !hold) void startFor(step)
+  }, [step, startFor, hold])
 
   // The Step on screen is the resume Step (on open and after every move).
   const stepIndex = step?.index
   useEffect(() => {
-    if (!resumed || stepIndex === undefined || forgotten.current) return
+    if (!resumed || hold || stepIndex === undefined || forgotten.current) return
     saveResume(scope, stepIndex, { batches })
-  }, [resumed, stepIndex, scope, batches])
+  }, [resumed, hold, stepIndex, scope, batches])
 
   const notCookable = query.error instanceof ApiError && query.error.code === 'not_cookable'
   useEffect(() => {

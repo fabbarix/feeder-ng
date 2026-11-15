@@ -99,7 +99,7 @@ describe("Had it", () => {
       screen.getByRole("button", { name: /increase portions/i }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Had it" }));
-    expect(onConfirm).toHaveBeenCalledWith({ kind: "had-it", portions: 1.5 });
+    expect(onConfirm).toHaveBeenCalledWith({ kind: "had-it", portions: 1.25 });
   });
   it("the stepper stops at what is left", () => {
     view("had-it", { leftover: leftover({ portions: 0.5 }) });
@@ -139,97 +139,107 @@ describe("Threw it out", () => {
   });
 });
 
-describe("Freeze it", () => {
-  it("lists freezers only, defaults to the default Storage Place when it is a freezer, shows the Use-by note", async () => {
-    view("freeze", {
-      storagePlaces: places.map((p) => ({ ...p, default: p.id === 2 })),
-    });
-    expect(
-      screen.getByRole("dialog", { name: "Freeze Chilli" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("combobox", { name: "Storage Place" }),
-    ).toHaveTextContent("Garage Freezer");
-    expect(
-      screen.getByText("Use by 10 Feb in the freezer (90 days)"),
-    ).toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("combobox", { name: "Storage Place" }),
-    );
-    expect(
-      (await screen.findAllByRole("option")).map((o) => o.textContent),
-    ).toEqual(["Basement Freezer", "Garage Freezer"]);
+describe("Freeze it (PC-13: one question)", () => {
+  const withDefault = places.map((p) => ({ ...p, default: p.id === 2 }));
+  const group = () => screen.getByRole("group", { name: "Portions to freeze" });
+  const value = () => within(group()).getByRole("spinbutton");
+  const press = (name: RegExp) => userEvent.click(within(group()).getByRole("button", { name }));
+
+  it("is titled with the one question, and the context line names the Recipe and what is left", () => {
+    view("freeze");
+    const dialog = screen.getByRole("dialog", { name: /How many portions to freeze\?/ });
+    expect(within(dialog).getByRole("heading", { name: "How many portions to freeze?" })).toBeInTheDocument();
+    expect(dialog.querySelector(".sheet__context")).toHaveTextContent("Chilli · 3 left");
   });
-  it("uses the Recipe Frozen Use-by in the note when it has one", () => {
+  it("has one decision: a large Stepper named 'Portions to freeze', from 0.25 to what is left, described by the hint", () => {
+    view("freeze", { leftover: leftover({ portions: 1.25 }) });
+    expect(group()).toHaveAttribute("data-size", "lg");
+    expect(value()).toHaveAttribute("aria-valuemin", "0.25");
+    expect(value()).toHaveAttribute("aria-valuemax", "1.25");
+    const hint = document.getElementById(value().getAttribute("aria-describedby")!);
+    expect(hint).toHaveTextContent("All of it. None of it is planned.");
+  });
+  it("offers every portion of a 1.25 Leftover and its quarter steps reach it", async () => {
+    view("freeze", { leftover: leftover({ portions: 1.25 }) });
+    expect(value()).toHaveAttribute("aria-valuenow", "1.25");
+    await press(/^Decrease/);
+    expect(value()).toHaveAttribute("aria-valuenow", "1");
+    await press(/^Increase/);
+    expect(value()).toHaveAttribute("aria-valuenow", "1.25");
+    expect(within(group()).getByRole("button", { name: /^Increase/ })).toBeDisabled();
+  });
+  it("defaults to every spare portion and says where the others are planned", () => {
+    view("freeze", { leftover: leftover({ portions: 2.5, plannedPortions: 1.25 }), plannedFor: ["Mon Dinner"] });
+    expect(value()).toHaveAttribute("aria-valuenow", "1.25");
+    expect(document.getElementById(value().getAttribute("aria-describedby")!)).toHaveTextContent("1.25 of 2.5. The rest is planned for Mon Dinner.");
+  });
+  it("names where it goes on one line: 'Goes to Garage Freezer · Use by 10 Feb'", () => {
+    view("freeze", { storagePlaces: withDefault });
+    expect(screen.getByText(/Goes to/)).toHaveTextContent("Goes to Garage Freezer · Use by 10 Feb");
+  });
+  it("the Use-by follows the Recipe's Frozen Use-by", () => {
     view("freeze", { recipeFrozenUseBy: 30 });
-    expect(
-      screen.getByText("Use by 12 Dec in the freezer (30 days)"),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Goes to/)).toHaveTextContent("Use by 12 Dec");
   });
-  it("defaults to the portions no Planned Meal is planned to use and confirms Storage Place and portions", async () => {
-    const { onConfirm } = view("freeze", {
-      leftover: leftover({ portions: 5, plannedPortions: 2 }),
-    });
-    expect(portions().textContent).toBe("3");
-    await pickOption("Storage Place", "Garage Freezer");
-    await userEvent.click(screen.getByRole("button", { name: "Freeze it" }));
-    expect(onConfirm).toHaveBeenCalledWith({
-      kind: "freeze",
-      storagePlaceId: 2,
-      portions: 3,
-    });
+  it("Change opens the Storage Place choice with freezers only, and the choice is kept", async () => {
+    const { onConfirm } = view("freeze", { storagePlaces: withDefault });
+    await userEvent.click(screen.getByRole("button", { name: "Change Storage Place" }));
+    expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual(["Basement Freezer", "Garage Freezer"]);
+    await userEvent.click(screen.getByRole("option", { name: "Basement Freezer" }));
+    expect(screen.getByText(/Goes to/)).toHaveTextContent("Goes to Basement Freezer");
+    await userEvent.click(screen.getByRole("button", { name: /^Freeze 3 portions$/ }));
+    expect(onConfirm).toHaveBeenCalledWith({ kind: "freeze", storagePlaceId: 4, portions: 3 });
+  });
+  it("has Cancel (secondary) and one primary whose label follows the stepper, with a snowflake", async () => {
+    const { onConfirm, onClose } = view("freeze", { storagePlaces: withDefault });
+    const primary = screen.getByRole("button", { name: "Freeze 3 portions" });
+    expect(primary).toHaveAttribute("data-variant", "primary");
+    expect(primary.querySelector("svg")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveAttribute("data-variant", "secondary");
+    await press(/^Decrease/);
+    expect(screen.getByRole("button", { name: "Freeze 2.75 portions" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Freeze 2.75 portions" }));
+    expect(onConfirm).toHaveBeenCalledWith({ kind: "freeze", storagePlaceId: 2, portions: 2.75 });
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalled();
+  });
+  it("says 'Freeze 1 portion' for one", async () => {
+    view("freeze", { leftover: leftover({ portions: 1 }) });
+    expect(screen.getByRole("button", { name: "Freeze 1 portion" })).toBeInTheDocument();
+  });
+  it("has no Close button (the sheet has Cancel, R-B), exactly one primary and no select on show", () => {
+    view("freeze");
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: "Close" })).toBeNull();
+    expect(within(dialog).getAllByRole("button").filter((b) => b.getAttribute("data-variant") === "primary")).toHaveLength(1);
+    expect(within(dialog).queryByRole("combobox")).toBeNull();
   });
   it("names the Planned Meals the server dry run says lose portions, and asks again when the draft changes", async () => {
     const api = dryRuns({
-      "POST /api/plan/leftovers/1/freeze?dryRun=1": (c: {
-        body?: { portions?: number };
-      }) => ({ replanned: (c.body?.portions ?? 0) >= 3 ? [friLunch] : [] }),
+      "POST /api/plan/leftovers/1/freeze?dryRun=1": (c: { body?: { portions?: number } }) => ({ replanned: (c.body?.portions ?? 0) >= 2.5 ? [friLunch] : [] }),
     });
     view("freeze", { leftover: leftover({ portions: 4, plannedPortions: 2 }) });
-    expect(portions().textContent).toBe("2");
-    await waitFor(() =>
-      expect(
-        api.callsTo("POST", "/api/plan/leftovers/1/freeze?dryRun=1"),
-      ).toHaveLength(1),
-    );
+    expect(value()).toHaveAttribute("aria-valuenow", "2");
+    await waitFor(() => expect(api.callsTo("POST", "/api/plan/leftovers/1/freeze?dryRun=1")).toHaveLength(1));
     expect(api.calls[0]!.body).toEqual({ storagePlaceId: 4, portions: 2 });
     expect(screen.queryByText(/is planned again/)).toBeNull();
-    await userEvent.click(
-      screen.getByRole("button", { name: /increase portions/i }),
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /increase portions/i }),
-    );
-    expect(
-      await screen.findByText(
-        "Fri Lunch was going to have it; it is planned again.",
-      ),
-    ).toBeInTheDocument();
-    expect(api.calls.at(-1)!.body).toEqual({ storagePlaceId: 4, portions: 3 });
+    await press(/^Increase/);
+    await press(/^Increase/);
+    expect(await screen.findByText("Fri Lunch was going to have it; it is planned again.")).toBeInTheDocument();
+    expect(api.calls.at(-1)!.body).toEqual({ storagePlaceId: 4, portions: 2.5 });
   });
   it("lists every Planned Meal from the dry run, even two on the same day and slot, without key warnings", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    dryRuns({
-      "POST /api/plan/leftovers/1/freeze?dryRun=1": {
-        replanned: [friLunch, { ...friLunch, courseId: 2 }, friDinner],
-      },
-    });
+    dryRuns({ "POST /api/plan/leftovers/1/freeze?dryRun=1": { replanned: [friLunch, { ...friLunch, courseId: 2 }, friDinner] } });
     view("freeze");
-    await waitFor(() =>
-      expect(screen.getAllByText(/is planned again/)).toHaveLength(3),
-    );
+    await waitFor(() => expect(screen.getAllByText(/is planned again/)).toHaveLength(3));
     expect(error.mock.calls.flat().join(" ")).not.toMatch(/unique "key"/);
   });
   it("with no freezer it says to add one and links to Storage Places instead of confirming", () => {
-    view("freeze", {
-      storagePlaces: places.filter((p) => p.kind !== "freezer"),
-      storagePlacesHref: "/settings/storage-places",
-    });
+    view("freeze", { storagePlaces: places.filter((p) => p.kind !== "freezer"), storagePlacesHref: "/settings/storage-places" });
     expect(screen.getByText("Add a Freezer first")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Storage Places" }),
-    ).toHaveAttribute("href", "/settings/storage-places");
-    expect(screen.queryByRole("button", { name: "Freeze it" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Storage Places" })).toHaveAttribute("href", "/settings/storage-places");
+    expect(screen.queryByRole("button", { name: /^Freeze \d/ })).toBeNull();
   });
 });
 

@@ -103,3 +103,19 @@
   background: var(--color-surface);
   color: var(--color-text);
 }
+
+/* B9-40 (SHORT-01): Cook Mode's landscape strip makes "+N" a button beside the open button (it opens the Timers sheet). The same
+   28 px badge, with a 44 px target through ::after; its focus ring is the focus scope's inset ring (R-C+). */
+.timer-pill__more--button {
+  position: relative;
+  border: 0;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.timer-pill__more--button::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}

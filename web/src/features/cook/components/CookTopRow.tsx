@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
-import { Button, Chip } from '../../../ui'
+import { Button } from '../../../ui'
 import { cookStrings } from '../strings'
 import { VoiceToggle } from './VoiceToggle'
 
 export interface CookTopRowProps {
-  /** Step number and count of the cooking sequence (Advance Steps excluded), shown as the pill "Step 1 of 5". */
-  number: number
-  of: number
+  /** Kept for callers; the Step count lives in the Step tile's overline since B9-40 (PC-03), so the row shows no count. */
+  number?: number
+  of?: number
+  /** B9-40 (PC-03): opens the Ingredients list; the Ingredients button is drawn only with it. */
+  onIngredients?: () => void
   speechSupported: boolean
   voiceOn: boolean
   onVoiceChange: (on: boolean) => void
@@ -14,24 +16,23 @@ export interface CookTopRowProps {
 }
 
 /**
- * The top row of Cook Mode (docs/design/ui-fix-plan.md 2.7): a secondary 44 px `Button` "Exit" with the X icon
- * (onExit), the "Step n of N" pill (a `Chip` kind state, role status so a Step change is announced), and the
- * voice `VoiceToggle` IconButton at the end. With no Steps (number 0) the pill is left out. Renders only.
+ * The top row of Cook Mode (PC-03): a secondary "Exit" Button with the X icon, then at the row's end Ingredients (a secondary
+ * Button, icon-only below 37.5 em; its name stays "Ingredients") and the circular voice `VoiceToggle`. DOM order is Exit,
+ * Ingredients, Voice; short landscape (SHORT-01) places them in its grid through `.cook-ingredients` and `.cook-voice`.
+ * Renders only.
  */
-export function CookTopRow({ number, of, speechSupported, voiceOn, onVoiceChange, onExit }: CookTopRowProps): ReactNode {
+export function CookTopRow({ onIngredients, speechSupported, voiceOn, onVoiceChange, onExit }: CookTopRowProps): ReactNode {
   return (
     <div className="cook-top">
-      <Button variant="secondary" size="md" icon="exit" onClick={onExit}>
+      <Button variant="secondary" size="md" icon="exit" className="cook-exit" onClick={onExit}>
         {cookStrings.exit}
       </Button>
-      {number > 0 ? (
-        <span className="cook-top__step" role="status">
-          <Chip kind="tag" icon="cook">
-            {cookStrings.stepOf(number, of)}
-          </Chip>
-        </span>
+      {onIngredients ? (
+        <Button variant="secondary" size="md" icon="ingredients" className="cook-ingredients" aria-label={cookStrings.ingredients} onClick={onIngredients}>
+          <span className="cook-ingredients__label">{cookStrings.ingredients}</span>
+        </Button>
       ) : null}
-      <VoiceToggle supported={speechSupported} enabled={voiceOn} onChange={onVoiceChange} />
+      <VoiceToggle className="cook-voice" supported={speechSupported} enabled={voiceOn} onChange={onVoiceChange} />
     </div>
   )
 }

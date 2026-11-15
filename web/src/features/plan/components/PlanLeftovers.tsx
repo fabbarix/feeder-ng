@@ -26,6 +26,7 @@ export function PlanLeftovers({ flow }: PlanLeftoversProps): ReactNode {
       leftovers={leftovers}
       today={flow.today}
       busy={flow.busy}
+      plannedFor={flow.plannedFor}
       onAction={(kind, leftover) => {
         setSheetOpen(false)
         flow.openSheet(kind, leftover)

@@ -49,7 +49,9 @@ describe('ReheatScreen (R12)', () => {
   it('shows the Recipe, the default time for the portions and the controls', async () => {
     mockApi(base())
     renderReheat()
-    expect(await screen.findByRole('heading', { name: 'Chicken curry' })).toBeInTheDocument()
+    // B9-40 (PC-15): the page title is "Reheat"; the Recipe's name is the tile's.
+    expect(await screen.findByRole('heading', { name: 'Reheat' })).toBeInTheDocument()
+    expect(screen.getByText('Chicken curry')).toBeInTheDocument()
     expect(screen.getByText('3:00')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Start timer' })).toBeInTheDocument()
@@ -129,15 +131,19 @@ describe('ReheatScreen (R12)', () => {
     expect(await screen.findByText('This Planned Meal has already been cooked or skipped')).toBeInTheDocument()
   })
 
-  it('a finished Reheat timer says it is ready and offers Dismiss, which deletes it', async () => {
+  // B9-40 (PC-15): a finished timer offers Restart (secondary) next to a primary Mark as Cooked; there is no Dismiss.
+  it('a finished Reheat timer says it is ready and offers Restart, which clears it and starts it again', async () => {
     const finished: CookTimer = { ...running, state: 'finished', remainingSeconds: 0 }
-    const api = mockApi({ ...base(), 'GET /api/cook/timers': timers([finished]), 'DELETE /api/cook/timers/5': { status: 204 } })
+    const api = mockApi({ ...base(), 'GET /api/cook/timers': timers([finished]), 'DELETE /api/cook/timers/5': { status: 204 }, 'POST /api/cook/timers': { status: 201, json: running } })
     renderReheat()
     expect(await screen.findByText('Reheat is ready')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cancel timer' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Restart' }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/cook/timers/5')).toHaveLength(1))
+    await waitFor(() => expect(api.callsTo('POST', '/api/cook/timers')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/cook/timers')[0]!.body).toEqual({ scope: SCOPE, label: 'Reheat', durationSeconds: 180 })
   })
 
   it('a paused Reheat timer offers Resume', async () => {

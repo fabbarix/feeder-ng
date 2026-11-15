@@ -47,10 +47,10 @@ export { useScreenLeftovers } from './hooks/useScreenLeftovers'
 export { usePlan } from './hooks/usePlan'
 export { useMarkCooked } from './hooks/useMarkCooked'
 export { MarkCookedSheet } from './components/MarkCookedSheet'
-export { ShortfallNotice } from './components/ShortfallNotice'
+// B9-45 (PC-02): the ONE Stock-shortfall notice and the ONE Correct Stock sheet live in features/stock; Today and Cook Mode import them from here.
+export { ShortfallNotice } from '../stock/components/ShortfallNotice'
+export { StockCorrectionSheet } from '../stock/components/StockCorrectionSheet'
 export { PlanningSettingsLink } from './components/PlanningSettingsLink'
-export { StockCorrectionSheet } from './components/StockCorrectionSheet'
-export { useStockSheet } from './hooks/useStockSheet'
 // CRS F: the Course-aware Tonight sheets and the Mark all Cooked sheet, shared with Today.
 export { useTonightSheets } from './hooks/useTonightSheets'
 export { PlannedMealSheet } from './components/PlannedMealSheet'
