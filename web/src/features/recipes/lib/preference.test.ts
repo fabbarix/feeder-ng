@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isExcluded, nextState, stateOf } from './preference'
+import { exclusionSummary, isExcluded, nextState, stateOf } from './preference'
 
 describe('nextState', () => {
   it('sets a state from none', () => {
@@ -21,5 +21,25 @@ describe('stateOf / isExcluded', () => {
     expect(stateOf({ '4': 'favourite' }, 5)).toBe('none')
     expect(isExcluded([2, 9], 9)).toBe(true)
     expect(isExcluded([2, 9], 3)).toBe(false)
+  })
+})
+
+// A11Y 3: the Exclusions tile says in one line who excludes the Ingredient.
+describe('exclusionSummary', () => {
+  it('nobody: "Nobody excludes Flour."', () => {
+    expect(exclusionSummary([], 'Flour')).toBe('Nobody excludes Flour.')
+  })
+  it('one Member: "Ben excludes Flour."', () => {
+    expect(exclusionSummary(['Ben'], 'Flour')).toBe('Ben excludes Flour.')
+  })
+  it('two Members: "Ben and Chiara exclude Flour."', () => {
+    expect(exclusionSummary(['Ben', 'Chiara'], 'Flour')).toBe('Ben and Chiara exclude Flour.')
+  })
+  it('three or more: the first two, then "N more": "Ben, Chiara and 2 more exclude Flour."', () => {
+    expect(exclusionSummary(['Ben', 'Chiara', 'Dev', 'Eli'], 'Flour')).toBe('Ben, Chiara and 2 more exclude Flour.')
+    expect(exclusionSummary(['Ben', 'Chiara', 'Dev'], 'Flour')).toBe('Ben, Chiara and 1 more exclude Flour.')
+  })
+  it('keeps the Members in the order given', () => {
+    expect(exclusionSummary(['Chiara', 'Ben'], 'garlic')).toBe('Chiara and Ben exclude garlic.')
   })
 })

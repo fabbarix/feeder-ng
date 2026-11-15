@@ -17,3 +17,8 @@ export function stateOf(recipes: Record<string, Exclude<PreferenceState, 'none'>
 export function isExcluded(excludedIngredients: number[], ingredientId: number): boolean {
   return excludedIngredients.includes(ingredientId)
 }
+
+/** STUB (B9-27 test author, A11Y 3): "Ben excludes Flour.", "Ben and Chiara exclude Flour.", "Ben, Chiara and 2 more exclude Flour.", "Nobody excludes Flour." */
+export function exclusionSummary(_names: readonly string[], _ingredient: string): string {
+  return ''
+}

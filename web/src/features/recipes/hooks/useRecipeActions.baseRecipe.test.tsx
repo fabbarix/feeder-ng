@@ -4,7 +4,9 @@ import { ApiError } from '../../../lib/http'
 
 // BR-D: deleting a Base recipe that Recipes call for is refused (409 base_recipe_in_use); the dialog names them and offers Archive instead.
 const confirm = vi.hoisted(() => ({ choose: vi.fn(), confirm: vi.fn() }))
-vi.mock('../../../ui', async (orig) => ({ ...(await orig<typeof import('../../../ui')>()), useConfirm: () => confirm }))
+const toast = vi.hoisted(() => ({ show: vi.fn(), hold: vi.fn() }))
+const undoToast = vi.hoisted(() => ({ show: vi.fn() }))
+vi.mock('../../../ui', async (orig) => ({ ...(await orig<typeof import('../../../ui')>()), useConfirm: () => confirm, useToast: () => toast, useUndoToast: () => undoToast }))
 
 import { useRecipeActions } from './useRecipeActions'
 
@@ -44,11 +46,11 @@ describe('useRecipeActions: delete a Base recipe in use', () => {
     expect(recipe.setArchived).not.toHaveBeenCalled()
     expect(onDeleted).not.toHaveBeenCalled()
   })
-  it('does not show the generic error text: the dialog said it', async () => {
+  it('shows no error toast: the dialog said it', async () => {
     confirm.confirm.mockResolvedValue(false)
     const { result } = setup()
     await act(() => result.current.remove())
-    expect(result.current.error).toBeNull()
+    expect(toast.show).not.toHaveBeenCalled()
   })
   it('an unused Base recipe deletes as any Recipe does', async () => {
     recipe.remove.mockResolvedValue(undefined)

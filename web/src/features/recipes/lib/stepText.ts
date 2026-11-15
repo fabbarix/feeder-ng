@@ -24,3 +24,17 @@ export function usesText(uses: StepUse[], refs: ReadonlyMap<number, IngredientRe
   const parts = uses.map((u) => `${quantityText(u.quantity, u.unit, refs.get(u.ingredientId), system)} ${refs.get(u.ingredientId)?.name ?? ''}`.trim())
   return recipeStrings.steps.usesLine(parts.join(', '))
 }
+
+/** STUB (B9-27 test author, RX-04): the Step row's state at the end: "10 min", "12 h before", or "No time" (untimed: true). */
+export function stepTime(_step: Pick<RecipeStep, 'kind' | 'durationMinutes' | 'leadTimeMinutes'>): { text: string; untimed: boolean } {
+  return { text: '', untimed: false }
+}
+
+/** STUB (B9-27 test author, RX-04): the Step row's muted detail: "Active", "Advance Step", "Active · Uses 50 g garlic", "Passive · After Step 2", "Active · After Steps 3 and 4". */
+export function stepDetail(
+  _step: Pick<RecipeStep, 'kind' | 'after' | 'uses'>,
+  _refs: ReadonlyMap<number, IngredientRef>,
+  _system: UnitSystem,
+): string {
+  return ''
+}
