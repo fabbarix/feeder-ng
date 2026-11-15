@@ -7,6 +7,7 @@ import { connectEvents } from '../../../lib/sse'
 import { cookApi } from '../api'
 import { coveredLines, readyBefore } from '../lib/baseSteps'
 import { advanceGroups, courseMenuEntries, effectiveFilter, filterChips, itemCaption, plannedClock, toCookStep, unresolvedCourses, visibleItems, type CourseFilter, type CourseMenuEntry, type FilterChip, type VisibleItem } from '../lib/timeline'
+import { isFutureMeal } from '../lib/future'
 import { reheatTimerOfCourse } from '../lib/reheat'
 import { createNav, goBack, goNext, isFirst, isLast, type StepNav } from '../lib/steps'
 import type { AdvanceGroup } from '../lib/timeline'
@@ -62,7 +63,8 @@ const TIMELINE_KEY = ['cook', 'view', 'timeline'] as const
  * topics `cook`, `plan`, `household` and after a reconnect. Reaching a Passive item starts its Step timer once, in the
  * item's scope; reaching a Reheat item starts the free Reheat timer of its Course unless that Course already has one.
  */
-export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
+/** `today` is the household date (usePlan): a future meal's Course menu has no "Mark <Course> as Cooked" (PC-12). */
+export function useCookTimeline(target: CookTimelineTarget, today = ''): UseCookTimeline {
   const client = useQueryClient()
   const key = [...TIMELINE_KEY, target.date, target.mealSlotId] as const
   const query = useQuery({
@@ -163,7 +165,7 @@ export function useCookTimeline(target: CookTimelineTarget): UseCookTimeline {
     timers,
     advance: view ? advanceGroups(view) : [],
     markAdvanceDone,
-    courseMenu: view ? courseMenuEntries(view) : [],
+    courseMenu: view ? courseMenuEntries(view, !isFutureMeal(view.date, today)) : [],
     unresolved: view ? unresolvedCourses(view) : [],
   }
 }

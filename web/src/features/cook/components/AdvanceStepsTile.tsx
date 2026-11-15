@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { Button, Tile } from '../../../ui'
-import { formatLeadTime, type AdvanceSummary } from '../lib/advance'
+import { Icon, Tile } from '../../../ui'
+import { advanceLine, type AdvanceSummary } from '../lib/advance'
 import { cookStrings } from '../strings'
-import { BaseRecipeChip } from './BaseRecipeChip'
+import { AdvanceChip, AdvanceLine, AdvanceRows, type AdvanceRowItem } from './AdvanceParts'
 
 export interface AdvanceStepsTileProps {
   summary: AdvanceSummary
@@ -14,35 +14,39 @@ export interface AdvanceStepsTileProps {
   collapsed?: boolean
 }
 
+function rows(summary: AdvanceSummary, onMarkDone: (step: number) => void): AdvanceRowItem[] {
+  return [...summary.done, ...summary.pending].map((item) => ({
+    key: String(item.step),
+    text: item.text,
+    done: item.done,
+    leadTimeMinutes: item.leadTimeMinutes,
+    baseRecipe: item.baseRecipe,
+    onMarkDone: () => onMarkDone(item.step),
+  }))
+}
+
 /**
- * The spoil status tile of Advance Steps: each pending one as "<text> · <lead time> ahead" with a "Done" button; the
- * done ones as "Done: <text>". Renders nothing when nothing is pending (Cook Mode shows it only before Step 1, see
- * lib/advance.advanceOnScreen).
+ * The Advance Steps of a Recipe cook, in the info tone (DS 3: lateness is never red, peach or mustard). On Step 1 an info status
+ * tile with its rows (done ones "Done: <text>", pending ones "<text> · <lead time> ahead" with a "Done" button), shown while one is
+ * pending. `collapsed` (a later Step): one info line (lib/advance advanceLine). `compact` (short landscape): the chip and its sheet.
  */
-export function AdvanceStepsTile({ summary, onMarkDone }: AdvanceStepsTileProps): ReactNode {
+export function AdvanceStepsTile({ summary, onMarkDone, compact = false, collapsed = false }: AdvanceStepsTileProps): ReactNode {
+  if (compact) {
+    return (
+      <AdvanceChip pending={summary.pending.length}>
+        <AdvanceRows label={cookStrings.advanceHeading} items={rows(summary, onMarkDone)} />
+      </AdvanceChip>
+    )
+  }
+  if (collapsed) return <AdvanceLine text={advanceLine(summary)} />
   if (summary.pending.length === 0) return null
   return (
-    <Tile as="section" variant="status" status="spoil" span="full" className="cook-advance">
-      <h2 className="cook-advance__heading">{cookStrings.advanceHeading}</h2>
-      <ul className="cook-advance__list">
-        {summary.done.map((item) => (
-          <li key={item.step} className="cook-advance__done">
-            <p>{cookStrings.advanceDone(item.text)}</p>
-            {item.baseRecipe ? <BaseRecipeChip recipe={item.baseRecipe} /> : null}
-          </li>
-        ))}
-        {summary.pending.map((item) => (
-          <li key={item.step} className="cook-advance__row">
-            <div className="cook-advance__text">
-              <p>{cookStrings.advanceAhead(item.text, formatLeadTime(item.leadTimeMinutes))}</p>
-              {item.baseRecipe ? <BaseRecipeChip recipe={item.baseRecipe} /> : null}
-            </div>
-            <Button variant="secondary" size="sm" onClick={() => onMarkDone(item.step)}>
-              {cookStrings.markAdvanceDoneShort}
-            </Button>
-          </li>
-        ))}
-      </ul>
+    <Tile as="section" variant="status" status="info" span="full" className="cook-advance">
+      <h2 className="cook-advance__heading">
+        <Icon name="advanceStep" size={16} />
+        {cookStrings.advanceHeading}
+      </h2>
+      <AdvanceRows label={cookStrings.advanceHeading} items={rows(summary, onMarkDone)} />
     </Tile>
   )
 }

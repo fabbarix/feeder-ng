@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { Button } from '../../../ui'
+import { Button, Icon } from '../../../ui'
 import { cookStrings } from '../strings'
 
 export interface CookNavTilesProps {
@@ -21,38 +21,62 @@ export interface CookNavTilesProps {
   onLeave?: () => void
   /** B9-40: the label of onLeave, default "Back to Plan" (the origin's name when the cook did not come from the Plan). */
   leaveLabel?: string
+  /** B9-40 (PC-03): the timer strip, first in the sticky nav (it spans both columns). */
+  children?: ReactNode
 }
 
 /**
- * Full-width Back and Next tiles (buttons named "Back" and "Next"). Back is
- * disabled on the first Step. On the last Step "Next" is replaced by "Mark as
- * Cooked" (when onMarkCooked is given) or "Done" (onDone); with neither, Next
- * stays but is disabled. With heldText, Next is disabled and described by that line (a live status).
+ * The sticky nav of Cook Mode: the timer strip (children), then Back (secondary, Back arrow) and the forward action (primary). Before
+ * the last Step the forward action is Next (Next arrow), disabled while `heldText` says why. On the last Step it is "Mark as Cooked"
+ * (onMarkCooked), "Back to Recipe" (onDone), or for a meal that is not due yet "Back to Plan" (onLeave) described by `futureLine`
+ * (PC-12). A last Step with nothing to offer has no forward button: never a disabled Next without a reason. The line under the tiles
+ * is a live status with an icon (the timer for a held Next, the Plan's calendar for a future meal).
  */
-export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, onDone, heldText, markLabel }: CookNavTilesProps): ReactNode {
-  const heldId = useId()
-  let forward: ReactNode
+export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, onDone, heldText, markLabel, futureLine, onLeave, leaveLabel, children }: CookNavTilesProps): ReactNode {
+  const lineId = useId()
+  const held = !isLast && heldText ? heldText : ''
+  const future = isLast && futureLine ? futureLine : ''
+  const line = held || future
+  let forward: ReactNode = null
   if (!isLast) {
     forward = (
-      <Button size="lg" className="cook-nav__tile" onClick={onNext} disabled={Boolean(heldText)} aria-describedby={heldText ? heldId : undefined}>
+      <Button size="lg" icon="next" className="cook-nav__tile" onClick={onNext} disabled={Boolean(held)} aria-describedby={held ? lineId : undefined}>
         {cookStrings.next}
       </Button>
     )
+  } else if (future) {
+    forward = onLeave ? (
+      <Button size="lg" icon="plan" className="cook-nav__tile" onClick={onLeave} aria-describedby={lineId}>
+        {leaveLabel ?? cookStrings.backToPlan}
+      </Button>
+    ) : null
   } else if (onMarkCooked) {
-    forward = <Button size="lg" className="cook-nav__tile" onClick={onMarkCooked}>{markLabel ?? cookStrings.markAsCooked}</Button>
+    forward = (
+      <Button size="lg" icon="markCooked" className="cook-nav__tile" onClick={onMarkCooked}>
+        {markLabel ?? cookStrings.markAsCooked}
+      </Button>
+    )
   } else if (onDone) {
-    forward = <Button size="lg" className="cook-nav__tile" onClick={onDone}>{cookStrings.done}</Button>
-  } else {
-    forward = <Button size="lg" className="cook-nav__tile" disabled>{cookStrings.next}</Button>
+    forward = (
+      <Button size="lg" icon="next" className="cook-nav__tile" onClick={onDone}>
+        {cookStrings.done}
+      </Button>
+    )
   }
   return (
-    <div className="cook-nav">
-      <Button variant="secondary" size="lg" className="cook-nav__tile" disabled={isFirst} onClick={onBack}>
+    <div className="cook-nav" data-last={isLast ? '' : undefined}>
+      {children}
+      <Button variant="secondary" size="lg" icon="back" className="cook-nav__tile" disabled={isFirst} onClick={onBack}>
         {cookStrings.back}
       </Button>
       {forward}
-      <p id={heldId} className="cook-nav__held" role="status">
-        {!isLast && heldText ? heldText : null}
+      <p id={lineId} className="cook-nav__held" role="status">
+        {line ? (
+          <>
+            <Icon name={held ? 'timer' : 'plan'} size={16} />
+            {line}
+          </>
+        ) : null}
       </p>
     </div>
   )

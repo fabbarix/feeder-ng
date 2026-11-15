@@ -37,6 +37,7 @@ export function useReheat(key: SlotKey, portions: number, reheatMinutes?: number
   const [starting, setStarting] = useState(false)
   const startingRef = useRef(false)
   const secondsLeft = timer ? (timers.items.find((i) => i.timer.id === timer.id)?.seconds ?? 0) : 0
+  const finished = timer !== null && (timer.state === 'finished' || (timer.state === 'running' && secondsLeft <= 0))
 
   // A failed action is reported to the caller (a toast), never left as an unhandled rejection.
   const guarded = async (run: () => Promise<unknown>) => {
@@ -69,7 +70,21 @@ export function useReheat(key: SlotKey, portions: number, reheatMinutes?: number
     pause: () => guarded(async () => timer && timers.pause(timer.id)),
     resume: () => guarded(async () => timer && timers.resume(timer.id)),
     cancel: () => guarded(async () => timer && timers.cancel(timer.id)),
-    finished: false,
-    restart: async () => {},
+    finished,
+    restart: async () => {
+      if (!timer || startingRef.current) return
+      const length = timer.durationSeconds
+      startingRef.current = true
+      setStarting(true)
+      try {
+        await guarded(async () => {
+          await timers.cancel(timer.id)
+          await timers.start({ scope, label: REHEAT_LABEL, durationSeconds: length })
+        })
+      } finally {
+        startingRef.current = false
+        setStarting(false)
+      }
+    },
   }
 }
