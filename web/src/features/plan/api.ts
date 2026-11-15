@@ -98,8 +98,9 @@ export const planApi = {
   reopenAll: (slot: SlotDayKey) => http.post<ReopenResult>(`${slotDayPath(slot)}/all/reopen`),
   /** B5-BOW: what Regenerate would replace, with the Bought Planned Meals named (POST ?dryRun=1; writes nothing). */
   regenerateDryRun: () => http.post<RegenerateDryRun>('/api/plan/regenerate?dryRun=1'),
-  setMeal: (key: SlotKey, recipeId: number, batches?: number) =>
-    http.put<PlanWriteResult>(slotPath(key), batches === undefined ? { recipeId } : { recipeId, batches }),
+  /** B9-38: `markCourse` (a pick from "Other Recipes") marks the Recipe with the key's Course and sets it in the same write. */
+  setMeal: (key: SlotKey, recipeId: number, batches?: number, markCourse?: boolean) =>
+    http.put<PlanWriteResult>(slotPath(key), { recipeId, ...(batches === undefined ? {} : { batches }), ...(markCourse ? { markCourse: true } : {}) }),
   /** B5-LOW: pins a Leftover (not taken out of the Freezer) to the Planned Meal of a Course; `{ leftoverId }` instead of a Recipe. */
   pickLeftover: (key: SlotKey, leftoverId: number) => http.put<PlanWriteResult>(slotPath(key), { leftoverId }),
   confirm: (key: SlotKey) => http.post<PlanWriteResult>(`${slotPath(key)}/confirm`),

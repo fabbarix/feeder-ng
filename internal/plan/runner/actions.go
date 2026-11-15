@@ -301,12 +301,23 @@ func (r *Runner) SetMeal(ctx context.Context, key plan.Key, recipeID int64, batc
 // meals and reports them as Covered. Errors: ErrUnknownSlot (not a Meal Slot of that weekday), ErrInPast (before
 // today), ErrAlreadyResolved (Cooked or skipped there), ErrUnknownRecipe, ErrArchivedRecipe, ErrInvalidBatches.
 func (r *Runner) SetCourseMeal(ctx context.Context, key plan.Key, recipeID int64, batches *float64) (SetResult, error) {
-	return r.setCell(ctx, key, recipeID, batches, 0)
+	return r.setCell(ctx, key, recipeID, batches, 0, nil)
+}
+
+// MarkFunc marks a Recipe with a Course inside the write's transaction (the courses module's MarkRecipesTx).
+type MarkFunc func(ctx context.Context, tx *sql.Tx, courseID, recipeID int64) error
+
+// SetCourseMealMarking is SetCourseMeal for a Recipe that is not marked with the key's Course yet (B9-38, "Other Recipes"
+// in Choose a Recipe): mark marks it inside the same transaction first, so the Course check, the set and the replan all
+// see the mark. A refusal rolls the mark back with the rest. The mark is not part of the write's undo: Undo restores the
+// plan and the Recipe stays marked.
+func (r *Runner) SetCourseMealMarking(ctx context.Context, key plan.Key, recipeID int64, batches *float64, mark MarkFunc) (SetResult, error) {
+	return r.setCell(ctx, key, recipeID, batches, 0, mark)
 }
 
 // setCell sets the Course's meal at key to a Recipe (SetCourseMeal), or, when leftoverID is not 0, to the Recipe of that
 // Leftover served from it (UseLeftover: no batches, the Leftover's Use-by and portions checked).
-func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batches *float64, leftoverID int64) (SetResult, error) {
+func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batches *float64, leftoverID int64, mark MarkFunc) (SetResult, error) {
 	var covered []int64
 	// The target and the Courses a Whole meal covers are the write's own cells: they are not "other meals changed".
 	targets := func() []plan.Key {
@@ -350,7 +361,14 @@ func (r *Runner) setCell(ctx context.Context, key plan.Key, recipeID int64, batc
 			}
 			pick, recipeID = &l, int64(l.RecipeID)
 		}
-		recipes, err := r.d.Source.Recipes(ctx)
+		rctx := ctx
+		if mark != nil {
+			if err := mark(ctx, tx, key.CourseID, recipeID); err != nil {
+				return nil, err
+			}
+			rctx = withTx(ctx, tx) // the Recipes' Course lists are read through tx, so the mark counts
+		}
+		recipes, err := r.d.Source.Recipes(rctx)
 		if err != nil {
 			return nil, err
 		}

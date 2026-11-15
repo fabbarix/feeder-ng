@@ -55,7 +55,7 @@ func mount(r *app.Router, d app.Deps) {
 	})
 	d.Scheduler.Daily("plan.nightly", "03:00", run.Nightly)
 
-	a := &api{run: run, st: st, names: newNames(d), cook: timers, tagExists: tagstore.New(d.DB).Exists}
+	a := &api{run: run, st: st, names: newNames(d), cook: timers, tagExists: tagstore.New(d.DB).Exists, events: d.Events}
 	rp := &Replanner{run: run, names: a.names}
 	replanners.Store(d.DB, rp) // B9-11: other modules' replanning writes (undo.go)
 	if d.Context != nil {
@@ -105,6 +105,13 @@ type api struct {
 	cook  *cookservice.Service
 	// tagExists is the Tag check of the rule routes (TG-R, ADR 0010): wired at mount, a stub in the handler tests.
 	tagExists TagExists
+	// events publishes the Courses and Recipes refresh of a PUT that marks a Recipe (B9-38).
+	events publisher
+}
+
+// publisher is the part of the event bus the handlers use.
+type publisher interface {
+	Publish(topic string, data any)
 }
 
 // TagExists says whether a Tag has that key.
