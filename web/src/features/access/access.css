@@ -28,7 +28,6 @@
     text-align: start;
     font-size: var(--text-meta-size);
     line-height: var(--text-meta-line);
-    font-weight: var(--text-meta-weight);
   }
   .access__list .list-row[data-actions='true'] > .list-row__value .list-row__sub-value::before {
     content: '· ';
