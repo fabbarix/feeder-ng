@@ -161,7 +161,8 @@ describe('RecipeDetailScreen: Delete of a planned Recipe (SAFE-05) and the Archi
     await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }))
     await waitFor(() => expect(toast()).not.toBeNull())
     expect(toast()!.querySelector('.toast__title svg')).toBeNull() // R-D+: a plain success toast has no icon
-    expect(toast()).toHaveAttribute('data-status', 'success')
+    // B9-27 developer: the shared useUndoToast (B9-18) draws every Undo toast in the neutral status, which has no icon (was 'success').
+    expect(toast()).toHaveAttribute('data-status', 'neutral')
   })
   it('Undo unarchives it', async () => {
     view()

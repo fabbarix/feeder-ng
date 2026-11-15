@@ -1,20 +1,17 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useState, type ReactNode } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useCourses } from '../../../lib/courses/useCourses'
 import { cookRecipePath } from '../../cook'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
-import { Button, Chip, ErrorState, IconButton, LoadState, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, TextLink, useBreakpoint } from '../../../ui'
-import { BaseRecipeBadge } from '../components/BaseRecipeBadge'
-import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
-import { useBaseLinkCandidates } from '../hooks/useBaseLinkCandidates'
-import { useBaseRecipeStock } from '../hooks/useBaseRecipeStock'
+import { ErrorState, IconButton, LoadState, Menu, PageHeader, RecipeThumb, Skeleton, StickyActionBar, Tile, useBreakpoint } from '../../../ui'
+import { BaseRecipeSection } from '../components/BaseRecipeSection'
 import { LineLinkSession, type LineSession } from '../components/LineLinkSession'
-import { usedInText, yieldText } from '../lib/baseRecipe'
 import { CookEntry } from '../components/CookEntry'
-import { CourseChips } from '../components/CourseChips'
+import { CookTile } from '../components/CookTile'
 import { IngredientLinesList } from '../components/IngredientLinesList'
 import { PreferenceTable } from '../components/PreferenceTable'
+import { RecipeAbout } from '../components/RecipeAbout'
 import { RecipeMetrics } from '../components/RecipeMetrics'
 import { RecipeTags } from '../components/RecipeTags'
 import { StepsList } from '../components/StepsList'
@@ -25,21 +22,19 @@ import { RecipeDetailSkeleton } from '../components/RecipeDetailSkeleton'
 import { useRecipe } from '../hooks/useRecipe'
 import { useRecipeActions } from '../hooks/useRecipeActions'
 import { useRecipeTags } from '../hooks/useRecipeTags'
+import { heroLeadChips } from '../lib/heroChips'
 import { preferenceRows } from '../lib/preferenceRows'
 import { lastCookedLabel, localToday } from '../lib/lastCooked'
 import { recipesTagPath } from '../lib/tags'
-import { showsWholeMeal } from '../lib/recipeCourses'
 import { recipeStrings } from '../strings'
-import type { Recipe } from '../types'
 import '../recipes-list.css'
 import '../recipe-detail.css'
 
 /**
- * Route /recipes/:id: the photo, the metrics (Yield, time and the Advance Step lead), the ingredient lines, the Steps,
- * the preferences of the whole Household as a table, and
- * "Start Cook Mode" with the Batch count. Edit is in the header; Archive and Delete are in the More actions Menu
- * (Delete asks in a ConfirmDialog). From the desktopWide band (80 em, 1280 px at the default text size) the left column holds the photo, metrics, Ingredients and the Cook
- * entry; below, the Cook entry is a StickyActionBar.
+ * Route /recipes/:id (RX-04): the lede (description and Source), then two columns from 45 rem of the page's own width: the side column
+ * holds the hero (Photo and one chip line), the Cook tile (from 1024 px of viewport), the metric strip and the Ingredients; the main
+ * column the Steps and the preferences of the whole Household. Below 1024 px the Cook entry is a StickyActionBar instead, never both.
+ * Edit is in the header; Archive and Delete are in the More actions Menu (useRecipeActions: dialogs and toasts).
  */
 export function RecipeDetailScreen(): ReactNode {
   const navigate = useNavigate()
@@ -51,11 +46,16 @@ export function RecipeDetailScreen(): ReactNode {
   const refs = useIngredientRefs()
   const system = useDisplayUnitSystem()
   const [batches, setBatches] = useState(1)
-  const wide = useBreakpoint('desktopWide')
+  // RX-04: the Cook tile from the side rail's breakpoint (1024 px), where no bottom bar floats over the page.
+  const hasRail = useBreakpoint('desktop')
   const { choices } = useCourses()
   const r = recipe.recipe
   const crumbs = useBreadcrumbs(r?.name)
-  const actions = useRecipeActions(recipe, { name: r?.name ?? '', archived: r?.archived ?? false }, () => navigate('/recipes'))
+  const actions = useRecipeActions(
+    recipe,
+    { name: r?.name ?? '', archived: r?.archived ?? false, deletable: r?.deletable, deleteBlockedBy: r?.deleteBlockedBy, usedBy: r?.usedBy },
+    () => navigate('/recipes'),
+  )
   const { colourOf } = useRecipeTags()
   // BR-D: a line action (Link to a Base recipe, Use as a plain Ingredient) runs as a session; a change refetches the Recipe and its candidates.
   const [session, setSession] = useState<LineSession | null>(null)
@@ -84,16 +84,17 @@ export function RecipeDetailScreen(): ReactNode {
   }
 
   const rows = preferenceRows(household.members, household.prefsByMember, r.id, r.lines, household.meUserId)
-  const cook = (
-    <CookEntry
-      batches={batches}
-      onBatchesChange={setBatches}
-      yieldValue={r.yield}
-      onStart={() => navigate(cookRecipePath(r.id, batches))}
-    />
-  )
-  const thumb = <RecipeThumb name={r.name} photoUrl={r.imageUrl || undefined} tags={r.tags} size="hero" />
   const isBase = r.baseRecipe === true
+  const cookProps = {
+    batches,
+    onBatchesChange: setBatches,
+    yieldValue: r.yield,
+    yieldUnit: isBase ? r.yieldUnit : null,
+    system,
+    onStart: () => navigate(cookRecipePath(r.id, batches)),
+  }
+  const photo = Boolean(r.imageUrl)
+  const thumb = <RecipeThumb name={r.name} photoUrl={r.imageUrl || undefined} tags={r.tags} size="hero" />
 
   return (
     <section className="recipe-detail">
@@ -125,20 +126,30 @@ export function RecipeDetailScreen(): ReactNode {
           </>
         }
       />
+      <RecipeAbout description={r.description} source={r.source} />
       {isBase ? <BaseRecipeSection recipe={r} refreshKey={candidateTick} onChanged={refreshAll} /> : null}
       <div className="recipe-detail__layout">
         <div className="recipe-detail__aside">
-          <Tile variant="media" className="recipe-detail__hero" media={thumb}>
-            {r.archived ? <Chip kind="tag">{recipeStrings.archived}</Chip> : null}
-            <CourseChips
-              names={r.courses.map((c) => c.name)}
-              wholeMeal={r.wholeMeal && showsWholeMeal(r.courses.map((c) => c.id), choices)}
+          <Tile
+            variant="media"
+            className="recipe-detail__hero"
+            data-photo={photo ? 'true' : 'false'}
+            media={thumb}
+          >
+            <RecipeTags
+              fitted
+              lead={heroLeadChips(r, choices)}
+              tags={r.tags}
+              colourOf={colourOf}
+              onOpen={(name) => navigate(recipesTagPath(name))}
             />
-            <RecipeTags tags={r.tags} colourOf={colourOf} onOpen={(name) => navigate(recipesTagPath(name))} />
           </Tile>
+          {hasRail ? <CookTile {...cookProps} /> : null}
           <RecipeMetrics
-            yieldText={String(r.yield)}
-            readyMeal={r.readyMeal}
+            yieldValue={r.yield}
+            yieldUnit={r.yieldUnit}
+            baseRecipe={isBase}
+            stepCount={r.steps.length}
             totalMinutes={r.totalMinutes}
             advanceMinutes={r.advanceMinutes}
             lastCooked={lastCookedLabel(r.lastCookedOn, localToday())}
@@ -153,7 +164,6 @@ export function RecipeDetailScreen(): ReactNode {
               onUseAsPlain={(line) => setSession({ kind: 'plain', line })}
             />
           </Tile>
-          {wide ? cook : null}
         </div>
         <div className="recipe-detail__main">
           <Tile as="section">
@@ -194,61 +204,11 @@ export function RecipeDetailScreen(): ReactNode {
         />
       ) : null}
       {lineError ? <p role="alert">{lineError}</p> : null}
-      {actions.error ? <ErrorState message={actions.error} /> : null}
-      {wide ? null : <StickyActionBar label={recipeStrings.cook.barLabel}>{cook}</StickyActionBar>}
+      {hasRail ? null : (
+        <StickyActionBar label={recipeStrings.cook.barLabel}>
+          <CookEntry {...cookProps} />
+        </StickyActionBar>
+      )}
     </section>
-  )
-}
-
-/**
- * BR-D: a Base recipe's own facts: the Yield, the Pantry's Stock of it, the Recipes that call for it (links), and the candidates row (its copy is in the
- * strings) that opens the bulk link list while any plain line of that name is left. A child component, so a plannable Recipe never asks for candidates or Stock.
- */
-function BaseRecipeSection({ recipe: r, refreshKey, onChanged }: { recipe: Recipe; refreshKey: number; onChanged: () => void }): ReactNode {
-  const candidates = useBaseLinkCandidates(r.id, true)
-  const stock = useBaseRecipeStock(r.baseIngredientId)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  useEffect(() => {
-    if (refreshKey > 0) candidates.refetch()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when the screen reports a link change
-  }, [refreshKey])
-  const used = r.usedBy ?? []
-  const t = recipeStrings.baseRecipe
-  return (
-    <>
-      <Tile as="section" span="full" aria-label={t.badge}>
-        <p>
-          <BaseRecipeBadge /> <span>{t.yieldLine(yieldText(r.yield, r.yieldUnit))}</span>
-        </p>
-        {stock.line ? <p>{stock.href ? <TextLink to={stock.href}>{stock.line}</TextLink> : stock.line}</p> : null}
-        <h2>{usedInText(used.length)}</h2>
-        {used.length === 0 ? null : (
-          <p>
-            {used.map((u, i) => (
-              <span key={u.id}>
-                {i > 0 ? ', ' : null}
-                <Link to={`/recipes/${u.id}`}>{u.name}</Link>
-              </span>
-            ))}
-          </p>
-        )}
-        {candidates.count > 0 ? (
-          <Button variant="secondary" onClick={() => setSheetOpen(true)}>
-            {t.candidatesRow(candidates.ingredientName, candidates.count)}
-          </Button>
-        ) : null}
-      </Tile>
-      {sheetOpen ? (
-        <LinkCandidatesSheet
-          open
-          baseRecipe={{ id: r.id, name: r.name, ingredientId: r.baseIngredientId ?? 0 }}
-          onClose={() => {
-            setSheetOpen(false)
-            candidates.refetch()
-          }}
-          onChanged={onChanged}
-        />
-      ) : null}
-    </>
   )
 }

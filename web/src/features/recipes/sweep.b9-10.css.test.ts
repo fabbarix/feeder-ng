@@ -220,11 +220,12 @@ describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery'
     const declared = rules.some((r) => declarations(r.body).some(([k, v]) => (k === 'container' && new RegExp(`^${name}\\s*/\\s*inline-size$`).test(v)) || (k === 'container-name' && v === name)))
     expect(declared, `container ${name} is declared`).toBe(true)
   })
-  it('useMediaQuery is not called by a component of the five folders: RecipeDetailScreen asks useBreakpoint("desktopWide")', () => {
+  // B9-27 (RX-04): the Cook tile shows from the side rail's breakpoint, 1024 px ('desktop'), no longer from 'desktopWide'.
+  it('useMediaQuery is not called by a component of the five folders: RecipeDetailScreen asks useBreakpoint("desktop")', () => {
     const calls = codeFiles().filter((f) => /\buseMediaQuery\s*\(/.test(stripComments(f.text))).map((f) => f.path)
     expect(calls).toEqual([])
     const detail = readSource('features/recipes/screens/RecipeDetailScreen.tsx')
-    expect(detail).toMatch(/useBreakpoint\(\s*'desktopWide'\s*\)/)
+    expect(detail).toMatch(/useBreakpoint\(\s*'desktop'\s*\)/)
     expect(detail).not.toMatch(/1280px/)
   })
 })

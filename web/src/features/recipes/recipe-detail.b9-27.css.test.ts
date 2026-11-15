@@ -68,10 +68,12 @@ describe('RX-04: the hero shares its edges with the tiles', () => {
   })
 })
 
-describe('RX-04: the hero chip line is one fitted line with room for the focus ring', () => {
+// Ruling 6 (main session): the lead chips (Courses, Archived, Whole meal, Ready Meal) never clip; when they alone do not fit one line at 375
+// they wrap to a second line. Only the Tags collapse into "+N" (the fit, lib/heroChipLine), so the line may wrap but never cuts a chip.
+describe('RX-04: the hero chip line is a fitted line with room for the focus ring', () => {
   const line = ".recipe-detail__hero .recipe-tags[data-fitted='true']"
-  it('never wraps, and clips nothing but its own overflow (the fit hides what does not fit)', () => {
-    expect(valueFor(line, 'flex-wrap', 0)).toBe('nowrap')
+  it('wraps (the lead chips never clip), and clips nothing but its own overflow (the fit hides the Tags that do not fit)', () => {
+    expect(valueFor(line, 'flex-wrap', 0)).toBe('wrap')
     expect(valueFor(line, 'overflow', 0)).toBe('hidden')
   })
   it('keeps 5 px of ring room on every side, taken back with an equal negative margin so the line does not move', () => {

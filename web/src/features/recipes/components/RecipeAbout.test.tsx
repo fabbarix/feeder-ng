@@ -61,11 +61,17 @@ describe('RecipeAbout: the Source line', () => {
     expect(container.querySelector('.recipe-source')).toHaveTextContent('Source: example.test')
     expect(screen.getByRole('link', { name: 'Source: example.test, opens in a new tab' })).toBeInTheDocument()
   })
-  it('an address that is not http(s) is never a link, whatever it says', () => {
+  // Ruling 4 (main session): such an address is shown as plain text after the attribution, never a link and never run.
+  it('an address that is not http(s) is never a link, whatever it says: it is plain text after the attribution', () => {
     const { container } = render(<RecipeAbout description="" source={{ url: 'javascript:alert(1)', attribution: 'Gran' }} />)
     expect(screen.queryByRole('link')).toBeNull()
     expect(container.querySelector('a')).toBeNull()
-    expect(container).not.toHaveTextContent('javascript')
+    expect(container.querySelector('.recipe-source')).toHaveTextContent('Source: Gran · javascript:alert(1)')
+  })
+  it('an address that is not http(s) and no attribution: "Source: <address>" as plain text', () => {
+    const { container } = render(<RecipeAbout description="" source={{ url: 'ftp://example.test/p', attribution: '' }} />)
+    expect(container.querySelector('a')).toBeNull()
+    expect(container.querySelector('.recipe-source')).toHaveTextContent('Source: ftp://example.test/p')
   })
   it('has the LinkSimple icon before the text, hidden from assistive technology', () => {
     const { container } = render(<RecipeAbout description="" source={{ url: '', attribution: 'Gran' }} />)
