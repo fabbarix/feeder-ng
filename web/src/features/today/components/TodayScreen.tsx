@@ -207,15 +207,19 @@ export function TodayScreen(): ReactElement {
         isLoading={sheets.swap.isLoading}
         onPick={(id) => void sheets.swap.pick(id)}
         bought={sheets.swap.bought}
+        courseId={sheets.swap.courseId}
       />
       <RecipeChooserSheet
         open={sheets.choose.key !== null}
         onClose={sheets.choose.close}
-        recipes={sheets.choose.recipes}
-        isLoading={sheets.choose.isLoading}
+        recipes={sheets.choose.sheetRecipes}
+        isLoading={sheets.choose.sheetLoading}
         onPick={(id) => void sheets.choose.pick(id)}
         frozenLeftovers={leftovers.chooserLeftovers}
         onPickLeftover={(id) => void leftovers.pickLeftover(id)}
+        slot={sheets.choose.slot}
+        courseId={sheets.choose.courseId}
+        onPickOther={(id) => void sheets.choose.pickOther(id)}
       />
       <ReplanReviewSheet controller={sheets.review} />
       <CouldntMealsSheet

@@ -123,6 +123,8 @@ describe('Today: the hero\'s ⋮ (TB-10)', () => {
     await open()
     await userEvent.click(screen.getByRole('menuitem', { name: 'Swap' }))
     const sheet = await screen.findByRole('dialog', { name: /Swap Chicken & leek pie$/ })
+    // B9-38 wired on Today (w4d review): the Swap sheet's context line names the day, Meal Slot and Course, as on the Plan.
+    expect(sheet.querySelector('.sheet__context')).toHaveTextContent(/^Tue 10 · Dinner · Main$/)
     await userEvent.click(await within(sheet).findByRole('button', { name: /Pizza/ }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-10/2/1')).toHaveLength(1))
     expect(api.callsTo('PUT', '/api/plan/2026-11-10/2/1')[0]!.body).toMatchObject({ recipeId: 21 })
