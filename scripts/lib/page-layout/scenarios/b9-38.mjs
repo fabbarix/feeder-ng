@@ -24,6 +24,10 @@ const PLAN_READY = `document.querySelectorAll('main .list-row__target').length >
 /** The element (button, menu item or list-row target) whose text or aria-label is `text`, as page code, inside `root`. */
 const named = (root, text) => `[...${root}.querySelectorAll('button, [role="menuitem"], a[href]')].find((e) => (e.getAttribute('aria-label') || e.textContent).trim() === ${JSON.stringify(text)})`
 
+/** An item of the open ⋮ (a menu item from 768 px, else the Menu sheet's row), never a page button of the same name (the Couldn't plan
+ *  tile's "Choose a Recipe" sits in the page, inert under the sheet). */
+const menuItem = (text) => `([...document.querySelectorAll('[role="menuitem"]')].find((e) => e.textContent.trim() === ${JSON.stringify(text)}) ?? [...document.querySelectorAll('dialog[open] .list-row')].find((r) => (r.querySelector('.list-row__title')?.textContent.trim() ?? '') === ${JSON.stringify(text)})?.querySelector('button, a[href]'))`
+
 /** What the page shows, appended to a failed setup's message. */
 const SNAPSHOT = `JSON.stringify({
   dialogs: [...document.querySelectorAll('dialog[open]')].map((d) => d.innerText.replace(/\\s+/g, ' ').slice(0, 200)),
@@ -48,11 +52,14 @@ const closeSheets = async () => {
  * Opens the Planned Meal sheet of the first Plan row that has one with a footer ⋮ ("More for …": a planned meal). With `needs` the sheet
  * must also have that footer button ("Mark as Cooked"); a sheet that does not is closed and the next row tried.
  */
-async function openPlannedSheet(needs) {
+// `future`: only rows of the days after today (w4d review: at some hours of the guard's clock every slot of today has passed, and
+// a past meal's Choose a Recipe opens no chooser).
+async function openPlannedSheet(needs, future = false) {
   await until(PLAN_READY, 'the Plan rows')
-  const n = await evaluate(`Math.min(16, document.querySelectorAll('main .list-row__target').length)`)
+  const rows = future ? `[...document.querySelectorAll('main .plan-day:not([data-today]) .list-row__target')]` : `[...document.querySelectorAll('main .list-row__target')]`
+  const n = await evaluate(`Math.min(16, ${rows}.length)`)
   for (let i = 0; i < n; i++) {
-    await evaluate(`document.querySelectorAll('main .list-row__target')[${i}]?.click()`)
+    await evaluate(`${rows}[${i}]?.click()`)
     const open = await until(`!!${DIALOG}`, 'a sheet', 1500).then(() => true, () => false)
     if (!open) continue
     const ok = await evaluate(`(() => { const d = ${DIALOG}; if (!d.querySelector('.sheet__footer button[aria-label^="More for "]')) return false; return ${needs ? `!!(${named('d.querySelector(".sheet__footer")', needs)})` : 'true'} })()`)
@@ -87,14 +94,14 @@ async function assertChrome(requireContext = true) {
   if (why) throw new Error(`setup: ${why}`)
 }
 
-export default {
+const scenarios = {
   order: 338,
   scenarios: [
     { name: 'plan-sheet-actions', route: '/plan', start: '/plan', setup: 'planSheetActions', widths: [375, 390, '667x375', '844x390'], emulate: TOUCH, rules: ['P25', 'P29', 'P30', 'P33'] },
     { name: 'plan-sheet-mark-cooked', route: '/plan', start: '/plan', setup: 'planSheetMarkCooked', widths: [375, 390, '667x375', '844x390'], emulate: TOUCH, rules: ['P25', 'P29', 'P30', 'P33'] },
     { name: 'plan-sheet-swap', route: '/plan', start: '/plan', setup: 'planSheetSwap', widths: [375, 390, 1440], emulate: TOUCH, rules: ['P25', 'P33'] },
     { name: 'plan-sheet-choose', route: '/plan', start: '/plan', setup: 'planSheetChoose', widths: [375, 390, 1440], emulate: TOUCH, rules: ['P25', 'P33'] },
-    { name: 'plan-sheet-choose-ring', route: '/plan', start: '/plan', setup: 'planSheetChoose', widths: [390, 1440], rules: ['P39'] },
+    { name: 'plan-sheet-choose-ring', route: '/plan', start: '/plan', setup: 'planSheetChooseRing', widths: [390, 1440], rules: ['P39'] },
     { name: 'plan-sheet-whos-eating', route: '/plan', start: '/plan', setup: 'planSheetWhosEating', widths: [390, '844x390'], emulate: TOUCH, rules: ['P25', 'P29', 'P33'] },
   ],
   setups: {
@@ -128,14 +135,29 @@ export default {
     },
     async planSheetChoose() {
       await withSnapshot(async () => {
-        await openPlannedSheet()
+        await openPlannedSheet(undefined, true)
         await press(`${DIALOG}.querySelector('.sheet__footer button[aria-label^="More for "]')`, 'the footer ⋮')
-        await until(`!!(${named('document', 'Choose a Recipe')})`, 'the Choose a Recipe item', 4000)
-        await press(named('document', 'Choose a Recipe'), 'Choose a Recipe in the ⋮')
+        await until(`!!(${menuItem('Choose a Recipe')})`, 'the Choose a Recipe item', 4000)
+        await press(menuItem('Choose a Recipe'), 'Choose a Recipe in the ⋮')
         await until(`!!(${DIALOG}?.querySelector('.sheet__title')?.textContent.trim() === 'Choose a Recipe') && !!(${DIALOG}.querySelector('[role="searchbox"], input[type="search"]'))`, 'the Choose a Recipe sheet with its search field', 8000)
         await assertChrome()
         const label = await evaluate(`(${DIALOG}.querySelector('[role="searchbox"], input[type="search"]').getAttribute('aria-label') || '')`)
         if (!/^Search .*Recipes$/.test(label)) throw new Error(`setup: the search field is "${label}", not "Search <Course> Recipes"`)
+      })
+    },
+    // w4d review: the same sheet with its list narrowed by the search to a few rows that fit, so the body does not scroll. The shared
+    // clipped-rings probe (order 100) scrolls every sheet-body control into view before focus-rings (order 180) measures, which left
+    // rows scrolled up beside the header; focus-rings does not clip a neighbour by its scroller, so Close's ring read as touching them.
+    // On the real screen (scrolled by hand, then Close focused) the body clips under the header and the ring stays clear of it.
+    async planSheetChooseRing() {
+      await scenarios.setups.planSheetChoose()
+      await withSnapshot(async () => {
+        await evaluate(`(() => { const f = ${DIALOG}.querySelector('[role="searchbox"], input[type="search"]'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(f, 'a'); f.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+        await until(`(() => { const b = ${DIALOG}.querySelector('.sheet__body'); return b.scrollHeight <= b.clientHeight + 1 })()`, 'the Choose list narrowed to rows that fit', 4000).catch(async () => {
+          await evaluate(`(() => { const f = ${DIALOG}.querySelector('[role="searchbox"], input[type="search"]'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(f, 'pan'); f.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+          await until(`(() => { const b = ${DIALOG}.querySelector('.sheet__body'); return b.scrollHeight <= b.clientHeight + 1 })()`, 'the Choose list narrowed to rows that fit', 4000)
+        })
+        if (!(await evaluate(`${DIALOG}.querySelectorAll('.list-row').length > 0`))) throw new Error('setup: the narrowed Choose list has no row')
       })
     },
     async planSheetWhosEating() {
@@ -159,3 +181,4 @@ export default {
     },
   },
 }
+export default scenarios
