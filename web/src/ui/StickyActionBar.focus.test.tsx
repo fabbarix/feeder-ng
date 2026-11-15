@@ -135,3 +135,16 @@ describe('StickyActionBar scrolls a Checkbox clear by its visible box (B9-19 dev
     expect(scrollIntoView.mock.contexts[0]).toBe(box)
   })
 })
+
+describe('a ring that only touches the bar is scrolled clear too (B9-19 developer, P39 counts touching)', () => {
+  it('a frame whose ring ends exactly on the bar top, or within the 4 px gap, is scrolled', async () => {
+    const { getByLabelText } = page(595, 600) // 595 + 5 = 600: touching
+    await userEvent.click(getByLabelText('Step text'))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  })
+  it('a frame whose ring ends 4 px or more above the bar is left where it is', async () => {
+    const { getByLabelText } = page(591, 600) // 591 + 5 + 4 = 600
+    await userEvent.click(getByLabelText('Step text'))
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+})

@@ -51,6 +51,8 @@ export function useStickyBarClearance(ref: RefObject<HTMLElement | null>, enable
 
 /** The focus ring's reach outside a field frame: the 3 px outline at its 2 px offset. */
 const RING_PX = 5
+/** The gap the scroll padding keeps between a focused ring and the bar (--space-1). */
+const RING_GAP_PX = 4
 
 /** Whether a field frame, grown by its focus ring, reaches below the sticky bar's top edge (touching is not crossing). */
 export function ringCrossesBarTop({ frameBottom, barTop, ring = RING_PX }: { frameBottom: number; barTop: number; ring?: number }): boolean {
@@ -82,7 +84,8 @@ export function useScrollFocusClearOfBar(ref: RefObject<HTMLElement | null>, ena
       const bar = ref.current
       if (!bar || !(target instanceof Element) || target === document.body || bar.contains(target)) return
       const frame = ringOwner(target)
-      if (!ringCrossesBarTop({ frameBottom: frame.getBoundingClientRect().bottom, barTop: bar.getBoundingClientRect().top })) return
+      // The ring and the 4 px the scroll padding keeps between it and the bar: a ring that only touches the bar is scrolled too (P39).
+      if (!ringCrossesBarTop({ frameBottom: frame.getBoundingClientRect().bottom, barTop: bar.getBoundingClientRect().top, ring: RING_PX + RING_GAP_PX })) return
       frame.scrollIntoView?.({ block: 'nearest' })
     }
     const onFocusIn = (e: FocusEvent) => clear(e.target)
