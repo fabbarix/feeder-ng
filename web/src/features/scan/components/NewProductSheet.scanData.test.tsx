@@ -162,6 +162,9 @@ describe('NewProductSheet: focus after a step change (A11Y-07)', () => {
   })
 
   it('the heading takes no ring when it is focused by the program', () => {
-    expect(css).toMatch(/\[data-step-heading\][^{]*\{[^}]*outline:\s*none/s)
+    // batch w5a: the rule is the shared sheet's (ui/BottomSheet.css); a feature-local outline: none is forbidden (sweepShopStock.css.test)
+    const sheetCss = readFileSync(`${cwd}/src/ui/BottomSheet.css`, 'utf8')
+    expect(sheetCss).toMatch(/\.sheet \[data-step-heading\]:focus[^{]*\{[^}]*outline:\s*none/s)
+    expect(css).not.toMatch(/outline:\s*none/)
   })
 })

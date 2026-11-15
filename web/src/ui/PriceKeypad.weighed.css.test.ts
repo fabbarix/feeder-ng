@@ -10,8 +10,10 @@ describe('PriceKeypad.css: the focused key', () => {
 
   it('draws a 2 px accent ring inside the key: a negative offset of at least the width', () => {
     const d = ring()
-    expect(d['outline']).toMatch(/^2px solid var\(--color-accent\)$/)
-    expect(d['outline-offset']).toMatch(/^-2px$/)
+    // batch w5a: written in the focus tokens (ui/focusLayer.css.test.ts forbids literal px and accent in a focus outline); in
+    // styles.css --focus-ring-inner-width is 2px and --focus-ring-color is var(--color-accent), so this is 2 px accent at -2 px.
+    expect(d['outline']).toMatch(/^var\(--focus-ring-inner-width\) solid var\(--focus-ring-color\)$/)
+    expect(d['outline-offset']).toMatch(/^calc\(-1 \* var\(--focus-ring-inner-width\)\)$/)
   })
 
   it('on a soft fill, so the ring is 3:1 against the key (3.4:1 light, 3.6:1 dark)', () => {
