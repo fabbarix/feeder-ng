@@ -1,7 +1,7 @@
 // B9-40 (PC-03, SHORT-01): which timer pills the Cook strip shows and in what order.
 import { describe, expect, it } from 'vitest'
 import type { CookTimer } from '../types'
-import { splitPills, stripOrder, visiblePillCount } from './timers'
+import { railPlace, splitPills, stripOrder, visiblePillCount } from './timers'
 
 const t = (id: number): { timer: CookTimer; seconds: number } => ({
   timer: { id, scope: 'recipe:1', step: id, label: `T${id}`, durationSeconds: 60, state: 'running', remainingSeconds: 60, endsAt: null, startedAt: '' },
@@ -54,5 +54,24 @@ describe('splitPills (the last whole pill carries "+N" for the rest)', () => {
   })
   it('no timers', () => {
     expect(splitPills([], 2)).toEqual({ shown: [], more: 0 })
+  })
+})
+
+describe('railPlace (the place line of a rail timer tile, PC-03)', () => {
+  const timer = (over: Partial<CookTimer>): CookTimer => ({ id: 1, scope: 'recipe:7', step: 0, label: 'Step 1: Pre-heat the oven', durationSeconds: 60, state: 'running', remainingSeconds: 60, endsAt: null, startedAt: '', ...over })
+  it('a timer that holds Next says so, with its Step number from the label', () => {
+    expect(railPlace(timer({}), 'recipe:7', true)).toBe('Step 1 · next waits for it')
+  })
+  it('this scope\'s other timers name their Step', () => {
+    expect(railPlace(timer({ label: 'Step 4: Simmer the rice', step: 3 }), 'recipe:7', false)).toBe('Step 4')
+  })
+  it('a free timer has no place line', () => {
+    expect(railPlace(timer({ label: 'Eggs', step: null, scope: null }), 'recipe:7', false)).toBe('')
+  })
+  it('another Recipe\'s timer names its Recipe and its Step', () => {
+    expect(railPlace(timer({ scope: 'recipe:9', recipeName: 'Slow cooker stew', label: 'Step 2: Simmer' }), 'recipe:7', false)).toBe('Slow cooker stew · Step 2')
+  })
+  it('a Planned Meal\'s timer with no Recipe name falls back to the day of the meal', () => {
+    expect(railPlace(timer({ scope: 'meal:2026-11-10/3/1', label: 'Step 2: Simmer' }), 'recipe:7', false)).toBe('Tue Planned Meal · Step 2')
   })
 })

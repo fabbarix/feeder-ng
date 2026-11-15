@@ -10,13 +10,21 @@ export interface CookTimerStripProps {
   items: TimerItem[]
   onPause: (id: number) => void
   onResume: (id: number) => void
-  onCancel: (id: number) => void
+  onCancel?: (id: number) => void
   /**
    * The timeline shows EVERY timer of the slot's Courses under "Timers" whichever Course chip is chosen. When given, a
    * timer is "here" when `belongs(timer.scope)` is true (the screen builds it with sameScope over the slot's Courses);
    * `scope` then only words the place hint of the other timers.
    */
   belongs?: (timerScope: string | null) => boolean
+  /** B9-40 (PC-03): the ids of the timers that hold Next: they come first and carry the accent boundary. */
+  holdingIds?: number[]
+  /** B9-40 (SHORT-01): short landscape shows only this many whole pills; the last one carries "+N". */
+  maxPills?: number
+  /** B9-40 (PC-03): a tap on a pill opens that timer's sheet. */
+  onOpenTimer?: (id: number) => void
+  /** B9-40 (SHORT-01): the "+N" button opens every timer. */
+  onShowAll?: () => void
 }
 
 /**
@@ -30,7 +38,7 @@ export function CookTimerStrip({ scope, items, onPause, onResume, onCancel, belo
   const { here, elsewhere } = belongs
     ? { here: items.filter((i) => belongs(i.timer.scope)), elsewhere: items.filter((i) => !belongs(i.timer.scope)) }
     : partitionByScope(items, scope)
-  const handlers = { onPause, onResume, onCancel }
+  const handlers = { onPause, onResume, onCancel: onCancel ?? (() => {}) }
   return (
     <>
       {here.length > 0 ? <TimerGroup label={cookStrings.timersRegion} items={here} scope={scope} {...handlers} /> : null}

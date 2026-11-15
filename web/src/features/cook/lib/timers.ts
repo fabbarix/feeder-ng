@@ -110,3 +110,11 @@ export function stripOrder<T extends { timer: CookTimer }>(items: T[], _holdingI
 export function splitPills<T>(items: T[], _max?: number): { shown: T[]; more: number } {
   return { shown: items, more: 0 }
 }
+
+/**
+ * The place line of a rail timer tile (PC-03): "Step 1 · next waits for it" for a timer that holds Next, "Step 4" for this scope's,
+ * "<where> · Step 2" for another scope's (the Recipe's name, "Tue Planned Meal" or "another Recipe"), '' for a free timer here.
+ */
+export function railPlace(_timer: CookTimer, _scope: string, _holdsNext: boolean): string {
+  return 'stub'
+}

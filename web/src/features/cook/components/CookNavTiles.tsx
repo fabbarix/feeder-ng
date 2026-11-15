@@ -15,6 +15,12 @@ export interface CookNavTilesProps {
   heldText?: string | null
   /** The label of the last-item action, default "Mark as Cooked"; the timeline passes "Mark all Cooked". */
   markLabel?: string
+  /** B9-40 (PC-12): the last Step of a meal that is not due yet: why it cannot be marked Cooked (lib/future futureLine). */
+  futureLine?: string
+  /** B9-40 (PC-12): leaves Cook Mode (the Plan, or where the cook came from); the primary of a future meal's last Step. */
+  onLeave?: () => void
+  /** B9-40: the label of onLeave, default "Back to Plan" (the origin's name when the cook did not come from the Plan). */
+  leaveLabel?: string
 }
 
 /**

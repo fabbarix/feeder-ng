@@ -22,6 +22,8 @@ export interface TimerPillProps {
   onOpen: () => void
   /** Cook Mode's strip: a round Pause / Resume beside the open button. The shell's pill has none. */
   onToggle?: () => void
+  /** B9-40 stub (SHORT-01): with `more`, the "+N" is a button "N more timers. Show all timers" that calls this (Cook Mode's landscape strip). */
+  onShowAll?: () => void
 }
 
 type PillState = 'running' | 'paused' | 'finished'
