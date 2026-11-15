@@ -308,8 +308,9 @@
   cursor: progress;
 }
 
+/* Batch w3e: a plain busy state (the progress cursor and a quieter circle, as a control in flight shows); no dashed circle. */
 .line-row__tick[aria-busy='true']::before {
-  border-style: dashed;
+  border-color: var(--color-outline);
 }
 
 /* B9-34 (SSP-05, P23): a long meta with a compact form keeps the compact one until its text column is wide enough for the long one
