@@ -138,7 +138,7 @@
   color: var(--color-muted);
 }
 
-/* The chip row and a Photo share one wrapping row: from 42 rem the 72 px Photo sits beside the chips. */
+/* The chip row and a Photo share one wrapping row: the 72 px Photo sits beside the chips where there is room. */
 .step-card__extras {
   display: flex;
   flex-wrap: wrap;
@@ -255,18 +255,23 @@
   min-inline-size: 0;
 }
 
-.use-row__quantity,
-.use-row__unit {
-  flex: 1 1 6rem;
+/* Quantity at the xs field width and the Unit after it with no gap between them; on a phone both fit one line of the card. */
+.use-row__quantity {
+  flex: 0 1 var(--field-size-xs);
   min-inline-size: 0;
-  max-inline-size: 9rem;
+}
+
+.use-row__unit {
+  flex: 1 1 5.5rem;
+  min-inline-size: 0;
+  max-inline-size: 10rem;
 }
 
 .use-row__hint {
   flex-basis: 100%;
 }
 
-/* On a phone a Photo comes after an open use's fields; from 42 rem it sits beside the chips (see the container query). */
+/* A Photo comes after an open use's fields, so the use's fields stay right under its chip at every width. */
 .step-card__photo {
   order: 2;
   display: grid;
@@ -275,13 +280,18 @@
 }
 
 /* A Step that has its Photo shows it at 72 px (4:3, the crop's shape, as the mock draws it) with Crop and Remove Photo beside it, as a
-   column on a phone. Adding another source (the drop zone, paste, link, camera) is the empty picker's job, so it is not drawn under a
+   column when the card is narrow. Adding another source (the drop zone, paste, link, camera) is the empty picker's job, so it is not drawn under a
    Photo already set; the two Rotate buttons are left out too, as the Crop editor has them. Remove the Photo to choose another.
    (The approved mock's "Change Photo" needs ImagePicker's compact mode, B9-30, not on this branch yet.) */
 .step-card__photo .image-picker:has(.image-picker__preview) {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+}
+
+/* R-A: a button label never wraps; on a phone Crop and Remove Photo stack beside the picture instead. */
+.step-card__photo .image-picker__actions .button {
+  white-space: nowrap;
 }
 
 .step-card__photo .image-picker__preview[data-size='72'] {
@@ -343,9 +353,5 @@
 
   .step-card__remove {
     display: inline-flex;
-  }
-
-  .step-card__photo {
-    order: 0;
   }
 }
