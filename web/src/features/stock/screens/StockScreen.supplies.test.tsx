@@ -64,15 +64,17 @@ const rowOf = (name: RegExp) => screen.getByRole('button', { name }).closest('li
 describe('the Pantry by default (D6): Supplies beside food', () => {
   it('a Supply Lot shows in its Storage Place group with the food in the others', async () => {
     setup()
-    const utility = await groupNamed(/^Utility cupboard, 2 Stock Lots/)
+    const utility = await groupNamed(/^Utility cupboard,? 2 Stock Lots/)
     expect(within(utility).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('Dish soap'), expect.stringContaining('Toilet paper')])
-    expect(within(await groupNamed(/^Kitchen Pantry, 2 Stock Lots/)).getByText('Rice')).toBeInTheDocument()
+    expect(within(await groupNamed(/^Kitchen Pantry,? 2 Stock Lots/)).getByText('Rice')).toBeInTheDocument()
   })
-  it('a Supply row says its quantity and Restock level: "4 pieces · Below 6 · 4 in Stock" and "1.5 l · Restocks below 1 l"', async () => {
+  it('a Supply row says its quantity in the value column and its Restock level in the meta: "4 pieces", "Below 6 · 4 in Stock" and "1.5 l", "Restocks below 1 l" (SSP-05)', async () => {
     setup()
     await groupNamed(/^Utility cupboard/)
-    await waitFor(() => expect(rowOf(/Toilet paper/)).toHaveTextContent('4 pieces · Below 6 · 4 in Stock'))
-    expect(rowOf(/Dish soap/)).toHaveTextContent('1.5 l · Restocks below 1 l')
+    await waitFor(() => expect(rowOf(/Toilet paper/).querySelector('.list-row__meta-text')).toHaveTextContent('Below 6 · 4 in Stock'))
+    expect(rowOf(/Toilet paper/).querySelector('.list-row__value')).toHaveTextContent('4 pieces')
+    expect(rowOf(/Dish soap/).querySelector('.list-row__meta-text')).toHaveTextContent('Restocks below 1 l')
+    expect(rowOf(/Dish soap/).querySelector('.list-row__value')).toHaveTextContent('1.5 l')
   })
   it('a Supply below its Restock level is marked info, not spoil; the other is not marked', async () => {
     setup()
@@ -92,7 +94,8 @@ describe('the Pantry by default (D6): Supplies beside food', () => {
   it('a Supply with no Restock level shows its quantity alone', async () => {
     setup('/pantry', { ingredients: [makeSupplyJson({ id: 40, name: 'toilet paper', restockLevel: null }), makeSupplyJson({ id: 41, name: 'dish soap', baseUnit: 'ml', restockLevel: null })] })
     await groupNamed(/^Utility cupboard/)
-    expect(rowOf(/Toilet paper/).querySelector('.list-row__meta')).toHaveTextContent(/^4 pieces$/)
+    expect(rowOf(/Toilet paper/).querySelector('.list-row__value')).toHaveTextContent(/^4 pieces$/)
+    expect(rowOf(/Toilet paper/).querySelector('.list-row__meta')).toBeNull()
   })
 })
 

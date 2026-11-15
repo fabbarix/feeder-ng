@@ -55,10 +55,12 @@ describe('Pantry list', () => {
     setup()
     expect(screen.getByRole('heading', { level: 1, name: 'Pantry' })).toBeInTheDocument()
     await screen.findByRole('list', { name: /^Garage Freezer/ })
-    const names = screen.getAllByRole('list').map((l) => l.getAttribute('aria-label')).filter((n) => n?.includes('Stock Lot'))
-    expect(names).toEqual(['Garage Freezer, 1 Stock Lot', 'Garage Fridge, 1 Stock Lot', 'Kitchen Pantry, 1 Stock Lot', 'Not sorted, 1 Stock Lot'])
+    // B9-29 (SSP-03): every group has a visible h2 with its name and count; no group is named only for assistive technology.
+    const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.querySelector('.list-group__name')?.textContent)
+    expect(names).toEqual(['Garage Freezer', 'Garage Fridge', 'Kitchen Pantry', 'Not sorted'])
     expect(within(group(/^Garage Fridge/)).getByText('Minced beef')).toBeInTheDocument()
-    expect(within(group(/^Garage Fridge/)).getByText(/1 kg · Good until tomorrow/)).toBeInTheDocument()
+    expect(within(group(/^Garage Fridge/)).getByText('Good until tomorrow')).toBeInTheDocument()
+    expect(within(group(/^Garage Fridge/)).getByText('1 kg')).toHaveClass('list-row__value')
   })
 
   it('filters by Storage Place and kind, and searches', async () => {
@@ -100,6 +102,7 @@ describe('Pantry list', () => {
     await screen.findByRole('list', { name: /^Garage Fridge/ })
     await userEvent.click(within(group(/^Garage Fridge/)).getByRole('button', { name: /Minced beef/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Minced beef' })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Move…' }))
     await userEvent.click(within(sheet).getByRole('combobox', { name: /Storage Place/ }))
     await userEvent.click(screen.getByRole('option', { name: /Garage Freezer/ }))
     expect(within(sheet).getByText(/frozen Shelf Life, from today/)).toBeInTheDocument()
@@ -115,6 +118,7 @@ describe('Pantry list', () => {
     await screen.findByRole('list', { name: /^Garage Fridge/ })
     await userEvent.click(within(group(/^Garage Fridge/)).getByRole('button', { name: /Minced beef/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Minced beef' })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Move…' }))
     await userEvent.click(within(sheet).getByRole('combobox', { name: /Storage Place/ }))
     await userEvent.click(screen.getByRole('option', { name: /Kitchen Pantry/ }))
     await userEvent.type(within(sheet).getByRole('textbox', { name: 'How much to move' }), '1500')

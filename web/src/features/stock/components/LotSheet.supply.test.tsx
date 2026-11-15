@@ -35,10 +35,11 @@ describe('LotSheet for a Supply: the facts', () => {
     expect(facts).toHaveTextContent('In Utility cupboard · Bought 1 Nov')
     expect(dialog).not.toHaveTextContent(/good until|go-off|went off|use soon|spoiled/i)
   })
-  it('keeps Edit, Delete and Move to', () => {
+  it('keeps Edit, Delete and Move to (behind "Move…", SAFE-11)', async () => {
     const { dialog } = setup()
     expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Move…' }))
     expect(within(dialog).getByRole('heading', { name: 'Move to' })).toBeInTheDocument()
   })
 })
