@@ -173,7 +173,8 @@ describe('ShoppingScreen: the open Line\'s sheet (SSP-13, SSP-14)', () => {
     expect(await within(price).findByRole('button', { name: /Last time here \$2\.99/ })).toBeInTheDocument()
     for (const k of '3.49') await userEvent.click(within(price).getByRole('button', { name: k === '.' ? 'Decimal separator' : k }))
     await userEvent.click(within(price).getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(products.recordPrice).toHaveBeenCalledExactlyOnceWith(21, { shopId: 1, date: '2026-11-15', priceCents: 349 }))
+    // the Price's date is the Household's today, the list's `today` (makeList: 2026-11-09); 2026-11-15 is the range's end (`to`)
+    await waitFor(() => expect(products.recordPrice).toHaveBeenCalledExactlyOnceWith(21, { shopId: 1, date: '2026-11-09', priceCents: 349 }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Price of Onion pack' })).toBeNull())
   })
 
@@ -202,7 +203,7 @@ describe('ShoppingScreen: the open Line\'s sheet (SSP-13, SSP-14)', () => {
     const sheet = await openOnion()
     await userEvent.click(within(sheet).getByRole('button', { name: 'Get something else…' }))
     const add = await screen.findByRole('dialog', { name: 'Add to Shopping List' })
-    await userEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Shallot/ }))
+    await userEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /shallot/i }))
     await userEvent.type(within(add).getByRole('spinbutton', { name: 'Quantity' }), '12')
     await userEvent.click(within(add).getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(actions.notNeeded).toHaveBeenCalledExactlyOnceWith({ ingredientId: 5, to: '2026-11-15', shopId: 1 }))

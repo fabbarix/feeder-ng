@@ -12,7 +12,7 @@ function texts(node: Leaf, call: (f: (...a: never[]) => string) => string[]): st
 // every string and every function's output for a few sample arguments
 const all = texts(shopStrings as unknown as Leaf, (f) => {
   const out: string[] = []
-  for (const args of [['Onion'], ['Onion', 'Shallot'], [1], [2], [17], ['Coop'], ['$10.79'], ['Sat Dinner'], [3, 'Onion'], ['$2.99', '14 Nov'], ['Onion', 3]]) {
+  for (const args of [['Onion'], ['Onion', 'Shallot'], [1], [2], [17], ['Coop'], ['$10.79'], ['Sat Dinner'], [3, 'Onion'], ['$2.99', '14 Nov'], ['Onion', 3], ['Sat Dinner', 'Onion']]) {
     try {
       out.push((f as (...a: unknown[]) => string)(...args))
     } catch {

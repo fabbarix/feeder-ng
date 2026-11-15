@@ -22,7 +22,8 @@ describe('shop.css: the open Line sheet', () => {
   it('the consequence line is meta text, muted, wrapping (never cut)', () => {
     const note = rules('.shop-line-sheet__consequence')
     expect(note).toMatch(/--text-meta/)
-    expect(note).toMatch(/color:\s*var\(--color-text-muted\)/)
+    // the muted token is --color-muted (there is no --color-text-muted; the mock's rule uses --color-muted)
+    expect(note).toMatch(/color:\s*var\(--color-muted\)/)
     expect(note).not.toMatch(/text-overflow|line-clamp|white-space:\s*nowrap/)
   })
 

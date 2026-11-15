@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -26,6 +27,9 @@ vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices:
 // B9-34: the ticked Line's sheet shows times in the Household zone, read from /api/me (app/useMe)
 vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 import { ShoppingScreen } from './ShoppingScreen'
+// B9-43: the screen reads Stock Lots (Put away) and the Recipe Assistant's status (Read the receipt) through react-query
+const testQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
 
 function PlanPage() {
   return <p>{`Plan page ${useLocation().search}`}</p>
@@ -35,12 +39,14 @@ function show(list: ShoppingList) {
   listHook.useShoppingList.mockReturnValue({ data: list, isLoading: false, error: null, stale: false, status: 'ready', retry: vi.fn() })
   render(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/shop']}>
+      <QueryClientProvider client={testQueryClient()}>
+    <MemoryRouter initialEntries={['/shop']}>
         <Routes>
           <Route path="/shop" element={<ShoppingScreen />} />
           <Route path="/plan" element={<PlanPage />} />
         </Routes>
       </MemoryRouter>
+    </QueryClientProvider>
     </ToastProvider>,
   )
 }
@@ -56,7 +62,7 @@ describe('ShoppingScreen: Mark it (DS-SHOP: said once in the notice; the row she
   it('the notice above the list says the sentence once and has one Mark it button; the Line row has none', () => {
     show(makeList({ lines: [makeLine({ pastPlannedMeals: [makePast()] }), makeLine({ ingredientId: 3, name: 'Rice', pastPlannedMeals: [makePast()] })], progress: { ticked: 0, total: 2 } }))
     expect(screen.getAllByText(/marked Cooked yet/)).toHaveLength(1)
-    expect(screen.getByRole('region', { name: 'Not marked Cooked yet' })).toHaveTextContent("Tue Dinner isn't marked Cooked yet")
+    expect(screen.getByRole('region', { name: /^Not marked Cooked yet/ })).toHaveTextContent(/Not marked Cooked yet.*Tue Dinner/)
     expect(screen.getAllByRole('button', { name: 'Mark it' })).toHaveLength(1)
     expect(screen.queryByRole('button', { name: 'Mark it: Passata' })).toBeNull()
   })

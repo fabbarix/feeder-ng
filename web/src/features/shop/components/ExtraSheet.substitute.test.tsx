@@ -24,7 +24,7 @@ describe('ExtraSheet: autoOpenIngredient (SSP-14)', () => {
   it('picking the replacement closes the list and enables the Quantity in its unit; Save submits the extra', async () => {
     const onSubmit = vi.fn()
     render(<ExtraSheet open autoOpenIngredient onClose={() => {}} ingredients={ingredients} onSubmit={onSubmit} />)
-    await userEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Shallot/ }))
+    await userEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /shallot/i }))
     expect(trigger()).toHaveAttribute('aria-expanded', 'false')
     await userEvent.type(screen.getByRole('spinbutton', { name: 'Quantity' }), '12')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))

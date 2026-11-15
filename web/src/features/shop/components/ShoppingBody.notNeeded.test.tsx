@@ -43,6 +43,6 @@ describe('ShoppingBody Not needed', () => {
   it('Not needed Lines do not feed the metrics or the notice', () => {
     const list = makeList({ lines: [], notNeeded: [makeLine({ ingredientId: 5, name: 'Rice', pastPlannedMeals: [{ date: '2026-11-03', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Main' }] })], progress: { ticked: 0, total: 0 } })
     render(<ShoppingBody {...base} list={list} onMarkIt={() => {}} />)
-    expect(screen.queryByRole('region', { name: 'Not marked Cooked yet' })).toBeNull()
+    expect(screen.queryByRole('region', { name: /^Not marked Cooked yet/ })).toBeNull()
   })
 })
