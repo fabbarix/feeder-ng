@@ -29,6 +29,13 @@ describe('BottomSheet.css: the body never collapses (rule 3)', () => {
   it('a body that fits has no floor: a short sheet is as tall as its content', () => {
     expect(declarations(css, '.sheet__body')['min-block-size']).toBeUndefined()
   })
+  it("the body's first and last child add no margin (a one-line sheet has no blank space)", () => {
+    expect(declarations(css, '.sheet__body > :first-child')['margin-block-start']).toBe('0')
+    expect(declarations(css, '.sheet__body > :last-child')['margin-block-end']).toBe('0')
+    const dialog = readUiCss('Dialog.css')
+    expect(declarations(dialog, '.dialog__body > :first-child')['margin-block-start']).toBe('0')
+    expect(declarations(dialog, '.dialog__body > :last-child')['margin-block-end']).toBe('0')
+  })
   it('header and footer never shrink', () => {
     expect(declarations(css, '.sheet__header')['flex'] ?? declarations(css, '.sheet__header, .sheet__footer')['flex']).toBe('none')
     expect(declarations(css, '.sheet__footer')['flex'] ?? declarations(css, '.sheet__header, .sheet__footer')['flex']).toBe('none')
