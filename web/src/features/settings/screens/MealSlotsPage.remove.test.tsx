@@ -33,7 +33,8 @@ const brunch = { ids: [51], name: 'Brunch', weekdays: [7], time: '11:00', remove
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 10, 9, 12, 0) }) // Monday 9 Nov 2026
-  vi.stubGlobal('matchMedia', (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }))
+  // The sheet's ⋮ is a popover menu (menuitem rows) from 768 px; these tests read it so.
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: /min-width/.test(q), media: q, addEventListener() {}, removeEventListener() {} }))
   window.location.hash = ''
 })
 afterEach(() => {

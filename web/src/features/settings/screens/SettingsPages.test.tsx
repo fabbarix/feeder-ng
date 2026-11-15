@@ -177,7 +177,7 @@ describe('MealSlotsPage', () => {
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Brunch')
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('1100')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add Meal Slot' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots')).toHaveLength(3))
     expect(api.callsTo('POST', '/api/meal-slots').map((c) => (c.body as { weekday: number }).weekday)).toEqual([5, 6, 7])
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
@@ -201,7 +201,7 @@ describe('MealSlotsPage', () => {
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Dinner')
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('1930')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add Meal Slot' }))
     const alert = await within(dialog).findByRole('alert')
     expect(alert).toHaveTextContent(/Tuesday/)
     expect(alert).toHaveTextContent(/already has a Meal Slot/)
@@ -228,6 +228,8 @@ describe('MealSlotsPage', () => {
   it('an Admin tapping a day gets the MealSlot sheet, which leads to "Change a date"', async () => {
     const url = '/api/meal-slots/11/attendance?date=2026-11-12'
     routes(ADMIN_ME, { [`GET ${url}`]: { slotId: 11, date: '2026-11-12', isOverride: false, attendance: thursdayDinner.attendance, portionsNeeded: 2.5 } })
+    // The sheet's ⋮ is a popover menu from 768 px (a sheet of rows below): read it as the popover.
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: /min-width/.test(q), media: q, addEventListener() {}, removeEventListener() {} }))
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: /^Dinner on Thursday, 19:00$/ }))
     expect(await screen.findByRole('dialog', { name: 'Edit Meal Slot' })).toBeInTheDocument()

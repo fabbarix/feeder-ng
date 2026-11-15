@@ -31,7 +31,8 @@ describe('MealSlotsPage: states', () => {
   it('a failed read is an alert with Try again, never "No Meal Slots yet"', async () => {
     mockApi({ ...base, 'GET /api/meal-slots': { status: 403, json: { error: { code: 'forbidden', message: 'No' } } } })
     renderWithProviders(<MealSlotsPage />)
-    expect(await screen.findByRole('alert', {})).toHaveTextContent(/Meal Slots could not be loaded/)
+    // The toast layer keeps an empty role=alert region mounted, so find the words and check they sit in the ErrorState's alert.
+    expect((await screen.findByText(/Meal Slots could not be loaded/)).closest('[role="alert"]')).toHaveClass('error-state')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(screen.queryByText('No Meal Slots yet')).toBeNull()
   })

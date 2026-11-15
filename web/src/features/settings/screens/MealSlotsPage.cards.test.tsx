@@ -90,10 +90,11 @@ describe('MealSlotsPage: the cards', () => {
     expect(screen.queryByText('Everyone eats unless a Meal Slot says otherwise')).toBeNull()
   })
 
+  // B9-20 / B9-42: skeleton cards (one busy status), not a "Loading" line.
   it('shows a loading status first', () => {
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
-    expect(screen.getByText('Loading')).toBeInTheDocument()
+    expect(screen.getAllByRole('status').some((s) => s.getAttribute('aria-busy') === 'true')).toBe(true)
   })
 })
 

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createQueryClient } from '../../../app/providers'
-import { ToastProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { householdSettings, anna, marco, tuesdayDinner } from '../components/fixtures'
 import { ADMIN_ME, mockApi } from '../test-utils'
 import { useMealSlotsPage } from './useMealSlotsPage'
@@ -13,7 +13,10 @@ import { useMealSlotsPage } from './useMealSlotsPage'
 const wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={createQueryClient()}>
     <ToastProvider>
-      <MemoryRouter>{children}</MemoryRouter>
+      {/* The page hook asks the Remove Meal Slot confirm through useConfirm (B9-42). */}
+      <ConfirmProvider>
+        <MemoryRouter>{children}</MemoryRouter>
+      </ConfirmProvider>
     </ToastProvider>
   </QueryClientProvider>
 )
