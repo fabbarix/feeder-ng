@@ -1,6 +1,6 @@
 // View models for Leftover rows and choices (no React).
 import type { IconName } from '../../ui/icons'
-import { dayDiff, weekdayShort } from './dates'
+import { dayDiff, shortDate, weekdayShort } from './dates'
 import { leftoverStrings, portionsLabel, questionText, useByPhrase } from './copy'
 import type { Leftover, LeftoverActionKind } from './types'
 
@@ -84,6 +84,19 @@ export function actionLabel(kind: LeftoverActionKind): string {
     case 'take-out':
       return leftoverStrings.takeOut
   }
+}
+
+/**
+ * B9-44 (TB-11): the name of a row that opens its Leftover's actions: "Slow cooker beef and barley stew, 1.25 portions, Use by Tue. Had it,
+ * Threw it out or Freeze it" (the row's facts, then what pressing it offers).
+ */
+export function rowActionName(l: Leftover, today: string): string {
+  const labels = menuActions(l, today).map(actionLabel)
+  const offers = labels.length > 1 ? `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}` : (labels[0] ?? '')
+  // The name says the day itself ("Use by Tue"), as the chapter's copy does; the visible meta keeps "today" and "tomorrow".
+  const day = Math.abs(dayDiff(l.useBy, today)) <= 6 ? weekdayShort(l.useBy) : shortDate(l.useBy)
+  const facts = `${l.recipeName}, ${portionsLabel(l.portions)}, Use by ${day}`
+  return offers ? `${facts}. ${offers}` : facts
 }
 
 export interface FreezerChoice {

@@ -1,0 +1,26 @@
+/* B9-44 (TB-09): a TileHeader's trailing link. A link that reads as one (R-A): underlined (1 px, 3 px off, 2 px on hover), a caret,
+   a 44 px target and no button fill. Its own colour is the tile's text colour. */
+.tile-header__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: 44px;
+  padding-inline: var(--space-1);
+  margin-inline-end: calc(-1 * var(--space-1));
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: inherit;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  white-space: nowrap;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.tile-header__link:hover {
+  text-decoration-thickness: 2px;
+}
+.tile-header__link svg {
+  flex: none;
+}
