@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 const h = vi.hoisted(() => ({ list: { data: undefined, isLoading: false } as Record<string, unknown> }))
-vi.mock('../shop', () => ({ useShoppingList: () => h.list }))
+vi.mock('../shop/hooks/useShoppingList', () => ({ useShoppingList: () => h.list })) // w6a: shopSeam imports it by path
 
 import { useLinesToGet } from './shopSeam'
 
@@ -23,5 +23,16 @@ describe('useLinesToGet', () => {
     expect(renderHook(() => useLinesToGet(), { wrapper }).result.current).toEqual({ count: 0, loading: true })
     h.list = { data: undefined, isLoading: false }
     expect(renderHook(() => useLinesToGet(), { wrapper }).result.current).toEqual({ count: 0, loading: false })
+  })
+})
+
+describe('Today keeps the Shopping List screen out of the entry chunk (w6a, B9-44 TB-12)', () => {
+  it('no Today module imports the shop barrel (it re-exports ShoppingScreen); hooks come by path', async () => {
+    const { readFileSync, readdirSync } = await import('node:fs')
+    const { join, resolve } = await import('node:path')
+    const root = resolve(__dirname)
+    const files = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(join(dir, e.name)) : /\.tsx?$/.test(e.name) && !/\.test\./.test(e.name) ? [join(dir, e.name)] : []))
+    for (const f of files(root)) expect(readFileSync(f, 'utf8'), f).not.toMatch(/from '(\.\.\/)+shop'/)
   })
 })
