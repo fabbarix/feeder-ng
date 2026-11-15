@@ -85,10 +85,11 @@
 }
 
 /* B9-48 "type or step": the value is our own text input inside the Stepper. It reads as a field (outline boundary, field fill),
-   is as tall as the − and + buttons, and holds four digits ("3650"); "Not set" shows as a muted meta-size placeholder. */
+   is as tall as the − and + buttons, and holds four digits ("3650") with a 16 px margin each side and room for the caret (batch
+   w3e: at 4.5ch "4000" ran to the edge); "Not set" shows as a muted meta-size placeholder. */
 .stepper__input {
   box-sizing: border-box;
-  inline-size: calc(4.5ch + 2 * var(--space-3));
+  inline-size: calc(4ch + 2 * var(--space-4) + 2px);
   block-size: 40px;
   padding: 0 var(--space-1);
   border: 0;
@@ -113,5 +114,5 @@
 }
 
 .stepper[data-size='sm'] .stepper__input {
-  inline-size: calc(4.5ch + 2 * var(--space-2));
+  inline-size: calc(4ch + 2 * var(--space-3) + 2px);
 }
