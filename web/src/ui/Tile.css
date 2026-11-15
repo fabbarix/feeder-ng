@@ -76,9 +76,12 @@
 }
 
 /* A why chip on a hero follows the hero's colour, in light and dark alike. 11 % is the highest tint that keeps its label at 4.5:1
-   on every accent preset in both schemes (TB-05 drew 14 %: 4.25:1 on the light Basil hero; theme/contrast.tiles.test.ts). */
+   on every accent preset in both schemes (TB-05 drew 14 %: 4.25:1 on the light Basil hero; theme/contrast.tiles.test.ts). That fill
+   is only 1.2 to 1.3:1 against the hero, so a 1 px currentColor boundary (2.0 to 2.5:1) keeps it a contained shape, never loose text;
+   the boundary sits outside the label, so the label's 4.5:1 is unchanged. */
 .tile[data-variant='hero'] .chip[data-kind='why'] {
   background: color-mix(in srgb, currentColor 11%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
   color: inherit;
 }
 
