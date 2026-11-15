@@ -56,6 +56,13 @@ export const strings = {
   deleteProduct: 'Delete Product',
   loading: 'Loading…',
   actionFailed: 'That did not work. Try again.',
+  /** B9-20 (RES-02): the failed, and offline-and-never-loaded, states of the list and the page. */
+  listError: 'The Products could not be loaded.',
+  itemError: 'The Product could not be loaded.',
+  offlineListTitle: 'Your Products aren’t on this phone yet',
+  offlineItemTitle: 'This Product isn’t on this phone yet',
+  offlineListText: 'Feeder loads them the first time this phone is online. They’ll appear here as soon as the connection is back.',
+  offlineItemText: 'Feeder needs a connection to load it the first time. It will appear here as soon as the connection is back.',
   notFoundTitle: 'Product not found',
   packSizeTitle: 'Pack size',
   savePackSize: 'Save pack size',

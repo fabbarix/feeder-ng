@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
-import { BentoGrid, Button, EmptyState, ErrorState, PageHeader } from '../../../ui'
+import { BentoGrid, Button, EmptyState, ErrorState, LoadState, PageHeader, Skeleton } from '../../../ui'
 import { CookFlowSheets } from '../components/CookFlowSheets'
 import { CouldntPlanNotice } from '../components/CouldntPlanNotice'
 import { DayTile } from '../components/DayTile'
@@ -39,9 +39,11 @@ export function PlanScreen(): ReactNode {
   const notice = useCouldntPlanNotice(unplanned, courseCells(plan.slots), isAdmin)
   const fix = useCouldntFix(s.openChoose)
 
+  // B9-20 (RES-02): one state model; offline with nothing loaded is a LoadState, never an error or an empty plan.
   let body: ReactNode
-  if (plan.isLoading) body = <p className="plan__muted">{planStrings.loading}</p>
-  else if (plan.failed) body = <ErrorState message={planStrings.loadError} onRetry={() => void plan.refetch()} />
+  if (plan.state === 'loading') body = <Skeleton variant="tile" count={3} label={planStrings.loading} />
+  else if (plan.state === 'offlineUnknown') body = <LoadState title={planStrings.offlineUnknownTitle} text={planStrings.offlineUnknownText} />
+  else if (plan.state === 'failed') body = <ErrorState message={planStrings.loadError} onRetry={() => void plan.refetch()} />
   else if (days.length === 0) body = <EmptyState title={planStrings.empty} />
   else
     body = (

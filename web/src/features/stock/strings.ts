@@ -114,8 +114,9 @@ export const stockStrings = {
   noMatch: 'Nothing in Stock matches',
   noMatchHint: 'Try another word or show all of Stock.',
   errorMessage: 'Stock could not be loaded.',
-  offlineTitle: 'Stock is not saved on this device yet',
-  offlineHint: 'Connect to see what is in Stock.',
+  /** B9-20 (RES-02): offline, and Stock was never loaded on this phone (a LoadState, never an empty state). */
+  offlineTitle: 'Your Stock isn’t on this phone yet',
+  offlineHint: 'Feeder loads it the first time this phone is online. It will appear here as soon as the connection is back.',
   goesOff: { goodUntil: { today: 'good until today', tomorrow: 'good until tomorrow', on: (day: string) => `good until ${day}` }, wentOffToday: 'went off today', yesterday: 'went off yesterday', ago: (n: number) => `went off ${n} days ago` },
   boughtOn: (date: string) => `Bought ${date}`,
   actionFailed: 'That did not save. Try again.',

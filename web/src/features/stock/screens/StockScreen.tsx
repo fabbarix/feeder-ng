@@ -11,12 +11,12 @@
  *   Storage Place); row 3 the active filter chips. The filters are chosen in the Filters panel and live in the URL (usePantryFilters).
  * - The list: the Storage Place groups, or a `ListGroup label="Stock"` of IngredientLotsRow. If the filters leave nothing: EmptyState
  *   "Nothing in Stock matches".
- * Status (from useStockTotals().status): loading -> Skeleton; error -> ErrorState with Try again; offline -> EmptyState "Stock is not
- * saved on this device yet"; empty -> EmptyState "Nothing in Stock yet" + hint; ready -> the list.
+ * State (B9-20, from useStockTotals().state): loading -> Skeleton; failed -> ErrorState with Try again; offlineUnknown -> LoadState
+ * "Your Stock isn’t on this phone yet"; empty -> EmptyState "Nothing in Stock yet" + hint; ready or offlineSaved -> the list.
  * A failed change shows an error toast. No `<main>`: the shell provides it. No tile grid.
  */
 import { useId, useMemo, useRef, useState, type ReactElement } from 'react'
-import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, PageHeader, SearchField, Skeleton, useToast } from '../../../ui'
+import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, LoadState, PageHeader, SearchField, Skeleton, useToast } from '../../../ui'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { IngredientLotsRow } from '../components/IngredientLotsRow'
 import { LotEditSheet } from '../components/LotEditSheet'
@@ -155,15 +155,15 @@ export function StockScreen(): ReactElement | null {
         ) : null}
 
         <div className="stock-screen__main">
-          {totals.status === 'loading' ? (
+          {totals.state === 'loading' ? (
             <div aria-busy="true">
               <Skeleton variant="row" count={5} />
             </div>
-          ) : totals.status === 'error' ? (
+          ) : totals.state === 'failed' ? (
             <ErrorState message={strings.errorMessage} onRetry={() => void totals.refetch()} />
-          ) : totals.status === 'offline' ? (
-            <EmptyState icon="offline" title={strings.offlineTitle} description={strings.offlineHint} />
-          ) : totals.status === 'empty' && leftovers.frozenCount === 0 ? (
+          ) : totals.state === 'offlineUnknown' ? (
+            <LoadState title={strings.offlineTitle} text={strings.offlineHint} />
+          ) : totals.state === 'empty' && leftovers.frozenCount === 0 ? (
             <EmptyState icon="stock" title={strings.empty} description={strings.emptyHint} />
           ) : mode === 'places' ? (
             sections.length === 0 ? (

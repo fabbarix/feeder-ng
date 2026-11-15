@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { settingsApi } from '../api'
 import type { Member, MemberInput } from '../types'
 import { settingsKeys } from './queryKeys'
 
 export interface MembersState {
+  /** B9-20 (RES-02): which of the seven screen states the list is in. */
+  state: ScreenState
+  /** Fetches the Members again (the error state's Try again). */
+  refetch: () => void
   members: Member[]
   isPending: boolean
   isError: boolean
@@ -34,7 +40,10 @@ export function useMembers(): MembersState {
     mutationFn: ({ id, userId }: { id: number; userId: number | null }) => settingsApi.linkMemberUser(id, userId),
     onSuccess: refreshMembers,
   })
+  const state = useScreenState(query, { isEmpty: query.data?.length === 0, hasFilter: false })
   return {
+    state,
+    refetch: () => void query.refetch(),
     members: query.data ?? NO_MEMBERS,
     isPending: query.isPending,
     isError: query.isError,

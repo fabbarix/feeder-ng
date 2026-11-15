@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { shopsApi } from '../api'
 import type { Shop, ShopLocation } from '../types'
 
 export interface UseShops {
+  /** B9-20 (RES-02): which of the seven screen states the list is in. */
+  state: ScreenState
+  /** Fetches the list again (the error state's Try again). */
+  refetch: () => void
   shops: Shop[]
   isLoading: boolean
   error: Error | null
@@ -24,7 +30,10 @@ export function useShops(): UseShops {
     mutationFn: ({ id, location }: { id: number; location: ShopLocation }) => shopsApi.setLocation(id, location),
     onSuccess: () => client.invalidateQueries({ queryKey: ['shops'] }),
   })
+  const state = useScreenState(query, { isEmpty: query.data?.length === 0, hasFilter: false })
   return {
+    state,
+    refetch: () => void query.refetch(),
     shops: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,

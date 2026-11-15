@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, Chip, Cluster, CROP_ASPECTS, EmptyState, FormActions, ImagePicker, Muted, PageHeader, SectionTitle, Stack, TextField, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, Chip, Cluster, CROP_ASPECTS, EmptyState, ErrorState, LoadState, FormActions, ImagePicker, Muted, PageHeader, SectionTitle, Stack, TextField, Tile } from '../../../ui'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { displayName } from '../../ingredients/lib/names'
 import { PriceEditor } from '../components/PriceEditor'
@@ -40,16 +40,21 @@ export function ProductScreen() {
   const product = p.product
   const breadcrumbs = useBreadcrumbs(product?.name)
   if (!product) {
-    if (p.isLoading) return <p role="status">{strings.loading}</p>
-    if (p.error instanceof ApiError && p.error.status === 404) {
-      return (
-        <Stack gap="4">
-          <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+    // B9-20 (RES-02): offline and never loaded is a LoadState; a 404 says so; another failure offers Try again.
+    if (p.state === 'loading') return <p role="status">{strings.loading}</p>
+    const notFound = p.error instanceof ApiError && p.error.status === 404
+    return (
+      <Stack gap="4">
+        <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+        {p.state === 'offlineUnknown' ? (
+          <LoadState title={strings.offlineItemTitle} text={strings.offlineItemText} />
+        ) : notFound ? (
           <EmptyState title={strings.notFoundTitle} />
-        </Stack>
-      )
-    }
-    return <p role="alert">{strings.actionFailed}</p>
+        ) : (
+          <ErrorState message={strings.itemError} onRetry={p.refetch} />
+        )}
+      </Stack>
+    )
   }
 
   const packValue = packText ?? String(product.packSize)

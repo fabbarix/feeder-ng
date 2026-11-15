@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useMe } from '../../../app/useMe'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, EmptyState, IconButton, ListGroup, ListRow, Muted, PageHeader, SectionTitle, Stack, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, EmptyState, ErrorState, LoadState, IconButton, ListGroup, ListRow, Muted, PageHeader, SectionTitle, Stack, Tile } from '../../../ui'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useProducts } from '../../products/hooks/useProducts'
 import { formatMinor } from '../../products/lib/money'
@@ -45,16 +45,21 @@ export function ShopScreen() {
   useProductsLiveUpdates()
 
   if (!shop.shop) {
-    if (shop.isLoading) return <p role="status">{strings.loading}</p>
-    if (shop.error instanceof ApiError && shop.error.status === 404) {
-      return (
-        <Stack gap="4">
-          <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+    // B9-20 (RES-02): offline and never loaded is a LoadState; a 404 says so; another failure offers Try again.
+    if (shop.state === 'loading') return <p role="status">{strings.loading}</p>
+    const notFound = shop.error instanceof ApiError && shop.error.status === 404
+    return (
+      <Stack gap="4">
+        <PageHeader title={breadcrumbs.at(-1)?.label ?? ''} breadcrumbs={breadcrumbs} />
+        {shop.state === 'offlineUnknown' ? (
+          <LoadState title={strings.offlineItemTitle} text={strings.offlineItemText} />
+        ) : notFound ? (
           <EmptyState title={strings.notFoundTitle} />
-        </Stack>
-      )
-    }
-    return <p role="alert">{strings.actionFailed}</p>
+        ) : (
+          <ErrorState message={strings.itemError} onRetry={shop.refetch} />
+        )}
+      </Stack>
+    )
   }
 
   const productName = (pid: number) => products.find((p) => p.id === pid)?.name ?? strings.unknownProduct

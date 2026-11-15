@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { connectEvents } from '../../../lib/sse'
 import type { UnitSystem } from '../../../lib/units'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
@@ -69,12 +71,15 @@ export function useStockLiveUpdates(): void {
  * Per-Ingredient totals (unsorted: the screen sorts with sortTotals), plus the
  * User's unit system for display. Refetches on `stock` events.
  */
-export function useStockTotals(): QueryState<IngredientStock[]> & { system: UnitSystem } {
+export function useStockTotals(): QueryState<IngredientStock[]> & { system: UnitSystem; state: ScreenState } {
   useStockLiveUpdates()
   const system = useDisplayUnitSystem()
   const query = useQuery({ queryKey: [...STOCK_KEY, 'totals'], queryFn: () => stockApi.totals() })
-  const status = statusOf(query, query.data !== undefined && query.data.length === 0)
-  return { data: query.data, isLoading: query.isLoading, error: query.error, system, status, refetch: query.refetch }
+  const isEmpty = query.data !== undefined && query.data.length === 0
+  const status = statusOf(query, isEmpty)
+  // B9-20 (RES-02): the screen switches on `state`; `status` stays for the readers that still use it.
+  const state = useScreenState(query, { isEmpty, hasFilter: false })
+  return { data: query.data, isLoading: query.isLoading, error: query.error, system, status, state, refetch: query.refetch }
 }
 
 /** The lots of one Ingredient (disabled while ingredientId is null). Refetches on `stock` events. */
