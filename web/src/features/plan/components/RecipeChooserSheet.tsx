@@ -65,7 +65,7 @@ export function RecipeChooserSheet({
       leading={<RecipeThumb name={r.name} photoUrl={r.imageUrl} size={48} tone="neutral" />}
       below={
         other ? (
-          <div className="plan-row__chips">
+          <div className="plan-sheet__chips">
             <Chip kind="status" status="info">
               {s.notMarkedAs(courseName)}
             </Chip>
@@ -97,7 +97,7 @@ export function RecipeChooserSheet({
         {!isLoading && recipes.length > 0 ? (
           <>
             <div className="plan-sheet__search">
-              <SearchField ref={searchRef} label={main ? s.searchRecipes : s.searchCourseRecipes(courseName)} value={query} onChange={setQuery} />
+              <SearchField ref={searchRef} label={main ? s.searchRecipes : s.searchCourseRecipes(courseName)} placeholder={main ? s.searchRecipes : s.searchCourseRecipes(courseName)} value={query} onChange={setQuery} />
             </div>
             {main
               ? [

@@ -6,7 +6,7 @@ import type { RowChip } from '../lib/rowChips'
 export function SheetRowChips({ chips }: { chips: RowChip[] }): ReactNode {
   if (chips.length === 0) return null
   return (
-    <div className="plan-row__chips">
+    <div className="plan-sheet__chips">
       {chips.map((c) => (
         <Chip key={c.key} kind={c.kind} status={c.status} outline={c.outline} icon={c.icon} title={c.title}>
           {c.label}

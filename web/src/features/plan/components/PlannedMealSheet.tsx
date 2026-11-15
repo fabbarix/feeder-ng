@@ -32,7 +32,7 @@ export interface PlannedMealSheetProps {
   onClose: () => void
   /** The slot opened from the day tile; null while closed. */
   slot: PlanSlot | null
-  /** Household date: Cook is offered for today only, Mark as Cooked for today and past (lib/resolve). */
+  /** Household date: which actions the footer offers for the meal's date (lib/rowActions sheetActions: Cook today and later, Mark as Cooked today and before). */
   today: string
   onCook: (key: SlotDayKey) => void
   onMarkCooked: (key: SlotKey) => void
@@ -96,10 +96,11 @@ const ACTION_ICON: Record<SheetActionId, IconName> = {
 }
 
 /**
- * The Planned Meal sheet (ui-fix-plan 2.4, 5.2): title = Recipe name; meta line "Dinner · 19:00" and the facts
- * "1 Batch · 3.5 portions"; Attendance avatars when the slot has them; up to 3 chips plus a "+N" count chip
- * (lib/chips sheetChips); actions in this order: Cook (primary, today, planned only), Mark as Cooked (today and past,
- * planned only), Swap, Pin or Unpin (planned only), Choose a Recipe. A Cooked or Not cooked meal has no actions.
+ * The Planned Meal sheet. B9-38 (PC-09, PC-10, SHORT-02): the context line "Tue 10 · Dinner 19:00" (" · Side" with several
+ * Courses) above the Recipe title, one round Close; the body has the facts ("1 Batch · 2.75 portions · 45 min · start 18:15"),
+ * the Attendance avatars, up to 3 chips plus a "+N" count chip (lib/chips sheetChips), the start note, a Cooked meal's Leftover
+ * block (Had it, Freeze it, ⋮) and "Open Recipe"; the footer is ONE FormActions row from lib/rowActions sheetActions: the ⋮
+ * "More for Tue Dinner", the outlined secondary and the primary. It opens on its title; after an Undo, Cook has the focus.
  */
 export function PlannedMealSheet({
   open,

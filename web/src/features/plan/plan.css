@@ -596,7 +596,7 @@
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--color-text);
 }
 .plan-sheet__rows {
   --plan-thumb: 48px;
@@ -606,6 +606,7 @@
 }
 .plan-sheet__rows .list-row__value {
   white-space: nowrap;
+  color: var(--color-accent-text);
 }
 .plan-sheet__note {
   display: flex;
