@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
+import { combineScreenStates } from '../../../lib/dataState'
 import { useToast } from '../../../ui'
 import { resultMessage } from '../lib/multiDay'
 import { createSlotsSequentially } from '../lib/slotForm'
@@ -118,6 +119,8 @@ export function useMealSlotsPage() {
 
   const exceptions = useDateExceptions()
   const loaded = !slots.isPending && !members.isPending
+  // B9-20 (RES-02): the cards need both answers; offline and never loaded is offlineUnknown, never an empty page.
+  const state = combineScreenStates(slots.state, members.state)
   const cards = useMemo<MealSlotCard[]>(
     () => (loaded ? buildMealSlotCards(slots.slots, members.members, { today: todayIso() }) : []),
     [loaded, slots.slots, members.members],
@@ -133,6 +136,13 @@ export function useMealSlotsPage() {
     isAdmin,
     /** True once the Meal Slots and the Members have loaded (the cards are derived from both). */
     loaded,
+    /** B9-20 (RES-02): the cards' screen state (the Meal Slots' and the Members' together). */
+    state,
+    /** Fetches both again (the error state's Try again). */
+    refetch: () => {
+      slots.refetch()
+      members.refetch()
+    },
     /** MS: one card per Meal Slot name (empty until the Meal Slots and the Members have loaded). */
     cards,
     /** MS: the read-only "Dates that differ" rows. */

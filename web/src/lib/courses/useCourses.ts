@@ -1,5 +1,7 @@
 // The Courses query and its writes (react-query). Not exported from the pure barrel index.ts.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useScreenState } from '../../app/useScreenState'
+import type { ScreenState } from '../dataState'
 import { settingsKeys } from '../../features/settings/hooks/queryKeys'
 import { coursesApi } from './api'
 import { courseKeys } from './queryKeys'
@@ -12,6 +14,10 @@ export interface UseCoursesOptions {
 }
 
 export interface CoursesState {
+  /** B9-20 (RES-02): the list's screen state; offline and never loaded is offlineUnknown, never an empty list. */
+  state: ScreenState
+  /** Fetches again (the error state's Try again). */
+  refetch: () => void
   /** As served: household order, archived ones last when asked for. */
   courses: Course[]
   /** Not archived, household order. */
@@ -70,9 +76,12 @@ export function useCourses({ includeArchived = false }: UseCoursesOptions = {}):
   })
   const unarchive = useMutation({ mutationFn: (id: number) => coursesApi.unarchive(id), onSuccess: refreshCourses })
 
+  const state = useScreenState(query, { isEmpty: query.data?.length === 0, hasFilter: false })
   const courses = query.data ?? NO_COURSES
   const active = activeCourses(courses)
   return {
+    state,
+    refetch: () => void query.refetch(),
     courses,
     active,
     archived: courses.filter((c) => c.archived),

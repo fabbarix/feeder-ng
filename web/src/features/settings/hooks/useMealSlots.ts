@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useScreenState } from '../../../app/useScreenState'
+import type { ScreenState } from '../../../lib/dataState'
 import { settingsApi } from '../api'
 import type { MealSlot, MealSlotInput, SlotBatchRequest, SlotBatchResult } from '../types'
 import { settingsKeys } from './queryKeys'
 
 export interface MealSlotsState {
+  /** B9-20 (RES-02): the page's screen state; offline and never loaded is offlineUnknown, never an empty or default page. */
+  state: ScreenState
+  /** Fetches again (the error state's Try again). */
+  refetch: () => void
   slots: MealSlot[]
   isPending: boolean
   isError: boolean
@@ -30,7 +36,10 @@ export function useMealSlots(): MealSlotsState {
   })
   const batch = useMutation({ mutationFn: settingsApi.batchUpdateMealSlots, onSuccess: refresh })
   const remove = useMutation({ mutationFn: settingsApi.deleteMealSlot, onSuccess: refresh })
+  const state = useScreenState(query, { isEmpty: query.data?.length === 0, hasFilter: false })
   return {
+    state,
+    refetch: () => void query.refetch(),
     slots: query.data ?? NO_SLOTS,
     isPending: query.isPending,
     isError: query.isError,

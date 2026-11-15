@@ -1,6 +1,7 @@
 import { Tile } from '../../../ui'
 import { PreferencesForm } from '../components/PreferencesForm'
 import { SettingsHeader } from '../components/SettingsHeader'
+import { SettingsLoadGate } from '../components/SettingsLoadGate'
 import { usePreferencesPage } from '../hooks/usePreferencesPage'
 import { settingsStrings } from '../strings'
 import '../settings.css'
@@ -11,14 +12,16 @@ export function PreferencesPage() {
   return (
     <div className="settings">
       <SettingsHeader title={settingsStrings.preferences} />
-      <Tile as="section" span="full" aria-label={settingsStrings.preferences}>
-        <PreferencesForm
-          key={JSON.stringify(page.preferences.preferences)}
-          value={page.preferences.preferences}
-          saving={page.preferences.saving}
-          onSave={page.save}
-        />
-      </Tile>
+      <SettingsLoadGate state={page.preferences.state} onRetry={page.preferences.refetch}>
+        <Tile as="section" span="full" aria-label={settingsStrings.preferences}>
+          <PreferencesForm
+            key={JSON.stringify(page.preferences.preferences)}
+            value={page.preferences.preferences}
+            saving={page.preferences.saving}
+            onSave={page.save}
+          />
+        </Tile>
+      </SettingsLoadGate>
     </div>
   )
 }

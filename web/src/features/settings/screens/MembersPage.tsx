@@ -1,7 +1,8 @@
-import { ErrorState, LoadState, Skeleton, Tile } from '../../../ui'
+import { Skeleton, Tile } from '../../../ui'
 import { MemberEditor } from '../components/MemberEditor'
 import { MemberList } from '../components/MemberList'
 import { SettingsHeader } from '../components/SettingsHeader'
+import { SettingsLoadGate } from '../components/SettingsLoadGate'
 import { useMembersPage } from '../hooks/useMembersPage'
 import { settingsStrings } from '../strings'
 import '../settings.css'
@@ -13,11 +14,7 @@ export function MembersPage() {
     <div className="settings">
       <SettingsHeader title={settingsStrings.members} />
       {/* B9-20 (RES-02): offline and never loaded is a LoadState, never an empty list. */}
-      {page.members.state === 'offlineUnknown' ? (
-        <LoadState title={settingsStrings.offline.title} text={settingsStrings.offline.text} />
-      ) : page.members.state === 'failed' ? (
-        <ErrorState message={settingsStrings.loadError} onRetry={page.members.refetch} />
-      ) : (
+      <SettingsLoadGate state={page.members.state} onRetry={page.members.refetch}>
         <Tile as="section" span="full" aria-label={settingsStrings.members}>
           {page.members.state === 'loading' ? (
             <Skeleton variant="row" count={3} label={settingsStrings.loading} />
@@ -31,7 +28,7 @@ export function MembersPage() {
             />
           )}
         </Tile>
-      )}
+      </SettingsLoadGate>
       <MemberEditor
         open={page.editor !== null}
         member={page.editor?.item}
