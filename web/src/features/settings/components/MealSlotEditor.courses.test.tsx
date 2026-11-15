@@ -100,7 +100,7 @@ describe('MealSlotEditor Courses: editing', () => {
     expect(rowNames()).toEqual(['Main', 'Side', 'Dessert'])
     expect(within(row('Dessert')).getByRole('switch', { name: 'Optional: Dessert' })).toHaveAttribute('aria-checked', 'true')
     expect(within(row('Dessert')).getByRole('button', { name: 'Sam' })).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByText('Dessert · without Sam')).toBeInTheDocument()
+    expect(within(row('Dessert')).getByText('Sam does not eat it')).toBeInTheDocument()
   })
 
   it('does not send the Courses when only another field changed', async () => {
