@@ -29,9 +29,11 @@ describe('the changed row (PC-01)', () => {
     expect(rulesFor('[data-changed]')).not.toMatch(/border(-left|-inline-start)?\s*:/)
   })
 
-  it('the "was" text is muted, on one line, and sits on the row\'s meta (the .plan-row__was rule exists)', () => {
+  // Batch w3e review: the mock draws "was …" in info-fg at 600; info-fg on surface is 9.0:1 light and 10.8:1 dark, so the mock wins.
+  it('the "was" text is info-toned (the mock), on one line, and sits on the row\'s meta (the .plan-row__was rule exists)', () => {
     const was = rulesFor('.plan-row__was')
     expect(was).not.toBe('')
-    expect(was).toMatch(/color:\s*var\(--color-muted\)|color:\s*var\(--color-on-surface-variant\)/)
+    expect(was).toMatch(/color:\s*var\(--color-info-fg\)/)
+    expect(was).toMatch(/white-space:\s*nowrap/)
   })
 })

@@ -1,6 +1,6 @@
 /* B9-26 (PC-01): a row the last edit changed, until the Plan is left or Review is opened. An info-tone bar on its start edge
    (an inset shadow, never a border: nothing moves) and "was Lentil soup" in its meta line. info-fg on surface is 9.0 (light) and
-   10.8 (dark). The "was" text is the muted meta; its ArrowsClockwise glyph carries the info tone. */
+   10.8 (dark), so the "was" text follows the mock: info-fg at weight 600, with its ArrowsClockwise glyph. */
 .list-row[data-changed] {
   box-shadow: inset 3px 0 0 var(--color-info-fg);
   padding-inline-start: var(--space-3);
@@ -13,7 +13,8 @@
   max-inline-size: 100%;
   min-inline-size: 0;
   vertical-align: bottom;
-  color: var(--color-muted);
+  color: var(--color-info-fg);
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -26,5 +27,4 @@
 
 .plan-row__was svg {
   flex: none;
-  color: var(--color-info-fg);
 }
