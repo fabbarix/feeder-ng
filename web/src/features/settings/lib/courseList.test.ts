@@ -9,7 +9,11 @@ describe('courseMeta', () => {
     [{ recipeCount: 3 }, '3 Recipes'],
     [{ mealSlotCount: 2 }, '2 Meal Slots'],
     [{}, ''],
-  ])('%j reads %s', (counts, text) => expect(courseMeta(counts)).toBe(text))
+  ])('%j reads %s', (counts, text) => expect(courseMeta(counts).replace(/\u00a0/g, ' ')).toBe(text))
+  // w4c review: a count never breaks inside ("28 Meal / Slots" at 375); a two-line meta wraps only at " · ".
+  it('keeps each count and "main Course" whole with no-break spaces', () => {
+    expect(courseMeta({ recipeCount: 13, mealSlotCount: 28, main: true })).toBe('main\u00a0Course · 13\u00a0Recipes · 28\u00a0Meal\u00a0Slots')
+  })
 })
 
 describe('courseActions', () => {

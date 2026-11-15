@@ -72,10 +72,10 @@ export function validateSettings(d: SettingsDraft): Record<string, string> {
   if (horizon) errors.planningHorizonDays = horizon
   const cooldown = dayCountError('Default Cool-down', d.defaultCooldownDays, 0, 365)
   if (cooldown) errors.defaultCooldownDays = cooldown
-  const useBy = dayCountError('Default Leftover Use-by', d.defaultLeftoverUseByDays, 1, 14)
+  const useBy = dayCountError('Default Leftover Use\u2011by', d.defaultLeftoverUseByDays, 1, 14)
   if (useBy) errors.defaultLeftoverUseByDays = useBy
   if (d.frozenUseByDays !== undefined) {
-    const frozenUseBy = dayCountError('Default Frozen Use-by', d.frozenUseByDays, 1, 365)
+    const frozenUseBy = dayCountError('Default Frozen Use\u2011by', d.frozenUseByDays, 1, 365)
     if (frozenUseBy) errors.frozenUseByDays = frozenUseBy
   }
   const { start, end } = d.quietHours

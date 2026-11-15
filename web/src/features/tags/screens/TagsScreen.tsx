@@ -1,11 +1,12 @@
-// /settings/tags (ListPage): the Tags by name, each as a pill with what uses it. Add, edit, merge and delete through the sheet.
+// /settings/tags (ListPage): the Tags by name, each with its colour swatch, its Recipe count and what else uses it (SET-11). Add, edit, merge and delete through the sheet.
 import type { ReactElement } from 'react'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { Button, Chip, EmptyState, ListGroup, ListPage, ListRow, Muted, PageHeader } from '../../../ui'
+import { Button, EmptyState, ListGroup, ListPage, ListRow, Muted, PageHeader } from '../../../ui'
+import { TagSwatch } from '../../../ui/TagColour/TagSwatch'
 import { MergeTargetDialog } from '../components/MergeTargetDialog'
 import { TagSheet } from '../components/TagSheet'
 import { useTagsPage } from '../hooks/useTagsPage'
-import { rowLabel, usageLine } from '../lib/usage'
+import { recipeValue, rowLabel, usageExtras } from '../lib/usage'
 import { tagsStrings } from '../strings'
 import '../tags.css'
 
@@ -29,10 +30,13 @@ export function TagsScreen(): ReactElement | null {
               <ListRow
                 key={tag.id}
                 data-tag-id={String(tag.id)}
-                title={usageLine(tag)}
+                title={tag.name}
+                meta={usageExtras(tag) || undefined}
+                value={recipeValue(tag.recipes)}
                 aria-label={rowLabel(tag)}
-                leading={<Chip kind="tag" tagColour={tag.colour}>{tag.name}</Chip>}
+                leading={<TagSwatch colour={tag.colour} />}
                 chevron
+                haspopup="dialog"
                 onActivate={() => page.openEdit(tag)}
               />
             ))}

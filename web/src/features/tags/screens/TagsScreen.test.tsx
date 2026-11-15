@@ -51,16 +51,19 @@ describe('TagsScreen: the list', () => {
     expect(screen.getByText(/the colour each one shows in/)).toBeInTheDocument()
   })
 
-  it('lists the Tags by name, each as a pill in its colour with what uses it', async () => {
+  it('lists the Tags by name, each with its swatch, its name as the title and its Recipe count as the value', async () => {
     await show()
     expect(rows().map((r) => within(r).getByRole('button').getAttribute('aria-label'))).toEqual([
-      FISH_ROW, 'Pasta, 3 Recipes', 'Roast, No Recipes yet', 'Seafood, 4 Recipes · Variety Rule',
+      FISH_ROW, 'Pasta, 3 Recipes', 'Roast, None', 'Seafood, 4 Recipes · Variety Rule',
     ])
-    const colours = rows().map((r) => r.querySelector('.chip[data-kind="tag"]')?.getAttribute('data-tag-colour'))
+    // B9-51 (SET-11): the Tag is the title, in a 40 px swatch of its colour pair; the count is the value, "None" for no Recipe.
+    const colours = rows().map((r) => r.querySelector('.tag-lead')?.getAttribute('data-tag-colour'))
     expect(colours).toEqual(['sky', 'apricot', 'tomato', 'teal'])
-    expect(rows().map((r) => r.querySelector('.chip')?.textContent)).toEqual(['fish', 'Pasta', 'Roast', 'Seafood'])
-    expect(within(rows()[0]!).getByText('12 Recipes · 1 Slot Rule · Variety Rule')).toBeInTheDocument()
-    expect(within(rows()[2]!).getByText('No Recipes yet')).toBeInTheDocument()
+    expect(rows().map((r) => r.querySelector('.list-row__title')?.textContent)).toEqual(['fish', 'Pasta', 'Roast', 'Seafood'])
+    expect(rows().map((r) => r.querySelector('.list-row__value')?.textContent)).toEqual(['12 Recipes', '3 Recipes', 'None', '4 Recipes'])
+    expect(rows().some((r) => r.querySelector('.chip'))).toBe(false)
+    expect(within(rows()[0]!).getByText('1 Slot Rule · Variety Rule')).toBeInTheDocument()
+    expect(within(rows()[3]!).getByText('Variety Rule')).toBeInTheDocument()
   })
 
   it('Add Tag ends the list', async () => {
@@ -139,8 +142,8 @@ describe('TagsScreen: Add Tag', () => {
     expect(api.callsTo('POST', '/api/tags')[0]?.body).toEqual({ name: 'Soup', colour: 'plum' })
     await findNotice('status', 'Added Soup.')
     expect(screen.queryByRole('dialog')).toBeNull()
-    await waitFor(() => expect(rowButton('Soup, No Recipes yet')).toHaveFocus())
-    expect(rows().map((r) => r.querySelector('.chip')?.textContent)).toEqual(['fish', 'Pasta', 'Roast', 'Seafood', 'Soup'])
+    await waitFor(() => expect(rowButton('Soup, None')).toHaveFocus())
+    expect(rows().map((r) => r.querySelector('.list-row__title')?.textContent)).toEqual(['fish', 'Pasta', 'Roast', 'Seafood', 'Soup'])
     expect(api.callsTo('GET', '/api/tags').length).toBeGreaterThanOrEqual(2)
   })
 
@@ -234,7 +237,7 @@ describe('TagsScreen: Edit Tag', () => {
     await userEvent.clear(name)
     await userEvent.type(name, 'Zucchini{Enter}')
     await waitFor(() => expect(rowButton('Zucchini, 3 Recipes')).toHaveFocus())
-    expect(rows().map((r) => r.querySelector('.chip')?.textContent)).toEqual(['fish', 'Roast', 'Seafood', 'Zucchini'])
+    expect(rows().map((r) => r.querySelector('.list-row__title')?.textContent)).toEqual(['fish', 'Roast', 'Seafood', 'Zucchini'])
   })
 
   it('recolours with the picker and sends only the colour', async () => {
@@ -305,7 +308,7 @@ describe('TagsScreen: rename onto another Tag asks "Merge fish into Seafood?"', 
     expect(api.callsTo('PATCH', '/api/tags/1')).toHaveLength(0)
     await findNotice('status', 'Merged fish into Seafood.')
     expect(screen.queryByRole('dialog')).toBeNull()
-    await waitFor(() => expect(rows().map((r) => r.querySelector('.chip')?.textContent)).toEqual(['Pasta', 'Roast', 'Seafood']))
+    await waitFor(() => expect(rows().map((r) => r.querySelector('.list-row__title')?.textContent)).toEqual(['Pasta', 'Roast', 'Seafood']))
     await waitFor(() => expect(rowButton('Pasta, 3 Recipes')).toHaveFocus())
   })
 })
@@ -381,7 +384,7 @@ describe('TagsScreen: Delete', () => {
     await userEvent.click(rowButton('Seafood, 4 Recipes · Variety Rule'))
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Tag' }))
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Delete Seafood?' })).getByRole('button', { name: 'Delete' }))
-    await waitFor(() => expect(rowButton('Roast, No Recipes yet')).toHaveFocus())
+    await waitFor(() => expect(rowButton('Roast, None')).toHaveFocus())
   })
 
   it('deleting the only Tag moves focus to Add Tag', async () => {
@@ -391,7 +394,7 @@ describe('TagsScreen: Delete', () => {
         return { status: 204 }
       },
     })
-    await userEvent.click(await within(await screen.findByRole('list', { name: 'Tags' })).findByRole('button', { name: 'Roast, No Recipes yet' }))
+    await userEvent.click(await within(await screen.findByRole('list', { name: 'Tags' })).findByRole('button', { name: 'Roast, None' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Tag' }))
     const confirm = await screen.findByRole('dialog', { name: 'Delete Roast?' })
     expect(confirm).toHaveTextContent('Roast is on no Recipes.')

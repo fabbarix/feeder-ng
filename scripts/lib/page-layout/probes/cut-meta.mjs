@@ -6,8 +6,8 @@
 // read (the Pantry's status, the Supplies' Restock reason, any list): a meta is never cut, whatever screen it is on.
 // w3c integration: P23 always fails, so the routes whose owners have not cleaned their metas yet keep the old reach (the Shop's info
 // hints only) until that package lands and deletes its entry here: /settings and /settings/planning (B9-51), /scan (B9-41).
-// int1: B9-34 has landed and /shop is clean at every width (1180 included), so /shop gets the full reach.
-const PENDING_ROUTES = ['/settings', '/settings/planning', '/scan']
+// int1: B9-34 and B9-51 have landed; /shop, /settings and /settings/planning are clean, so they get the full reach. Only /scan is left.
+const PENDING_ROUTES = ['/scan']
 const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')

@@ -49,7 +49,7 @@ export function ApiKeyRow({ state, last4, value, error, disabled, focusRequest =
             icon={raIcons.key}
             title={raStrings.keySaved}
             meta={`••••${last4}`}
-            trailing={
+            actions={
               <span className="ra__key-actions">
                 <Button variant="secondary" size="sm" disabled={disabled} onClick={onReplace}>
                   {raStrings.replace}

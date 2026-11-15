@@ -14,13 +14,9 @@ describe('Settings > Catalogue > Supplies', () => {
     }
   })
   it('leads to /supplies with the Supply glyph and a one-line description in Supply words', () => {
-    expect(row(false)).toEqual({
-      id: 'supplies',
-      title: 'Supplies',
-      meta: "What you buy and keep but don't cook with: toilet paper, batteries, laundry pods",
-      icon: 'supply',
-      path: '/supplies',
-    })
+    // B9-51 (DS-10): the description is at most 60 characters, so two lines hold it at 375 px even with text spacing.
+    expect(row(false)).toEqual({ id: 'supplies', title: 'Supplies', meta: expect.any(String), icon: 'supply', path: '/supplies' })
+    expect(row(false)!.meta.length).toBeLessThanOrEqual(60)
     expect(row(false)!.meta).not.toMatch(/\bitems?\b|non-food/i)
   })
   it('has its glyph registered in the shared icon registry', () => {

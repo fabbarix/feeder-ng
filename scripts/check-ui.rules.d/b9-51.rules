@@ -1,0 +1,3 @@
+# B9-51 (SAFE-04): the Planning rules forms carry no loose role="alert" (field errors at the field, the server error is FormError),
+# so alert-in-form fails on these files (fail_paths add up with b9-16.rules).
+alert-in-form.fail_paths=web/src/features/plan/components/RulesEditors.tsx web/src/features/plan/components/CookingTimesTile.tsx web/src/features/plan/screens/PlanningRulesScreen.tsx

@@ -40,7 +40,7 @@ describe('HouseholdSettingsForm', () => {
     expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveTextContent('Rome · Europe/Rome')
     expect(field('Planning Horizon (days)')).toHaveValue('7')
     expect(field('Default Cool-down (days)')).toHaveValue('7')
-    expect(field('Default Leftover Use-by (days)')).toHaveValue('3')
+    expect(field('Default Leftover Use‑by (days)')).toHaveValue('3')
     const start = screen.getByRole('group', { name: 'Quiet hours start' })
     expect(within(start).getByRole('spinbutton', { name: 'Hour' })).toHaveValue('22')
     expect(within(start).getByRole('spinbutton', { name: 'Minute' })).toHaveValue('00')

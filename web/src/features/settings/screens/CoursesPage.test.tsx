@@ -36,15 +36,15 @@ describe('CoursesPage: the list', () => {
     expect(screen.getByText(/in the order every picker lists them/)).toBeInTheDocument()
   })
 
-  it('shows the active Courses in household order with what uses each, and the main chip on the main Course only', async () => {
+  // B9-51 (SET-14c): the main Course has no "Main" chip any more; its meta starts with "main Course" instead.
+  it('shows the active Courses in household order with what uses each, and "main Course" on the main Course only', async () => {
     routes()
     await show()
     expect(rows().map(nameOf)).toEqual(['Main', 'Side', 'Starter', 'Dessert'])
-    expect(rows().map((r) => within(r).getByText(/^\d+ Recipes? · \d+ Meal Slots?$/).textContent)).toEqual([
-      '12 Recipes · 5 Meal Slots', '8 Recipes · 3 Meal Slots', '1 Recipe · 1 Meal Slot', '4 Recipes · 2 Meal Slots',
+    expect(rows().map((r) => within(r).getByText(/^(main\sCourse · )?\d+\sRecipes? · \d+\sMeal\sSlots?$/).textContent?.replace(/\u00a0/g, ' '))).toEqual([
+      'main Course · 12 Recipes · 5 Meal Slots', '8 Recipes · 3 Meal Slots', '1 Recipe · 1 Meal Slot', '4 Recipes · 2 Meal Slots',
     ])
-    expect(screen.getAllByTestId('course-main-chip')).toHaveLength(1)
-    expect(within(rows()[0]!).getByTestId('course-main-chip')).toBeInTheDocument()
+    expect(screen.queryAllByTestId('course-main-chip')).toHaveLength(0)
   })
 
   it('keeps archived Courses out of the list, in a collapsed "Archived Courses (1)" section', async () => {

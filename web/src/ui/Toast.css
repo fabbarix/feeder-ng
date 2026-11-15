@@ -5,7 +5,9 @@
    too (FU-1), so a toast never covers Save or Start Cook Mode. SSP-12: while the Price keypad is open, toasts are held
    (useToast().hold), never lifted into the priced row's band.
    PC-04 (B9-25): while the shell's timer pill shows at the bottom it publishes its room as --timer-pill-clearance (app/ShellTimers.css;
-   0 from 64em, where the pill sits in the top bar), and the region is lifted by it, so a toast never overlaps the pill. */
+   0 from 64em, where the pill sits in the top bar), and the region is lifted by it, so a toast never overlaps the pill.
+   B9-51: on a page shorter than the viewport the sticky bar ends the form above its floating spot; the bar publishes that lift as
+   --sticky-bar-lift (0 while it floats) and the region rises by it too. Every lift is its own term with a 0 fallback, so they sum. */
 .toast-region {
   position: fixed;
   inset-inline: var(--space-4);
@@ -18,7 +20,7 @@
 }
 
 html:has(.sticky-action-bar) .toast-region {
-  bottom: calc(var(--nav-top) + var(--keyboard-inset) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--timer-pill-clearance, 0px) + var(--space-3));
+  bottom: calc(var(--nav-top) + var(--keyboard-inset) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--sticky-bar-lift, 0px) + var(--timer-pill-clearance, 0px) + var(--space-3));
 }
 
 /* Both live regions stay mounted; an empty one takes no room. */

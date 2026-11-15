@@ -30,6 +30,10 @@ async function openAddMember() {
   await until(`!!document.querySelector('main') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Members page')
   await press(byText('main button', 'Add Member'), '"Add Member"')
   await until(dialogOpen, 'the Add Member sheet')
+  // w4c: P33 measured the sheet while it was still rising in (the first field cut off, the footer already in view): an intermittent
+  // finding under load at 375x256 and 390. Wait until the sheet's animations are done and its box holds still for two frames.
+  await until(`(() => { const d = document.querySelector('dialog.sheet[open]'); return !!d && d.getAnimations({ subtree: true }).every((a) => a.playState !== 'running') })()`, 'the Add Member sheet to finish opening')
+  await until(`new Promise((ok) => { const d = document.querySelector('dialog.sheet[open]'); const a = JSON.stringify(d.getBoundingClientRect()); requestAnimationFrame(() => requestAnimationFrame(() => ok(JSON.stringify(d.getBoundingClientRect()) === a))) })`, 'the Add Member sheet to hold still')
 }
 
 export default {
