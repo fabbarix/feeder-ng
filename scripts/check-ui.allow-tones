@@ -8,6 +8,6 @@ web/src/features/stock/components/SpoiledTile.tsx   # B9-29: "Throw out or keep?
 web/src/features/stock/components/LotList.tsx   # B9-29: a Lot's Went off / Use soon chip is food going off (spoil)
 web/src/features/stock/components/LotSheet.tsx   # B9-29: Delete a Stock Lot asks in a danger confirm, a destructive loss
 web/src/features/stock/screens/StoragePlacesScreen.tsx   # B9-29: Delete a Storage Place asks in a danger confirm, a destructive loss
-web/src/features/products/hooks/useProductActions.ts   # Delete Product is a loss: its confirm keeps the danger tone (SAFE-02, B9-30); a Shop delete confirm file is listed here by the developer when it sets tone: danger
+web/src/features/products/hooks/useProductActions.ts   # B9-30 (SAFE-02): Delete Product is a loss; its confirm keeps the danger tone
 web/src/features/products/screens/ProductScreen.tsx   # B9-30: the header menu's Delete Product item is a loss (danger tone; its confirm keeps danger too)
 web/src/features/shops/screens/ShopScreen.tsx   # B9-30 (SAFE-02): the Delete Shop confirm is a loss and keeps the danger tone
