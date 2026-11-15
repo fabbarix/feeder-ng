@@ -1,6 +1,7 @@
 // SAFE-02 (Remove Meal Slot, decision SAFE 4 + 7): the confirm lists what goes and what stays as rows (R-E), then an Undo toast.
 import { describe, expect, it } from 'vitest'
-import { removeGroups, removeLead, removedHeadline, removeTitle, restoredHeadline, undoRemoveLabel, type ImpactMeal, type MealSlotImpact } from './slotRemoval'
+import { ApiError } from '../../../lib/http'
+import { nameTakenRefusal, otherDaysOf, putBackRefusedHeadline, removeGroups, removeLead, removedHeadline, removeTitle, restoredHeadline, undoRemoveLabel, type ImpactMeal, type MealSlotImpact } from './slotRemoval'
 
 const meal = (date: string, over: Partial<ImpactMeal> = {}): ImpactMeal => ({
   date, mealSlotId: 10, mealSlotName: 'Dinner', courseId: 1, courseName: 'Main', recipeId: 5, recipeName: 'Pasta', pinned: false, bought: [], ...over,
@@ -72,5 +73,25 @@ describe('removeGroups: Goes, then Stays', () => {
   it('with nothing planned, Goes is not drawn at all and Stays remains', () => {
     const groups = removeGroups(impact({ plannedMeals: [], slotRules: [], toConfirm: [] }), { today: TODAY, locale: 'en' })
     expect(groups.map((g) => g.label)).toEqual(['Stays'])
+  })
+})
+
+describe('the restore refusal (409 meal_slot_name_taken, main-session ruling 3)', () => {
+  it('a taken name gives the server\'s sentence as the subline and what to do as the body', () => {
+    const err = new ApiError(409, 'meal_slot_name_taken', 'There is already a Dinner on Monday.')
+    expect(nameTakenRefusal(err)).toEqual({ subline: 'There is already a Dinner on Monday.', body: 'Rename or remove that Meal Slot first.' })
+  })
+  it('any other failure is not this refusal', () => {
+    expect(nameTakenRefusal(new ApiError(404, 'not_found', 'gone'))).toBeNull()
+    expect(nameTakenRefusal(new Error('boom'))).toBeNull()
+  })
+  it('Put back names what did not come back, and says so when some days did', () => {
+    expect(putBackRefusedHeadline('Snack', 0)).toBe('Snack was not put back')
+    expect(putBackRefusedHeadline('Snack', 1)).toBe('Snack was put back on some days only')
+  })
+  it('counts the other weekdays of the same name, case and edge spaces ignored', () => {
+    const slots = [{ id: 1, name: 'Dinner' }, { id: 2, name: ' dinner ' }, { id: 3, name: 'Lunch' }]
+    expect(otherDaysOf(slots[0]!, slots)).toBe(1)
+    expect(otherDaysOf(slots[2]!, slots)).toBe(0)
   })
 })

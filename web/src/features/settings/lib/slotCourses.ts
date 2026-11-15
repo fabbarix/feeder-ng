@@ -138,6 +138,8 @@ export function removalPreview(removals: ReturnType<typeof courseRemovals>, remo
  * "Chiara, Ben and Sam do not eat it". Only Members who attend count (an opt-out of someone who no longer attends is ignored), in the
  * Members' own order. Null when everyone who attends eats it. The picker adds "main Course" in front by itself.
  */
-export function slotCourseMeta(_row: SlotCourseInput, _attendees: readonly Member[]): string | null {
-  throw new Error('not implemented')
+export function slotCourseMeta(row: SlotCourseInput, attendees: readonly Member[]): string | null {
+  const out = attendees.filter((m) => row.optOutMemberIds.includes(m.id)).map((m) => m.name)
+  if (out.length === 0) return null
+  return `${joinList(out)} ${out.length === 1 ? 'does' : 'do'} not eat it`
 }

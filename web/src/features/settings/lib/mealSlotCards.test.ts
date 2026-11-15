@@ -209,7 +209,7 @@ describe('buildMealSlotCards: scaling', () => {
     const slots = names.flatMap(([n, t]) => [1, 2, 3, 4, 5, 6, 7].map((d) => slot(d, n, t)))
     const cards = build(slots)
     expect(cards.map((c) => c.name)).toEqual(['Breakfast', 'Elevenses', 'Lunch', 'Tea', 'Dinner'])
-    expect(cards.every((c) => c.week.length === 7 && c.span !== 'full' && c.differences.length === 0)).toBe(true)
+    expect(cards.every((c) => c.week.length === 7 && (c.span as string) !== 'full' && c.differences.length === 0)).toBe(true)
   })
   it('six Members: everyone stays "everyone", a subset is listed in Members order, and a Course can name its eaters', () => {
     const all = eats(1, 2, 3, 4, 5, 6)

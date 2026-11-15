@@ -44,8 +44,8 @@ export interface MealSlotCard {
   week: WeekCell[]
   /** Only the weekdays that differ, in week order. */
   differences: DayDifference[]
-  /** 'full' when the name runs all seven days, else 'half' (Bento sizing). */
-  span: 'full' | 'half'
+  /** Bento sizing. SET-08: a card never spans the whole row, even one that runs every day (the grid is two-up from 1024 px). */
+  span: 'half'
   /** The slot "Edit <name>" opens: the earliest weekday whose values equal the usual ones (else the earliest weekday). */
   editSlot: MealSlot
   /** The slot and date "Change a date" opens: the soonest upcoming run (today counts). */
@@ -142,7 +142,7 @@ function buildCard(list: MealSlot[], members: Member[], today: string, weekStart
   const week: WeekCell[] = order.map((weekday) => {
     const e = entries.find((x) => x.weekday === weekday)
     if (!e) return { weekday, state: 'free' }
-    return { weekday, state: 'runs', slot: e.slot, time: e.time, differs: differsOn(e), timeDiffers: false }
+    return { weekday, state: 'runs', slot: e.slot, time: e.time, differs: differsOn(e), timeDiffers: e.time !== usualTime }
   })
 
   const editEntry = entries.find(matchesUsual) ?? entries[0]!
@@ -159,7 +159,7 @@ function buildCard(list: MealSlot[], members: Member[], today: string, weekStart
     usualCourses,
     week,
     differences,
-    span: days.length === 7 ? 'full' : 'half',
+    span: 'half',
     editSlot: editEntry.slot,
     next,
   }
