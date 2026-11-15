@@ -6,7 +6,7 @@
 //   - an unfilled cause other than Dessert, in the warn tone (too_early, "Outside your cooking times"): on day 5 the Dinner is moved to
 //     06:40 for that date and its Main chosen by hand, so no Side or Dessert Recipe can start after 06:30 (the Main keeps its warn chip).
 // Best effort like every area: a step the API refuses is reported and skipped. Runs before b9-34 (its ticks follow this plan).
-// seed(ctx) reads api, step, line from ctx; adds overnightRecipe.
+// seed(ctx) reads api, step, line from ctx; adds overnightBreakfastRecipe.
 
 export const order = 332
 
@@ -43,5 +43,5 @@ export async function seed(ctx) {
     await step('early dinner', 'PATCH', `/api/meal-slots/${early.mealSlotId}/dates/${early.date}`, { time: '06:40' })
     await choose(early, main.id, byName('Spinach omelette')?.id, 'early dinner main')
   }
-  Object.assign(ctx, { overnightRecipe: buns.json?.id ?? null })
+  Object.assign(ctx, { overnightBreakfastRecipe: buns.json?.id ?? null })
 }
