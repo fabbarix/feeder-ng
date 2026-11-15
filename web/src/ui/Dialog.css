@@ -126,6 +126,12 @@ html:has(dialog:modal) {
   gap: var(--space-2);
 }
 
+/* Batch w3e: the buttons did not fit on one line (useStackedActions): each takes the whole width, the decision (last) on top. */
+.dialog__actions[data-stacked] {
+  flex-direction: column-reverse;
+  align-items: stretch;
+}
+
 @keyframes dialog-in {
   from {
     opacity: 0;
