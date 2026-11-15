@@ -362,16 +362,6 @@
   line-height: var(--text-label-line);
   font-weight: var(--text-label-weight);
 }
-.course-remove__list {
-  margin: 0;
-  padding-left: var(--space-4);
-  display: grid;
-  gap: var(--space-1);
-}
-.course-remove__pinned {
-  font-weight: var(--text-label-weight);
-  color: var(--color-muted);
-}
 .meal-slot-summary__pinned {
   font-weight: var(--text-label-weight);
 }

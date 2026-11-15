@@ -1,6 +1,7 @@
 // The Delete / Archive dialog of a Course: what it is on, the replacement, the Planned Meals and Slot Rules that go.
 // A `<dialog>` built on the shared Dialog; the state and the rules are in hooks/useCourseRemoval and lib/courseRemoval.
-import { Button, CourseSelect, Dialog } from '../../../ui'
+import { useId } from 'react'
+import { Button, CourseSelect, DetailList, DetailRow, Dialog } from '../../../ui'
 import { coursesStrings } from '../coursesStrings'
 import type { CourseRemovalState } from '../hooks/useCourseRemoval'
 import { plannedMealLines, replacementLine, slotRuleLines, usageLine } from '../lib/courseRemoval'
@@ -13,6 +14,8 @@ export interface CourseRemoveDialogProps {
 }
 
 export function CourseRemoveDialog({ state, locale = 'en' }: CourseRemoveDialogProps) {
+  const mealsId = useId()
+  const rulesId = useId()
   const { course, mode, impact, loading, loadFailed, choices, replacementId, needsReplacement, busy, error } = state
   if (course === null) return null
   const name = course.name
@@ -49,25 +52,27 @@ export function CourseRemoveDialog({ state, locale = 'en' }: CourseRemoveDialogP
       ) : null}
       {meals.length > 0 ? (
         <section>
-          <h3 className="course-remove__heading">{s.plannedHeading}</h3>
-          <ul aria-label={s.plannedHeading} className="course-remove__list">
+          <h3 id={mealsId} className="course-remove__heading">
+            {s.plannedHeading}
+          </h3>
+          {/* R-E: rows, not bullet sentences: the Recipe, Pinned at the row's end, the Meal Slot and date muted under it. */}
+          <DetailList aria-labelledby={mealsId}>
             {meals.map((m) => (
-              <li key={m.key}>
-                {m.text}
-                {m.pinned ? <span className="course-remove__pinned"> {s.pinned}</span> : null}
-              </li>
+              <DetailRow key={m.key} label={m.recipe} state={m.pinned ? s.pinned : undefined} detail={m.when} />
             ))}
-          </ul>
+          </DetailList>
         </section>
       ) : null}
       {rules.length > 0 ? (
         <section>
-          <h3 className="course-remove__heading">{s.rulesHeading}</h3>
-          <ul aria-label={s.rulesHeading} className="course-remove__list">
+          <h3 id={rulesId} className="course-remove__heading">
+            {s.rulesHeading}
+          </h3>
+          <DetailList aria-labelledby={rulesId}>
             {rules.map((r) => (
-              <li key={r.key}>{r.text}</li>
+              <DetailRow key={r.key} label={r.text} />
             ))}
-          </ul>
+          </DetailList>
         </section>
       ) : null}
       {error ? <p role="alert">{error}</p> : null}
