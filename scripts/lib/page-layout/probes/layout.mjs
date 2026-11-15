@@ -47,7 +47,10 @@ const layoutProbe = `
     // popover is in the top layer and places itself (P19 checks the popover), so it is not a page bar.
     if ((s.position === 'sticky' || s.position === 'fixed') && s.bottom !== 'auto' && vis(e) && e.querySelector('button, a') && !e.closest('dialog, [popover]')) {
       const b = e.getBoundingClientRect()
-      bars.push({ cls: String(e.className).split(' ')[0], x: Math.round(b.x), r: Math.round(b.right), bgAlpha: (rgb(s.backgroundColor)[3] ?? 1) })
+      // B9-19 (SHORT-08): a bar capped to a column (data-column narrow or form) reports its column and its cap, so P6 lines it up with the column.
+      const column = e.getAttribute('data-column')
+      const cap = parseFloat(s.maxWidth)
+      bars.push({ cls: String(e.className).split(' ')[0], x: Math.round(b.x), r: Math.round(b.right), bgAlpha: (rgb(s.backgroundColor)[3] ?? 1), ...(column && column !== 'page' && Number.isFinite(cap) ? { column, cap: Math.round(cap) } : {}) })
     }
   }
   const cur = rail && vis(rail) ? rail.querySelector('[aria-current="page"]') : null
