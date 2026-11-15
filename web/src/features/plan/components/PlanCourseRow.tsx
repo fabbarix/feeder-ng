@@ -36,7 +36,7 @@ export function PlanCourseRow({ row, slot, onOpen, onSwap, onPin, onUnpin, onCho
   const wasMeta = was ? (
     <span className="plan-row__was">
       <Icon name="refresh" size={14} />
-      <span className="plan-row__was-text">{was}</span>
+      {was}
     </span>
   ) : null
   const meta = wasMeta ? (caption ? <>{caption} · {wasMeta}</> : wasMeta) : (caption ?? undefined)

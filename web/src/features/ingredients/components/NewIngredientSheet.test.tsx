@@ -34,7 +34,8 @@ describe('NewIngredientSheet: layout (F-09)', () => {
     const group = screen.getByRole('radiogroup', { name: strings.baseUnitLabel })
     expect(group).toHaveAccessibleDescription(strings.sheet.baseUnitHelper)
     expect(within(group).getAllByRole('radio').map((r) => r.textContent)).toEqual(['g', 'ml', 'piece'])
-    expect(screen.getByLabelText(new RegExp(strings.sheet.shelfLifeLabel))).toBeInTheDocument()
+    // B9-48 (SET-05): Shelf Life is a Stepper field now (see NewIngredientSheet.stepper.test.tsx).
+    expect(screen.getByRole('group', { name: strings.sheet.shelfLifeLabel })).toBeInTheDocument()
     expect(screen.getByText(strings.sheet.shelfLifeHelper)).toBeInTheDocument()
   })
   it('draws an icon on every Base Unit option', () => {
@@ -106,9 +107,10 @@ describe('NewIngredientSheet: creating', () => {
     const p = setup()
     await userEvent.type(name(), '  Olive oil ')
     await userEvent.click(unit('ml'))
-    await userEvent.type(screen.getByLabelText(new RegExp(strings.sheet.shelfLifeLabel)), '365')
+    const increase = screen.getByRole('button', { name: `Increase ${strings.sheet.shelfLifeLabel}` })
+    for (let i = 0; i < 3; i++) await userEvent.click(increase)
     await userEvent.click(create())
-    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Olive oil', baseUnit: 'ml', shelfLifeDays: 365, kind: 'food' })
+    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Olive oil', baseUnit: 'ml', shelfLifeDays: 3, kind: 'food' })
     expect(p.onClose).toHaveBeenCalled()
   })
   it('leaves Shelf Life out when it is blank', async () => {
@@ -124,14 +126,6 @@ describe('NewIngredientSheet: creating', () => {
     expect(p.onCreate).not.toHaveBeenCalled()
     expect(name()).toHaveAccessibleDescription(strings.sheet.nameRequired)
     expect(name()).toHaveFocus()
-  })
-  it('explains an invalid Shelf Life inside its field', async () => {
-    const p = setup({ initialName: 'Milk' })
-    const shelf = screen.getByLabelText(new RegExp(strings.sheet.shelfLifeLabel))
-    await userEvent.type(shelf, '0')
-    await userEvent.click(create())
-    expect(p.onCreate).not.toHaveBeenCalled()
-    expect(shelf).toHaveAccessibleDescription(new RegExp(strings.sheet.shelfLifeInvalid))
   })
   it('shows a taken name as the Name field error, not as a loose alert, and stays open', async () => {
     const p = setup({ initialName: 'onion', onCreate: vi.fn().mockRejectedValue(new ApiError(409, 'name_taken', 'exists')) })

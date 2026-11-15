@@ -42,6 +42,8 @@ export interface MenuProps {
   trigger?: ReactNode
   /** BR-D: the item that takes the focus on open (default: the first). */
   initialFocusId?: string
+  /** An item's action is waiting on a read before it can show (Delete Ingredient's impact read): the trigger is aria-busy and its glyph muted. */
+  busy?: boolean
 }
 
 const GAP = 8
@@ -54,7 +56,7 @@ interface Placed {
 }
 
 /** G-01: a popover anchored to its IconButton from 768 px; a BottomSheet of rows below. */
-export function Menu({ label, icon = 'more', title, size = 'md', items, trigger, initialFocusId }: MenuProps) {
+export function Menu({ label, icon = 'more', title, size = 'md', items, trigger, initialFocusId, busy }: MenuProps) {
   const wide = useBreakpoint('md')
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -79,7 +81,17 @@ export function Menu({ label, icon = 'more', title, size = 'md', items, trigger,
           {trigger}
         </button>
       ) : (
-        <IconButton ref={triggerRef} icon={icon} label={label} size={size} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} />
+        <IconButton
+          ref={triggerRef}
+          icon={icon}
+          label={label}
+          size={size}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-busy={busy || undefined}
+          data-busy={busy || undefined}
+          onClick={() => setOpen((o) => !o)}
+        />
       )}
       {open && wide ? <Popover label={label} items={items} triggerRef={triggerRef} onClose={close} initialFocusId={initialFocusId} /> : null}
       {open && !wide ? <Sheet title={title ?? label} items={items} onClose={close} /> : null}

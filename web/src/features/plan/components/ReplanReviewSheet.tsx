@@ -1,7 +1,7 @@
 // B9-26 (PC-01): the sheet "What changed": the edit as its context line, a lede, the changed meals as R-E rows grouped by day,
 // Undo all (secondary) and Keep the changes (primary) for the signed-in User's own edit, and the one circular Close (R-B).
 import { useId, type ReactNode } from 'react'
-import { BottomSheet, Button, Chip, DetailList, DetailRow } from '../../../ui'
+import { BottomSheet, Button, Chip, DetailList, DetailRow, Icon } from '../../../ui'
 import type { ReplanReviewController } from '../hooks/useReplanReview'
 import { useSheetTitleFocus } from '../hooks/useSheetTitleFocus'
 import type { ReviewDay } from '../lib/replan'
@@ -26,8 +26,18 @@ function Day({ day }: { day: ReviewDay }) {
             label={row.key}
             detail={
               <span className="replan-review__detail">
-                <span>{row.detail}</span>
-                {row.why ? <Chip kind="why">{row.why}</Chip> : null}
+                <span>
+                  {row.place ? <>{row.place} · </> : null}
+                  <span className="replan-review__was">
+                    <Icon name="refresh" size={14} />
+                    {row.was}
+                  </span>
+                </span>
+                {row.why ? (
+                  <Chip kind="why" icon={row.whyIcon ?? 'why'}>
+                    {row.why}
+                  </Chip>
+                ) : null}
               </span>
             }
           />

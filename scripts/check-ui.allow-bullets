@@ -9,7 +9,6 @@ web/src/features/import/components/ImageWarningsTile.tsx                # B9-28:
 web/src/features/import/components/ReadErrorTile.tsx                    # B9-28: read errors
 web/src/features/import/components/ValidationErrorsTile.tsx             # B9-28: validation errors
 web/src/features/import/screens/ImportScreen.tsx                        # B9-28: import summary list
-web/src/features/ingredients/components/KindTile.tsx                    # B9-48: Kind consequences
 web/src/features/notifications/components/NotificationSettingsView.tsx  # B9-49: notification settings list
 web/src/features/plan/components/CouldntPlanExclusionTile.tsx           # B9-32: Couldn't plan "Show all" (DS-12 names it)
 web/src/features/plan/components/CouldntPlanTile.tsx                    # B9-32: Couldn't plan "Show all" (DS-12 names it)

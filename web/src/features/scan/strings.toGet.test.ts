@@ -3,12 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { scanStrings } from './strings'
 
 describe('scanStrings: tick by hand', () => {
-  it('the row is named "Tick {line}", the toast says "{line} ticked" with Undo, and failures say what to do', () => {
+  // B9-34: the toast and its Undo are the Shop's (useTickFlow); lineTicked, undoAction and untickFailed are gone.
+  it('the row is named "Tick {line}", and a failed tick says what to do', () => {
     expect(scanStrings.tickLine('Passata')).toBe('Tick Passata')
-    expect(scanStrings.lineTicked('Passata')).toBe('Passata ticked')
-    expect(scanStrings.undoAction).toBe('Undo')
     expect(scanStrings.tickFailed('Passata')).toBe("Couldn't tick Passata. Try again.")
-    expect(scanStrings.untickFailed).toBe("Couldn't undo that tick. Try again.")
+    expect('lineTicked' in scanStrings || 'undoAction' in scanStrings || 'untickFailed' in scanStrings).toBe(false)
   })
 
   it('an empty To get tab says everything is ticked', () => {
@@ -17,7 +16,7 @@ describe('scanStrings: tick by hand', () => {
   })
 
   it('uses no word the GLOSSARY avoids', () => {
-    for (const text of [scanStrings.tickLine('x'), scanStrings.lineTicked('x'), scanStrings.nothingToGet, scanStrings.nothingToGetHint]) {
+    for (const text of [scanStrings.tickLine('x'), scanStrings.nothingToGet, scanStrings.nothingToGetHint]) {
       expect(text).not.toMatch(/\b(item|checkbox|checked)\b/i)
     }
   })

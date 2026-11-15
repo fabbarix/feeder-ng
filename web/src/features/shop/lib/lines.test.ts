@@ -31,7 +31,8 @@ describe('priceText', () => {
 
 describe('lineEntry / extraEntry', () => {
   it('flattens an open Line', () => {
-    expect(lineEntry(makeLine(), 'USD', 'metric')).toEqual({
+    // B9-34: the entry also carries defaultAmount, need, packChoice, tick, tickMeta and moreSince (lines.ticks.test pins them)
+    expect(lineEntry(makeLine(), 'USD', 'metric')).toMatchObject({
       key: 'line:2',
       kind: 'line',
       ingredientId: 2,

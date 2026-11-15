@@ -1,9 +1,12 @@
 import { useId, useRef, useState } from 'react'
-import { BottomSheet, Button, CROP_ASPECTS, ImagePicker, Segmented, TextField } from '../../../ui'
+import { BottomSheet, Button, CROP_ASPECTS, ImagePicker, Segmented, StepperField, TextField } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
 import { baseUnitLabel, type BaseUnit } from '../../../lib/units'
 import { ingredientsApi } from '../api'
 import { errorMessage } from '../lib/errorMessage'
 import { baseUnitAfterKindChange, checkKindIngredient, defaultBaseUnit, duplicateGuard, type DuplicateGuard, type KindIngredientErrors } from '../lib/newIngredient'
+import { MAX_SHELF_LIFE_DAYS } from '../lib/conversionForm'
+import { restockNumber, restockStep } from '../lib/keeping'
 import { wordsFor } from '../lib/kind'
 import { strings } from '../strings'
 import '../ingredients.css'
@@ -99,7 +102,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
   const formRef = useRef<HTMLFormElement>(null)
   const [name, setName] = useState(initialName)
   const [baseUnit, setBaseUnit] = useState<BaseUnit>(() => (kind === 'supply' ? 'piece' : defaultBaseUnit(unitHint)))
-  const [shelfLife, setShelfLife] = useState('')
+  const [shelfLife, setShelfLife] = useState<number | null>(null)
   const [restock, setRestock] = useState('')
   const [image, setImage] = useState('')
   const [errors, setErrors] = useState<KindIngredientErrors>({})
@@ -127,7 +130,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
   const submit = async () => {
     if (disabledReason) return
     setServerError(null)
-    const checked = checkKindIngredient({ name, baseUnit, shelfLife, kind, restock })
+    const checked = checkKindIngredient({ name, baseUnit, shelfLife: shelfLife === null ? '' : String(shelfLife), kind, restock })
     if (!checked.ok) {
       setErrors(checked.errors)
       focus(checked.errors.name ? 'name' : checked.errors.shelfLife ? 'shelfLife' : 'restock')
@@ -199,28 +202,34 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
       />
       <BaseUnitPicker disabled={working} value={baseUnit} onChange={(u) => edited(() => setBaseUnit(u))} />
       {isFood ? (
-        <TextField
+        <StepperField
+          editable
           label={strings.sheet.shelfLifeLabel}
           name="shelfLife"
           value={shelfLife}
           onChange={(v) => edited(() => setShelfLife(v))}
-          suffix={strings.sheet.shelfLifeUnit}
+          unit={strings.sheet.shelfLifeUnit}
+          min={1}
+          max={MAX_SHELF_LIFE_DAYS}
+          placeholder={strings.keeping.notSet}
           helper={strings.sheet.shelfLifeHelper}
           error={errors.shelfLife}
-          inputMode="numeric"
-          autoComplete="off"
         />
       ) : (
-        <TextField
+        <StepperField
+          editable
+          decimal
           label={strings.restock.label}
           name="restock"
-          value={restock}
-          onChange={(v) => edited(() => setRestock(v))}
-          suffix={baseUnitLabel(baseUnit, 'metric')}
+          value={restockNumber(restock)}
+          onChange={(v) => edited(() => setRestock(v === null ? '' : String(v)))}
+          unit={baseUnitLabel(baseUnit, 'metric', restockNumber(restock) ?? undefined)}
+          min={1}
+          step={restockStep(baseUnit)}
+          start={restockStep(baseUnit)}
+          placeholder={strings.keeping.notSet}
           helper={strings.restock.helper}
           error={errors.restock}
-          inputMode="decimal"
-          autoComplete="off"
         />
       )}
       <ImagePicker label={strings.sheet.pictureLabel} value={image} onChange={setImage} onBusyChange={onPictureBusy} aspect={CROP_ASPECTS.landscape} listenOn="dialog" />
@@ -264,7 +273,7 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
           </div>
         </div>
       ) : null}
-      {otherError ? <p role="alert" className="new-ingredient__error">{otherError}</p> : null}
+      <FormError>{otherError}</FormError>
       {disabledReason ? (
         <p id={reasonId} className="new-ingredient__helper">
           {disabledReason}
@@ -273,3 +282,4 @@ function NewIngredientForm({ formId, reasonId, onBusy, onPictureBusy, onClose, o
     </form>
   )
 }
+

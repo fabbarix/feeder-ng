@@ -138,7 +138,9 @@ describe('PlanScreen: Regenerate asks first (2.4)', () => {
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
-    expect(dialog).toHaveTextContent('2 unpinned Planned Meals will change. Pinned and Cooked ones stay as they are.')
+    // B9-26 (SAFE-07): the question is a lead and a note (regenerate.test, PlanScreen.undo.test pin the same words).
+    expect(dialog).toHaveTextContent('2 unpinned Planned Meals will change.')
+    expect(dialog).toHaveTextContent('Pinned and Cooked ones stay. You can undo it straight after.')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Regenerate the plan?' })).not.toBeInTheDocument())
     expect(api.callsTo('POST', '/api/plan/regenerate')).toHaveLength(0)

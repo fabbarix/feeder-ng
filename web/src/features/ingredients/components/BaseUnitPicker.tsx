@@ -12,6 +12,11 @@ export interface BaseUnitPickerProps {
   value: BaseUnit
   onChange: (unit: BaseUnit) => void
   disabled?: boolean
+  /**
+   * B9-48 (SET-05): inside a Keeping row the row draws the label and the hint; the picker is then only the radiogroup, named and
+   * described by the row's ids.
+   */
+  bare?: { labelledBy: string; describedBy?: string }
 }
 
 /**
@@ -19,17 +24,18 @@ export interface BaseUnitPickerProps {
  * state never rests on colour alone. Same anatomy as the Segmented field (label above, helper below); it lives here only because
  * Segmented has no per-option icon yet.
  */
-export function BaseUnitPicker({ value, onChange, disabled }: BaseUnitPickerProps) {
+export function BaseUnitPicker({ value, onChange, disabled, bare }: BaseUnitPickerProps) {
   const base = useId()
   const labelId = `${base}-label`
   const helperId = `${base}-helper`
   const roving = useRovingRadios(BASE_UNITS.map((v) => ({ value: v, disabled })), value, onChange)
-  return (
-    <div className="base-unit">
-      <span id={labelId} className="base-unit__label">
-        {strings.baseUnitLabel}
-      </span>
-      <div role="radiogroup" aria-labelledby={labelId} aria-describedby={helperId} className="base-unit__options">
+  const group = (
+      <div
+        role="radiogroup"
+        aria-labelledby={bare ? bare.labelledBy : labelId}
+        aria-describedby={bare ? bare.describedBy : helperId}
+        className="base-unit__options"
+      >
         {BASE_UNITS.map((unit) => {
           const checked = unit === value
           return (
@@ -52,6 +58,14 @@ export function BaseUnitPicker({ value, onChange, disabled }: BaseUnitPickerProp
           )
         })}
       </div>
+  )
+  if (bare) return group
+  return (
+    <div className="base-unit">
+      <span id={labelId} className="base-unit__label">
+        {strings.baseUnitLabel}
+      </span>
+      {group}
       <p id={helperId} className="base-unit__helper">
         {strings.sheet.baseUnitHelper}
       </p>

@@ -75,7 +75,8 @@ describe('SuppliesScreen: the stock level', () => {
   })
   it('keeps the rows and the old meta when Stock fails to load, with every Use disabled', async () => {
     setup({ 'GET /api/stock': refusal(500, 'internal') })
-    expect(await screen.findByText('piece · restocks below 6 pieces')).toBeInTheDocument()
+    // B9-48 (Restock wording): the list meta reads "piece · Restocks below 6".
+    expect(await screen.findByText('piece · Restocks below 6')).toBeInTheDocument()
     for (const name of ['Use one Toilet paper', 'Use some Dish soap', 'Use one Batteries']) expect(screen.getByRole('button', { name })).toBeDisabled()
   })
   it('disables Use for a Supply with no Stock', async () => {

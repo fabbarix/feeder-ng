@@ -1,46 +1,36 @@
-import { useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, CROP_ASPECTS, Chip, EmptyState, ErrorState, ImagePicker, LoadState, PageHeader, TextField, Tile } from '../../../ui'
+import { BentoGrid, CROP_ASPECTS, Chip, ConfirmDialog, EmptyState, ErrorState, IconButton, ImagePicker, LoadState, Menu, PageHeader, Tile, useLeaveGuard, type MenuEntry } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
 import { IngredientProducts } from '../../products'
 import { IngredientExclusionList } from '../../recipes/components/IngredientExclusionList'
-import { BaseUnitPicker } from '../components/BaseUnitPicker'
 import { ConversionEditor } from '../components/ConversionEditor'
-import { KindTile } from '../components/KindTile'
+import { KeepingTile } from '../components/KeepingTile'
+import { KindDialogs } from '../components/KindDialogs'
 import { MergeSheet } from '../components/MergeSheet'
-import { RestockLevelTile } from '../components/RestockLevelTile'
-import { ShelfLifeEditor } from '../components/ShelfLifeEditor'
+import { RenameSheet } from '../components/RenameSheet'
 import { useDisplayUnitSystem } from '../hooks/useDisplayUnitSystem'
-import { useIngredient } from '../hooks/useIngredient'
+import { useIngredient, type UseIngredient } from '../hooks/useIngredient'
+import { useIngredientPage } from '../hooks/useIngredientPage'
+import { useKeepingForm } from '../hooks/useKeepingForm'
 import { useKindChange } from '../hooks/useKindChange'
-import { errorMessage } from '../lib/errorMessage'
 import { kindBasePath, kindOf, wordsFor } from '../lib/kind'
 import { displayName } from '../lib/names'
 import { strings } from '../strings'
-import type { IngredientKind } from '../types'
+import type { IngredientDetail, IngredientKind } from '../types'
 
 /**
- * Route /ingredients/:id (food, the default) and /supplies/:id (kind "supply"). Heading = name; "Rename" (inline Name field + "Save name").
- * Below it a BentoGrid of Tiles: Base Unit (BaseUnitPicker; a read-only value while referenced), then for food Shelf Life and Frozen Shelf
- * Life, for a Supply Restock level (RestockLevelTile); Picture, Unit Conversions, Products, for food Excluded by, then the Kind Tile
- * (changing kind; a Supply asks first), Merge and Delete. An Ingredient opened under the other kind's route is sent to its own page.
+ * Route /ingredients/:id (food, the default) and /supplies/:id (kind "supply"). SET-05: the header holds the name, "Food" or
+ * "Supply", and two outline IconButtons: Rename (a sheet) and More (Merge, Change kind, Delete). Below, a BentoGrid: Keeping (one
+ * tile, one Save) first and full width, then Products and Unit Conversions as a pair (the render's order), then (food) Excluded by and the Picture, full
+ * width. An Ingredient opened under the other kind's route is sent to its own page.
  */
 export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
   const { id: rawId } = useParams()
   const id = Number(rawId)
-  const navigate = useNavigate()
-  const system = useDisplayUnitSystem()
   const ing = useIngredient(id)
-  const change = useKindChange(ing.setKind, (target) => navigate(`${kindBasePath(target)}/${id}`, { replace: true }))
   const words = wordsFor(kind)
-
-  const [renaming, setRenaming] = useState(false)
-  const [nameText, setNameText] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [mergeOpen, setMergeOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-
   const ingredient = ing.ingredient
   const breadcrumbs = useBreadcrumbs(ingredient && displayName(ingredient.name))
   if (!ingredient) {
@@ -60,141 +50,97 @@ export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
       </section>
     )
   }
-
   const actualKind = kindOf(ingredient)
   if (actualKind !== kind) return <Navigate to={`${kindBasePath(actualKind)}/${id}`} replace />
+  return <IngredientPage key={id} id={id} kind={kind} ing={ing} ingredient={ingredient} breadcrumbs={breadcrumbs} />
+}
 
-  const locked = ing.referenceCount > 0
+interface IngredientPageProps {
+  id: number
+  kind: IngredientKind
+  ing: UseIngredient
+  ingredient: IngredientDetail
+  breadcrumbs: ReturnType<typeof useBreadcrumbs>
+}
+
+/** The loaded page. */
+function IngredientPage({ id, kind, ing, ingredient, breadcrumbs }: IngredientPageProps) {
+  const navigate = useNavigate()
+  const system = useDisplayUnitSystem()
+  const words = wordsFor(kind)
+  const title = displayName(ingredient.name)
+  const keeping = useKeepingForm(ingredient, ing.save)
+  const guard = useLeaveGuard(keeping.dirty, { what: title })
+  const page = useIngredientPage(ing, kind, id, () => guard.bypass(() => navigate(kindBasePath(kind))))
+  const change = useKindChange(ing.setKind, (target) => guard.bypass(() => navigate(`${kindBasePath(target)}/${id}`, { replace: true })))
   const isFood = kind === 'food'
+  const locked = ing.referenceCount > 0
 
-  /** Runs a change, showing its failure inline. Resolves to true when it went through. */
-  const attempt = async (run: () => Promise<unknown>): Promise<boolean> => {
-    setError(null)
-    try {
-      await run()
-      return true
-    } catch (e) {
-      setError(errorMessage(e))
-      return false
-    }
-  }
-
-  const saveName = async () => {
-    if (await attempt(() => ing.rename(nameText))) setRenaming(false)
-  }
-
-  const remove = async () => {
-    if (await attempt(() => ing.remove())) navigate(kindBasePath(kind))
-  }
+  const more: MenuEntry[] = [
+    { id: 'merge', label: words.mergeInto, onSelect: () => page.open('merge') },
+    {
+      id: 'kind',
+      label: isFood ? strings.kind.changeToSupply : strings.kind.changeToFood,
+      onSelect: () => change.request(isFood ? 'supply' : 'food'),
+    },
+    { separator: true },
+    { id: 'delete', label: words.deleteLabel, tone: 'danger', disabled: locked, onSelect: () => page.open('delete') },
+  ]
 
   return (
     <section>
-      <PageHeader title={displayName(ingredient.name)} breadcrumbs={breadcrumbs} />
-      {error ? <p role="alert">{error}</p> : null}
+      <PageHeader
+        title={title}
+        subtitle={isFood ? strings.kind.food : strings.kind.supply}
+        breadcrumbs={breadcrumbs}
+        actions={
+          <>
+            {ingredient.baseRecipe ? null : (
+              <IconButton icon="edit" label={strings.header.rename(title)} aria-haspopup="dialog" onClick={() => page.open('rename')} />
+            )}
+            <Menu label={strings.header.more(title)} items={more} busy={page.deletePending} />
+          </>
+        }
+      />
+      <FormError>{page.failure ?? change.failure}</FormError>
 
       {ingredient.baseRecipe ? (
-        <p className="ingredient__base">
-          <Chip kind="tag" icon="cook">
-            {ingredient.baseRecipe.archived ? strings.baseRecipeArchived : strings.baseRecipeBadge}
-          </Chip>{' '}
-          <Link to={`/recipes/${ingredient.baseRecipe.id}`} aria-label={strings.openBaseRecipe(ingredient.baseRecipe.name)}>
-            {ingredient.baseRecipe.name}
-          </Link>
-        </p>
+        <>
+          <p className="ingredient__base">
+            <Chip kind="tag" icon="cook">
+              {ingredient.baseRecipe.archived ? strings.baseRecipeArchived : strings.baseRecipeBadge}
+            </Chip>{' '}
+            <Link to={`/recipes/${ingredient.baseRecipe.id}`} aria-label={strings.openBaseRecipe(ingredient.baseRecipe.name)}>
+              {ingredient.baseRecipe.name}
+            </Link>
+          </p>
+          <p className="ingredient__helper">{strings.renameBaseRecipe}</p>
+        </>
       ) : null}
-
-      {ingredient.baseRecipe ? (
-        <p className="ingredient__helper">{strings.renameBaseRecipe}</p>
-      ) : renaming ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            void saveName()
-          }}
-        >
-          <TextField label={strings.nameLabel} value={nameText} onChange={setNameText} />
-          <Button type="submit">{strings.saveName}</Button>
-        </form>
-      ) : (
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setNameText(ingredient.name)
-            setRenaming(true)
-          }}
-        >
-          {strings.rename}
-        </Button>
-      )}
 
       <div className="ingredient__tiles">
         <BentoGrid min="card" label={words.detailsLabel}>
-          <Tile as="section" className="ingredient__tile" aria-label={strings.baseUnitLabel}>
-            {locked ? (
-              <>
-                <div className="base-unit__value" data-testid="base-unit-value">
-                  <span className="base-unit__label">{strings.baseUnitLabel}</span>
-                  <span aria-hidden="true">{' · '}</span>
-                  <strong>{ingredient.baseUnit}</strong>
-                </div>
-                <p className="base-unit__helper">{strings.baseUnitLocked(ing.referenceCount)}</p>
-              </>
-            ) : (
-              <BaseUnitPicker
-                value={ingredient.baseUnit}
-                onChange={(b) => {
-                  if (b !== ingredient.baseUnit) void attempt(() => ing.setBaseUnit(b))
-                }}
-              />
-            )}
-          </Tile>
+          <KeepingTile kind={kind} name={ingredient.name} form={keeping} referenceCount={ing.referenceCount} system={system} />
 
-          {isFood ? (
-            <>
-              <Tile as="section" className="ingredient__tile" aria-label={strings.shelfLifeTile}>
-                <ShelfLifeEditor days={ingredient.shelfLifeDays} onSave={(days) => void attempt(() => ing.setShelfLife(days))} />
-              </Tile>
+          <IngredientProducts
+            ingredientId={id}
+            ingredientName={ingredient.name}
+            baseUnit={ingredient.baseUnit}
+            system={system}
+            span={1}
+            className="ingredient__tile"
+          />
 
-              <Tile as="section" className="ingredient__tile" aria-label={strings.frozenShelfLifeLabel}>
-                <ShelfLifeEditor
-                  variant="frozen"
-                  days={ingredient.frozenShelfLifeDays ?? null}
-                  onSave={(days) => void attempt(() => ing.setFrozenShelfLife(days))}
-                />
-              </Tile>
-            </>
-          ) : (
-            <RestockLevelTile
-              level={ingredient.restockLevel ?? null}
-              baseUnit={ingredient.baseUnit}
-              system={system}
-              onSave={(level) => void attempt(() => ing.setRestockLevel(level))}
-            />
-          )}
-
-          <Tile as="section" span="full" aria-labelledby="ingredient-picture-heading">
-            <h2 id="ingredient-picture-heading">{strings.pictureLabel}</h2>
-            <ImagePicker
-              hideLabel
-              label={strings.pictureLabel}
-              value={ingredient.image ?? ''}
-              onChange={(imageId) => void attempt(() => ing.setImage(imageId))}
-              aspect={CROP_ASPECTS.landscape}
-            />
-          </Tile>
-
-          <Tile as="section" span="full" aria-label={strings.conversionsTitle}>
+          <Tile as="section" className="ingredient__tile" aria-label={strings.conversionsTitle}>
             <ConversionEditor
               conversions={ingredient.conversions}
               base={ingredient.baseUnit}
               system={system}
               lockedUnits={ingredient.baseRecipe ? ['batch', 'portion'] : undefined}
-              onAdd={(c) => void attempt(() => ing.setConversion(c))}
-              onRemove={(unit) => void attempt(() => ing.removeConversion(unit))}
+              onAdd={(c) => ing.setConversion(c)}
+              onRemove={(unit) => void page.removeConversion(unit)}
             />
           </Tile>
-
-          <IngredientProducts ingredientId={id} ingredientName={ingredient.name} baseUnit={ingredient.baseUnit} system={system} />
 
           {isFood ? (
             <Tile as="section" id="exclusions" span="full" aria-label={strings.excludedBy}>
@@ -203,39 +149,34 @@ export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {
             </Tile>
           ) : null}
 
-          <KindTile kind={kind} name={ingredient.name} change={change} />
-
-          <Tile as="section" aria-label={words.mergeTitle}>
-            <Button variant="secondary" onClick={() => setMergeOpen(true)}>
-              {words.mergeInto}
-            </Button>
-          </Tile>
-
-          <Tile as="section" aria-label={words.deleteLabel}>
-            <Button variant="danger-secondary" disabled={locked} onClick={() => setDeleteOpen(true)}>
-              {words.deleteLabel}
-            </Button>
-            {locked ? <p>{strings.deleteLocked(ing.referenceCount)}</p> : null}
+          <Tile as="section" span="full" aria-labelledby="ingredient-picture-heading">
+            <h2 id="ingredient-picture-heading">{strings.pictureLabel}</h2>
+            <ImagePicker
+              hideLabel
+              label={strings.pictureLabel}
+              value={ingredient.image ?? ''}
+              onChange={(imageId) => void page.attempt(() => ing.setImage(imageId))}
+              aspect={CROP_ASPECTS.landscape}
+            />
           </Tile>
         </BentoGrid>
       </div>
 
-      {mergeOpen ? (
+      <RenameSheet open={page.sheet === 'rename'} kind={kind} name={ingredient.name} onClose={page.close} onSave={ing.rename} />
+      {page.sheet === 'merge' ? (
         <MergeSheet
           open
           sourceId={id}
           kind={kind}
-          onClose={() => setMergeOpen(false)}
+          onClose={page.close}
           onMerged={(targetId) => {
-            setMergeOpen(false)
-            navigate(`${kindBasePath(kind)}/${targetId}`)
+            page.close()
+            guard.bypass(() => navigate(`${kindBasePath(kind)}/${targetId}`))
           }}
         />
       ) : null}
-      <BottomSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title={words.deleteLabel}>
-        <p>{strings.deleteConfirm(ingredient.name)}</p>
-        <Button onClick={() => void remove()}>{words.deleteLabel}</Button>
-      </BottomSheet>
+      <ConfirmDialog open={page.deleteOpen} {...page.deleteOptions} onConfirm={() => void page.confirmDelete()} onCancel={page.close} />
+      <KindDialogs kind={kind} name={ingredient.name} change={change} />
     </section>
   )
 }

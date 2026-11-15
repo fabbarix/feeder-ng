@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { strings } from '../strings'
@@ -45,8 +45,35 @@ describe('MergeSheet', () => {
     flow.preview = preview
     render_()
     expect(screen.getByText(strings.mergeSummary('passata', 'tomato puree'))).toBeInTheDocument()
-    expect(screen.getByText(strings.mergeMoves(4))).toBeInTheDocument()
+    // B9-48 (SAFE-02, R-E): what moves is rows under "Moves to <target>", not the sentence "4 places will move".
+    expect(screen.queryByText(strings.mergeMoves(4))).toBeNull()
+    const moves = screen.getByRole('list', { name: 'Moves to Tomato puree' })
+    expect(within(moves).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Recipe lines3', 'Products1'])
     expect(screen.getByRole('radio', { name: 'Keep 700 ml' })).toBeInTheDocument()
+  })
+  it('shows no "Moves to" rows when nothing refers to the source', () => {
+    flow.target = puree
+    flow.preview = { ...preview, sourceReferences: {} }
+    render_()
+    expect(screen.queryByRole('list', { name: /^Moves to/ })).toBeNull()
+  })
+  it('a blocked merge is the sheet\'s one form-level alert (FormError), and a refused merge too', async () => {
+    flow.target = puree
+    flow.preview = { ...preview, blocked: 'base_unit_mismatch', conflicts: [] }
+    render_()
+    expect(screen.getByRole('alert')).toHaveClass('form-error')
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+  })
+  it('a merge the server refuses stays on the sheet with one FormError, nothing else lost', async () => {
+    flow.target = puree
+    flow.preview = preview
+    flow.canMerge = true
+    flow.merge.mockRejectedValueOnce(new Error('boom'))
+    render_()
+    await userEvent.click(screen.getByRole('button', { name: strings.mergeConfirm }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveClass('form-error')
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
   })
   it('keeps Merge disabled until every conflict is answered', () => {
     flow.target = puree

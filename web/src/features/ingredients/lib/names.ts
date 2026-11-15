@@ -27,3 +27,8 @@ export function ingredientMeta(baseUnitLabel: string, shelfLifeDays: number | nu
   if (shelfLifeDays === null) return baseUnitLabel
   return `${baseUnitLabel} · keeps ${shelfLifeDays} ${shelfLifeDays === 1 ? 'day' : 'days'}`
 }
+
+/** A typed name as it is saved or quoted: trimmed, runs of whitespace collapsed to one space (case kept). */
+export function tidyName(text: string): string {
+  return text.trim().split(/\s+/).filter(Boolean).join(' ')
+}

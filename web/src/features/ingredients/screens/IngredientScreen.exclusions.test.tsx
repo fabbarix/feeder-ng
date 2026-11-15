@@ -1,7 +1,7 @@
 // PT: the Ingredient page's Excluded by Tile (docs/dev/design/rx-pt.md section 5.4): who excludes this Ingredient, one toggle per Member.
-import { render, screen, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { renderRoutes } from '../ingredient.test-helper'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { household, prefs } from '../../recipes/household.test-helper'
 import type { IngredientDetail } from '../types'
@@ -10,6 +10,7 @@ const base: IngredientDetail = { id: 7, name: 'garlic', baseUnit: 'g', shelfLife
 const h = vi.hoisted(() => ({ household: {} as import('../../recipes/hooks/useHouseholdPreferences').UseHouseholdPreferences }))
 const hook = { ingredient: base as IngredientDetail | undefined, isLoading: false, error: null as Error | null, referenceCount: 0 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
+vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false }) }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
 vi.mock('../../recipes/hooks/useHouseholdPreferences', () => ({ useHouseholdPreferences: () => h.household }))
@@ -17,8 +18,7 @@ vi.mock('../../recipes/hooks/useHouseholdPreferences', () => ({ useHouseholdPref
 import { IngredientScreen } from './IngredientScreen'
 
 const setup = (entry = '/ingredients/7') => {
-  const router = createMemoryRouter([{ path: '/ingredients/:id', element: <IngredientScreen /> }], { initialEntries: [entry] })
-  return render(<RouterProvider router={router} />)
+  return renderRoutes([{ path: '/ingredients/:id', element: <IngredientScreen /> }], entry)
 }
 const tile = () => screen.getByRole('heading', { level: 2, name: 'Excluded by' }).closest('section') as HTMLElement
 

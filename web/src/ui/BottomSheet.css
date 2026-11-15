@@ -152,29 +152,38 @@
   background: var(--color-surface);
 }
 
-/* R-B: with onCancel, Cancel is the footer's first control (secondary) and the decision takes the rest of the row:
-   Cancel one part, each other action two. */
+/* R-B: with onCancel, Cancel is the footer's first control (secondary) and the decision takes the rest of the row: Cancel one part,
+   each other action two. Batch w3e (B9-34, Add extra at 375): no footer control ever shrinks below its label. Each starts from its
+   natural width and only grows; when they do not all fit on one row they stack full width, and wrap-reverse puts the decision
+   (the last control) on top, Cancel under it. One row is unchanged by wrap-reverse. A FormActions row counts as one control. */
 .sheet__footer[data-cancel] {
-  flex-wrap: nowrap;
+  flex-wrap: wrap-reverse;
 }
 
 .sheet__footer[data-cancel] > * {
-  flex: 2 1 0;
-  min-inline-size: 0;
+  flex: 2 1 auto;
+  min-inline-size: min(100%, max-content);
 }
 
 .sheet__footer[data-cancel] > .sheet__cancel {
-  flex: 1 1 0;
+  flex: 1 1 auto;
 }
 
 .sheet__footer[data-cancel] > .form-actions {
   flex-direction: row;
+  inline-size: auto;
 }
 
 /* SHORT-02 rule 1: the footer is one row; a FormActions row takes the whole of it. */
 .sheet__footer > .form-actions {
   flex: 1 1 auto;
   min-inline-size: 0;
+}
+
+/* ...beside Cancel it is one control like the others (above): it starts from its buttons' width and never squeezes Cancel. */
+.sheet__footer[data-cancel] > .form-actions {
+  flex: 2 1 auto;
+  min-inline-size: min(100%, max-content);
 }
 
 /* SHORT-02 rule 5, the safety net: when the body would show less than 40 % of the panel (BottomSheet sets data-footer="flow"),

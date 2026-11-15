@@ -5,8 +5,8 @@
 // too; below 420 px it is the compact "400 ml/1 l", which the probe measures as painted. B9-29 (SSP-05): every visible row meta is
 // read (the Pantry's status, the Supplies' Restock reason, any list): a meta is never cut, whatever screen it is on.
 // w3c integration: P23 always fails, so the routes whose owners have not cleaned their metas yet keep the old reach (the Shop's info
-// hints only) until that package lands and deletes its entry here: /settings and /settings/planning (B9-51), /shop (B9-34), /scan (B9-41).
-const PENDING_ROUTES = ['/settings', '/settings/planning', '/shop', '/scan']
+// hints only) until that package lands and deletes its entry here: /settings and /settings/planning (B9-51), /scan (B9-41). /shop left with B9-34 (w3e).
+const PENDING_ROUTES = ['/settings', '/settings/planning', '/scan']
 const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')

@@ -3,6 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ExtraSheet } from './ExtraSheet'
 
+// jsdom has no scrollIntoView; a failed Save scrolls the invalid field into view before focusing it (useFocusFirstInvalid, SAFE-11)
+Element.prototype.scrollIntoView ??= () => {}
+
 const ingredients = [
   { id: 1, name: 'milk', baseUnit: 'ml' },
   { id: 2, name: 'passata', baseUnit: 'g' },
@@ -159,9 +162,10 @@ describe('ExtraSheet: validation (inline, on the field at fault)', () => {
   it('switching mode clears an error', async () => {
     setup()
     await save()
-    expect(screen.getByText('Choose an Ingredient')).toBeInTheDocument()
+    // B9-34 (SAFE-11): the select's placeholder also reads "Choose an Ingredient"; the error is the second one
+    expect(screen.getAllByText('Choose an Ingredient')).toHaveLength(2)
     await note()
-    expect(screen.queryByText('Choose an Ingredient')).toBeNull()
+    expect(screen.queryAllByText('Choose an Ingredient')).toHaveLength(0)
   })
 })
 

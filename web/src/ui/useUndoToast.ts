@@ -57,6 +57,8 @@ const REASONS: Record<string, string> = {
   not_undoable: 'It cannot be undone.',
   not_found: 'It was already undone.',
   email_taken: 'That email is already used by someone else.',
+  // A request that never reached the server (lib/http's ApiError(0, 'network')): nothing changed, and the person learns why.
+  network: 'Feeder is offline.',
 }
 const NOTHING_CHANGED = 'Nothing changed.'
 

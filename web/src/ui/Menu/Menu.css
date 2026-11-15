@@ -84,3 +84,12 @@
 .list-row[data-disabled='true'] {
   color: var(--color-muted);
 }
+
+/* A busy trigger (an item's action waits on a read): the progress cursor and a muted glyph until the read answers. */
+.icon-button[data-busy] {
+  cursor: progress;
+}
+
+.icon-button[data-busy] > svg {
+  color: var(--color-muted);
+}

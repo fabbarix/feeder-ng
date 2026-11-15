@@ -120,6 +120,11 @@ describe('DS-10: metaLines={2} on a navigation row', () => {
     const s = inList(<ListRow title="Static" meta="m" metaLines={2} />)
     expect(li(s.container)).not.toHaveAttribute('data-meta-lines', '2')
   })
+  // Batch w3e (B9-34 P23 on /scan): a chevron row that opens a page is a navigation row too ("Read the receipt").
+  it('is allowed on an onActivate row with a chevron (it opens a page)', () => {
+    const { container } = inList(<ListRow title="Read the receipt" meta="Fill in Prices and weighed amounts from a photo" chevron onActivate={() => {}} metaLines={2} />)
+    expect(li(container)).toHaveAttribute('data-meta-lines', '2')
+  })
   it('the full description is still the link row accessible description', () => {
     render(
       <MemoryRouter>

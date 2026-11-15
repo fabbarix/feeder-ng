@@ -4,6 +4,7 @@ import type {
   Ingredient,
   IngredientKind,
   IngredientDetail,
+  IngredientImpact,
   IngredientPatch,
   MergePreview,
   MergeRequest,
@@ -28,6 +29,8 @@ export const ingredientsApi = {
   create: (body: NewIngredient) => http.post<Ingredient>(base, body),
   patch: (id: number, body: IngredientPatch) => http.patch<Ingredient>(`${base}/${id}`, body),
   remove: (id: number) => http.delete<void>(`${base}/${id}`),
+  /** SAFE-02: what still uses it; read when the Delete confirm opens. Changes nothing. */
+  impact: (id: number) => http.get<IngredientImpact>(`${base}/${id}/impact`),
   setConversion: (id: number, c: Conversion) =>
     http.put<Ingredient>(`${base}/${id}/conversions/${encodeURIComponent(c.unit)}`, { toBase: c.toBase }),
   removeConversion: (id: number, unit: string) =>
