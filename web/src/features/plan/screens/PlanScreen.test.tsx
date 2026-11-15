@@ -130,7 +130,9 @@ describe('PlanScreen: Regenerate asks first (2.4)', () => {
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
-    expect(dialog).toHaveTextContent('2 unpinned Planned Meals will change. Pinned and Cooked ones stay as they are.')
+    // B9-26 (SAFE-07): the question is a lead and a note (regenerate.test, PlanScreen.undo.test pin the same words).
+    expect(dialog).toHaveTextContent('2 unpinned Planned Meals will change.')
+    expect(dialog).toHaveTextContent('Pinned and Cooked ones stay. You can undo it straight after.')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Regenerate the plan?' })).not.toBeInTheDocument())
     expect(api.callsTo('POST', '/api/plan/regenerate')).toHaveLength(0)
@@ -310,7 +312,9 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     await userEvent.click(within(planned).getByRole('button', { name: 'Mark as Cooked' }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Mark as Cooked' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
+    // B9-26: the Cooked toast has its own Dismiss now; press the one inside the shortfall notice.
+    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
+    await userEvent.click(within(notice).getByRole('button', { name: 'Dismiss' }))
     await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
     expect(api.calls.some((c) => c.path.startsWith('/api/stock'))).toBe(false)
   })
