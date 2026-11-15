@@ -1,5 +1,5 @@
 // R2-1 (E-01, F-01 adoption): the ingredient line is Ingredient · Quantity xs · Unit sm · Note · remove (Optional is a menu item and a chip in the Ingredient cell).
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { flour, garlic } from '../fixtures.test-helper'
@@ -32,48 +32,32 @@ describe('IngredientLineRow: sizes', () => {
   })
 })
 
-describe('IngredientLineRow: "Optional" is a menu item plus a status chip (never a tooltip-only icon)', () => {
-  const open = async () => userEvent.click(screen.getByRole('button', { name: 'Actions for garlic' }))
-  it('the actions menu has a checkable "Optional" item, unchecked for an ordinary line, that toggles it on', async () => {
+describe('IngredientLineRow: "Optional" is a checkbox on the line (B9-37, RX-10; was a menu item plus a chip)', () => {
+  it('the line has an unchecked "Optional: garlic" checkbox for an ordinary line, which toggles it on', async () => {
     const { onChange } = view()
-    await open()
-    const item = screen.getByRole('menuitemcheckbox', { name: 'Optional' })
-    expect(item).toHaveAttribute('aria-checked', 'false')
-    await userEvent.click(item)
+    const box = screen.getByRole('checkbox', { name: 'Optional: garlic' })
+    expect(box).not.toBeChecked()
+    await userEvent.click(box)
     expect(onChange).toHaveBeenCalledWith({ optional: true })
   })
-  it('the item is checked when the line is optional and toggles it off', async () => {
+  it('the checkbox is checked when the line is optional and toggles it off', async () => {
     const { onChange } = view({ optional: true })
-    await open()
-    const item = screen.getByRole('menuitemcheckbox', { name: 'Optional' })
-    expect(item).toHaveAttribute('aria-checked', 'true')
-    await userEvent.click(item)
+    const box = screen.getByRole('checkbox', { name: 'Optional: garlic' })
+    expect(box).toBeChecked()
+    await userEvent.click(box)
     expect(onChange).toHaveBeenCalledWith({ optional: false })
   })
-  it('works without a drag handle or onMove: the menu still has the Optional item and no Move items', async () => {
+  it('works without a drag handle or onMove: the menu has no Move items and no Optional item', async () => {
     view({ optional: false })
-    await open()
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Optional' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for garlic' }))
     expect(screen.queryByRole('menuitem', { name: 'Move ingredient up' })).toBeNull()
+    expect(screen.queryByRole('menuitemcheckbox', { name: 'Optional' })).toBeNull()
   })
-  it('an ordinary line shows no Optional chip', () => {
+  it('an ordinary line shows no Optional chip, and an optional line shows none either: the checkbox says it', () => {
     const { container } = view()
     expect(container.querySelector('.line-row .chip')).toBeNull()
-    expect(screen.queryByText('Optional')).toBeNull()
-  })
-  it('an optional line shows a compact non-interactive "Optional" chip inside the Ingredient cell, after the picker, announced with the line', () => {
-    const { container } = view({ optional: true })
-    const cell = container.querySelector('.line-row__ingredient')!
-    const chip = cell.querySelector('.chip') as HTMLElement
-    expect(chip).not.toBeNull()
-    expect(chip.tagName).toBe('SPAN')
-    expect(chip).toHaveTextContent('Optional')
-    expect(chip).toHaveAttribute('data-kind', 'tag')
-    expect(chip.closest('button')).toBeNull()
-    expect(chip).not.toHaveAttribute('aria-hidden')
-    const combo = within(cell as HTMLElement).getByRole('combobox', { name: 'Ingredient' })
-    expect(combo.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(container.querySelector('li.line-row')!.textContent).toContain('Optional')
+    const { container: optional } = view({ optional: true })
+    expect([...optional.querySelectorAll('.line-row .chip')].filter((c) => c.textContent === 'Optional')).toHaveLength(0)
   })
   it('no [title] attribute anywhere in the line, except on chips (their full text, DS-A system.md §6)', () => {
     const { container } = view({ optional: true })

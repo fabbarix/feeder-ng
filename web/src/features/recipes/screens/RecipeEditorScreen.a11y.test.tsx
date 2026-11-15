@@ -46,7 +46,8 @@ describe('the editor\'s comboboxes', () => {
     await screen.findByRole('textbox', { name: 'Name' })
     await userEvent.click(screen.getByRole('button', { name: 'Add ingredient' }))
     await userEvent.click(screen.getByRole('button', { name: 'Add Step' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Add ingredient use' }))
+    // B9-37: a new Recipe opens with one Step, so there are two now; each card has its own "Add ingredient use".
+    await userEvent.click(screen.getAllByRole('button', { name: 'Add ingredient use' })[1]!)
     const all = screen.getAllByRole('combobox')
     const named = screen.getAllByRole('combobox', { name: /\S/ })
     expect(all.filter((c) => !named.includes(c)).map((c) => c.outerHTML.slice(0, 160))).toEqual([])

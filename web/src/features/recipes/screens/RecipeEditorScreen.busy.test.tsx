@@ -39,10 +39,14 @@ beforeEach(() => {
   )
 })
 const saves = () => screen.getAllByRole('button', { name: recipeStrings.save })
+// B9-37 (RX-02): the Recipe photo's picker is in the sheet its 96 px button opens; a Step's picker shows after "Add Photo".
+const openRecipePhoto = () => userEvent.click(screen.getByRole('button', { name: 'Photo of the Recipe: add' }))
+const openStepPhoto = () => userEvent.click(screen.getByRole('button', { name: 'Add Photo' }))
 
 describe('RecipeEditorScreen: photo busy', () => {
   it('disables Save while the Recipe photo uploads, enables it after', async () => {
     expect(saves().every((b) => !(b as HTMLButtonElement).disabled)).toBe(true)
+    await openRecipePhoto()
     await userEvent.click(screen.getByRole('button', { name: `start upload ${recipeStrings.photo}` }))
     expect(saves().every((b) => (b as HTMLButtonElement).disabled)).toBe(true)
     await userEvent.click(screen.getByRole('button', { name: `finish upload ${recipeStrings.photo}` }))
@@ -50,6 +54,7 @@ describe('RecipeEditorScreen: photo busy', () => {
   })
 
   it('disables Save while a Step photo uploads', async () => {
+    await openStepPhoto()
     await userEvent.click(screen.getByRole('button', { name: `start upload ${recipeStrings.steps.image}` }))
     expect(saves().every((b) => (b as HTMLButtonElement).disabled)).toBe(true)
     await userEvent.click(screen.getByRole('button', { name: `finish upload ${recipeStrings.steps.image}` }))
@@ -57,6 +62,8 @@ describe('RecipeEditorScreen: photo busy', () => {
   })
 
   it('stays disabled until BOTH pickers are done', async () => {
+    await openRecipePhoto()
+    await openStepPhoto()
     await userEvent.click(screen.getByRole('button', { name: `start upload ${recipeStrings.photo}` }))
     await userEvent.click(screen.getByRole('button', { name: `start upload ${recipeStrings.steps.image}` }))
     await userEvent.click(screen.getByRole('button', { name: `finish upload ${recipeStrings.photo}` }))

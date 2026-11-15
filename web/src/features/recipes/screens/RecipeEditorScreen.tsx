@@ -1,5 +1,5 @@
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../../lib/http'
 import { useCourses } from '../../../lib/courses/useCourses'
@@ -26,13 +26,17 @@ import { baseUnitOfYield } from '../../../lib/baseRecipes/yield'
 import { useRef } from 'react'
 import { LinkCandidatesSheet } from '../components/LinkCandidatesSheet'
 import { TakeOverDialog } from '../components/TakeOverDialog'
-import { neededAtOverride, setBaseRecipe } from '../lib/baseRecipe'
+import { neededAtOverride, setKind } from '../lib/baseRecipe'
 import { NewIngredientSheet } from '../../ingredients/components/NewIngredientSheet'
 import { CourseLossDialog } from '../components/CourseLossDialog'
 import { IngredientLineRow } from '../components/IngredientLineRow'
-import { PhotoPicker } from '../components/PhotoPicker'
-import { RecipeDetailsFields } from '../components/RecipeDetailsFields'
-import { useHouseholdFrozenUseBy } from '../hooks/useHouseholdFrozenUseBy'
+import { RecipeAboutFields } from '../components/RecipeAboutFields'
+import { RecipeBasicsFields } from '../components/RecipeBasicsFields'
+import { RecipePlanningFields } from '../components/RecipePlanningFields'
+import { RecipeYieldField } from '../components/RecipeYieldField'
+import { useHouseholdPlanningDefaults } from '../hooks/useHouseholdPlanningDefaults'
+import { Disclosure } from '../../../ui/Disclosure'
+import { aboutSummary, planningSummary, sectionInvalid } from '../lib/editorSummary'
 import { useRecipeTags } from '../hooks/useRecipeTags'
 import { RecipeSectionIndex } from '../components/RecipeSectionIndex'
 import { StepsEditor } from '../components/StepsEditor'
@@ -49,18 +53,26 @@ import { parseNumber } from '../lib/draft'
 import type { IngredientRef } from '../types'
 import '../recipe-detail.css'
 import '../recipe-editor.css'
+import '../recipe-editor.lines.css'
+import '../recipe-editor.steps.css'
+import '../recipe-editor.sections.css'
 
 const SECTIONS = [
-  { id: 'recipe-section-details', label: recipeStrings.fields.details },
-  { id: 'recipe-section-photo', label: recipeStrings.photo },
+  { id: 'recipe-section-recipe', label: recipeStrings.fields.sectionRecipe },
   { id: 'recipe-section-ingredients', label: recipeStrings.ingredients },
   { id: 'recipe-section-steps', label: recipeStrings.stepsTitle },
+  { id: 'recipe-section-about', label: recipeStrings.fields.sectionAbout },
+  { id: 'recipe-section-planning', label: recipeStrings.fields.sectionPlanning },
 ]
+/** RX-02: which closed sections the person left open on this device (only the ids). */
+const OPEN_KEY = 'feeder.recipeEditor.open'
 
 /**
- * Routes /recipes/new and /recipes/:id/edit: one centred 840 px column of section cards (Details, Photo, Ingredients,
- * Steps) with a section index beside it from 1280 px, and a StickyActionBar with Cancel and Save Recipe. An unknown unit opens the inline Unit Conversion
- * prompt; saving then goes on from where it stopped.
+ * Routes /recipes/new and /recipes/:id/edit: one centred 840 px column of section cards with a section index beside it from 1280 px, and
+ * a StickyActionBar with Cancel and Save Recipe on the form column. B9-37 (RX-02): Recipe (Name, Photo, Kind) · Ingredients (with the
+ * Yield) · Steps · "Description and source" and "Planning" as closed Disclosures with a one-line summary. A new Recipe puts the cursor in
+ * the Name and opens with one empty line and one empty Step. An unknown unit opens the inline Unit Conversion prompt; saving then goes on
+ * from where it stopped.
  * B9-31: the editor keeps work. While dirty every in-app exit asks "Leave without saving?" (useLeaveGuard); a reload draft covers a
  * reload or a crash (useRecipeDraft, with its DraftNotice); Cancel goes to a known route and asks "Discard your changes?" while dirty;
  * removing a Step, line or use offers Undo; a failed Save focuses the first invalid field (SAFE-04).
@@ -71,7 +83,7 @@ export function RecipeEditorScreen(): ReactNode {
   const recipeId = id === undefined ? undefined : Number(id)
   const refs = useIngredientRefs()
   const { known: knownTags, colourOf, isLoading: tagsLoading } = useRecipeTags()
-  const householdFrozenUseBy = useHouseholdFrozenUseBy()
+  const planningDefaults = useHouseholdPlanningDefaults()
   const [saveError, setSaveError] = useState<string | null>(null)
   // Ingredients made from the picker, known at once (the list refetch may still be on its way).
   const [made, setMade] = useState<IngredientRef[]>([])
@@ -95,6 +107,9 @@ export function RecipeEditorScreen(): ReactNode {
   // L13: set by Add ingredient so the new line's Ingredient picker takes focus.
   const [addedLine, setAddedLine] = useState(false)
   const clearAddedLine = useCallback(() => setAddedLine(false), [])
+  // RX-08: a pick moves the cursor to that line's Quantity (a quick create asks the same through `quick.focusLineKey`).
+  const [pickedLine, setPickedLine] = useState<string | null>(null)
+  const clearPickedLine = useCallback(() => setPickedLine(null), [])
   const [busyPickers, setBusyPickers] = useState<ReadonlySet<string>>(new Set())
   const setPickerBusy = useCallback((id: string, busy: boolean) => {
     setBusyPickers((cur) => {
@@ -135,7 +150,13 @@ export function RecipeEditorScreen(): ReactNode {
   const { removeLine, removeStep, removeUse } = useEditorRemovals(editor, byId, formRef)
   // SAFE-04: grows after every Save the editor answered (client check or server), so focus goes to the first invalid field.
   const [submits, setSubmits] = useState(0)
-  useFocusFirstInvalid(formRef, editor.errors, submits)
+  // B9-37: focus follows one render later. A closed Disclosure that holds the invalid field opens itself in that render (its `invalid`),
+  // so the field is shown before it takes focus; a server refusal arrives in the same render as its submit, too late to open it first.
+  const [focusSubmits, setFocusSubmits] = useState(0)
+  useEffect(() => {
+    if (focusSubmits !== submits) setFocusSubmits(submits)
+  }, [submits, focusSubmits])
+  useFocusFirstInvalid(formRef, editor.errors, focusSubmits)
 
   // The crumb names the stored Recipe, as the leave dialogs do: a restored draft's unsaved name is not where the crumb leads.
   const crumbs = useBreadcrumbs(editor.storedName ?? editor.draft?.name)
@@ -234,6 +255,12 @@ export function RecipeEditorScreen(): ReactNode {
     }
   }
 
+  // Add ingredient, or Enter in the last field of the last line: a new line whose picker takes the cursor (L13, RX-02).
+  const addLine = () => {
+    editor.addLine()
+    setAddedLine(true)
+  }
+
   const lineByKey = (key: string | null) => (key === null ? undefined : draft.lines.find((l) => l.key === key))
 
   return (
@@ -243,33 +270,27 @@ export function RecipeEditorScreen(): ReactNode {
         <section className="recipe-editor" ref={formRef}>
           <PageHeader title={recipeId === undefined ? recipeStrings.newRecipe : recipeStrings.editRecipe} breadcrumbs={crumbs} />
           {keeper.notice ? <DraftNotice {...keeper.notice} /> : null}
-          <Tile as="section" id="recipe-section-details" className="recipe-editor__section" aria-labelledby="recipe-section-details-title">
-            <h2 id="recipe-section-details-title">{recipeStrings.fields.details}</h2>
-            <RecipeDetailsFields
+          <Tile as="section" id="recipe-section-recipe" className="recipe-editor__section" aria-label={recipeStrings.fields.sectionRecipe}>
+            <RecipeBasicsFields
               draft={draft}
               errors={editor.errors}
-              knownTags={knownTags}
-              colourOf={tagsLoading ? undefined : colourOf}
-              courses={courses}
-              householdFrozenUseBy={householdFrozenUseBy}
-              onChange={changeDetails}
-              onBaseRecipeChange={(on) => setDraft((d) => setBaseRecipe(d, on))}
+              autoFocusName={isNew}
+              onName={(name) => setDraft((d) => ({ ...d, name }))}
+              onImage={(image) => setDraft((d) => ({ ...d, image }))}
+              onKind={(kind) => setDraft((d) => setKind(d, kind))}
+              onPhotoBusyChange={(busy) => setPickerBusy('photo', busy)}
             />
           </Tile>
-          <div id="recipe-section-photo" className="recipe-editor__section">
-            <PhotoPicker
-              value={draft.image}
-              onChange={(image) => setDraft((d) => ({ ...d, image }))}
-              onBusyChange={(busy) => setPickerBusy('photo', busy)}
-            />
-          </div>
           <Tile
             as="section"
             id="recipe-section-ingredients"
             className="recipe-editor__section"
             aria-labelledby="recipe-section-ingredients-title"
           >
-            <h2 id="recipe-section-ingredients-title">{recipeStrings.ingredients}</h2>
+            <div className="recipe-editor__section-head">
+              <h2 id="recipe-section-ingredients-title">{recipeStrings.ingredients}</h2>
+              <RecipeYieldField draft={draft} errors={editor.errors} onChange={changeDetails} />
+            </div>
             {editor.errors.lines ? (
               <p id="recipe-lines-error" className="ui-field__error">
                 <Icon name="error" size={14} />
@@ -280,10 +301,12 @@ export function RecipeEditorScreen(): ReactNode {
             <div className="recipe-editor__lines-box">
               {draft.lines.length > 0 ? (
                 <div className="recipe-editor__lines-head" aria-hidden="true">
+                  <span />
                   <span>{recipeStrings.lines.ingredient}</span>
                   <span>{recipeStrings.lines.quantity}</span>
                   <span>{recipeStrings.lines.unit}</span>
                   <span>{recipeStrings.lines.note}</span>
+                  <span>{recipeStrings.lines.optional}</span>
                   <span />
                 </div>
               ) : null}
@@ -308,7 +331,10 @@ export function RecipeEditorScreen(): ReactNode {
                     errors={editor.errors}
                     ingredient={line.ingredientId === null ? undefined : byId.get(line.ingredientId)}
                     ingredients={ingredients}
-                    onPick={(ing) => editor.pickIngredient(line.key, ing)}
+                    onPick={(ing) => {
+                      editor.pickIngredient(line.key, ing)
+                      setPickedLine(line.key)
+                    }}
                     onChange={(patch) => editor.updateLine(line.key, patch)}
                     steps={draft.steps}
                     neededAtDefault={(line.baseRecipeId ?? null) !== null ? (line.neededAtDefault ?? null) : null}
@@ -318,10 +344,11 @@ export function RecipeEditorScreen(): ReactNode {
                     onRemove={() => removeLine(line.key)}
                     onQuickCreate={(query) => quick.open({ lineKey: line.key, query, unit: line.unit })}
                     quickCreateDisabledReason={quick.disabledReason}
-                    focusAmount={quick.focusLineKey === line.key}
-                    onAmountFocused={quick.amountFocused}
+                    focusAmount={quick.focusLineKey === line.key || pickedLine === line.key}
+                    onAmountFocused={pickedLine === line.key ? clearPickedLine : quick.amountFocused}
                     focusIngredient={addedLine && i === draft.lines.length - 1}
                     onIngredientFocused={clearAddedLine}
+                    onEnterLast={i === draft.lines.length - 1 ? addLine : undefined}
                   />
                 )}
               />
@@ -331,10 +358,7 @@ export function RecipeEditorScreen(): ReactNode {
               icon="add"
               data-invalid-target={editor.errors.lines ? '' : undefined}
               aria-describedby={editor.errors.lines ? 'recipe-lines-error' : undefined}
-              onClick={() => {
-                editor.addLine()
-                setAddedLine(true)
-              }}
+              onClick={addLine}
             >
               {recipeStrings.lines.add}
             </Button>
@@ -347,6 +371,32 @@ export function RecipeEditorScreen(): ReactNode {
               onRemoveUse={removeUse}
             />
           </Tile>
+          <Disclosure
+            id="recipe-section-about"
+            title={recipeStrings.fields.sectionAbout}
+            summary={aboutSummary(draft)}
+            persistKey={OPEN_KEY}
+            invalid={sectionInvalid(editor.errors, 'about')}
+          >
+            <RecipeAboutFields draft={draft} errors={editor.errors} onChange={changeDetails} />
+          </Disclosure>
+          <Disclosure
+            id="recipe-section-planning"
+            title={recipeStrings.fields.sectionPlanning}
+            summary={planningSummary(draft, courses)}
+            persistKey={OPEN_KEY}
+            invalid={sectionInvalid(editor.errors, 'planning')}
+          >
+            <RecipePlanningFields
+              draft={draft}
+              errors={editor.errors}
+              onChange={changeDetails}
+              courses={courses}
+              knownTags={knownTags}
+              colourOf={tagsLoading ? undefined : colourOf}
+              defaults={planningDefaults}
+            />
+          </Disclosure>
           {kindRequest ? (
             <KindChange
               recipeId={recipeId}

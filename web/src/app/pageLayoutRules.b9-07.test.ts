@@ -140,7 +140,7 @@ describe('P39: a focused control\'s ring box is clipped, or touches a neighbour 
     const probe = api.PROBES.find((p) => p.name === 'focus-rings')
     expect(probe?.key).toBe('focusRings')
     // B9-14 adds the sheet page (focus-ring-room-sheet: a form sheet's first field shows its whole ring)
-    expect(probe?.scenarios).toEqual(['focus-ring-room-today', 'focus-ring-room-fields', 'focus-ring-room-sheet'])
+    expect(probe?.scenarios).toEqual(['focus-ring-room-today', 'focus-ring-room-fields', 'focus-ring-room-sheet', 'recipe-editor-ring-room'])
   })
 
   it.each(['focus-ring-room-today', 'focus-ring-room-fields'])('scenario %s runs P39 only, at the phone and the desktop width', (name) => {

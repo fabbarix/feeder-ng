@@ -1,0 +1,318 @@
+/* B9-37 (RX-02, RX-08): the editor's Step cards (split from recipe-editor.css). A compact card: a 44 px lead column (number, handle; on
+   a phone the ⋮ under them), the body (text, one timing row, After chips, the chip row of uses and Add chips, an open use's fields, a
+   Photo only once it has one), and from 42 rem the ⋮ and the trash at the row's end. Layout on tokens only. */
+
+.steps-editor {
+  container: rx-steps / inline-size;
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.steps-editor__list {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  padding-inline-start: 0; /* a Step card sits at the depth of a line: no list indent */
+  list-style: none;
+}
+
+.steps-editor__empty {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.step-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-areas:
+    'lead body'
+    'actions body';
+  grid-template-rows: auto 1fr;
+  column-gap: var(--space-2);
+  row-gap: var(--space-3); /* A11Y-02 (P39): the handle and the ⋮ under it stand 12 px apart, so their rings never touch on touch */
+  align-items: start;
+  min-inline-size: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface-2);
+}
+
+.step-card[data-state='dragging'],
+.step-card[data-state='lifted'] {
+  background: var(--color-surface);
+}
+
+.step-card__lead {
+  grid-area: lead;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+}
+
+.step-card__number {
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--radius-chip);
+  background: var(--color-soft);
+  color: var(--color-accent-text);
+  font-weight: var(--text-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* R-C+ trap: the Step handle keeps the outer ring; the 12 px card padding leaves it room inside the card. */
+.step-card__lead .sortable-handle {
+  min-inline-size: 32px;
+}
+
+.step-card__body {
+  grid-area: body;
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* The text has no visible label in the card (the number says which Step); its name stays "Step text". */
+.step-card__body > .ui-field:first-child > .ui-field__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* B9-31 (user ruling): a Step's text is set at the Step weight (500), never bold. RX-02: it opens at two lines and grows with its text. */
+.step-card textarea {
+  font-weight: var(--text-step-weight);
+}
+
+.step-card .ui-field__textarea {
+  min-block-size: calc(2lh + 2 * var(--space-3));
+}
+
+/* One timing row: the compact kind Segmented (each option as wide as its label, never wrapping; P30) and the Duration or Lead time.
+   The Segmented never shrinks below its content: the duration wraps under it instead. */
+.step-card__timing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+  min-inline-size: 0;
+}
+
+/* The Duration or Lead time takes its own width (the shared frame is 100 % wide), so it sits beside the kind when there is room. */
+.step-card__timing > .ui-field + .ui-field {
+  flex: 0 1 13.5rem; /* the xs number, the 6 rem unit and their gap; an auto width let the number collapse */
+  inline-size: auto;
+  min-inline-size: 11rem;
+}
+
+.step-card__timing > .ui-field:has(.segmented) {
+  flex: none;
+  inline-size: max-content;
+  min-inline-size: max-content;
+}
+
+.step-card__after {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step-card__label {
+  margin: 0;
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* The chip row and a Photo share one wrapping row: from 42 rem the 72 px Photo sits beside the chips. */
+.step-card__extras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-inline-size: 0;
+}
+
+/* The chip row: each use as a chip, then "Ingredient use" and "Photo". Chips are never fused: 8 px apart. */
+.step-card__more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-card__adds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* R-A: the Add chips are outlined buttons with the surface fill on the tinted card. */
+.step-card .choice-chip[data-variant='outline'] {
+  background: var(--color-surface);
+}
+
+/* A use: one pill holding two buttons, the use itself (it opens its fields) and its remove ×. Each draws its ring inside itself (R-C+). */
+.use-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-half);
+  max-inline-size: 100%;
+  min-block-size: 44px;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+
+.use-chip[data-open] {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.use-chip__edit,
+.use-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 36px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.use-chip__edit {
+  min-inline-size: 0;
+  padding-inline: var(--space-2);
+  overflow: hidden;
+  font-size: var(--text-chip-size);
+  line-height: var(--text-chip-line);
+  font-weight: var(--text-label-weight);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.use-chip__remove {
+  justify-content: center;
+  inline-size: 36px;
+  color: var(--color-muted);
+}
+
+.use-chip__edit:hover,
+.use-chip__remove:hover {
+  background: color-mix(in oklab, currentColor 8%, transparent);
+}
+
+/* The open use: Ingredient, Quantity and Unit in one row (the Ingredient takes what is left; it wraps on a narrow card). */
+.use-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.use-row__ingredient {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+}
+
+.use-row__quantity {
+  flex: 0 1 7rem;
+  min-inline-size: 0;
+}
+
+.use-row__unit {
+  flex: 0 1 8rem;
+  min-inline-size: 0;
+}
+
+.use-row__hint {
+  flex-basis: 100%;
+}
+
+.step-card__photo {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* A Step that has its Photo shows it at 72 px with its actions beside it; adding another source (the drop zone, paste, link, camera)
+   is the empty picker's job, so it is not drawn under a Photo already set. Remove the Photo to choose another. */
+.step-card__photo .image-picker:has(.image-picker__preview) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step-card__photo .image-picker:has(.image-picker__preview) > :is(div:not([class]), .image-picker__sources, .image-picker__helper) {
+  display: none;
+}
+
+.step-card__photo .image-picker__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.step-card__error {
+  margin: 0;
+  color: var(--status-danger-fg);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+}
+
+.step-card__actions {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2); /* A11Y-02: the ⋮ and remove rings never touch. */
+}
+
+/* R-A: icon buttons on the tinted card have the surface fill and the outline. */
+.step-card .icon-button {
+  background: var(--color-surface);
+}
+
+/* A phone: Remove Step is in the ⋮ (SAFE's Undo toast); the trash shows from 42 rem. */
+.step-card__remove {
+  display: none;
+}
+
+@container rx-steps (min-width: 42rem) {
+  .step-card {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-areas: 'lead body actions';
+    grid-template-rows: auto;
+  }
+
+  .step-card__actions {
+    flex-direction: row;
+  }
+
+  .step-card__remove {
+    display: inline-flex;
+  }
+}

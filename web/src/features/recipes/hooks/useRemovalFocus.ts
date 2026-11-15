@@ -27,7 +27,7 @@ function targetOf(root: HTMLElement, want: RemovalFocus): HTMLElement | undefine
   }
   const card = Array.from(root.querySelectorAll<HTMLElement>('li.step-card')).find((c) => c.dataset.focusKey === want.stepKey)
   if (!card) return undefined
-  const use = near(Array.from(card.querySelectorAll<HTMLElement>('.use-row')), want.index)
+  const use = near(Array.from(card.querySelectorAll<HTMLElement>('[data-use]')), want.index) // B9-37: each use is a chip with its remove
   return use ? named(use, (n) => n === recipeStrings.steps.removeUse) : named(card, (n) => n === recipeStrings.steps.addUse)
 }
 

@@ -14,8 +14,9 @@ function decl(css: string, selector: string, prop: string): string | undefined {
 }
 
 describe.each([
-  ['features/recipes/recipe-editor.css', '.line-row__remove'],
-  ['features/recipes/recipe-editor.css', '.step-card__moves'],
+  // B9-37: the line and the Step card styles moved to their own sheets; the Step's ⋮ and trash are in .step-card__actions.
+  ['features/recipes/recipe-editor.lines.css', '.line-row__remove'],
+  ['features/recipes/recipe-editor.steps.css', '.step-card__actions'],
   ['features/settings/settings.css', '.allowlist__actions'],
   ['features/recipe-assistant/recipe-assistant.css', '.ra__key-actions'],
 ])('%s %s', (sheet, selector) => {
@@ -24,13 +25,17 @@ describe.each([
   })
 })
 
+// B9-37 (RX-02): the handle has the chapter's 32 px track of its own (the first of the one-row tracks), so it never overlaps the picker:
+// its holder is exactly that wide, and the Ingredient cell's gap equals the column gap, so the picker starts on the Ingredient track.
 describe('the Ingredient line drag handle', () => {
-  const css = read('features/recipes/recipe-editor.css')
-  it('has the whole 44 px target as its column (--target-min)', () => {
-    expect(decl(css, '.line-row__handle', 'inline-size')).toBe('var(--target-min)')
+  const css = read('features/recipes/recipe-editor.lines.css')
+  it('has its own 32 px column, the first track, and its holder is that wide', () => {
+    expect(decl(css, '.line-row__handle', 'inline-size')).toBe('32px')
+    expect(css).toMatch(/grid-template-columns:\s*32px minmax\(9rem, 1\.6fr\) 88px 112px minmax\(6rem, 1fr\) 64px 88px;/)
+    expect(decl(css, '.line-row__ingredient', 'gap')).toBe('var(--space-2)')
   })
   it('the one-row actions track holds two 40 px buttons and the 8 px gap (88 px), header and row alike', () => {
-    expect(css).toMatch(/grid-template-columns:\s*minmax\(0, 1\.4fr\) 88px 120px minmax\(0, 1fr\) 88px;/)
+    expect(css).toMatch(/grid-template-columns:[^;]* 64px 88px;/)
   })
 })
 

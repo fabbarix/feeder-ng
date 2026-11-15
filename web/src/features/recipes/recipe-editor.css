@@ -3,6 +3,7 @@
 
 /* Editor (R2-1, L-02, E-01): one centred 840 px column of section cards; from 80em the section index sits in the left gutter. */
 .recipe-editor {
+  container: rx-editor / inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -78,374 +79,110 @@
   padding-inline-start: var(--space-4);
 }
 
-/* Editor: a card per Step and per ingredient line. */
-.recipe-details,
-.steps-editor,
-.steps-editor__list,
-.recipe-editor__lines {
+/* B9-37 (RX-02): the "Recipe" section: the Name with the 96 px Photo button beside it, then the Kind. */
+.recipe-basics {
   display: grid;
   gap: var(--space-3);
   min-inline-size: 0;
 }
 
-.recipe-editor__lines,
-.steps-editor__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.steps-editor__list {
-  padding-inline-start: 0;
-}
-
-/* DS-04: a definite track (an `auto` one grew to a long Tag chip, past the tile at 375); 24rem, never wider than the column. */
-.tag-input {
+.recipe-basics__name-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
   min-inline-size: 0;
-  max-inline-size: min(24rem, 100%);
+}
+
+.recipe-basics__name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* The Recipe photo is one button (R-A: it shows its shape): the picture, or the surface with "Add", and a label strip at its foot. */
+.recipe-photo {
+  position: relative;
+  flex: none;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-1);
-}
-
-.tag-input__label {
-  display: block;
-}
-
-/* Chips and the field share one line: the field's own label is visually hidden (the group's caption above is the visible one). */
-.tag-input__control {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.tag-input__control .ui-field__label {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
+  place-items: center;
+  inline-size: 96px;
+  block-size: 96px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-thumb-lg);
   overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.tag-input__control > .ui-field {
-  flex: 1 1 96px;
-  min-inline-size: 96px;
-}
-
-/* Existing Tags matching what is typed, listed under the field (a listbox for the field's combobox). */
-.tag-input__suggestions {
-  margin: 0;
-  padding: var(--space-1);
-  list-style: none;
-  display: grid;
-  gap: var(--space-half);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-}
-
-.tag-input__suggestions[hidden] {
-  display: none;
-}
-
-.tag-input__suggestion {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: 44px;
-  padding-inline: var(--space-2);
-  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
   color: var(--color-text);
   cursor: pointer;
 }
 
-.tag-input__suggestion[aria-selected="true"],
-.tag-input__suggestion:hover {
-  background: var(--color-surface-2);
+.recipe-photo__image {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
 }
 
-/* The Tag field's "New" marker on a Tag nobody has saved yet, and the dot in front of a suggestion. */
-.tag-input__new {
-  color: var(--color-muted);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-}
-
-.tag-input__suggestion .tag-dot {
-  flex: none;
-}
-
-.tag-input__name {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-}
-
-.tag-input__count {
-  flex: none;
-  color: var(--color-muted);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-}
-
-.line-row,
-.step-card {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-tile-sm);
-  background: var(--color-surface-2);
-  min-inline-size: 0;
-}
-
-/* Phone: Ingredient on its own row, then Quantity, Unit and remove; Note below. The last column holds the actions menu and the trash icon. */
-.line-row {
-  grid-template-columns: 72px minmax(0, 1fr) auto;
-  grid-template-areas:
-    'ingredient ingredient ingredient'
-    'quantity unit remove'
-    'note note note';
-  align-items: end;
-}
-
-.line-row__ingredient {
-  grid-area: ingredient;
+.recipe-photo__label {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
   display: flex;
-  align-items: flex-end;
-  gap: var(--space-2);
-  min-inline-size: 0;
-}
-
-/* The drag handle sits before the picker, inside the Ingredient cell, so the grid tracks stay as they were. */
-.line-row__handle {
-  flex: none;
-  align-self: flex-end;
-  display: grid;
-  place-items: center;
-  /* The whole 44 px target: a narrower column let it spill over the picker, and their focus rings met (A11Y-02). */
-  inline-size: var(--target-min);
-}
-
-.line-row__ingredient > :not(.line-row__handle) {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-}
-
-/* The picker keeps a 180 px basis; the Optional chip sits after it, or wraps under it when the cell is narrow. */
-.line-row__ingredient-body {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1) var(--space-2);
-}
-
-.line-row__ingredient-body > :first-child {
-  flex: 1 1 180px;
-  min-inline-size: 0;
-}
-
-.line-row__ingredient-body > .chip {
-  flex: none;
-}
-
-.line-row__pending-body {
-  display: grid;
+  justify-content: center;
   gap: var(--space-1);
-  justify-items: start;
+  padding-block: var(--space-1);
+  background: color-mix(in oklab, var(--color-surface) 88%, transparent);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-label-weight);
 }
 
-.line-row__quantity {
-  grid-area: quantity;
-}
-
-.line-row__unit {
-  grid-area: unit;
-}
-
-.line-row__note {
-  grid-area: note;
-}
-
-.line-row__remove {
-  grid-area: remove;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2); /* A11Y-02: the ⋮ and remove rings (3 px + 2 px offset) never touch. */
-  align-self: center;
-  justify-self: end;
-}
-
-.line-row__quantity,
-.line-row__unit,
-.line-row__note,
-.line-row__remove {
+/* The Kind takes its content's width; its options never wrap (P30). */
+.recipe-kind {
   min-inline-size: 0;
 }
 
-.line-row--pending {
-  align-items: start;
+.recipe-kind .segmented__option {
+  white-space: nowrap;
 }
 
-/* A pending Ready Meal line is the summary and its remove button: two tracks at every width. */
-.line-row.line-row--pending {
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: none;
-}
-
-.line-row--pending > .line-row__ingredient {
-  grid-area: auto;
-}
-
-/* The two-track grid has no `remove` area: put the actions in column 2 at every width (beats the one-row rule by specificity). */
-.line-row--pending > .line-row__remove {
-  grid-area: auto;
-  grid-row: 1;
-  grid-column: 2;
-  justify-self: end;
-}
-
-.line-row__pending-name,
-.line-row__pending-amount {
+/* The Ingredients head: the title, and the Yield said in context beside it (it wraps under the title on a phone). */
+.recipe-editor__section-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.line-row__pending-amount {
-  color: var(--color-muted);
-}
-
-.recipe-editor__lines-head {
-  display: none;
-}
-
-.line-row__hint {
-  grid-row: 4;
-}
-
-.line-row__hint,
-.use-row__hint,
-.steps-editor__empty {
-  grid-column: 1 / -1;
-  margin: 0;
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-  color: var(--color-muted);
-}
-
-.step-card__head {
-  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--space-2) var(--space-3);
 }
 
-.step-card__lead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* Reordering: a line being moved is opaque and round even in the one-row layout, where its row has no background of its own. */
-.line-row[data-state='dragging'],
-.line-row[data-state='lifted'] {
-  border-radius: var(--radius-tile-sm);
-}
-
-.step-card__number {
-  display: grid;
-  place-items: center;
-  inline-size: 30px;
-  block-size: 30px;
-  border-radius: var(--radius-chip);
-  background: var(--color-soft);
-  color: var(--color-accent-text);
-  font-weight: var(--text-label-weight);
-  font-variant-numeric: tabular-nums;
-}
-
-.step-card__moves {
-  display: flex;
-  gap: var(--space-2); /* A11Y-02: the ⋮ and remove rings never touch. */
-}
-
-.step-card__timing {
-  align-items: flex-end;
-}
-
-/* The Step kind Segmented (compact: each option as wide as its label, never wrapping; P30) takes its content's width and never
-   shrinks below it: the timing row wraps the Duration under it instead. Its options used to share the width equally (flex: 1),
-   so "Advance Step" got a third of the control and wrapped at every width. */
-.step-card__timing > .ui-field:has(.segmented) {
-  flex: none;
-  inline-size: max-content;
-  min-inline-size: max-content;
-}
-
-.step-card__label {
+.recipe-editor__section-head > h2 {
   margin: 0;
-  font-size: var(--text-overline-size);
-  line-height: var(--text-overline-line);
-  font-weight: var(--text-overline-weight);
-  letter-spacing: var(--text-overline-tracking);
-  text-transform: uppercase;
-  color: var(--color-muted);
 }
 
-.step-card__uses {
+.recipe-yield {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-}
-
-.step-card__uses > .step-card__label,
-.step-card__uses > .step-card__use-list {
-  flex: 1 1 100%;
-}
-
-.step-card__after {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.step-card__use-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.use-row {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
-  align-items: end;
-  gap: var(--space-2);
-}
-
-.step-card__photo {
-  display: grid;
   gap: var(--space-2);
   min-inline-size: 0;
 }
 
-/* B9-31 (user ruling): a Step's text is set at the Step weight (500) in the editor too, never bold. Type only; no layout. */
-.step-card textarea { font-weight: var(--text-step-weight); }
-.step-card__error {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: var(--status-danger-fg);
+.recipe-yield__text {
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.recipe-yield[data-kind='base'] {
+  align-items: flex-end;
+}
+
+.recipe-yield__error {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .unit-prompt__actions {
@@ -454,94 +191,6 @@
   justify-content: flex-end;
   align-items: center;
   gap: var(--space-2);
-}
-
-.photo-picker {
-  min-inline-size: 0;
-}
-
-/* DS-09: the lines box (captions and lines) is the container of the one-row switch; it is at most 800 px wide, never the page. */
-.recipe-editor__lines-box {
-  container: editor-lines / inline-size;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-inline-size: 0;
-}
-
-/* Ingredient lines: one row from a 49rem lines box (Ingredient, Quantity, Unit, Note, actions + remove) under a row of captions; the
-   box is 49rem at a viewport of about 887 px, so every width from 900 px is one row, as before. Narrower, the picker would get under
-   180 px beside the drag handle, so the multi-row layout stays.
-   Optional is a Menu item plus a chip inside the Ingredient cell (it wraps under the picker), so it needs no track.
-   Every track is a fixed width except the two flexible ones: an `auto` track is empty in the header, so it collapsed and the captions drifted. */
-@container editor-lines (min-width: 49rem) {
-  .recipe-editor__lines-head,
-  .line-row {
-    grid-template-columns: minmax(0, 1.4fr) 88px 120px minmax(0, 1fr) 88px;
-  }
-
-  .recipe-editor__lines-head {
-    display: grid;
-    gap: var(--space-3);
-    padding-inline: var(--space-3);
-    font-size: var(--text-overline-size);
-    line-height: var(--text-overline-line);
-    font-weight: var(--text-overline-weight);
-    letter-spacing: var(--text-overline-tracking);
-    text-transform: uppercase;
-    color: var(--color-muted);
-  }
-
-  .line-row {
-    grid-template-areas: none;
-    /* Top-aligned, so an Optional chip under the picker does not lift the picker off the other fields. */
-    align-items: start;
-    background: none;
-    border-block-end: 1px solid var(--color-line);
-    border-radius: 0;
-  }
-
-  .line-row__ingredient,
-  .line-row__quantity,
-  .line-row__unit,
-  .line-row__note,
-  .line-row__remove {
-    grid-area: auto;
-    grid-row: 1;
-  }
-
-  /* Top-aligned with the picker, centred on the 48 px field: (48 - 44) / 2. The base rule drops it to the chip row. */
-  .line-row__handle {
-    align-self: flex-start;
-    margin-block-start: calc(var(--space-1) / 2);
-  }
-
-  .line-row__remove {
-    justify-self: start;
-    align-self: start;
-    /* Centres the 40 px buttons on the 48 px fields. */
-    margin-block-start: var(--space-1);
-  }
-
-  .line-row__hint {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
-  .line-row[data-state='dragging'],
-  .line-row[data-state='lifted'] {
-    background: var(--color-surface);
-    border-radius: var(--radius-tile-sm);
-  }
-
-  .line-row .ui-field__label {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
 }
 
 /* BR-D: Needed at (the line's Step menu); 44 px rows. The Base recipe picker and link sheet are in recipe-detail.css (shared). */

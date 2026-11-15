@@ -94,7 +94,7 @@ export function newKey(prefix: string): string {
   return `${prefix}${keyCounter}`
 }
 
-/** A blank Recipe: Yield "4", no lines, no Steps. */
+/** A blank Recipe (B9-37, RX-02): Yield "4", one empty line and one empty Step, so the person starts typing at once. */
 export function emptyDraft(): RecipeDraft {
   return {
     name: '',
@@ -112,8 +112,8 @@ export function emptyDraft(): RecipeDraft {
     sourceUrl: '',
     sourceAttribution: '',
     image: '',
-    lines: [],
-    steps: [],
+    lines: [newLineDraft()],
+    steps: [{ key: newKey('step'), text: '', kind: 'active', durationMinutes: '', leadTimeMinutes: '', after: [], uses: [], image: '' }],
   }
 }
 
@@ -221,7 +221,9 @@ const frozenUseByOf = (text: string): number | null => {
  * applied: call validateDraft first and only convert a draft without errors. Lines without an
  * Ingredient are skipped. Advance Steps are sent with after [].
  */
-export function draftToInput(draft: RecipeDraft): RecipeInput {
+export function draftToInput(whole: RecipeDraft): RecipeInput {
+  // B9-37: an untouched empty line or Step is never sent (and the "After" of the others follows the removal).
+  const draft = dropUntouched(whole)
   const base = draft.baseRecipe === true
   return {
     name: draft.name.trim(),
@@ -301,10 +303,13 @@ export function validateDraft(draft: RecipeDraft): DraftErrors {
   if (yieldValue === null || yieldValue <= 0 || yieldValue > yieldMax) errors.yield = 'yield_invalid'
   if (base && (draft.yieldUnit ?? '') === '') errors.yieldUnit = 'yield_unit_invalid'
 
+  // B9-37: untouched empty lines and Steps are skipped (they are dropped on Save); the others keep their own indexes.
+  const touchedLines = draft.lines.filter((l) => !isUntouched(l)).length
   // A Base recipe needs no lines to be saved (its Ingredients are optional; it is never planned).
-  if (!base && draft.lines.length === 0) errors.lines = 'lines_required'
-  else if (!base && draft.readyMeal && draft.lines.length !== 1) errors.lines = 'ready_meal_lines'
+  if (!base && touchedLines === 0) errors.lines = 'lines_required'
+  else if (!base && draft.readyMeal && touchedLines !== 1) errors.lines = 'ready_meal_lines'
   draft.lines.forEach((l, i) => {
+    if (isUntouched(l)) return
     const pending = draft.readyMeal && l.auto === true && l.ingredientId === null // R14: the server creates the Ingredient on save
     if (l.ingredientId === null && !pending) errors[`lines.${i}.ingredient`] = 'ingredient_required'
     const q = parseNumber(l.quantity)
@@ -326,6 +331,7 @@ export function validateDraft(draft: RecipeDraft): DraftErrors {
   }
 
   draft.steps.forEach((s, i) => {
+    if (isUntouched(s)) return
     if (s.text.trim() === '') errors[`steps.${i}.text`] = 'step_text_required'
     if (s.kind === 'passive' && numberOrZero(s.durationMinutes) <= 0) errors[`steps.${i}.durationMinutes`] = 'passive_needs_duration'
     if (s.kind === 'advance' && numberOrZero(s.leadTimeMinutes) <= 0) errors[`steps.${i}.leadTimeMinutes`] = 'advance_needs_lead_time'
@@ -474,4 +480,41 @@ export function restoreLine(draft: RecipeDraft, removed: RemovedLine): RecipeDra
   const lines = [...draft.lines]
   lines.splice(Math.max(0, Math.min(removed.index, lines.length)), 0, removed.line)
   return { ...draft, lines }
+}
+
+// ---- B9-37 (RX-02): a new Recipe opens with one empty line and one empty Step; the ones left untouched are dropped on Save ----
+
+const blank = (text: string) => text.trim() === ''
+const isStep = (item: LineDraft | StepDraft): item is StepDraft => 'kind' in item
+
+/** True for a line or Step the person never touched: blank in every field (whitespace counts as blank). A Ready Meal's own line never is. */
+export function isUntouched(item: LineDraft | StepDraft): boolean {
+  if (isStep(item)) {
+    return blank(item.text) && blank(item.durationMinutes) && blank(item.leadTimeMinutes) && item.kind === 'active' && item.uses.length === 0 && item.image === '' && item.after.length === 0
+  }
+  return (
+    item.auto !== true &&
+    item.ingredientId === null &&
+    (item.baseRecipeId ?? null) === null &&
+    blank(item.ingredientName) &&
+    blank(item.quantity) &&
+    blank(item.unit) &&
+    blank(item.note) &&
+    !item.optional
+  )
+}
+
+/** The draft without its untouched lines and Steps (other Steps' `after` follow the removal, as removeStep does). The same object when nothing is untouched. */
+export function dropUntouched(draft: RecipeDraft): RecipeDraft {
+  const lines = draft.lines.filter((l) => !isUntouched(l))
+  const dropped = draft.steps.flatMap((s, i) => (isUntouched(s) ? [i] : []))
+  if (lines.length === draft.lines.length && dropped.length === 0) return draft
+  const shift = (j: number) => j - dropped.filter((d) => d < j).length
+  const steps =
+    dropped.length === 0
+      ? draft.steps
+      : draft.steps
+          .filter((_, i) => !dropped.includes(i))
+          .map((s) => ({ ...s, after: s.after.filter((j) => !dropped.includes(j)).map(shift) }))
+  return { ...draft, lines, steps }
 }

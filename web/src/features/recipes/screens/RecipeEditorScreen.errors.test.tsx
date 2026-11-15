@@ -113,12 +113,13 @@ describe('errors clear as each field is fixed', () => {
     expect(screen.queryByText('Give the Recipe a name.')).toBeNull()
   })
 
-  it('adding a line removes the Ingredients message', async () => {
+  // B9-37 (RX-02): a new Recipe already has an empty line, which does not count until it is touched: filling it in clears the message.
+  it('filling in a line removes the Ingredients message', async () => {
     mount('/recipes/new')
     await userEvent.type(await screen.findByRole('textbox', { name: 'Name' }), 'Aioli')
     await save()
     await within(ingredientsSection()).findByText('Add at least one ingredient line.')
-    await userEvent.click(screen.getByRole('button', { name: 'Add ingredient' }))
+    await userEvent.type(within(ingredientsSection()).getByRole('textbox', { name: 'Quantity' }), '2')
     await waitFor(() => expect(screen.queryByText('Add at least one ingredient line.')).toBeNull())
   })
 })
@@ -127,7 +128,8 @@ describe('a line without an Ingredient', () => {
   it('focuses its Ingredient picker, marked invalid, with the message under it', async () => {
     mount('/recipes/new')
     await userEvent.type(await screen.findByRole('textbox', { name: 'Name' }), 'Aioli')
-    await userEvent.click(screen.getByRole('button', { name: 'Add ingredient' }))
+    // B9-37: the new Recipe's empty line counts once it is touched (an untouched one is dropped on Save).
+    await userEvent.type(screen.getByRole('textbox', { name: 'Quantity' }), '2')
     await save()
     const picker = await screen.findByRole('combobox', { name: 'Ingredient' })
     await waitFor(() => expect(picker).toHaveFocus())

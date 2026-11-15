@@ -1,6 +1,8 @@
-// B5-LOW: the editor tells the Household's Frozen Use-by under the Recipe field (read from the Household settings).
+// B5-LOW: the editor tells the Household's Frozen Use-by (read from the Household settings). B9-37 (RX-02, RX-10): it is named in the
+// one footnote under the Planning overrides, with the Household's Cool-down and Leftover Use-by.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Route } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockApi } from '../../settings/test-utils'
@@ -27,14 +29,16 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('RecipeEditorScreen: Frozen Use-by', () => {
-  it("names the Household's default in the helper", async () => {
-    mockApi({ 'GET /api/household/settings': { frozenUseByDays: 60 } })
+  it("names the Household's default in the Planning footnote", async () => {
+    window.localStorage.clear()
+    mockApi({ 'GET /api/household/settings': { frozenUseByDays: 60, defaultCooldownDays: 5, defaultLeftoverUseByDays: 2 } })
     render(
       <QueryClientProvider client={new QueryClient()}>
         <EditorRouter initialEntries={['/recipes/new']}>
           <Route path="/recipes/new" element={<RecipeEditorScreen />} />        </EditorRouter>
       </QueryClientProvider>,
     )
-    expect(await screen.findByText("Blank uses the Household's 60 days.")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^Planning/ }))
+    expect(await screen.findByText(/Cool-down 5 days, Leftover Use-by 2 days, Frozen Use-by 60 days\./)).toBeVisible()
   })
 })

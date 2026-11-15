@@ -37,9 +37,12 @@ describe('parseNumber', () => {
 })
 
 describe('emptyDraft', () => {
-  it('starts with Yield 4 and nothing else', () => {
+  // B9-37 (RX-02): a new Recipe opens with one empty line and one empty Step (draft.untouched.test.ts pins them).
+  it('starts with Yield 4, one empty line, one empty Step and nothing else', () => {
     const d = emptyDraft()
-    expect(d).toMatchObject({ name: '', yield: '4', readyMeal: false, tags: [], lines: [], steps: [], cooldownDays: '', leftoverUseByDays: '' })
+    expect(d).toMatchObject({ name: '', yield: '4', readyMeal: false, tags: [], cooldownDays: '', leftoverUseByDays: '' })
+    expect(d.lines).toEqual([expect.objectContaining({ ingredientId: null, quantity: '', unit: '', note: '', optional: false })])
+    expect(d.steps).toEqual([expect.objectContaining({ text: '', kind: 'active', uses: [] })])
   })
 })
 

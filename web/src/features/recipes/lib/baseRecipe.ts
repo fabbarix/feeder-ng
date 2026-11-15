@@ -176,3 +176,25 @@ export function baseTileMeta(recipe: Pick<RecipeSummary, 'baseRecipe' | 'yield' 
 export function neededAtOverride(step: number | null, defaultStep: number | null): number | null {
   return step === null || step === defaultStep ? null : step
 }
+
+// ---- B9-37 (RX-10, decision RX 4): the Recipe's kind is one choice: Recipe | Ready Meal | Base recipe ----
+
+/** The one kind the Kind control shows. */
+export type EditorKind = 'recipe' | 'readyMeal' | 'base'
+
+/** The kind of a draft; a Base recipe wins if a draft ever carries both flags. */
+export function kindOf(draft: RecipeDraft): EditorKind {
+  if (draft.baseRecipe === true) return 'base'
+  return draft.readyMeal ? 'readyMeal' : 'recipe'
+}
+
+/**
+ * Applies a kind on top of setBaseRecipe: Base recipe clears Ready Meal and the plannable fields; leaving it clears its Yield unit;
+ * Ready Meal turns the flag on (the pack line follows through useRecipeEditor's syncReadyMealLine). The same draft when nothing changes.
+ */
+export function setKind(draft: RecipeDraft, kind: EditorKind): RecipeDraft {
+  if (kindOf(draft) === kind) return draft
+  const based = setBaseRecipe(draft, kind === 'base')
+  if (kind === 'base') return based
+  return { ...based, readyMeal: kind === 'readyMeal' }
+}

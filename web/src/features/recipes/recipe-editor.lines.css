@@ -1,0 +1,270 @@
+/* B9-37 (RX-02, RX-10): the editor's Ingredient lines (split from recipe-editor.css). The lines box is the container "rx-lines": below
+   42 rem of its width (a phone) a line is two rows, handle + Ingredient + ⋮, then Quantity, Unit and the Optional checkbox, with the Note
+   as a third row only when the line has one; from 42 rem it is one row under visible captions. Layout on tokens only. */
+
+.recipe-editor__lines-box {
+  container: rx-lines / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.recipe-editor__lines {
+  display: grid;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipe-editor__lines-head {
+  display: none;
+}
+
+/* Phone: the handle sits inside the Ingredient cell, so the first row is one cell and the ⋮. 4 px of side room keep the ⋮'s inner ring
+   off the line's edge (R-C+). */
+.line-row {
+  display: grid;
+  grid-template-columns: 32px 64px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'ingredient ingredient ingredient remove'
+    'quantity quantity unit optional'
+    'note note note note';
+  column-gap: var(--space-2);
+  row-gap: var(--space-2);
+  align-items: end;
+  min-inline-size: 0;
+  padding-block: var(--space-3);
+  padding-inline: var(--space-1);
+  border-block-end: 1px solid var(--color-line);
+}
+
+.line-row:last-child {
+  border-block-end: 0;
+}
+
+.line-row__ingredient {
+  grid-area: ingredient;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.line-row__handle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 48px;
+}
+
+.line-row__handle .sortable-handle {
+  min-inline-size: 32px;
+  inline-size: 32px;
+}
+
+.line-row__ingredient > :not(.line-row__handle) {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.line-row__ingredient-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-inline-size: 0;
+}
+
+.line-row__ingredient-body > :first-child {
+  flex: 1 1 180px;
+  min-inline-size: 0;
+}
+
+.line-row__quantity { grid-area: quantity; }
+.line-row__unit { grid-area: unit; }
+.line-row__note { grid-area: note; }
+
+.line-row__optional {
+  grid-area: optional;
+  display: flex;
+  align-items: center;
+  min-block-size: 48px;
+}
+
+.line-row__remove {
+  grid-area: remove;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2); /* A11Y-02: the ⋮ and the trash rings never touch. */
+  align-self: center;
+  justify-self: end;
+}
+
+.line-row__quantity,
+.line-row__unit,
+.line-row__note,
+.line-row__optional,
+.line-row__remove {
+  min-inline-size: 0;
+}
+
+/* A phone line shows its Note only once it has one ("Add note" in the ⋮), and keeps Remove in the ⋮. */
+.line-row[data-has-note='false'] .line-row__note,
+.line-row__trash {
+  display: none;
+}
+
+/* R-C+: the line's ⋮ and trash draw their ring inside themselves on the soft fill, so the ring never meets the line's edge. */
+.line-row__remove button:focus-visible {
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+  background: var(--color-soft);
+}
+
+.line-row__hint {
+  grid-column: 1 / -1;
+  grid-row: 4;
+}
+
+.line-row__hint,
+.use-row__hint {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+/* The fields of a line have no visible labels (the mock): the picker and the units say what they are, the Note has its placeholder, and
+   from 42 rem the captions name the columns. Their labels stay the accessible names. */
+.line-row .ui-field__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A pending Ready Meal line is the summary and its actions: two tracks at every width. */
+.line-row.line-row--pending {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: none;
+  align-items: start;
+}
+
+.line-row--pending > .line-row__ingredient {
+  grid-area: auto;
+}
+
+.line-row--pending > .line-row__remove {
+  grid-area: auto;
+  grid-row: 1;
+  grid-column: 2;
+  justify-self: end;
+}
+
+.line-row__pending-body {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.line-row__pending-name,
+.line-row__pending-amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.line-row__pending-amount {
+  color: var(--color-muted);
+}
+
+/* Reordering: a line being moved is opaque and round. */
+.line-row[data-state='dragging'],
+.line-row[data-state='lifted'] {
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface);
+}
+
+/* From 42 rem of list width (a 720 px viewport): one row under the captions. The row and the captions share the tracks, the gap and the
+   side padding, so each caption sits over its field: handle, Ingredient, Quantity, Unit, Note, Optional, then the ⋮ and the trash. */
+@container rx-lines (min-width: 42rem) {
+  .recipe-editor__lines-head,
+  .line-row {
+    grid-template-columns: 32px minmax(9rem, 1.6fr) 88px 112px minmax(6rem, 1fr) 64px 88px;
+  }
+
+  .recipe-editor__lines-head {
+    display: grid;
+    column-gap: var(--space-2);
+    padding-inline: 0;
+    padding-block-end: var(--space-1);
+    border-block-end: 1px solid var(--color-line);
+    font-size: var(--text-overline-size);
+    line-height: var(--text-overline-line);
+    font-weight: var(--text-overline-weight);
+    letter-spacing: var(--text-overline-tracking);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .line-row {
+    grid-template-areas: none;
+    column-gap: var(--space-2);
+    padding-inline: 0;
+    padding-block: var(--space-2);
+    align-items: center;
+  }
+
+  .line-row__ingredient {
+    grid-row: 1;
+    grid-column: 1 / span 2;
+    align-items: center;
+  }
+
+  .line-row__quantity,
+  .line-row__unit,
+  .line-row__note,
+  .line-row__optional,
+  .line-row__remove {
+    grid-area: auto;
+    grid-row: 1;
+  }
+
+  .line-row[data-has-note='false'] .line-row__note {
+    display: block;
+  }
+
+  .line-row__trash {
+    display: inline-flex;
+  }
+
+  .line-row__optional {
+    justify-content: center;
+  }
+
+  .line-row__remove {
+    justify-self: end;
+  }
+
+  .line-row__hint {
+    grid-row: 2;
+  }
+
+  /* The captions name the columns; the Optional label is hidden too (Optional: garlic stays the checkbox's name). */
+  .line-row__optional .checkbox__label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

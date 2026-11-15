@@ -9,7 +9,7 @@ const pasta: IngredientRef = { id: 22, name: 'pasta', baseUnit: 'g', conversions
 const known = [garlic, flour, pack, pasta]
 
 const blank = (over: Partial<LineDraft> = {}): LineDraft => ({ key: 'b', ingredientId: null, ingredientName: '', quantity: '', unit: '', optional: false, note: '', ...over })
-const draftOf = (over: Partial<RecipeDraft> = {}): RecipeDraft => ({ ...emptyDraft(), readyMeal: true, name: 'Lasagne pack', ...over })
+const draftOf = (over: Partial<RecipeDraft> = {}): RecipeDraft => ({ ...emptyDraft(), lines: [], readyMeal: true, name: 'Lasagne pack', ...over }) // B9-37: emptyDraft has a blank line now; these cases start from none
 
 describe('nameKey', () => {
   it('lower-cases, trims and collapses whitespace like units.NormalizeName', () => {

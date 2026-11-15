@@ -1,8 +1,8 @@
-// Units shown beside NumberFields are copy: they live in recipeStrings, not in the components.
+// Units shown beside NumberFields are copy: they live in recipeStrings, not in the components. B9-37: the overrides moved to Planning.
 import { describe, expect, it } from 'vitest'
 import { recipeStrings } from './strings'
 
-const raw = import.meta.glob<string>(['./components/RecipeDetailsFields.tsx', './components/StepsEditor.tsx'], { query: '?raw', import: 'default', eager: true })
+const raw = import.meta.glob<string>(['./components/RecipePlanningFields.tsx', './components/StepsEditor.tsx'], { query: '?raw', import: 'default', eager: true })
 
 describe('Recipes unit suffixes', () => {
   it('recipeStrings holds the day and minute units', () => {
