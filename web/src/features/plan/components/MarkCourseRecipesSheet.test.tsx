@@ -179,7 +179,8 @@ describe('MarkCourseRecipesSheet', () => {
   })
 
   it('while the list loads it shows a skeleton, not an empty state', async () => {
-    mockApi({ 'GET /api/recipes?notCourse=3': () => new Promise(() => {}) as never })
+    // A fetch that never answers (mockApi resolves a handler's Promise to {}, so the list would not stay loading).
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
     renderWithProviders(<MarkCourseRecipesSheet open onClose={vi.fn()} course={{ id: 3, name: 'Dessert' }} count={7} />)
     const dialog = await sheet()
     await act(async () => {})
