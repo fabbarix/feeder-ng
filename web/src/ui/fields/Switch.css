@@ -78,3 +78,12 @@
     transition: none;
   }
 }
+
+/* A11Y-09: on a coarse pointer the 52 x 32 track hits 52 x 44. */
+@media (pointer: coarse) {
+  .switch::after {
+    content: '';
+    position: absolute;
+    inset: -6px 0;
+  }
+}

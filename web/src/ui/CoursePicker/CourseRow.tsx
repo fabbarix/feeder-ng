@@ -2,6 +2,7 @@
 // then Move up, Move down and Remove. Keyed by Course id, so the extras keep their state when the order changes.
 import type { ReactNode } from 'react'
 import { IconButton } from '../IconButton'
+import { IconSet } from '../IconSet'
 import type { SortableRenderContext } from '../Sortable'
 import type { CourseChoice } from '../../lib/courses'
 import { coursePickerStrings as s } from './strings'
@@ -29,7 +30,7 @@ export function CourseRow({ course, ctx, count, disabled, extras, onMove, onRemo
       </span>
       {course.main && <span className="course-picker__main">{s.mainCourse}</span>}
       {hasExtras && <div className="course-picker__extras">{extras}</div>}
-      <div className="course-picker__actions">
+      <IconSet className="course-picker__actions">
         <IconButton
           icon="moveUp"
           label={s.moveUp(course.name)}
@@ -45,7 +46,7 @@ export function CourseRow({ course, ctx, count, disabled, extras, onMove, onRemo
           onClick={() => onMove(1)}
         />
         <IconButton icon="remove" label={s.remove(course.name)} disabled={disabled} onClick={onRemove} />
-      </div>
+      </IconSet>
     </li>
   )
 }

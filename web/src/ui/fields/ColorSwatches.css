@@ -46,3 +46,16 @@
   display: grid;
   gap: var(--space-4);
 }
+
+/* A11Y-09: on a coarse pointer the 40 px swatch hits 44 px; the row's 12 px gap keeps neighbours apart. */
+@media (pointer: coarse) {
+  .colour-swatch {
+    position: relative;
+  }
+
+  .colour-swatch::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+  }
+}
