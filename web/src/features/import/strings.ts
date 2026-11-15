@@ -195,6 +195,7 @@ export const importStrings = {
     count: (recipes: number, bases: number) =>
       `${recipes} Recipe${recipes === 1 ? '' : 's'}` + (bases > 0 ? ` and ${bases} Base recipe${bases === 1 ? '' : 's'}` : ''),
     search: 'Search Recipes',
+    searchHint: 'Search',
     noMatch: 'No Recipe matches this search.',
   },
   exportPick: 'Choose Recipes',

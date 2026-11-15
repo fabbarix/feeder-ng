@@ -41,7 +41,7 @@ export function ExportPicker({ recipes, selected, onToggle, onSelectAll, onClear
     <>
       <Tile as="section" className="export-picker">
         <h2>{s.exportPick}</h2>
-        {recipes.length >= EXPORT_SEARCH_FROM ? <SearchField label={t.search} placeholder={t.search} value={query} onChange={setQuery} /> : null}
+        {recipes.length >= EXPORT_SEARCH_FROM ? <SearchField label={t.search} placeholder={t.searchHint} value={query} onChange={setQuery} /> : null}
         <ListGroup label={s.exportPick}>
           <ListRow
             title={s.allRecipes}
