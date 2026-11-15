@@ -9,6 +9,8 @@ export const settingsAllowlistStrings = {
     youMeta: 'You',
     admin: (email: string) => `Admin: ${email}`,
     lastAdmin: 'Last Admin',
+    adminMeta: 'Admin',
+    notSignedIn: 'Not signed in yet',
     adminLabel: 'Admin',
     confirm: 'Confirm',
     removeButton: 'Remove',

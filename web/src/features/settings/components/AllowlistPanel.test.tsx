@@ -91,7 +91,7 @@ describe('AllowlistPanel', () => {
     setup()
     expect(screen.getByRole('switch', { name: 'Admin: admin@example.test' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Remove admin@example.test' })).toBeDisabled()
-    expect(screen.getByText('You · Last Admin')).toBeInTheDocument() // F-02: one meta line, no Chip
+    expect(screen.getByText('You · Admin · Last Admin')).toBeInTheDocument() // F-02: one meta line, no Chip; B9-52: "Admin" too
   })
 
   it('unlocks Admins when there are two', () => {

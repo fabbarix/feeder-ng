@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { Button, IconButton, ListGroup, ListRow, Muted, Switch, TextField, useConfirm } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
 import { useSignInMessage } from '../hooks/useSignInMessage'
-import { EmailText } from '../../access'
-import { isEmail, isLastAdmin } from '../lib/allowlist'
+import { EmailText, NameText } from '../../access'
+import { allowlistMeta, isEmail, isLastAdmin } from '../lib/allowlist'
 import { settingsStrings } from '../strings'
 import type { AllowedUser } from '../types'
 import { RowSignInActions } from './RowSignInActions'
@@ -28,7 +28,8 @@ export interface AllowlistPanelProps {
 const text = settingsStrings.allowlistPanel
 
 /** The add form (email field "Email to allow" and "Add to allowlist"), a hint linking to Sign-in requests, and a ListGroup
- *  row per User: the email, meta "You" / "Last Admin", and in the row's actions slot an Admin Switch and two icon buttons:
+ *  row per User: the email, the meta (allowlistMeta: "You · Admin · Last Admin" on your row, the display name or "Not signed in
+ *  yet" on the others), and in the row's actions slot an Admin Switch and two icon buttons:
  *  Share and More (Copy sign-in message, Remove) where the device has a share sheet, else Copy and Remove. Your own row has
  *  Remove only. Remove asks in a danger ConfirmDialog. The only Admin's controls are locked. After an Add, a toast offers the
  *  sign-in message (SET-03). */
@@ -87,13 +88,13 @@ export function AllowlistPanel({ users, currentUserId, error, addError, onEmailE
           {users.map((u) => {
             const locked = isLastAdmin(users, u)
             const you = u.id === currentUserId
-            const meta = [you ? text.youMeta : null, locked ? text.lastAdmin : null].filter(Boolean).join(' · ')
+            const meta = allowlistMeta(u, { you, locked })
             return (
               <ListRow
                 key={u.id}
                 title={<EmailText email={u.email} />}
                 wrapTitle
-                meta={meta || undefined}
+                meta={meta ? <NameText name={meta} /> : undefined}
                 actions={
                   <span className="allowlist__actions">
                     <Switch label={text.adminLabel} aria-label={text.admin(u.email)} checked={u.isAdmin} disabled={locked} onChange={(isAdmin) => onSetAdmin(u.id, isAdmin)} />

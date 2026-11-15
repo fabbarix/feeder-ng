@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type MouseEvent } from 'react'
+import { useRef, type MouseEvent } from 'react'
 import { IconButton, Menu } from '../../../ui'
 import { settingsStrings } from '../strings'
 
@@ -17,10 +17,6 @@ export interface RowSignInActionsProps {
 export function RowSignInActions({ email, canShare, onShare, onCopy, onRemove }: RowSignInActionsProps) {
   const moreRef = useRef<HTMLSpanElement>(null)
   const more = text.more(email)
-  // The shared Menu's trigger takes no `title`; every icon button here has one (its name), so it is set on the rendered trigger.
-  useLayoutEffect(() => {
-    moreRef.current?.querySelector('button[aria-haspopup="menu"]')?.setAttribute('title', more)
-  })
   const starter = (e: MouseEvent<HTMLButtonElement>) => e.currentTarget
   if (canShare) {
     const moreButton = () => moreRef.current?.querySelector<HTMLElement>('button[aria-haspopup="menu"]') ?? null
@@ -30,6 +26,7 @@ export function RowSignInActions({ email, canShare, onShare, onCopy, onRemove }:
         <span ref={moreRef} className="allowlist__more">
           <Menu
             label={more}
+            triggerTitle
             items={[
               { id: 'copy', label: text.copyItem, icon: 'copy', onSelect: () => onCopy(moreButton()) },
               { separator: true },

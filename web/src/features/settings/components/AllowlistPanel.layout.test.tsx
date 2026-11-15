@@ -99,17 +99,27 @@ describe('AllowlistPanel: rows', () => {
     expect(remove.querySelector('svg')).not.toBeNull()
   })
 
-  it('meta is one line: "You", "Last Admin", both, or nothing; no Chip is used', () => {
-    const second = { ...cook, id: 3, email: 'third@example.test' }
+  // B9-52 (SET-03, main-session ruling): your row reads "You · Admin · Last Admin" (the parts that apply); another row reads the
+  // User's display name once they have signed in, else "Not signed in yet". No Chip.
+  it('meta: "You · Admin · Last Admin" on your row, the display name or "Not signed in yet" on the others; no Chip is used', () => {
+    const second = { ...cook, id: 3, email: 'third@example.test', displayName: 'third', signedIn: false }
     setup({ users: [admin, cook, second] })
-    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('You · Last Admin')).toBeInTheDocument()
+    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('You · Admin · Last Admin')).toBeInTheDocument()
+    expect(within(screen.getByText('cook@example.test').closest('li')!).getByText('Cook')).toBeInTheDocument()
     expect(within(screen.getByText('cook@example.test').closest('li')!).queryByText(/You|Last Admin/)).toBeNull()
+    expect(within(screen.getByText('third@example.test').closest('li')!).getByText('Not signed in yet')).toBeInTheDocument()
     expect(document.querySelector('.chip')).toBeNull()
   })
 
-  it('a row that is only "Last Admin" (someone else is signed in) reads "Last Admin"', () => {
+  it('your row as a plain User reads "You"; with two Admins your row reads "You · Admin"', () => {
+    setup({ users: [admin, { ...cook, isAdmin: true }], currentUserId: 1 })
+    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('You · Admin')).toBeInTheDocument()
+  })
+
+  it('another row that is the Last Admin (someone else is signed in) reads its name and "Last Admin"', () => {
     setup({ currentUserId: 2 })
-    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('Last Admin')).toBeInTheDocument()
+    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('Admin · Last Admin')).toBeInTheDocument()
+    expect(within(screen.getByText('cook@example.test').closest('li')!).getByText('You')).toBeInTheDocument()
   })
 
   it('the row has one controls wrapper that cannot shrink away (.allowlist__actions), in the ListRow actions slot (B9-52)', () => {

@@ -2,7 +2,8 @@
 // page itself and throws when the screen is wrong, so the check holds whatever the shared rules (P40 and the others) are doing.
 //   allowlist-actions     /settings/allowlist, no share sheet (a desktop-like browser): each row's email is whole (it wraps only before "@" or
 //                         after ".", never mid-word, or ends in an ellipsis), at least 120 px wide; below 35 rem the controls take their own
-//                         line under it; the two icon buttons are at least 44 x 44 px and the switch and the buttons keep 8 px between them.
+//                         line under it; every control has a target of at least 44 x 44 px (its hit area: an IconButton's ::after, a
+//                         Switch's row) and the switch and the buttons keep 8 px between them.
 //   allowlist-share       the same page on a device with a share sheet (navigator.share is defined before the app starts): the row shows
 //                         "Share sign-in message for <email>" and "More for <email>", both 44 x 44 px; More opens a menu with Copy and Remove.
 //   access-requests-rows  /settings/access-requests with the seeded requests (page-layout-seed/access.mjs): every row's name is whole and at
@@ -48,8 +49,21 @@ const CHECK_TITLES = `(() => {
   return bad
 })()`
 
-/** Page code: problems with the controls of each Allowlist row (own line below 35 rem, 44 px targets, 8 px apart). */
+/** Page code: problems with the controls of each Allowlist row (own line below 35 rem, 44 px targets, 8 px apart). The target is
+ *  the hit area, not the visual box (main-session ruling): an IconButton is 40 px visual with a 44 px ::after (its inset widens
+ *  the box), and a Switch is hit through its 44 px .switch-row. The 8 px gap is measured between the visual boxes. */
 const CHECK_ACTIONS = `(() => {
+  const hitArea = (e) => {
+    const r = e.getBoundingClientRect()
+    if (e.matches('[role=switch]')) {
+      const row = e.closest('.switch-row')
+      return row ? row.getBoundingClientRect() : r
+    }
+    const after = getComputedStyle(e, '::after')
+    if (after.content === 'none' || after.position !== 'absolute') return r
+    const grow = (v) => Math.max(0, -(parseFloat(v) || 0))
+    return { width: r.width + grow(after.left) + grow(after.right), height: r.height + grow(after.top) + grow(after.bottom) }
+  }
   const bad = []
   for (const li of ${ROWS('.allowlist__list')}) {
     const name = li.querySelector('.list-row__title').textContent.trim()
@@ -60,7 +74,8 @@ const CHECK_ACTIONS = `(() => {
     if (li.getBoundingClientRect().width < 560 && box.top < title.bottom - 1) bad.push(name + ': the controls share the email line below 35 rem')
     const controls = [...actions.querySelectorAll('button, [role=switch]')].map((e) => ({ e, r: e.getBoundingClientRect() })).sort((a, b) => a.r.left - b.r.left)
     for (const { e, r } of controls) {
-      if (e.matches('button') && (r.width < ${MIN_TARGET} - 0.5 || r.height < ${MIN_TARGET} - 0.5)) bad.push(name + ': ' + (e.getAttribute('aria-label') || e.textContent) + ' is ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' px')
+      const t = hitArea(e)
+      if (t.width < ${MIN_TARGET} - 0.5 || t.height < ${MIN_TARGET} - 0.5) bad.push(name + ': ' + (e.getAttribute('aria-label') || e.textContent) + ' has a ' + Math.round(t.width) + 'x' + Math.round(t.height) + ' px target')
       if (r.right > li.getBoundingClientRect().right + 0.5) bad.push(name + ': a control leaves the row')
     }
     for (let i = 1; i < controls.length; i++) {

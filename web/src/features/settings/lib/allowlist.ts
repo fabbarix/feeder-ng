@@ -13,6 +13,16 @@ export function isLastAdmin(users: AllowedUser[], user: AllowedUser): boolean {
   return user.isAdmin && users.filter((u) => u.isAdmin).length === 1
 }
 
+const panel = settingsAllowlistStrings.allowlistPanel
+
+/** SET-03: the meta line of an Allowlist row. Your row: "You", then "Admin" and "Last Admin" where they apply. Another row:
+ *  the User's display name once they have signed in, else "Not signed in yet" (and "Last Admin" when it is). */
+export function allowlistMeta(user: AllowedUser, { you, locked }: { you: boolean; locked: boolean }): string {
+  const name = user.signedIn ? user.displayName.trim() : panel.notSignedIn
+  const parts = you ? [panel.youMeta, user.isAdmin ? panel.adminMeta : '', locked ? panel.lastAdmin : ''] : [name, locked ? panel.lastAdmin : '']
+  return parts.filter(Boolean).join(' · ')
+}
+
 /** The message an Admin sends after adding an email: where to go and what to choose. `origin` is window.location.origin. */
 export function signInMessage(email: string, origin: string): string {
   return `${msg.lead}\n${msg.open(origin, email)}`

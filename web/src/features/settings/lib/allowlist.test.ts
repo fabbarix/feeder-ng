@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { emailBreak, isEmail, isLastAdmin, sharePayload, signInMessage } from './allowlist'
+import { allowlistMeta, emailBreak, isEmail, isLastAdmin, sharePayload, signInMessage } from './allowlist'
 
-const a = { id: 1, email: 'a@example.test', displayName: 'A', isAdmin: true }
-const b = { id: 2, email: 'b@example.test', displayName: 'B', isAdmin: false }
+const a = { id: 1, email: 'a@example.test', displayName: 'A', isAdmin: true, signedIn: true }
+const b = { id: 2, email: 'b@example.test', displayName: 'B', isAdmin: false, signedIn: true }
 
 describe('isEmail', () => {
   it.each(['a@example.test', ' a@b.co '])('accepts %j', (v) => expect(isEmail(v)).toBe(true))
@@ -58,5 +58,20 @@ describe('emailBreak', () => {
   it('leaves a piece that is not an address whole', () => {
     expect(emailBreak('nonna')).toEqual(['nonna'])
     expect(emailBreak('')).toEqual([])
+  })
+})
+
+// B9-52 (SET-03, main-session ruling): the meta line of an Allowlist row.
+describe('allowlistMeta', () => {
+  it('your row: "You", then "Admin" and "Last Admin" where they apply', () => {
+    expect(allowlistMeta(a, { you: true, locked: true })).toBe('You · Admin · Last Admin')
+    expect(allowlistMeta(a, { you: true, locked: false })).toBe('You · Admin')
+    expect(allowlistMeta(b, { you: true, locked: false })).toBe('You')
+  })
+  it('another row: the display name once they have signed in, else "Not signed in yet"', () => {
+    expect(allowlistMeta(b, { you: false, locked: false })).toBe('B')
+    expect(allowlistMeta({ ...b, signedIn: false }, { you: false, locked: false })).toBe('Not signed in yet')
+    expect(allowlistMeta({ ...b, displayName: '  ' }, { you: false, locked: false })).toBe('')
+    expect(allowlistMeta(a, { you: false, locked: true })).toBe('A · Last Admin')
   })
 })

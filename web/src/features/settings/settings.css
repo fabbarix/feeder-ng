@@ -108,6 +108,14 @@
   overflow-wrap: normal;
   word-break: normal;
 }
+/* The meta ("You · Admin · Last Admin", a display name) takes the lines it needs at 375 and wraps only at its spaces (NameText),
+   never an ellipsis or a mid-word break. */
+.allowlist__list .list-row__meta,
+.allowlist__list .list-row__meta-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
 /* From 35 rem of row the controls sit at the end of line 1; they keep their own width there. */
 @container (width >= 35rem) {
   .allowlist__actions {
