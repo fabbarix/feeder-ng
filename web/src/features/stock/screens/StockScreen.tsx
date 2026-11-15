@@ -7,7 +7,7 @@
  *   accent action) and the More menu ("Storage Places").
  * - L-06: from 1280 px a two-column `.stock-screen__layout`: a sticky `<aside aria-label="Filter Stock">` (SpoiledTile, then the filter
  *   header) beside `.stock-screen__main` (the list). One tree: on a phone the aside simply comes first.
- * - The filter header (pantry-filter), only when status is 'ready': row 1 Search Stock + Filters; row 2 the List control + Sort (By
+ * - The filter header (pantry-filter), while the list loads or shows (ready, or its saved copy offline): row 1 Search Stock + Filters; row 2 the List control + Sort (By
  *   Storage Place); row 3 the active filter chips. The filters are chosen in the Filters panel and live in the URL (usePantryFilters).
  * - The list: the Storage Place groups, or a `ListGroup label="Stock"` of IngredientLotsRow. If the filters leave nothing: EmptyState
  *   "Nothing in Stock matches".
@@ -87,7 +87,9 @@ export function StockScreen(): ReactElement | null {
   const spoiledLots = spoiled.data ?? []
   // B9-20 (RES-02): the Storage Place view lists the Lots, so it waits for them as well as for the totals.
   const listState = mode === 'places' ? combineScreenStates(totals.state, pantry.lots.state) : totals.state
-  const ready = totals.status === 'ready'
+  // B9-20 (RES-02): the filter header shows while the list loads too (the skeleton then sits where the list will be, so
+  // nothing jumps when it arrives) and over a saved copy offline; not over an empty, unknown or failed list.
+  const ready = totals.state === 'loading' || totals.state === 'ready' || totals.state === 'offlineSaved'
   // No empty aside: it exists when something is spoiled or the filter header is shown.
   const showAside = spoiledLots.length > 0 || ready
 

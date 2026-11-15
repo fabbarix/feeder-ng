@@ -97,11 +97,25 @@ describe('StockScreen two-column layout (L-06)', () => {
     expect(within(aside).getByRole('searchbox', { name: 'Search Stock' })).toBeInTheDocument()
   })
 
-  it('renders no empty aside while Stock loads and nothing is spoiled', () => {
+  // B9-20 (RES-02): while Stock loads the aside holds the filter header, so the list skeleton sits where the list will be
+  // and nothing jumps when it arrives (was: no aside while loading). It is never empty.
+  it('holds the filter header, never an empty aside, while Stock loads and nothing is spoiled', () => {
     hooks.spoiled.data = []
     hooks.spoiled.status = 'empty'
     hooks.totals.status = 'loading'
     view()
-    expect(screen.queryByRole('complementary')).toBeNull()
+    const aside = screen.getByRole('complementary')
+    expect(within(aside).getByRole('searchbox')).toBeInTheDocument()
+  })
+
+  it('renders no aside over a failed or unknown list when nothing is spoiled', () => {
+    hooks.spoiled.data = []
+    hooks.spoiled.status = 'empty'
+    for (const status of ['error', 'offline'] as const) {
+      hooks.totals.status = status
+      const { unmount } = view()
+      expect(screen.queryByRole('complementary')).toBeNull()
+      unmount()
+    }
   })
 })
