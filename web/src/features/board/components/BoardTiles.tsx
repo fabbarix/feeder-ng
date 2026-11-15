@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { TimerItem } from '../../cook/hooks/useTimers'
 import { Button, Chip, Tile, TimerTile } from '../../../ui'
+import type { BoardHero } from '../lib/hero'
 import { clockText, dateText, dueText, hasPlanned, notServedLine, shortWeekday, tomorrowLine, tonightRows, type LeftoverRow } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import type { NextAdvance, SlotLike, StockTotalLike } from '../types'
@@ -14,6 +15,8 @@ import type { NextAdvance, SlotLike, StockTotalLike } from '../types'
 export interface ClockTileProps {
   now: Date
   timeZone: string
+  /** B9-47 (TB-04): the Close control, drawn at the top end of the tile beside the date. */
+  close?: ReactNode
   /** @deprecated the coordinates hint moved to Settings (5.13); ignored here. */
   showFallbackHint?: boolean
 }
@@ -124,7 +127,7 @@ export function NextAdvanceTile({ next, nowMs, timeZone, onDone }: NextAdvanceTi
 }
 
 /** Heading "Leftovers", one row per Leftover ("Stew · 2 portions · use by Thu"); "No Leftovers" when empty. Status leftover. */
-export function BoardLeftoversTile({ rows }: { rows: LeftoverRow[] }): ReactNode {
+export function BoardLeftoversTile({ rows }: { rows: LeftoverRow[]; today?: string }): ReactNode {
   return (
     <Tile as="section" variant="status" status="leftover" className="board-leftovers">
       <h2 className="board-tile__heading">{boardStrings.leftovers}</h2>
@@ -142,7 +145,7 @@ export function BoardLeftoversTile({ rows }: { rows: LeftoverRow[] }): ReactNode
 }
 
 /** Heading "Use soon" (2 columns), one spoil status Chip per Ingredient; "Nothing to use up" when empty. */
-export function UseSoonTile({ rows }: { rows: StockTotalLike[] }): ReactNode {
+export function UseSoonTile({ rows }: { rows: StockTotalLike[]; today?: string }): ReactNode {
   return (
     <Tile as="section" span={2} className="board-use-soon">
       <h2 className="board-tile__heading">{boardStrings.useSoon}</h2>
@@ -230,4 +233,18 @@ export function StreakTile({ days }: { days: number }): ReactNode {
       <p className="board-streak__days">{boardStrings.streakDays(days)}</p>
     </Tile>
   )
+}
+
+// ---- B9-47 STUBS (test author): the real components are built by the developer. ----
+
+export interface BoardHeroTileProps {
+  hero: BoardHero | null
+  /** the slots Not served today (lib/tiles tonightNotServed): with no hero the tile says "Dinner · Not served" for each */
+  notServed?: SlotLike[]
+  onCook?: () => void
+}
+
+/** B9-47 STUB: the hero tile (TB-07, TB-08): eyebrow with the day word, the Recipe, the Courses, the start line and Cook. */
+export function BoardHeroTile(_props: BoardHeroTileProps): ReactNode {
+  return null
 }

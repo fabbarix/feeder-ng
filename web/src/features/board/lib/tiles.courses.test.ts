@@ -96,8 +96,9 @@ describe('tonightRows', () => {
 })
 
 describe('tomorrowLine', () => {
-  it('one Course reads exactly as before: "Dinner · Chicken stew"', () => {
-    expect(tomorrowLine(slotOf([course(1, 'Main', true, { meal: meal('Chicken stew') })]))).toBe('Dinner · Chicken stew')
+  // B9-47 (TB-08): one format for every slot, "Dinner: Chicken stew" (it was "Dinner · Chicken stew" for one Course).
+  it('one Course reads "Dinner: Chicken stew", the same format as several', () => {
+    expect(tomorrowLine(slotOf([course(1, 'Main', true, { meal: meal('Chicken stew') })]))).toBe('Dinner: Chicken stew')
   })
 
   it('several Courses: "Dinner: Roast chicken + green beans", in the slot\'s order', () => {
@@ -106,7 +107,7 @@ describe('tomorrowLine', () => {
 
   it('a covered slot is its Whole meal alone; a Course that holds a Planned Meal beside it is added', () => {
     const covered = slotOf([course(1, 'Main', true, { meal: meal('Lasagne', 'planned', true) }), course(2, 'Side', false, { coveredBy: { courseId: 1, recipeId: 1, recipeName: 'Lasagne' } })])
-    expect(tomorrowLine(covered)).toBe('Dinner · Lasagne')
+    expect(tomorrowLine(covered)).toBe('Dinner: Lasagne')
     const kept = slotOf([course(1, 'Main', true, { meal: meal('Lasagne', 'planned', true) }), course(2, 'Side', false, { meal: meal('Salad') })])
     expect(tomorrowLine(kept)).toBe('Dinner: Lasagne + Salad')
   })

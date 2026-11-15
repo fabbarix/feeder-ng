@@ -13,7 +13,7 @@ describe('TomorrowTile: Couldn\'t plan on the board', () => {
     const chip = screen.getByText('Not planned').closest('.chip')!
     expect(chip).toHaveAttribute('data-kind', 'tag')
     expect(container.querySelector('[data-status="danger"]')).toBeNull()
-    expect(screen.getByText('Dinner · Pasta')).toBeInTheDocument()
+    expect(container.textContent).toContain('Dinner: Pasta') // B9-47 (TB-08): one format
     expect(screen.queryByText(/Couldn't plan/)).not.toBeInTheDocument()
   })
 

@@ -1,4 +1,5 @@
 // CRS F: the board reads the payload's `slots` (with Courses), and its big Cook button opens tonight's cooking timeline.
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -13,7 +14,7 @@ vi.mock('../hooks/useBoard', () => ({
   useNow: () => new Date('2026-11-09T17:00:00Z'),
 }))
 vi.mock('../hooks/useBoardPalette', () => ({ useBoardPalette: () => undefined }))
-vi.mock('../../plan', () => ({ usePlan: () => ({ slots: h.planSlots }), useLeftovers: () => ({ leftovers: [] }) }))
+vi.mock('../../plan', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../plan')>()), usePlan: () => ({ slots: h.planSlots }), useLeftovers: () => ({ leftovers: [] }) }))
 vi.mock('../../stock/hooks/useStock', () => ({ useStockTotals: () => ({ data: [] }) }))
 vi.mock('../../cook/hooks/useTimers', () => ({ useTimers: () => ({ items: [] }) }))
 vi.mock('../../settings/hooks/useHouseholdSettings', () => ({ useHouseholdSettings: () => ({ settings: { timeZone: 'UTC' } }) }))
@@ -33,12 +34,14 @@ const data = (slots?: SlotLike[]): BoardData => ({
 })
 const view = () =>
   render(
-    <MemoryRouter initialEntries={['/board']}>
-      <Routes>
-        <Route path="/board" element={<BoardScreen />} />
-        <Route path="/cook/meal/:date/:slotId" element={<p>Cook timeline</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/board']}>
+        <Routes>
+          <Route path="/board" element={<BoardScreen />} />
+          <Route path="/cook/meal/:date/:slotId" element={<p>Cook timeline</p>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 
 afterEach(() => {

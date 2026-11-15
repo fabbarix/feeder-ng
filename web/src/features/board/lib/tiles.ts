@@ -199,3 +199,15 @@ export function tonightNotServed(slots: SlotLike[], today: string): SlotLike[] {
     .filter((s) => s.date === today && s.notServed === true)
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
 }
+
+// ---- B9-47 (TB-08) STUBS (test author): the board's Leftover line and Use soon chip, in Today's words. ----
+
+/** The Leftover row of the board: the name over "1.25 portions · Use by Tue" (the same meta as Today). */
+export function leftoverLine(_row: LeftoverRow, _today: string): { title: string; meta: string } {
+  return { title: '', meta: '' }
+}
+
+/** The Use soon chip: "Flour · tomorrow" and its full accessible name "Flour, good until tomorrow". */
+export function useSoonChip(_row: StockTotalLike, _today: string): { label: string; name: string } {
+  return { label: '', name: '' }
+}

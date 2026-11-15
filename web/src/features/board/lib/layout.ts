@@ -38,7 +38,15 @@ const PHONE_LAYOUT: BoardCell[] = [
   { id: 'streak', col: 2, row: 5, colSpan: 1, rowSpan: 1 },
 ]
 
-/** The layout for a 2-column phone board (L-10) or the 4 x 3 wall board. */
-export function boardLayout(columns: 2 | 4): BoardCell[] {
-  return columns === 2 ? PHONE_LAYOUT : BOARD_LAYOUT
+/** B9-47 (TB-07, SHORT-03): the four board layouts. */
+export type BoardLayoutKind = 'wall' | 'portrait' | 'scroll' | 'phone'
+
+/** B9-47 STUB (test author): the real function picks phone / portrait / scroll / wall from the viewport. */
+export function boardLayoutKind(_v: { wide: boolean; short: boolean; portrait: boolean }): BoardLayoutKind {
+  return 'wall'
+}
+
+/** The layout for a 2-column phone board (L-10) or the 4 x 3 wall board. B9-47 STUB: portrait and scroll are not built yet. */
+export function boardLayout(columns: 2 | 4 | BoardLayoutKind): BoardCell[] {
+  return columns === 2 || columns === 'phone' ? PHONE_LAYOUT : BOARD_LAYOUT
 }
