@@ -3,3 +3,4 @@
 # its package converts it. Feature files are added by the package that converts their folder (for example features/today UseSoonTile,
 # food, with B9-44).
 web/src/ui/Gallery.tsx   # the primitives Gallery shows every tone as a specimen, spoil and danger included
+web/src/ui/GalleryOverlays.tsx   # the Gallery's overlay specimens show the danger confirm dialogs (a loss)
