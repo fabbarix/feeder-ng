@@ -33,6 +33,13 @@ describe('LeftoverItems: one row per Recipe and Use-by', () => {
     expect(container.querySelectorAll('.list-row')).toHaveLength(2)
   })
 
+  it('P38: two rows of one Recipe have Menus of their own names (the row\'s meta added); a lone row keeps "Actions for Chilli"', () => {
+    view({ leftovers: [a, { ...b, useBy: '2026-11-18' }] })
+    const names = screen.getAllByRole('button', { name: /^Actions for Chilli/ }).map((el) => el.getAttribute('aria-label') ?? el.textContent)
+    expect(new Set(names).size).toBe(2)
+    expect(names.every((n) => n !== 'Actions for Chilli')).toBe(true)
+  })
+
   it('an action is reported for the merged Leftover: every id, the portions summed', async () => {
     const { onAction } = view()
     await userEvent.click(screen.getByRole('button', { name: 'Actions for Chilli' }))

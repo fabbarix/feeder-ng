@@ -23,14 +23,21 @@ export interface LeftoverItemsProps {
 export function LeftoverItems({ leftovers, today, busy = false, plannedFor = {}, onAction, onAnswer }: LeftoverItemsProps) {
   const byId = new Map(leftovers.map((l) => [l.id, l]))
   const merged = new Map(mergeRows(leftovers).map((l) => [l.id, l]))
+  const rows = tileRows(leftovers, today, plannedFor)
+  // P38: two rows of one Recipe (another Use-by, or frozen) get Menus whose names say which row they are
+  const perRecipe = new Map<string, number>()
+  for (const row of rows) if (row.kind !== 'question') {
+    const name = byId.get(row.id)!.recipeName
+    perRecipe.set(name, (perRecipe.get(name) ?? 0) + 1)
+  }
   return (
     <>
-      {tileRows(leftovers, today, plannedFor).map((row) => {
+      {rows.map((row) => {
         const leftover = byId.get(row.id)!
         return row.kind === 'question' ? (
           <LeftoverQuestion key={row.id} leftover={leftover} today={today} busy={busy} onAnswer={(answer, l) => onAnswer(l, answer)} />
         ) : (
-          <LeftoverRow key={row.id} leftover={merged.get(row.id) ?? leftover} today={today} hint={row.hint} onAction={onAction} />
+          <LeftoverRow key={row.id} leftover={merged.get(row.id) ?? leftover} today={today} hint={row.hint} distinguish={(perRecipe.get(leftover.recipeName) ?? 0) > 1} onAction={onAction} />
         )
       })}
     </>
