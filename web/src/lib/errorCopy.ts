@@ -56,6 +56,15 @@ export function failureToast(copy: FailureCopy, onRetry?: () => void): ToastCont
   return toast
 }
 
+/**
+ * The one line a dialog, sheet or plain toast shows for a failed action: "Couldn’t {phrase}." and what the person can do
+ * ("Try again.", or offline "Feeder is offline. Try again when you’re back online."). A known code is its own line.
+ */
+export function failureLine(copy: FailureCopy): string {
+  if (copy.icon === 'offline') return `${copy.headline}. ${copy.subline}. Try again when you’re back online.`
+  return copy.retryable ? `${copy.headline}. Try again.` : copy.headline
+}
+
 /** The one sentence a form shows inline when no code is known. */
 export function fallbackMessage(err: unknown, opts: Pick<FailureOptions, 'online'> = {}): string {
   return isOffline(err, opts.online ?? browserOnline())

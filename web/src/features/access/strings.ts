@@ -33,7 +33,11 @@ export const accessStrings = {
   },
   waitingLabel: (n: number) => `${plural(n, 'sign-in request', 'sign-in requests')} waiting`,
   alreadyAnswered: 'That request was already answered.',
-  genericError: 'Something went wrong. Please try again.',
+  /** B9-20 (RES-06): what a failed answer was, for "Couldn’t {phrase}." */
+  failed: {
+    approve: (email: string) => (email ? `approve ${email}` : 'approve the sign-in request'),
+    deny: (email: string) => (email ? `deny ${email}` : 'deny the sign-in request'),
+  },
   history: 'Recent activity',
   historyEmpty: 'Nothing yet.',
   historyLine: {

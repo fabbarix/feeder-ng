@@ -1,4 +1,5 @@
 // Display text for Access Request values. Plain TypeScript, no React.
+import { actionFailed, failureLine } from '../../../lib/errorCopy'
 import { ApiError } from '../../../lib/http'
 import { accessStrings } from '../strings'
 import type { AccessEvent } from '../types'
@@ -34,9 +35,12 @@ export function historyLine(e: AccessEvent): string {
   }
 }
 
-/** The message for a failed approve or deny: a 404 means somebody else answered first. */
-export function answerErrorMessage(err: unknown): string {
+/**
+ * The message for a failed approve or deny: a 404 means somebody else answered first. Otherwise it names what failed
+ * (`phrase`, from accessStrings.failed) and what to do (B9-20, RES-06: lib/errorCopy).
+ */
+export function answerErrorMessage(err: unknown, phrase: string): string {
   if (err instanceof ApiError && err.status === 404) return accessStrings.alreadyAnswered
   if (err instanceof ApiError && err.status === 409 && err.code === 'member_unavailable') return accessStrings.memberTaken
-  return accessStrings.genericError
+  return failureLine(actionFailed(phrase, err))
 }

@@ -30,7 +30,16 @@ export const coursesStrings = {
   archivedHeading: (n: number) => `Archived Courses (${n})`,
   unarchive: 'Unarchive',
   unarchiveLabel: (name: string) => `Unarchive ${name}`,
-  actionFailed: 'Something went wrong. Please try again.',
+  /** B9-20 (RES-06): what a failed Course action was, for "Couldn’t {phrase}." (lib/errorCopy). */
+  failed: {
+    add: (name: string) => `add ${name}`,
+    rename: (name: string) => `rename ${name}`,
+    makeMain: (name: string) => `make ${name} the main Course`,
+    reorder: 'reorder the Courses',
+    unarchive: (name: string) => `unarchive ${name}`,
+    delete: (name: string) => `delete ${name}`,
+    archive: (name: string) => `archive ${name}`,
+  },
   removal: {
     deleteTitle: (name: string) => `Delete ${name}?`,
     archiveTitle: (name: string) => `Archive ${name}?`,

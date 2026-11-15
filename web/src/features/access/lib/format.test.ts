@@ -26,10 +26,14 @@ describe('historyLine', () => {
 })
 
 describe('answerErrorMessage', () => {
-  it('says already answered for a 404 and stays generic otherwise', () => {
-    expect(answerErrorMessage(new ApiError(404, 'not_found', 'x'))).toMatch(/already answered/)
-    expect(answerErrorMessage(new ApiError(409, 'member_unavailable', 'x'))).toMatch(/already has a user/i)
-    expect(answerErrorMessage(new ApiError(500, 'internal', 'x'))).toMatch(/something went wrong/i)
-    expect(answerErrorMessage(new Error('x'))).toMatch(/something went wrong/i)
+  // B9-20 (RES-06): otherwise it names what failed and what to do, never "Something went wrong".
+  it('says already answered for a 404 and names what failed otherwise', () => {
+    expect(answerErrorMessage(new ApiError(404, 'not_found', 'x'), 'approve zia@example.test')).toMatch(/already answered/)
+    expect(answerErrorMessage(new ApiError(409, 'member_unavailable', 'x'), 'approve zia@example.test')).toMatch(/already has a user/i)
+    expect(answerErrorMessage(new ApiError(500, 'internal', 'x'), 'approve zia@example.test')).toBe('Couldn’t approve zia@example.test. Try again.')
+    expect(answerErrorMessage(new Error('x'), 'deny zia@example.test')).toBe('Couldn’t deny zia@example.test. Try again.')
+    expect(answerErrorMessage(new ApiError(0, 'network', 'x'), 'deny zia@example.test')).toBe(
+      'Couldn’t deny zia@example.test. Feeder is offline. Try again when you’re back online.',
+    )
   })
 })
