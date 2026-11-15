@@ -53,7 +53,7 @@ describe('tickedMeta: what a ticked row says about the tick (SSP-01)', () => {
 
   it('a Line with two additions (RES 2): "Added twice · Sam 50 g, you 50 g", compact "Added twice · 100 g"; the viewer is "you"', () => {
     const tick = makeTick({ additions: [makeAddition({ who: 'Sam', mine: false, quantity: 50, clientUuid: 's-1' }), makeAddition({ quantity: 50, clientUuid: 'u-2' })] })
-    expect(meta(tick)).toEqual({ text: 'Added twice · Sam 50 g, you 50 g', compact: 'Added twice · 100 g', tone: 'success', icon: 'stock' })
+    expect(meta(tick)).toEqual({ text: 'Added twice · Sam 50 g, you 50 g', compact: 'Added twice · 100 g', tone: 'success', icon: 'rotateRight' }) // ArrowClockwise (res.md SSP-18; batch w3e)
   })
 
   it('three additions read "Added 3 times · …" (the same form; the count in digits)', () => {

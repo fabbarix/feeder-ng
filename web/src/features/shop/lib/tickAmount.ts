@@ -15,7 +15,8 @@ export function defaultTickAmount(line: { quantity: number; more?: number; ticke
 }
 
 export type TickMetaTone = 'success' | 'muted'
-export type TickMetaIcon = 'stock' | 'notAdded' | 'scan'
+/** rotateRight is Phosphor ArrowClockwise, the chapter's glyph for "Added twice" (SSP-18), already in the icon set. */
+export type TickMetaIcon = 'stock' | 'notAdded' | 'scan' | 'rotateRight'
 
 /** What a ticked row's one meta line says. `compact` is the shorter form for a narrow text column; '' when there is none. */
 export interface TickedMeta {
@@ -44,7 +45,7 @@ export function tickedMeta(tick: LineTick | null | undefined, baseUnit: BaseUnit
       text: `${times} · ${who.join(', ')}`,
       compact: `${times} · ${q(total)}`,
       tone: total > 0 ? 'success' : 'muted',
-      icon: 'stock',
+      icon: 'rotateRight',
     }
   }
   if (tick.by === 'scan') {

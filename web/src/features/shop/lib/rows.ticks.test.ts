@@ -25,7 +25,7 @@ describe('rowMeta of a ticked row (SSP-01)', () => {
 
   it('two additions: success, long and compact', () => {
     const tick = makeTick({ additions: [makeAddition({ who: 'Sam', mine: false, quantity: 50 }), makeAddition({ quantity: 50, clientUuid: 'u-2' })] })
-    expect(rowMeta(tickedGarlic(tick))).toEqual({ text: 'Added twice · Sam 50 g, you 50 g', compact: 'Added twice · 100 g', status: 'success', icon: 'stock' })
+    expect(rowMeta(tickedGarlic(tick))).toEqual({ text: 'Added twice · Sam 50 g, you 50 g', compact: 'Added twice · 100 g', status: 'success', icon: 'rotateRight' }) // ArrowClockwise (res.md; batch w3e)
   })
 
   it('a ticked entry without a tick from the server (an older list) says nothing, as before', () => {
