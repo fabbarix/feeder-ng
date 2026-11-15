@@ -29,7 +29,7 @@ export function RecipeMetrics({ lastCooked, ...facts }: RecipeMetricsProps): Rea
       <Tile>
         <TileMetric value={m.yield.value} label={m.yield.label} />
       </Tile>
-      <Tile>
+      <Tile data-words={m.time.words ? 'true' : undefined}>
         <TileMetric value={m.time.value} label={m.time.label} />
         {m.ahead ? <p className="recipe-metric__ahead">{m.ahead}</p> : null}
         {lastCooked ? <p className="recipe-metric__ahead">{lastCooked}</p> : null}
