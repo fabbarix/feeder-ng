@@ -28,11 +28,18 @@
 /* A long single word (a Course name) wraps inside a half-width Tile instead of scrolling the page sideways. */
 .import-review h2 {
   margin: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden; /* B9-55 (word-break): wrap at a word; a single word too long ends in an ellipsis */
+  text-overflow: ellipsis;
+  min-inline-size: 0;
 }
 
 .import-review p {
-  overflow-wrap: anywhere;
+  /* B9-55 (system.md 3, check-ui word-break): wrap at a word; a single word too long for the line ends in an ellipsis. Clipped with
+     room for a focus ring, so nothing inside loses its ring. */
+  overflow: clip;
+  overflow-clip-margin: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  text-overflow: ellipsis;
+  min-inline-size: 0;
 }
 
 .import-chips {
@@ -53,7 +60,6 @@
   min-block-size: 32px;
   padding-block: var(--space-1);
   white-space: normal;
-  overflow-wrap: anywhere;
   line-height: var(--text-label-line);
 }
 
@@ -63,8 +69,15 @@
   min-block-size: 28px;
   padding-block: var(--space-1);
   white-space: normal;
-  overflow-wrap: anywhere;
   line-height: var(--text-label-line);
+}
+
+/* B9-55 (system.md 3, check-ui word-break): a chip wraps at a word; a single word too long for the chip ends in an ellipsis on its label,
+   so the chip's ::after hit area is not clipped. */
+.import-chips .chip__label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .export-picker {
@@ -302,7 +315,6 @@
 
 .read-error__details {
   margin: 0;
-  padding-inline-start: var(--space-4);
 }
 
 .photo-choice {
@@ -376,7 +388,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  overflow-wrap: anywhere;
+  /* B9-55 (system.md 3, check-ui word-break): wrap at a word; a single word too long for the line ends in an ellipsis. Clipped with
+     room for a focus ring, so nothing inside loses its ring. */
+  overflow: clip;
+  overflow-clip-margin: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  text-overflow: ellipsis;
+  min-inline-size: 0;
 }
 
 /* ---- Base recipes (BR-E, design §11.3, §13). Tokens only; a status tile has a 1 px border in its tone; a chip stays on one line. ---- */
@@ -459,6 +476,19 @@
   padding: 0;
   list-style: none;
   color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+}
+
+/* B9-55: the note is a DetailList (R-E); its rows keep the quiet meta look of the note, with no hairlines. */
+.export-picker__also .detail-row {
+  padding-block: 0;
+  border: 0;
+  color: var(--color-muted);
+}
+
+.export-picker__also .detail-row__label {
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
@@ -687,7 +717,9 @@
 /* Long Recipe names wrap (to two lines) instead of being cut. */
 .recipe-preview .list-row__title {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow: hidden; /* B9-55 (word-break): wrap at a word; a single word too long ends in an ellipsis */
+  text-overflow: ellipsis;
+  min-inline-size: 0;
 }
 
 /* The answers and the panel of a row sit under its text, past the 40 px picture; on a phone they take the row's width. */
@@ -805,7 +837,9 @@
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
-  overflow-wrap: anywhere;
+  overflow: hidden; /* B9-55 (word-break): wrap at a word; a single word too long ends in an ellipsis */
+  text-overflow: ellipsis;
+  min-inline-size: 0;
 }
 
 /* RX-12: the closing "5 match your Ingredients" row: a success CheckCircle and an outlined 40 px caret. */

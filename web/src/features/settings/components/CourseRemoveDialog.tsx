@@ -36,7 +36,7 @@ export function CourseRemoveDialog({ state, locale = 'en' }: CourseRemoveDialogP
       groups={groups}
       cancelLabel={s.cancel}
       confirmLabel={mode === 'delete' ? s.confirmDelete : s.confirmArchive}
-      confirmDisabled={loading || loadFailed || impact === undefined}
+      confirmDisabled={loading || loadFailed || impact === undefined || (needsReplacement && replacementId === null)}
       busy={busy}
       onCancel={state.close}
       onConfirm={() => void state.confirm()}
@@ -46,7 +46,7 @@ export function CourseRemoveDialog({ state, locale = 'en' }: CourseRemoveDialogP
       {loadFailed ? <p role="alert">{s.loadFailed}</p> : null}
       {impact && needsReplacement ? (
         <>
-          <CourseSelect label={s.replacementLabel} courses={choices} value={replacementId} onChange={state.setReplacementId} disabled={busy} />
+          <CourseSelect label={s.replacementLabel} placeholder={s.replacementPlaceholder} courses={choices} value={replacementId} onChange={state.setReplacementId} disabled={busy} />
           {replacementText ? <p>{replacementText}</p> : null}
         </>
       ) : null}

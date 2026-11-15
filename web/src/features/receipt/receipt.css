@@ -308,7 +308,9 @@
   font-weight: var(--text-meta-weight);
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  overflow: hidden; /* B9-55 (word-break): wrap at a word; a single word too long ends in an ellipsis */
+  text-overflow: ellipsis;
+  min-inline-size: 0;
 }
 
 .receipt-row__match {

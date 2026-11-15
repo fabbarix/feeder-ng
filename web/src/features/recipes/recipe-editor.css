@@ -37,7 +37,9 @@
   display: block;
   padding: var(--space-2);
   border-radius: var(--radius-control);
-  overflow-wrap: anywhere;
+  overflow: hidden; /* B9-55 (word-break): wrap at a word; a single word too long ends in an ellipsis */
+  text-overflow: ellipsis;
+  min-inline-size: 0;
   color: var(--color-muted);
   text-decoration: none;
 }
@@ -72,11 +74,6 @@
   .recipe-editor-layout > .recipe-editor {
     grid-column: 2;
   }
-}
-
-.course-loss__rules {
-  margin: var(--space-2) 0 0;
-  padding-inline-start: var(--space-4);
 }
 
 /* B9-37 (RX-02): the "Recipe" section: the Name with the 96 px Photo button beside it, then the Kind. */
