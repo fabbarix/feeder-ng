@@ -3,7 +3,7 @@ import { Button, ConfirmDialog } from '../../../ui'
 import { importStrings as s } from '../strings'
 
 export interface StartOverButtonProps {
-  /** An answer was given: Start over asks before discarding it. */
+  /** An answer was given: Start over asks before the answers are lost. */
   answered: boolean
   onStartOver: () => void
 }
@@ -12,7 +12,7 @@ const t = s.reviewRows
 
 /**
  * The PageHeader's "Start over" while reviewing (RX-11). With no answer given it starts over at once; after an answer it asks first in our
- * own confirm dialog, with the copy of leaving a form with unsaved changes: Cancel "Keep answering" (focused), destructive "Discard answers".
+ * own confirm dialog: "Start over?", "Your answers so far are lost.", Cancel "Keep answering" (focused), destructive "Start over".
  * The dialog is the ConfirmDialog that useConfirm mounts, held here so the screen needs no ConfirmProvider of its own.
  */
 export function StartOverButton({ answered, onStartOver }: StartOverButtonProps): ReactNode {
@@ -25,10 +25,12 @@ export function StartOverButton({ answered, onStartOver }: StartOverButtonProps)
       {asking ? (
         <ConfirmDialog
           open
-          title={t.discardTitle}
-          cancelLabel={t.discardKeep}
-          confirmLabel={t.discardConfirm}
+          title={t.startOverTitle}
+          body={t.startOverLead}
+          cancelLabel={t.startOverKeep}
+          confirmLabel={t.startOverConfirm}
           tone="danger"
+          icon="error"
           onCancel={() => setAsking(false)}
           onConfirm={() => {
             setAsking(false)

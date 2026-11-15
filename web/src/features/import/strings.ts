@@ -179,9 +179,11 @@ export const importStrings = {
     questionsLeft: (n: number) => `${n} question${n === 1 ? '' : 's'} left`,
     nextQuestion: 'Next question',
     answerFirst: (n: number) => `Answer the ${n} question${n === 1 ? '' : 's'} first`,
-    discardTitle: 'Discard your answers?',
-    discardKeep: 'Keep answering',
-    discardConfirm: 'Discard answers',
+    // Main-session ruling: never the word Discard in new copy (GLOSSARY _Avoid_).
+    startOverTitle: 'Start over?',
+    startOverLead: 'Your answers so far are lost.',
+    startOverKeep: 'Keep answering',
+    startOverConfirm: 'Start over',
   },
 
   /** B9-28 (RX-15): Export's tri-state "All Recipes", its search and its always-present bar. */

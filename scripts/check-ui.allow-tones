@@ -4,3 +4,4 @@
 # food, with B9-44).
 web/src/ui/Gallery.tsx   # the primitives Gallery shows every tone as a specimen, spoil and danger included
 web/src/ui/GalleryOverlays.tsx   # the Gallery's overlay specimens show the danger confirm dialogs (a loss)
+web/src/features/import/components/StartOverButton.tsx   # the Start over confirm loses every answer given so far: a destructive confirm keeps its danger tone (main-session ruling, B9-28)
