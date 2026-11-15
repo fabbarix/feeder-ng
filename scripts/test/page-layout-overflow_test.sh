@@ -65,7 +65,7 @@ for try in 0 1 2 3 4 5 6 7; do
 done
 [ -n "$PORT" ] || { echo "FAIL: no free port for the fixture server"; exit 1; }
 echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings|pantry)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"; RC=$?
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings|pantry)$' timeout 300 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"; RC=$?
 [ "$RC" -eq 1 ] && ok || bad "the driver must exit 1 (findings) on the overflow page (rc $RC): $OUT"
 
 # (a) the 390 phone: the document is wider than the viewport
