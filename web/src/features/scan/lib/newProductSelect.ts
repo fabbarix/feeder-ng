@@ -97,6 +97,12 @@ export function weighedLine(grams: number, shopName: string, itemCode: string, s
   return newProductStrings.weighedAt(formatQuantity(grams, 'g', system), shopName, itemCode)
 }
 
+/** Batch w5a: the same line in its two parts, the weight (set in the stronger weight, as the mock) and the rest (" · weighed at Coop · item 012300"). */
+export function weighedLineParts(grams: number, shopName: string, itemCode: string, system: UnitSystem): { weight: string; rest: string } {
+  const weight = formatQuantity(grams, 'g', system)
+  return { weight, rest: newProductStrings.weighedAt(weight, shopName, itemCode).slice(weight.length) }
+}
+
 /** B9-41 (SSP-20): the code as printed ("8 000000 009999") and its accessible name, the same digits without the spaces. */
 export function printedCode(code: string): { text: string; spoken: string } {
   const text = displayCode(code)

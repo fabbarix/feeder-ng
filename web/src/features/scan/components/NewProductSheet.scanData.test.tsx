@@ -26,14 +26,16 @@ describe('NewProductSheet: a weighed code (SSP-07)', () => {
 
   it('the header line reads "312 g · weighed at Coop · item 012300" with the Scales icon, and there is no barcode line', () => {
     setup(weighed)
-    const header = within(dialog()).getByText('312 g · weighed at Coop · item 012300')
-    expect(header.closest('p, div')!.querySelector('svg')!.innerHTML).toBe(iconMarkup('weigh'))
+    // batch w5a: the weight is its own element in the stronger weight (the mock's <b>), so the line is read by its text content
+    const header = within(dialog()).getByText((_, el) => el?.tagName === 'P' && el.textContent === '312 g · weighed at Coop · item 012300')
+    expect(header.querySelector('svg')!.innerHTML).toBe(iconMarkup('weigh'))
+    expect(within(header).getByText('312 g')).toHaveClass('new-product__code-digits')
     expect(within(dialog()).queryByText(/not in Feeder yet/)).toBeNull()
   })
 
   it('the weight is said as Feeder says amounts: 1250 g is "1.25 kg"', () => {
     setup({ ...weighed, weighed: { grams: 1250, itemCode: '000042' } })
-    expect(within(dialog()).getByText('1.25 kg · weighed at Coop · item 000042')).toBeInTheDocument()
+    expect(within(dialog()).getByText((_, el) => el?.tagName === 'P' && el.textContent === '1.25 kg · weighed at Coop · item 000042')).toBeInTheDocument()
   })
 
   it('the header line is the sheet\'s description', () => {

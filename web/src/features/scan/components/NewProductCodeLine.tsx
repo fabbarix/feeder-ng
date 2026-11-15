@@ -2,7 +2,7 @@
 // SSP-20); a weighed code reads "312 g · weighed at Coop · item 012300" with the Scales icon (SSP-07). It is the sheet's description. Render only.
 import { Icon } from '../../../ui/Icon'
 import type { UnitSystem } from '../../../lib/units'
-import { printedCode, weighedLine } from '../lib/newProductSelect'
+import { printedCode, weighedLineParts } from '../lib/newProductSelect'
 import { newProductStrings } from '../newProductStrings'
 
 export type NewProductCodeLineProps = { id?: string } & (
@@ -12,10 +12,15 @@ export type NewProductCodeLineProps = { id?: string } & (
 
 export function NewProductCodeLine(p: NewProductCodeLineProps) {
   if (p.weighed) {
+    // the weight is the figure to check against the label: set in the stronger weight, as mocks/ssp-07-weighed-sheet.html draws it
+    const { weight, rest } = weighedLineParts(p.weighed.grams, p.shopName, p.weighed.itemCode, p.system)
     return (
       <p id={p.id} className="new-product__code">
         <Icon name="weigh" size={16} />
-        <span>{weighedLine(p.weighed.grams, p.shopName, p.weighed.itemCode, p.system)}</span>
+        <span>
+          <span className="new-product__code-digits">{weight}</span>
+          {rest}
+        </span>
       </p>
     )
   }
