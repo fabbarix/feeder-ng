@@ -426,6 +426,7 @@ button.ms-day[data-state='free']:hover {
   margin: 0;
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
 

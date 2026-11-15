@@ -50,7 +50,8 @@
 }
 
 .course-picker__row :focus-visible {
-  outline-offset: -2px;
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
   background: var(--color-soft);
 }
 

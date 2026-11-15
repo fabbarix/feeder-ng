@@ -62,7 +62,8 @@ describe('CoursePicker.css: the row boundary and its focus (R-C+)', () => {
   })
   it('a focused control inside the row draws its ring inside itself (negative offset) on a soft fill', () => {
     const b = body('.course-picker__row :focus-visible') + ' ' + body('.course-picker__actions :focus-visible')
-    expect(b).toMatch(/outline-offset:\s*-2px/)
+    // The inner ring by its tokens (focusLayer.css.test.ts allows no literal px): -2 px, inside the control.
+    expect(b).toMatch(/outline-offset:\s*(-2px|calc\(-1 \* var\(--focus-ring-inner-width\)\))/)
     expect(b).toMatch(/background:\s*var\(--color-soft\)/)
   })
 })

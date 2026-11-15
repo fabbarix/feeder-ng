@@ -16,6 +16,11 @@ const ready = `!!document.querySelector('main') && !document.querySelector('[ari
 const dialogOpen = `!!document.querySelector('dialog[open]')`
 // A sheet rises and a dialog fades in: measure only once nothing animates any more (the guard does not ask for reduced motion).
 const settled = `document.getAnimations().every((a) => a.playState !== 'running')`
+// P25 judges tap targets: a scenario that runs it emulates touch, so `(pointer: coarse)` holds (as scenarios/b9-14.mjs).
+const TOUCH = [
+  { method: 'Emulation.setTouchEmulationEnabled', params: { enabled: true, maxTouchPoints: 5 } },
+  { method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } },
+]
 const fail = (what, bad) => {
   throw new Error(`setup: ${what}: ${js(bad)}`)
 }
@@ -39,7 +44,7 @@ export default {
     { name: 'meal-slot-editor-short', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'editorShort', widths: ['667x375'], rules: ['P33'] },
     { name: 'meal-slot-remove-confirm', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'removeConfirm', widths: [375, 390, 1440], rules: ['P8', 'P13'] },
     { name: 'removed-meal-slots', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'removedTile', widths: [375, 390, 1440], rules: ['P1', 'P11', 'P13', 'P40'] },
-    { name: 'change-date', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'changeDate', widths: [375, 390, 1440], rules: ['P13', 'P25', 'P33'] },
+    { name: 'change-date', route: '/settings/meal-slots', start: '/settings/meal-slots', setup: 'changeDate', widths: [375, 390, 1440], emulate: TOUCH, rules: ['P13', 'P25', 'P33'] },
   ],
   setups: {
     async cardsMeasured() {

@@ -205,9 +205,10 @@ describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery'
     const phone = rules.filter((r) => /settings\/settings\.css$/.test(r.file) && r.at.includes('@media (width < 37.5em)'))
     expect(phone.some((r) => selectorsOf(r).includes('.allowlist__field'))).toBe(true)
   })
-  it('the Meal Slot card splits at its own container: @container ms-card (min-width: 44rem), not a 820px media query', () => {
-    const split = rules.filter((r) => /mealSlotCards\.css$/.test(r.file) && r.at.includes('@container ms-card (min-width: 44rem)'))
-    expect(split.map((r) => r.selector)).toEqual(expect.arrayContaining([".ms-card[data-span='full'] .ms-card__split"]))
+  // B9-42 (SET-08): a card never spans the row any more, so the full-width card's split (and its 44 rem query) is gone; the card is still
+  // its own container, which the strip's time rule (@container, below 22 rem) answers to.
+  it('the Meal Slot card is its own container (container: ms-card / inline-size), not a viewport media query', () => {
+    expect(rules.some((r) => /mealSlotCards\.css$/.test(r.file) && r.at.some((a) => /^@media .*820px/.test(a)))).toBe(false)
     const declared = rules.filter((r) => /mealSlotCards\.css$/.test(r.file) && declarations(r.body).some(([k, v]) => (k === 'container' && /^ms-card\s*\/\s*inline-size$/.test(v)) || (k === 'container-name' && v === 'ms-card')))
     expect(declared.length, 'a rule declares the ms-card container (container: ms-card / inline-size)').toBeGreaterThan(0)
   })

@@ -35,7 +35,7 @@ export function useMealSlotsPage() {
   useHouseholdLiveUpdates()
   const toast = useToast()
   const undoToast = useUndoToast()
-  const { confirm } = useConfirm()
+  const confirmer = useConfirm()
   const isAdmin = Boolean(useMe().data?.isAdmin)
   const members = useMembers()
   const slots = useMealSlots()
@@ -126,7 +126,7 @@ export function useMealSlotsPage() {
       toast.show(settingsStrings.removal.impactFailed, { status: 'error' })
       return
     }
-    const ok = await confirm({
+    const ok = await confirmer.confirm({
       title: removeTitle(editing, locale),
       body: removeLead(editing.name.trim(), otherDaysOf(editing, slots.slots)),
       groups: removeGroups(impact, { today: todayIso(), locale }),
