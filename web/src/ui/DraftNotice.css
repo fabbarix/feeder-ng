@@ -1,0 +1,21 @@
+/* DraftNotice (B9-18, SAFE-01): an info status Tile with a body-strong title, a meta line and a wrapping row of outline buttons.
+   Tokens only. */
+.draft-notice__title {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+}
+
+.draft-notice__meta {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.draft-notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
