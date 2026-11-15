@@ -47,9 +47,10 @@ describe('SSP 2: one tap, no "How much?" prefill', () => {
 })
 
 describe('B9-34: the toast uses useUndoToast, never a bare "Undo" action string', () => {
-  it('the tick flow and Scan\'s hook go through ui/useUndoToast', () => {
-    for (const f of ['shop/hooks/useTickFlow.ts', 'scan/hooks/useToGetTick.ts']) {
-      expect(strip(readFileSync(`${cwd}/src/features/${f}`, 'utf8')), f).toMatch(/useUndoToast/)
-    }
+  it('the tick flow goes through ui/useUndoToast, and Scan\'s hook is that tick flow (no toast of its own with an Undo)', () => {
+    expect(strip(readFileSync(`${cwd}/src/features/shop/hooks/useTickFlow.ts`, 'utf8'))).toMatch(/useUndoToast/)
+    const scan = strip(readFileSync(`${cwd}/src/features/scan/hooks/useToGetTick.ts`, 'utf8'))
+    expect(scan).toMatch(/useTickFlow\(/)
+    expect(scan).not.toMatch(/actionLabel|undoAction/)
   })
 })

@@ -58,7 +58,9 @@ describe('shop.css: tokens only', () => {
   })
 
   it('the accent is only for the one primary action: Button and Tile own it, this stylesheet never paints with it', () => {
-    expect(css).not.toMatch(/var\(--color-(accent|primary|soft|soft-strong|accent-text|on-accent)\b/)
+    // B9-34 (R-C+): the one exception is the focused tick's ring, drawn on its circle (an accent border on a soft fill), not a paint
+    const painted = css.replace(/\.line-row__tick[^{}]*:focus-visible::before\s*\{[^}]*\}/g, '')
+    expect(painted).not.toMatch(/var\(--color-(accent|primary|soft|soft-strong|accent-text|on-accent)\b/)
   })
 
   it('sets no max-width of its own: the Page owns the width', () => {

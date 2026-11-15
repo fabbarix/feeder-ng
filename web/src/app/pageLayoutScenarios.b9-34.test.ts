@@ -1,6 +1,6 @@
 // B9-34 (SSP-01, A11Y-07; plan section 9): the guard files of the Shop's ticking are registered and read what the plan says.
 //   scenarios/b9-34.mjs: shop-ticked (P23 on ticked rows) and shop-focus-after-tick (the A11Y-07 focus scenario)
-//   probes/cut-meta.mjs: widened from the info metas to every `.shop-lines .list-row__meta`
+//   probes/cut-meta.mjs: widened from the Shop's info metas to every visible `.list-row__meta-text` (the general form B9-29 also takes)
 //   page-layout-seed/b9-34.mjs: the ticked Lines the scenarios read
 import { describe, expect, it } from 'vitest'
 
@@ -35,10 +35,10 @@ describe('B9-34 page-layout scenarios', () => {
     expect(s!.setup).toBeTruthy()
   })
 
-  it('the cut-meta probe reads every Shop meta line, not only the info ones', () => {
+  it('the cut-meta probe reads every row meta line (the Shop\'s ticked ones included), not only the info ones', () => {
     const probe = api.PROBES.find((p) => p.name === 'cut-meta')!
     expect(probe.source).not.toContain('[data-status="info"] .list-row__meta-text')
-    expect(probe.source).toContain('.shop-lines .list-row__meta')
+    expect(probe.source).toContain("querySelectorAll('.list-row__meta-text')")
   })
 
   it('the seed ticks Lines for the scenarios and says which ones in the ids file', () => {

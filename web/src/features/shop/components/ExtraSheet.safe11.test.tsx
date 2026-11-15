@@ -6,6 +6,9 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ExtraSheet } from './ExtraSheet'
 
+// jsdom has no scrollIntoView; a failed Save scrolls the invalid field into view before focusing it (useFocusFirstInvalid, SAFE-11)
+Element.prototype.scrollIntoView ??= () => {}
+
 const ingredients = [
   { id: 1, name: 'milk', baseUnit: 'ml' },
   { id: 2, name: 'passata', baseUnit: 'g' },
