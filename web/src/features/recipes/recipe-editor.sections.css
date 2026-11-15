@@ -66,9 +66,25 @@
   color: var(--color-muted);
 }
 
-/* The popover from 768 px is as wide as the Filters panel. */
+/* The popover from 768 px is as wide as the Filters panel. It is capped to the room the viewport leaves (useFloatingPopover sets its
+   max height): the list gives way, so it never runs off the screen and the footer stays in view. */
 .tag-chooser__panel {
   inline-size: min(24rem, calc(100vw - 2 * var(--space-4)));
+}
+
+@media (min-width: 48em) {
+  .tag-chooser__panel .tag-chooser__body,
+  .tag-chooser__panel .option-list {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
+
+  .tag-chooser__panel .tag-chooser__body [role='listbox'] {
+    flex: 1 1 auto;
+    min-block-size: 3rem;
+  }
 }
 
 /* The four overrides: two by two (the unit is each field's suffix), then the one footnote with the Household's values. */

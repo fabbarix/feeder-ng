@@ -35,7 +35,7 @@
     'actions body';
   grid-template-rows: auto 1fr;
   column-gap: var(--space-2);
-  row-gap: var(--space-1);
+  row-gap: var(--space-3); /* A11Y-02 (P39): the handle and the ⋮ under it stand 12 px apart, so their rings never touch on touch */
   align-items: start;
   min-inline-size: 0;
   padding: var(--space-3);
@@ -109,7 +109,7 @@
 }
 
 /* The Duration or Lead time takes its own width (the shared frame is 100 % wide), so it sits beside the kind when there is room. */
-.step-card__timing > .ui-field:not(:has(.segmented)) {
+.step-card__timing > .ui-field + .ui-field {
   flex: 0 1 auto;
   inline-size: auto;
 }
@@ -235,9 +235,14 @@
   min-inline-size: 0;
 }
 
-.use-row__quantity,
+.use-row__quantity {
+  flex: 0 1 7rem;
+  min-inline-size: 0;
+}
+
 .use-row__unit {
-  flex: none;
+  flex: 0 1 8rem;
+  min-inline-size: 0;
 }
 
 .use-row__hint {

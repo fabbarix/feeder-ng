@@ -14,6 +14,7 @@ export function RecipeEditorKind({ value, onChange }: RecipeEditorKindProps): Re
   return (
     <div className="recipe-kind">
       <Segmented<EditorKind>
+        size="md"
         label={f.kind}
         helper={f.kindHelp}
         value={value}

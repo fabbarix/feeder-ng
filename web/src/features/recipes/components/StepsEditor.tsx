@@ -149,6 +149,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     />
                   )}
                 </div>
+                <div className="step-card__extras">
                 {afterChoices.length > 0 ? (
                   <div role="group" aria-label={t.after} className="step-card__after">
                     <span className="step-card__label">{t.after}</span>
@@ -159,7 +160,6 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     ))}
                   </div>
                 ) : null}
-                <div className="step-card__extras">
                 <ul className="step-card__more">
                   {s.uses.map((u, j) => (
                     <UseChip

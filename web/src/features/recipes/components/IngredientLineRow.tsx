@@ -223,7 +223,8 @@ export function IngredientLineRow({
         />
       </div>
       {asks ? <p className="line-row__hint">{recipeStrings.lines.unitNeedsConversion(line.unit)}</p> : null}
-      <div ref={noteRef} className="line-row__note">
+      {/* data-size-intent="inline": the Note is one cell of a one-row line (the chapter's minmax(6rem, 1fr) track), not a lone text field (P5). */}
+      <div ref={noteRef} className="line-row__note" data-size-intent="inline">
         <TextField size="full" label={recipeStrings.lines.note} placeholder="note" value={line.note} onChange={(note) => onChange({ note })} onKeyDown={enter('note')} />
       </div>
       <div className="line-row__optional">
