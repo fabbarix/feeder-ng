@@ -80,18 +80,21 @@ describe("B9-13's drop-in", () => {
   })
 })
 
-describe("w2a's drop-in (ruling e: P36 on Your preferences until B9-19)", () => {
+describe("w2a's drop-in (rulings: P36 on Your preferences until B9-19, P41 on Scan until B9-41)", () => {
   const dir = resolve(cwd, '../scripts/check-page-layout.modes.d')
-  const own = readFileSync(resolve(dir, '30-b9-w2a-p36-preferences-warn'), 'utf8')
+  const own = readFileSync(resolve(dir, '30-b9-w2a-warn'), 'utf8')
   const base = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
   const all = `${base}\n${readdirSync(dir)
     .filter((n) => !n.startsWith('.'))
     .sort()
     .map((n) => readFileSync(resolve(dir, n), 'utf8'))
     .join('\n')}`
-  it('is the one line P36@/settings/preferences, until B9-19, and no whole route', () => {
+  it('is the two lines P36@/settings/preferences until B9-19 and P41@/scan until B9-41, and no whole route', () => {
     expect(rules.parseModes(own).errors).toEqual([])
-    expect(rules.parseModes(own).ruleWarn).toEqual([{ rule: 'P36', pattern: '/settings/preferences', until: 'B9-19' }])
+    expect(rules.parseModes(own).ruleWarn).toEqual([
+      { rule: 'P36', pattern: '/settings/preferences', until: 'B9-19' },
+      { rule: 'P41', pattern: '/scan', until: 'B9-41' },
+    ])
     expect(own).not.toMatch(/^\s*(warn_routes|fail_routes|default|width)\b/m)
   })
   it('covers P36 in the touch-targets-controls scenario and nothing else there or on other Settings pages', () => {
@@ -99,5 +102,16 @@ describe("w2a's drop-in (ruling e: P36 on Your preferences until B9-19)", () => 
     expect(rules.ruleWarnFor(all, 'P1', '/settings/preferences#touch-targets-controls')).toBeNull()
     expect(rules.ruleWarnFor(all, 'P36', '/settings/household')).toBeNull()
     expect(rules.modeFor(all, '/settings/preferences')).toBe('fail')
+  })
+  it('covers P41 in the three Scan scenarios, and no other rule there, and not P41 on other routes', () => {
+    for (const name of ['scan-scanned-list', 'scan-row-active', 'scan-price-keypad']) {
+      expect(rules.ruleWarnFor(all, 'P41', `/scan#${name}`), name).toMatchObject({ rule: 'P41', pattern: '/scan', until: 'B9-41' })
+      expect(rules.ruleWarnFor(all, 'P13', `/scan#${name}`), name).toBeNull()
+    }
+    expect(rules.ruleWarnFor(all, 'P41', '/shop')).toBeNull()
+    expect(rules.modeFor(all, '/scan')).toBe('fail')
+    const out = ['scan-scanned-list', 'scan-row-active', 'scan-price-keypad'].map((n) => line(`/scan#${n}`, 'P41', 375)).join('\n')
+    expect(rules.countFindings(all, out).fail).toBe(0)
+    expect(rules.countFindings(all, line('/scan#scan-scanned-list', 'P1', 375)).fail).toBe(1)
   })
 })
