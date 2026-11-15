@@ -1,0 +1,19 @@
+/* RX-06 (B9-27): a Base recipe's own facts on its detail: the badge, the Stock line, the heading "Used in" (title-3), then the Recipes
+   that call for it or the muted sentence that none does yet. Its lines sit at the tile's gap, without paragraph margins. */
+.recipe-base > p {
+  margin: 0;
+}
+
+.recipe-base__title {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+
+.recipe-base__none {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}

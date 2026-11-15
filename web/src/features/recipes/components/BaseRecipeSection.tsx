@@ -7,6 +7,7 @@ import { recipeStrings } from '../strings'
 import type { Recipe } from '../types'
 import { BaseRecipeBadge } from './BaseRecipeBadge'
 import { LinkCandidatesSheet } from './LinkCandidatesSheet'
+import './BaseRecipeSection.css'
 
 /**
  * BR-D and RX-06: a Base recipe's own facts on its detail: the badge, the Pantry's Stock of it, the heading "Used in" (always) with the
@@ -26,7 +27,7 @@ export function BaseRecipeSection({ recipe: r, refreshKey, onChanged }: { recipe
   const t = recipeStrings.baseRecipe
   return (
     <>
-      <Tile as="section" span="full" aria-label={t.badge}>
+      <Tile as="section" span="full" aria-label={t.badge} className="recipe-base">
         <p>
           <BaseRecipeBadge />
         </p>

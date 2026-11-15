@@ -10,9 +10,8 @@
   min-inline-size: 0;
 }
 
-/* Muted meta lines: the metric strip's "+ 12 h ahead" and "Not cooked yet" (RX-13), "Not used in any Recipe yet" (RX-06), the Cook hint. */
+/* Muted meta lines: the metric strip's "+ 12 h ahead" and "Not cooked yet" (RX-13), the Cook hint. */
 .recipe-metric__ahead,
-.recipe-base__none,
 .cook-entry__hint {
   margin: 0;
   font-size: var(--text-meta-size);
@@ -185,14 +184,13 @@
   }
 }
 
-/* RX-04: the Cook tile (from 1024 px of viewport) stacks its entry under its heading; RX-06: the Base recipe's "Used in" heading. */
+/* RX-04: the Cook tile (from 1024 px of viewport) stacks its entry under its heading. */
 .recipe-cook {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
-.recipe-cook__title,
-.recipe-base__title {
+.recipe-cook__title {
   margin: 0;
   font-size: var(--text-title-3-size);
   line-height: var(--text-title-3-line);
