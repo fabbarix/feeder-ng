@@ -253,6 +253,11 @@ describe('undoRefusal (pure)', () => {
     expect(reason(code)).toBe(text)
   })
 
+  // Batch w3e (B9-26): an Undo pressed offline is a warning that says so, not a bare "Nothing changed.".
+  it('a request that never reached the server (ApiError network) says Feeder is offline', () => {
+    expect(reason('network', 0)).toBe('Feeder is offline.')
+  })
+
   it('404 not_found -> already undone', () => {
     expect(reason('not_found', 404)).toBe('It was already undone.')
   })
