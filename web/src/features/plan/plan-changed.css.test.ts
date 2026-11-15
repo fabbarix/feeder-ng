@@ -30,10 +30,16 @@ describe('the changed row (PC-01)', () => {
   })
 
   // Batch w3e review: the mock draws "was …" in info-fg at 600; info-fg on surface is 9.0:1 light and 10.8:1 dark, so the mock wins.
-  it('the "was" text is info-toned (the mock), on one line, and sits on the row\'s meta (the .plan-row__was rule exists)', () => {
+  it('the "was" text is info-toned (the mock) and sits on the row\'s meta (the .plan-row__was rule exists)', () => {
     const was = rulesFor('.plan-row__was')
     expect(was).not.toBe('')
     expect(was).toMatch(/color:\s*var\(--color-info-fg\)/)
-    expect(was).toMatch(/white-space:\s*nowrap/)
+  })
+
+  // Batch w3e (P23): a long "was …" wraps; it is never cut with an ellipsis.
+  it('a changed row\'s meta wraps instead of ending in an ellipsis', () => {
+    const meta = rulesFor('[data-changed] .list-row__meta-text')
+    expect(meta).toMatch(/white-space:\s*normal/)
+    expect(meta).toMatch(/text-overflow:\s*clip/)
   })
 })
