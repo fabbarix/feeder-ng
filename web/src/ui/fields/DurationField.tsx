@@ -54,9 +54,14 @@ export function DurationField({ label, helper, error, disabled, required, name, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
+  // The number on screen is the stored minutes rounded to 2 decimals in the shown unit (50 min is 0.03 d). While it is still that
+  // number it means the stored minutes, not the rounded amount: a unit change or a blur never turns 50 min into 43.
+  const meansStored = (n: number, unit: DurationUnit) => value !== null && n === fromMinutes(value, unit)
+
   const commitNumber = (n: number) => {
     const next = clamp(n, 0, undefined)
     setShown((s) => ({ ...s, text: String(next) }))
+    if (meansStored(next, shown.unit)) return
     const minutes = toMinutes(next, shown.unit)
     if (minutes !== value) onChange(minutes)
   }
@@ -87,7 +92,8 @@ export function DurationField({ label, helper, error, disabled, required, name, 
 
   const changeUnit = (unit: DurationUnit) => {
     setShown((s) => {
-      const minutes = minutesOf(s.text, s.unit)
+      const parsed = parseNumber(s.text)
+      const minutes = parsed.kind === 'number' && meansStored(parsed.value, s.unit) ? value : minutesOf(s.text, s.unit)
       return { unit, text: minutes === null || minutes === undefined ? s.text : String(fromMinutes(minutes, unit)) }
     })
   }
