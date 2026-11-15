@@ -83,7 +83,8 @@ describe.each([
   it('cheers and says where each Leftover went (a success toast)', async () => {
     await open()
     await confirmAll()
-    expect(await findToast('Cooked, nice one! Roast chicken: 2 portions → Thu Lunch; Green beans: 1 portion kept, good until Fri')).toBeInTheDocument()
+    const toast = await findToast('Cooked, nice one!')
+    expect(toast.querySelector('.toast__body')).toHaveTextContent('Roast chicken: 2 portions planned for Thu Lunch. Green beans: 1 portion kept as a Leftover, good until Fri.')
   })
 
   it('shows the Stock shortfall with Correct Stock and Dismiss', async () => {

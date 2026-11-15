@@ -22,7 +22,7 @@ function rowFor(side: PlanCourse, compact = false) {
 describe('CourseRow: an unplanned Course says why', () => {
   it('Excluded: an amber chip and the short reason', () => {
     const { item } = rowFor(empty(2, 'Side', EXCLUDED))
-    expect(within(item).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'spoil')
+    expect(within(item).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'warn')
     expect(within(item).getByText('Every Recipe is excluded.')).toBeInTheDocument()
   })
 
@@ -47,12 +47,12 @@ describe('CourseRow: an unplanned Course says why', () => {
   it('Nobody attends offers no Choose a Recipe (as a lone slot does): there is nobody to cook for', () => {
     const { item } = rowFor(empty(2, 'Side', NOBODY))
     expect(within(item).getByText('Nobody is set to attend.')).toBeInTheDocument()
-    expect(within(item).queryByRole('button', { name: 'Choose a Recipe' })).not.toBeInTheDocument()
+    expect(within(item).queryByRole('button', { name: /^Choose a Recipe/ })).not.toBeInTheDocument()
   })
 
   it('every other cause keeps Choose a Recipe for that Course', async () => {
     const { item, onChoose } = rowFor(empty(2, 'Side', NO_COURSE_RECIPES))
-    await userEvent.click(within(item).getByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(within(item).getByRole('button', { name: /^Choose a Recipe for / }))
     expect(onChoose).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 4, courseId: 2 })
   })
 

@@ -11,6 +11,7 @@ import {
   NotServedRow,
   PlannedMealSheet,
   RecipeChooserSheet,
+  ReplanReviewSheet,
   SlotDateSheets,
   SwapSheet,
   TonightHero,
@@ -71,7 +72,7 @@ export function TodayScreen(): ReactElement {
   const reheatMeal = (key: SlotKey) => navigate(cookReheatPath(key))
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
   const hero = data.nextSlot
-  const sheets = useTonightSheets(hero)
+  const sheets = useTonightSheets(hero, flow.open)
   // B5-LOW: the Leftover flow, the tile and the chooser's freezer list (round 2: the logic lives in useScreenLeftovers).
   const leftovers = useScreenLeftovers({ today: data.planToday, leftovers: data.leftovers, choose: sheets.choose, closePlanned: sheets.planned.close })
   // B5-F1: the per-date choices of today's Tonight slot and its Not served rows (their sheets are rendered below).
@@ -177,6 +178,11 @@ export function TodayScreen(): ReactElement {
           onAddRecipes={sheets.planned.addRecipes}
           onReviewVarietyRules={sheets.planned.reviewVarietyRules}
           onOpenLeftover={(id) => leftovers.openLeftover(id)}
+          timeZone={sheets.planned.timeZone}
+          offline={sheets.planned.offline}
+          onUndoCooked={sheets.planned.resolvedUndo.onUndoCooked}
+          onUndoNotCooked={sheets.planned.resolvedUndo.onUndoNotCooked}
+          onCookedAfterAll={sheets.planned.resolvedUndo.onCookedAfterAll}
         />
       ) : null}
       <SwapSheet
@@ -197,6 +203,7 @@ export function TodayScreen(): ReactElement {
         frozenLeftovers={leftovers.chooserLeftovers}
         onPickLeftover={(id) => void leftovers.pickLeftover(id)}
       />
+      <ReplanReviewSheet controller={sheets.review} />
       <LeftoverSheets flow={leftovers.flow} />
       <AllCookedSheets flow={sheets.allCooked} />
       <SlotDateSheets controller={slotDate} />

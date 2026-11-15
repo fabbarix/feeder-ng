@@ -25,13 +25,13 @@ describe('DayTile', () => {
     const tile = screen.getByRole('article')
     expect(tile).toHaveAttribute('data-today', 'true')
     expect(tile).toHaveAttribute('data-variant', 'surface')
-    expect(screen.getAllByRole('button', { name: /Chicken curry/ })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: /^Chicken curry$/ })).toHaveLength(2)
   })
 
   it('shows the slot name and time of each meal, and Cook for today\'s planned meals', () => {
     view(0)
     expect(screen.getByText('Lunch')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Cook' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: /^Cook / })).toHaveLength(2)
   })
 
   it('other days are not marked today', () => {

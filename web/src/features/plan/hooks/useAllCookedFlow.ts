@@ -6,11 +6,13 @@ import { useCallback, useState } from 'react'
 import { useToast } from '../../../ui'
 import { planApi } from '../api'
 import { usedFromApi } from '../api.usedFrom'
-import { cookedAllSuccessText } from '../lib/cook'
+import { cookedToast } from '../lib/resolved'
 import { allCookedBody, previewRows } from '../lib/toConfirm'
 import { planStrings } from '../strings'
-import type { SlotDayKey, StockWarning } from '../types'
+import type { CookedAllResult, SlotDayKey, StockWarning } from '../types'
 import { invalidatePlan } from './planCache'
+import { cachedSlots } from './replanState'
+import { useReopen } from './useReopen'
 import { useStockSheet, type StockSheetController } from './useStockSheet'
 import type { MarkAllCookedController } from './useMarkAllCooked'
 import { useMarkAllCooked } from './useMarkAllCooked'
@@ -27,7 +29,7 @@ export interface AllCookedFlow {
   /** Stock shortfall warnings still to show (controller.warnings, and the one-tap's). */
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
-  /** The sheet's primary button: controller.confirm(); closes on success with a success toast; a shortfall stays in `warnings`. */
+  /** The sheet's primary button: controller.confirm(); closes on success with the Cooked toast and its Undo; a shortfall stays in `warnings`. */
   confirm: () => Promise<boolean>
   /** DS-TODAY: "All Cooked" in one tap for the slot's Courses (planned Leftovers, no sheet). Resolves true on success. */
   quickAll: (slot: SlotDayKey, courseIds: number[]) => Promise<boolean>
@@ -44,18 +46,37 @@ export function useAllCookedFlow(): AllCookedFlow {
   const [quick, setQuick] = useState<StockWarning[]>([])
   const controller = useMarkAllCooked(key, courseIds)
   const stock = useStockSheet((id) => controller.dismissWarning(id))
+  const reopen = useReopen()
   const open = useCallback((slot: SlotDayKey, ids: number[]) => {
     setKey(slot)
     setCourseIds(ids)
   }, [])
   const close = useCallback(() => setKey(null), [])
+  /**
+   * The Cooked toast of a Mark all, with one Undo for the whole action (SAFE-03, user decision): it posts to the first Course's
+   * reopen, which takes back every Course of that Mark all (the slot-wide .../all/reopen would also reopen earlier marks).
+   */
+  const offerUndo = useCallback(
+    (slot: SlotDayKey, ids: number[], res: CookedAllResult) => {
+      const first = ids[0]
+      if (first === undefined) return
+      const key = { date: slot.date, mealSlotId: slot.mealSlotId, courseId: first }
+      const gone = res.warnings.map((w) => w.ingredientId)
+      reopen.offerUndo(cookedToast({ slots: cachedSlots(client), key, recipeName: '', result: res, courses: ids.length }), key, () => {
+        setQuick((ws) => ws.filter((w) => !gone.includes(w.ingredientId)))
+        gone.forEach((id) => controller.dismissWarning(id))
+      })
+    },
+    [client, reopen, controller],
+  )
   const confirm = useCallback(async () => {
+    const slot = key
     const res = await controller.confirm()
     if (res === null) return false
-    toast.show(cookedAllSuccessText(res), { status: 'success' })
+    if (slot) offerUndo(slot, courseIds, res)
     setKey(null)
     return true
-  }, [controller, toast])
+  }, [controller, key, courseIds, offerUndo])
   const quickAll = useCallback(
     async (slot: SlotDayKey, ids: number[]) => {
       setQuickBusy(slot)
@@ -63,7 +84,7 @@ export function useAllCookedFlow(): AllCookedFlow {
         const previews = await Promise.all(ids.map((courseId) => planApi.cookPreview({ date: slot.date, mealSlotId: slot.mealSlotId, courseId })))
         const res = await usedFromApi.cookedAll(slot, allCookedBody(previewRows(ids, previews)))
         setQuick(res.warnings)
-        toast.show(cookedAllSuccessText(res), { status: 'success' })
+        offerUndo(slot, ids, res)
         await invalidatePlan(client)
         return true
       } catch {
@@ -73,7 +94,7 @@ export function useAllCookedFlow(): AllCookedFlow {
         setQuickBusy(null)
       }
     },
-    [client, toast],
+    [client, toast, offerUndo],
   )
   const fromSheet = controller.warnings
   const warnings = [...fromSheet, ...quick.filter((w) => !fromSheet.some((c) => c.ingredientId === w.ingredientId))]

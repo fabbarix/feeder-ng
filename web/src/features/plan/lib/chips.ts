@@ -17,10 +17,10 @@ export interface PlanChip {
 const SHEET_LIMIT = 3
 const HERO_LIMIT = 2
 
-/** The state chip of a meal: Cooked (success), Not cooked (danger), else Pinned when pinned. */
+/** The state chip of a meal: Cooked (success), Not cooked (neutral, DS-06), else Pinned when pinned. */
 function stateChips(meal: PlannedMeal): PlanChip[] {
   if (meal.state === 'cooked') return [{ key: 'state:cooked', kind: 'state', status: 'success', label: s.cooked }]
-  if (meal.state === 'skipped') return [{ key: 'state:skipped', kind: 'state', status: 'danger', label: s.skipped }]
+  if (meal.state === 'skipped') return [{ key: 'state:skipped', kind: 'state', status: 'neutral', label: s.skipped }]
   return meal.pinned ? [{ key: 'state:pinned', kind: 'state', status: 'pinned', label: s.pinned }] : []
 }
 
@@ -60,7 +60,7 @@ function whyChips(meal: PlannedMeal, ctx: PhraseContext): PlanChip[] {
 }
 
 /**
- * The single chip a day tile shows (rule: at most 1). Priority: Cooked (state success), Not cooked (state danger),
+ * The single chip a day tile shows (rule: at most 1). Priority: Cooked (state success), Not cooked (state neutral),
  * Pinned (state pinned), served from a Leftover (status leftover "Leftover from Tue"), then the first phrased why
  * chip. 'best_available' never makes a chip. null when there is nothing to say.
  */

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { createElement } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { findNotice } from '../../../test/notices'
+import { findToast } from '../../../test/notices'
 import { meal, mockApi, renderWithProviders, slot } from '../../plan/test-utils'
 import type { CookedResult, CookPreview } from '../../plan/types'
 import { TodayScreen } from './TodayScreen'
@@ -87,7 +87,9 @@ describe('TodayScreen: after the slot time the hero asks whether it was cooked',
     renderWithProviders(routed, '/')
     await userEvent.click(await screen.findByRole('button', { name: 'Cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2 }))
-    expect(await findNotice('status', 'Cooked, nice one! 2 portions → Wed Lunch')).toBeDefined()
+    // B9-26: the rich Cooked toast (headline, the meal, where the Leftover went, Undo).
+    const toast = await findToast('Cooked, nice one!')
+    expect(toast.querySelector('.toast__body')).toHaveTextContent('2 portions planned for Wed Lunch.')
   })
 
   it('Adjust opens the Mark as Cooked sheet on Today itself', async () => {

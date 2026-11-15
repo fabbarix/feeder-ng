@@ -34,7 +34,7 @@ const phone = () =>
 const headingOf = (day: string): string | RegExp => ({ Today: /· Today$/, Tomorrow: /· Tomorrow$/, Wednesday: 'Wed 11' })[day] ?? day
 const tile = async (name: string) => ((await screen.findByRole('heading', { name: headingOf(name) })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
-  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
+  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(`^${recipe}$`) }))
   return screen.findByRole('dialog', { name: recipe })
 }
 
@@ -126,7 +126,7 @@ describe('PlanScreen layout (5.2)', () => {
 describe('PlanScreen: Regenerate asks first (2.4)', () => {
   it('states how many unpinned Planned Meals will change, and does nothing on Cancel', async () => {
     phone()
-    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate': undefined })
+    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate': { placed: 2, kept: 0, unfilled: 0, changed: 2, changes: [] } })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
@@ -137,7 +137,7 @@ describe('PlanScreen: Regenerate asks first (2.4)', () => {
   })
 
   it('posts and reloads the plan once confirmed', async () => {
-    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate': undefined })
+    const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/regenerate': { placed: 2, kept: 0, unfilled: 0, changed: 2, changes: [] } })
     renderWithProviders(<PlanScreen />)
     await userEvent.click(await screen.findByRole('button', { name: 'Regenerate' }))
     const dialog = await screen.findByRole('dialog', { name: 'Regenerate the plan?' })
@@ -157,8 +157,8 @@ describe('PlanScreen: the Planned Meal sheet', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     const tomorrow = await openSheet('Tomorrow', 'Stew')
     expect(within(tomorrow).queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
-    expect(within(tomorrow).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
-    expect(within(tomorrow).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
+    expect(within(tomorrow).queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
+    expect(within(tomorrow).getByRole('button', { name: /^Swap / })).toBeInTheDocument()
   })
 
   it('Pin posts to the confirm route (the word is Pin, the route is old)', async () => {
@@ -192,7 +192,7 @@ describe('PlanScreen: B2 Cook Mode from a Planned Meal', () => {
   it("the Cook icon on today's tile opens Cook Mode for that slot", async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(routed, '/plan')
-    await userEvent.click(within(await tile('Today')).getByRole('button', { name: 'Cook' }))
+    await userEvent.click(within(await tile('Today')).getByRole('button', { name: /^Cook / }))
     expect(await screen.findByText('Cook Mode screen')).toBeInTheDocument()
   })
 
@@ -207,7 +207,7 @@ describe('PlanScreen: B2 Cook Mode from a Planned Meal', () => {
   it("tomorrow's tile has no Cook icon", async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(routed, '/plan')
-    expect(within(await tile('Tomorrow')).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    expect(within(await tile('Tomorrow')).queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
   })
 })
 
@@ -223,7 +223,7 @@ describe('PlanScreen: Swap', () => {
   it('the icon button opens three alternative rows and tapping one sets it on the slot', async () => {
     const api = mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives, 'PUT /api/plan/2026-11-10/3/1': meal({ recipeId: 21, pinned: true }) })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
     const dialog = await screen.findByRole('dialog', { name: 'Swap for…' })
     expect(await within(dialog).findByRole('button', { name: 'Pizza' })).toBeInTheDocument()
     expect(within(dialog).getByRole('list', { name: 'Alternatives' }).querySelectorAll('li')).toHaveLength(3)
@@ -232,26 +232,24 @@ describe('PlanScreen: Swap', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
-  it('toasts "Swapped" with Undo, which puts the previous Recipe back and unpins it', async () => {
-    const api = mockApi({
+  // B9-26 (changed on purpose): Swap's Undo is no longer "put the previous Recipe back, then unpin": it is one POST /api/plan/restore with the
+  // server's undoToken (PC-01). The toast and its Undo are covered in PlanScreen.undo.test.tsx.
+  it('toasts "Swapped" with Undo when nothing else changed', async () => {
+    mockApi({
       'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives,
-      'PUT /api/plan/2026-11-10/3/1': meal({ recipeId: 21, pinned: true }),
-      'POST /api/plan/2026-11-10/3/1/unpin': meal({ recipeId: 8 }),
+      'PUT /api/plan/2026-11-10/3/1': { ...meal({ recipeId: 21, pinned: true }), changes: [], undoToken: 'tok-1' },
     })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
     await userEvent.click(await screen.findByRole('button', { name: 'Pizza' }))
     const toast = await findNotice('status', 'Swapped')
-    await userEvent.click(within(toast).getByRole('button', { name: 'Undo' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-10/3/1')).toHaveLength(2))
-    expect(api.callsTo('PUT', '/api/plan/2026-11-10/3/1')[1]?.body).toEqual({ recipeId: 8 })
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/3/1/unpin')).toHaveLength(1))
+    expect(within(toast).getByRole('button', { name: 'Undo the Swap' })).toBeInTheDocument()
   })
 
   it('"Keep it" closes the sheet and changes nothing', async () => {
     const api = mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
     await userEvent.click(await screen.findByRole('button', { name: 'Keep it' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(api.calls.some((c) => c.method !== 'GET')).toBe(false)
@@ -266,7 +264,7 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
       'PUT /api/plan/2026-11-11/4/1': meal({ recipeId: 32, pinned: true }),
     })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Choose a Recipe for / }))
     const dialog = await screen.findByRole('dialog', { name: 'Choose a Recipe' })
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Risotto' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-11/4/1')[0]?.body).toEqual({ recipeId: 32 }))
