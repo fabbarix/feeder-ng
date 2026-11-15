@@ -164,7 +164,15 @@ function SessionCookScreen(): ReactNode {
         onNext={gate.next}
         heldText={gate.heldText}
         onMarkCooked={view.meal && mayResolve(view.meal.date, view.today) ? () => setSheetOpen(true) : undefined}
-        onDone={view.meal ? undefined : () => navigate(`/recipes/${view.recipeId}`)}
+        onDone={
+          view.meal
+            ? undefined
+            : () => {
+                // PC-04 (main-session call, w4a): finishing a Recipe cook forgets its resume Step, as Mark as Cooked does for a meal.
+                session.clearResume()
+                navigate(`/recipes/${view.recipeId}`)
+              }
+        }
       />
       {view.meal ? (
         <MarkCookedSheet
