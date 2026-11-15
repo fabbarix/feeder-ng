@@ -24,4 +24,10 @@ describe('Settings hub descriptions (DS-10)', () => {
   it('Planning rules says where the Cooking times are', () => {
     expect(settingsStrings.index.sections.planningRules.meta).toMatch(/Cooking times/)
   })
+  // Review (w4c): each description names what is on its page. Planner Style, Cool-down and the Use-by days are in the Household
+  // form, not on Planning rules (the DS-10 mock's copy predates the Cooking times tile and named them there).
+  it('Planning rules names its own tiles, and Household names the Planner Style', () => {
+    expect(settingsStrings.index.sections.planningRules.meta).toBe('Cooking times, Slot Rules, Variety Rules')
+    expect(settingsStrings.index.sections.household.meta).toMatch(/Planner Style/)
+  })
 })
