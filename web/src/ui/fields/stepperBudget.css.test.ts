@@ -64,8 +64,9 @@ describe('xs stepper with a unit stays inside its frame (R2-F send-back)', () =>
     expect(px('var(--field-size-xs-stepper-unit)')).toBeGreaterThan(px('var(--field-size-xs-stepper)'))
   })
 
-  it('the xs stepper frame switches to that token when a unit is present', () => {
-    expect(unitRule['max-inline-size']).toBe('var(--field-size-xs-stepper-unit)')
+  // SET-07 (B9-16): the frame is full width and the size caps the control, so the token goes to --field-control-max.
+  it('the xs stepper control switches to that token when a unit is present', () => {
+    expect(unitRule['--field-control-max']).toBe('var(--field-size-xs-stepper-unit)')
   })
 
   it.each(['min', 'days', 'g'])('the reserved 3ch value plus the unit "%s" fits inside the frame (no overflow)', (unit) => {
