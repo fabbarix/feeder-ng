@@ -30,7 +30,7 @@ export interface UseTimersOptions {
   tickMs?: number
   /**
    * Ask the server again every this many ms (PC-04: the shell polls every 15 s, besides the live events). Default: no polling
-   * (Cook Mode refetches on live events and after its own actions). STUB: not applied yet.
+   * (Cook Mode refetches on live events and after its own actions). A failed poll keeps the last timers (offline).
    */
   pollMs?: number
 }
@@ -47,7 +47,11 @@ export function useTimers(scope?: string, opts: UseTimersOptions = {}): UseTimer
   const now = opts.now ?? Date.now
   const tickMs = opts.tickMs ?? 1000
   const client = useQueryClient()
-  const query = useQuery({ queryKey: [...TIMERS_KEY, scope ?? ''], queryFn: () => cookApi.timers(scope) })
+  const query = useQuery({
+    queryKey: [...TIMERS_KEY, scope ?? ''],
+    queryFn: () => cookApi.timers(scope),
+    refetchInterval: opts.pollMs && opts.pollMs > 0 ? opts.pollMs : false,
+  })
   const data = query.data
 
   // Measured once per response, against the device clock at the moment it arrived.

@@ -5,6 +5,7 @@ import { connectEvents } from '../../../lib/sse'
 import { cookApi } from '../api'
 import { advanceSummary, type AdvanceSummary } from '../lib/advance'
 import { coveredLines, readyBefore } from '../lib/baseSteps'
+import { clearResume as forgetResume, readResume, resumePosition, saveResume } from '../lib/resume'
 import { scopeOf } from '../lib/scope'
 import { createNav, goBack, goNext, isFirst, isLast, type StepNav } from '../lib/steps'
 import type { CookSource, CookStep, CookView } from '../types'
@@ -36,7 +37,7 @@ export interface UseCookSession {
   /** The Planned Meal for T11's Mark as Cooked sheet; null for a Recipe scope. */
   markCookedKey: { date: string; mealSlotId: number; courseId: number } | null
   scope: string
-  /** Forget the resume Step (Cooked). STUB: does nothing yet. */
+  /** Forget the resume Step (the screen calls it after Mark as Cooked). Nothing is saved again until the cook moves. */
   clearResume(): void
 }
 
@@ -48,6 +49,9 @@ const VIEW_KEY = ['cook', 'view'] as const
  * Reaching a Passive Step (by next/back, or because it is the first Step) starts
  * its timer once per Step per session through cookApi.startTimer({scope, step: index})
  * (the server keeps one timer per Step, so a second device is safe too).
+ * PC-04 resume: once the Steps are in, it opens on the Step stored for this scope (lib/resume; a finished timer's "after" is the next
+ * Step), and saves the Step on screen (with a Recipe cook's Batches) on open and on every next/back. Cooked, or 409 not_cookable,
+ * forgets it.
  */
 export function useCookSession(source: CookSource): UseCookSession {
   const client = useQueryClient()
@@ -61,6 +65,16 @@ export function useCookSession(source: CookSource): UseCookSession {
   const steps = view?.steps ?? []
 
   const [index, setIndex] = useState(0)
+  // The scope whose stored Step has been applied: once per scope, so a refetch never pulls the cook back.
+  const [resumedScope, setResumedScope] = useState<string | null>(null)
+  if (view && resumedScope !== scope) {
+    setResumedScope(scope)
+    setIndex(resumePosition(steps, readResume(scope)))
+  }
+  const resumed = resumedScope === scope
+  const batches = source.kind === 'recipe' ? source.batches : undefined
+  // After clearResume nothing is saved until the cook moves (leaving a Cooked meal must not store its Step again).
+  const forgotten = useRef(false)
   const [repeatCount, setRepeatCount] = useState(0)
   const started = useRef<Set<number>>(new Set())
   const nav = createNav(steps.length, index)
@@ -99,6 +113,25 @@ export function useCookSession(source: CookSource): UseCookSession {
     if (step) void startFor(step)
   }, [step, startFor])
 
+  // The Step on screen is the resume Step (on open and after every move).
+  const stepIndex = step?.index
+  useEffect(() => {
+    if (!resumed || stepIndex === undefined || forgotten.current) return
+    saveResume(scope, stepIndex, { batches })
+  }, [resumed, stepIndex, scope, batches])
+
+  const notCookable = query.error instanceof ApiError && query.error.code === 'not_cookable'
+  useEffect(() => {
+    if (!notCookable) return
+    forgotten.current = true
+    forgetResume(scope)
+  }, [notCookable, scope])
+
+  const clearResume = useCallback(() => {
+    forgotten.current = true
+    forgetResume(scope)
+  }, [scope])
+
   const total = steps.length
   const markAdvanceDone = useCallback(
     async (stepIndex: number) => {
@@ -121,13 +154,19 @@ export function useCookSession(source: CookSource): UseCookSession {
     view,
     isLoading: query.isLoading,
     error: query.error,
-    notCookable: query.error instanceof ApiError && query.error.code === 'not_cookable',
+    notCookable,
     nav,
     step,
     ready,
     covered: coveredLines(view?.covered),
-    next: () => setIndex((i) => goNext(createNav(total, i)).index),
-    back: () => setIndex((i) => goBack(createNav(total, i)).index),
+    next: () => {
+      forgotten.current = false
+      setIndex((i) => goNext(createNav(total, i)).index)
+    },
+    back: () => {
+      forgotten.current = false
+      setIndex((i) => goBack(createNav(total, i)).index)
+    },
     repeatCount,
     repeat: () => setRepeatCount((n) => n + 1),
     advance: advanceSummary(view?.advance ?? []),
@@ -137,6 +176,6 @@ export function useCookSession(source: CookSource): UseCookSession {
     isLast: isLast(nav),
     markCookedKey: view?.meal && source.kind === 'meal' ? { date: view.meal.date, mealSlotId: view.meal.mealSlotId, courseId: source.courseId } : null,
     scope,
-    clearResume: () => {},
+    clearResume,
   }
 }

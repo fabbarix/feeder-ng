@@ -175,7 +175,10 @@ function SessionCookScreen(): ReactNode {
           leftover={marked.leftover}
           onLeftoverChange={marked.setLeftover}
           onConfirm={async () => {
-            if (await marked.confirm()) setSheetOpen(false)
+            if (await marked.confirm()) {
+              session.clearResume()
+              setSheetOpen(false)
+            }
           }}
           onNotCooked={async () => {
             if (await marked.notCooked()) finishCook()
