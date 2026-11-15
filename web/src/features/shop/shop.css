@@ -195,7 +195,7 @@
   background: var(--color-surface);
   color: var(--color-info-fg);
   font-size: var(--text-chip-size);
-  line-height: 1;
+  line-height: var(--text-chip-line);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

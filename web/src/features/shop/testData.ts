@@ -87,9 +87,9 @@ export function makeOnion(over: Partial<ShoppingLine> = {}): ShoppingLine {
     pack: { productId: 21, name: 'Onion pack', size: 6, count: 16, remainder: 2, bought: false, price: { cents: 299, date: '2026-11-14', shopId: 1 } },
     estimatedCostCents: 4784,
     plannedMeals: [
-      { date: '2026-11-21', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Main', recipeName: 'French onion soup' },
-      { date: '2026-11-16', mealSlotId: 2, mealSlotName: 'Lunch', courseName: 'Main', recipeName: 'Onion and potato frittata' },
-      { date: '2026-11-18', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Main', recipeName: 'Roast chicken' },
+      { date: '2026-11-21', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Course 1', recipeName: 'French onion soup' },
+      { date: '2026-11-16', mealSlotId: 2, mealSlotName: 'Lunch', courseName: 'Course 1', recipeName: 'Onion and potato frittata' },
+      { date: '2026-11-18', mealSlotId: 3, mealSlotName: 'Dinner', courseName: 'Course 1', recipeName: 'Roast chicken' },
     ],
     ...over,
   }
