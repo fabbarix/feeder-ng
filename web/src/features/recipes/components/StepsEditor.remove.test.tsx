@@ -27,7 +27,7 @@ describe('StepsEditor: removal callbacks', () => {
   it('Remove Step calls onRemoveStep with the index and does not change the Steps itself', async () => {
     const onRemoveStep = vi.fn()
     const p = view([step({ key: 'a' }), step({ key: 'b' })], { onRemoveStep })
-    await userEvent.click(within(cards()[1]!).getByRole('button', { name: 'Remove Step' }))
+    await userEvent.click(within(cards()[1]!).getByRole('button', { name: /^Remove Step( \d+)?$/ }))
     expect(onRemoveStep).toHaveBeenCalledWith(1)
     expect(p.onChange).not.toHaveBeenCalled()
   })
@@ -35,14 +35,14 @@ describe('StepsEditor: removal callbacks', () => {
   it('Remove ingredient use calls onRemoveUse with the Step and use indexes', async () => {
     const onRemoveUse = vi.fn()
     const p = view([step({ key: 'a' }), step({ key: 'b', uses: [use, { ...use, key: 'u2' }] })], { onRemoveUse })
-    await userEvent.click(within(cards()[1]!).getAllByRole('button', { name: 'Remove ingredient use' })[1]!)
+    await userEvent.click(within(cards()[1]!).getAllByRole('button', { name: /^Remove (ingredient use|.+ from Step \d+)$/ })[1]!)
     expect(onRemoveUse).toHaveBeenCalledWith(1, 1)
     expect(p.onChange).not.toHaveBeenCalled()
   })
 
   it('without the callbacks the old behaviour stands (onChange with the shortened Steps)', async () => {
     const p = view([step({ key: 'a' }), step({ key: 'b' })])
-    await userEvent.click(within(cards()[0]!).getByRole('button', { name: 'Remove Step' }))
+    await userEvent.click(within(cards()[0]!).getByRole('button', { name: /^Remove Step( \d+)?$/ }))
     expect(vi.mocked(p.onChange).mock.calls[0]![0].map((s) => s.key)).toEqual(['b'])
   })
 

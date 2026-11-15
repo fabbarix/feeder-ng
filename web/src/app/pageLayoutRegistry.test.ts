@@ -117,7 +117,10 @@ const ADDED = {
   // B9-34: scenarios/b9-34.mjs (order 340, after b9-25 by file name): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
   // B9-35: scenarios/b9-35.mjs (order 340, after b9-34 by file name): scan-typed (no camera, P12 and P30), scan-camera-typed and scan-camera-landscape (a fake camera).
   // scan-price-keypad (scenarios/scan.mjs) is also a P43 scenario now: its setup shows a toast while the Price keypad is open.
-  // B9-51: scenarios/b9-51.mjs (order 340, after b9-35 by file name): tags-rows (SET-11), assistant-bar (SHORT-06), toast-over-preferences-bar, planning-cooking-times (PC-14, A2, SAFE-04).
+  // B9-37: scenarios/b9-37.mjs (order 340, after b9-35 by file name): the editor flow (RX height budget, new Recipe, ring room, restored focus, Tag chooser) and P12's option-cover probe.
+  // B9-51: scenarios/b9-51.mjs (order 340, after b9-37 by file name): tags-rows (SET-11), assistant-bar (SHORT-06), toast-over-preferences-bar, planning-cooking-times (PC-14, A2, SAFE-04).
+  // B9-27: scenarios/recipe-detail.mjs (order 340, after b9-51 by file name): the Cook tile in the first viewport, the side column's edges and the phone Cook bar (RX-04, SHORT-04);
+  // the seed step page-layout-seed/recipe-detail.mjs gives the seeded Recipe its lede, Source, eight Tags and an untimed Step.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
@@ -136,7 +139,9 @@ const ADDED = {
     'timer-pill', 'timer-pill-editor',
     'shop-ticked', 'shop-focus-after-tick',
     'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',
+    'recipe-editor-flow', 'recipe-new-flow', 'recipe-editor-ring-room', 'recipe-editor-restored-focus', 'recipe-editor-tag-chooser',
     'tags-rows', 'assistant-bar', 'toast-over-preferences-bar', 'planning-cooking-times',
+    'recipe-detail-cook', 'recipe-detail-phone',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',

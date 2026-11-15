@@ -22,7 +22,7 @@ describe('IngredientLineRow: a unit the Ingredient does not know (G2)', () => {
         />
       </ul>,
     )
-    await userEvent.click(screen.getByRole('combobox', { name: 'Unit' }))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ }))
     await userEvent.keyboard('handful')
     await userEvent.click(screen.getByRole('option', { name: 'Use unit "handful"' }))
     expect(onChange).toHaveBeenCalledWith({ unit: 'handful' })

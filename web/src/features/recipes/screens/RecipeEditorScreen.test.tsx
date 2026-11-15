@@ -45,12 +45,13 @@ beforeEach(() => {
 })
 
 describe('RecipeEditorScreen', () => {
-  it('has a section per concern: Details, Photo, Ingredients, Steps', () => {
+  // B9-37 (RX-02): Recipe (Name, the Photo button, Kind), Ingredients, Steps, then the closed "Description and source" and "Planning".
+  it('has a section per concern: Recipe, Ingredients, Steps, Description and source, Planning', () => {
     view()
     expect(screen.getByRole('heading', { level: 1, name: 'New Recipe' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Recipe' })).toContainElement(screen.getByRole('button', { name: /^Photo of the Recipe/ }))
     for (const name of ['Ingredients', 'Steps']) expect(screen.getByRole('heading', { level: 2, name })).toBeInTheDocument()
-    // IM2: the Photo section is the shared ImagePicker, whose group carries the heading.
-    expect(screen.getByRole('group', { name: 'Photo' })).toBeInTheDocument()
+    for (const name of [/^Description and source/, /^Planning/]) expect(screen.getByRole('button', { name })).toHaveAttribute('aria-expanded')
   })
 
   it('uses no native select, checkbox, file or search control (primitives only)', () => {
@@ -90,8 +91,12 @@ describe('RecipeEditorScreen', () => {
     expect(statuses.filter((el) => !el.classList.contains('toast-live'))[0]).toHaveAttribute('aria-busy', 'true')
   })
 
-  it('has an image picker for the Recipe and one for each Step', () => {
+  // B9-37 (RX-02): no picker is drawn until it is asked for: the Recipe's opens from its Photo button, a Step's after "Add Photo".
+  it('has an image picker for the Recipe and one for each Step, each drawn when asked for', async () => {
     view()
+    expect(screen.queryAllByTestId('fake-image-picker')).toHaveLength(0)
+    await userEvent.click(screen.getByRole('button', { name: /^Photo of the Recipe/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Add Photo( to Step \d+)?$/ }))
     expect(screen.getAllByTestId('fake-image-picker')).toHaveLength(2)
   })
 })

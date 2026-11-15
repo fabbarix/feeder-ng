@@ -39,11 +39,12 @@ beforeEach(() => {
 })
 
 describe('StepsEditor: drag handles', () => {
-  it('every Step card has a handle "Reorder Step N" in its head, with the shared instructions', () => {
+  // B9-37 (RX-02): the handle sits in the card's lead column, under the Step number (it had a head row before).
+  it('every Step card has a handle "Reorder Step N" in its lead column, with the shared instructions', () => {
     render(<Harness initial={three()} />)
     for (const [i, card] of cards().entries()) {
       const handle = within(card).getByRole('button', { name: `Reorder Step ${i + 1}` })
-      expect(card.querySelector('.step-card__head')).toContainElement(handle)
+      expect(card.querySelector('.step-card__lead')).toContainElement(handle)
       expect(handle).toHaveAccessibleDescription(/Press Space to pick up/)
     }
   })
@@ -98,7 +99,7 @@ describe('StepsEditor: keyboard reorder', () => {
 describe('StepsEditor: after-chips while a Step is lifted', () => {
   it('name the Steps by the positions shown in the preview, matching the badges', async () => {
     render(<Harness initial={three()} />)
-    const chipNames = (card: HTMLElement) => within(card).getAllByRole('button', { name: /^After step/ }).map((b) => b.textContent)
+    const chipNames = (card: HTMLElement) => within(card).getAllByRole('button', { name: /after step/i }).map((b) => b.textContent)
     const two = () => cards().find((c) => (within(c).getByRole('textbox', { name: 'Step text' }) as HTMLTextAreaElement).value === 'two')!
     expect(chipNames(two())).toEqual(['After step 1'])
     screen.getByRole('button', { name: 'Reorder Step 3' }).focus()
@@ -134,12 +135,12 @@ describe('StepsEditor: pointer reorder', () => {
 describe('StepsEditor: the actions menu is still the accessible fallback', () => {
   it('Move Step down in the menu still reorders, next to the handle', async () => {
     render(<Harness initial={three()} />)
-    await userEvent.click(within(cards()[0]!).getByRole('button', { name: 'Step actions' }))
+    await userEvent.click(within(cards()[0]!).getByRole('button', { name: /^Step( \d+)? actions$/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Move Step down' }))
     expect(texts()).toEqual(['two', 'one', 'three'])
   })
   it('Remove Step is still there', () => {
     render(<Harness initial={three()} />)
-    expect(within(cards()[0]!).getByRole('button', { name: 'Remove Step' })).toBeInTheDocument()
+    expect(within(cards()[0]!).getByRole('button', { name: /^Remove Step( \d+)?$/ })).toBeInTheDocument()
   })
 })

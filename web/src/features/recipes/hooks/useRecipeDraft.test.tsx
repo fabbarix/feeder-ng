@@ -262,6 +262,13 @@ describe('a Photo that was swept', () => {
 })
 
 describe('writing the draft', () => {
+  // The 500 ms wait is measured on the fake clock only: with shouldAdvanceTime a loaded machine moved the clock past 500 ms
+  // between "nothing at 499 ms" and its check, so these tests flaked (no waitFor here needs real time).
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(T0)
+  })
+
   it('writes 500 ms after the last change while dirty, with the stored Recipe\'s updatedAt as the base', async () => {
     const h = setup()
     await settle(10)

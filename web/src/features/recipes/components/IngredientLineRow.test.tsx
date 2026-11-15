@@ -18,26 +18,26 @@ const view = (p = props()) => {
 }
 
 describe('IngredientLineRow', () => {
-  it('uses only field primitives: no native select, checkbox or datalist', () => {
+  it('uses only field primitives: no native select or datalist', () => {
     view()
     expect(document.querySelector('select, datalist')).toBeNull()
-    expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('garlic')
-    expect(screen.getByRole('combobox', { name: 'Unit' })).toHaveTextContent('clove')
-    // E-01: Optional lives in the actions menu as a checkable item, never as a checkbox or a toggle button on the line.
-    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toHaveTextContent('garlic')
+    expect(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ })).toHaveTextContent('clove')
+    // B9-37 (RX-10): Optional is the line's Checkbox (the menu item is gone; IngredientLineRow.flow.test.tsx pins it).
+    expect(screen.getByRole('checkbox', { name: 'Optional: garlic' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Optional/ })).toBeNull()
   })
 
   it('picks an Ingredient from the IngredientSelect', async () => {
     const p = view(props({ line: line({ ingredientId: null, ingredientName: '', unit: '' }), ingredient: undefined }))
-    await userEvent.click(screen.getByRole('combobox', { name: 'Ingredient' }))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }))
     await userEvent.click(screen.getByRole('option', { name: /flour/ }))
     expect(p.onPick).toHaveBeenCalledWith(flour)
   })
 
   it('chooses a unit of the Ingredient from the UnitSelect', async () => {
     const p = view()
-    await userEvent.click(screen.getByRole('combobox', { name: 'Unit' }))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ }))
     await userEvent.click(screen.getByRole('option', { name: /^kg/ }))
     expect(p.onChange).toHaveBeenCalledWith({ unit: 'kg' })
   })
@@ -59,7 +59,7 @@ describe('IngredientLineRow', () => {
 
   it('has no Unit choice before an Ingredient is picked', () => {
     view(props({ line: line({ ingredientId: null, ingredientName: '', unit: '' }), ingredient: undefined }))
-    expect(screen.getByRole('combobox', { name: 'Unit' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ })).toBeDisabled()
   })
 
   it('keeps fractions typeable in Quantity (a text field, "1 1/2")', async () => {
@@ -70,8 +70,7 @@ describe('IngredientLineRow', () => {
 
   it('toggles optional and edits the note', async () => {
     const p = view()
-    await userEvent.click(screen.getByRole('button', { name: 'Actions for garlic' }))
-    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Optional' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Optional: garlic' }))
     expect(p.onChange).toHaveBeenCalledWith({ optional: true })
     await userEvent.type(screen.getByRole('textbox', { name: 'Note' }), 'x')
     expect(p.onChange).toHaveBeenLastCalledWith({ note: 'x' })
@@ -119,13 +118,14 @@ describe('IngredientLineRow: unique button names across lines', () => {
 })
 
 describe('IngredientLineRow: structure for the two-row phone layout', () => {
-  it('Ingredient, Quantity, Unit, Note and remove are direct children of the row, each in its own cell', () => {
+  // B9-37 (RX-10): the Optional checkbox has its own cell, between the Note and the actions.
+  it('Ingredient, Quantity, Unit, Note, Optional and the actions are direct children of the row, each in its own cell', () => {
     const { container } = render(<ul><IngredientLineRow {...props()} /></ul>)
     const row = container.querySelector('li.line-row')!
-    const cells = ['ingredient', 'quantity', 'unit', 'note', 'remove']
+    const cells = ['ingredient', 'quantity', 'unit', 'note', 'optional', 'remove']
     expect([...row.children].map((c) => c.className)).toEqual(cells.map((c) => `line-row__${c}`))
     expect(row.querySelector('.line-row__remove button[aria-label="Remove ingredient garlic"]')).not.toBeNull()
-    expect(row.querySelector('.line-row__optional')).toBeNull()
+    expect(row.querySelector('.line-row__optional input[type="checkbox"]')).toHaveAccessibleName('Optional: garlic')
     expect(row.querySelector('.line-row__remove button[aria-haspopup="menu"]')).toHaveAccessibleName('Actions for garlic')
   })
   it('the unit-conversion hint sits between the cells as its own full-width item', () => {

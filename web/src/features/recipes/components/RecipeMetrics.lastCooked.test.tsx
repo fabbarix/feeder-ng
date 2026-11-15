@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { RecipeMetrics } from './RecipeMetrics'
 
-const props = { yieldText: '4', readyMeal: false, totalMinutes: 25, advanceMinutes: 0 }
+const props = { yieldValue: 4, totalMinutes: 25, advanceMinutes: 0, stepCount: 3 }
 
 describe('RecipeMetrics last cooked', () => {
   it('shows the line it is given', () => {

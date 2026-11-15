@@ -3,7 +3,12 @@
 // recipes.sweep.test.ts pins the split itself.
 import { readSource } from '../plan/test-css'
 
-export const RECIPES_CSS_FILES = ['recipes.css', 'recipes-list.css', 'recipe-detail.css', 'recipe-editor.css'] as const
+// B9-37: recipe-editor.css is held to 600 lines, so the editor flow may split it; the three names below are where its parts go (a name that
+// does not exist is skipped).
+export const RECIPES_CSS_FILES = [
+  'recipes.css', 'recipes-list.css', 'recipe-detail.css', 'recipe-editor.css',
+  'recipe-editor.lines.css', 'recipe-editor.steps.css', 'recipe-editor.sections.css',
+] as const
 
 /** The paths (under web/src) of the Recipes stylesheets that exist. */
 export const recipesCssPaths = (): string[] => RECIPES_CSS_FILES.map((f) => `features/recipes/${f}`).filter((p) => readSource(p) !== '')

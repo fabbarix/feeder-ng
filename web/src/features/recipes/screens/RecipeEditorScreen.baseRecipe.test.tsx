@@ -66,7 +66,7 @@ describe('RecipeEditorScreen: Base recipe switch', () => {
   it('patches the draft on the toggle and asks nothing yet (the change applies on Save, see RecipeEditorScreen.kindSwitch)', async () => {
     mockApi({})
     view()
-    await userEvent.click(screen.getByRole('switch', { name: 'Base recipe' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Base recipe' }))
     await waitFor(() => expect(h.editor.setDraft).toHaveBeenCalled())
     expect(h.change.turnOn).not.toHaveBeenCalled()
     expect(h.change.turnOff).not.toHaveBeenCalled()

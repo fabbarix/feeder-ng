@@ -55,7 +55,7 @@ describe('recordDetail: what an Ingredient rules out', () => {
 })
 
 describe('recordAction: the trailing link', () => {
-  it('"Review garlic" goes to the Ingredient\'s Excluded by Tile', () => {
+  it('"Review garlic" goes to the Ingredient\'s Exclusions Tile', () => {
     expect(recordAction(garlic())).toEqual({ label: 'Review garlic', to: '/ingredients/12#exclusions' })
   })
   it('a direct Exclusion has none: its Recipes are links already', () => expect(recordAction(fishPie())).toBeNull())

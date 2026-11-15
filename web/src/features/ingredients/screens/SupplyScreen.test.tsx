@@ -1,4 +1,4 @@
-// H5: /supplies/:id (decision D5): the Ingredient page with kind="supply": Restock level Tile, kind Tile, no Shelf Life, no Excluded by.
+// H5: /supplies/:id (decision D5): the Ingredient page with kind="supply": Restock level Tile, kind Tile, no Shelf Life, no Exclusions.
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { alerts, findAlert, renderRoutes } from '../ingredient.test-helper'
@@ -102,11 +102,12 @@ describe('SupplyScreen: what a Supply has', () => {
     expect(screen.queryByRole('region', { name: /Ingredient/ })).toBeNull()
     expect(screen.getByRole('button', { name: 'Rename Dish soap' })).toBeInTheDocument()
   })
-  it('has no Shelf Life, Frozen Shelf Life or Excluded by Tile', () => {
+  it('has no Shelf Life, Frozen Shelf Life or Exclusions Tile', () => {
     setup()
     expect(screen.queryByLabelText(/Shelf Life/)).toBeNull()
     expect(screen.queryByRole('region', { name: /Shelf Life/ })).toBeNull()
-    expect(screen.queryByRole('heading', { name: 'Excluded by' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Frozen Shelf Life' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Exclusions' })).toBeNull()
     expect(screen.queryByText('exclusion list')).toBeNull()
     expect(screen.queryByText(/Shelf Life|Freezer/)).toBeNull()
   })

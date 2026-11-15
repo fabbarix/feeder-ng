@@ -56,7 +56,7 @@ describe('RecipeEditorScreen: Add ingredient (L13)', () => {
     })
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Add ingredient' }))
-    const boxes = screen.getAllByRole('combobox', { name: 'Ingredient' })
+    const boxes = screen.getAllByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })
     expect(boxes).toHaveLength(3)
     expect(boxes[2]).toHaveFocus()
   })
@@ -114,7 +114,7 @@ describe('RecipeEditorScreen: Steps reorder', () => {
   it('Move Step down in the Step actions menu still works', async () => {
     view()
     const first = document.querySelector<HTMLElement>('.steps-editor__list > li')!
-    await userEvent.click(within(first).getByRole('button', { name: 'Step actions' }))
+    await userEvent.click(within(first).getByRole('button', { name: /^Step( \d+)? actions$/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Move Step down' }))
     expect(vi.mocked(h.editor.setSteps as (s: { text: string }[]) => void).mock.calls[0]![0].map((s) => s.text)).toEqual(['Mix', 'Crush'])
   })

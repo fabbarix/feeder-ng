@@ -71,7 +71,7 @@ describe('RecipeEditorScreen: the kind switch applies on Save', () => {
     const api = mockApi({})
     h.editor = editorOf(savedPlannable, stored('plannable'))
     view('/recipes/4/edit')
-    await userEvent.click(screen.getByRole('switch', { name: 'Base recipe' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Base recipe' }))
     await waitFor(() => expect(h.editor.setDraft).toHaveBeenCalled())
     expect(h.change.turnOn).not.toHaveBeenCalled()
     expect(api.calls.filter((c) => c.method === 'POST')).toEqual([])

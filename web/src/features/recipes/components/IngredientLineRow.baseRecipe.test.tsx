@@ -65,6 +65,6 @@ describe('IngredientLineRow: a Base recipe line', () => {
   })
   it('sizes the Unit choices from the Base recipe\'s Ingredient', async () => {
     view(props({ line: baseLine, ingredient: bech }))
-    expect(screen.getByRole('combobox', { name: 'Unit' })).toHaveTextContent('ml')
+    expect(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ })).toHaveTextContent('ml')
   })
 })

@@ -44,15 +44,15 @@ const tiles = () => [...document.querySelectorAll('[role="group"][aria-label="In
 beforeEach(() => vi.unstubAllGlobals())
 
 describe('layout: one Keeping tile, no orphan (SET-05)', () => {
-  it('Keeping is the first tile and full width; Unit Conversions and Products are the pair; Excluded by and Picture are full and last', async () => {
+  it('Keeping is the first tile and full width; Unit Conversions and Products are the pair; Exclusions and Picture are full and last', async () => {
     setup()
     await ready()
     const names = tiles().map((t) => t.getAttribute('aria-label') ?? t.querySelector('h2')?.textContent)
     // Batch w3e ruling: the order follows the render (set-05-after): Products before Unit Conversions.
-    expect(names).toEqual(['Keeping', 'Products', 'Unit Conversions', 'Excluded by', 'Picture'])
+    expect(names).toEqual(['Keeping', 'Products', 'Unit Conversions', 'Exclusions', 'Picture'])
     const span = (name: string) => tiles().find((t) => (t.getAttribute('aria-label') ?? t.querySelector('h2')?.textContent) === name)!.getAttribute('data-span')
     expect(span('Keeping')).toBe('full')
-    expect(span('Excluded by')).toBe('full')
+    expect(span('Exclusions')).toBe('full')
     expect(span('Picture')).toBe('full')
     expect(span('Unit Conversions')).not.toBe('full')
     expect(span('Products')).not.toBe('full')

@@ -12,27 +12,86 @@ export const recipeDetailStrings = {
   archive: 'Archive',
   unarchive: 'Unarchive',
   delete: 'Delete',
+  /** SAFE-05: the danger dialog of a Recipe that can be deleted. */
   deleteDialog: {
     title: (name: string) => `Delete ${name}?`,
-    body: 'It is removed from future Planned Meals. Archive keeps it for history.',
+    body: 'Nobody has planned it yet.',
+    note: "Nothing else changes. This can't be undone.",
     confirm: 'Delete',
     alternate: 'Archive instead',
   },
+  /** Ruling 3 (B9-27): a Base recipe in use can't be deleted; the dialog lists the Recipes that use it (up to 5, then "and N more"). */
   inUse: {
-    title: (name: string) => `${name} is in use`,
+    lead: (n: number) => `It is used in ${n} ${n === 1 ? 'Recipe' : 'Recipes'}.`,
+    /** Main-session call (w4b): "Used in", so the rows' label does not repeat the lead line's "Recipes". */
+    rowsLabel: 'Used in',
+    archived: 'Archived',
+    more: (n: number) => `and ${n} more`,
   },
   more: 'More actions',
-  portionsPerBatch: (yieldText: string) => `${yieldText} portions per Batch`,
+  /** RX-06: the Yield metric. A plannable Recipe: value "4", label "portions per Batch"; a Base recipe: value "800 g", label "per Batch". */
+  portionsPerBatch: (n: number) => (n === 1 ? 'portion per Batch' : 'portions per Batch'),
+  perBatch: 'per Batch',
   totalMetric: (t: string) => `${t} cooking`,
+  /** RX-13: the time metric's label under the value ("37 min" / "cooking"). */
+  cookingLabel: 'cooking',
   aheadMetric: (t: string) => `+ ${t} ahead`,
+  /** RX-07: Steps without a Duration are not "No Steps". */
+  noTimeSet: 'No time set',
+  untimedSteps: (n: number) => (n === 1 ? '1 Step, not timed' : `${n} Steps, none timed`),
   cook: {
     start: 'Start Cook Mode',
+    /** SHORT-04: the button's visible label at 375 px and below; its name stays "Start Cook Mode". */
+    short: 'Cook',
     barLabel: 'Cook',
     batches: 'Batches',
-    batchesHint: (n: number, portions: string) => `${n} Batch${n === 1 ? '' : 'es'} · ${portions} portions`,
+    /** RX-06: "1 Batch · 4 portions", "2 Batches · 1.6 kg". */
+    batchesHint: (n: number, amount: string) => `${n} Batch${n === 1 ? '' : 'es'} · ${amount}`,
   },
-
-  deleteBlocked: 'This Recipe was planned, so it can only be archived.',
+  /** RX-05: the lede (description and Source). */
+  about: {
+    showMore: 'Show more',
+    showLess: 'Show less',
+    source: 'Source:',
+    sourceLink: (host: string) => `Source: ${host}, opens in a new tab`,
+  },
+  /** RX-04: the hero's one chip line (Courses, Archived, Whole meal, Ready Meal, then the Tags). */
+  heroChips: {
+    label: 'Courses and Tags',
+    showAll: (n: number) => `Show all ${n} Tags`,
+    showFewer: 'Show fewer Tags',
+    fewer: 'Show fewer',
+  },
+  /** RX-04: a Step row's time at its end, and the Steps it comes after (1-based). */
+  stepRow: {
+    noTime: 'No time',
+    before: (t: string) => `${t} before`,
+    after: (numbers: string, count: number) => `After ${count === 1 ? 'Step' : 'Steps'} ${numbers}`,
+  },
+  /** RX-06: the Base recipe section's heading, always, and the sentence when nothing uses it. */
+  usedIn: {
+    title: 'Used in',
+    none: "Not used in any Recipe yet. Link it from a Recipe's ingredient line.",
+  },
+  /** SAFE-05 and ruling 3: Delete of a Recipe that is not deletable says why before asking, and offers only Archive. */
+  deleteBlocked: {
+    title: (name: string) => `${name} can't be deleted`,
+    planned: 'It was planned before, so Feeder keeps it in the history of what was Cooked.',
+    note: 'Archive takes it out of the Recipes list, the pickers and the plan. You can unarchive it later.',
+    archive: 'Archive',
+  },
+  /** RX-04 / SAFE-05 toasts (R-D+): plain success toasts, an outline Undo; failures are error toasts with Retry. */
+  toasts: {
+    archived: (name: string) => `${name} archived`,
+    unarchived: (name: string) => `${name} unarchived`,
+    undoUnarchive: (name: string) => `Undo: unarchive ${name}`,
+    undoArchive: (name: string) => `Undo: archive ${name}`,
+    deleted: (name: string) => `${name} deleted`,
+    archiveFailed: (name: string) => `Couldn't archive ${name}`,
+    unarchiveFailed: (name: string) => `Couldn't unarchive ${name}`,
+    deleteFailed: (name: string) => `Couldn't delete ${name}`,
+    retry: 'Retry',
+  },
   edit: 'Edit',
   ingredients: 'Ingredients',
   stepsTitle: 'Steps',
@@ -56,7 +115,16 @@ export const recipeDetailStrings = {
   stateToggle: (member: string, state: string) => `${member}: ${state}`,
   saveFailed: (member: string, state: string) => `Couldn't save ${member}'s ${state}. Try again.`,
   exclusionSaveFailed: (member: string) => `Couldn't save ${member}'s Exclusions. Try again.`,
-  /** PT: who excludes an Ingredient (the Ingredient page's Excluded by Tile). */
+  /** PT: who excludes an Ingredient (the Ingredient page's Exclusions Tile). */
   members: 'Members',
-  excludesToggle: (member: string, ingredient: string) => `${member}: excludes ${ingredient}`,
+  /** A11Y 3: the toggle's name, without a colon, and the excluding Member's row meta. */
+  excludesToggle: (member: string, ingredient: string) => `${member} excludes ${ingredient}`,
+  excludesMeta: (ingredient: string) => `Excludes ${ingredient}`,
+  /** A11Y 3: the Exclusions tile's summary (lib/preference exclusionSummary picks the form). */
+  exclusionSummary: {
+    nobody: (ingredient: string) => `Nobody excludes ${ingredient}.`,
+    one: (name: string, ingredient: string) => `${name} excludes ${ingredient}.`,
+    two: (a: string, b: string, ingredient: string) => `${a} and ${b} exclude ${ingredient}.`,
+    many: (a: string, b: string, more: number, ingredient: string) => `${a}, ${b} and ${more} more exclude ${ingredient}.`,
+  },
 } as const

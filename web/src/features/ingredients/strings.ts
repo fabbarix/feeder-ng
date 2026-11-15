@@ -7,8 +7,8 @@ export const strings = {
   nameLabel: 'Name',
   /** H5: the New Ingredient sheet's name for a Supply (ADR 0017). */
   newSupply: 'New Supply',
-  /** PT: the Ingredient page's Tile of the Members who exclude it (rx-pt.md section 5.4). */
-  excludedBy: 'Excluded by',
+  /** PT: the Ingredient page's Tile of the Members who exclude it (rx-pt.md section 5.4); A11Y 3 (B9-27): titled "Exclusions". */
+  excludedBy: 'Exclusions',
   baseUnitLabel: 'Base Unit',
   /** R14 / F-09: the New Ingredient sheet. */
   sheet: {

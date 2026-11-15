@@ -89,7 +89,13 @@
   }
 }
 
-/* A11Y-02: one tab stop (the arrows choose), so the whole track rings with the outer ring and the option draws none. */
+/* A11Y-02: one tab stop (the arrows choose), so the whole track rings with the outer ring and the option draws none. The option
+   keeps the track's padding as its scroll margin, so focus scrolls the whole ringed track clear of a sticky bar, not just the option
+   (P39: the track's ring ran 1 px under the Recipe editor's Save bar). */
+.segmented__option {
+  scroll-margin-block: var(--space-1);
+}
+
 .segmented__option:focus-visible {
   outline: none;
 }

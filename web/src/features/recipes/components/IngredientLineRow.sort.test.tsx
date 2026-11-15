@@ -28,7 +28,7 @@ describe('IngredientLineRow: drag handle', () => {
     expect(holder).not.toBeNull()
     expect(cell.firstElementChild).toBe(holder)
     expect(within(holder as HTMLElement).getByRole('button', { name: 'Reorder garlic' })).toBeInTheDocument()
-    expect(holder!.compareDocumentPosition(within(cell as HTMLElement).getByRole('combobox', { name: 'Ingredient' }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(holder!.compareDocumentPosition(within(cell as HTMLElement).getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
   it('spreads the sortable item props on the row (state and drag offset)', () => {
     view(props({ itemProps: { ref: null, 'data-sortable-item': '', 'data-sortable-index': 1, 'data-state': 'dragging', style: { ['--sortable-dy' as string]: '12px' } } }))
@@ -61,7 +61,7 @@ describe('IngredientLineRow: drag handle', () => {
     expect(row().querySelector('.line-row__handle')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Actions for garlic' }))
     expect(screen.queryByRole('menuitem', { name: /^Move ingredient/ })).toBeNull()
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Optional' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Add note' })).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
     expect(screen.getByRole('button', { name: 'Remove ingredient garlic' })).toBeInTheDocument()
   })

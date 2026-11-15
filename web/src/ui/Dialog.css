@@ -132,6 +132,15 @@ html:has(dialog:modal) {
   align-items: stretch;
 }
 
+/* A phone dialog with three actions (Cancel, an alternative, the commit) cannot hold them on one line: rather than leave the last one
+   alone at the end of a ragged second line, each line's buttons share its width, so the commit takes the whole last line (as SAFE-02
+   gives a destructive action its own row). Two actions keep their natural width at the end. */
+@media (width < 37.5em) {
+  .dialog__actions:has(> :nth-child(3)) > * {
+    flex: 1 1 auto;
+  }
+}
+
 @keyframes dialog-in {
   from {
     opacity: 0;

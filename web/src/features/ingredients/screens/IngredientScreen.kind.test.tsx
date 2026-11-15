@@ -65,7 +65,7 @@ describe('IngredientScreen: food', () => {
     expect(within(await more()).getByRole('menuitem', { name: 'Change to Supply' })).toBeInTheDocument()
     expect(screen.queryByRole('spinbutton', { name: /Restock level/ })).toBeNull() // B9-48 "type or step": a spinbutton now
     expect(screen.getByRole('group', { name: 'Shelf Life' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Excluded by' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Exclusions' })).toBeInTheDocument()
   })
   it('merges in its kind', async () => {
     setup()

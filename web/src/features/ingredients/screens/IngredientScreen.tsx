@@ -23,7 +23,7 @@ import type { IngredientDetail, IngredientKind } from '../types'
 /**
  * Route /ingredients/:id (food, the default) and /supplies/:id (kind "supply"). SET-05: the header holds the name, "Food" or
  * "Supply", and two outline IconButtons: Rename (a sheet) and More (Merge, Change kind, Delete). Below, a BentoGrid: Keeping (one
- * tile, one Save) first and full width, then Products and Unit Conversions as a pair (the render's order), then (food) Excluded by and the Picture, full
+ * tile, one Save) first and full width, then Products and Unit Conversions as a pair (the render's order), then (food) Exclusions and the Picture, full
  * width. An Ingredient opened under the other kind's route is sent to its own page.
  */
 export function IngredientScreen({ kind = 'food' }: { kind?: IngredientKind }) {

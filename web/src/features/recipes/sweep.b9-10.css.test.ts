@@ -1,7 +1,7 @@
 // B9-10 (sweep-recipes-settings): the W1 sweep of features/recipes, import, recipe-assistant, settings and tags, pinned in the source
 // because jsdom does not lay out (the page-layout scenarios and the reviewer's shots are the proof of geometry). One block per theme:
 //   DS-07 type roles and the DS-07 drift (docs/ B9-DRIFT-W1.md), DS-11 (opacity, radii, spacing), A11Y-02 (focus rings),
-//   DS-09 (em breakpoints, container queries in rem, no raw useMediaQuery), DS-04 (.tag-input), WP-RX-0 (the file splits).
+//   DS-09 (em breakpoints, container queries in rem, no raw useMediaQuery), DS-04 (.tag-input, now .tag-chooser: B9-37), WP-RX-0 (the file splits).
 // Each test reads every file of the five folders, so a class added later is covered too.
 import { describe, expect, it } from 'vitest'
 import { readSource } from '../plan/test-css'
@@ -196,9 +196,10 @@ describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery'
     expect(queries.length).toBeGreaterThan(0)
     expect(queries.filter(({ a }) => /\d+(\.\d+)?(px|em)\b/.test(a.replace(/rem/g, ''))).map(({ r, a }) => `${label(r)} in ${a}`)).toEqual([])
   })
-  it('the two-column Recipe detail and editor start at (min-width: 80em), not 1280px', () => {
+  it('the two-column Recipe editor starts at (min-width: 80em), not 1280px; the detail (B9-27, RX-04) switches by its own width, in a container query', () => {
     const wide = rules.filter((r) => r.at.includes('@media (min-width: 80em)')).map((r) => r.file)
-    expect(wide.some((f) => /recipes\/recipe-detail\.css$/.test(f)), 'detail').toBe(true)
+    expect(wide.some((f) => /recipes\/recipe-detail\.css$/.test(f)), 'detail has no 80em media rule').toBe(false)
+    expect(rules.some((r) => /recipes\/recipe-detail\.css$/.test(r.file) && r.at.includes('@container recipe-detail (min-width: 45rem)')), 'detail container query').toBe(true)
     expect(wide.some((f) => /recipes\/recipe-editor\.css$/.test(f)), 'editor').toBe(true)
   })
   it('the Settings phone rules are (width < 37.5em), not max-width: 599px', () => {
@@ -212,31 +213,33 @@ describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery'
     const declared = rules.filter((r) => /mealSlotCards\.css$/.test(r.file) && declarations(r.body).some(([k, v]) => (k === 'container' && /^ms-card\s*\/\s*inline-size$/.test(v)) || (k === 'container-name' && v === 'ms-card')))
     expect(declared.length, 'a rule declares the ms-card container (container: ms-card / inline-size)').toBeGreaterThan(0)
   })
-  it('the editor ingredient lines switch to one row at @container ... (min-width: 49rem), not (min-width: 900px)', () => {
-    const q = rules.filter((r) => /recipes\/recipe-editor\.css$/.test(r.file) && selectorsOf(r).includes('.line-row') && r.at.some((a) => /^@container [a-z-]+ \(min-width: 49rem\)$/.test(a)))
+  // B9-37 (RX-02): the switch moved from the 49rem box query to the chapter's 42rem of list width, in the editor's lines sheet.
+  it('the editor ingredient lines switch to one row at @container ... (min-width: 42rem), not (min-width: 900px)', () => {
+    const q = rules.filter((r) => /recipes\/recipe-editor[^/]*\.css$/.test(r.file) && selectorsOf(r).includes('.line-row') && r.at.some((a) => /^@container [a-z-]+ \(min-width: 42rem\)$/.test(a)))
     expect(q.length).toBeGreaterThan(0)
     const name = /^@container ([a-z-]+) /.exec(q[0]!.at.find((a) => a.startsWith('@container'))!)![1]!
     // the container the query names must be declared, in the editor sheet, on an element that holds the .line-row and its header
     const declared = rules.some((r) => declarations(r.body).some(([k, v]) => (k === 'container' && new RegExp(`^${name}\\s*/\\s*inline-size$`).test(v)) || (k === 'container-name' && v === name)))
     expect(declared, `container ${name} is declared`).toBe(true)
   })
-  it('useMediaQuery is not called by a component of the five folders: RecipeDetailScreen asks useBreakpoint("desktopWide")', () => {
+  // B9-27 (RX-04): the Cook tile shows from the side rail's breakpoint, 1024 px ('desktop'), no longer from 'desktopWide'.
+  it('useMediaQuery is not called by a component of the five folders: RecipeDetailScreen asks useBreakpoint("desktop")', () => {
     const calls = codeFiles().filter((f) => /\buseMediaQuery\s*\(/.test(stripComments(f.text))).map((f) => f.path)
     expect(calls).toEqual([])
     const detail = readSource('features/recipes/screens/RecipeDetailScreen.tsx')
-    expect(detail).toMatch(/useBreakpoint\(\s*'desktopWide'\s*\)/)
+    expect(detail).toMatch(/useBreakpoint\(\s*'desktop'\s*\)/)
     expect(detail).not.toMatch(/1280px/)
   })
 })
 
+// B9-37 (RX-09): the Tag field is .tag-chooser now (TagInput is gone); recipe-editor.tagChooser.css.test.ts holds the rest of DS-04.
 describe('DS-04: a Tag chip never runs past the Tag field', () => {
-  const tagInput = () => merged(rules, '.tag-input')
-  it('.tag-input has a definite track: grid-template-columns: minmax(0, 1fr)', () => {
-    expect(tagInput()['grid-template-columns']).toBe('minmax(0, 1fr)')
+  const field = () => merged(rules, '.tag-chooser')
+  it('.tag-chooser has a definite track: grid-template-columns: minmax(0, 1fr)', () => {
+    expect(field()['grid-template-columns']).toBe('minmax(0, 1fr)')
   })
-  it('.tag-input is capped at min(24rem, 100%), not a fixed 320px that is wider than the 375 px column', () => {
-    expect(tagInput()['max-inline-size']).toBe('min(24rem, 100%)')
-    expect(JSON.stringify(rules.filter((r) => selectorsOf(r).includes('.tag-input')).map((r) => r.body))).not.toMatch(/320px/)
+  it('.tag-chooser sets no fixed 320px, which is wider than the 375 px column', () => {
+    expect(JSON.stringify(rules.filter((r) => selectorsOf(r).some((s) => s.startsWith('.tag-chooser'))).map((r) => r.body))).not.toMatch(/320px/)
   })
 })
 
@@ -266,10 +269,11 @@ describe('WP-RX-0: recipes.css is split into recipes-list.css, recipe-detail.css
   it('the classes live with their screen: tile and filters in the list, Steps and Preferences in the detail, Tag input and Step cards in the editor', () => {
     const list = classesOf('recipes-list.css')
     const detail = classesOf('recipe-detail.css')
-    const editor = classesOf('recipe-editor.css')
+    // B9-37: the editor's sheet is split under the 600-line cap (recipe-editor.css, .lines.css, .steps.css, .sections.css).
+    const editor = new Set(['recipe-editor.css', 'recipe-editor.lines.css', 'recipe-editor.steps.css', 'recipe-editor.sections.css'].flatMap((f) => [...classesOf(f)]))
     for (const c of ['recipe-tile', 'recipes-screen']) expect(list.has(c), `list: .${c}`).toBe(true)
     for (const c of ['recipe-detail__hero', 'steps-list', 'preference-table']) expect(detail.has(c), `detail: .${c}`).toBe(true)
-    for (const c of ['tag-input', 'step-card', 'line-row', 'recipe-editor-layout']) expect(editor.has(c), `editor: .${c}`).toBe(true)
+    for (const c of ['tag-chooser', 'step-card', 'line-row', 'recipe-editor-layout']) expect(editor.has(c), `editor: .${c}`).toBe(true)
     for (const c of ['steps-list', 'preference-table']) expect(editor.has(c) || list.has(c), `${c} not in list or editor`).toBe(false)
   })
 })

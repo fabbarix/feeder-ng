@@ -17,11 +17,13 @@ export interface CheckboxProps {
   indeterminate?: boolean
   disabled?: boolean
   name?: string
+  /** B9-37: the accessible name when the visible label must say more ("Optional: garlic" under the visible "Optional"). Start with the label. */
+  ariaLabel?: string
   onChange: (checked: boolean) => void
 }
 
 /** A 22 px checkbox: the native input is visually replaced by .checkbox__box with a Check (or Minus when mixed). */
-export function Checkbox({ label, id: inputId, description, checked, indeterminate = false, disabled, name, onChange }: CheckboxProps) {
+export function Checkbox({ label, id: inputId, description, checked, indeterminate = false, disabled, name, ariaLabel, onChange }: CheckboxProps) {
   const id = useId()
   const input = useRef<HTMLInputElement>(null)
   useEffect(() => {
@@ -37,6 +39,7 @@ export function Checkbox({ label, id: inputId, description, checked, indetermina
           type="checkbox"
           className="checkbox__input"
           name={name}
+          aria-label={ariaLabel}
           checked={checked}
           disabled={disabled}
           aria-describedby={description ? descriptionId : undefined}

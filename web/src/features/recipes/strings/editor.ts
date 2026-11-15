@@ -1,6 +1,8 @@
 // Recipes strings, editor area (WP-RX-0): the Recipe editor, its fields, lines, Steps, Base recipes and error codes.
 // Glossary terms only (Recipe, Yield, Ready Meal, Step, Advance Step, Tag, Favourite, Dislike, Exclusion, Unit Conversion, Member,
 // Cool-down, Use-by). Re-exported as part of recipeStrings by ../strings.ts.
+const days = (n: number) => (n === 1 ? '1 day' : `${n} days`)
+const dayText = (n: string) => (n === '1' ? '1 day' : `${n} days`)
 const capitalised = (name: string) => name.charAt(0).toUpperCase() + name.slice(1)
 const lineThing = (name: string, n: number) => (name.trim() ? `${capitalised(name.trim())} line` : `Line ${n}`)
 const useThing = (name: string) => (name.trim() ? `${capitalised(name.trim())} use` : 'Ingredient use')
@@ -86,6 +88,46 @@ export const recipeEditorStrings = {
     frozenUse: 'Frozen Use-by',
     reheat: 'Reheat time',
     reheatHint: 'Blank: Reheat works it out from the portions',
+    /** B9-37 (RX-02, RX-10): the editor flow. Kind, the sections, the Household's defaults footnote, the Photo button, the summaries. */
+    kind: 'Kind',
+    kindRecipe: 'Recipe',
+    kindHelp: 'A Ready Meal is one bought pack. A Base recipe is used inside other Recipes and never planned.',
+    leftoverUseBy: 'Leftover Use-by',
+    householdDefaults: (cooldownDays: number, leftoverUseByDays: number, frozenUseByDays: number): string =>
+      `Leave a field blank to use the Household's setting: Cool-down ${days(cooldownDays)}, Leftover Use-by ${days(leftoverUseByDays)}, Frozen Use-by ${days(frozenUseByDays)}. Reheat time without a value is worked out from the portions.`,
+    sectionRecipe: 'Recipe',
+    sectionAbout: 'Description and source',
+    sectionPlanning: 'Planning',
+    optionalSummary: 'Optional',
+    summary: {
+      cooldown: (n: string) => `Cool-down ${dayText(n)}`,
+      leftoverUseBy: (n: string) => `Leftover Use-by ${dayText(n)}`,
+      reheat: (n: string) => `Reheat time ${n} min`,
+      frozenUseBy: (n: string) => `Frozen Use-by ${dayText(n)}`,
+      overrides: (n: number) => `${n} overrides`,
+      householdDefaults: 'Household defaults',
+      neverPlanned: 'Never planned',
+    },
+    photoButton: (has: boolean) => (has ? 'Photo of the Recipe: change' : 'Photo of the Recipe: add'),
+    photoAdd: 'Add',
+    photoChange: 'Change',
+    yieldFor: 'For one Batch of',
+    yieldPortions: 'portions',
+    yieldPack: 'One pack is',
+    yieldMakes: 'One Batch makes',
+    /** RX-09: the Tag chooser. "Done" is the mock's word (main-session ruling; the sheet has no Cancel). */
+    tagChooser: {
+      add: 'Add Tag',
+      title: 'Tags',
+      search: 'Search or add a Tag',
+      list: 'Tags',
+      create: (q: string) => `Add Tag \u201c${q}\u201d`,
+      createMeta: 'New Tag, gets the next Tag colour',
+      chosen: (names: string) => `Chosen: ${names}`,
+      empty: 'No Tags yet. Type a name to add one.',
+      noMatch: 'No Tag matches.',
+      done: 'Done',
+    },
     sourceUrl: 'Source link',
     attribution: 'Attribution',
   },
@@ -104,7 +146,11 @@ export const recipeEditorStrings = {
     down: 'Move ingredient down',
     optional: 'Optional',
     optionalLine: (name: string) => `Optional: ${name}`,
+    addNote: 'Add note',
     lineLabel: (n: number) => `line ${n}`,
+    /** B9-37 (A11Y-08, P38): the line's Selects name their line ("Ingredient of line 2", "Unit for Flour"); the labels stay on screen. */
+    ingredientOf: (n: number) => `Ingredient of line ${n}`,
+    unitFor: (name: string) => `Unit for ${name}`,
     none: 'No ingredients yet.',
     packSizeHint: 'Enter the pack size.',
     unitNeedsConversion: (unit: string) => `Feeder will ask how much 1 ${unit} is when you save.`,
@@ -145,14 +191,35 @@ export const recipeEditorStrings = {
     after: 'After',
     afterStep: (n: number) => `After step ${n}`,
     image: 'Step photo',
+    /** B9-37: the empty compact Step picker (GLOSSARY: a Step's picture is its Photo). */
+    noPhotoYet: 'No Photo yet.',
     usesTitle: 'Uses',
     addUse: 'Add ingredient use',
+    /** B9-37: the visible words of the Step's chips (their names stay addUse and addPhoto). */
+    useChip: 'Ingredient use',
+    addPhoto: 'Add Photo',
+    photoChip: 'Photo',
+    kindOf: (n: number) => `Kind of Step ${n}`,
+    advanceShort: 'Advance',
     removeUse: 'Remove ingredient use',
     useIngredient: 'Ingredient used',
     useQuantity: 'Quantity used',
     useUnit: 'Unit used',
     usesLine: (parts: string) => `Uses ${parts}`,
     stepNumber: (n: number) => `Step ${n}`,
+    /** B9-37 (A11Y-08, P38): a control repeated on every Step names its Step; the visible words stay the short ones above. */
+    removeOf: (n: number) => `Remove Step ${n}`,
+    actionsOf: (n: number) => `Step ${n} actions`,
+    kindOption: (n: number, kind: string) => `Step ${n}: ${kind}`,
+    durationOf: (n: number) => `Duration of Step ${n}`,
+    leadOf: (n: number) => `Lead time of Step ${n}`,
+    afterOf: (n: number, j: number) => `Step ${n} after Step ${j}`,
+    addUseTo: (n: number) => `Add ingredient use to Step ${n}`,
+    addPhotoTo: (n: number) => `Add Photo to Step ${n}`,
+    removeUseFrom: (use: string, n: number) => `Remove ${use} from Step ${n}`,
+    useIn: (use: string, n: number) => `${use} in Step ${n}`,
+    useIngredientIn: (n: number) => `Ingredient used in Step ${n}`,
+    useUnitIn: (n: number) => `Unit used in Step ${n}`,
     empty: 'No Steps. A Recipe can be made without them.',
   },
   /** B9-31 (SAFE-10): the Undo toasts of a removal. A name is capitalised; a line with no Ingredient is "Line 3". */
