@@ -11,6 +11,7 @@ import {
   newSlotCourses,
   removalPreview,
   slotCourseInputs,
+  slotCourseMeta,
   withCourseIds,
   withEater,
   withOptional,
@@ -158,3 +159,26 @@ describe('courseRemovals and removalPreview', () => {
   })
 })
 
+// SET-09: the second line of a Course row says who does not eat it, in words, never as a bare count.
+describe('slotCourseMeta', () => {
+  const row = (optOutMemberIds: number[]): SlotCourseInput => ({ id: 4, optional: true, optOutMemberIds })
+  const names = (...ids: number[]) => members.filter((m) => ids.includes(m.id))
+  it('is null when everyone who attends eats the Course', () => {
+    expect(slotCourseMeta(row([]), members)).toBeNull()
+  })
+  it('names one Member in the singular', () => {
+    expect(slotCourseMeta(row([sam.id]), members)).toBe('Sam does not eat it')
+  })
+  it('joins two with "and" and uses the plural', () => {
+    expect(slotCourseMeta(row([sam.id, anna.id]), members)).toBe('Anna and Sam do not eat it')
+  })
+  it('joins three with commas and "and"', () => {
+    expect(slotCourseMeta(row(members.map((m) => m.id)), members)).toMatch(/^.+, .+ and .+ do not eat it$/)
+  })
+  it('lists the names in the Members order, not the order of the opt-outs', () => {
+    expect(slotCourseMeta(row([3, 1]), members)).toBe(`${members[0]!.name} and ${members[2]!.name} do not eat it`)
+  })
+  it('ignores an opt-out of a Member who no longer attends', () => {
+    expect(slotCourseMeta(row([sam.id]), names(1, 2))).toBeNull()
+  })
+})

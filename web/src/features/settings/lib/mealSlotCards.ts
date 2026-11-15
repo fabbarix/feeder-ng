@@ -18,7 +18,7 @@ export interface CourseChip {
 
 /** One weekday of the 7-day strip: a day the name runs (its slot, its time, whether it differs from the card's usual) or a free day ("+ add"). */
 export type WeekCell =
-  | { weekday: number; state: 'runs'; slot: MealSlot; time: string; differs: boolean }
+  | { weekday: number; state: 'runs'; slot: MealSlot; time: string; differs: boolean; /** SET-08: this day's time is not the card's usual time, so the strip prints it. */ timeDiffers: boolean }
   | { weekday: number; state: 'free' }
 
 /** A weekday of a card that differs from the card's usual; only the fields that differ are set. */
@@ -142,7 +142,7 @@ function buildCard(list: MealSlot[], members: Member[], today: string, weekStart
   const week: WeekCell[] = order.map((weekday) => {
     const e = entries.find((x) => x.weekday === weekday)
     if (!e) return { weekday, state: 'free' }
-    return { weekday, state: 'runs', slot: e.slot, time: e.time, differs: differsOn(e) }
+    return { weekday, state: 'runs', slot: e.slot, time: e.time, differs: differsOn(e), timeDiffers: false }
   })
 
   const editEntry = entries.find(matchesUsual) ?? entries[0]!

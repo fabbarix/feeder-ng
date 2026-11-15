@@ -69,14 +69,16 @@ describe('buildMealSlotCards: grouping', () => {
   it('has no cards without slots', () => {
     expect(build([])).toEqual([])
   })
-  it('a name that runs one day only still gets a card (a half-width one)', () => {
+  it('a name that runs one day only still gets a card', () => {
     const cards = build([slot(2, 'Snack', '16:00')])
     expect(cards[0]!.days).toEqual([2])
-    expect(cards[0]!.span).toBe('half')
   })
-  it('a name that runs all seven days spans the full width', () => {
-    expect(card(build(sample()), 'Dinner').span).toBe('full')
-    expect(card(build(sample()), 'Lunch').span).toBe('half')
+  // SET-08: the cards are two to a row from 1024 px (BentoGrid min="wide"); a card never spans the whole row, even one that runs every day.
+  it('a card never spans the full width, whatever days it runs (SET-08)', () => {
+    const cards = build(sample())
+    expect(cards.length).toBeGreaterThan(0)
+    for (const c of cards) expect(c.span).not.toBe('full')
+    expect(card(cards, 'Dinner').days).toHaveLength(7)
   })
 })
 
@@ -207,7 +209,7 @@ describe('buildMealSlotCards: scaling', () => {
     const slots = names.flatMap(([n, t]) => [1, 2, 3, 4, 5, 6, 7].map((d) => slot(d, n, t)))
     const cards = build(slots)
     expect(cards.map((c) => c.name)).toEqual(['Breakfast', 'Elevenses', 'Lunch', 'Tea', 'Dinner'])
-    expect(cards.every((c) => c.week.length === 7 && c.span === 'full' && c.differences.length === 0)).toBe(true)
+    expect(cards.every((c) => c.week.length === 7 && c.span !== 'full' && c.differences.length === 0)).toBe(true)
   })
   it('six Members: everyone stays "everyone", a subset is listed in Members order, and a Course can name its eaters', () => {
     const all = eats(1, 2, 3, 4, 5, 6)
@@ -328,5 +330,26 @@ describe('datePartText', () => {
     expect(datePartText({ kind: 'time', time: '13:30', usualTime: '13:00' }, two)).toBe('13:30 · usually 13:00')
     expect(datePartText({ kind: 'attendance', attendeeIds: [2] }, two)).toBe('Fabio only')
     expect(datePartText({ kind: 'attendance', attendeeIds: [] }, two)).toBe('Nobody attending')
+  })
+})
+
+// SET-08: the strip shows a time only on a day whose time differs from the usual one; a day that differs only in Attendance or Courses
+// keeps its dot but not its time (the "Differs on" list says what differs).
+describe('buildMealSlotCards: which strip days show their time (SET-08)', () => {
+  const runs = (c: ReturnType<typeof card>) => c.week.filter((w): w is Extract<typeof w, { state: 'runs' }> => w.state === 'runs')
+  it('an every-day Meal Slot at one time shows no time on any day', () => {
+    const c = card(build([1, 2, 3, 4, 5, 6, 7].map((d) => slot(d, 'Dinner', '19:30'))), 'Dinner')
+    expect(runs(c).map((w) => w.timeDiffers)).toEqual([false, false, false, false, false, false, false])
+  })
+  it('only Friday at 20:00 shows its time; Wednesday (Fabio only, same time) shows a dot but no time', () => {
+    const c = card(build(sample()), 'Dinner')
+    const by = (d: number) => runs(c).find((w) => w.weekday === d)!
+    expect(by(5)).toMatchObject({ differs: true, timeDiffers: true, time: '20:00' })
+    expect(by(3)).toMatchObject({ differs: true, timeDiffers: false })
+    expect(by(1)).toMatchObject({ differs: false, timeDiffers: false })
+  })
+  it('a tie for the usual time still marks the minority day as the one with a time', () => {
+    const c = card(build(sample()), 'Breakfast')
+    expect(runs(c).map((w) => [w.weekday, w.timeDiffers])).toEqual([[6, false], [7, true]])
   })
 })

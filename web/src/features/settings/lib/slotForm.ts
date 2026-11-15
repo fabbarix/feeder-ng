@@ -1,5 +1,6 @@
 import type { CourseChoice } from '../../../lib/courses'
 import type { MealSlot, MealSlotInput, Member, SlotCourseInput } from '../types'
+import type { MealSlotCard } from './mealSlotCards'
 import { newSlotCourses, slotCourseInputs } from './slotCourses'
 
 /**
@@ -79,4 +80,25 @@ export async function createSlotsSequentially(
     }
   }
   return { created }
+}
+
+/** Where the Meal Slot sheet starts when editing: the slot it opens on and the weekdays "Apply to" has chosen. */
+export interface SlotFormStart {
+  slot: MealSlot
+  weekdays: number[]
+}
+
+/** SET-14h (decision SET 5): "Edit <name>" on a card starts with every day the name runs chosen, so a time change applies to all of them. */
+export function slotFormFromCard(_card: MealSlotCard): SlotFormStart {
+  throw new Error('not implemented')
+}
+
+/** A day cell of the week strip or a "Differs on" row: that day only (spec r15). */
+export function slotFormFromCell(_slot: MealSlot): SlotFormStart {
+  throw new Error('not implemented')
+}
+
+/** A11Y / SHORT-02: true when the sheet holds changes the Admin has not saved (the sheet then asks before it closes on Cancel, Esc or the scrim). */
+export function slotFormDirty(_start: { draft: MealSlotInput; weekdays: number[] }, _now: { draft: MealSlotInput; weekdays: number[] }): boolean {
+  throw new Error('not implemented')
 }

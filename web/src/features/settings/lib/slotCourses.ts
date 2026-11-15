@@ -132,3 +132,12 @@ export function removalPreview(removals: ReturnType<typeof courseRemovals>, remo
   return { lines, pinned }
 }
 
+
+/**
+ * SET-09: the muted second line of a chosen Course row in the Meal Slot editor: "Chiara does not eat it", "Chiara and Ben do not eat it",
+ * "Chiara, Ben and Sam do not eat it". Only Members who attend count (an opt-out of someone who no longer attends is ignored), in the
+ * Members' own order. Null when everyone who attends eats it. The picker adds "main Course" in front by itself.
+ */
+export function slotCourseMeta(_row: SlotCourseInput, _attendees: readonly Member[]): string | null {
+  throw new Error('not implemented')
+}
