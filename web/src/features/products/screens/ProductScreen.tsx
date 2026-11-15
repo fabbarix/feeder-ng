@@ -78,7 +78,7 @@ function ProductPage({ product, p, breadcrumbs }: { product: ProductDetail; p: R
             <Link className="text-link" to={`/ingredients/${product.ingredientId}`}>
               {displayName(product.ingredientName)}
             </Link>{' '}
-            · {strings.packPill(formatPackSize(product.packSize, product.baseUnit, system))}
+            <span className="product-header__pack">· {strings.packPill(formatPackSize(product.packSize, product.baseUnit, system))}</span>
           </>
         }
         actions={

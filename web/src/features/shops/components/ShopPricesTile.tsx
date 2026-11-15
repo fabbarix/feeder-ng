@@ -52,7 +52,6 @@ export function ShopPricesTile({ shopName, prices }: ShopPricesTileProps) {
                 <ListRow
                   key={row.id}
                   title={row.name}
-                  wrapTitle
                   aria-label={row.label}
                   leading={<Thumb name={row.name} imageUrl={row.imageUrl} size={40} />}
                   meta={row.meta}

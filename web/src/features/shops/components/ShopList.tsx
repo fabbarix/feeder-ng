@@ -22,7 +22,7 @@ export function ShopList({ shops }: ShopListProps) {
       ) : (
         <ListGroup label={strings.shopsTitle}>
           {shops.map((s) => (
-            <ListRow key={s.id} title={s.name} chevron href={`/settings/shops/${s.id}`} metaIcon={s.location ? 'location' : undefined} meta={shopMeta(s)} />
+            <ListRow key={s.id} title={s.name} icon="shops" chevron href={`/settings/shops/${s.id}`} metaIcon={s.location ? 'location' : undefined} meta={shopMeta(s)} />
           ))}
         </ListGroup>
       )}

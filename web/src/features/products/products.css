@@ -69,3 +69,8 @@
   display: grid;
   gap: var(--space-2);
 }
+
+/* SET-04: "· 500 g pack" stays on one line after the Ingredient link. */
+.product-header__pack {
+  white-space: nowrap;
+}

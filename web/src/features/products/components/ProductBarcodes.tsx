@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
-import { Button, Chip, Cluster, DetailList, DetailRow, FieldRow, Muted, SectionTitle, Stack, TextField } from '../../../ui'
+import { Button, Chip, Cluster, DetailList, DetailRow, FieldRow, Muted, Stack, TextField } from '../../../ui'
 import { useBarcodeAdd } from '../hooks/useBarcodeAdd'
 import { formatBarcode } from '../lib/barcodeFormat'
 import { shopBarcodeRows } from '../lib/shopBarcodeRows'
@@ -79,7 +79,7 @@ export function ProductBarcodes({ barcodes, shopBarcodes, shops, rules, onAdd, o
         </FieldRow>
       </form>
       <div className="product-barcodes__shop">
-        <SectionTitle as="h3">{strings.shopBarcodesTitle}</SectionTitle>
+        <h3 className="product-subhead">{strings.shopBarcodesTitle}</h3>
         {rows.length === 0 ? (
           <Muted>{strings.noShopBarcodesYet}</Muted>
         ) : (
