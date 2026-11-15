@@ -10,6 +10,10 @@
 #                       or partly under the bottom bar is a finding; with the clearance there is none (system.md §8).
 #   today-*.html        DS-TODAY round 2: To confirm rows (wide and 358 px: actions not collapsed, no clipped label, no overlap, own row on a
 #                       phone), the hero's Course row and slot menu, the metric strip.
+#   forced-colors.html  B9-55 (A11Y-04): the primitives with forced colours emulated (CDP, scripts/test/forced-colors-run.mjs): every control
+#                       focused by keyboard (the stepper's - and +, Clear search included) shows an outline in Highlight, the chosen Segmented
+#                       option, pressed IconButton and on Switch are Highlight, each swatch keeps its own colour behind a 1 px border,
+#                       the SearchField keeps its 2 px bottom rule, buttons have a 1 px border and a disabled one is GrayText.
 # No Chrome: SKIP (exit 0), as the page-layout guard does in its quick profile.
 set -uo pipefail
 
@@ -124,6 +128,30 @@ P="$(title_of p12-two-px.html)"
 [ "$(q "$P" "Array.isArray(o) && o.some((f) => /^div\.last/.test(f.sel) && f.px >= 2)")" = true ] && ok || bad "a 2 px intersection with the bar is a P12 finding of 2 px (probe said: $P)"
 P="$(title_of p12-covered.html)"
 [ "$(q "$P" "Array.isArray(o) && o.every((f) => f.px > 1)")" = true ] && ok || bad "the probe never reports an intersection of 1 px or less ('0 px' in review 2): $P"
+
+# --- B9-55 (A11Y-04): forced colours ------------------------------------------------------------------------------------------
+FC="$(timeout 90 node "$ROOT/scripts/test/forced-colors-run.mjs" "$FIX/forced-colors.html" 18 dark 2>/dev/null)"
+if [ -z "$FC" ]; then
+  bad "forced-colors.html did not report (scripts/test/forced-colors-run.mjs printed nothing)"
+else
+  [ "$(q "$FC" o.static.forced)" = true ] && ok || bad "forced colours must be active in the fixture run"
+  [ -f "$ROOT/web/src/ui/forcedColors.css" ] && ok || bad "web/src/ui/forcedColors.css (the forced-colours layer, A11Y-04) is missing"
+  H="$(q "$FC" o.static.highlight)"
+  [ "$(q "$FC" "o.static.segOnBg === o.static.highlight")" = true ] && ok || bad "the chosen Segmented option's background must be Highlight ($H), got $(q "$FC" o.static.segOnBg)"
+  [ "$(q "$FC" "o.static.pressedBg === o.static.highlight")" = true ] && ok || bad "a pressed IconButton must be Highlight ($H), got $(q "$FC" o.static.pressedBg)"
+  [ "$(q "$FC" "o.static.switchOnBg === o.static.highlight")" = true ] && ok || bad "a Switch that is on must be Highlight ($H), got $(q "$FC" o.static.switchOnBg)"
+  [ "$(q "$FC" "o.static.swatches.every((s) => s.w === '1px' && s.style === 'solid')")" = true ] && ok || bad "each colour swatch has a 1 px solid border ($(q "$FC" o.static.swatches))"
+  [ "$(q "$FC" "o.static.swatches[0].bg === 'rgb(63, 125, 88)' && o.static.swatches[1].bg === 'rgb(192, 57, 43)'")" = true ] && ok || bad "each colour swatch keeps its own colour (forced-color-adjust: none), got $(q "$FC" o.static.swatches)"
+  [ "$(q "$FC" "o.static.searchBorderBottom === '2px' && o.static.searchBorderTop === '1px'")" = true ] && ok || bad "the SearchField keeps a 2 px bottom rule on a 1 px frame (bottom $(q "$FC" o.static.searchBorderBottom), top $(q "$FC" o.static.searchBorderTop))"
+  [ "$(q "$FC" "o.static.segBorder === '1px 2px'")" = true ] && ok || bad "the Segmented track has a 1 px frame and a 2 px bottom rule, got $(q "$FC" o.static.segBorder)"
+  [ "$(q "$FC" "o.static.buttonBorder === '1px'")" = true ] && ok || bad "a button has a 1 px border in forced colours, got $(q "$FC" o.static.buttonBorder)"
+  [ "$(q "$FC" "o.static.disabledColor === o.static.grayText")" = true ] && ok || bad "a disabled button is GrayText, got $(q "$FC" o.static.disabledColor)"
+  for probe in button-primary button-secondary icon-button icon-button-pressed segmented swatch switch checkbox text-field stepper-minus stepper-input stepper-plus search-input search-clear select; do
+    [ "$(q "$FC" "o.focus.some((f) => f && f.probe === '$probe')")" = true ] && ok || bad "the Tab walk never reached $probe"
+    [ "$(q "$FC" "o.focus.filter((f) => f && f.probe === '$probe').every((f) => f.style !== 'none' && parseFloat(f.width) > 0)")" = true ] && ok || bad "$probe focused by keyboard must show an outline in forced colours (got $(q "$FC" "o.focus.filter((f) => f && f.probe === '$probe')"))"
+    [ "$(q "$FC" "o.focus.filter((f) => f && f.probe === '$probe').every((f) => f.color === o.static.highlight)")" = true ] && ok || bad "$probe's focus ring must be Highlight ($H), got $(q "$FC" "o.focus.filter((f) => f && f.probe === '$probe').map((f) => f.color)")"
+  done
+fi
 
 printf 'ds-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
