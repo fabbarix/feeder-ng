@@ -66,6 +66,13 @@
   border-radius: var(--radius-thumb);
 }
 
+/* R-C (w4a, the Timers sheet): in a sheet the ListGroup is drawn with its boundary, and a ring at the row's edge ran along it (the
+   bottom corners of the last row fused with the group's rounded border). There the focused target draws in by 4 px, so its ring (the
+   token inset, unchanged) sits clear of the group's edge and the row dividers. */
+.sheet .list-group .list-row__target:focus-visible {
+  inset: var(--space-1);
+}
+
 .list-row[data-selected='true'] .list-row__target {
   background: var(--color-soft);
 }

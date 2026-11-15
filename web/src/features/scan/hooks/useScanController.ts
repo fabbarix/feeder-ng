@@ -9,6 +9,7 @@ import { useShoppingList } from '../../shop/hooks/useShoppingList'
 import { liveRefreshFor } from '../../shop/lib/liveRefresh'
 import type { ShoppingList } from '../../shop/types'
 import { useToast } from '../../../ui/Toast'
+import { useUndoToast } from '../../../ui/useUndoToast'
 import { useIngredientChoices } from '../../stock/hooks/useIngredientChoices'
 import { useStockTotals } from '../../stock/hooks/useStock'
 import type { UnitSystem } from '../../../lib/units'
@@ -95,6 +96,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const shopId = options.shop?.id ?? null
   const queryClient = useQueryClient()
   const toast = useToast()
+  const undoToast = useUndoToast()
   const offline = useOfflineData(shopId)
   const currency = useCurrency()
   const system = useDisplayUnitSystem()
@@ -215,11 +217,23 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     ...(mode === 'shop' ? { session: scanned } : {}),
     feedback,
     notify: (message, status, opts) => toast.show(message, { status, ...opts }),
+    // SSP-06: "Added <product>" is an Undo toast (no status icon, the 'undo' role); Scan keeps its 5 s.
+    announceAdded: ({ headline, undo, durationMs }) => undoToast.show({ headline, undo, durationMs }),
     findArchived: (code, shopId) => scanApi.findArchived(code, shopId),
     fetchProduct: (id) => scanApi.product(id),
     unarchive,
   })
   flowRef.current = flow
+
+  // SSP-12: while the Price entry is open no toast shows (errors still do); one hold for the whole entry, Next included. On
+  // close only the latest held toast shows.
+  const pricingOpen = flow.pricing !== null
+  const holdRef = useRef(toast.hold)
+  holdRef.current = toast.hold
+  useEffect(() => {
+    if (!pricingOpen) return
+    return holdRef.current()
+  }, [pricingOpen])
 
   const source = useMemo(() => ({ frame: camera.frame }), [camera.frame])
   const onScan = useRef(flow.onScan)

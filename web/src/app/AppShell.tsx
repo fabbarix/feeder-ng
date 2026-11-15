@@ -3,13 +3,14 @@ import { Icon, Page, PageWidthProvider } from '../ui'
 import { useKeyboardInset } from '../ui/lib/useKeyboardInset'
 import { withAccessRequests } from './accessMenu'
 import { BrandMark } from './BrandMark'
-import { isChromeless } from './chromeless'
+import { isChromeless, isReceiptScreen } from './chromeless'
 import { pageWidthFor } from './pageWidths'
 import { PageErrorBoundary } from './PageErrorBoundary'
 import type { NavItem } from './nav'
 import { MENU_NAV, PRIMARY_NAV, RAIL_NAV, sortByOrder } from './nav'
 import { isCurrentNav } from './navCurrent'
 import { ShellStatus } from './ShellStatus'
+import { ShellTimers } from './ShellTimers'
 import { shellStrings } from './strings'
 import { YourMenu } from './YourMenu'
 import './shell.css'
@@ -25,6 +26,9 @@ export interface AppShellProps {
   pendingAccessRequests?: number
 }
 
+/** PC-04: the shell's timers, keyed so React keeps the one mounted ShellTimers when the cook moves between a framed page and a
+ * receipt screen (same root element, same key): one poll, one alarm, and a ringing timer keeps ringing. */
+const SHELL_TIMERS_KEY = 'shell-timers'
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
 export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
@@ -44,6 +48,8 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
             </PageErrorBoundary>
           </PageWidthProvider>
         </main>
+        {/* PC-04: a timer can finish while the cook is on a receipt screen: the finish banner shows there (no pill: Save is there). */}
+        {isReceiptScreen(pathname) ? <ShellTimers key={SHELL_TIMERS_KEY} pill={false} /> : null}
       </div>
     )
   }
@@ -61,6 +67,8 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
           onSignOut={onSignOut}
         />
       </header>
+      {/* PC-04: the timer pill, finish banner and Timers sheet, mounted once for the framed pages (one poll, one alarm). */}
+      <ShellTimers key={SHELL_TIMERS_KEY} />
       <div className="app-status">
         <ShellStatus pendingScans={pendingScans} />
       </div>

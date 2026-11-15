@@ -244,3 +244,11 @@ describe('tokens: the numbers the rules above read exist', () => {
     expect(styles).toMatch(/--color-surface-2:/)
   })
 })
+
+describe('R-C (w4a): a row\'s ring inside a sheet\'s ListGroup stays clear of the group\'s edge', () => {
+  it('the focused target draws in by 4 px (the ring keeps its token inset and radius)', () => {
+    const d = declarations(css, '.sheet .list-group .list-row__target:focus-visible')
+    expect(d['inset']).toBe('var(--space-1)')
+    expect(d['outline-offset']).toBeUndefined()
+  })
+})

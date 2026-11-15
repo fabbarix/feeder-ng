@@ -218,6 +218,22 @@ describe('CookScreen: a Recipe scope', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Back to Recipe' }))
     expect(await screen.findByText('Recipe page')).toBeInTheDocument()
   })
+
+  it('finishing with Back to Recipe forgets the resume Step (PC-04, w4a call): the pill reopens it at Step 1 next time', async () => {
+    mockApi({ 'GET /api/cook/recipes/7?batches=1': recipeView, 'GET /api/cook/timers': timers })
+    renderWithProviders(
+      <Routes>
+        <Route path="/cook/recipe/:id" element={<CookScreen />} />
+        <Route path="/recipes/:id" element={<p>Recipe page</p>} />
+      </Routes>,
+      '/cook/recipe/7',
+    )
+    await screen.findByRole('article', { name: 'Step 1 of 1' })
+    await waitFor(() => expect(localStorage.getItem('feeder.cook.resume.recipe:7')).not.toBeNull())
+    await userEvent.click(await screen.findByRole('button', { name: 'Back to Recipe' }))
+    expect(await screen.findByText('Recipe page')).toBeInTheDocument()
+    expect(localStorage.getItem('feeder.cook.resume.recipe:7')).toBeNull()
+  })
 })
 
 const twoSteps = (over: Partial<CookView> = {}): CookView => ({

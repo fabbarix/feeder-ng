@@ -28,11 +28,13 @@ export function useMenuKeys({ open, onClose, menuRef, triggerRef, initialFocusId
     ;(chosen ?? itemsIn(menuRef.current)[0])?.focus()
   }, [open, menuRef, initialFocusId])
 
-  // Escape closes from anywhere and returns focus to the trigger.
+  // Escape closes from anywhere and returns focus to the trigger. The key is the menu's (preventDefault), so a page-wide Escape
+  // listener on window (the shell's finish banner, a docked sheet) leaves it alone.
   useEffect(() => {
     if (!open) return
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key !== 'Escape') return
+      e.preventDefault()
       close.current()
       triggerRef.current?.focus()
     }

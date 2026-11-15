@@ -55,6 +55,18 @@ describe('useMenuKeys', () => {
     expect(onClose).toHaveBeenCalledOnce()
     expect(screen.getByRole('button', { name: 'trigger' })).toHaveFocus()
   })
+  it('Escape is the menu\'s: it is marked handled (preventDefault), so a window Escape listener behind it leaves it alone', async () => {
+    const seen: boolean[] = []
+    const onWindowKey = (e: KeyboardEvent) => seen.push(e.defaultPrevented)
+    window.addEventListener('keydown', onWindowKey)
+    try {
+      render(<Harness onClose={() => {}} />)
+      await userEvent.keyboard('{Escape}')
+      expect(seen).toEqual([true])
+    } finally {
+      window.removeEventListener('keydown', onWindowKey)
+    }
+  })
   it('Tab closes and focuses the trigger', async () => {
     const onClose = vi.fn()
     render(<Harness onClose={onClose} />)

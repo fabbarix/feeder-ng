@@ -1,0 +1,210 @@
+/* The shell's timers (PC-04; mocks/pc-04-timer-pill.html and pc-04-timer-done.html). Tokens only.
+   The pill (ui/TimerPill, placed here): on phones and tablets fixed at the inline end, 16 px in, 16 px above the bottom bar (--nav-top,
+   which is the bottom inset alone where no bar floats: landscape, the keyboard up) and the keyboard; lifted over a sticky action bar
+   the way the toast region is, so it never covers the bar or Save. From 64em it sits in the top bar, centred. The shell
+   keeps 16 px of room around it, so the pill's ring (inside its own fill, ui/focusLayer.css) is never clipped.
+   The pill's room (--timer-pill-clearance) is published on the root while it shows: ui/Toast.css lifts the toast region by it, and
+   a page without a sticky bar gets it as extra end room, so its last row can scroll out from under the pill.
+   The finish banner: fixed under the top inset, the success tone with a 2 px success boundary, above the pill and the toasts. */
+
+:root:has(.shell-timer) {
+  /* The pill's 52 px (TimerPill's min-block-size) and the 16 px gap above it. */
+  --timer-pill-clearance: calc(52px + var(--space-4));
+}
+
+.shell-timer {
+  position: fixed;
+  inset-inline-end: var(--space-4);
+  bottom: calc(var(--nav-top) + var(--keyboard-inset) + var(--space-4));
+  z-index: 30;
+  display: flex;
+  max-inline-size: min(24rem, calc(100% - 2 * var(--space-4)));
+}
+
+html:has(.sticky-action-bar) .shell-timer {
+  bottom: calc(var(--nav-top) + var(--keyboard-inset) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--space-4));
+}
+
+/* Floating: a drop shadow with the pill's boundary written into the same box-shadow (an --elev token is none in dark, and the
+   boundary must stay). The shadow's colour is the scrim's, which is dark in both schemes. */
+.shell-timer .timer-pill {
+  box-shadow: 0px 6px 20px color-mix(in oklab, var(--scrim) 40%, transparent), inset 0 0 0 1px var(--color-outline);
+}
+
+.shell-timer[data-state='finished'] .timer-pill {
+  box-shadow: 0px 6px 20px color-mix(in oklab, var(--scrim) 40%, transparent), inset 0 0 0 2px var(--status-success-fg);
+}
+
+/* While the open button has focus its ring is the one accent mark: the boundary steps back to the outline (ui/focusLayer.css). */
+.shell-timer .timer-pill:has(:focus-visible) {
+  box-shadow: 0px 6px 20px color-mix(in oklab, var(--scrim) 40%, transparent), inset 0 0 0 1px var(--color-outline);
+}
+
+/* A page without a sticky bar ends with room for the pill too. */
+:root:has(.shell-timer) .app-main:not(.app-main--full):not(:has(.sticky-action-bar)) {
+  padding-bottom: calc(var(--nav-clearance) + var(--timer-pill-clearance));
+}
+
+/* Below 64em (phones and tablets, landscape with a notch included): the pill and the banner keep clear of a side inset too. */
+@media (width < 64em) {
+  .shell-timer {
+    inset-inline-end: calc(var(--space-4) + var(--safe-right));
+  }
+
+  .shell-timer-banner {
+    inset-inline: calc(var(--space-3) + var(--safe-left)) calc(var(--space-3) + var(--safe-right));
+  }
+}
+
+/* Below 48em a non-modal sheet (the Scan Price keypad) is fixed at the bottom over the page and the bottom bar: the pill would float
+   over its keys and Save (w4a review). It steps aside while that sheet is open; the finish banner still shows. */
+@media (width < 48em) {
+  :root:has(.sheet[data-modal='false'][open]) .shell-timer {
+    display: none;
+  }
+}
+
+/* A short viewport with a floating Save bar (w4a): the pill docks inside the bar's free start, level with it (useTimerPillDock measures
+   where), so it covers no page content. No drop shadow there: it sits on the bar. Toasts need no room for it. */
+:root:has(.shell-timer[data-docked]) {
+  --timer-pill-clearance: 0px;
+}
+
+.shell-timer[data-docked],
+html:has(.sticky-action-bar) .shell-timer[data-docked] {
+  inset: var(--timer-pill-dock-y) auto auto var(--timer-pill-dock-x);
+  z-index: 6;
+}
+
+.shell-timer[data-docked] .timer-pill,
+.shell-timer[data-docked] .timer-pill:has(:focus-visible) {
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+
+.shell-timer[data-docked][data-state='finished'] .timer-pill {
+  box-shadow: inset 0 0 0 2px var(--status-success-fg);
+}
+
+/* A short landscape phone (below 64em wide, under 500 px tall) on Scan with the camera on: the pill's corner is where the strip's
+   Mute, torch and Type a barcode sit (SHORT-04: never covered). It steps aside there; the finish banner still shows. */
+@media (width < 64em) and (height < 31.25em) {
+  :root:has(.viewfinder-strip:not([data-size='bar'])) .shell-timer {
+    display: none;
+  }
+}
+
+/* From 64em: in the top bar (64 px below the top inset), centred in it as the mock's 1440 render draws it (main-session call,
+   w4a), 6 px above and below the pill; at 1024 its 24rem cap keeps it clear of the brand and Your menu. No drop shadow: it sits
+   on the bar. Toasts no longer need to make room for it. */
+@media (min-width: 64em) {
+  :root:has(.shell-timer) {
+    --timer-pill-clearance: 0px;
+  }
+
+  .shell-timer {
+    inset-block-start: calc(var(--safe-top) + var(--space-1) + var(--space-half));
+    inset-block-end: auto;
+    inset-inline: 0;
+    inline-size: fit-content;
+    margin-inline: auto;
+  }
+
+  html:has(.sticky-action-bar) .shell-timer {
+    bottom: auto;
+  }
+
+  .shell-timer .timer-pill {
+    box-shadow: inset 0 0 0 1px var(--color-outline);
+  }
+
+  .shell-timer[data-state='finished'] .timer-pill {
+    box-shadow: inset 0 0 0 2px var(--status-success-fg);
+  }
+
+  .shell-timer .timer-pill:has(:focus-visible) {
+    box-shadow: inset 0 0 0 1px var(--color-outline);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shell-timer {
+    animation: shell-timer-in var(--dur-2) var(--ease-out);
+  }
+}
+
+@keyframes shell-timer-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+}
+
+/* The finish alert. */
+.shell-timer-banner {
+  position: fixed;
+  z-index: 31;
+  inset-block-start: calc(var(--safe-top) + var(--space-3));
+  inset-inline: var(--space-3);
+  box-sizing: border-box;
+  max-inline-size: 36rem;
+  margin-inline: auto;
+  display: grid;
+  row-gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-tile);
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+  border: 2px solid var(--status-success-fg);
+  box-shadow: 0px 10px 30px color-mix(in oklab, var(--scrim) 55%, transparent);
+}
+
+/* The headline line: the bell (the status, on the headline) and the headline. */
+.shell-timer-banner__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.shell-timer-banner__head > svg {
+  flex: none;
+}
+
+.shell-timer-banner__title {
+  min-inline-size: 0;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+
+/* The Recipe and Step, and the actions, line up under the headline's text (the bell's 24 px and its 8 px gap). */
+.shell-timer-banner__subline {
+  margin: calc(-1 * var(--space-1)) 0 0;
+  padding-inline-start: var(--space-8);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: 400;
+}
+
+.shell-timer-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-8);
+}
+
+/* Dismiss on the tinted banner: a surface fill and a 1 px outline (boundary 3.8:1 on success-bg, label 17:1, R-A). */
+.shell-timer-banner .button[data-variant='secondary'] {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  color: var(--color-text);
+}
+
+/* The Timers sheet rows: the time is tabular; a paused timer says so, muted. */
+.shell-timer-row__time {
+  font-variant-numeric: tabular-nums;
+}
+
+.shell-timer-row__paused {
+  color: var(--color-muted);
+}
