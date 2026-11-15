@@ -8,7 +8,7 @@ export async function seed(ctx) {
   const { api, step, line } = ctx
   const steps = [
     { text: 'Take the beef out of the freezer to thaw.', kind: 'advance', durationMinutes: 0, leadTimeMinutes: 24 * 60, after: [], uses: [] },
-    { text: 'Braise the beef with the barley until tender.', kind: 'active', durationMinutes: 40, leadTimeMinutes: 0, after: [0], uses: [] },
+    { text: 'Braise the beef with the barley until tender.', kind: 'active', durationMinutes: 40, leadTimeMinutes: 0, after: [], uses: [] },
   ]
   const r = await step('advance recipe', 'POST', '/api/recipes', { name: 'Slow cooker beef and barley stew', description: '', yield: 4, readyMeal: false, tags: [], lines: [line(3, 400)], steps })
   const recipeId = r.json?.id
