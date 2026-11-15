@@ -81,7 +81,9 @@ mkdirSync(dirname(out), { recursive: true })
 const sideCourseId = sideCourse?.id ?? null
 // beta.7: the Supply page, the Scan session's Shop and codes, and whether the assistant is on (the guard's beta.7 scenarios).
 const beta7 = { supplyId, shopName: shops[0]?.name ?? null, scanBarcodes, unknownBarcode, assistant }
-writeFileSync(out, JSON.stringify({ ...beta7, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, longPlaceId }, null, 2) + '\n')
+// B9-40 review: the rich Cook Mode Recipe (page-layout-seed/cook.mjs: Advance Steps, a Step photo) of the cook-step scenarios.
+const cookRecipeId = ctx.cookRecipeId ?? null
+writeFileSync(out, JSON.stringify({ ...beta7, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, cookRecipeId, longPlaceId }, null, 2) + '\n')
 if (longTagRecipe === null || sideCourseId === null) {
   console.error(`page-layout-seed: the Side Recipe tagged "${LONG_TAG}" was not created; the filtered /recipes scenarios would show no Recipe`)
   process.exit(1)

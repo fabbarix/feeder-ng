@@ -11,9 +11,12 @@ import { byText, evaluate, until } from '../helpers.mjs'
 import * as helpers from '../helpers.mjs'
 
 const noSkeleton = `!document.querySelector('[aria-busy="true"], .skeleton')`
+// The seed's rich Cook Mode Recipe (page-layout-seed/cook.mjs: two Advance Steps, a Passive pre-heat that holds Next, a 50-word Step with a
+// photo) when it exists, else the first seed Recipe.
 async function openCook() {
-  const id = helpers.ids.recipeId ?? 1
-  await evaluate(`location.assign('/cook/recipe/${id}')`)
+  const id = helpers.ids.cookRecipeId ?? helpers.ids.recipeId ?? 1
+  // always the first Step at load: a resume Step left by an earlier scenario (the photo one) is forgotten
+  await evaluate(`localStorage.removeItem('feeder.cook.resume.recipe:${id}'); location.assign('/cook/recipe/${id}')`)
   await until(`!!document.querySelector('.cook-step__text') && ${noSkeleton}`, 'the Cook Mode Step text', 15000)
   return id
 }
@@ -25,6 +28,14 @@ const START_TIMER = (id) => `(async () => {
   const body = step ? { scope: 'recipe:${id}', step: step.index } : { label: 'Pre-heat the oven', durationSeconds: 900 }
   const r = await fetch('/api/cook/timers', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   return r.ok
+})()`
+// Reopen Cook Mode on the first Step with a photo (lib/resume: feeder.cook.resume.<scope> = the CookStep index); a Step held by the
+// running pre-heat cannot be reached with Next. Nothing when no Step has a photo.
+const RESUME_AT_PHOTO = (id) => `(async () => {
+  const view = await (await fetch('/api/cook/recipes/${id}?batches=1', { credentials: 'same-origin' })).json()
+  const step = (view.steps || []).find((s) => s.imageUrl)
+  if (step) localStorage.setItem('feeder.cook.resume.recipe:${id}', String(step.index))
+  return !!step
 })()`
 const CANCEL_TIMERS = `(async () => {
   const list = await (await fetch('/api/cook/timers', { credentials: 'same-origin' })).json()
@@ -69,6 +80,7 @@ async function photoSetup() {
   const id = await openCook()
   if (!(await evaluate(START_TIMER(id)))) throw new Error('setup: not inspected: the timer could not be started through the API')
   try {
+    await evaluate(RESUME_AT_PHOTO(id))
     await evaluate('location.reload()')
     await until(`!!document.querySelector('.cook-step__text') && !!document.querySelector('.timer-pill, .timer-tile') && ${noSkeleton}`, 'Cook Mode with a timer', 15000)
     // Walk to the first Step with a photo; stay on the first Step when there is none.
