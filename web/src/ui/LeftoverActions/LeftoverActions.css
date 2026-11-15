@@ -92,9 +92,13 @@
 }
 
 /* B9-45 (PC-13): the second meta line of a Leftover that is planned for ("1.25 for Mon Dinner · 1.25 spare: have it or freeze it"). */
+/* B9-45 review: the hint is a sentence the cook acts on, so it wraps (at a word) rather than ending in an ellipsis; seen cut at 390 px. */
 .leftover-row__hint {
   display: block;
   color: var(--color-muted);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .leftover-freeze__where-text {
