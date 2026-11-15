@@ -1,5 +1,5 @@
 // R2-1 (E-01, F-01 adoption): the ingredient line is Ingredient · Quantity xs · Unit sm · Note · remove (Optional is a menu item and a chip in the Ingredient cell).
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { flour, garlic } from '../fixtures.test-helper'
