@@ -41,6 +41,8 @@ export interface LeftoverSheetProps {
   /** The Recipe's Use-by days (Take out). */
   recipeUseByDays: number
   busy?: boolean
+  /** B9-45 (PC-13), not built: the Planned Meals that need portions of this Leftover ("Mon Dinner"); the Freeze sheet's hint names them. */
+  plannedFor?: string[]
   onConfirm: (request: LeftoverRequest) => void
   onClose: () => void
   /** "Storage Places" link of the no-Freezer state (the parent navigates to Settings > Storage Places). */

@@ -14,6 +14,10 @@ export interface LeftoverRowModel {
   text: string
   tone: 'info' | 'spoil' | 'leftover'
   icon: IconName
+  /** B9-45 (PC-13), not built: every Leftover the row stands for, soonest first (one for a Leftover on its own). */
+  ids?: number[]
+  /** B9-45 (PC-13), not built: spareHint, the second meta line; absent when nothing is planned. */
+  hint?: string
   /** A frozen question names its Storage Place ("Not sorted" without one), so it is not hidden in the Pantry. */
   badge?: string
 }
@@ -93,4 +97,33 @@ export function freezerChoices(leftovers: Leftover[], recipeIds?: ReadonlySet<nu
       recipeName: l.recipeName,
       meta: `${portionsLabel(l.portions)} · ${l.storagePlaceName ?? leftoverStrings.notSorted}`,
     }))
+}
+
+// ---- B9-45 (PC-13): Leftovers of one Recipe with the same Use-by are one row. STUBS: the developer builds them. ----
+
+/** Several Leftovers shown as one row: portions and planned portions summed, `id` the soonest member's, `ids` every member soonest first. */
+export interface MergedLeftover extends Leftover {
+  ids: number[]
+}
+
+/**
+ * One entry per Recipe and Use-by. Frozen and not frozen stay apart; frozen ones in different Storage Places stay apart; a Leftover that is to
+ * answer (a question) is never merged. Members are ordered soonest first (cooked earliest, then lowest id); the entries keep the order of
+ * their first member in `leftovers`. A Leftover on its own comes back with `ids: [id]`.
+ */
+export function mergeRows(_leftovers: Leftover[]): MergedLeftover[] {
+  throw new Error('B9-45: not built yet')
+}
+
+/** Splits `portions` over the members of a merged row, soonest first: [{ leftoverId, portions }] (the last may take part of its portions). */
+export function takeFromSoonest(_members: Leftover[], _portions: number): { leftoverId: number; portions: number }[] {
+  throw new Error('B9-45: not built yet')
+}
+
+/**
+ * The second meta line of a Leftover that is planned for: "1.25 for Mon Dinner · 1.25 spare: have it or freeze it" (some spare),
+ * "Planned for Sun Dinner" (all of it is planned); null when nothing is planned. Without meal names: "a planned meal".
+ */
+export function spareHint(_left: number, _plannedPortions: number, _plannedFor: string[]): string | null {
+  throw new Error('B9-45: not built yet')
 }

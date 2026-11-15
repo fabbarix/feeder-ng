@@ -8,6 +8,8 @@ export interface LeftoverItemsProps {
   leftovers: Leftover[]
   today: string
   busy?: boolean
+  /** B9-45 (PC-13), not built: the Planned Meals that need portions of a Leftover, by Leftover id ("Mon Dinner"); the row's second meta line (lib/leftovers spareHint). */
+  plannedFor?: Record<number, string[]>
   onAction: (kind: LeftoverActionKind, leftover: Leftover) => void
   onAnswer: (leftover: Leftover, answer: LeftoverAnswer) => void
 }

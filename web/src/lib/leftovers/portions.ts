@@ -60,3 +60,10 @@ export function freezeUseBy(today: string, recipeDays: number | null, householdD
 export function takeOutUseBy(today: string, useByDays: number): { date: string; days: number } {
   return { date: addDays(today, useByDays), days: useByDays }
 }
+
+// ---- B9-45 (PC-13): the Freeze sheet's one question. STUBS: the developer builds them (and moves PORTION_STEP to 0.25, see portions.pc13.test.ts). ----
+
+/** The stepper's move: one step up (1) or down (-1) in steps of 0.25, from `value`, never below 0.25 and never above `left`; the maximum is always reachable (1 up from 1 in a 1.25 Leftover is 1.25; 1 down from 1.3 is 1.25). */
+export function stepPortions(_value: number, _direction: 1 | -1, _left: number): number {
+  throw new Error('B9-45: not built yet')
+}

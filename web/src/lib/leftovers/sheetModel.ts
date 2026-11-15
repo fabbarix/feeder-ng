@@ -99,3 +99,27 @@ export function replannedNotes(refs: PlannedMealRef[]): ReplannedNote[] {
     text: replannedNote(ref),
   }))
 }
+
+// ---- B9-45 (PC-13): the Freeze sheet's words. STUBS: the developer builds them. ----
+
+/** The sheet's title: "How many portions to freeze?". */
+export const freezeQuestion = 'How many portions to freeze?'
+
+/** The context line under the title: "Cauliflower al gorgonzola · 1.25 left" (one line; the sheet ends it in an ellipsis). */
+export function freezeContext(_recipeName: string, _left: number): string {
+  throw new Error('B9-45: not built yet')
+}
+
+/**
+ * The muted hint under the stepper, about the default (every spare portion):
+ * "All of it. None of it is planned." / "1.25 of 2.5. The rest is planned for Mon Dinner." / "All of it is planned for Mon Dinner." (nothing spare).
+ * `plannedFor` names the Planned Meals ("Mon Dinner"); without names: "The rest is planned." / "All of it is planned."
+ */
+export function freezeHint(_left: number, _plannedPortions: number, _plannedFor: string[]): string {
+  throw new Error('B9-45: not built yet')
+}
+
+/** The primary button: "Freeze 1.25 portions", "Freeze 1 portion". */
+export function freezeLabel(_portions: number): string {
+  throw new Error('B9-45: not built yet')
+}
