@@ -66,7 +66,9 @@ describe('CookScreen: Next waits for the Steps the next Step depends on', () => 
     expect(screen.getByText(/Next waits for the oven: 4:1\d left\. Cancel that timer to go on now\./)).toBeInTheDocument()
     expect(next).toHaveAccessibleDescription(/Next waits for the oven/)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel Step 1 · Pre-heat the oven' }))
+    // B9-40 (PC-03): a timer is cancelled from its sheet (a rail tile's "Options", a pill's tap), with an Undo toast.
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Step 1 · Pre-heat the oven' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel timer' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled())
     expect(screen.queryByText(/Next waits for/)).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Next' }))

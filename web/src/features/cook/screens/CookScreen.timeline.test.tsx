@@ -69,8 +69,9 @@ describe('CookScreen: the cooking timeline', () => {
     const tile = await screen.findByRole('article', { name: 'Step 1 of 4' })
     expect(within(tile).getByText('Brown the chicken')).toBeInTheDocument()
     expect(within(tile).getByText('Main · Roast chicken')).toBeInTheDocument()
-    expect(within(tile).getByText('18:30')).toBeInTheDocument()
-    expect(screen.getAllByRole('status').map((e) => e.textContent)).toContain('Step 1 of 4')
+    // B9-40 (PC-16 item 4, PC-03): the planned time is a labelled meta line, and the Step count leads the Step tile's own overline.
+    expect(within(tile).getByText('Start at 18:30')).toBeInTheDocument()
+    expect(within(tile).getByRole('status')).toHaveTextContent('Step 1 of 4 · Active · 10 min')
     expect(screen.getByRole('heading', { level: 1, name: 'Dinner' })).toBeInTheDocument()
     expect(api.callsTo('GET', '/api/cook/meals/2026-11-10/4/all')).toHaveLength(1)
   })

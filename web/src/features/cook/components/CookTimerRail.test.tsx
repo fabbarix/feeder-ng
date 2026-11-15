@@ -22,6 +22,7 @@ describe('CookTimerRail (PC-03)', () => {
     const aside = screen.getByRole('complementary', { name: 'Timers' })
     expect(within(aside).getByRole('heading', { name: 'Timers' })).toBeInTheDocument()
     expect(container.querySelectorAll('.timer-tile[data-size="md"]')).toHaveLength(2)
+    expect(within(screen.getByRole('region', { name: 'Timers' })).getAllByRole('timer')).toHaveLength(2)
     expect(screen.getByRole('timer', { name: 'Pre-heat the oven to 220 °C' })).toHaveTextContent('2:43')
   })
 
