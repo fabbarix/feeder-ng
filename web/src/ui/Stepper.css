@@ -104,6 +104,7 @@
   color: var(--color-muted);
   opacity: 1;
   font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
   font-weight: 400;
 }
 

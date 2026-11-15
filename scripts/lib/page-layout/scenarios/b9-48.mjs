@@ -8,6 +8,12 @@
 // The seeded Ingredient (ids.ingredientId) has no references, so Delete is enabled; the seeded Supply is ids.supplyId.
 import { evaluate, js, press, until } from '../helpers.mjs'
 
+// P25 judges tap targets on a touch emulation (the coarse ::after hit areas apply), as b9-14's sheets do.
+const TOUCH = [
+  { method: 'Emulation.setTouchEmulationEnabled', params: { enabled: true, maxTouchPoints: 5 } },
+  { method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } },
+]
+
 const settled = `!document.querySelector('[aria-busy="true"], .skeleton')`
 
 /** Page code: the tiles of the page's Bento grid and the checks of SET-05. */
@@ -36,7 +42,7 @@ export default {
   scenarios: [
     { name: 'ingredient-keeping', route: '/ingredients/:id', start: '/ingredients/:id', setup: 'ingredientKeeping', widths: [375, 834, 1440] },
     { name: 'supply-keeping', route: '/supplies/:id', start: '/supplies/:id', setup: 'supplyKeeping', widths: [375, 834, 1440] },
-    { name: 'ingredient-rename-sheet', route: '/ingredients/:id', start: '/ingredients/:id', setup: 'renameSheet', widths: [375, 834], rules: ['P1', 'P8', 'P18', 'P25', 'P33'] },
+    { name: 'ingredient-rename-sheet', route: '/ingredients/:id', start: '/ingredients/:id', setup: 'renameSheet', widths: [375, 834], emulate: TOUCH, rules: ['P1', 'P8', 'P18', 'P25', 'P33'] },
     { name: 'ingredient-delete-confirm', route: '/ingredients/:id', start: '/ingredients/:id', setup: 'deleteConfirm', widths: [375, 1440], rules: ['P1', 'P8', 'P18'] },
   ],
   setups: {
