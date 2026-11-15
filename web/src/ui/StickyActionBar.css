@@ -73,3 +73,8 @@ html:has(.sticky-action-bar) {
   block-size: 0;
   pointer-events: none;
 }
+
+/* The row holding the actions: the box carries the column's width, so the row takes all of it (SHORT-08). */
+.sticky-action-bar__inner {
+  min-inline-size: 0;
+}
