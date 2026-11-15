@@ -136,20 +136,22 @@ html {
 }
 
 /* DS-02 / R-F: each link is its whole track (the tap target); the shapes are on the inner 40 px squircle, never on the link, so no
-   link box is ever filled or stretched. The focus ring follows the whole target (the button radius). */
+   link box is ever filled or stretched, and no ring is drawn round the link (the focus ring is on the squircle, below). */
 .bottom-bar__link,
 .bottom-bar__link[aria-current='page'],
 .bottom-bar__link[data-accent='true'] {
   align-self: stretch;
   justify-self: stretch;
-  /* The link is its track plus half the gap on each side (so neighbouring links meet, never overlap), and 4 px short of the bar's
-     border top and bottom, which leaves room for its outer focus ring inside the bar (below). */
+  /* The link is its track plus half the gap on each side (so neighbouring links meet, never overlap), from 4 px under the bar's top
+     border down to its bottom border: the squircle sits 8.5 px under the top border at 390, which leaves the current Scan's outline
+     3.5 px of bar above it. */
   inline-size: auto;
-  margin-block: var(--space-1);
+  margin-block: var(--space-1) 0;
   margin-inline: calc(var(--space-half) / -2);
   block-size: auto;
   min-width: 0;
-  gap: var(--space-half);
+  /* 6 px: the current Scan's outline (4 px outside its squircle) keeps 2 px off the label under it. */
+  gap: calc(var(--space-1) + var(--space-half));
   background: none;
   box-shadow: none;
   border-radius: var(--radius-button);
@@ -174,7 +176,7 @@ html {
   color: var(--color-accent-text);
 }
 
-/* Scan: always the accent squircle; its label is plain text, accent text when Scan is the current page. No ring. */
+/* Scan: always the accent squircle; its label is plain text, accent text when Scan is the current page. */
 .bottom-bar__link[data-accent='true'] {
   color: var(--color-text);
 }
@@ -188,15 +190,33 @@ html {
   color: var(--color-accent-text);
 }
 
-/* A11Y-02 (R-C+): the bar has 14 px of inline padding, so the ring is outer: drawn just outside the link, inside the 4 px the link
-   leaves above and below it and over the empty edge of its neighbour's track. An inner ring touched a long label ("Settings" fills
-   43 of a 46 px link at 390) and fused with the bar's border. The ring is the normal ring colour on every link, Scan included: the
-   link sits on the bar surface, the accent is the span's. */
+/* USER (B9-19 bar, w2c): Scan as the current page also gets an outer 2 px outline in the selected-ring colour (accent text), 2 px
+   off its squircle, so the current Scan is told apart from Scan at rest (both are the accent squircle) in every band, labels or not. */
+.bottom-bar__link[data-accent='true'][aria-current='page'] .bottom-bar__icon {
+  /* Two spreads, not an outline, so the focus ring (the squircle's outline) can show with it: the bar's surface for the gap, then the
+     ring. */
+  box-shadow: 0 0 0 var(--space-half) var(--color-surface), 0 0 0 calc(2 * var(--space-half)) var(--selected-ring);
+}
+
+/* USER (B9-19 bar, w2c), A11Y-02 and R-C+: keyboard focus rings the ICON only, never the link: a 2 px ring on the 40 px squircle,
+   drawn inside its edge, so it never reaches a label, a neighbour or the bar border at any width; and the focused item's label turns
+   accent text. The hit target stays the whole link. */
 .bottom-bar__link:focus-visible {
+  outline: none;
+  color: var(--color-accent-text);
+}
+
+.bottom-bar__link:focus-visible .bottom-bar__icon {
   outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
-  /* Just outside the link, which reaches halfway into the gap: the ring sits midway between a long label and its neighbour's
-     (Settings and Recipes are 6.4 px apart at 390 px: about 2 px of air on each side of the 2 px ring). */
-  outline-offset: 0;
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
+}
+
+/* On Scan's accent fill the ring is the on-accent colour (the ring token's rule for an accent fill), 2 px in from the squircle's edge
+   so an accent edge stays between it and the current outline outside: focus is a light ring inside, current a dark ring outside,
+   and both show, never fused, when Scan is current and focused. */
+.bottom-bar__link[data-accent='true']:focus-visible .bottom-bar__icon {
+  --focus-ring-color: var(--color-on-accent);
+  outline-offset: calc(-2 * var(--focus-ring-inner-width));
 }
 
 .bottom-bar__label {
@@ -217,11 +237,12 @@ html {
     padding-inline: calc(var(--space-1) + var(--space-half));
   }
 
-  /* No gap here: the links are exactly their tracks (the same selectors as the base rule, so the current link and Scan follow). */
+  /* No gap here: the links are exactly their tracks (the same selectors as the base rule, so the current link and Scan follow), and
+     with no label the squircle is centred, 4 px in from the border top and bottom. */
   .bottom-bar__link,
   .bottom-bar__link[aria-current='page'],
   .bottom-bar__link[data-accent='true'] {
-    margin-inline: 0;
+    margin: var(--space-1) 0;
   }
 
   .bottom-bar__label {
@@ -254,9 +275,10 @@ html {
     margin: 0;
   }
 
-  /* No room outside the link in the 52 px bar: the ring rings inside the link. */
-  .bottom-bar__link:focus-visible {
-    outline-offset: calc(-1 * var(--focus-ring-inner-width));
+  /* The 52 px bar leaves 5 px above and below a squircle: the current Scan's outline comes 1 px off it (3 px outside), 2 px clear of
+     the bar's border. */
+  .bottom-bar__link[data-accent='true'][aria-current='page'] .bottom-bar__icon {
+    box-shadow: 0 0 0 calc(var(--space-half) / 2) var(--color-surface), 0 0 0 calc(3 * var(--space-half) / 2) var(--selected-ring);
   }
 
   .bottom-bar__label {
@@ -583,6 +605,36 @@ html[data-keyboard='open'] .bottom-bar {
   .side-rail__link,
   .side-rail__link[data-accent='true'] {
     height: 44px;
+  }
+}
+
+/* USER (B9-19 bar, w2c), on the rails: a rail link keeps the outer ring where it is clean (the 88 and 240 px rails: 3 px of air to a
+   neighbour). Scan's accent fill would fuse with it (and with the current Scan's soft ring there), so on Scan the ring is drawn inside
+   the fill in the on-accent colour, 2 px in from its edge, as in the bottom bar. */
+.side-rail__link[data-accent='true']:focus-visible {
+  outline: var(--focus-ring-inner-width) solid var(--color-on-accent);
+  outline-offset: calc(-2 * var(--focus-ring-inner-width));
+}
+
+/* The compact rail's 44 px rows are 4 px apart, so an outer ring overran its neighbours and the rail's edge: there the ring is on the
+   icon capsule (44 x 26), inside its edge, and the focused label turns accent text (as in the bottom bar). */
+@media (max-height: 499px) and (min-width: 37.5em) and (width < 64em) {
+  .side-rail__link:focus-visible,
+  .side-rail__link[data-accent='true']:focus-visible {
+    outline: none;
+  }
+
+  .side-rail__link:focus-visible:not([data-accent='true']) {
+    color: var(--color-accent-text);
+  }
+
+  .side-rail__link:focus-visible .side-rail__pill {
+    outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-inner-width));
+  }
+
+  .side-rail__link[data-accent='true']:focus-visible .side-rail__pill {
+    outline-color: var(--color-on-accent);
   }
 }
 
