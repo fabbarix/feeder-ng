@@ -129,6 +129,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['photos', 'Images'], // photo-read: Choose photos
   ['clipboard', 'ClipboardText'], // UF1: ImagePicker paste
   ['link', 'LinkSimple'], // UF1: ImagePicker from a link
+  ['external', 'ArrowSquareOut'], // B9-27 RX-05: the Source link opens in a new tab
   ['rotateRight', 'ArrowClockwise'], // UF1: ImagePicker crop rotate
   ['rotateLeft', 'ArrowCounterClockwise'], // UF1: shares the glyph of undo/unarchive
   ['pasta', 'BowlSteam'],
