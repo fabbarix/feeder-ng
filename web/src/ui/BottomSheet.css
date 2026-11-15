@@ -171,6 +171,21 @@
   flex-direction: row;
 }
 
+/* SHORT-02: the leading ⋮ keeps its 44 px square at the start of the row; Cancel and the commit share the rest. R-A: it reads as
+   one of the row's outlined buttons (the IconButton's own 1 px boundary), with the same surface fill and corner. */
+.sheet__footer > .sheet__more,
+.sheet__footer[data-cancel] > .sheet__more {
+  display: flex;
+  flex: none;
+}
+
+.sheet__more .icon-button {
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+}
+
 /* SHORT-02 rule 1: the footer is one row; a FormActions row takes the whole of it. */
 .sheet__footer > .form-actions {
   flex: 1 1 auto;

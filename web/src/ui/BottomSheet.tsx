@@ -30,6 +30,11 @@ export interface BottomSheetProps {
   /** Sticky action row under the scrolling body. */
   footer?: ReactNode
   /**
+   * SHORT-02: the footer's leading slot, before Cancel: the ⋮ `<Menu>` of a sheet whose other actions (Change a date, a danger
+   * Remove) live there, so the row stays [⋮] [Cancel] [Save] with the sheet's own Cancel and submit. Additive (B9-42).
+   */
+  more?: ReactNode
+  /**
    * DS-12 R-B: a sheet that offers Cancel passes `onCancel`. Cancel is then a secondary Button at the footer's start (the
    * footer renders even without `footer`), and the header has no Close. Escape, the scrim and the grip still call `onClose`.
    * Without it the header carries the circular CloseButton.
@@ -74,6 +79,7 @@ function SheetSurface({
   title,
   children,
   footer,
+  more,
   onCancel,
   cancelLabel = overlayStrings.cancel,
   cancelProps,
@@ -116,7 +122,7 @@ function SheetSurface({
   const anchorRef = useRef<HTMLSpanElement>(null)
   useLayoutEffect(() => inheritScheme(anchorRef.current, ref.current), [])
 
-  const hasFooter = Boolean(footer || onCancel || submit)
+  const hasFooter = Boolean(footer || more || onCancel || submit)
   const showClose = closeButton && !onCancel
 
   const sheet = (
@@ -159,6 +165,7 @@ function SheetSurface({
         {hasFooter ? (
           <div className="sheet__footer" data-cancel={onCancel ? '' : undefined}>
             <ActionSurface>
+              {more ? <div className="sheet__more">{more}</div> : null}
               {onCancel ? (
                 <Button variant="secondary" className="sheet__cancel" onClick={() => dismiss('cancel')} {...cancelProps}>
                   {cancelLabel}
