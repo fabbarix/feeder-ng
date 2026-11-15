@@ -3,7 +3,8 @@
 #   focus-ring  21  a box-shadow: var(--focus-ring) anywhere (the ring is an outline, so forced colours keep it), or outline: none in a
 #                   :focus-visible rule whose last compound is not on the allow-list (.ui-field__input, .search-field__input,
 #                   .ui-field__textarea, .time-field__segment, .segmented__option: a text entry whose frame rings, an option whose
-#                   track rings). One violation per offending declaration.
+#                   track rings; B9-34: .line-row__tick, the Shop tick whose visible 24 px circle takes the ring as its border, R-C+).
+#                   One violation per offending declaration.
 register_rule focus-ring
 
 rule_focus_ring() {
@@ -13,7 +14,7 @@ rule_focus_ring() {
       function lastc(t,   n, a) { gsub(/[ \t]*[>+~][ \t]*/, " ", t); gsub(/[ \t]+$/, "", t); n = split(t, a, /[ \t]+/); return a[n] }
       function allowed(t,   l) {
         l = lastc(t); gsub(/:[a-z-]+(\([^)]*\))?/, "", l)
-        return (l == ".ui-field__input" || l == ".search-field__input" || l == ".ui-field__textarea" || l == ".time-field__segment" || l == ".segmented__option")
+        return (l == ".ui-field__input" || l == ".search-field__input" || l == ".ui-field__textarea" || l == ".time-field__segment" || l == ".segmented__option" || l == ".line-row__tick")
       }
       $1 != "D" { next }
       $4 == "box-shadow" && $5 ~ /var\(--focus-ring\)/ {

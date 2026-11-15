@@ -2,11 +2,12 @@
 // ("700 g of 1.4 kg", the same words and the same maths as a Scanned row), and the request that ticking it sends.
 import { describe, expect, it } from 'vitest'
 import { lineEntry } from '../../shop/lib/lines'
-import { makeLine } from '../../shop/testData'
-import { buildScannedRows } from './scannedList'
+import { makeGarlic, makeLine, makeList, makeTick } from '../../shop/testData'
+import { buildScannedRows, toGetLines } from './scannedList'
 import { applied, passata, products, queued } from './scannedList.testData'
 import { tickRequest, toGetRows } from './toGet'
 
+const lineLike = (line: ReturnType<typeof makeLine>) => lineEntry(line, 'USD', 'metric')
 const passataLine = makeLine()
 const cheeseLine = makeLine({ ingredientId: 5, name: 'Cheese', quantity: 200, pack: null })
 const eggsLine = makeLine({ ingredientId: 9, name: 'Eggs', baseUnit: 'piece', quantity: 6, pack: null })
@@ -46,13 +47,42 @@ describe('toGetRows', () => {
   })
 })
 
-describe('tickRequest: what ticking a To get row sends', () => {
-  it('is the Line and what is still to get (what the Shop screen "How much?" prefills), so it adds that to Stock', () => {
-    expect(tickRequest(lineEntry(passataLine, 'USD', 'metric'))).toEqual({ ingredientId: 2, quantity: 1400 })
-    expect(tickRequest(lineEntry(makeLine({ quantity: 700 }), 'USD', 'metric'))).toEqual({ ingredientId: 2, quantity: 700 })
+describe('tickRequest: what ticking a To get row sends (B9-34, SSP 1: the same amount as the Shop)', () => {
+  it('is the Line and its default amount: the suggested pack, not what is still to get', () => {
+    expect(tickRequest(lineLike(passataLine))).toEqual({ ingredientId: 2, quantity: 1400 }) // 2 x Mutti 700 g
+    expect(tickRequest(lineLike(makeLine({ quantity: 700, pack: { productId: 7, name: 'Mutti 700 g', size: 700, count: 1, remainder: 0 } })))).toEqual({ ingredientId: 2, quantity: 700 })
+    expect(tickRequest(lineLike(makeGarlic()))).toEqual({ ingredientId: 9, quantity: 500 }) // need 150 g, the pack is 500 g
+  })
+
+  it('without a pack it is what is still to get', () => {
+    expect(tickRequest(lineLike(makeLine({ quantity: 200, pack: null })))).toEqual({ ingredientId: 2, quantity: 200 })
   })
 
   it('is null for an entry with no Ingredient (nothing to tick here)', () => {
-    expect(tickRequest({ ...lineEntry(passataLine, 'USD', 'metric'), ingredientId: null })).toBeNull()
+    expect(tickRequest({ ...lineLike(passataLine), ingredientId: null })).toBeNull()
+  })
+})
+
+describe('toGetRows: need that grew after a tick (SSP-02)', () => {
+  const grown = makeGarlic({ ticked: true, need: 650, quantity: 500, more: 500, pack: null, tick: makeTick() })
+
+  it('a ticked Line with more shows once, as the open row "more:<id>" for the difference, with its own cover', () => {
+    const rows = toGetRows([grown], [], 'USD', 'metric')
+    expect(rows.map((r) => r.entry.key)).toEqual(['more:9'])
+    expect(rows[0]!.entry).toMatchObject({ moreSince: true, quantity: 500, ticked: false })
+    expect(rows[0]!.cover).toEqual({ text: '0 of 500 g', done: false })
+  })
+
+  it('ticking that row sends the difference', () => {
+    expect(tickRequest(toGetRows([grown], [], 'USD', 'metric')[0]!.entry)).toEqual({ ingredientId: 9, quantity: 500 })
+  })
+
+  it('a ticked Line without more is not a row (as before)', () => {
+    expect(toGetRows([{ ...grown, more: undefined, quantity: 0 }], [], 'USD', 'metric')).toEqual([])
+  })
+
+  it('toGetLines (scan/lib/scannedList.ts, a one-line change B9-41 inherits) keeps a ticked Line that has more, and still drops a plain ticked one', () => {
+    const list = makeList({ lines: [grown, makeLine({ ingredientId: 4, name: 'Rice', ticked: true, quantity: 0 }), makeLine()] })
+    expect(toGetLines(list, []).map((l) => l.ingredientId)).toEqual([9, 2])
   })
 })

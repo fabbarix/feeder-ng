@@ -18,6 +18,8 @@ vi.mock('../../../ui/Toast', () => ({ useToast: () => ({ show: vi.fn() }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
 
+// B9-34: the ticked Line's sheet shows times in the Household zone, read from /api/me (app/useMe)
+vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 import { ShoppingScreen } from './ShoppingScreen'
 
 function show(shopId: number | null, wide: boolean) {
