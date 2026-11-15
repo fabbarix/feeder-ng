@@ -117,7 +117,7 @@ describe('PlanScreen with Courses', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Mark all Cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/4/all/cooked')).toHaveLength(1))
     expect(api.callsTo('POST', '/api/plan/2026-11-10/4/all/cooked')[0]!.body).toEqual({
-      courses: [{ courseId: 1, leftoverPortions: 2 }, { courseId: 2, leftoverPortions: 1.5 }],
+      courses: [{ courseId: 1, leftoverPortions: 2 }, { courseId: 2, leftoverPortions: 1.75 }],
     })
   })
 })

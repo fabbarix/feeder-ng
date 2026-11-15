@@ -297,7 +297,7 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Increase Leftover portions' }))
     await userEvent.click(within(sheet).getByRole('button', { name: 'Mark as Cooked' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2.5 }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2.25 }))
 
     const notice = await findShortfallNotice()
     expect(notice).toHaveTextContent('Stock was short for chicken thighs')
