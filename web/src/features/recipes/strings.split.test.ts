@@ -19,7 +19,7 @@ const KEYS = [
   'readyMealIngredient', 'steps', 'generic', 'checkFields', 'codes',
   // B9-20 (RES-02): the seven-state copy. 'noMatch' ("No Recipe matches.") became noMatchFor / noMatchFilters.
   'emptyText', 'importRecipes', 'noMatchFor', 'noMatchFilters', 'noMatchText', 'showAll', 'offlineUnknownTitle', 'offlineUnknownText',
-  'detailOfflineTitle', 'detailOfflineText',
+  'detailOfflineTitle', 'detailOfflineText', 'detailTitle',
 ]
 
 const parts = { list: recipeListStrings, detail: recipeDetailStrings, editor: recipeEditorStrings } as Record<string, Record<string, unknown>>

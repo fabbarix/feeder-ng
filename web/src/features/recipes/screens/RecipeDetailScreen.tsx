@@ -68,7 +68,7 @@ export function RecipeDetailScreen(): ReactNode {
 
   // B9-20 (RES-02): one state model. Unknown offline is a LoadState (Try again could not work), never the error.
   if (!r) {
-    const title = recipe.knownName ?? recipeStrings.title
+    const title = recipe.knownName ?? recipeStrings.detailTitle
     return (
       <section className="recipe-detail">
         <PageHeader title={title} breadcrumbs={crumbs} actions={recipe.state === 'loading' ? <RecipeDetailSkeleton.Actions /> : undefined} />

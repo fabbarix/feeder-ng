@@ -4,6 +4,8 @@
 export const recipeDetailStrings = {
   loading: 'Loading…',
   loadError: 'The Recipe could not be loaded.',
+  /** B9-20: the page title while the Recipe's own name is not known (loading, offline, failed). */
+  detailTitle: 'Recipe',
   /** B9-20 (RES-02): offline, and this Recipe was never loaded on this phone. */
   detailOfflineTitle: 'This Recipe isn’t on this phone yet',
   detailOfflineText: 'Feeder needs a connection to load it the first time. It will appear here as soon as the connection is back.',
