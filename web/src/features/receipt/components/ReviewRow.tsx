@@ -1,7 +1,7 @@
 // One proposal of the review, as a ListRow (DS R-E; B9-50 SSP-08): the name read as the key, the state at the row's end, the printed line
 // muted under it. A row with a checkbox is toggled by the whole row; a Not scanned row has no checkbox until it is set up, and its one
 // control is "Add…" (named after its printed line), which the whole row opens too. The whole-row click is ReviewSection's (one listener for
-// the list); here the row only renders. Our Checkbox is the keyboard control.
+// the list); here the row only renders. Our Checkbox is the keyboard control. The button is the md size (44 px; SSP-08 asks 40 at least).
 import { Button, Checkbox, Icon, ListRow, Thumb } from '../../../ui'
 import { receiptStrings as t } from '../strings'
 import type { ReviewRowView } from '../lib/reviewRows'
@@ -23,14 +23,14 @@ export function ReviewRow({ view, onToggle, onOpenAdd }: ReviewRowProps) {
     actions = (
       <>
         {view.ready ? <span className="receipt-row__ready">{t.ready}</span> : null}
-        <Button variant="secondary" size="sm" aria-label={view.buttonName} onClick={() => onOpenAdd(view.id)}>
+        <Button variant="secondary" aria-label={view.buttonName} onClick={() => onOpenAdd(view.id)}>
           {view.ready ? t.edit : t.add}
         </Button>
       </>
     )
   } else if (view.isMissing) {
     actions = (
-      <Button variant="secondary" size="sm" aria-label={view.buttonName} onClick={() => onToggle(view.id)}>
+      <Button variant="secondary" aria-label={view.buttonName} onClick={() => onToggle(view.id)}>
         {view.checked ? t.undo : t.remove}
       </Button>
     )

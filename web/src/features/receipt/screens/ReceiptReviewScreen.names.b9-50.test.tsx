@@ -82,3 +82,20 @@ describe('two identical printed lines', () => {
     unique()
   })
 })
+
+describe('focus after the Add… sheet', () => {
+  it('goes back to the row\'s button: Edit once it is set up, Add… after a Close', async () => {
+    show(({ onSave, onClose }) => (
+      <>
+        <button type="button" onClick={() => onSave(completeDraft)}>Save add</button>
+        <button type="button" onClick={onClose}>Close add</button>
+      </>
+    ))
+    await userEvent.click(screen.getByRole('button', { name: 'Add KITCHEN ROLL 4 PACK, line 4' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close add' }))
+    expect(screen.getByRole('button', { name: 'Add KITCHEN ROLL 4 PACK, line 4' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Add KITCHEN ROLL 4 PACK, line 4' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save add' }))
+    expect(screen.getByRole('button', { name: 'Edit KITCHEN ROLL 4 PACK, line 4' })).toHaveFocus()
+  })
+})

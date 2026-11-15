@@ -214,17 +214,35 @@
   white-space: nowrap;
 }
 
-/* B9-50 (SSP-08, A11Y-09; mock ssp-08-review.html): the review's rows are ListRows (R-E). The name read is the key, the state sits at the
-   row's end, the change and the printed line are muted detail under the key, and the row's one button sits under the detail, in line with
-   the text, so a long name keeps the whole text column. The whole row is the target (ReviewSection listens on the list). */
+/* B9-50 (SSP-08, A11Y-09; mock ssp-08-review.html): the review's rows are ListRows laid out as R-E rows. The name read is the key and the
+   state sits at the end of its line; the change, the printed line and "… is a Product" are detail under them, across the state's column;
+   the row's one button sits under the detail, in line with the text, so a long name keeps the whole text column. The text column's parts
+   join the row's grid (display: contents), so the detail can run under the state. The whole row is the target (ReviewSection listens on
+   the list). */
 .receipt-section__list {
   container-type: inline-size;
 }
 
 .receipt-section__list > .list-row {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'lead key state'
+    'lead detail detail'
+    'lead act act';
+  align-items: start;
+  column-gap: var(--space-3);
+  row-gap: var(--space-half);
   padding-block: var(--space-3);
   cursor: pointer;
+}
+
+.receipt-section__list > .list-row:has(> .list-row__control) {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'ctl lead key state'
+    'ctl lead detail detail'
+    'ctl lead act act';
 }
 
 .receipt-section__list > .list-row:hover {
@@ -236,7 +254,38 @@
 }
 
 .receipt-section__list .list-row__control {
+  grid-area: ctl;
   margin-block: calc(-1 * var(--space-1));
+}
+
+.receipt-section__list .list-row__leading {
+  grid-area: lead;
+}
+
+.receipt-section__list .list-row__text {
+  display: contents;
+}
+
+.receipt-section__list .list-row__title {
+  grid-area: key;
+}
+
+.receipt-section__list .list-row__value {
+  grid-area: state;
+  min-inline-size: 0;
+}
+
+.receipt-section__list .list-row__extra {
+  grid-area: detail;
+  margin-block-start: 0;
+  min-inline-size: 0;
+}
+
+.receipt-section__list .list-row__actions {
+  grid-area: act;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-block-start: var(--space-2);
 }
 
 .receipt-row__details {
@@ -274,36 +323,6 @@
 
 .receipt-row__match > svg {
   flex: none;
-}
-
-/* The row's button under the detail, lined up with the text column: after the 40 px thumb (--space-10), and after the 44 px checkbox (--space-10 + --space-1) when there is one. */
-.receipt-section__list .list-row__actions {
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  padding-inline-start: calc(var(--space-10) + var(--space-3));
-}
-
-.receipt-section__list .list-row:has(> .list-row__control) .list-row__actions {
-  padding-inline-start: calc(2 * var(--space-10) + var(--space-1) + 2 * var(--space-3));
-}
-
-@container (width < 24rem) {
-  .receipt-section__list .list-row__actions {
-    padding-inline-start: calc(var(--space-10) + var(--space-2));
-  }
-
-  .receipt-section__list .list-row:has(> .list-row__control) .list-row__actions {
-    padding-inline-start: calc(2 * var(--space-10) + var(--space-1) + 2 * var(--space-2));
-  }
-}
-
-/* From 35 rem of row the button sits at the end of the first line (ListRow's actions slot). */
-@container (width >= 35rem) {
-  .receipt-section__list .list-row__actions,
-  .receipt-section__list .list-row:has(> .list-row__control) .list-row__actions {
-    padding-inline-start: 0;
-    justify-content: flex-end;
-  }
 }
 
 .receipt-row__ready {

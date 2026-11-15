@@ -40,6 +40,13 @@ export function ReceiptReviewScreen({ renderAdd, products }: ReceiptReviewScreen
   const [adding, setAdding] = useState<Proposal>()
   // B9-50: "Clear all" answers a press of Accept all; rows the read checked by default still offer "Accept all N".
   const [accepted, setAccepted] = useState(false)
+  // The row whose Add… sheet just closed: focus goes back to its button (Add… or, once set up, Edit), never to the page.
+  const [returnTo, setReturnTo] = useState<string>()
+  useEffect(() => {
+    if (returnTo === undefined) return
+    document.querySelector<HTMLElement>(`li[data-proposal="${returnTo}"] .list-row__actions button`)?.focus()
+    setReturnTo(undefined)
+  }, [returnTo])
 
   const onApplied = useCallback(
     (applied: number) => {
@@ -99,8 +106,12 @@ export function ReceiptReviewScreen({ renderAdd, products }: ReceiptReviewScreen
     onSave: (draft) => {
       review.setAdd(adding.id, draft)
       setAdding(undefined)
+      setReturnTo(adding.id)
     },
-    onClose: () => setAdding(undefined),
+    onClose: () => {
+      setAdding(undefined)
+      setReturnTo(adding.id)
+    },
   }) : null
 
   return (
