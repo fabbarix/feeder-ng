@@ -146,7 +146,7 @@ html {
      border top and bottom, which leaves room for its outer focus ring inside the bar (below). */
   inline-size: auto;
   margin-block: var(--space-1);
-  margin-inline: calc(-1 * var(--space-half));
+  margin-inline: calc(var(--space-half) / -2);
   block-size: auto;
   min-width: 0;
   gap: var(--space-half);
@@ -188,15 +188,15 @@ html {
   color: var(--color-accent-text);
 }
 
-/* A11Y-02 (R-C+): the bar has 14 px of inline padding, so the ring is outer: drawn at the link's edge, inside the 4 px the link
+/* A11Y-02 (R-C+): the bar has 14 px of inline padding, so the ring is outer: drawn just outside the link, inside the 4 px the link
    leaves above and below it and over the empty edge of its neighbour's track. An inner ring touched a long label ("Settings" fills
    43 of a 46 px link at 390) and fused with the bar's border. The ring is the normal ring colour on every link, Scan included: the
    link sits on the bar surface, the accent is the span's. */
 .bottom-bar__link:focus-visible {
   outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
-  /* Half over the link's edge: the ring sits midway between a long label and its neighbour's (Settings and Recipes are 6.4 px apart
-     at 390 px: about 2 px of air on each side of the 2 px ring). */
-  outline-offset: calc(var(--space-half) / -2);
+  /* Just outside the link, which reaches halfway into the gap: the ring sits midway between a long label and its neighbour's
+     (Settings and Recipes are 6.4 px apart at 390 px: about 2 px of air on each side of the 2 px ring). */
+  outline-offset: 0;
 }
 
 .bottom-bar__label {

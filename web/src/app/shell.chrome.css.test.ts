@@ -94,7 +94,7 @@ describe('DS-02 / R-F: one squircle system in the bottom bar', () => {
   it('a link rings just outside itself with the inner width, inside the 4 px it leaves to the bar border (an inner ring touched "Settings" and fused with the border; B9-19 review), inside itself in the 52 px short bar; the ring is the normal ring colour on every link', () => {
     const d = at('.bottom-bar__link:focus-visible')
     expect(d['outline']).toBe('var(--focus-ring-inner-width) solid var(--focus-ring-color)')
-    expect(d['outline-offset']).toBe('calc(var(--space-half) / -2)')
+    expect(d['outline-offset']).toBe('0')
     expect(at('.bottom-bar__link:focus-visible', SHORT_NARROW)['outline-offset']).toBe('calc(-1 * var(--focus-ring-inner-width))')
     expect(at(".bottom-bar__link[data-accent='true']")['--focus-ring-color']).toBeUndefined()
   })
@@ -106,11 +106,11 @@ describe('DS-02 / R-F: one squircle system in the bottom bar', () => {
 
 describe('B9-19 review: the bar link and its focus ring', () => {
   const LINKS = ['.bottom-bar__link', ".bottom-bar__link[aria-current='page']", ".bottom-bar__link[data-accent='true']"]
-  it('a link is 4 px short of the bar border top and bottom, and takes half the 2 px gap on each side (neighbours meet, never overlap)', () => {
+  it('a link is 4 px short of the bar border top and bottom, and reaches halfway into the 2 px gap on each side (neighbours meet, never overlap)', () => {
     expect(at('.bottom-bar')['column-gap']).toBe('var(--space-half)')
     for (const sel of LINKS) {
       expect(at(sel)['margin-block'], sel).toBe('var(--space-1)')
-      expect(at(sel)['margin-inline'], sel).toBe('calc(-1 * var(--space-half))')
+      expect(at(sel)['margin-inline'], sel).toBe('calc(var(--space-half) / -2)')
     }
   })
   it('in the gapless narrow band the links are exactly their tracks, the current link and Scan included', () => {
