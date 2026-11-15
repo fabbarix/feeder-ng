@@ -30,3 +30,28 @@ export function removeUse(steps: StepDraft[], step: number, use: number): StepDr
 export function setStepImage(steps: StepDraft[], step: number, image: string): StepDraft[] {
   return onStep(steps, step, (s) => ({ ...s, image }))
 }
+
+/** B9-31 (SAFE-10): a removed use, the key of its Step and its index there. */
+export interface RemovedUse {
+  stepKey: string
+  index: number
+  use: UseDraft
+}
+
+/** Removes use `useIndex` of Step `stepIndex` and reports it for an Undo; an unknown index removes nothing (removed: null). */
+export function removeUseWithUndo(steps: StepDraft[], stepIndex: number, useIndex: number): { steps: StepDraft[]; removed: RemovedUse | null } {
+  const use = steps[stepIndex]?.uses[useIndex]
+  if (!use) return { steps, removed: null }
+  return { steps: removeUse(steps, stepIndex, useIndex), removed: { stepKey: steps[stepIndex]!.key, index: useIndex, use } }
+}
+
+/** Gives a removed use back to its Step (found by key, so a moved Step still gets it), at its index (clamped). A Step that is gone: no change. */
+export function restoreUse(steps: StepDraft[], removed: RemovedUse): StepDraft[] {
+  if (!steps.some((s) => s.key === removed.stepKey)) return steps
+  return steps.map((s) => {
+    if (s.key !== removed.stepKey) return s
+    const uses = [...s.uses]
+    uses.splice(Math.max(0, Math.min(removed.index, uses.length)), 0, removed.use)
+    return { ...s, uses }
+  })
+}

@@ -5,6 +5,8 @@ import { importStrings } from '../strings'
 import type { CourseMatch } from '../types'
 
 export interface CourseMatchTileProps {
+  /** B9-28: the question id this tile answers (lib/reviewSummary.openQuestions); "Next question" moves focus to the tile. */
+  question?: string
   match: CourseMatch
   /** Names of the Recipes that use the name (lib/courseRows.usedByRecipes). */
   usedBy: readonly string[]
@@ -21,7 +23,7 @@ export interface CourseMatchTileProps {
 const s = importStrings.courses
 
 /** CRS E2: one unknown or archived Course name of the file, with its answers (docs/dev/design/crs-e2.md 4.3). */
-export function CourseMatchTile({ match, usedBy, courses, isAdmin, onUse, onSkip, onAdd, onUnarchive }: CourseMatchTileProps): ReactNode {
+export function CourseMatchTile({ question, match, usedBy, courses, isAdmin, onUse, onSkip, onAdd, onUnarchive }: CourseMatchTileProps): ReactNode {
   const name = match.name
   const archived = match.status === 'archived'
   const answer = match.effective?.action
@@ -29,7 +31,7 @@ export function CourseMatchTile({ match, usedBy, courses, isAdmin, onUse, onSkip
   const useCourseId = answer === 'use' ? (match.effective?.courseId ?? null) : null
 
   return (
-    <Tile as="section" aria-label={name}>
+    <Tile as="section" aria-label={name} data-question={question} tabIndex={question ? -1 : undefined}>
       <h2>{name}</h2>
       <div className="import-chips">
         <Chip kind="tag">{archived ? s.statusArchived : s.statusUnknown}</Chip>

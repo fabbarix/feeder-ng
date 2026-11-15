@@ -419,3 +419,59 @@ export function pickCreatedIngredient(draft: RecipeDraft, key: string, ingredien
   const unit = line && line.unit.trim() !== '' ? line.unit : ingredient.baseUnit
   return updateLine(draft, key, { ingredientId: ingredient.id, ingredientName: ingredient.name, unit })
 }
+
+// ---- B9-31 (SAFE-01, SAFE-10): dirty state, a restored draft's keys, and removing a line with its Undo ----
+
+/** What the person typed into a line or use that Save would skip (no Ingredient yet), so it still counts as a change. */
+const pendingLine = (l: LineDraft) => ({ name: l.ingredientName.trim(), quantity: l.quantity.trim(), unit: l.unit.trim(), optional: l.optional, note: l.note.trim(), auto: l.auto === true })
+const pendingUse = (u: UseDraft) => ({ name: u.ingredientName.trim(), quantity: u.quantity.trim(), unit: u.unit.trim() })
+
+/** The part of a draft that decides "dirty": the body Save would send, plus the lines and uses it would skip, by position. */
+function comparable(draft: RecipeDraft) {
+  const input: Partial<RecipeInput> = draftToInput(draft)
+  delete input.takeOver
+  const sent = (l: LineDraft) => l.ingredientId !== null || (l.baseRecipeId ?? null) !== null
+  return {
+    input,
+    lineNames: draft.lines.map((l) => l.ingredientName.trim()),
+    pendingLines: draft.lines.map((l) => (sent(l) ? null : pendingLine(l))),
+    pendingUses: draft.steps.map((s) => s.uses.map((u) => (u.ingredientId === null ? pendingUse(u) : null))),
+  }
+}
+
+/**
+ * SAFE-01 R2: true when two drafts are the same to the person. It compares what Save would send (draftToInput), so leading and
+ * trailing spaces and the keys do not count and a reordered list does; a line or use with no Ingredient yet (which Save skips)
+ * counts by what was typed in it. The take-over answer and wholeMealSet are not compared.
+ */
+export function sameDraft(a: RecipeDraft, b: RecipeDraft): boolean {
+  return JSON.stringify(comparable(a)) === JSON.stringify(comparable(b))
+}
+
+/** Fresh keys for every line, Step and use (a draft read back after a reload holds keys this session's counter hands out again). */
+export function rekeyDraft(draft: RecipeDraft): RecipeDraft {
+  return {
+    ...draft,
+    lines: draft.lines.map((l) => ({ ...l, key: newKey('line') })),
+    steps: draft.steps.map((s) => ({ ...s, key: newKey('step'), uses: s.uses.map((u) => ({ ...u, key: newKey('use') })) })),
+  }
+}
+
+export interface RemovedLine {
+  line: LineDraft
+  index: number
+}
+
+/** Removes the line with `key` and reports it with its index, for an Undo; an unknown key removes nothing (removed: null). */
+export function removeLineWithUndo(draft: RecipeDraft, key: string): { draft: RecipeDraft; removed: RemovedLine | null } {
+  const index = draft.lines.findIndex((l) => l.key === key)
+  if (index < 0) return { draft, removed: null }
+  return { draft: removeLine(draft, key), removed: { line: draft.lines[index]!, index } }
+}
+
+/** Puts a removed line back at its index (clamped to the list), with its key and content. */
+export function restoreLine(draft: RecipeDraft, removed: RemovedLine): RecipeDraft {
+  const lines = [...draft.lines]
+  lines.splice(Math.max(0, Math.min(removed.index, lines.length)), 0, removed.line)
+  return { ...draft, lines }
+}

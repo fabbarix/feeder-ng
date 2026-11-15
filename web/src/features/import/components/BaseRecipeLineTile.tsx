@@ -10,6 +10,8 @@ import { FileYieldForm } from './FileYieldForm'
 import { TakeOverQuestion } from './TakeOverQuestion'
 
 export interface BaseRecipeLineTileProps {
+  /** B9-28: the question id this tile answers (lib/reviewSummary.openQuestions); "Next question" moves focus to the tile. */
+  question?: string
   row: BaseRecipeRow
   /** The take-over ask of this line, when a Base recipe of its name meets a plain Ingredient. */
   ask?: ImportTakeOverAsk
@@ -27,7 +29,7 @@ export interface BaseRecipeLineTileProps {
  * answers), and "Choose another" (BR-D's Base recipe picker). Answers are sent when they are chosen; nothing is linked until Confirm. A Recipe of
  * this file that is not a Base recipe asks for its Yield when the server says so.
  */
-export function BaseRecipeLineTile({ row, ask, problems, warnings, onAnswer, onConvert, onTakeOver }: BaseRecipeLineTileProps): ReactNode {
+export function BaseRecipeLineTile({ question, row, ask, problems, warnings, onAnswer, onConvert, onTakeOver }: BaseRecipeLineTileProps): ReactNode {
   const uid = useId()
   const questionId = `${uid}-question`
   const [picking, setPicking] = useState(false)
@@ -52,7 +54,7 @@ export function BaseRecipeLineTile({ row, ask, problems, warnings, onAnswer, onC
   }
 
   return (
-    <Tile as="section" aria-label={row.reading} className="base-line-tile">
+    <Tile as="section" aria-label={row.reading} className="base-line-tile" data-question={question} tabIndex={question ? -1 : undefined}>
       <p className="base-line-tile__reading">{row.reading}</p>
       {open ? (
         <div className="base-line-tile__chips">
@@ -62,7 +64,7 @@ export function BaseRecipeLineTile({ row, ask, problems, warnings, onAnswer, onC
         </div>
       ) : null}
       {ownProblems.map((p, i) => (
-        <Tile key={alertIds[i]} id={alertIds[i]} variant="status" status="danger" role="alert" as="div">
+        <Tile key={alertIds[i]} id={alertIds[i]} variant="status" status="warn" role="alert" as="div">
           <p>{p.message}</p>
         </Tile>
       ))}

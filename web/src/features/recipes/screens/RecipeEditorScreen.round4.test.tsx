@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockApi } from '../../../lib/baseRecipes/test-utils'
 import { ConfirmProvider, ToastProvider } from '../../../ui'
@@ -19,17 +19,16 @@ vi.mock('../../../ui', async (orig) => ({ ...(await orig<object>()), ImagePicker
 vi.mock('../../../lib/courses/useCourses', () => ({ useCourses: () => ({ choices: [], isPending: false, isError: false }) }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter, safeEditorFields } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const view = () =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ToastProvider>
         <ConfirmProvider>
-          <MemoryRouter initialEntries={['/recipes/new']}>
-            <Routes>
+          <EditorRouter providers={false} initialEntries={['/recipes/new']}>
               <Route path="/recipes/new" element={<RecipeEditorScreen />} />
-            </Routes>
-          </MemoryRouter>
+          </EditorRouter>
         </ConfirmProvider>
       </ToastProvider>
     </QueryClientProvider>,
@@ -42,6 +41,7 @@ const baseLine = (over: Partial<LineDraft> = {}): LineDraft => ({
   linkedFromIngredientId: 5, neededAtStep: null, neededAtDefault: 2, ...over,
 })
 const editorOf = (line: LineDraft) => ({
+  ...safeEditorFields(),
   draft: { ...emptyDraft(), name: 'Lasagne', lines: [line], steps } as RecipeDraft,
   setDraft: vi.fn(), errors: {}, saving: false, isLoading: false, unitPrompt: null, save: vi.fn(), answerUnitPrompt: vi.fn(), dismissUnitPrompt: vi.fn(),
   addLine: vi.fn(), updateLine: vi.fn(), pickIngredient: vi.fn(), removeLine: vi.fn(), setSteps: vi.fn(), moveLine: vi.fn(),

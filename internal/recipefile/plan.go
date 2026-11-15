@@ -325,6 +325,42 @@ type RecipeStatus struct {
 	Action     string `json:"action,omitempty"` // the user's answer; empty = unanswered
 	Resolved   bool   `json:"resolved"`
 	ImportedAs string `json:"importedAs,omitempty"` // final name ("X (2)" for keep_both)
+	// Preview (B9-28, RX-01) is what the file says about the Recipe, so Import Review can show it before anything is saved.
+	// Filled by BuildPlan for every Recipe of the file (kept, conflicting or skipped), in file order.
+	Preview RecipePreview `json:"preview"`
+}
+
+// RecipePreview is the read-only view of one Recipe of the file (B9-28, RX-01). Courses, Tags, Lines and Steps are never null in JSON.
+type RecipePreview struct {
+	Yield       float64       `json:"yield"`
+	YieldUnit   string        `json:"yieldUnit,omitempty"`
+	ReadyMeal   bool          `json:"readyMeal"`
+	BaseRecipe  bool          `json:"baseRecipe"` // true only when the file says so
+	Courses     []string      `json:"courses"`    // the file's Course names, as written; empty = the file names none (the main Course)
+	Tags        []string      `json:"tags"`
+	Description string        `json:"description,omitempty"`
+	Source      *Source       `json:"source,omitempty"`
+	Lines       []PreviewLine `json:"lines"`
+	Steps       []PreviewStep `json:"steps"`
+	HasImage    bool          `json:"hasImage"`
+}
+
+// PreviewLine is one Ingredient line of a previewed Recipe. Recipe is the name of the Base recipe the line calls for, or empty.
+type PreviewLine struct {
+	Quantity   float64 `json:"quantity"`
+	Unit       string  `json:"unit"`
+	Ingredient string  `json:"ingredient"`
+	Note       string  `json:"note,omitempty"`
+	Optional   bool    `json:"optional"`
+	Recipe     string  `json:"recipe,omitempty"`
+}
+
+// PreviewStep is one Step of a previewed Recipe; the minutes are 0 when the file gives none.
+type PreviewStep struct {
+	Text            string  `json:"text"`
+	Kind            string  `json:"kind"`
+	DurationMinutes float64 `json:"durationMinutes"`
+	LeadTimeMinutes float64 `json:"leadTimeMinutes"`
 }
 
 // Problem blocks the import: Path is a JSON path into the file.
@@ -378,7 +414,51 @@ type Plan struct {
 //     Recipes with decision skip are not checked.
 //   - Warnings carry the image warnings in images.Warnings.
 func BuildPlan(f File, ex Existing, d Decisions, images ImageSet) Plan {
-	return newReview(f, ex, d, images).plan()
+	p := newReview(f, ex, d, images).plan()
+	for i := range p.Recipes {
+		if idx := p.Recipes[i].Index; idx >= 0 && idx < len(f.Recipes) {
+			p.Recipes[i].Preview = previewOf(f.Recipes[idx])
+		}
+	}
+	return p
+}
+
+// previewOf is the read-only view of one Recipe of the file (B9-28, RX-01): its lists are never nil, minutes absent read 0.
+func previewOf(r Recipe) RecipePreview {
+	pv := RecipePreview{
+		Yield:       r.Yield,
+		YieldUnit:   r.YieldUnit,
+		ReadyMeal:   r.ReadyMeal,
+		BaseRecipe:  r.BaseRecipe != nil && *r.BaseRecipe,
+		Courses:     append([]string{}, r.Courses...),
+		Tags:        append([]string{}, r.Tags...),
+		Description: r.Description,
+		Lines:       make([]PreviewLine, 0, len(r.Ingredients)),
+		Steps:       make([]PreviewStep, 0, len(r.Steps)),
+		HasImage:    r.Image != "",
+	}
+	if r.Source != nil && (r.Source.URL != "" || r.Source.Attribution != "") {
+		src := *r.Source
+		pv.Source = &src
+	}
+	for _, l := range r.Ingredients {
+		pl := PreviewLine{Quantity: l.Quantity, Unit: l.Unit, Ingredient: l.Ingredient, Note: l.Note, Optional: l.Optional}
+		if l.Recipe != nil {
+			pl.Recipe = l.Recipe.Name
+		}
+		pv.Lines = append(pv.Lines, pl)
+	}
+	for _, s := range r.Steps {
+		ps := PreviewStep{Text: s.Text, Kind: s.Kind}
+		if s.DurationMinutes != nil {
+			ps.DurationMinutes = *s.DurationMinutes
+		}
+		if s.LeadTimeMinutes != nil {
+			ps.LeadTimeMinutes = *s.LeadTimeMinutes
+		}
+		pv.Steps = append(pv.Steps, ps)
+	}
+	return pv
 }
 
 // NotReadyError is returned by BuildCommit when the Plan still has open answers.

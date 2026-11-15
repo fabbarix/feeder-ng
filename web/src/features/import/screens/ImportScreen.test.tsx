@@ -34,37 +34,15 @@ describe('ImportScreen', () => {
   beforeEach(() => {
     hook.current = state({})
   })
-  it('guides the import as four numbered steps: Read a recipe, the Agent Prompt, the file, then the review', () => {
+  // The numbered steps are gone (RX-11): ImportScreen.rx.test.tsx covers the two paths.
+  it('shows the page title', () => {
     view()
     expect(screen.getByRole('heading', { level: 1, name: s.importTitle })).toBeInTheDocument()
-    expect(screen.getByText(s.stepOverline(1))).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Read a recipe' })).toBeInTheDocument()
-    expect(screen.getByText(s.stepOverline(2))).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: s.stepOneTitle })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: s.copyAgentPrompt })).toBeInTheDocument()
-    expect(screen.getByText(s.stepOverline(3))).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: s.stepTwoTitle })).toBeInTheDocument()
-    expect(screen.getByText(s.stepOverline(4))).toBeInTheDocument()
   })
-  it('step 4 is a Tile with an overline and its heading, like the other steps (before and during the review)', () => {
-    const { rerender } = view()
-    const tileOf = (n: number) => screen.getByText(s.stepOverline(n)).closest('.tile')
-    for (const n of [1, 2, 3, 4]) expect(tileOf(n), `step ${n}`).not.toBeNull()
-    expect(within(tileOf(4) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
-    expect(screen.getByText(s.stepOverline(4))).toHaveClass('tile__overline')
-    hook.current = state({ phase: 'reviewing', plan: plan() })
-    rerender(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
-    expect(within(tileOf(2) as HTMLElement).getByRole('heading', { name: s.stepThreeTitle })).toBeInTheDocument()
-  })
-  it('numbers the steps that are shown without gaps: during the review the Agent Prompt is step 1 and the review step 2', () => {
-    hook.current = state({ phase: 'reviewing', plan: plan() })
+  it('starts with the file tile and passes the pasted text to the review', async () => {
     view()
-    const overlines = Array.from(document.querySelectorAll('.tile__overline')).map((e) => e.textContent)
-    expect(overlines).toEqual([s.stepOverline(1), s.stepOverline(2)])
-  })
-  it('starts with the source step and passes the text to the review', async () => {
-    view()
-    await userEvent.click(screen.getByLabelText(s.pasteLabel))
+    await userEvent.click(screen.getByRole('button', { name: 'Paste the JSON instead' }))
+    await userEvent.click(screen.getByLabelText('Recipe File JSON'))
     await userEvent.paste('{}')
     await userEvent.click(screen.getByRole('button', { name: s.review }))
     expect(hook.current.open).toHaveBeenCalledWith('{}')
@@ -73,14 +51,17 @@ describe('ImportScreen', () => {
     hook.current = state({ error: { kind: 'schema', errors: [{ path: '$.recipes', message: 'at least 1' }] } })
     view()
     expect(screen.getByText(/\$\.recipes/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: s.confirm })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Import actions' })).not.toBeInTheDocument()
   })
-  it('shows a tile per open question while reviewing and wires the answers', async () => {
+  it('shows a row per open question while reviewing and wires the answers', async () => {
     hook.current = state({
       phase: 'reviewing',
       plan: plan({
         ready: false,
-        ingredients: [match({ key: 'onion', name: 'onion', status: 'conflict', resolved: false, effective: undefined, match: { id: 5, name: 'onion', baseUnit: 'g' }, conflict: { file: 'piece', existing: 'g' } })],
+        ingredients: [
+          match({ key: 'onion', name: 'onion', status: 'conflict', resolved: false, effective: undefined, match: { id: 5, name: 'onion', baseUnit: 'g' }, conflict: { file: 'piece', existing: 'g' } }),
+          match({ key: 'spinach', name: 'spinach', status: 'new' }),
+        ],
         unitPrompts: [prompt()],
         recipes: [recipe({ status: 'conflict', resolved: false })],
         warnings: [{ path: '$.recipes[0].image', code: 'image_failed', message: 'private address' }],
@@ -88,24 +69,22 @@ describe('ImportScreen', () => {
     })
     view()
     expect(screen.getByText(s.conflictText('piece', 'g'))).toBeInTheDocument()
-    expect(screen.getByText(s.unitPrompt('handful', 'spinach'))).toBeInTheDocument()
-    expect(screen.getByText(s.conflictTitle('Chicken tikka traybake'))).toBeInTheDocument()
+    expect(screen.getByText('How many g is 1 handful?')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'What to do with Chicken tikka traybake' })).toBeInTheDocument()
     expect(screen.getByText('$.recipes[0].image')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: s.confirm })).toBeDisabled()
 
     await userEvent.click(screen.getByRole('button', { name: s.useExisting('Onion') }))
     expect(hook.current.chooseExisting).toHaveBeenCalledWith('onion', 5)
-    await userEvent.click(screen.getByRole('button', { name: s.skip }))
+    await userEvent.click(screen.getByRole('button', { name: 'Skip' }))
     expect(hook.current.chooseRecipeAction).toHaveBeenCalledWith(0, 'skip')
-    await userEvent.type(screen.getByRole('spinbutton', { name: s.unitAmountLabel('g') }), '30')
-    await userEvent.tab()
+    await userEvent.type(screen.getByRole('spinbutton', { name: '1 handful of Spinach is' }), '30')
     await userEvent.click(screen.getByRole('button', { name: s.saveConversion }))
     expect(hook.current.answerConversion).toHaveBeenCalledWith('spinach', 'handful', 30)
   })
-  it('confirms when ready', async () => {
+  it('imports when ready', async () => {
     hook.current = state({ phase: 'reviewing', plan: plan({ ingredients: [match({ key: 'lemon' })] }) })
     view()
-    await userEvent.click(screen.getByRole('button', { name: s.confirm }))
+    await userEvent.click(screen.getByRole('button', { name: 'Import 1 Recipe' }))
     expect(hook.current.confirm).toHaveBeenCalledOnce()
   })
   it('says what happened when done, and links on', () => {
@@ -118,7 +97,8 @@ describe('ImportScreen', () => {
     hook.current = state({ phase: 'reviewing', plan: plan(), stale: true })
     view()
     expect(screen.getByText(s.stale)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: s.startOver }))
+    const tile = screen.getByText(s.stale).closest('[role="alert"]') as HTMLElement
+    await userEvent.click(within(tile).getByRole('button', { name: s.startOver }))
     expect(hook.current.reset).toHaveBeenCalledOnce()
   })
 })

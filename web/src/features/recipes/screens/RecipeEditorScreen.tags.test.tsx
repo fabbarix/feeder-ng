@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { courseChoices, flour, garlic } from '../fixtures.test-helper'
 import { emptyDraft, type RecipeDraft } from '../lib/draft'
@@ -24,6 +24,7 @@ vi.mock('../../../ui', async (orig) => ({
 }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter, safeEditorFields } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const draft = (tags: string[]): RecipeDraft => ({
   ...emptyDraft(), name: 'Rice', courseIds: [1], tags,
@@ -32,14 +33,14 @@ const draft = (tags: string[]): RecipeDraft => ({
 })
 const view = (tags: string[]) => {
   h.editor = {
+    ...safeEditorFields(),
     draft: draft(tags), setDraft: vi.fn(), errors: {}, isLoading: false, loadError: null, saving: false, save: vi.fn(), courseLoss: null,
     dirty: false, pickCreatedIngredient: vi.fn(), addLine: vi.fn(), removeLine: vi.fn(), moveLine: vi.fn(), uploading: false,
   }
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={['/recipes/new']}>
-        <Routes><Route path="/recipes/new" element={<RecipeEditorScreen />} /></Routes>
-      </MemoryRouter>
+      <EditorRouter initialEntries={['/recipes/new']}>
+        <Route path="/recipes/new" element={<RecipeEditorScreen />} />      </EditorRouter>
     </QueryClientProvider>,
   )
 }

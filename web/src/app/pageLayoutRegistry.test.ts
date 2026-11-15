@@ -95,8 +95,8 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43.
-  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P33', 'P36', 'P39', 'P40', 'P41', 'P43'],
+  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35.
+  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P39', 'P40', 'P41', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning, and shop-barcode-sheet (the Add Shop Barcode sheet,
@@ -106,9 +106,22 @@ const ADDED = {
   // B9-14: scenarios/b9-14.mjs (order 310): the sheet scenarios of P25 and P33 and the sheet page of P39.
   // B9-16: scenarios/b9-16.mjs (order 310, after b9-14 by file name): P36's touch-targets-controls and the household-errors check.
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
+  // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
+  // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
+  // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
   // B9-29: scenarios/b9-29.mjs (order 330): pantry-put-away (SSP-10), meta-fit-pantry and meta-fit-supplies (SSP-05, P23 at 1120), text-spacing-pantry (DS-03, DS-10).
-  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'shop-barcode-sheet', 'toast-pricing', 'toast-over-bar', 'pantry-put-away', 'meta-fit-pantry', 'meta-fit-supplies', 'text-spacing-pantry', 'shop-page', 'shop-delete-confirm', 'product-page', 'products-new-product', 'offline-unknown', 'error-state-fast'],
+  scenarios: [
+    'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
+    'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
+    'planning-recipe-select', 'shop-barcode-sheet', 'toast-pricing', 'toast-over-bar',
+    'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
+    'pantry-put-away', 'meta-fit-pantry', 'meta-fit-supplies', 'text-spacing-pantry',
+    'shop-page', 'shop-delete-confirm', 'product-page', 'products-new-product',
+    'recipe-editor-guard', 'recipe-new-empty-save',
+    'offline-unknown', 'error-state-fast',
+    'import-review', 'import-result',
+  ],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {
@@ -233,7 +246,7 @@ describe('a package adds its own files and edits no shared one', () => {
       expect(api.RULES.map((r) => r.id)).toContain('P37')
       expect(api.ALWAYS_FAIL).toContain('P37')
       expect(api.RESERVED.map((r) => r.id)).not.toContain('P37')
-      expect(api.RESERVED.map((r) => r.id)).toContain('P32')
+      expect(api.RESERVED.map((r) => r.id)).toContain('P34')
       expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P37'])
       expect(api.evaluateMetrics(metrics, ctx)).toEqual([])
     } finally {
@@ -255,7 +268,7 @@ describe('a package adds its own files and edits no shared one', () => {
   // Review of B9-03: the mistakes a later package can make with its own files all fail on load, naming the file.
   it('a reserved rule with the wrong mode, a second probe for a metrics key, a viewport that does not exist, a setup without widths, and a stray non-.mjs file all throw on load', () => {
     const cases: [string, string, RegExp][] = [
-      ['page-layout/rules/P32-demo.mjs', demoRule('P32'), /P32 is planned as by the route mode/],
+      ['page-layout/rules/P38-demo.mjs', demoRule('P38'), /P38 is planned as by the route mode/],
       ['page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'cutMeta', source: '[]' }\n", /metrics key "cutMeta"/],
       ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', start: '/shop', setup: 's', widths: ['568x320'] }], setups: { s: async () => {} } }\n", /no viewport "568x320"/],
       ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', setup: 's' }], setups: { s: async () => {} } }\n", /setup but no widths/],
@@ -263,7 +276,7 @@ describe('a package adds its own files and edits no shared one', () => {
       ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', start: '/shop', widths: [390], emulate: ['Page.setFontSizes'] }], setups: {} }\n", /emulate is a list/],
       ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', start: '/shop', widths: [390], rules: ['P99'] }], setups: {} }\n", /rules is a list/],
       ['page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'zzDemo', scenarios: ['no-such'], source: '[]' }\n", /no-such/],
-      ['page-layout/rules/P33-demo.js', demoRule('P33'), /only \.mjs modules/],
+      ['page-layout/rules/P34-demo.js', demoRule('P34'), /only \.mjs modules/],
     ]
     for (const [file, text, why] of cases) {
       const s = scratchLib()

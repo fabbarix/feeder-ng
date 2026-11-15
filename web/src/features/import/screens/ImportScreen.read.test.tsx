@@ -53,17 +53,20 @@ beforeEach(() => {
 })
 
 describe('ImportScreen: Read a recipe', () => {
-  it('puts the Read a recipe step first, above the Agent Prompt, and the file and review steps after', () => {
+  // RX-11 replaced the four numbered steps with two choices: Read a recipe first, then the Recipe File (with the Agent Prompt in it).
+  it('puts Read a recipe first and Import a Recipe File second, with no step numbers (RX-11)', () => {
     at()
     const heads = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(heads.slice(0, 4)).toEqual(['Read a recipe', 'Copy the Agent Prompt', 'Paste the Recipe File or choose a file', 'Review'])
-    expect(screen.getByText('Step 1').closest('.tile')).toContainElement(screen.getByRole('heading', { name: 'Read a recipe' }))
+    expect(heads.slice(0, 2)).toEqual(['Read a recipe', 'Import a Recipe File'])
+    expect(screen.queryByText(/^Step \d/)).toBeNull()
+    expect(screen.getByRole('region', { name: 'Import a Recipe File' })).toContainElement(screen.getByRole('button', { name: 'Copy Agent Prompt' }))
   })
-  it('the Recipe File route is still there when the Recipe Assistant is off', () => {
+  it('the Recipe File route is still there when the Recipe Assistant is off', async () => {
     hook.avail = avail({ enabled: false, message: 'The Recipe Assistant is off. Ask an Admin to turn it on.' })
     at()
     expect(screen.getByRole('button', { name: 'Copy Agent Prompt' })).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: 'Or paste the JSON' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Paste the JSON instead' }))
+    expect(screen.getByRole('textbox', { name: 'Recipe File JSON' })).toBeEnabled()
   })
   it('hands a finished read to Import Review: useRecipeRead gets useImportReview.adopt as onDone', () => {
     at()
@@ -130,7 +133,7 @@ describe('ImportScreen: the review of a read', () => {
     at()
     const sw = screen.getByRole('switch', { name: 'Use this photo for the Recipe' })
     expect(sw).toHaveAttribute('aria-checked', 'false')
-    const confirm = screen.getByRole('button', { name: 'Confirm import' })
+    const confirm = screen.getByRole('button', { name: /^Import \d+ Recipes?$/ })
     expect(sw.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
   it('wires the switch, the thumbnails and the Recipe choice to the hook', async () => {
@@ -165,7 +168,7 @@ describe('ImportScreen: the review of a read', () => {
   it('Import Review itself is unchanged: Confirm calls confirm()', async () => {
     hook.review = photoReview()
     at()
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm import' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Import \d+ Recipes?$/ }))
     expect(hook.review.confirm).toHaveBeenCalledOnce()
   })
   it('the photo tile is gone once the import is done', () => {
@@ -177,19 +180,22 @@ describe('ImportScreen: the review of a read', () => {
 })
 
 describe('ImportScreen: focus after a read (accessibility)', () => {
-  it('when a finished read opens the review, focus moves to the Review heading so the result is not missed', () => {
+  // RX-01: the review has no "Review" heading any more; it starts with its notice, and the start of the review (around the notice) takes focus.
+  const reviewStart = () => document.querySelector('.import-review__start') as HTMLElement
+  it('when a finished read opens the review, focus moves to the start of the review (its notice) so the result is not missed', () => {
     Element.prototype.scrollIntoView = vi.fn()
     const { rerender } = at()
     hook.review = review({ phase: 'reviewing', plan: plan(), reviewId: 'imp1', readNote: { modelName: 'Claude Haiku 5.5', structuredData: false } })
     rerender(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: 'Review' })).toHaveFocus()
+    expect(reviewStart()).toHaveFocus()
+    expect(within(reviewStart()).getByRole('status')).toBeInTheDocument()
   })
   it('a review opened from a file does not move focus', () => {
     Element.prototype.scrollIntoView = vi.fn()
     const { rerender } = at()
     hook.review = review({ phase: 'reviewing', plan: plan(), reviewId: 'f1' })
     rerender(<MemoryRouter><ToastProvider><ImportScreen /></ToastProvider></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: 'Review' })).not.toHaveFocus()
+    expect(reviewStart()).not.toHaveFocus()
   })
 })
 

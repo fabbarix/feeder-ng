@@ -99,11 +99,12 @@ describe('StickyActionBar.css', () => {
   const css = readUiCss('StickyActionBar.css')
   const code = css.replace(/\/\*[\s\S]*?\*\//g, '')
   const d = (s: string) => declarations(css, s)
-  it('sticks to the bottom clear of the phone bottom bar (--nav-top is 0 from 1024), below the bottom bar in z-order', () => {
+  it('sticks to the bottom clear of the bottom bar, below the bottom bar in z-order', () => {
     const b = d('.sticky-action-bar')
     expect(b['position']).toBe('sticky')
-    // Floats a gutter above the bottom bar's top edge (--nav-top), not --nav-clearance.
-    expect(b['bottom']).toBe('calc(var(--nav-top) + var(--page-gutter))')
+    // SHORT-04 / SHORT-08: floats --bar-gap (12 px, the bottom bar's own inset) above whatever is below it: the bottom bar's top edge
+    // (--nav-top), the viewport edge (--nav-top is the safe-area inset then) or the on-screen keyboard. One rule at every width.
+    expect(b['bottom']).toBe('calc(var(--nav-top) + var(--bar-gap) + var(--keyboard-inset))')
     expect(Number(b['z-index'])).toBeGreaterThan(0)
     expect(Number(b['z-index'])).toBeLessThan(10) // .bottom-bar is 10
   })
@@ -128,7 +129,7 @@ describe('StickyActionBar.css', () => {
   })
   it('stays inside the Page content (no negative gutter margin, never under the rail), padded like a tile', () => {
     const b = d('.sticky-action-bar')
-    expect(b['margin-inline']).toBeUndefined()
+    expect(b['margin-inline'] ?? 'auto').toBe('auto') // SHORT-08: centred in its column when capped; never a negative gutter margin
     expect(b['padding-inline']).toBe('var(--tile-pad)')
   })
   it('floats like the phone bottom bar: full hairline border, tile radius, elevation', () => {
@@ -137,16 +138,13 @@ describe('StickyActionBar.css', () => {
     expect(b['border-radius']).toBe('var(--radius-tile)')
     expect(b['box-shadow']).toBe('var(--elev-2)')
   })
-  it('aligns the inner row: full page by default, the narrow form column when data-column="narrow"', () => {
-    expect(d('.sticky-action-bar__inner')['margin-inline']).toBe('auto')
-    expect(d(".sticky-action-bar[data-column='narrow'] .sticky-action-bar__inner")['max-inline-size']).toBe('var(--page-narrow)')
+  it('SHORT-08: the box takes its column: the full page by default, the narrow column or the editor form column when capped (see StickyActionBar.css.test.ts)', () => {
+    expect(d(".sticky-action-bar[data-column='narrow']")['max-inline-size']).toBe('var(--page-narrow)')
   })
-  it('respects the safe area from 1024 (where there is no bottom bar above it) and never covers a focused field', () => {
-    const wide = /@media \(min-width: 64em\)\s*\{([\s\S]*?)\n\}/.exec(code)?.[1] ?? ''
-    expect(wide).toMatch(/bottom\s*:[^;]*env\(safe-area-inset-bottom/)
-    expect(d(':root')['--sticky-bar-clearance']).toBe('calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2))')
-    // B9-07 (A11Y-02): plus the focused control's ring (width + offset) and a 4 px gap, so the ring never touches the bar (P39)
-    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1))')
+  it('never covers a focused field: the scroll padding is the bar, its gap, the keyboard, the ring and 4 px', () => {
+    // SHORT-04: --page-gutter became --bar-gap and the keyboard is added; B9-07 (A11Y-02): the focused control's ring (width + offset) and
+    // a 4 px gap, so the ring never touches the bar (P39).
+    expect(d('html:has(.sticky-action-bar)')['scroll-padding-block-end']).toBe('calc(var(--nav-top) + var(--bar-gap) + var(--keyboard-inset) + var(--sticky-bar-clearance) + var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1))')
   })
   it('uses tokens only', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
