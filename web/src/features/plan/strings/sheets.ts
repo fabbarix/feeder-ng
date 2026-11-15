@@ -1,8 +1,13 @@
 // English UI strings of the planning feature: the Swap, Choose a Recipe and Planned Meal sheets, and a Meal Slot on one date. Glossary terms only. Re-exported by ../strings.ts as part of planStrings.
 export const sheetsStrings = {
   // Swap sheet and its Undo
-  swapTitle: 'Swap for…',
-  swapAlternatives: 'Alternatives',
+  /** B9-38 (PC-10): "Swap Risotto ai funghi", under the context line "Tue 17 · Breakfast · Main". */
+  swapTitle: (recipe: string) => `Swap ${recipe}`,
+  swapNow: 'Now',
+  swapInstead: 'Instead',
+  swapNote: "Later meals that aren't Pinned may move to make room. You can review and undo them.",
+  /** The value column of an alternative: the Leftover it would leave. */
+  leftoverGain: (portions: number) => `+${portions} Leftover`,
   swapLoading: 'Finding alternatives…',
   swapNone: 'No other Recipe fits this Meal Slot.',
   swapKeep: 'Keep it',
@@ -13,9 +18,40 @@ export const sheetsStrings = {
   chooseNone: 'There are no Recipes yet.',
   searchRecipes: 'Search Recipes',
   recipesList: 'Recipes',
-  minutes: (n: number) => `${n} min`,
+  /** B9-38: a pick from "Other Recipes": "Baked apples chosen for Tue Dinner and marked as Dessert". */
+  chosenAndMarked: (recipe: string, slot: string, course: string) => `${recipe} chosen for ${slot} and marked as ${course}`,
+  staysMarked: (course: string) => `It stays marked as ${course}.`,
+  // B9-38 (PC-10): the groups of Choose a Recipe for a Course other than the main one
+  searchCourseRecipes: (course: string) => `Search ${course} Recipes`,
+  markedAs: (course: string) => `Marked as ${course}`,
+  otherRecipes: 'Other Recipes',
+  notMarkedAs: (course: string) => `Not marked as ${course}`,
   // Planned Meal sheet
-  plannedFacts: (batches: string, portions: string) => `${batches} · ${portions}`,
+  /** B9-38 (SHORT-02): the ⋮ of the Mark as Cooked footer: "More for Cucumber tomato feta salad". */
+  moreFor: (name: string) => `More for ${name}`,
+  // B9-38 (PC-09): the Planned Meal sheet's footer, ⋮ and body
+  sheet: {
+    /** The ⋮ of the footer: "More for Tue Dinner", " Side" added when the slot has several Courses. */
+    moreFor: (day: string, slot: string, course?: string) => (course ? `More for ${day} ${slot} ${course}` : `More for ${day} ${slot}`),
+    /** A disabled ⋮ item's trailing words: "from Mon 16". */
+    markCookedFrom: (day: string) => `from ${day}`,
+    disabledItem: (label: string, note: string) => `${label} · ${note}`,
+    openRecipe: 'Open Recipe',
+    openRecipeFor: (portions: string) => `Ingredients for ${portions}, Steps, Notes`,
+    openRecipePlain: 'Ingredients, Steps, Notes',
+    leftoverOf: (recipe: string) => `Leftover of ${recipe}`,
+    leftoverMore: 'More for the Leftover',
+  },
+  sheetFacts: {
+    start: (time: string) => `start ${time}`,
+    outside: (time: string) => `Cooking would start at ${time}, outside your cooking times.`,
+    outsideOn: (day: string, time: string) => `Cooking would start on ${day} at ${time}, outside your cooking times.`,
+    startOn: (day: string, time: string) => `Start cooking on ${day} at ${time}.`,
+    leftoverTitle: (portions: string, useBy: string) => `${portions} left · Use by ${useBy}`,
+    partPlanned: (planned: string, rest: string) => `${planned} planned. ${rest} not planned yet.`,
+    noneYet: 'None planned yet.',
+    allPlanned: 'All planned.',
+  },
   // B5-F1: a Meal Slot on one date (lib/slotDate, hooks/useSlotDate, components/NotServedRow, SlotTimeDialog)
   slotDate: {
     whosEating: "Who's eating",

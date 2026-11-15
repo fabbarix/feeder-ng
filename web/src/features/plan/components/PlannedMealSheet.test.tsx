@@ -1,9 +1,12 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 import { favourite, meal, slot } from '../test-utils'
 import type { PlanSlot } from '../types'
 import { PlannedMealSheet } from './PlannedMealSheet'
+
+afterEach(() => vi.unstubAllGlobals())
 
 const slotKey = { date: '2026-11-10', mealSlotId: 2 }
 const key = { ...slotKey, courseId: 1 }
@@ -17,10 +20,10 @@ function setup(s: PlanSlot | null = slot(), today = '2026-11-10') {
 const buttonNames = () => within(screen.getByRole('dialog')).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)
 
 describe('PlannedMealSheet', () => {
-  it('is titled with the Recipe and shows the Meal Slot, time and the facts as a meta line', () => {
+  it('is titled with the Recipe under the context line (day, Meal Slot and time, B9-38) and shows the facts', () => {
     setup(slot({ meal: meal({ batches: 1, portions: 3.5 }) }))
-    expect(screen.getByRole('dialog', { name: 'Chicken curry' })).toBeInTheDocument()
-    expect(screen.getByText('Dinner · 19:00')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Tue 10 · Dinner 19:00 Chicken curry' })).toBeInTheDocument()
+    expect(screen.getByText('Tue 10 · Dinner 19:00')).toBeInTheDocument()
     expect(screen.getByText('1 Batch · 3.5 portions')).toBeInTheDocument()
   })
 
@@ -51,20 +54,24 @@ describe('PlannedMealSheet', () => {
     expect(dialog.getByText('+1')).toBeInTheDocument()
   })
 
-  it("today's planned meal offers the full action set in order: Cook, Mark as Cooked, Swap, Pin, Choose a Recipe", () => {
+  it("today's planned meal: the footer is ⋮, Mark as Cooked, Cook (B9-38: one row; Swap, Pin and Choose a Recipe are under ⋮)", () => {
     setup()
-    expect(buttonNames().filter((n) => n !== 'Close')).toEqual(['Cook', 'Mark as Cooked', 'Swap', 'Pin', 'Choose a Recipe'])
+    expect(buttonNames().filter((n) => n !== 'Close')).toEqual(['More for Tue Dinner', 'Mark as Cooked', 'Cook'])
     expect(screen.getByRole('button', { name: 'Cook' })).toHaveAttribute('data-variant', 'primary')
     expect(screen.getByRole('button', { name: 'Mark as Cooked' })).toHaveAttribute('data-variant', 'secondary')
   })
 
   it('each action reports the slot', async () => {
+    stubViewportWidth(1024)
     const h = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
     await userEvent.click(screen.getByRole('button', { name: 'Mark as Cooked' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Swap' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Pin' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(screen.getByRole('button', { name: 'More for Tue Dinner' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Swap' }))
+    await userEvent.click(screen.getByRole('button', { name: 'More for Tue Dinner' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Pin' }))
+    await userEvent.click(screen.getByRole('button', { name: 'More for Tue Dinner' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Choose a Recipe' }))
     expect(h.onCook).toHaveBeenCalledWith(slotKey)
     expect(h.onMarkCooked).toHaveBeenCalledWith(key)
     expect(h.onSwap).toHaveBeenCalledWith(key)
@@ -73,17 +80,21 @@ describe('PlannedMealSheet', () => {
   })
 
   it('a Pinned meal offers Unpin instead of Pin', async () => {
+    stubViewportWidth(1024)
     const h = setup(slot({ meal: meal({ pinned: true }) }))
-    expect(screen.queryByRole('button', { name: 'Pin' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Unpin' }))
+    await userEvent.click(screen.getByRole('button', { name: 'More for Tue Dinner' }))
+    expect(screen.queryByRole('menuitem', { name: 'Pin' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Unpin' }))
     expect(h.onUnpin).toHaveBeenCalledWith(key)
   })
 
-  it('B10/B2: a future meal has neither Cook nor Mark as Cooked', () => {
+  it('B10/B2 (PC 4, B9-38): a future meal has Cook and Swap; Mark as Cooked is a disabled ⋮ item, "from Wed 11"', async () => {
+    stubViewportWidth(1024)
     setup(slot({ date: '2026-11-11', meal: meal({ date: '2026-11-11' }) }), '2026-11-10')
-    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
-    expect(buttonNames().filter((n) => n !== 'Close')).toEqual(['Swap', 'Pin', 'Choose a Recipe'])
+    expect(buttonNames().filter((n) => n !== 'Close')).toEqual(['More for Wed Dinner', 'Swap', 'Cook'])
+    await userEvent.click(screen.getByRole('button', { name: 'More for Wed Dinner' }))
+    expect(screen.getByRole('menuitem', { name: 'Mark as Cooked · from Wed 11' })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('a past planned meal still waiting can be Marked as Cooked but not cooked in Cook Mode', () => {

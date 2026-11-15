@@ -52,7 +52,7 @@ describe('Today: the Tonight tile is the slot block', () => {
     renderWithProviders(routed, '/')
     const hero = (await screen.findByRole('group', { name: 'Today' })).firstElementChild as HTMLElement
     expect(within(hero).getByRole('heading', { name: 'Roast chicken' })).toBeInTheDocument()
-    expect(within(within(hero).getByRole('listitem', { name: 'Side' })).getByRole('button', { name: /Green beans/ })).toBeInTheDocument()
+    expect(within(within(hero).getByRole('listitem', { name: 'Side' })).getByRole('button', { name: /^Green beans$/ })).toBeInTheDocument()
     expect(within(hero).getByText('start 19:00')).toBeInTheDocument()
     expect(within(hero).queryByRole('listitem', { name: 'Dessert' })).not.toBeInTheDocument()
   })
@@ -69,7 +69,7 @@ describe('Today: the Tonight tile is the slot block', () => {
     h.nextSlot = dinner()
     const api = mockApi({ ...base, 'POST /api/plan/2026-11-10/4/2/confirm': courseMeal(2, 'Side', { pinned: true }) })
     renderWithProviders(routed, '/')
-    await userEvent.click(within(await screen.findByRole('listitem', { name: 'Side' })).getByRole('button', { name: 'Pin' }))
+    await userEvent.click(within(await screen.findByRole('listitem', { name: 'Side' })).getByRole('button', { name: /^Pin / }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/4/2/confirm')).toHaveLength(1))
   })
 

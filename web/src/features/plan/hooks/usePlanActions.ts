@@ -1,8 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { useToast, useUndoToast, type ToastAction } from '../../../ui'
+import { markedChoiceWords } from '../lib/chooseMark'
 import { planApi, type ReplanFields } from '../api'
 import { replanToast, type ReplanKind } from '../lib/replan'
+import { focusIsInToastOrLost, focusPlanRow } from '../lib/rowFocus'
 import { notCookedToast } from '../lib/resolved'
 import { undoStrings as u } from '../strings/undo'
 import type { SlotDayKey, SlotKey } from '../types'
@@ -19,7 +21,8 @@ export interface UsePlanActions {
    * Sets the Recipe of a slot (and pins it, on the server). Resolves true on success. B9-26 (PC-01): `kind` words the "What changed" toast
    * ('swap': "Swapped Tue Breakfast"; 'choose', the default: "Recipe chosen for Tue Breakfast").
    */
-  setMeal: (key: SlotKey, recipeId: number, kind?: 'swap' | 'choose') => Promise<boolean>
+  /** B9-38: `{ markCourse: true }` (a pick from "Other Recipes") also marks the Recipe with the Course, in the same write. */
+  setMeal: (key: SlotKey, recipeId: number, kind?: 'swap' | 'choose', opts?: { markCourse?: boolean }) => Promise<boolean>
   /** Pin the Planned Meal (POST .../confirm on the server; the UI word is Pin). */
   pin: (key: SlotKey) => Promise<boolean>
   unpin: (key: SlotKey) => Promise<boolean>
@@ -64,10 +67,12 @@ export function usePlanActions(): UsePlanActions {
 
   /** Shares the changes (marks, Review) and shows What changed for the signed-in User's own write. */
   const announce = useCallback(
-    (kind: ReplanKind, target: SlotKey | undefined, res: ReplanFields & { changed?: number }) => {
+    (kind: ReplanKind, target: SlotKey | undefined, res: ReplanFields & { changed?: number; recipeName?: string; courseName?: string }, marked = false) => {
       const changes = res.changes ?? []
       const slots = cachedSlots(client)
-      const words = replanToast({ kind, target, changes, slots, changed: res.changed })
+      const plain = replanToast({ kind, target, changes, slots, changed: res.changed })
+      // B9-38: a pick that also marked the Recipe says so; its Undo restores the plan and the mark stays.
+      const words = marked && target && res.recipeName ? markedChoiceWords(plain, { recipeName: res.recipeName, courseName: res.courseName, key: target, slots }) : plain
       // Regenerate marks no rows (most of the week moved; SAFE-07 is a count and Undo); every write replaces the last one's marks.
       writeReplan(client, kind === 'regenerate' || (changes.length === 0 && !res.undoToken) ? null : replanStateOf({ kind, target, changes, undoToken: res.undoToken }))
       if (!words) return
@@ -85,7 +90,12 @@ export function usePlanActions(): UsePlanActions {
           undoAriaLabel: words.undoAriaLabel,
           restored: kind === 'regenerate' ? u.regenerateUndone : undefined,
           durationMs,
-          undo: () => restorePlan(client, token),
+          // B9-32 (B9-26 hand-back): an Undo pressed in the toast puts focus on the restored row; one clicked from elsewhere leaves focus be.
+          undo: async (ctx) => {
+            const handBack = focusIsInToastOrLost(ctx.focusWasInToast)
+            await restorePlan(client, token)
+            if (handBack && target) setTimeout(() => focusPlanRow(target), 0)
+          },
         })
       } else {
         toast.show({ status: 'success', title: words.headline, subline: words.subline, body: words.body, actions, durationMs })
@@ -123,7 +133,11 @@ export function usePlanActions(): UsePlanActions {
   return {
     regenerate,
     regenerating,
-    setMeal: (key, recipeId, kind = 'choose') => run(() => planApi.setMeal(key, recipeId), (res) => announce(kind, key, res)),
+    setMeal: (key, recipeId, kind = 'choose', opts) =>
+      run(
+        () => planApi.setMeal(key, recipeId, undefined, opts?.markCourse),
+        (res) => announce(kind, key, res, opts?.markCourse === true),
+      ),
     pin: (key) => run(() => planApi.confirm(key), (res) => announce('pin', key, res)),
     unpin: (key) => run(() => planApi.unpin(key), (res) => announce('unpin', key, res)),
     notCookedSlot,

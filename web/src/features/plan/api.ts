@@ -1,6 +1,23 @@
 import { http } from '../../lib/http'
 import type { RegenerateDryRun } from './lib/bought'
 import type { PlanChange } from './lib/replan'
+
+/** B9-32: the answer of POST /api/courses/<id>/recipes. */
+export interface MarkRecipesResult {
+  marked: number
+  /** The Recipes this call newly marked (absent from an old server: then there is no Undo). */
+  markedIds?: number[]
+  changes: PlanChange[]
+  undoToken?: string
+}
+
+/** B9-32: the answer of POST /api/courses/<id>/recipes/unmark. */
+export interface UnmarkRecipesResult {
+  unmarked: number
+  unmarkedIds: number[]
+  changes: PlanChange[]
+  undoToken?: string
+}
 import type {
   Alternative,
   CookedAllEntry,
@@ -66,6 +83,13 @@ export const planApi = {
   couldntExclusions: () => http.get<{ cells: ExclusionCell[] }>('/api/plan/couldnt-plan/exclusions'),
   leftovers: () => http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers'),
   regenerate: () => http.post<RegenerateResult>('/api/plan/regenerate'),
+  /**
+   * B9-32 (PC-07): POST /api/courses/<id>/recipes `{ recipeIds }` marks Recipes with a Course and replans once. `marked` is how many
+   * Recipes gained it and `markedIds` which (the Undo unmarks exactly those). Any User. 422 `validation_failed` on `recipeIds`, 404.
+   */
+  markRecipes: (courseId: number, recipeIds: number[]) => http.post<MarkRecipesResult>(`/api/courses/${courseId}/recipes`, { recipeIds }),
+  /** B9-32 (ruling 2): the Undo of markRecipes: POST /api/courses/<id>/recipes/unmark `{ recipeIds }` takes the Course off them and replans. */
+  unmarkRecipes: (courseId: number, recipeIds: number[]) => http.post<UnmarkRecipesResult>(`/api/courses/${courseId}/recipes/unmark`, { recipeIds }),
   /** B9-11: POST /api/plan/restore { undoToken }: writes the plan back exactly, no replan. 409 `plan_changed`, 404 `not_found`. */
   restore: (undoToken: string) => http.post<{ changes: PlanChange[] }>('/api/plan/restore', { undoToken }),
   /** B9-11: POST .../{courseId}/reopen: Cooked or Not cooked taken back (every Course of the same Mark all). 409 `leftover_used`, `reopen_window_over`. */
@@ -74,8 +98,9 @@ export const planApi = {
   reopenAll: (slot: SlotDayKey) => http.post<ReopenResult>(`${slotDayPath(slot)}/all/reopen`),
   /** B5-BOW: what Regenerate would replace, with the Bought Planned Meals named (POST ?dryRun=1; writes nothing). */
   regenerateDryRun: () => http.post<RegenerateDryRun>('/api/plan/regenerate?dryRun=1'),
-  setMeal: (key: SlotKey, recipeId: number, batches?: number) =>
-    http.put<PlanWriteResult>(slotPath(key), batches === undefined ? { recipeId } : { recipeId, batches }),
+  /** B9-38: `markCourse` (a pick from "Other Recipes") marks the Recipe with the key's Course and sets it in the same write. */
+  setMeal: (key: SlotKey, recipeId: number, batches?: number, markCourse?: boolean) =>
+    http.put<PlanWriteResult>(slotPath(key), { recipeId, ...(batches === undefined ? {} : { batches }), ...(markCourse ? { markCourse: true } : {}) }),
   /** B5-LOW: pins a Leftover (not taken out of the Freezer) to the Planned Meal of a Course; `{ leftoverId }` instead of a Recipe. */
   pickLeftover: (key: SlotKey, leftoverId: number) => http.put<PlanWriteResult>(slotPath(key), { leftoverId }),
   confirm: (key: SlotKey) => http.post<PlanWriteResult>(`${slotPath(key)}/confirm`),

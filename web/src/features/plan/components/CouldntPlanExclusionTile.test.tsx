@@ -81,7 +81,7 @@ describe('CouldntPlanExclusionTile', () => {
   it('is warn (amber), not danger, with an icon', () => {
     const { view } = setup(three)
     const tile = view.container.querySelector('section')!
-    expect(tile).toHaveAttribute('data-status', 'spoil')
+    expect(tile).toHaveAttribute('data-status', 'warn')
     expect(tile.querySelector('[data-status="danger"]')).toBeNull()
   })
 })

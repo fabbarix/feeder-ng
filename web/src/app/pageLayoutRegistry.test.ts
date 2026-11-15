@@ -95,8 +95,8 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35.
-  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P39', 'P40', 'P41', 'P43'],
+  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35; B9-32 P38.
+  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P38', 'P39', 'P40', 'P41', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning, and shop-barcode-sheet (the Add Shop Barcode sheet,
@@ -113,6 +113,8 @@ const ADDED = {
   // B9-31: scenarios/b9-31.mjs (order 330, after b9-19 by file name): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-36: scenarios/b9-36.mjs (order 330, after b9-31 by file name): preferences-preview (SAFE-08).
   // B9-52: scenarios/b9-52.mjs (order 330, after b9-36 by file name): allowlist-actions, allowlist-share and access-requests-rows (SET-03, SET-12).
+  // B9-32: scenarios/b9-32.mjs (order 332): plan-grid (PC-11, PC-06, A11Y-08, A11Y-09) and plan-couldnt (PC-07); rules/P38-unique-names.mjs (A11Y-08).
+  // B9-38: scenarios/b9-38.mjs (order 338): plan-sheet-actions, plan-sheet-mark-cooked, plan-sheet-swap, plan-sheet-choose, plan-sheet-choose-ring and plan-sheet-whos-eating (PC-09, PC-10, SHORT-02).
   // B9-25: scenarios/b9-25.mjs (order 340): timer-pill and timer-pill-editor (PC-04). No rule number: the setup measures the pill and throws on a finding.
   // B9-34: scenarios/b9-34.mjs (order 340, after b9-25 by file name): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
   // B9-35: scenarios/b9-35.mjs (order 340, after b9-34 by file name): scan-typed (no camera, P12 and P30), scan-camera-typed and scan-camera-landscape (a fake camera).
@@ -133,6 +135,8 @@ const ADDED = {
     'recipe-editor-guard', 'recipe-new-empty-save',
     'preferences-preview',
     'allowlist-actions', 'allowlist-share', 'access-requests-rows',
+    'plan-grid', 'plan-couldnt',
+    'plan-sheet-actions', 'plan-sheet-mark-cooked', 'plan-sheet-swap', 'plan-sheet-choose', 'plan-sheet-choose-ring', 'plan-sheet-whos-eating',
     'timer-pill', 'timer-pill-editor',
     'shop-ticked', 'shop-focus-after-tick',
     'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',

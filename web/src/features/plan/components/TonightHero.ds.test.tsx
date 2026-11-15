@@ -73,13 +73,13 @@ describe('TonightHero: the Course row', () => {
     const row = screen.getByRole('listitem', { name: 'Side' })
     const body = row.querySelector('.plan-course__body')!
     expect(row.querySelector('.plan-course__caption')).toHaveTextContent('Side')
-    expect(within(row).getByRole('button', { name: /Two-colour cauliflower/ })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /^Two-colour cauliflower$/ })).toBeInTheDocument()
     expect(within(row).getByText('Leftover from Mon')).toBeInTheDocument()
     const actions = body.lastElementChild as HTMLElement
     expect(actions).toHaveClass('plan-course__actions')
     expect(actions).toHaveAttribute('role', 'group')
     expect(actions).toHaveAccessibleName('Side actions')
-    expect(within(actions).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Swap', 'Pin', 'More for Side'])
+    expect(within(actions).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Swap Two-colour cauliflower with peppers, Tue 10 Dinner', 'Pin Two-colour cauliflower with peppers, Tue 10 Dinner', 'More for Side'])
     // the name and the chip come before the actions
     expect(body.querySelector('.plan-meal__recipe')!.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -96,8 +96,8 @@ describe('TonightHero: the Course row', () => {
   it('Swap and Pin report the Course key', async () => {
     const h = setup()
     const row = screen.getByRole('listitem', { name: 'Side' })
-    await userEvent.click(within(row).getByRole('button', { name: 'Swap' }))
-    await userEvent.click(within(row).getByRole('button', { name: 'Pin' }))
+    await userEvent.click(within(row).getByRole('button', { name: /^Swap / }))
+    await userEvent.click(within(row).getByRole('button', { name: /^Pin / }))
     const key = { date: '2026-11-10', mealSlotId: 2, courseId: 2 }
     expect(h.rowHandlers.onSwap).toHaveBeenCalledWith(key)
     expect(h.rowHandlers.onPin).toHaveBeenCalledWith(key)
@@ -131,7 +131,7 @@ describe('TonightHero: the Course row structure (round 2)', () => {
 
   it('the Recipe name is not given an ellipsis class or a max-width in markup (full name, wrapping)', () => {
     setup()
-    const name = screen.getByRole('button', { name: /Two-colour cauliflower/ })
+    const name = screen.getByRole('button', { name: /^Two-colour cauliflower$/ })
     expect(name.getAttribute('style') ?? '').not.toMatch(/max-|overflow|ellipsis/)
   })
 

@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { BottomSheet, Button, Chip, NumberField } from '../../../ui'
+import { BottomSheet, Button, FormActions, Chip, NumberField } from '../../../ui'
 import { LEFTOVER_STEP } from '../lib/cook'
 import type { AllCookedRow } from '../lib/toConfirm'
 import { weekdayName } from '../lib/phrase'
 import { planStrings as s } from '../strings'
 import type { UsedFromController } from '../hooks/useUsedFrom'
 import { CourseUsedFrom } from './CourseUsedFrom'
+import { useSheetBodyFocus } from '../hooks/useSheetBodyFocus'
 import '../plan.css'
 
 export interface MarkAllCookedSheetProps {
@@ -29,15 +30,18 @@ export function MarkAllCookedSheet({ open, onClose, rows, isLoading, onLeftoverC
   const ready = rows.length > 0 && !isLoading
   const conflict = usedFrom.hasConflict
   const footer = (
-    <div className="plan-sheet__actions">
-      <Button variant="primary" disabled={busy || !ready || conflict} onClick={onConfirm}>
-        {s.markAllCooked}
-      </Button>
-    </div>
+    <FormActions
+      primary={
+        <Button variant="primary" data-one-line="" disabled={busy || !ready || conflict} onClick={onConfirm}>
+          {s.markAllCooked}
+        </Button>
+      }
+    />
   )
+  const { bodyRef, focusRef } = useSheetBodyFocus<HTMLDivElement>('[role="spinbutton"]')
   return (
-    <BottomSheet open={open} onClose={onClose} title={s.markAllCooked} footer={footer}>
-      <div className="plan__stack">
+    <BottomSheet open={open} onClose={onClose} title={s.markAllCooked} footer={footer} initialFocusRef={focusRef}>
+      <div ref={bodyRef} className="plan__stack">
         {isLoading || rows.length === 0 ? <p className="plan__muted">{s.loading}</p> : null}
         {rows.map((row) => (
           <section key={row.courseId} className="plan-sheet__course">

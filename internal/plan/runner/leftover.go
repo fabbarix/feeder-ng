@@ -409,7 +409,7 @@ func (r *Runner) UseLeftover(ctx context.Context, key plan.Key, leftoverID int64
 // PickLeftover is UseLeftover with what the pick covered: a Whole-meal Leftover in the main Course covers the other
 // Courses' unpinned, unresolved meals, as a Recipe set there does (SetResult.Covered).
 func (r *Runner) PickLeftover(ctx context.Context, key plan.Key, leftoverID int64) (SetResult, error) {
-	return r.setCell(ctx, key, 0, nil, leftoverID)
+	return r.setCell(ctx, key, 0, nil, leftoverID, nil)
 }
 
 // availableLeftover is the Leftover of id when it is still available; ErrNotFound otherwise.

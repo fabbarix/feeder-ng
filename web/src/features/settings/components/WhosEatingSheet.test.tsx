@@ -13,7 +13,7 @@ const target = { mealSlotId: 11, date: '2026-11-12' }
 const PATH = '/api/meal-slots/11/attendance?date=2026-11-12'
 const att: DateAttendance = { slotId: 11, date: '2026-11-12', isOverride: false, attendance: thursdayDinner.attendance, portionsNeeded: 2.5, guests: 0, courses: [] }
 const routes = (extra: Record<string, unknown> = {}) => mockApi({ 'GET /api/members': members, 'GET /api/meal-slots': [thursdayDinner], [`GET ${PATH}`]: att, ...extra })
-const NAME = "Who's eating Dinner on 2026-11-12"
+const NAME = "Thu 12 Nov · Dinner Who's eating" // B9-38: the context line, then the title
 
 describe('WhosEatingSheet', () => {
   it('renders nothing and asks for nothing while closed', () => {

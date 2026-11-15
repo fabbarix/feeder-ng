@@ -29,17 +29,8 @@ describe('check-ui rules hold in the whole Plan folder (they fail here now)', ()
   })
 })
 
-describe('the week grid: BentoGrid min="day", no column rules of our own', () => {
-  it('plan.css has no .plan-grid and no data-columns rule (BentoGrid sizes the tracks)', () => {
-    expect(css).not.toMatch(/\.plan-grid/)
-    expect(css).not.toMatch(/data-columns/)
-  })
-
-  it('the container the columns were measured on is gone (.plan__grid-box)', () => {
-    expect(css).not.toMatch(/plan__grid-box/)
-  })
-
-  it('a day tile is one track and top-aligned; it never spans', () => {
+describe('the week grid (B9-32, PC-11 option B): a measured container, 12 tracks; the full grid rules are in plan.grid.css.test.ts', () => {
+  it('a day tile may shrink and is top-aligned; its span is set by usePlanGrid (inline), never by a rule of the stylesheet', () => {
     const day = d('.plan-day')
     expect(day['min-width']).toBe('0')
     expect(day['align-content']).toBe('start')
