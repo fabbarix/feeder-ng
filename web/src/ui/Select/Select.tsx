@@ -8,7 +8,7 @@ import type { FieldSizeProps } from '../fields/Field'
 import { FieldFrame, useFieldIds } from '../fields/FieldFrame'
 import { buildList, type SelectFilter, type SelectSort } from './buildList'
 import { SelectPanel } from './SelectPanel'
-import { typeAheadMatch, typeAheadStep, nextEnabledIndex, firstEnabledIndex, type SelectOption, type TypeAheadBuffer } from './lib'
+import { typeAheadMatch, typeAheadStep, nextEnabledIndex, firstEnabledIndex, optionsPerPage, pageIndex, type SelectOption, type TypeAheadBuffer } from './lib'
 import { selectStrings } from './strings'
 import { useChipFit } from './useChipFit'
 import './Select.css'
@@ -265,6 +265,13 @@ function SelectCore<V extends string | number>({
       case 'End':
         e.preventDefault()
         return setActive(lastEnabledIndex(current.nav))
+      case 'PageDown':
+      case 'PageUp': {
+        // A page of options at a time, as a listbox does; the active option is scrolled into view like any other move.
+        e.preventDefault()
+        const size = optionsPerPage(list.current)
+        return setActive((a) => pageIndex(current.nav, a, e.key === 'PageDown' ? 1 : -1, size))
+      }
       case 'Enter':
         e.preventDefault()
         return pickIndex(active)

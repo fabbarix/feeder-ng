@@ -89,6 +89,27 @@ export function typeAheadMatch<V extends string | number>(options: SelectOption<
 }
 
 /** Index of the first enabled option, or -1. */
+/** PageUp/PageDown when the list has no layout to measure (jsdom): this many options. */
+export const PAGE_STEP = 10
+
+/** PageDown (1) or PageUp (-1): `size` enabled options on from `from`, stopping at the last (or first) enabled one. */
+export function pageIndex<V extends string | number>(options: SelectOption<V>[], from: number, delta: 1 | -1, size: number): number {
+  let at = from
+  for (let n = 0; n < Math.max(1, size); n += 1) {
+    const next = nextEnabledIndex(options, at, delta)
+    if (next === at) break
+    at = next
+  }
+  return at
+}
+
+/** How many options a list shows at once (one less, so the last one seen stays in view), or PAGE_STEP where nothing is laid out. */
+export function optionsPerPage(list: HTMLElement | null): number {
+  const option = list?.querySelector<HTMLElement>('[role=option]')
+  const height = option?.offsetHeight ?? 0
+  return list && height > 0 ? Math.max(1, Math.floor(list.clientHeight / height) - 1) : PAGE_STEP
+}
+
 export function firstEnabledIndex<V extends string | number>(options: SelectOption<V>[]): number {
   return options.findIndex((o) => !o.disabled)
 }

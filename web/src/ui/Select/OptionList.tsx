@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Icon } from '../Icon'
 import { SearchField } from '../fields/SearchField'
-import { firstEnabledIndex, nextEnabledIndex, normalise, type SelectOption } from './lib'
+import { firstEnabledIndex, nextEnabledIndex, normalise, optionsPerPage, pageIndex, type SelectOption } from './lib'
 import { selectStrings } from './strings'
 import './Select.css'
 
@@ -39,7 +39,7 @@ function exactMatch<V extends string | number>(options: SelectOption<V>[], query
   return q === '' ? undefined : options.find((o) => !o.disabled && normalise(o.label).replace(/\s+/g, '') === q)
 }
 
-/** A search combobox over a listbox of options, always open. Arrows, Home and End move the active option; Enter toggles it. */
+/** A search combobox over a listbox of options, always open. Arrows, Home, End, PageUp and PageDown move the active option; Enter toggles it. */
 export function OptionList<V extends string | number>({
   label,
   searchLabel,
@@ -113,6 +113,14 @@ export function OptionList<V extends string | number>({
         e.preventDefault()
         setActive(lastEnabledIndex(nav))
         return
+      case 'PageDown':
+      case 'PageUp': {
+        e.preventDefault()
+        const size = optionsPerPage(document.getElementById(listId))
+        const delta = e.key === 'PageDown' ? 1 : -1
+        setActive((a) => pageIndex(nav, a, delta, size))
+        return
+      }
       case 'Enter':
         if (active >= 0 && active < nav.length) {
           e.preventDefault()
