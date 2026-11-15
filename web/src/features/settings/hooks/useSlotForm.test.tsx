@@ -30,7 +30,10 @@ describe('useSlotForm (the Meal Slot sheet\'s state and derived values)', () => 
     expect(result.current.problem).toEqual({ message: 'Choose at least one weekday.', field: 'weekdays' })
     act(() => result.current.setWeekdays([1]))
     act(() => result.current.submit())
-    expect(result.current.problem?.field).toBe('form')
+    expect(result.current.problem?.field).toBe('name') // B9-16: the problem names its field, so the sheet can focus it
+    act(() => result.current.set({ name: 'Tea' }))
+    act(() => result.current.submit())
+    expect(result.current.problem?.field).toBe('time')
   })
 
   it('edit mode: the summary names the matched days and the skipped ones', () => {
@@ -55,5 +58,26 @@ describe('useSlotForm (the Meal Slot sheet\'s state and derived values)', () => 
     const { result, rerender } = renderHook((p: { d: number[] }) => useSlotForm({ ...base, defaultWeekdays: p.d }), { initialProps: { d: [1, 2] } })
     rerender({ d: [2] })
     expect(result.current.weekdays).toEqual([2])
+  })
+
+  // SET-14h: the page hands an edit the weekdays it starts with; a strip cell hands none and gets the slot's own day.
+  it('edit mode: initialWeekdays is the starting selection (every day of the name from a card), else the slot\'s own day', () => {
+    const all = [1, 2, 3, 4, 5, 6, 7]
+    const slots = all.map((weekday) => ({ ...tuesdayDinner, id: 20 + weekday, weekday }))
+    const fromCard = renderHook(() => useSlotForm({ ...base, slot: slots[0], slots, initialWeekdays: all }))
+    expect(fromCard.result.current.weekdays).toEqual(all)
+    const fromCell = renderHook(() => useSlotForm({ ...base, slot: slots[2], slots }))
+    expect(fromCell.result.current.weekdays).toEqual([3])
+  })
+
+  it('dirty: false until something is changed, true after a field or a weekday, false again when put back', () => {
+    const { result } = renderHook(() => useSlotForm({ ...base, slot: tuesdayDinner, slots: [tuesdayDinner, wed] }))
+    expect(result.current.dirty).toBe(false)
+    act(() => result.current.set({ time: '20:00' }))
+    expect(result.current.dirty).toBe(true)
+    act(() => result.current.set({ time: tuesdayDinner.time }))
+    expect(result.current.dirty).toBe(false)
+    act(() => result.current.setWeekdays([2, 3]))
+    expect(result.current.dirty).toBe(true)
   })
 })

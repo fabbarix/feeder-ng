@@ -103,7 +103,8 @@ describe('MealSlotEditor', () => {
     render(<MealSlotEditor open members={members} onSave={onSave} onClose={() => {}} />)
     await userEvent.click(day('Monday'))
     await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
-    expect(screen.getByRole('alert')).toHaveTextContent(/name/i)
+    // B9-16: the problem is on the field (aria-invalid, described by its message) and the field has focus.
+    expect(screen.getByLabelText('Name')).toHaveAccessibleDescription(/name/i)
     expect(onSave).not.toHaveBeenCalled()
   })
 
