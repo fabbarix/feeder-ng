@@ -88,7 +88,13 @@ async function recipeTimerPill() {
   try {
     await evaluate('window.scrollTo(0, 0); location.reload()')
     await until(`!!document.querySelector('.shell-timer .timer-pill') && !!document.querySelector('main .recipe-detail__hero') && ${noSkeleton}`, 'the Recipe page with the timer pill', 15000)
-    const findings = await evaluate(MEASURE_HERO)
+    // fast-checks: the pill can be re-rendered (the timers list refetched after the reload) between the wait above and the
+    // measurement; a pill that is missing then is waited for again (up to 3 s), so only a pill that stays away is reported.
+    let findings = await evaluate(MEASURE_HERO)
+    for (let i = 0; i < 6 && findings.some((f) => f.startsWith('no timer pill')); i++) {
+      await helpers.h.sleep(500)
+      findings = await evaluate(MEASURE_HERO)
+    }
     if (findings.length > 0) throw new Error(`Recipe page with a running timer: ${findings.join('; ')}`)
   } finally {
     await evaluate(CANCEL_TIMERS).catch(() => {})
