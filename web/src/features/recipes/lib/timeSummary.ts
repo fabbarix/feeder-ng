@@ -16,6 +16,6 @@ export function timeSummary(r: { totalMinutes: number; advanceMinutes: number; s
   return {
     total: r.totalMinutes > 0 ? formatMinutes(r.totalMinutes) : null,
     ahead: r.advanceMinutes > 0 ? recipeStrings.advanceChip(formatMinutes(r.advanceMinutes), recipeStrings.advanceWord) : null,
-    untimedSteps: null, // B9-27 stub (RX-07): the developer implements it
+    untimedSteps: r.totalMinutes <= 0 && r.advanceMinutes <= 0 && (r.stepCount ?? 0) > 0 ? r.stepCount! : null,
   }
 }

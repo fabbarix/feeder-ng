@@ -14,6 +14,9 @@ export interface BaseRecipeRef {
   empty?: boolean
 }
 
+/** SAFE-05 and ruling 3 (B9-27): why a Recipe can't be deleted: it was planned before, or it is a Base recipe that Recipes call for. */
+export type DeleteBlockedBy = 'planned' | 'in_use'
+
 /** BR-D: a Recipe named in `usedBy`, in a refusal's `usedBy`, in a take-over ask. */
 export interface RecipeRef {
   id: number
@@ -144,6 +147,8 @@ export interface Recipe extends Omit<RecipeInput, 'courseIds' | 'lines' | 'yield
   lastCookedOn: string | null
   /** SAFE-05 (B9-27): false when Delete would refuse (planned before, or a Base recipe in use). Absent = unknown, treated as deletable. */
   deletable?: boolean
+  /** Ruling 3 (B9-27): why Delete would refuse; absent when deletable (and on write responses). */
+  deleteBlockedBy?: DeleteBlockedBy
 }
 
 export interface RecipeSummary {

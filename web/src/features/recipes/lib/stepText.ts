@@ -25,16 +25,26 @@ export function usesText(uses: StepUse[], refs: ReadonlyMap<number, IngredientRe
   return recipeStrings.steps.usesLine(parts.join(', '))
 }
 
-/** STUB (B9-27 test author, RX-04): the Step row's state at the end: "10 min", "12 h before", or "No time" (untimed: true). */
-export function stepTime(_step: Pick<RecipeStep, 'kind' | 'durationMinutes' | 'leadTimeMinutes'>): { text: string; untimed: boolean } {
-  return { text: '', untimed: false }
+/** RX-04: the Step row's state at its end: "10 min", "12 h before", or "No time" (untimed: true, drawn muted). */
+export function stepTime(step: Pick<RecipeStep, 'kind' | 'durationMinutes' | 'leadTimeMinutes'>): { text: string; untimed: boolean } {
+  const t = recipeStrings.stepRow
+  if (step.kind === 'advance' && step.leadTimeMinutes > 0) return { text: t.before(formatMinutes(step.leadTimeMinutes)), untimed: false }
+  if (step.kind !== 'advance' && step.durationMinutes > 0) return { text: formatMinutes(step.durationMinutes), untimed: false }
+  return { text: t.noTime, untimed: true }
 }
 
-/** STUB (B9-27 test author, RX-04): the Step row's muted detail: "Active", "Advance Step", "Active · Uses 50 g garlic", "Passive · After Step 2", "Active · After Steps 3 and 4". */
-export function stepDetail(
-  _step: Pick<RecipeStep, 'kind' | 'after' | 'uses'>,
-  _refs: ReadonlyMap<number, IngredientRef>,
-  _system: UnitSystem,
-): string {
-  return ''
+/** "After Step 2", "After Steps 3 and 4", "After Steps 2, 3 and 4" from the stored 0-based indexes; '' for none. */
+export function afterText(after: readonly number[]): string {
+  if (after.length === 0) return ''
+  const numbers = after.map((i) => String(i + 1))
+  const joined = numbers.length === 1 ? numbers[0]! : `${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`
+  return recipeStrings.stepRow.after(joined, numbers.length)
+}
+
+/**
+ * RX-04: the Step row's muted detail: its kind, then the Steps it comes after, then what it uses ("Passive · After Step 1 · Uses 250 g
+ * flour"). It may wrap; it never carries the time, which is the state at the end of the row.
+ */
+export function stepDetail(step: Pick<RecipeStep, 'kind' | 'after' | 'uses'>, refs: ReadonlyMap<number, IngredientRef>, system: UnitSystem): string {
+  return [kindWord[step.kind], afterText(step.after), usesText(step.uses, refs, system)].filter((part) => part !== '').join(' · ')
 }
