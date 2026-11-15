@@ -29,8 +29,9 @@ describe('Select.css: the chip strip', () => {
   })
   it('a focused chip or sort button draws its ring inside itself on a soft fill (R-C+)', () => {
     const body = bodyOf((s) => s.includes('.select__tools') && s.includes(':focus-visible'))
-    expect(body).toMatch(/outline:\s*2px solid var\(--color-accent\)/)
-    expect(body).toMatch(/outline-offset:\s*-2px/)
+    // B9-15 developer: the inner ring in the ring tokens (2 px, the ring colour), as focusLayer.css.test.ts requires of every ring.
+    expect(body).toMatch(/outline:\s*var\(--focus-ring-inner-width\) solid var\(--focus-ring-color\)/)
+    expect(body).toMatch(/outline-offset:\s*calc\(-1 \* var\(--focus-ring-inner-width\)\)/)
     expect(body).toMatch(/background:\s*var\(--color-soft\)/)
   })
 })

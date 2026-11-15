@@ -157,8 +157,8 @@
 /* R-C+: the strip clips, so a focused chip or sort button draws its ring inside itself on a soft fill and never touches a neighbour. */
 .select__tools .chip:focus-visible,
 .select__tools .icon-button:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-inner-width));
   background: var(--color-soft);
   color: var(--color-accent-text);
 }
