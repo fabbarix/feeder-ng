@@ -1,7 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
+import { createPortal } from 'react-dom'
 import { ActionSurface } from './lib/actionSurface'
+import { useModalHost } from './lib/useModalHost'
 import { splitToastText } from './lib/toastText'
 import { uiStrings } from './strings'
 import './Toast.css'
@@ -328,6 +330,7 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
   }, [runAction])
 
   const api = useMemo<ToastApi>(() => ({ show, hold }), [show, hold])
+  const modalHost = useModalHost()
   const byAge = [...toasts].sort((a, b) => a.id - b.id)
   const view = (t: ToastItem) => (
     <ToastView
@@ -340,14 +343,18 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
     />
   )
 
+  const region = (
+    <div className="toast-region">
+      {/* an error sits above the other lanes; of the rest, the newest is nearest the thumb */}
+      <LiveRegion role="alert">{byAge.filter((t) => t.status === 'error').map(view)}</LiveRegion>
+      <LiveRegion role="status">{byAge.filter((t) => t.status !== 'error').map(view)}</LiveRegion>
+    </div>
+  )
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="toast-region">
-        {/* an error sits above the other lanes; of the rest, the newest is nearest the thumb */}
-        <LiveRegion role="alert">{byAge.filter((t) => t.status === 'error').map(view)}</LiveRegion>
-        <LiveRegion role="status">{byAge.filter((t) => t.status !== 'error').map(view)}</LiveRegion>
-      </div>
+      {/* Batch w3e: while a modal sheet or dialog is open the region lives inside it, so a toast is seen and its Undo reachable. */}
+      {modalHost ? createPortal(region, modalHost) : region}
     </ToastContext.Provider>
   )
 }
