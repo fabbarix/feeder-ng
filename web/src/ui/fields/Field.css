@@ -141,6 +141,11 @@ legend.ui-field__label {
   inset: -4px;
 }
 
+/* The unit sits 8 px from the + (gap plus margin), as the value does from the buttons, so "days" never reads as touching it. */
+.ui-field--stepper .ui-field__suffix {
+  margin-inline-end: var(--space-1);
+}
+
 .ui-field--stepper .ui-field__number {
   text-align: center;
   font-variant-numeric: tabular-nums;

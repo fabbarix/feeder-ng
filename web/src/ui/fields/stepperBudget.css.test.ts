@@ -31,7 +31,8 @@ const minValue = (() => {
 /** Space left for the value input: the frame cap minus everything fixed. */
 function remaining(cap: string, unit: string): number {
   const children = unit ? 4 : 3
-  return px(cap) - 2 * border - 2 * inline - (children - 1) * gap - 2 * button - unit.length * UNIT_CHAR
+  const suffixMargin = unit ? px(declarations(field, '.ui-field--stepper .ui-field__suffix')['margin-inline-end'] ?? '0px') : 0
+  return px(cap) - 2 * border - 2 * inline - (children - 1) * gap - 2 * button - unit.length * UNIT_CHAR - suffixMargin
 }
 
 describe('compact stepper width budget', () => {
