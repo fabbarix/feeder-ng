@@ -1,13 +1,15 @@
 // Beta.8 (scan): the To get rows. Each open Shopping List Line is a ListEntry plus what this session's applied scans cover of
 // it ("700 g of 1.4 kg", the same words and maths as a Scanned row), and the request that ticking it sends. No React.
 import { lineEntry, moreEntryOf, type ListEntry } from '../../shop/lib/lines'
-import type { ShoppingLine } from '../../shop/types'
+import type { ShoppingExtra, ShoppingLine } from '../../shop/types'
 import type { UnitSystem } from '../../../lib/units'
 import { coverText, type ScannedRow } from './scannedList'
 
 export interface ToGetRow {
   entry: ListEntry
   cover: { text: string; done: boolean }
+  /** B9-41 (SSP-11): a free-text extra, added by hand: it has nothing to cover, so its second line says "Added by hand" instead of a cover */
+  byHand?: boolean
 }
 
 /**
@@ -16,7 +18,8 @@ export interface ToGetRow {
  * B9-34 (SSP-02): a ticked Line whose need grew is its "more since your tick" row ("more:<id>", for the difference); a ticked Line
  * without more is no row.
  */
-export function toGetRows(lines: ShoppingLine[], scannedRows: ScannedRow[], currency: string, system: UnitSystem): ToGetRow[] {
+export function toGetRows(lines: ShoppingLine[], scannedRows: ScannedRow[], currency: string, system: UnitSystem, extras: ShoppingExtra[] = []): ToGetRow[] {
+  void extras // B9-41 (SSP-11) STUB: the developer builds the extras' rows
   return lines.flatMap((line) => {
     const entry = line.ticked ? moreEntryOf(line, currency, system) : lineEntry(line, currency, system)
     if (!entry) return []

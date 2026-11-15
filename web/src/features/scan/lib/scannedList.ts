@@ -2,7 +2,7 @@
 // (Ops with their server Results, or null while queued) are grouped into one row per Product. Pure TypeScript, no React.
 import { amountOf } from '../../../lib/amountOf'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import type { ShoppingLine, ShoppingList } from '../../shop/types'
+import type { ShoppingExtra, ShoppingLine, ShoppingList } from '../../shop/types'
 import { scanStrings } from '../strings'
 import type { BaseUnit, IngredientKind, OfflineProduct, Op, ScanResult } from '../types'
 
@@ -385,4 +385,9 @@ export function repriceEntries(entries: SessionEntry[], updates: PriceUpdate[]):
     const result = entry.result?.scan ? { ...entry.result, scan: { ...entry.result.scan, priceCents: update.priceCents } } : entry.result
     return { op, result }
   })
+}
+
+/** B9-41 (SSP-11) STUB: the open (not ticked) manual extras of the Shopping List, in the list's order. The developer implements it. */
+export function toGetExtras(_list: ShoppingList | undefined): ShoppingExtra[] {
+  return []
 }

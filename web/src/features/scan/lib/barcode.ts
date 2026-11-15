@@ -475,3 +475,19 @@ function checkDigitOk(d: string): boolean {
 function isDigits(s: string): boolean {
   return /^[0-9]+$/.test(s)
 }
+
+/**
+ * B9-41 (SSP-20) STUB: the code as printed under the bars: EAN-13 in 1-6-6 groups, UPC-A in 1-5-5-1, EAN-8 in 4-4, anything else as typed.
+ * Takes the canonical code (GTIN-14, zero padded) or a code as typed. The developer implements it.
+ */
+export function displayCode(code: string): string {
+  return code
+}
+
+/**
+ * B9-41 (SSP-15) STUB: is this an EAN-13 (or its zero-padded GTIN-14) that starts with a GS1 in-store prefix, 20 to 29 or 02? The
+ * developer implements it.
+ */
+export function isInStoreCode(_code: string): boolean {
+  return false
+}
