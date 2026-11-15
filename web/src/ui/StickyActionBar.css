@@ -1,29 +1,44 @@
-/* StickyActionBar (R2-L, L-03): an opaque floating card, the width of the Page content (the cards above it, never under the rail),
-   inset by the gutter from the bottom and clear of the phone bottom bar (--nav-top is 0 from 1024). */
+/* StickyActionBar (R2-L, L-03; SHORT-04, SHORT-08): an opaque floating card, one row, as wide as its column (the Page content by
+   default, never under the rail), floating --bar-gap above --nav-top (the bottom bar's top edge, or the bottom inset where no bar
+   floats) plus the keyboard. */
 :root {
-  /* Room the bar takes above the viewport bottom: a toast and a focused field (WCAG 2.4.11) keep clear of it. The bar publishes its
-     measured height (useStickyBarClearance) and this is only the default before that: the stacked two-row phone bar, 2 x 12 padding
-     + 1 border + 2 x 44 control + 8 gap = 121 px (the Save and Cancel rows of the recipe editor at 360 and 390 px). */
-  --sticky-bar-clearance: calc(2 * var(--space-3) + 1px + 2 * 44px + var(--space-2));
+  /* Room the bar takes above what is below it: a toast and a focused field (WCAG 2.4.11) keep clear of it. The bar publishes its
+     measured height (useStickyBarClearance); this is only the default before that: the one-row bar, 2 x 12 padding + a 44 px row
+     + the two hairlines = 70 px. */
+  --sticky-bar-clearance: 70px;
 }
 
-/* A11Y-02: and the focused control's ring (width + offset) stays clear of the bar, with --space-1 between them: with the ring room
-   alone a control scrolled into view had its ring flush against the bar's edge (P39 counts that as touching). */
+/* A short viewport: 8 px of padding, so the bar is 62 px. */
+@media (max-height: 499px) {
+  :root {
+    --sticky-bar-clearance: 62px;
+  }
+
+  .sticky-action-bar {
+    padding-block: var(--space-2);
+  }
+}
+
+/* A11Y-02: the focused control's ring (width + offset) stays clear of the bar, with --space-1 between them. The keyboard inset is
+   in it too: with the keyboard up the bar sits on the keyboard. */
 html:has(.sticky-action-bar) {
-  scroll-padding-block-end: calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1));
+  scroll-padding-block-end: calc(var(--nav-top) + var(--bar-gap) + var(--keyboard-inset) + var(--sticky-bar-clearance) + var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1));
 }
 
-/* QA-4: at the end of the page the bar is the last thing in flow, so the page padding is the bar's floating gap (the gutter above
-   the nav, or above the viewport edge from 1024), not the content clearance. The bar never jumps when the scroll reaches the end. */
+/* QA-4: at the end of the page the bar is the last thing in flow, so the page padding is the bar's floating gap, not the content
+   clearance. The bar never jumps when the scroll reaches the end. */
 .app-main:has(.sticky-action-bar):not(.app-main--full) {
-  padding-bottom: calc(var(--nav-top) + var(--page-gutter));
+  padding-bottom: calc(var(--nav-top) + var(--bar-gap));
 }
 
 .sticky-action-bar {
   position: sticky;
-  /* Floats a gutter above the phone bottom bar's top edge (or the viewport bottom from 1024), like the bottom bar itself. */
-  bottom: calc(var(--nav-top) + var(--page-gutter));
+  /* One rule at every size: --nav-top is the bottom bar's top edge, or the bottom inset where no bar floats (the rail, the keyboard). */
+  bottom: calc(var(--nav-top) + var(--bar-gap) + var(--keyboard-inset));
   z-index: 5;
+  /* As wide as its column: the whole track, capped by data-column below (auto margins alone would shrink it to its content). */
+  box-sizing: border-box;
+  inline-size: 100%;
   padding-inline: var(--tile-pad);
   padding-block: var(--space-3);
   /* The phone bottom bar's surface, border and elevation, with the tile radius. */
@@ -33,28 +48,36 @@ html:has(.sticky-action-bar) {
   box-shadow: var(--elev-2);
 }
 
+/* SHORT-08: the box takes its column's width, centred like the column. */
+.sticky-action-bar[data-column='narrow'] {
+  max-inline-size: var(--page-narrow);
+  margin-inline: auto;
+}
+
+.sticky-action-bar[data-column='form'] {
+  max-inline-size: 840px;
+  margin-inline: auto;
+}
+
+/* SHORT-06: a bar with nothing to do ends the form instead of floating. */
+.sticky-action-bar[data-sticky='false'] {
+  position: static;
+}
+
+/* Under 340 px tall (400 % zoom) nothing floats over the page: the bar ends the form. */
+@media (max-height: 339px) {
+  .sticky-action-bar {
+    position: static;
+  }
+}
+
 .sticky-action-bar__sentinel {
   display: block;
   block-size: 0;
   pointer-events: none;
 }
 
+/* The row holding the actions: the box carries the column's width, so the row takes all of it (SHORT-08). */
 .sticky-action-bar__inner {
-  margin-inline: auto;
-}
-
-.sticky-action-bar[data-column='narrow'] .sticky-action-bar__inner {
-  max-inline-size: var(--page-narrow);
-}
-
-/* R2-1: the editor's form column. */
-.sticky-action-bar[data-column="form"] .sticky-action-bar__inner {
-  max-inline-size: 840px;
-}
-
-/* From 1024 there is no bottom bar (--nav-top is 0, so it carries no safe area): the bar clears the safe area itself. */
-@media (min-width: 64em) {
-  .sticky-action-bar {
-    bottom: calc(var(--page-gutter) + env(safe-area-inset-bottom, 0px));
-  }
+  min-inline-size: 0;
 }

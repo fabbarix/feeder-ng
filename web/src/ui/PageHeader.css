@@ -12,8 +12,13 @@
 .page-header__row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  /* The items start at the row's top and the text is padded so the h1's line is centred on a 40 px action row: the h1 sits at
+     the same place on every page, with or without a subtitle, actions or a wrapped action line (centring the row moved it 4 px). */
+  align-items: flex-start;
   gap: var(--space-3);
+  /* Every title row is the height of an action row (a 40 px IconButton), with actions or without, so every page's h1 sits at the
+     same place and its content starts at the same height. */
+  min-block-size: var(--space-10);
 }
 
 .page-header__leading,
@@ -24,15 +29,22 @@
   flex: none;
 }
 
-/* Wrapped actions stay at the inline end. */
+/* Wrapped actions stay at the inline end (DS-03): they never reach past the gutter, so when they do not fit beside the title they
+   take their own line and, if they still do not fit, wrap. */
 .page-header__actions {
   margin-inline-start: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
-/* A title that would get less than 12rem sends the actions to a second line. */
+/* RX-03: a title that would get less than 8rem sends the actions to a second line ("Recipes", New Recipe and the menu share one
+   row from 375 px). */
 .page-header__text {
-  flex: 1 1 12rem;
+  flex: 1 1 8rem;
   min-inline-size: 0;
+  padding-block-start: calc((var(--space-10) - var(--text-title-1-line)) / 2);
 }
 
 .page-header__title {
@@ -40,6 +52,11 @@
   font-size: var(--text-title-1-size);
   line-height: var(--text-title-1-line);
   font-weight: var(--text-title-1-weight);
+}
+
+.page-header__title:focus {
+  /* A11Y-01: the h1 takes focus on a route change; it is not an operable control, so it draws no ring. */
+  outline: none;
 }
 
 .page-header__subtitle {
