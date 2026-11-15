@@ -132,38 +132,37 @@ describe('MealTile (on a day tile)', () => {
     expect(screen.queryByRole('button', { name: /^Swap / })).not.toBeInTheDocument()
   })
 
-  // ds-plan: the empty Course is a dashed ListRow: the short reason is its title, the "Not planned" chip its chip line, and the
-  // whole row is "Choose a Recipe" (was: a tertiary button under a reason sentence).
-  it('R13: an empty slot is a dashed row with a "Not planned" chip (never danger), the short reason and Choose a Recipe as its target', async () => {
+  // PC-07 (B9-32): the empty Course is a dashed ListRow titled "Not planned", its cause as the one chip (in the tone of the cause),
+  // and one trailing Choose a Recipe (was R13: the short reason as the title and a "Not planned" chip).
+  it('PC-07: an unfilled Course is a dashed "Not planned" row whose one chip names the cause (never danger), with a trailing Choose a Recipe', async () => {
     const h = setup(slot({
       date: '2026-11-12', meal: null,
       unfilled: { reason: 'no_candidates', slotRuleClaimed: false, eliminated: { considered: 3, exclusion: 3, coolDown: 0, varietyRule: 0, advanceStep: 0 } },
     }))
     const block = screen.getByText('Not planned').closest('[data-unfilled]') as HTMLElement
     expect(block).not.toBeNull()
-    const chip = within(block).getByText('Not planned').closest('.chip')!
+    const chip = within(block).getByText('Excluded').closest('.chip')!
     expect(chip).toHaveAttribute('data-kind', 'status')
     expect(chip).toHaveAttribute('data-status', 'warn') // warn: a rule conflict
     expect(block.querySelector('[data-status="danger"]')).toBeNull()
-    expect(screen.getByText('Every Recipe is excluded.')).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't plan Thursday dinner/)).not.toBeInTheDocument()
-    const choose = screen.getByRole('button', { name: 'Choose a Recipe' })
+    const choose = within(block).getByRole('button', { name: /^Choose a Recipe for / })
     expect(choose.closest('li')).toBe(block)
     await userEvent.click(choose)
     expect(h.onChoose).toHaveBeenCalledWith({ date: '2026-11-12', mealSlotId: 2, courseId: 1 })
   })
 
-  it('R13: a setup gap (nobody attends) is the blue info chip with its reason', () => {
+  it('PC-07: a setup gap (nobody attends) is the info-toned "Nobody attending" chip', () => {
     setup(slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }))
-    const chip = screen.getByText('Not planned').closest('.chip')!
+    expect(screen.getByText('Not planned')).toBeInTheDocument()
+    const chip = screen.getByText('Nobody attending').closest('.chip')!
     expect(chip).toHaveAttribute('data-kind', 'status')
     expect(chip).toHaveAttribute('data-status', 'info')
-    expect(screen.getByText('Nobody is set to attend.')).toBeInTheDocument()
   })
 
   it('R13: choosing a Recipe is no fix for a slot nobody attends, so the day tile offers none', () => {
     setup(slot({ meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } }))
-    expect(screen.queryByRole('button', { name: 'Choose a Recipe' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Choose a Recipe/ })).not.toBeInTheDocument()
   })
 
   it('a slot with nothing planned and no reason just says so', () => {
