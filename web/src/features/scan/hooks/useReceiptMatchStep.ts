@@ -1,7 +1,7 @@
 // B9-50 (SSP-08): the state of the "Is it one of these?" step of a receipt line's Add… (no barcode): the chosen match, the Lines left for
 // "Other Lines", the note and the "Use <Product>" primary, and the Product a new name already is. Over lib/receiptMatchStep; the form
 // (useNewProductForm) is told when a Line match is picked.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { LineCandidate, LineChip, LineChips } from '../lib/lineChoice'
 import { chipOfLineMatch, initialMatchKey, matchKey, otherLines, productNamed, productNote } from '../lib/receiptMatchStep'
 import type { IngredientChoice } from '../lib/unknownForm'
@@ -20,6 +20,9 @@ export interface ReceiptMatchStepOptions {
   choice: IngredientChoice | null
   onPickLine: (chip: LineChip) => void
   onUseProduct?: (productId: number) => void
+  /** the Ingredient near-duplicate guard's state, and its reset: a new name that is a Product shows the Product guard alone */
+  guardKind?: string
+  clearGuard?: () => void
 }
 
 export function useReceiptMatchStep(o: ReceiptMatchStepOptions) {
@@ -40,6 +43,12 @@ export function useReceiptMatchStep(o: ReceiptMatchStepOptions) {
 
   // Something else: a new name that is a Product already (the guard works without the Ingredient lookup).
   const clash = o.noBarcode && o.onUseProduct && o.choice && o.choice.id === undefined ? productNamed(o.choice.name, o.products) : undefined
+  // One guard at a time: the name is a Product, so "Use <Product>" is the answer, not "Did you mean <Ingredient>?" as well.
+  const clashId = clash?.id
+  const { guardKind, clearGuard } = o
+  useEffect(() => {
+    if (clashId !== undefined && guardKind !== undefined && guardKind !== 'clear') clearGuard?.()
+  }, [clashId, guardKind, clearGuard])
 
   return {
     active,

@@ -60,6 +60,8 @@ export function NewProductForm(p: NewProductSheetProps & { describeIds?: NewProd
     choice: form.choice,
     onPickLine: form.pickLine,
     onUseProduct: p.onUseProduct,
+    guardKind: form.guard.kind,
+    clearGuard: form.keepNew,
   })
   const formRef = useRef<HTMLFormElement>(null)
   // A11Y-07: a step change moves the focus to the new step's heading (never left on <body> when the focused chip goes).

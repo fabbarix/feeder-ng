@@ -78,7 +78,7 @@ const { supplyId, scanBarcodes, unknownBarcode, assistant } = ctx
 // B9-41: the scan-weighed scenario's Weight Barcode Rule and its code (page-layout-seed/b9-41.mjs).
 const b941 = { weightRuleId: ctx.weightRuleId ?? null, weighedBarcode: ctx.weighedBarcode ?? null }
 // B9-50: the receipt-review-add and receipt-add-sheet scenarios' Product that matches the fake read's Kitchen roll line (page-layout-seed/b9-50.mjs).
-const b950 = { kitchenRollIngredientId: ctx.kitchenRollIngredientId ?? null, kitchenRollProductId: ctx.kitchenRollProductId ?? null }
+const b950 = { kitchenRollIngredientId: ctx.kitchenRollIngredientId ?? null, kitchenRollProductId: ctx.kitchenRollProductId ?? null, receiptUnpricedBarcode: ctx.receiptUnpricedBarcode ?? null }
 
 mkdirSync(dirname(out), { recursive: true })
 // hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.

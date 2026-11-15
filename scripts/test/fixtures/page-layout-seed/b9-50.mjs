@@ -5,7 +5,7 @@
 //   - Product "Kitchen roll 4 pack" (a pack of 4) of "Kitchen roll": the supplies area's Supply and Product when they are there, else made
 //     here. No Line: the Shopping List's Lines come from the plan.
 // Best effort, like every area: a step the API refuses is reported and skipped; the scenario's setup says what is missing.
-// seed(ctx) reads step from ctx and adds kitchenRollIngredientId and kitchenRollProductId.
+// seed(ctx) reads step and ean13 from ctx and adds kitchenRollIngredientId, kitchenRollProductId and receiptUnpricedBarcode.
 
 export const order = 500
 
@@ -28,5 +28,14 @@ export async function seed(ctx) {
       if (p.ok && p.json?.id) kitchenRollProductId = p.json.id
     }
   }
-  Object.assign(ctx, { kitchenRollIngredientId, kitchenRollProductId })
+  // A Product with a barcode and no Price at any Shop: scanned before the read, the fake read prices it at 2.49 a pack, so the review has
+  // a Price row (a row that needs no choice: "Accept all 1").
+  let receiptUnpricedBarcode = null
+  const water = await step('sparkling water ingredient', 'POST', '/api/ingredients', { name: 'Sparkling water', baseUnit: 'ml', shelfLifeDays: 365, conversions: [] })
+  if (water.ok && water.json?.id) {
+    const code = ctx.ean13('800000000500')
+    const p = await step('sparkling water product', 'POST', '/api/products', { name: 'Sparkling water 1.5 l', ingredientId: water.json.id, packSize: 1500, barcodes: [code] })
+    if (p.ok && p.json?.id) receiptUnpricedBarcode = code
+  }
+  Object.assign(ctx, { kitchenRollIngredientId, kitchenRollProductId, receiptUnpricedBarcode })
 }

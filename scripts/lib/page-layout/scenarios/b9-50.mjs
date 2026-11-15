@@ -11,7 +11,7 @@
 //   receipt-photos-bar   /scan/receipt at 375, 390, 834 and 667x375: with no photo the sticky primary is Take a photo (or Choose a photo) with an icon
 //                        and no Read the receipt; after one photo it is Read the receipt, "Add another photo" is in the list, focus is on "Edit photo 1",
 //                        Edit and Remove are one IconSet at least 8 px apart, the thumbnail has a frame, and the bar covers no content at the end.
-import { ADD_PHOTO, evaluate, ids, press, receiptPhotos, until } from '../helpers.mjs'
+import { ADD_PHOTO, READ_ROW, evaluate, ids, press, receiptPhotos, scanSession, until } from '../helpers.mjs'
 
 // P25 judges tap targets on a touch emulation (the coarse ::after hit areas apply), as b9-14's and b9-48's sheets do.
 const TOUCH = [
@@ -24,8 +24,17 @@ const NOT_SCANNED = `document.querySelector('ul[aria-label="Not scanned"]')`
 const KITCHEN_ROW = `[...${NOT_SCANNED}.querySelectorAll(':scope > li')].find((li) => /KITCHEN ROLL 4 PACK/.test(li.textContent))`
 const SHEET = `document.querySelector('dialog.sheet[open]')`
 
+// The review of a done read. The seeded scans all carry their Price, so the fake read proposes nothing for them; the seed's unpriced Product
+// (page-layout-seed/b9-50.mjs, receiptUnpricedBarcode) is scanned too, and the read prices it: one Price row, a row that needs no choice.
 async function openReview() {
-  await receiptPhotos(1)
+  if (!ids.assistant) throw new Error('setup: the seeder did not turn the Recipe Assistant on (no fake Anthropic API), so "Read the receipt" cannot be read')
+  if (!ids.receiptUnpricedBarcode) throw new Error('setup: not inspected: the seed has no unpriced Product to scan (page-layout-seed/b9-50.mjs)')
+  await scanSession([...(ids.scanBarcodes ?? []), ids.receiptUnpricedBarcode])
+  await until(`(() => { const r = ${READ_ROW}; return !!r && !!r.querySelector('.list-row__target') })()`, 'the "Read the receipt" footer row, ready', 15000)
+  await press(`(${READ_ROW})?.querySelector('.list-row__target')`, '"Read the receipt" row')
+  await until(`location.pathname === '/scan/receipt' && !!document.querySelector('.receipt-add')`, 'the receipt photos screen')
+  if (!(await evaluate(ADD_PHOTO))) throw new Error('setup: the photos screen has no file input')
+  await until(`document.querySelectorAll('.receipt-photos > li').length >= 1`, 'receipt photo 1')
   await press(`[...document.querySelectorAll('.sticky-action-bar button')].find((b) => b.textContent.trim() === 'Read the receipt')`, '"Read the receipt" in the action bar')
   await until(`location.pathname === '/scan/receipt/review'`, 'the review (a done read)', 30000)
   await until(`!!document.querySelector('main h1') && !!${NOT_SCANNED} && ${settled}`, 'the review content with its Not scanned rows')
@@ -45,7 +54,7 @@ export default {
       const state = await evaluate(`(() => {
         const out = { problems: [] }
         const all = [...document.querySelectorAll('main button')].find((b) => /^Accept all \\d+$/.test(b.textContent.trim()))
-        if (!all) out.problems.push('SSP-08: no "Accept all N" button (the read has Price rows, so some rows need no choice)')
+        if (!all) out.problems.push('SSP-08: no "Accept all N" button (the read has a Price row for the unpriced scan, so a row needs no choice)')
         const rows = [...${NOT_SCANNED}.querySelectorAll(':scope > li')]
         if (rows.length < 2) out.problems.push('SSP-08: the Not scanned list has ' + rows.length + ' rows, not the 2 of the fake read')
         for (const li of rows) {
