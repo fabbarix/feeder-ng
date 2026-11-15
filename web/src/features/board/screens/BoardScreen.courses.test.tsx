@@ -54,7 +54,8 @@ describe('BoardScreen with Courses', () => {
     view()
     expect(screen.getAllByText('Roast chicken').length).toBeGreaterThan(0)
     expect(screen.getByText('Green beans')).toBeInTheDocument()
-    expect(screen.getByText('Dinner: Roast chicken + Green beans')).toBeInTheDocument()
+    // B9-47 (TB-08): the Meal Slot is a <strong> of the line ("<strong>Dinner:</strong> Roast chicken + Green beans")
+    expect(screen.getByText('Dinner:').closest('li')?.textContent).toBe('Dinner: Roast chicken + Green beans')
   })
 
   it('reads the plan\'s slots when the payload has none (an older server): nothing changes', () => {
@@ -67,7 +68,7 @@ describe('BoardScreen with Courses', () => {
   it('the big Cook button opens tonight\'s slot timeline, with no Course in the route', async () => {
     h.data = data([dinner('2026-11-09')])
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cook Dinner' }) /* B9-47 ruling 5 (P38): Cook names its slot */)
     expect(await screen.findByText('Cook timeline')).toBeInTheDocument()
   })
 })

@@ -28,7 +28,10 @@ afterEach(() => {
   globalThis.matchMedia = originalMatchMedia
 })
 
-const cells = () => [...document.querySelectorAll<HTMLElement>('.board-cell')].map((c) => ({ column: c.style.gridColumn, row: c.style.gridRow }))
+const place = (c: HTMLElement) => ({ column: c.style.gridColumn, row: c.style.gridRow })
+const cells = () => [...document.querySelectorAll<HTMLElement>('.board-cell')].map(place)
+// B9-47 (TB-04): the clock cell comes first in the DOM (its Close is the first focusable element), so the hero is found by its data-cell.
+const hero = () => place(document.querySelector<HTMLElement>('.board-cell[data-cell="tonight"]')!)
 // B9-47 (RES-09): the board's tiles sit in TileErrorBoundary, which reads the query client.
 const view = () => render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><BoardScreen /></MemoryRouter></QueryClientProvider>)
 
@@ -36,13 +39,13 @@ describe('BoardScreen layout switch', () => {
   it('at 600 px and up it uses the wall layout (Tonight 2 x 2 at the top left)', () => {
     width(true)
     view()
-    expect(cells()[0]).toEqual({ column: '1 / span 2', row: '1 / span 2' })
+    expect(hero()).toEqual({ column: '1 / span 2', row: '1 / span 2' })
     expect(document.querySelectorAll('.board-cell')).toHaveLength(8)
   })
   it('below 600 px Tonight is full width on one row and no cell is wider than 2 columns', () => {
     width(false)
     view()
-    expect(cells()[0]).toEqual({ column: '1 / span 2', row: '1 / span 1' })
+    expect(hero()).toEqual({ column: '1 / span 2', row: '1 / span 1' })
     for (const c of cells()) expect(c.column).toMatch(/^[12] \/ span [12]$/)
     expect(document.querySelectorAll('.board-cell')).toHaveLength(8)
   })

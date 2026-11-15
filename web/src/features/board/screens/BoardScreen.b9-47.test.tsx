@@ -160,7 +160,9 @@ describe('the layout follows the viewport (TB-07, SHORT-03)', () => {
     view()
     const cells = [...document.querySelectorAll<HTMLElement>('.board-cell')]
     expect(cells).toHaveLength(8)
-    expect({ column: cells[0]!.style.gridColumn, row: cells[0]!.style.gridRow }).toEqual({ column: '1 / span 2', row: '1 / span 1' })
+    // the clock cell is first in the DOM (TB-04: Close is the first focusable element), so the hero is found by its data-cell
+    const hero = document.querySelector<HTMLElement>('.board-cell[data-cell="tonight"]')!
+    expect({ column: hero.style.gridColumn, row: hero.style.gridRow }).toEqual({ column: '1 / span 2', row: '1 / span 1' })
   })
   it('scroll: the hero is 2 x 2 and Tomorrow spans columns 1 to 2 of row 3', () => {
     viewport(844, 390)
@@ -200,7 +202,7 @@ describe('the hero is Today\'s selection, in Today\'s eyebrow (TB-01, TB-08, TB 
     h.data = boardData({ slots: [breakfast(TODAY), lunch(TODAY), dinner(TODAY)] })
     h.now = new Date(`${TODAY}T14:44:00Z`)
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cook Dinner' }) /* B9-47 ruling 5 (P38): Cook names its slot */)
     expect(await screen.findByText(`Cook timeline ${TODAY}/3`)).toBeInTheDocument()
   })
   it('reads the plan\'s slots as before when the payload has none (an older server)', () => {

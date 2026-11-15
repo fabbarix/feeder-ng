@@ -1,15 +1,17 @@
-/* The kitchen board: a wall display, read from two metres. Big type (the base is 1.75 x the phone scale, §3.2), a 4 x 3
-   grid of 12 cells (lib/layout). Tokens only. */
+/* The kitchen board: a wall display, read from two metres (TB-07). One board unit (--board-unit, styles.css) scales the whole board
+   with the screen; every size is a board role (--text-board-*) or a board control size. Four layouts (lib/layout, BoardScreen):
+   phone (2 columns, below 37.5 em), wall (4 x 3, one screen), portrait (2 x 5, one screen) and scroll (a phone held sideways). */
 .board-screen {
-  min-height: 100vh;
-  padding: var(--space-6);
+  /* R-C: tiles clip their overflow, so every board control sits this far inside its tile's padding: the 3 px ring and its 2 px offset. */
+  --board-inset: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  min-height: 100dvh;
+  padding: var(--board-pad);
   box-sizing: border-box;
   background: var(--color-bg);
   color: var(--color-text);
 }
 
-/* L-10: below 37.5 em (600 px) the board is 2 columns of content-height rows (the hero and Use soon full width); the 4 x 3 wall
-   grid starts at 37.5 em (see the end of this block). */
+/* L-10: below 37.5 em (600 px) the board is 2 columns of content-height rows (the hero and Use soon full width). */
 .board-screen .board-grid {
   display: grid;
   gap: var(--bento-gap);
@@ -23,29 +25,40 @@
   container-type: inline-size;
 }
 
-@media (min-width: 37.5em) {
-  .board-screen .board-grid {
-    height: calc(100vh - 2 * var(--space-6)); /* the screen less its padding */
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: repeat(3, minmax(0, 1fr));
-  }
-
-  .board-cell {
-    min-height: 0;
-  }
+/* RES-09: the tile sits in its TileErrorBoundary, which fills the cell. */
+.board-cell > .tile-boundary {
+  block-size: 100%;
+  min-width: 0;
 }
 
-.board-cell > .tile {
+.board-cell > .tile-boundary > .tile {
   box-sizing: border-box;
   height: 100%;
-  --board-tile-pad-x: var(--space-5); /* 20 px; the clock sizes subtract 2 of these */
-  padding: var(--space-4) var(--board-tile-pad-x);
+  padding: calc(var(--board-unit)) calc(1.25 * var(--board-unit));
   border-radius: var(--radius-board);
-  font-size: 1.5rem;
-  /* the tile's running text keeps the 22 px line it has had since DS-07 (a 1.2 line overflows the wall Tomorrow tile at 1440 x 900);
-     the display classes below set their own lines. TB-07 owns the board type. */
-  line-height: var(--text-body-line);
+  font-size: var(--text-board-body);
+  line-height: 1.2;
+  gap: calc(0.5 * var(--board-unit));
   overflow: hidden;
+}
+
+/* A crashed tile keeps its cell (the grid does not jump); its Try again is a board control. */
+.board-cell > .tile-boundary > .tile-error {
+  box-sizing: border-box;
+  block-size: 100%;
+  border-radius: var(--radius-board);
+}
+
+.board-screen .tile-error .button,
+.board-screen .error-state .button {
+  block-size: var(--board-control);
+  padding-inline: calc(1.25 * var(--board-unit));
+  font-size: var(--text-board-control);
+  line-height: 1.2;
+}
+
+.board-cell p {
+  margin: 0;
 }
 
 .board-next,
@@ -57,34 +70,34 @@
   align-content: start;
 }
 
-/* Tile headings: the overline at board scale (about 21 px), full strength (no opacity). */
+/* Tile headings at board scale, full strength (no opacity). */
 .board-tile__heading {
   margin: 0;
-  font-size: 1.3125rem;
+  font-size: var(--text-board-heading);
   font-weight: 700;
   line-height: 1.2;
 }
 
+.board-empty {
+  color: var(--color-muted);
+}
+
+/* TB-04: the date at the top beside the Close control, the time under them. */
 .board-clock {
-  justify-content: center;
+  justify-content: space-between;
 }
 
-/* Next Advance Step at 1280 x 800 (cell 240 px, 208 px of content): heading 25, the Step text (2 lines, 67), the Recipe line
-   (1 line, 28), the due line (28) and Done (36) with 4 px gaps come to about 200 px. Only the due line and the button hold
-   their height. */
-.board-next {
-  gap: var(--space-1);
-}
-
-.board-next .board-tile__heading,
-.board-next__due,
-.board-next .button {
-  flex-shrink: 0;
+.board-clock__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(0.5 * var(--board-unit));
+  min-width: 0;
 }
 
 .board-clock__time {
   margin: 0;
-  font-size: 22cqi; /* phone: the half-width cell is 163 px at 390 (123 px of content); the wall grid restores the cap below */
+  font-size: 22cqi; /* phone: the half-width cell is about 160 px at 375; the wall grid sizes it below */
   line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -92,28 +105,168 @@
 }
 
 .board-clock__date {
-  margin: var(--space-2) 0 0;
-  font-size: 12cqi; /* phone: "Wednesday" and "November" fit 123 px; the wall grid restores 2rem */
+  margin: 0;
+  flex: 1 1 auto;
+  font-size: 12cqi;
   line-height: 1.15;
   overflow-wrap: break-word; /* a word splits only when it cannot fit at all; at phone sizes every word fits */
   min-width: 0;
 }
 
-/* From 37.5 em (600 px) the sizes come from the content box (the cell less the tile padding on both sides, 2 * --board-tile-pad-x), not the bare
-   cell: "00:00" is 3em wide and "Wednesday" 5.24em ("September" 4.99em), so the time is capped at 32cqi and the date at 2rem. Each size is
-   declared twice: the first is the fallback for a browser without min(), the second the content-box size. */
+/* Phone: the half-width clock cannot hold the date beside the Close control, so Close takes the top line (at the end) and the date
+   the next one; the DOM order (date, then Close) is unchanged. */
+@media (width < 37.5em) {
+  .board-clock__top {
+    flex-wrap: wrap;
+  }
+
+  .board-clock__top > .board-close {
+    order: -1;
+    margin-inline-start: auto;
+  }
+
+  .board-clock__top > .board-clock__date {
+    flex-basis: 100%;
+  }
+}
+
+/* From 37.5 em (600 px) the clock sizes come from the cell (cqi, cqh) less the tile's sides (2 x 1.25 board units): "00:00" is 3em wide,
+   and the date shares its line with Close, so its longest word ("Wednesday", 5.24em) fits what Close leaves. The first size of each is
+   the fallback for a browser without min(). */
 @media (min-width: 37.5em) {
+  .board-screen .board-grid {
+    height: calc(100dvh - 2 * var(--board-pad));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+
+  .board-cell {
+    min-height: 0;
+    container-type: size;
+  }
+
   .board-clock__time {
     font-size: 32cqi;
-    font-size: min(32cqi, calc((100cqi - 2 * var(--board-tile-pad-x)) / 3));
+  }
+
+  .board-clock__time {
+    font-size: min(32cqi, calc((100cqi - 2.5 * var(--board-unit)) / 3), 55cqh);
   }
 
   .board-clock__date {
-    font-size: 2rem;
-    font-size: min(2rem, calc((100cqi - 2 * var(--board-tile-pad-x)) / 5.5));
-    line-height: 1.2; /* was inherit: the tile's line is 22 px since DS-07, which fused a two-line date */
+    font-size: var(--text-board-title);
+    font-size: min(var(--text-board-title), calc((100cqi - 2.5 * var(--board-unit) - var(--board-control) - 0.5 * var(--board-unit) - var(--board-inset)) / 5.4));
+    line-height: 1.15;
     overflow-wrap: normal;
   }
+}
+
+/* TB-07: a portrait tablet (820 x 1180): two columns and five rows, still one screen. */
+@media (orientation: portrait) and (min-width: 37.5em) {
+  .board-screen .board-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 2fr 1.3fr 1fr 0.7fr 1fr;
+  }
+}
+
+/* SHORT-03: a phone held sideways (600 px wide, under 560 px high). The board keeps four columns, but rows take their content height,
+   tiles stop clipping, and the board scrolls; Cook follows the slot line so it is on screen at first view. */
+@media (min-width: 37.5em) and (max-height: 34.9375em) {
+  .board-screen {
+    padding: max(var(--space-4), var(--safe-top)) max(var(--space-4), var(--safe-right)) max(var(--space-4), var(--safe-bottom)) max(var(--space-4), var(--safe-left));
+  }
+
+  .board-screen .board-grid {
+    height: auto;
+    grid-template-rows: none;
+    grid-auto-rows: minmax(8rem, auto);
+  }
+
+  .board-cell {
+    container-type: inline-size;
+  }
+
+  .board-cell > .tile-boundary > .tile {
+    overflow: visible;
+  }
+
+  .board-screen .board-tonight .board-tonight__cook {
+    margin-block-start: var(--space-4);
+    min-height: 64px;
+  }
+}
+
+/* TB-04 (R-B at board scale): the way out, a round 56 px control in the clock tile's top corner. It sits 5 px inside the tile's padding
+   (R-C: tiles clip, so its ring is never cut), dims after 10 s without input and never hides. */
+.board-close {
+  flex: none;
+  box-sizing: border-box;
+  inline-size: var(--board-control);
+  block-size: var(--board-control);
+  margin: var(--board-inset) var(--board-inset) 0 0;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: opacity 0.4s;
+}
+
+.board-close svg {
+  width: 45%;
+  height: 45%;
+}
+
+.board-close[data-idle='true'] {
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-close {
+    transition: none;
+  }
+}
+
+/* The board without its grid (loading, or the load error): the way out at the top end, then the state. */
+.board-status {
+  display: grid;
+  gap: var(--board-pad);
+  max-inline-size: 48rem;
+  margin-inline: auto;
+}
+
+.board-status__top {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* TB 7, TB-08, TB-15b: the hero's eyebrow is Today's parts with the day word, at board scale. It wraps only between parts, each of
+   which carries its leading separator, so no line ends in "·". */
+.board-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.4em;
+  margin: 0;
+  font-size: var(--text-board-heading);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.board-eyebrow__part {
+  white-space: nowrap;
+}
+
+/* "start now": the meal must start now, underlined as on Today's hero. */
+.board-eyebrow__start[data-now='true'] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
 .board-tonight {
@@ -122,115 +275,237 @@
   align-items: flex-start;
 }
 
-/* The hero recipe name: 52 / 800 at board scale. */
-.board-tonight__recipe {
-  margin: 0;
-  font-size: 3.25rem;
-  line-height: 1.1;
-  font-weight: 800;
+.board-tonight > * {
+  flex-shrink: 0;
+  max-inline-size: 100%;
 }
 
-/* Next Advance Step: the Step text clamps to 2 lines and the Recipe line to 1, so the tile fits 240 px (1280 x 800). */
-.board-next__text {
+/* The hero Recipe name: display text is large, not extra-bold; two lines, then an ellipsis. */
+.board-tonight__recipe {
+  margin: 0;
+  font-size: var(--text-board-hero);
+  line-height: 1.08;
+  font-weight: 700;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  flex-shrink: 0;
-  height: 4.2rem; /* 2 lines at line-height 1.05 */
-  margin: 0;
-  font-size: 2rem;
-  line-height: 1.05;
-  font-weight: 700;
-}
-
-.board-next__recipe {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  overflow: hidden;
-  flex-shrink: 0;
-  height: 1.75rem; /* 1 line at 1.4375rem, line-height 1.2 */
-  margin: 0;
-  font-size: 1.4375rem;
-  line-height: 1.2;
 }
 
 .board-tonight__slot {
-  margin: var(--space-2) 0 0;
-  font-size: 1.75rem;
-  line-height: 1.2;
-}
-
-/* Meta lines at board scale (about 23 px). */
-.board-next__due {
   margin: 0;
-  font-size: 1.4375rem;
+  font-size: var(--text-board-meta);
+  font-weight: 600;
   line-height: 1.2;
 }
 
-/* The hero Cook button: the board's 28 px label beats the Button size xl (.button[data-size='xl'], 0,2,0) by specificity. */
+/* The hero Cook: at the foot of the hero, 5 px inside the tile (R-C), at least max(76 px, 4.75 board units). */
 .board-screen .board-tonight .board-tonight__cook {
-  min-height: 76px;
-  margin-block-start: auto;
-  font-size: 1.75rem;
+  margin: auto 0 var(--board-inset) var(--board-inset);
+  min-height: max(76px, calc(4.75 * var(--board-unit)));
+  padding-inline: calc(2 * var(--board-unit));
+  font-size: calc(0.875 * var(--text-board-title)); /* 1.75 board units */
   line-height: 1.25;
   font-weight: 800;
 }
 
-.board-streak__days {
-  margin: 0;
-  font-size: 3.5rem;
-  line-height: 1.2;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+.board-screen .board-tonight .board-tonight__cook svg {
+  width: calc(1.75 * var(--board-unit));
+  height: calc(1.75 * var(--board-unit));
 }
 
+/* CRS F: the hero lists the slot's Courses; the main Course's row is the hero role, the others the title role. Each is one line. */
+.board-tonight__courses {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: calc(0.25 * var(--board-unit));
+  min-width: 0;
+}
+
+.board-tonight__course {
+  font-size: var(--text-board-title);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-tonight__course[data-main='true'] {
+  font-size: var(--text-board-hero);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* The hero is a hero tile: a Cooked row is the hero's own text colour at 70 % (TB-05: no redefined --color-muted and no opacity
+   fade), so it reads as done and stays legible on the hero in both schemes. */
+.board-tonight__course[data-state='cooked'] {
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+/* TB-07: Next Advance Step, an info status tile (DS 3): the Step (2 lines), its meal (1 line), then a foot row with the due state and
+   Done. Nothing has a fixed height. */
+.board-next__text {
+  margin: 0;
+  font-size: var(--text-board-title);
+  font-weight: 600;
+  line-height: 1.08;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.board-next__recipe {
+  margin: 0;
+  font-size: var(--text-board-meta);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-next__foot {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(0.5 * var(--board-unit));
+  min-width: 0;
+}
+
+.board-next__due {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--text-board-meta);
+  line-height: 1.2;
+}
+
+/* Done: a secondary lg button at board scale, 5 px inside the tile (R-C). */
+.board-screen .board-next__done {
+  flex: none;
+  min-height: var(--board-control);
+  margin: 0 var(--board-inset) var(--board-inset) 0;
+  padding-inline: calc(1.25 * var(--board-unit));
+  font-size: var(--text-board-control);
+  line-height: 1.2;
+}
+
+.board-screen .board-next__done svg {
+  width: var(--text-board-control);
+  height: var(--text-board-control);
+}
+
+/* A narrow Next Advance Step cell (under 16 rem, 1024 x 768 and phones): the meal line gives way, and the foot may wrap. */
+@container (max-width: 16rem) {
+  .board-next__recipe {
+    display: none;
+  }
+
+  .board-next__foot {
+    flex-wrap: wrap;
+  }
+}
+
+/* Chips at board scale, readable from 2 m. */
+.board-screen .board-use-soon .chip,
+.board-screen .board-next .chip {
+  block-size: var(--board-chip);
+  padding: 0 calc(var(--board-unit));
+  font-size: var(--text-board-control);
+  line-height: 1.2;
+  gap: calc(0.4 * var(--board-unit));
+  max-inline-size: 100%;
+}
+
+.board-screen .board-tomorrow .chip {
+  block-size: var(--board-chip);
+  padding: 0 calc(var(--board-unit));
+  font-size: var(--text-board-control);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.board-screen .board-cell .chip svg {
+  width: var(--text-board-control);
+  height: var(--text-board-control);
+}
+
+/* TB-07: lists. A Leftover is its name (bold, one line) over a meta line; Tomorrow is one line per Meal Slot, ending in an ellipsis. */
 .board-list,
 .board-chips {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.board-list {
   display: grid;
-  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(0.4 * var(--board-unit));
+  min-height: 0;
+}
+
+.board-list li {
+  min-width: 0;
+}
+
+.board-list--lines li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-list__title {
+  display: block;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-list__meta {
+  display: block;
+  font-size: var(--text-board-meta);
+  line-height: 1.2;
 }
 
 .board-chips {
   display: flex;
   flex-wrap: wrap;
+  gap: calc(0.5 * var(--board-unit));
 }
 
-/* Use soon: 40 px chips at board scale, readable from 2 m (a board-level override of the 28 px phone chip). */
-.board-screen .board-use-soon .chip {
-  block-size: 40px;
-  padding: 0 var(--space-4);
-  font-size: 1.25rem;
-  line-height: 1;
+.board-chips li {
+  min-width: 0;
+  max-inline-size: 100%;
 }
 
-.board-screen .board-tomorrow .chip {
-  block-size: 40px;
-  padding: 0 var(--space-4);
-  font-size: 1.25rem;
+.board-streak__days {
+  margin: auto 0 0;
+  font-size: var(--text-board-metric);
+  font-weight: 800;
   line-height: 1;
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .board-timers .board-list {
   overflow: hidden;
-  gap: var(--space-1);
+  gap: calc(0.25 * var(--board-unit));
 }
 
-/* Compact rows: at most 2 fit under the heading with the "+n more" line (208 px of content at 1280 x 800). The 6 px block padding is
-   two scale steps (4 + 2), kept so the rows do not move. */
+/* Compact timer rows: at most 2 fit under the heading with the "+n more" line. */
 .board-timers .timer-tile {
   padding: calc(var(--space-1) + var(--space-half)) var(--space-3);
   gap: var(--space-half);
 }
 
-/* Timer labels at board scale (the overline of the TimerTile, about 21 px); they stay on one line, a long one ends in an ellipsis. */
+/* Timer labels at board scale; they stay on one line, a long one ends in an ellipsis. */
 .board-screen .board-timers .timer-tile .tile__overline {
-  font-size: 1.3125rem;
+  font-size: var(--text-board-heading);
   line-height: 1.2;
 }
 
@@ -253,37 +528,12 @@
 
 .board-timers__more {
   margin: 0;
-  font-size: 1.4375rem;
+  font-size: var(--text-board-meta);
   line-height: 1.2;
 }
 
 .board-screen .timer-tile__time {
-  font-size: 1.5rem;
+  font-size: var(--text-board-body);
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
-}
-
-/* CRS F: the Tonight tile lists the slot's Courses; the main Course's row is the larger one. */
-.board-tonight__courses {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-1);
-}
-/* Legible from across the kitchen: the main row sits near the hero Recipe scale (3.25rem), the others below it but not
-   below the slot line (1.75rem). A Cooked row stays on the list, muted. */
-.board-tonight__course {
-  font-size: 2rem;
-  line-height: 1.2;
-}
-.board-tonight__course[data-main='true'] {
-  font-size: 2.75rem;
-  font-weight: 600;
-  line-height: 1.1;
-}
-/* The Tonight tile is a hero tile: a Cooked row is the hero's own text colour at 70 % (TB-05: no redefined --color-muted and no
-   opacity fade), so it reads as done and stays legible on the hero in both schemes. */
-.board-tonight__course[data-state='cooked'] {
-  color: color-mix(in srgb, currentColor 70%, transparent);
 }

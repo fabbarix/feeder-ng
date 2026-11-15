@@ -76,18 +76,20 @@ describe('the hero\'s body', () => {
 })
 
 describe('Cook (5.13): ONE big button that starts Cook Mode', () => {
+  // B9-47 ruling 5 (P38, every button on a page has its own name): Cook's name says the slot, "Cook Dinner"; its visible label stays "Cook".
   it('calls onCook once', async () => {
     const onCook = vi.fn()
     render(<BoardHeroTile hero={heroOf(several())} onCook={onCook} />)
-    expect(screen.getAllByRole('button', { name: 'Cook' })).toHaveLength(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
+    expect(screen.getAllByRole('button', { name: /^Cook/ })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Cook Dinner' })).toHaveTextContent(/^Cook$/)
+    await userEvent.click(screen.getByRole('button', { name: 'Cook Dinner' }))
     expect(onCook).toHaveBeenCalledTimes(1)
   })
   it('there is none without a handler or without a hero', () => {
     const { rerender } = render(<BoardHeroTile hero={heroOf(dinner())} />)
-    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cook/ })).not.toBeInTheDocument()
     rerender(<BoardHeroTile hero={null} onCook={() => {}} />)
-    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cook/ })).not.toBeInTheDocument()
   })
 })
 
@@ -96,7 +98,7 @@ describe('with no hero (B5-F1, ADR 0014)', () => {
   it('says "Dinner · Not served" for a slot Not served today, with no Cook', () => {
     render(<BoardHeroTile hero={null} notServed={[notServed()]} onCook={() => {}} />)
     expect(screen.getByText('Dinner · Not served')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cook/ })).not.toBeInTheDocument()
   })
   it('says nothing is planned (and not "tonight") when nothing is Not served either', () => {
     render(<BoardHeroTile hero={null} notServed={[]} />)
