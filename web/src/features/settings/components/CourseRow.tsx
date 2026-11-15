@@ -1,6 +1,6 @@
 // One Course in Settings > Courses: the handle (Admin, from Sortable), the name or the rename field, what uses it, and the
 // actions menu. Renders and wires events only; the menu items come from lib/courseList.
-import { Button, Chip, Menu, TextField, type SortableRenderContext } from '../../../ui'
+import { Button, Menu, TextField, type SortableRenderContext } from '../../../ui'
 import type { Course } from '../../../lib/courses'
 import { coursesStrings as s } from '../coursesStrings'
 import { courseActions, courseMeta, type CourseAction } from '../lib/courseList'
@@ -41,11 +41,6 @@ export function CourseRow({ course, canEdit, sortable, onAction, onUnarchive, re
             <span className="course-row__name" data-testid="course-name">
               {course.name}
             </span>
-            {course.main ? (
-              <span data-testid="course-main-chip">
-                <Chip>{s.mainChip}</Chip>
-              </span>
-            ) : null}
           </div>
         )}
         {renaming ? (
