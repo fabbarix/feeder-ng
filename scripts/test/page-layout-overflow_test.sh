@@ -65,7 +65,10 @@ for try in 0 1 2 3 4 5 6 7; do
 done
 [ -n "$PORT" ] || { echo "FAIL: no free port for the fixture server"; exit 1; }
 echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings|pantry)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"; RC=$?
+# int1: PAGE_LAYOUT_ONLY keeps every scenario on these three routes too (B9-25's timer-pill, B9-26's plan-after-swap and regenerate,
+# B9-29's Pantry ones, ...). On the static fixture their setups find nothing and each waits out its own 10-15 s before it is
+# reported not inspected, so the run takes about 200 s with every batch joined: the limit is 600 s, not 180.
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings|pantry)$' timeout 600 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"; RC=$?
 [ "$RC" -eq 1 ] && ok || bad "the driver must exit 1 (findings) on the overflow page (rc $RC): $OUT"
 
 # (a) the 390 phone: the document is wider than the viewport
