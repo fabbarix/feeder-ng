@@ -54,6 +54,7 @@ import { priceContext } from '../lib/priceContext'
 import type { PriceEntry, PriceIntent } from '../lib/priceEntry'
 import { rowByKey, toGetExtras, type ScannedRow } from '../lib/scannedList'
 import { scanStrings } from '../strings'
+import { LoadState } from '../../../ui/LoadState'
 import { TickChangeSheet } from '../../shop/components/TickChangeSheet'
 import '../scan.css'
 
@@ -354,7 +355,10 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
         />
       ) : null}
 
-      {isShop ? (
+      {c.status === 'unavailable' ? (
+        // B9-54 (RES-03): opened offline on a phone that never saved this Shop's barcodes: say so, not a dead viewfinder
+        <LoadState title={scanStrings.unavailableTitle} text={scanStrings.unavailableText} />
+      ) : isShop ? (
         <div className="scan-screen__split">
           {cameraColumn}
           {listColumn}

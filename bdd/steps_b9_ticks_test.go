@@ -303,6 +303,22 @@ func b9TickSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return fmt.Errorf("tick %s alsoTickedBy = %v, want %s for %d g", uuid, also, who, qty)
 	})
+	// B9-54 (RES 2): the same User's own earlier addition (another phone) is named too, marked mine, with the time it was ticked.
+	sc.Step(`^tick "([^"]*)" names my own earlier tick of (\d+) g$`, func(uuid string, qty int) error {
+		r, err := result(uuid)
+		if err != nil {
+			return err
+		}
+		tk, _ := r["tick"].(map[string]any)
+		also, _ := tk["alsoTickedBy"].([]any)
+		for _, x := range also {
+			a, _ := x.(map[string]any)
+			if a != nil && a["mine"] == true && ssNum(a["quantity"]) == float64(qty) && a["tickedAt"] != nil && a["tickedAt"] != "" {
+				return nil
+			}
+		}
+		return fmt.Errorf("tick %s alsoTickedBy = %v, want my own earlier %d g, mine, with its time", uuid, also, qty)
+	})
 }
 
 func ssNumInt(v any) int { n, _ := v.(int); return n }

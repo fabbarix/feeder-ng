@@ -19,6 +19,8 @@ export interface SyncNoticeRow {
 export interface SyncNoticeAction {
   label: string
   onClick: () => void
+  /** B9-54 (P38): the accessible name when two notices would otherwise both have a "Dismiss"; it contains the visible label ("Dismiss: Carrot was ticked twice"). */
+  ariaLabel?: string
 }
 
 export interface SyncNoticeProps {
@@ -62,7 +64,7 @@ export function SyncNotice({ tone, title, subtitle, rows, actions }: SyncNoticeP
       {actions && actions.length > 0 ? (
         <div className="sync-notice__actions">
           {actions.map((a) => (
-            <Button key={a.label} variant="secondary" size="sm" onClick={a.onClick}>
+            <Button key={a.label} variant="secondary" size="sm" onClick={a.onClick} {...(a.ariaLabel ? { 'aria-label': a.ariaLabel } : {})}>
               {a.label}
             </Button>
           ))}

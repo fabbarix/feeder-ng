@@ -17,7 +17,7 @@ describe('useShellStatus (the WP5 extension point)', () => {
     await store.append(entry('a'))
     await store.append(entry('b'))
     const { result } = renderHook(() => useShellStatus(store))
-    await waitFor(() => expect(result.current).toEqual({ pendingScans: 2 }))
+    await waitFor(() => expect(result.current).toEqual({ pendingScans: 2, pendingTicks: 0 }))
   })
 
   it('follows the queue when a scan is queued or synced, without a Scan screen being open', async () => {

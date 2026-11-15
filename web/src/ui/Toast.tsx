@@ -9,7 +9,7 @@ import { uiStrings } from './strings'
 import './Toast.css'
 
 /** DS-12 R-D+: only error, warning, offline and syncing carry an icon; a success toast's headline already says what happened. */
-export type ToastStatus = 'neutral' | 'success' | 'info' | 'error' | 'warning' | 'offline' | 'syncing'
+export type ToastStatus = 'neutral' | 'success' | 'info' | 'error' | 'warning' | 'offline' | 'syncing' | 'pending'
 
 export interface ToastOptions {
   status?: ToastStatus
@@ -112,6 +112,7 @@ const STATUS_ICON: Record<ToastStatus, IconName | null> = {
   warning: 'warning',
   offline: 'offline',
   syncing: 'refresh',
+  pending: 'duration', // B9-54 (RES-03): Phosphor Clock, "waiting to sync"
 }
 
 type PauseReason = 'hover' | 'focus' | 'hidden'

@@ -352,10 +352,13 @@ type AlsoTicked struct {
 	Name     string
 	Quantity float64
 	By       string // "hand" | "scan"
+	// B9-54 (RES 2): Mine is true when the addition is the same User's (their other phone); TickedAt is the phone's time.
+	Mine     bool
+	TickedAt time.Time
 }
 
-// TickResult says which Stock Lot a tick added. Added is this tick's quantity. AlsoTickedBy lists the additions other
-// Users made to the Line before this one (empty for the first); a retried tick (Created false) answers as the first time.
+// TickResult says which Stock Lot a tick added. Added is this tick's quantity. AlsoTickedBy lists the additions made
+// to the Line before this one, the same User's own included (Mine; B9-54) (empty for the first); a retried tick (Created false) answers as the first time.
 type TickResult struct {
 	LotID        *int64
 	Created      bool
@@ -467,9 +470,6 @@ func (s *Service) tickResult(ctx context.Context, a store.Addition, created bool
 		if o.ID >= a.ID {
 			break
 		}
-		if o.UserID == a.UserID {
-			continue
-		}
 		before = append(before, o)
 		ids = append(ids, o.UserID)
 	}
@@ -478,7 +478,8 @@ func (s *Service) tickResult(ctx context.Context, a store.Addition, created bool
 		return TickResult{}, err
 	}
 	for _, o := range before {
-		res.AlsoTickedBy = append(res.AlsoTickedBy, AlsoTicked{Name: names[o.UserID], Quantity: finite(o.Quantity), By: o.By})
+		res.AlsoTickedBy = append(res.AlsoTickedBy, AlsoTicked{Name: names[o.UserID], Quantity: finite(o.Quantity), By: o.By,
+			Mine: o.UserID != 0 && o.UserID == a.UserID, TickedAt: o.TickedAt})
 	}
 	return res, nil
 }

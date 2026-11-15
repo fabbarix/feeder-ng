@@ -16,10 +16,7 @@ import type { UnitSystem } from '../../../lib/units'
 import { scanApi } from '../api'
 import { chooseDetector, type Detector } from '../lib/detector'
 import { createFeedback, webAudioBeep } from '../lib/feedback'
-import { appOpStore, appPictureStore } from '../lib/idbStore'
 import { appSessionStore } from '../lib/sessionStore'
-import { shouldRefreshOfflineData } from '../lib/offlineRefresh'
-import { OfflineQueue, type SyncApi } from '../lib/queue'
 import type { SyncNotice } from '../lib/notices'
 import { createZxingDetector } from '../lib/zxingDetector'
 import type { IngredientChoice } from '../lib/unknownForm'
@@ -31,7 +28,9 @@ import { useCameraRecovery, type CameraRecovery } from './useCameraRecovery'
 import { useScanFlow, type ScanFlow } from './useScanFlow'
 import { useScanner } from './useScanner'
 import { useScannedList, type ScannedList } from './useScannedList'
-import { useSyncQueue } from './useSyncQueue'
+import { useSharedSyncQueue } from '../components/SyncQueueProvider'
+import { applyPending } from '../../shop/lib/pendingTicks'
+import { useMe } from '../../../app/useMe'
 import { useToGetTick, type ToGetTick } from './useToGetTick'
 
 export interface ScanControllerOptions {
@@ -42,7 +41,7 @@ export interface ScanControllerOptions {
 
 export interface ScanController {
   /** loading the offline data; error when it is neither online nor cached */
-  status: 'loading' | 'ready' | 'error'
+  status: 'loading' | 'ready' | 'error' | 'unavailable'
   error: string | null
   camera: {
     status: CameraStatus
@@ -103,9 +102,14 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const ingredientChoices = useIngredientChoices()
   const totals = useStockTotals()
   const shopList = useShoppingList({ shopId })
-  const toGetTick = useToGetTick({ to: shopList.data?.to, shopId, system })
+  // B9-54 (RES-03): the app's one queue (SyncQueueProvider under the shell; a private one when rendered alone): a Tick the Shop queued waits here
+  // too, and a Scan goes in the same batch, in the order made. The provider refreshes the list, Stock and the offline data after each flush.
+  // The To get tick queues on the same one.
+  const sync = useSharedSyncQueue()
+  const toGetTick = useToGetTick({ to: shopList.data?.to, shopId, system, queue: sync })
   const [picturePicking, setPicturePicking] = useState(false)
-  const camera = useCamera({ enabled: !picturePicking })
+  // B9-54: no camera while this Shop's barcodes are not on the phone (the screen says so instead)
+  const camera = useCamera({ enabled: !picturePicking && offline.status !== 'unavailable' })
   const sessionStore = useMemo(() => appSessionStore(), [])
 
   const [detector, setDetector] = useState<Detector | null>(null)
@@ -133,28 +137,24 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   )
   const [muted, setMuted] = useState(() => feedback.isMuted())
 
-  const store = useMemo(() => appOpStore(), [])
-  const queue = useMemo(() => new OfflineQueue(store, undefined, appPictureStore()), [store])
-  const syncApi = useMemo<SyncApi>(() => ({ sync: (ops: Op[]) => scanApi.sync(ops), uploadPicture: (blob: Blob) => scanApi.uploadPicture(blob) }), [])
   const [notices, setNotices] = useState<SyncNotice[]>([])
   const resultsRef = useRef(new Map<string, ScanResult>())
   // The flow is created after the sync queue (it needs the queue's functions); the sync reaches it through this ref.
   const flowRef = useRef<ScanFlow | null>(null)
-  const sync = useSyncQueue({
-    queue,
-    api: syncApi,
-    // PPX: the phone had no room for the Picture of an offline scan: the scan is queued without it, and the User is told.
-    onPictureNotStored: () => toast.show(scanStrings.pictureNotSaved, { status: 'info' }),
-    onResults: (results, found) => {
-      for (const r of results) resultsRef.current.set(r.clientUuid, r)
-      flowRef.current?.applySyncResults(results)
-      if (found.length > 0) setNotices((prev) => [...prev, ...found])
-      // A Product created (or merged into one) by this batch: the cached offline data must learn its barcode.
-      if (shouldRefreshOfflineData(results)) void queryClient.invalidateQueries({ queryKey: ['scan', 'offline'] })
-      liveRefreshFor(queryClient).request()
-      void queryClient.invalidateQueries({ queryKey: ['stock'] })
-    },
-  })
+  // PPX: the phone had no room for the Picture of an offline scan: the scan is queued without it, and the User is told.
+  const showToast = toast.show
+  const onPictureNotStored = sync.onPictureNotStored
+  useEffect(() => onPictureNotStored(() => showToast(scanStrings.pictureNotSaved, { status: 'info' })), [onPictureNotStored, showToast])
+  const subscribe = sync.subscribe
+  useEffect(
+    () =>
+      subscribe((results: ScanResult[], found: SyncNotice[]) => {
+        for (const r of results) resultsRef.current.set(r.clientUuid, r)
+        flowRef.current?.applySyncResults(results)
+        if (found.length > 0) setNotices((prev) => [...prev, ...found])
+      }),
+    [subscribe],
+  )
 
   /** Queues the Op (PPX: with the Blob of its offline Picture) and sends the queue; the Result of this Op, or null while it waits (offline). */
   const submit = async (op: Op, picture?: Blob): Promise<ScanResult | null> => {
@@ -180,6 +180,10 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
       queryClient.invalidateQueries({ queryKey: ['scan', 'offline'] }),
     ])
   }
+
+  // B9-54: the live list with the Ticks still waiting in the queue applied (the To get tab shows them ticked, waiting to sync)
+  const who = useViewerName()
+  const liveList = useMemo(() => (shopList.data ? applyPending(shopList.data, sync.pendingOps, { who }) : undefined), [shopList.data, sync.pendingOps, who])
 
   // SR3: the Scanned list is the Shop's session (the day is the Shopping List's); Stock-take keeps none.
   const scanned = useScannedList({
@@ -269,7 +273,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
     scanned,
     toGetTick,
     endSession: () => scanned.clear(),
-    list: mode === 'shop' ? shopList.data : undefined,
+    list: mode === 'shop' ? liveList : undefined,
     refreshLive,
     online: sync.online,
     pendingCount: sync.pendingCount,
@@ -288,6 +292,15 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
 }
 
 const NO_PRODUCTS: OfflineProduct[] = []
+
+/** The viewer's display name for a waiting Tick's addition ('' while unknown, or where no Me query can run, as in a screen rendered alone). */
+function useViewerName(): string {
+  try {
+    return useMe().data?.displayName ?? ''
+  } catch {
+    return ''
+  }
+}
 
 function safeStorage(): Storage | null {
   try {

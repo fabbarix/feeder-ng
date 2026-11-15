@@ -74,6 +74,8 @@ export interface ListEntry {
   details?: LineDetails
   /** B9-34 (SSP-02): true on the open entry "more:<ingredientId>" that carries a ticked Line's growth. */
   moreSince?: boolean
+  /** B9-54 (RES-03): 'pending' when one of the entry's own additions is waiting in the offline queue (`syncedAt` null); absent otherwise. */
+  sync?: 'pending'
 }
 
 /** "1.4 kg · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1.4 kg" with no pack suggestion. */
@@ -120,6 +122,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     tickMeta: line.ticked ? tickedMeta(line.tick, line.baseUnit, system) : null,
     details: lineDetails(line, currency, system),
     moreSince: false,
+    ...(line.ticked && isWaiting(line.tick) ? { sync: 'pending' as const } : {}),
   }
 }
 
@@ -160,7 +163,13 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     tick: extra.tick ?? null,
     tickMeta: extra.ticked ? tickedMeta(extra.tick, extra.baseUnit ?? 'piece', system) : null,
     moreSince: false,
+    ...(extra.ticked && isWaiting(extra.tick) ? { sync: 'pending' as const } : {}),
   }
+}
+
+/** B9-54: one of the tick's additions only exists on this phone (waiting in the offline queue). */
+function isWaiting(tick: LineTick | null | undefined): boolean {
+  return (tick?.additions ?? []).some((a) => a.syncedAt === null)
 }
 
 /**

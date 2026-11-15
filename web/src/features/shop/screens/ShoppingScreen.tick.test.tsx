@@ -81,7 +81,8 @@ describe('ShoppingScreen: one tap (SSP-01, SSP 2)', () => {
   })
 
   it('a failed tick is the failure toast ("Couldn’t tick Garlic", with Try again), not an Undo toast', async () => {
-    actions.tick.mockRejectedValue(new ApiError(500, 'internal', 'boom'))
+    // B9-54 (RES-03): status 0 and 5xx now queue the Tick (ShoppingScreen.offline.test); a refusal with an answer is still a failure
+    actions.tick.mockRejectedValue(new ApiError(422, 'validation_failed', ''))
     show(makeList({ lines: [makeGarlic()] }))
     await userEvent.click(screen.getByRole('button', { name: 'Tick Garlic' }))
     expect(undoToast.show).not.toHaveBeenCalled()

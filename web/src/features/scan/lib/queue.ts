@@ -59,10 +59,15 @@ export interface SyncApi {
   uploadPicture?(blob: Blob): Promise<string>
 }
 
+/** B9-54: what changed in the queue (OfflineQueue.onChange). */
+export type QueueChange = 'enqueue' | 'change'
+
 export interface FlushResult {
   /** the server was unreachable (network error or 5xx); everything stays queued */
   offline: boolean
   results: ScanResult[]
+  /** B9-54: the operations this flush sent, in the order sent (their kinds tell a Tick's result from a Scan's); empty when nothing was sent */
+  sent?: Op[]
   /** PPX: Pictures given up in this flush; absent when there were none */
   pictureFailures?: PictureFailure[]
 }
@@ -154,6 +159,8 @@ export class OfflineQueue {
   private outcomes = new Map<string, 'applied' | 'rejected'>()
   /** notes for rejected operations, kept in memory until dismissed (they are not resent) */
   private notes = new Map<string, QueuedOp>()
+  /** B9-54: told after anything changed what pending() or rejected() answer (two owners of one queue stay in step) */
+  private changeListeners = new Set<(kind: QueueChange) => void>()
 
   constructor(
     private readonly store: OpStore,
@@ -161,6 +168,21 @@ export class OfflineQueue {
     /** PPX: where queued Pictures are kept; without it a Picture passed to enqueue is dropped (pictureStored false) */
     protected readonly pictures?: PictureStore,
   ) {}
+
+  /**
+   * B9-54: `listener` runs after every change of the pending or rejected operations, until the returned function is called; `kind` is
+   * 'enqueue' when an operation was added (an owner that did not add it may want to send it), else 'change'.
+   */
+  onChange(listener: (kind: QueueChange) => void): () => void {
+    this.changeListeners.add(listener)
+    return () => {
+      this.changeListeners.delete(listener)
+    }
+  }
+
+  private changed(kind: QueueChange = 'change'): void {
+    for (const listener of [...this.changeListeners]) listener(kind)
+  }
 
   /**
    * Appends the operation; a clientUuid already in the queue is ignored (no duplicate). PPX: an optional Picture (the Blob
@@ -181,6 +203,7 @@ export class OfflineQueue {
       }
     }
     await this.store.append({ op, queuedAt: this.now().toISOString(), attempts: 0, ...(kept ? { picture: kept } : {}) })
+    this.changed('enqueue')
     return { pictureStored: kept !== undefined }
   }
 
@@ -200,6 +223,21 @@ export class OfflineQueue {
     })
   }
 
+  /**
+   * B9-54 (RES-03): sets `quantity` (the amount added to Stock; 0 = Tick without adding) on the still-queued shop_tick `clientUuid`, in
+   * place, so its order is kept. true when it was queued and changed; false when it already left the queue (sent, applied or rejected), or
+   * is not a shop_tick: the caller then PATCHes the synced tick. Runs in the queue's lock, like updatePrice.
+   */
+  updateTick(clientUuid: string, quantity: number): Promise<boolean> {
+    return this.exclusive(async () => {
+      const queued = (await this.store.all()).find((e) => e.op.clientUuid === clientUuid)
+      if (!queued || queued.op.kind !== 'shop_tick') return false
+      await this.store.put({ ...queued, op: { ...queued.op, quantity } })
+      this.changed()
+      return true
+    })
+  }
+
   /** Operations still to send, in order. */
   async pending(): Promise<QueuedOp[]> {
     return this.store.all()
@@ -213,6 +251,7 @@ export class OfflineQueue {
   /** Forgets the notes of rejected operations (the "N scans couldn't sync" line). */
   dismissRejected(): void {
     this.notes.clear()
+    this.changed()
   }
 
   /**
@@ -228,6 +267,7 @@ export class OfflineQueue {
       await this.pictures?.remove(clientUuid)
       if (queued) {
         await this.store.remove(clientUuid)
+        this.changed()
         return queued.attempts === 0
       }
       return this.outcomes.get(clientUuid) === 'rejected'
@@ -285,7 +325,16 @@ export class OfflineQueue {
   }
 
   private sendExclusive(api: SyncApi): Promise<FlushResult> {
-    return this.exclusive(() => this.send(api))
+    return this.exclusive(async () => {
+      let touched = true
+      try {
+        const result = await this.send(api)
+        touched = result.offline || result.results.length > 0 || (result.pictureFailures?.length ?? 0) > 0
+        return result
+      } finally {
+        if (touched) this.changed()
+      }
+    })
   }
 
   private async send(api: SyncApi): Promise<FlushResult> {
@@ -346,7 +395,7 @@ export class OfflineQueue {
         this.outcomes.set(entry.op.clientUuid, 'applied')
       }
     }
-    return withFailures({ offline: false, results }, failures)
+    return withFailures({ offline: false, results, sent: sent.map((e) => e.op) }, failures)
   }
 
   /** PPX: uploads the Blob of a queued entry. A missing Blob (or no uploader) is a PictureFailure 'missing', thrown as such. */

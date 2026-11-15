@@ -6,6 +6,7 @@ import { baseUnitLabel, formatQuantity, type UnitSystem } from '../../../lib/uni
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
 import { DetailList, DetailRow } from '../../../ui/DetailList'
+import { Icon } from '../../../ui/Icon'
 import { FormActions } from '../../../ui/FormActions'
 import { NumberField } from '../../../ui/fields/NumberField'
 import { RadioCards } from '../../../ui/fields/RadioCards'
@@ -31,6 +32,8 @@ export interface TickSheetProps {
   onSubmit: (quantity: number) => void
   /** the change is in flight: Save shows its spinner */
   busy?: boolean
+  /** B9-54 (RES-03): the Tick is still in the offline queue: the sheet says what goes to Stock when it syncs, and that nothing is sent meanwhile */
+  waiting?: boolean
 }
 
 type Choice = 'pack' | 'need' | 'other'
@@ -47,7 +50,7 @@ function startChoice(added: number, choices: TickSheetProps['choices']): Choice 
   return 'other'
 }
 
-export function TickSheet({ open, onClose, name, baseUnit, system, added, tickedAt, timeZone, choices, onSubmit, busy }: TickSheetProps) {
+export function TickSheet({ open, onClose, name, baseUnit, system, added, tickedAt, timeZone, choices, onSubmit, busy, waiting = false }: TickSheetProps) {
   const formId = useId()
   const groupLabelId = useId()
   const [choice, setChoice] = useState<Choice>(() => startChoice(added, choices))
@@ -85,7 +88,7 @@ export function TickSheet({ open, onClose, name, baseUnit, system, added, ticked
     onSubmit(other)
   }
 
-  const detail = additionDetail({ who: '', mine: true, by: 'hand', quantity: added, clientUuid: null, tickedAt, syncedAt: null }, timeZone)
+  const detail = additionDetail({ who: '', mine: true, by: 'hand', quantity: added, clientUuid: null, tickedAt, syncedAt: tickedAt }, timeZone)
   return (
     <BottomSheet
       open={open}
@@ -114,7 +117,15 @@ export function TickSheet({ open, onClose, name, baseUnit, system, added, ticked
           submit()
         }}
       >
-        {added > 0 ? (
+        {waiting ? (
+          <>
+            <p className="tick-sheet__waiting">
+              <Icon name="duration" size={16} />
+              <span>{added > 0 ? shopStrings.waitingGoesToStock(amount(added)) : shopStrings.waitingToSync}</span>
+            </p>
+            <p className="tick-sheet__hint">{shopStrings.changeWaitingHint}</p>
+          </>
+        ) : added > 0 ? (
           <DetailList tone="success" className="tick-sheet__added">
             <DetailRow label={shopStrings.addedWhenTicked} state={shopStrings.plusAmount(amount(added))} detail={detail} />
           </DetailList>

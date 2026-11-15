@@ -207,13 +207,15 @@ type tickJSON struct {
 	LotID        *int64           `json:"lotId"`
 	Created      bool             `json:"created"`
 	Added        float64          `json:"added"`
-	AlsoTickedBy []alsoTickedJSON `json:"alsoTickedBy"` // RES 2: earlier additions by other Users, [] when none
+	AlsoTickedBy []alsoTickedJSON `json:"alsoTickedBy"` // RES 2: earlier additions (the same User's own marked mine), [] when none
 }
 
 type alsoTickedJSON struct {
 	Name     string  `json:"name"`
 	Quantity float64 `json:"quantity"`
 	By       string  `json:"by"`
+	Mine     bool    `json:"mine"`
+	TickedAt string  `json:"tickedAt"`
 }
 
 func lineToJSON(l shopping.Line, me int64) lineJSON {
@@ -405,7 +407,7 @@ func (a *api) tick(w http.ResponseWriter, r *http.Request) {
 	}
 	out := tickJSON{Ticked: true, LotID: res.LotID, Created: res.Created, Added: res.Added, AlsoTickedBy: []alsoTickedJSON{}}
 	for _, o := range res.AlsoTickedBy {
-		out.AlsoTickedBy = append(out.AlsoTickedBy, alsoTickedJSON{Name: o.Name, Quantity: o.Quantity, By: o.By})
+		out.AlsoTickedBy = append(out.AlsoTickedBy, alsoTickedJSON{Name: o.Name, Quantity: o.Quantity, By: o.By, Mine: o.Mine, TickedAt: rfc3339(o.TickedAt)})
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
@@ -563,4 +565,12 @@ func writeError(w http.ResponseWriter, err error) {
 	default:
 		httpx.WriteAPIError(w, err)
 	}
+}
+
+// rfc3339 is t in UTC as RFC 3339, or "" for the zero time.
+func rfc3339(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339)
 }

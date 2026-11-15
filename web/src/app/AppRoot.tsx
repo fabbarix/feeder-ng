@@ -3,6 +3,7 @@ import { http } from '../lib/http'
 import { SignedOut } from '../features/signin/components/SignedOut'
 import { forgetStoredPhotos } from '../features/import'
 import { ReceiptReadWatcher, resetBackgroundRead } from '../features/receipt'
+import { SyncQueueProvider } from '../features/scan/components/SyncQueueProvider'
 import { clearCachedMe } from './meCache'
 import type { ShellStatusHook } from './features'
 import { AppShell } from './AppShell'
@@ -50,8 +51,9 @@ export function AppRoot({ navItems, statusHooks = [], onNavIntent }: AppRootProp
     queryClient.setQueryData(ME_QUERY_KEY, null)
   }
   // The receipt read goes on in the background while a User is signed in; the watcher (one, above both shell frames) says when it ends.
+  // B9-54 (RES-03): the one offline queue of Scans and Ticks, for every screen of a signed-in User (it syncs wherever the User is).
   return (
-    <>
+    <SyncQueueProvider>
       <ReceiptReadWatcher />
       <AppShell
         user={{ displayName: me.data.displayName }}
@@ -62,6 +64,6 @@ export function AppRoot({ navItems, statusHooks = [], onNavIntent }: AppRootProp
         pendingAccessRequests={pendingAccessRequests}
         onNavIntent={onNavIntent}
       />
-    </>
+    </SyncQueueProvider>
   )
 }
