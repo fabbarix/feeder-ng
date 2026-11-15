@@ -22,7 +22,7 @@ function localToday(now: Date = new Date()): string {
  * no request), and the plan view's `today` when ['plan', 'view'] is cached (no fetch of its own).
  */
 export function useCookContext(enabled = true): CookContext {
-  const unitSystem = usePreferences(enabled).preferences.units
+  const unitSystem = usePreferences(enabled).effective.units
   // B9-20: the same queryFn as usePlan. The query runs with the options its observers last set, so a reader without one
   // made usePlan's paused retry fail with "Missing queryFn" when the connection came back. `enabled: false`: no fetch of its own.
   const view = useQuery<PlanView>({ queryKey: ['plan', 'view'], queryFn: () => planApi.view(), enabled: false })

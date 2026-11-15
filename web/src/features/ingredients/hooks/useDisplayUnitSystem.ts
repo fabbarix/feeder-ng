@@ -6,5 +6,5 @@ import { usePreferences } from '../../settings/hooks/usePreferences'
  * Defaults to 'metric' while the preference loads.
  */
 export function useDisplayUnitSystem(): UnitSystem {
-  return usePreferences().preferences.units
+  return usePreferences().effective.units
 }

@@ -37,7 +37,7 @@ describe('HouseholdSettingsForm', () => {
 
   it('shows the current values', () => {
     render(<HouseholdSettingsForm value={householdSettings} canEdit onSave={() => {}} />)
-    expect(field('Time zone')).toHaveValue('Europe/Rome')
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveTextContent('Rome · Europe/Rome')
     expect(field('Planning Horizon (days)')).toHaveValue('7')
     expect(field('Default Cool-down (days)')).toHaveValue('7')
     expect(field('Default Leftover Use-by (days)')).toHaveValue('3')
@@ -47,14 +47,15 @@ describe('HouseholdSettingsForm', () => {
     const end = screen.getByRole('group', { name: 'Quiet hours end' })
     expect(within(end).getByRole('spinbutton', { name: 'Hour' })).toHaveValue('07')
     expect(field('Location')).toHaveValue('Turin')
-    expect(field('Currency')).toHaveValue('USD')
+    expect(screen.getByRole('combobox', { name: 'Currency' })).toHaveTextContent('US Dollar · USD')
     expect(screen.getByRole('slider', { name: 'Planner Style' })).toHaveAttribute('aria-valuetext', 'Variety')
   })
 
   it('is read-only without edit rights: disabled fields and no save button', () => {
     render(<HouseholdSettingsForm value={householdSettings} canEdit={false} onSave={() => {}} />)
     expect(field('Planning Horizon (days)')).toBeDisabled()
-    expect(field('Currency')).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Currency' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toBeDisabled()
     expect(screen.getByRole('slider', { name: 'Planner Style' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.queryByRole('button', { name: 'Save Household settings' })).toBeNull()
   })
@@ -90,10 +91,12 @@ describe('HouseholdSettingsForm', () => {
     expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ location: null }))
   })
 
-  it('upper-cases the Currency', async () => {
+  it('saves a Currency picked by name ("Euro" sends EUR)', async () => {
     const onSave = vi.fn()
     render(<HouseholdSettingsForm value={householdSettings} canEdit onSave={onSave} />)
-    await replace('Currency', 'eur')
+    await userEvent.click(screen.getByRole('combobox', { name: 'Currency' }))
+    await userEvent.keyboard('euro')
+    await userEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /^Euro/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Household settings' }))
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ currency: 'EUR' }))
   })
@@ -111,13 +114,13 @@ describe('HouseholdSettingsForm', () => {
   it('offers the browser time zone on first setup', () => {
     const first = { ...householdSettings, timeZone: 'UTC', timeZoneConfigured: false }
     render(<HouseholdSettingsForm value={first} canEdit suggestedTimeZone="Europe/Rome" onSave={() => {}} />)
-    expect(field('Time zone')).toHaveValue('Europe/Rome')
-    expect(screen.getByText(/from your browser/i)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveTextContent('Europe/Rome')
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveAccessibleDescription(/Suggested from your browser/)
   })
 
   it('keeps the stored time zone once configured', () => {
     render(<HouseholdSettingsForm value={householdSettings} canEdit suggestedTimeZone="Asia/Tokyo" onSave={() => {}} />)
-    expect(field('Time zone')).toHaveValue('Europe/Rome')
+    expect(screen.getByRole('combobox', { name: 'Time zone' })).toHaveTextContent('Rome · Europe/Rome')
     expect(screen.queryByText(/from your browser/i)).toBeNull()
   })
 

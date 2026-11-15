@@ -5,6 +5,9 @@ import { openOptionNames, pickOption } from '../test-utils'
 import { anna, marco, sam } from './fixtures'
 import { MemberEditor } from './MemberEditor'
 
+// jsdom has no scrollIntoView; useFocusFirstInvalid scrolls the first invalid field into view before focusing it (B9-36 developer).
+if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {}
+
 const users = [
   { id: 1, displayName: 'Admin', email: 'admin@example.test' },
   { id: 2, displayName: 'Cook', email: 'cook@example.test' },
@@ -63,7 +66,8 @@ describe('MemberEditor', () => {
     const onSave = vi.fn()
     render(<MemberEditor open users={users} members={all} onSave={onSave} onClose={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: 'Save Member' }))
-    expect(screen.getByRole('alert')).toHaveTextContent(/name/i)
+    // B9-36 (SAFE-04): the message sits under Name, not in an alert (see MemberEditor.footer.test.tsx).
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveAccessibleDescription('Enter a name for the Member.')
     expect(onSave).not.toHaveBeenCalled()
   })
 
