@@ -1,0 +1,5 @@
+# B9-16 (plan section 9, check-ui rule 24): alert-in-form warns everywhere until the form packages (B9-30, B9-31, B9-36, B9-48, B9-51)
+# have moved their loose role="alert" paragraphs to field errors and FormError; B9-55 flips it to fail. fail_paths lines add up, so each
+# of those packages lists its own folder in its own rules.d file when it is clean. web/src/ui and web/src/app have none today.
+alert-in-form=warn
+alert-in-form.fail_paths=web/src/ui web/src/app

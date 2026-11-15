@@ -36,11 +36,13 @@ describe('Segmented label', () => {
     expect(declarations(css, '.segmented__option:disabled')).not.toHaveProperty('opacity')
   })
 
-  it('a disabled Segmented keeps a selection cue: the selected option differs from an unselected one, the track stays outlined', () => {
+  it('a disabled Segmented keeps a selection cue: the selected option differs from an unselected one, the track keeps its (muted) bottom rule', () => {
     const css = readUiCss('fields/Segmented.css')
     const track = declarations(css, '.segmented[data-disabled]')
     expect(track['background']).toBe('transparent')
-    expect(track['border-color']).toBe('var(--color-outline)')
+    // A11Y-05 (ruled track): no frame, a muted 2 px rule along the bottom edge
+    expect(track['border']).toBe('0')
+    expect(track['border-block-end']).toBe('var(--field-rule-width) solid var(--color-line)')
     const selected = declarations(css, ".segmented[data-disabled] .segmented__option[aria-checked='true']")
     expect(selected['box-shadow']).toBe('inset 0 0 0 var(--field-border-width) var(--color-outline)')
     expect(selected['color']).toBe('var(--color-text)')
@@ -49,7 +51,9 @@ describe('Segmented label', () => {
     expect(selected['color']).not.toBe(unselected['color'])
   })
 
-  it('the enabled track has a transparent border of the same width, so disabling does not shift layout', () => {
-    expect(declarations(readUiCss('fields/Segmented.css'), '.segmented')['border']).toBe('var(--field-border-width) solid transparent')
+  it('the enabled track has the same 2 px bottom rule as the disabled one, so disabling does not shift layout (A11Y-05)', () => {
+    const d = declarations(readUiCss('fields/Segmented.css'), '.segmented')
+    expect(d['border']).toBe('0')
+    expect(d['border-block-end']).toBe('var(--field-rule-width) solid var(--field-rule-color)')
   })
 })
