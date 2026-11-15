@@ -60,21 +60,28 @@ export function ringCrossesBarTop({ frameBottom, barTop, ring = RING_PX }: { fra
 /**
  * B9-19 (SHORT-04): while the bar floats, a control that takes focus with its ring under the bar is scrolled clear of it. The
  * browser scrolls the caret of a textarea, not its box, and leaves a partly visible control where it is, so scroll-padding alone
- * leaves the frame's bottom and ring under the bar. The field frame (`.ui-field__control`) is scrolled, else the control itself;
+ * leaves the frame's bottom and ring under the bar. A visual-viewport resize (the keyboard coming up) checks the focused field again. The field frame (`.ui-field__control`) is scrolled, else the control itself;
  * `scroll-padding-block-end` then decides where it stops. Focus inside the bar never scrolls.
  */
 export function useScrollFocusClearOfBar(ref: RefObject<HTMLElement | null>, enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return
-    const onFocusIn = (e: FocusEvent) => {
+    const clear = (target: EventTarget | Element | null) => {
       const bar = ref.current
-      const target = e.target
-      if (!bar || !(target instanceof Element) || bar.contains(target)) return
+      if (!bar || !(target instanceof Element) || target === document.body || bar.contains(target)) return
       const frame = target.closest('.ui-field__control') ?? target
       if (!ringCrossesBarTop({ frameBottom: frame.getBoundingClientRect().bottom, barTop: bar.getBoundingClientRect().top })) return
       frame.scrollIntoView?.({ block: 'nearest' })
     }
+    const onFocusIn = (e: FocusEvent) => clear(e.target)
+    // The on-screen keyboard comes up after the focus: the bar then rides up onto it, so the focused field is checked again.
+    const onViewport = () => clear(document.activeElement)
+    const vv = globalThis.visualViewport
     document.addEventListener('focusin', onFocusIn)
-    return () => document.removeEventListener('focusin', onFocusIn)
+    vv?.addEventListener('resize', onViewport)
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      vv?.removeEventListener('resize', onViewport)
+    }
   }, [ref, enabled])
 }

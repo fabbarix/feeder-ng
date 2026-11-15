@@ -14,6 +14,9 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+  /* Every title row is the height of an action row (a 40 px IconButton), with actions or without, so every page's h1 sits at the
+     same place and its content starts at the same height. */
+  min-block-size: var(--space-10);
 }
 
 .page-header__leading,

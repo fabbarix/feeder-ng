@@ -98,3 +98,18 @@ describe('StickyActionBar scrolls a field frame clear when focus puts its ring u
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
 })
+
+describe('StickyActionBar re-checks the focused field when the keyboard comes up (B9-19 developer)', () => {
+  it('a visual-viewport resize after the focus scrolls the frame clear when the bar has ridden up over it', async () => {
+    const listeners: (() => void)[] = []
+    vi.stubGlobal('visualViewport', { height: 844, offsetTop: 0, addEventListener: (_t: string, cb: () => void) => listeners.push(cb), removeEventListener: () => {} })
+    const { getByLabelText, getByTestId, container } = page(560)
+    await userEvent.click(getByLabelText('Step text'))
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    vi.spyOn(container.querySelector('.sticky-action-bar')!, 'getBoundingClientRect').mockReturnValue(rect(400, 470))
+    listeners.forEach((cb) => cb())
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView.mock.contexts[0]).toBe(getByTestId('frame'))
+    vi.unstubAllGlobals()
+  })
+})
