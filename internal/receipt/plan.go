@@ -57,6 +57,9 @@ type AddChoice struct {
 	Ingredient  IngredientChoice
 	ProductName string
 	PackSize    int
+	// ProductID (B9-50, SSP-08): an existing Product of the Household. The Add then makes no Product: it scans this one.
+	// The other fields are ignored.
+	ProductID int64
 }
 
 // Op is one operation. Only the fields of its Kind are set.
@@ -123,6 +126,8 @@ type PlanCode string
 const (
 	PlanUnknownProposal PlanCode = "unknown_proposal"
 	PlanAddIncomplete   PlanCode = "add_incomplete"
+	// PlanUnknownProduct (B9-50): an Add names a Product that does not exist or is archived.
+	PlanUnknownProduct PlanCode = "unknown_product"
 )
 
 // PlanError refuses a plan: an accepted id that is not a proposal, or an accepted Add without its choice.
