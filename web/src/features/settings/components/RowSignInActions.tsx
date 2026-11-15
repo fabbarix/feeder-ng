@@ -1,5 +1,6 @@
 import { useRef, type MouseEvent } from 'react'
 import { IconButton, Menu } from '../../../ui'
+import { EmailSentence } from '../../access'
 import { settingsStrings } from '../strings'
 
 const text = settingsStrings.allowlistPanel
@@ -26,11 +27,12 @@ export function RowSignInActions({ email, canShare, onShare, onCopy, onRemove }:
         <span ref={moreRef} className="allowlist__more">
           <Menu
             label={more}
+            title={<EmailSentence text={more} email={email} />}
             triggerTitle
             items={[
               { id: 'copy', label: text.copyItem, icon: 'copy', onSelect: () => onCopy(moreButton()) },
               { separator: true },
-              { id: 'remove', label: text.remove(email), icon: 'delete', tone: 'danger', onSelect: onRemove },
+              { id: 'remove', label: text.remove(email), labelNode: <EmailSentence text={text.remove(email)} email={email} />, icon: 'delete', tone: 'danger', onSelect: onRemove },
             ]}
           />
         </span>

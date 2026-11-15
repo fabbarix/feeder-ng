@@ -25,7 +25,8 @@ export interface SheetSubmit {
 export interface BottomSheetProps {
   open: boolean
   onClose: () => void
-  title: string
+  /** A string, or a node (additive, B9-52) where part of it must wrap its own way: an email that breaks only at "@" and ".". */
+  title: ReactNode
   children?: ReactNode
   /** Sticky action row under the scrolling body. */
   footer?: ReactNode

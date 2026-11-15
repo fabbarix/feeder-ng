@@ -264,7 +264,8 @@ describe('after "Add to allowlist"', () => {
     const { writeText } = device()
     setup()
     await addNonna()
-    expect(await screen.findByText('nonna@example.test can sign in now')).toBeInTheDocument()
+    // The headline holds the address as EmailText (it wraps only at "@" and "."), so its words span several nodes.
+    await waitFor(() => expect(toast()?.querySelector('.toast__title')).toHaveTextContent('nonna@example.test can sign in now'))
     const t = toast()!
     expect(t.querySelector('.toast__subline')).toHaveTextContent('Send them where and how to sign in.')
     expect(t.querySelector('.toast__title svg')).toBeNull()
@@ -279,7 +280,7 @@ describe('after "Add to allowlist"', () => {
     device({ share })
     setup()
     await addNonna()
-    await screen.findByText('nonna@example.test can sign in now')
+    await waitFor(() => expect(toast()?.querySelector('.toast__title')).toHaveTextContent('nonna@example.test can sign in now'))
     const action = [...toast()!.querySelectorAll('.toast__action')]
     expect(action.map((b) => b.textContent)).toEqual(['Share sign-in message'])
     await userEvent.click(action[0] as HTMLElement)

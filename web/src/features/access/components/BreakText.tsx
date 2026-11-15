@@ -42,3 +42,17 @@ export function NameText({ name }: { name: string }) {
     </span>
   )
 }
+
+/** A sentence that holds an email ("chiara@example.test can sign in now"): the email wraps only at "@" and "." (EmailText), the
+ *  rest at its spaces. For the shared surfaces that take a node: a toast headline, a sheet title, a Menu item (B9-52). */
+export function EmailSentence({ text, email }: { text: string; email: string }) {
+  const at = email ? text.indexOf(email) : -1
+  if (at < 0) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, at)}
+      <EmailText email={email} />
+      {text.slice(at + email.length)}
+    </>
+  )
+}

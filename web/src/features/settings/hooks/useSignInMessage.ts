@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
+import { createElement, useCallback, useState } from 'react'
 import { useToast } from '../../../ui'
+import { EmailSentence } from '../../access'
 import { useCopyText } from '../../../ui/lib/useCopyText'
 import { useShareText } from '../../../ui/lib/useShareText'
 import { sharePayload, signInMessage } from '../lib/allowlist'
@@ -69,7 +70,8 @@ export function useSignInMessage(): SignInMessageApi {
     (email: string) => {
       toast.show({
         status: 'success',
-        title: text.added(email),
+        // The email wraps only at "@" and "." (SET-03), never mid-word or at a hyphen.
+        title: createElement(EmailSentence, { text: text.added(email), email }),
         subline: text.addedSubline,
         actions: [
           {

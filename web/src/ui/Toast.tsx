@@ -45,7 +45,8 @@ export interface ToastAction {
  */
 export interface ToastContent {
   status?: ToastStatus
-  title: string
+  /** A string, or a node (additive, B9-52) where part of it must wrap its own way: an email that breaks only at "@" and ".". */
+  title: ReactNode
   subline?: string
   body?: string
   actions?: ToastAction[]
@@ -71,7 +72,7 @@ interface ToastItem {
   id: number
   lane: Lane
   status: ToastStatus
-  title: string
+  title: ReactNode
   subline?: string
   body?: string
   actions: ToastAction[]
