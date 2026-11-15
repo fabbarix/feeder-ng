@@ -50,3 +50,18 @@ describe('TimerPill onShowAll (the "+N" as a button)', () => {
     expect(screen.queryByRole('button', { name: /more timer/ })).not.toBeInTheDocument()
   })
 })
+
+describe('TimerPill opensOptions (Cook Mode: the open button shows the timer\'s sheet)', () => {
+  it('names the open button "Timer: <label>, <time>. Show options", never "Open Cook Mode"', () => {
+    pill({ opensOptions: true })
+    expect(screen.getByRole('button', { name: 'Timer: Simmer the rice, 11:20. Show options' })).toBeInTheDocument()
+  })
+  it('a finished timer reads "Timer finished: <label>. Show options"', () => {
+    pill({ opensOptions: true, seconds: 0 })
+    expect(screen.getByRole('button', { name: 'Timer finished: Simmer the rice. Show options' })).toBeInTheDocument()
+  })
+  it('without it the shell\'s name stays "… Open Cook Mode"', () => {
+    pill()
+    expect(screen.getByRole('button', { name: 'Timer: Simmer the rice, 11:20. Open Cook Mode' })).toBeInTheDocument()
+  })
+})

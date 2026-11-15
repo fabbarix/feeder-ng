@@ -6,6 +6,9 @@ export const timerPillStrings = {
   open: (label: string, time: string, more: number) => `Timer: ${label}, ${time}${others(more)}. Open Cook Mode`,
   /** "Timer finished: Roast the chicken, and 1 more. Open Cook Mode" */
   openFinished: (label: string, more: number) => `Timer finished: ${label}${others(more)}. Open Cook Mode`,
+  /** B9-40: Cook Mode's pill opens the timer's own sheet, not Cook Mode: "Timer: Roast the chicken, 18:42. Show options" */
+  openOptions: (label: string, time: string, more: number) => `Timer: ${label}, ${time}${others(more)}. Show options`,
+  openOptionsFinished: (label: string, more: number) => `Timer finished: ${label}${others(more)}. Show options`,
   /** shown in place of the time once the timer has run out */
   finished: 'finished',
   /** B9-40: the "+N" button of Cook Mode's landscape strip: "1 more timer. Show all timers". */

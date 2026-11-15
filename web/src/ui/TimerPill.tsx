@@ -27,6 +27,8 @@ export interface TimerPillProps {
    * calls this (Cook Mode's landscape strip). The open button's name then leaves the count out. Without it the badge is aria-hidden.
    */
   onShowAll?: () => void
+  /** B9-40: Cook Mode's pill, whose open button shows the timer's options (its sheet): the name ends "Show options", not "Open Cook Mode". */
+  opensOptions?: boolean
 }
 
 type PillState = 'running' | 'paused' | 'finished'
@@ -36,13 +38,20 @@ type PillState = 'running' | 'paused' | 'finished'
  * scope with its own boundary and 4 px of fill around its controls, so a focused control rings inside itself (R-C+). It positions
  * nothing: the shell and Cook Mode place it.
  */
-export function TimerPill({ label, seconds, running = true, nameSeconds, more = 0, gate, onOpen, onToggle, onShowAll }: TimerPillProps) {
+export function TimerPill({ label, seconds, running = true, nameSeconds, more = 0, gate, onOpen, onToggle, onShowAll, opensOptions = false }: TimerPillProps) {
   const state: PillState = seconds <= 0 ? 'finished' : running ? 'running' : 'paused'
   const others = Math.max(0, Math.trunc(more))
   const icon: IconName = state === 'finished' ? 'bellRinging' : state === 'paused' ? 'pause' : 'timer'
   const moreButton = others > 0 && onShowAll !== undefined
   const named = moreButton ? 0 : others
-  const name = state === 'finished' ? s.openFinished(label, named) : s.open(label, formatTimer(nameSeconds ?? seconds), named)
+  const time = formatTimer(nameSeconds ?? seconds)
+  const name = opensOptions
+    ? state === 'finished'
+      ? s.openOptionsFinished(label, named)
+      : s.openOptions(label, time, named)
+    : state === 'finished'
+      ? s.openFinished(label, named)
+      : s.open(label, time, named)
 
   return (
     <div className="timer-pill" role="timer" aria-label={label} data-focus-scope="" data-state={state} data-gate={gate ? '' : undefined}>
