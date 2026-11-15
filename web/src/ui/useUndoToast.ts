@@ -86,7 +86,7 @@ export function useUndoToast(): UndoToastApi {
         label: input.undoLabel ?? undoStrings.undo,
         ariaLabel: input.undoAriaLabel ?? undoStrings.undoAria(input.headline),
         role: 'undo',
-        onClick: (ctx) => void runUndo(ctx),
+        onClick: (ctx) => void runUndo(ctx ?? { focusWasInToast: false }),
       }
       return toast.show({
         title: input.headline,

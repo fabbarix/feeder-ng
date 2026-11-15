@@ -35,7 +35,8 @@ export interface ToastAction {
   label: string
   ariaLabel?: string
   role?: 'undo' | 'dismiss'
-  onClick: (ctx: ToastActionContext) => void
+  /** `ctx` is always passed by the toast; it is optional so a test or a caller can run an action directly. */
+  onClick: (ctx?: ToastActionContext) => void
 }
 
 /**
