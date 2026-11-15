@@ -55,7 +55,8 @@ describe('useStockCorrection', () => {
     const { result } = renderHook(() => useStockCorrection(groups, () => {}), { wrapper })
     await act(async () => void (await result.current.save({ 2: 10 })))
     const toast = await findToast('Stock corrected for 1 Ingredient')
-    expect(toast.querySelector('svg')).toBeNull()
+    // every toast has its round Dismiss (an svg); the toast itself carries no status icon (as StockScreen.b9-29.test checks)
+    expect(toast.querySelector('.toast__title svg, .toast__icon')).toBeNull()
   })
 
   it('Save with every row left at 0 writes nothing, says nothing and only closes (Stock stays where it is)', async () => {
