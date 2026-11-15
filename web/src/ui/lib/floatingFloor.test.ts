@@ -54,6 +54,12 @@ describe('readNavTop and floatingFloor (DOM)', () => {
     expect(readNavTop(900)).toBeNull()
     expect(floatingFloor(document.body, 900)).toBe(900)
   })
+  it('a bar hidden while the keyboard is up sets no floor (B9-19)', () => {
+    const hidden = bar(rect(12, 760, 810, 70))
+    hidden.style.visibility = 'hidden'
+    expect(readNavTop(844)).toBeNull()
+    expect(floatingFloor(document.body, 844)).toBe(844)
+  })
   it('a trigger inside an open sheet uses the whole viewport: the sheet covers the bar', () => {
     bar(rect(12, 1112, 810, 70))
     const dialog = document.createElement('dialog')

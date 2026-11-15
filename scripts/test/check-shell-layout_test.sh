@@ -67,6 +67,14 @@ has "__shellLayoutPrevious" "load() must not take the previous document for the 
 grep -Eq "Page\.navigate.*\}\)\s*$" "$F" && grep -A1 "Page.navigate" "$F" | grep -Eq "setTimeout\(r, [0-9]{4}\)" && bad "no fixed multi-second wait may follow a navigation; use load()" || ok
 has "did not render within" "a page that never renders must be a failure, not a silent pass"
 has "process.on\\('exit', \\(\\) => chrome.kill\\(\\)\\)" "Chrome must be stopped on every exit path"
+# USER (w2c): keyboard focus rings the bar's 40 px squircle only, the current Scan gets an outline; rule 15 measures both
+has "ringProbe" "rule 15 must measure the focus rings and the current Scan outline (USER w2c)"
+has "\\[375, 376, 390, 430\\]" "the rings are measured at 375, 376, 390 and 430"
+has "rings the link; the ring is on the squircle only" "a ring round the whole link must fail"
+has "the current Scan's squircle has no outline" "a current Scan without its outline must fail"
+has "from the label .*less than 1.5" "a ring touching a label must fail"
+has "from the current Scan outline, less than 1.5" "a focus ring touching the current Scan's outline must fail"
+has "inside the bar's inner outline, less than 2" "a ring touching the bar border must fail"
 node --check "$F" 2>/dev/null && ok || bad "check-shell-layout.mjs must be valid"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError } from '../../../lib/http'
 import { recipesApi } from '../api'
 import {
@@ -10,7 +10,11 @@ import {
   pickCreatedIngredient,
   pickIngredient,
   moveLine,
+  rekeyDraft,
   removeLine,
+  removeLineWithUndo,
+  restoreLine,
+  sameDraft,
   serverErrorKey,
   updateLine,
   validateDraft,
@@ -27,6 +31,8 @@ import type { TakeOverAsk } from '../../../lib/baseRecipes/types'
 import { parseTakeOver } from '../../../lib/baseRecipes/takeOver'
 import { refusalMessage } from '../../../lib/baseRecipes/refusals'
 import { linkDraftLine, unlinkDraftLine } from '../lib/baseRecipe'
+import { removeStepWithUndo, restoreStep } from '../lib/steps'
+import { removeUseWithUndo, restoreUse } from '../lib/stepUses'
 import type { CourseLoss, IngredientRef, Recipe } from '../types'
 
 export interface UseRecipeEditor {
@@ -51,7 +57,12 @@ export interface UseRecipeEditor {
   addLine: () => void
   updateLine: (key: string, patch: Partial<LineDraft>) => void
   pickIngredient: (key: string, ingredient: IngredientRef) => void
-  removeLine: (key: string) => void
+  /** SAFE-10: removes the line and returns its Undo (puts it back at its index); null for an unknown key. */
+  removeLine: (key: string) => (() => void) | null
+  /** SAFE-10: removes the Step at `index` and returns its Undo ("After step N" references come back too); null out of range. */
+  removeStep: (index: number) => (() => void) | null
+  /** SAFE-10: removes use `useIndex` of Step `stepIndex` and returns its Undo; null for an unknown use. */
+  removeUse: (stepIndex: number, useIndex: number) => (() => void) | null
   /** Drag handles and the line actions menu: move the line at `from` to `to` (lib/draft.moveLine). */
   moveLine: (from: number, to: number) => void
   /** Replaces the Steps (the StepsEditor computes the new list with lib/steps). */
@@ -83,6 +94,32 @@ export interface UseRecipeEditor {
   linkLine: (key: string, base: { id: number; name: string; ingredientId: number }) => void
   /** BR-D: "Use as a plain Ingredient" on a draft line (lib/baseRecipe.unlinkDraftLine). */
   unlinkLine: (key: string, plain: IngredientRef) => void
+  /**
+   * SAFE-01: the draft differs from what the editor was opened with (lib/draft.sameDraft): the stored Recipe, or for a new one an
+   * empty draft with the main Course. A successful save (also after the Unit Conversion prompt or the take-over answer) makes it clean.
+   */
+  dirty: boolean
+  /** The baseline is known (a stored Recipe loaded; a new Recipe at once). The reload draft is not read or written before it. */
+  ready: boolean
+  /** The stored Recipe's updatedAt; null for a new Recipe. */
+  storedUpdatedAt: string | null
+  /** The stored Recipe's name (the leave dialog's "Your changes to <name>"); null for a new Recipe. */
+  storedName: string | null
+  /** Puts a kept reload draft in the editor (fresh keys); the baseline stays, so it is dirty. */
+  restoreDraft: (draft: RecipeDraft) => void
+  /** Back to the baseline: the stored Recipe, or the empty new one. */
+  resetDraft: () => void
+}
+
+/** The value at a draft error path ('name', 'lines.1.quantity'), as text; a path past the draft gives its deepest known part. */
+function valueAt(draft: RecipeDraft, path: string): string {
+  let at: unknown = draft
+  for (const part of path.split('.')) {
+    const next = at !== null && typeof at === 'object' ? (at as Record<string, unknown>)[part] : undefined
+    if (next === undefined) break
+    at = next
+  }
+  return JSON.stringify(at)
 }
 
 const NO_INGREDIENTS: readonly IngredientRef[] = []
@@ -118,7 +155,11 @@ export function useRecipeEditor(
   const defaulted = useRef(false)
 
   const [draft, setDraftState] = useState<RecipeDraft>(() => emptyDraft())
-  const [errors, setErrors] = useState<DraftErrors>({})
+  // SAFE-01: what "clean" means. A new Recipe's is known at once; a stored one's when it loads.
+  const [baseline, setBaseline] = useState<RecipeDraft | null>(() => (recipeId === undefined ? emptyDraft() : null))
+  // SAFE-04: errors appear on Save; after a failed Save the fields re-check as they change. A server field error stays until its value changes.
+  const [checking, setChecking] = useState(false)
+  const [serverError, setServerError] = useState<{ key: string; reason: string; at: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [unitPrompt, setUnitPrompt] = useState<UnitPrompt | null>(null)
   const [keptOffer, setKeptOffer] = useState<RenameOffer | null>(null)
@@ -132,7 +173,9 @@ export function useRecipeEditor(
   useEffect(() => {
     if (existing.data && !loaded.current) {
       loaded.current = true
-      setDraftState(draftFromRecipe(existing.data))
+      const opened = draftFromRecipe(existing.data)
+      setDraftState(opened)
+      setBaseline(opened)
     }
   }, [existing.data])
 
@@ -141,6 +184,7 @@ export function useRecipeEditor(
     if (recipeId !== undefined || defaulted.current || courses.length === 0) return
     defaulted.current = true
     setDraftState((d) => withDefaultCourse(d, courses))
+    setBaseline((b) => (b ? withDefaultCourse(b, courses) : b))
   }, [recipeId, courses])
 
   // Every change goes through the Ready Meal rule, which keeps the one pack line in step with the name and the flag,
@@ -152,7 +196,20 @@ export function useRecipeEditor(
   // Ingredients that load (or are created) after the box was ticked can turn the pending line into a selected one.
   useEffect(() => {
     setDraftState((d) => syncReadyMealLine(d, ingredients))
+    setBaseline((b) => (b ? syncReadyMealLine(b, ingredients) : b))
   }, [ingredients])
+
+  const latest = useRef(draft)
+  latest.current = draft
+  const dirty = baseline !== null && !sameDraft(draft, baseline)
+
+  const clientErrorsOf = (d: RecipeDraft): DraftErrors => ({ ...validateDraft(d), ...(courses.length > 0 ? validateCourses(d) : {}) })
+  const errors = useMemo<DraftErrors>(() => {
+    const out: DraftErrors = checking ? clientErrorsOf(draft) : {}
+    if (serverError && valueAt(draft, serverError.key) === serverError.at) out[serverError.key] = serverError.reason
+    return out
+    // clientErrorsOf reads only `courses`
+  }, [checking, serverError, draft, courses])
 
   const liveOffer = renameOfferOf(existing.data, draft, ingredients)
   // BR-D round 3: the kind the stored Recipe has; the screen compares it with the draft on Save (the switch applies there).
@@ -176,15 +233,19 @@ export function useRecipeEditor(
 
   const submit = async (d: RecipeDraft): Promise<Recipe | null> => {
     // CRS E2: the Courses check waits until the household's Courses are known; the server is the backstop.
-    const clientErrors = { ...validateDraft(d), ...(courses.length > 0 ? validateCourses(d) : {}) }
-    setErrors(clientErrors)
+    const clientErrors = clientErrorsOf(d)
+    setServerError(null)
     setRefusal(null)
-    if (Object.keys(clientErrors).length > 0) return null
+    if (Object.keys(clientErrors).length > 0) {
+      setChecking(true)
+      return null
+    }
     const input = draftToInput(d)
     setSaving(true)
     try {
       const saved = recipeId === undefined ? await recipesApi.create(input) : await recipesApi.replace(recipeId, input)
-      setErrors({})
+      setChecking(false)
+      setBaseline({ ...d, takeOver: undefined })
       setUnitPrompt(null)
       setTakeOverAsk(null)
       setKeptOffer(renameOfferOf(existing.data, d, known.current))
@@ -205,7 +266,9 @@ export function useRecipeEditor(
       }
       if (err instanceof ApiError && err.code === 'validation_failed' && typeof err.details.field === 'string') {
         const reason = typeof err.details.reason === 'string' ? err.details.reason : err.message
-        setErrors({ [serverErrorKey(err.details.field, reason)]: reason })
+        const key = serverErrorKey(err.details.field, reason)
+        setChecking(true)
+        setServerError({ key, reason, at: valueAt(d, key) })
         setRefusal(refusalMessage(err))
         return null
       }
@@ -236,7 +299,24 @@ export function useRecipeEditor(
     addLine: () => setDraft(addLine),
     updateLine: (key, patch) => setDraft((d) => updateLine(d, key, patch)),
     pickIngredient: (key, ingredient) => setDraft((d) => pickIngredient(d, key, ingredient)),
-    removeLine: (key) => setDraft((d) => removeLine(d, key)),
+    removeLine: (key) => {
+      const { removed } = removeLineWithUndo(latest.current, key)
+      if (!removed) return null
+      setDraft((d) => removeLine(d, key))
+      return () => setDraft((d) => restoreLine(d, removed))
+    },
+    removeStep: (index) => {
+      const { removed } = removeStepWithUndo(latest.current.steps, index)
+      if (!removed) return null
+      setDraft((d) => ({ ...d, steps: removeStepWithUndo(d.steps, index).steps }))
+      return () => setDraft((d) => ({ ...d, steps: restoreStep(d.steps, removed) }))
+    },
+    removeUse: (stepIndex, useIndex) => {
+      const { removed } = removeUseWithUndo(latest.current.steps, stepIndex, useIndex)
+      if (!removed) return null
+      setDraft((d) => ({ ...d, steps: removeUseWithUndo(d.steps, stepIndex, useIndex).steps }))
+      return () => setDraft((d) => ({ ...d, steps: restoreUse(d.steps, removed) }))
+    },
     moveLine: (from, to) => setDraft((d) => moveLine(d, from, to)),
     setSteps: (steps) => setDraft((d) => ({ ...d, steps })),
     pickCreatedIngredient: (key, ingredient) => setDraft((d) => pickCreatedIngredient(d, key, ingredient)),
@@ -247,6 +327,16 @@ export function useRecipeEditor(
     refusal,
     linkLine: (key, base) => setDraft((d) => linkDraftLine(d, key, base)),
     unlinkLine: (key, plain) => setDraft((d) => unlinkDraftLine(d, key, plain)),
+    dirty,
+    ready: baseline !== null,
+    storedUpdatedAt: existing.data?.updatedAt ?? null,
+    storedName: existing.data?.name ?? null,
+    restoreDraft: (kept) => setDraftState(rekeyDraft(kept)),
+    resetDraft: () => {
+      if (baseline) setDraftState(baseline)
+      setChecking(false)
+      setServerError(null)
+    },
     renameOffer: keptOffer ?? liveOffer,
     renameLinkedIngredient: async () => {
       const offer = keptOffer ?? liveOffer

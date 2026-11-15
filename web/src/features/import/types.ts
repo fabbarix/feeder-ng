@@ -108,6 +108,26 @@ export interface RecipeStatus {
   action?: RecipeAction
   resolved: boolean
   importedAs?: string
+  /** B9-28 (RX-01): what the file says about the Recipe, so the review can list it before anything is saved. Present for every Recipe row. */
+  preview: RecipePreview
+}
+/** B9-28: one Ingredient line of a previewed Recipe; `recipe` is the Base recipe the line calls for. */
+export interface PreviewLine { quantity: number; unit: string; ingredient: string; note?: string; optional: boolean; recipe?: string }
+/** B9-28: one Step of a previewed Recipe; the minutes are 0 when the file gives none. */
+export interface PreviewStep { text: string; kind: 'active' | 'passive' | 'advance'; durationMinutes: number; leadTimeMinutes: number }
+/** B9-28: mirror of recipefile.RecipePreview. `courses` are the file's Course names as written (empty: it names none). */
+export interface RecipePreview {
+  yield: number
+  yieldUnit?: string
+  readyMeal: boolean
+  baseRecipe: boolean
+  courses: string[]
+  tags: string[]
+  description?: string
+  source?: { url?: string; attribution?: string }
+  lines: PreviewLine[]
+  steps: PreviewStep[]
+  hasImage: boolean
 }
 export interface PathError { path: string; message: string }
 export interface Problem { path: string; code: string; message: string }

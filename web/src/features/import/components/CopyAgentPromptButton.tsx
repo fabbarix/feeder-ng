@@ -15,12 +15,12 @@ export function AgentPromptNotice({ outcome }: { outcome: Outcome }): ReactNode 
   return null
 }
 
-/** The primary Button "Copy Agent Prompt" (copy icon). The result is a Toast, never a stray status line. */
+/** The secondary sm Button "Copy Agent Prompt" (copy icon, RX-11). The result is a Toast, never a stray status line. */
 export function CopyAgentPromptButton(): ReactNode {
   const { state, copy } = useAgentPrompt()
   return (
     <>
-      <Button icon="copy" loading={state === 'copying'} onClick={() => void copy()}>
+      <Button variant="secondary" size="sm" icon="copy" loading={state === 'copying'} onClick={() => void copy()}>
         {s.copyAgentPrompt}
       </Button>
       {state === 'copied' || state === 'failed' ? <AgentPromptNotice outcome={state} /> : null}

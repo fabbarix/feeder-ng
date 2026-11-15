@@ -34,6 +34,12 @@ describe('not-found route (B12)', () => {
     expect(screen.getByRole('navigation', { name: 'Bottom bar' })).toBeInTheDocument()
   })
 
+  it('the page has one h1, "Page not found", and the document title "Page not found · Feeder" (A11Y-01)', () => {
+    at('/nope')
+    expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
+    expect(document.title).toBe('Page not found · Feeder')
+  })
+
   it('the "Go to Today" button leads back to Today', async () => {
     const router = at('/nope')
     await userEvent.click(screen.getByRole('button', { name: 'Go to Today' }))

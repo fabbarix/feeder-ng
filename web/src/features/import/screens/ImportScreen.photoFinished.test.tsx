@@ -83,7 +83,7 @@ describe('a photo read that reaches review', () => {
     await readyToRead()
     expect(await stored()).toBe(2)
     await userEvent.click(readButton())
-    await screen.findByRole('button', { name: 'Confirm import' }) // the review is open: the step is gone
+    await screen.findByRole('button', { name: /^Import \d+ Recipes?$/ }) // the review is open: the step is gone
     expect(screen.queryByRole('radio', { name: 'Photo' })).not.toBeInTheDocument()
     await waitFor(async () => expect(await stored()).toBe(0))
   })
@@ -92,7 +92,7 @@ describe('a photo read that reaches review', () => {
     const first = mountScreen()
     await readyToRead()
     await userEvent.click(readButton())
-    await screen.findByRole('button', { name: 'Confirm import' })
+    await screen.findByRole('button', { name: /^Import \d+ Recipes?$/ })
     await waitFor(async () => expect(await stored()).toBe(0))
     first.unmount()
     mountScreen()
@@ -116,7 +116,7 @@ describe('a photo read that fails', () => {
     await screen.findByRole('button', { name: 'Cancel' }) // the second read is running (its answer is pending)
     expect(await stored()).toBe(2) // still there while it runs
     second.resolve(done)
-    await screen.findByRole('button', { name: 'Confirm import' })
+    await screen.findByRole('button', { name: /^Import \d+ Recipes?$/ })
     await waitFor(async () => expect(await stored()).toBe(0))
   })
 

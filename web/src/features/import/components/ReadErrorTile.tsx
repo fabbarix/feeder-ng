@@ -14,11 +14,11 @@ export interface ReadErrorTileProps {
 
 const SETTINGS = '/settings/recipe-assistant'
 
-/** `Tile variant="status" status="danger"` role=alert with the mapped copy, details, and the action (Try again / Open Recipe Assistant settings / Choose another model). */
+/** `Tile variant="status" status="warn"` role=alert (a failed read loses nothing) with the mapped copy, details, and the action (Try again / Open Recipe Assistant settings / Choose another model). */
 export function ReadErrorTile({ error, isAdmin, onRetry, focusRef }: ReadErrorTileProps): ReactNode {
   const copy = readErrorCopy(error, { isAdmin })
   return (
-    <Tile ref={focusRef} tabIndex={-1} className="read-error" variant="status" status="danger" role="alert" as="section">
+    <Tile ref={focusRef} tabIndex={-1} className="read-error" variant="status" status="warn" role="alert" as="section">
         <p>{copy.message}</p>
         {copy.hint ? <p className="read-error__hint">{copy.hint}</p> : null}
         {copy.details.length > 0 ? (
@@ -36,12 +36,12 @@ export function ReadErrorTile({ error, isAdmin, onRetry, focusRef }: ReadErrorTi
           </Button>
         ) : null}
         {copy.action === 'settings' ? (
-          <Link className="import-text-link" to={SETTINGS}>
+          <Link className="button import-text-link" data-variant="secondary" data-size="sm" to={SETTINGS}>
             {t.settingsLink}
           </Link>
         ) : null}
         {copy.action === 'chooseModel' ? (
-          <Link className="import-text-link" to={`${SETTINGS}#model`}>
+          <Link className="button import-text-link" data-variant="secondary" data-size="sm" to={`${SETTINGS}#model`}>
             {t.chooseModelLink}
           </Link>
         ) : null}

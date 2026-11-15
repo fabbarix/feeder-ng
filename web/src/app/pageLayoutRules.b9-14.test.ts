@@ -122,7 +122,7 @@ describe('probes and scenarios', () => {
   })
   it('the sheet probes run on the sheet scenarios', () => {
     expect(probe('sheet-body')?.scenarios).toEqual(expect.arrayContaining(['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400']))
-    expect(probe('sheet-targets')?.scenarios).toEqual(expect.arrayContaining(['leftover-menu-sheet', 'sheet-add-member']))
+    expect(probe('sheet-targets')?.scenarios).toEqual(expect.arrayContaining(['leftover-menu-sheet', 'sheet-add-member', 'bottom-bar']))
   })
   it('registers every scenario with a start, a setup and widths of the SHORT-02 sizes', () => {
     for (const n of names) {

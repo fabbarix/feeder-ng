@@ -62,12 +62,14 @@ describe('ImportScreen Course rows', () => {
     expect(within(screen.getByRole('region', { name: 'Soup' })).getByText('Used by Pancakes, Trifle')).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Brunch' })).getByText('Used by Trifle')).toBeInTheDocument()
   })
-  it('puts the Course tiles after the Ingredients and before a Recipe conflict', () => {
+  it('puts the Course tiles after the Recipes tile (a Recipe conflict sits on its Recipe row, B9-28) and before the Ingredients', () => {
     h.review = state({ plan: plan({ recipes: [recipe({ index: 0, name: 'Pancakes', status: 'conflict', resolved: false })], courses: rows }) })
     view()
     const soup = screen.getByRole('region', { name: 'Soup' })
-    const conflict = screen.getByRole('heading', { name: s.conflictTitle('Pancakes') })
-    expect(soup.compareDocumentPosition(conflict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const recipes = screen.getByRole('heading', { name: 'Recipes', level: 2 })
+    const ingredients = screen.getByRole('heading', { name: 'Ingredients', level: 2 })
+    expect(recipes.compareDocumentPosition(soup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(soup.compareDocumentPosition(ingredients) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
 
@@ -98,18 +100,18 @@ describe('ImportScreen Course answers', () => {
 
 describe('ImportScreen: 403 and the Course limit', () => {
   const limit = { path: '$.recipes[0].courses[0]', code: 'too_many_courses', message: 'too many' }
-  /** The inline danger Tile that holds `text`: the Toast live region is another alert and is not it. */
+  /** The inline warn Tile that holds `text`: the Toast live region is another alert and is not it. */
   const inlineAlert = (text: string) => screen.getByText(text).closest('[role=alert]') as HTMLElement
   const inToastRegion = (el: Element) => el.closest('[aria-live]') !== null
   const sibling = (a: HTMLElement, b: HTMLElement) => a.parentElement === b.parentElement
 
-  it('after a refused Confirm, an inline danger Tile says only an Admin can add or unarchive, and the Review stays open', () => {
+  it('after a refused Confirm, an inline warn Tile says only an Admin can add or unarchive, and the Review stays open', () => {
     h.review = state({ plan: plan({ recipes, courses: rows }), courseForbidden: true })
     view()
     const tile = inlineAlert(s.courses.forbidden)
     expect(tile).toHaveTextContent(s.courses.forbidden)
     expect(tile).toHaveClass('tile')
-    expect(tile).toHaveAttribute('data-status', 'danger')
+    expect(tile).toHaveAttribute('data-status', 'warn')
     expect(inToastRegion(tile)).toBe(false)
     expect(screen.getByRole('region', { name: 'Soup' })).toBeInTheDocument()
   })
@@ -135,11 +137,11 @@ describe('ImportScreen: 403 and the Course limit', () => {
     view()
     expect(screen.queryByText(s.courses.forbidden)).toBeNull()
   })
-  it('explains too_many_courses in an inline danger Tile beside the Course rows, with the limit of 20', () => {
+  it('explains too_many_courses in an inline warn Tile beside the Course rows, with the limit of 20', () => {
     h.review = state({ plan: plan({ ready: false, recipes, courses: rows, problems: [limit] }) })
     view()
     const tile = inlineAlert(s.courses.tooMany(20))
-    expect(tile).toHaveAttribute('data-status', 'danger')
+    expect(tile).toHaveAttribute('data-status', 'warn')
     expect(inToastRegion(tile)).toBe(false)
     expect(sibling(tile, screen.getByRole('region', { name: 'Soup' }))).toBe(true)
   })
@@ -173,16 +175,18 @@ describe('ImportScreen: 403 and the Course limit', () => {
 describe('ImportScreen done', () => {
   const done = (result: Partial<NonNullable<UseImportReview['result']>>) =>
     state({ phase: 'done', result: { recipes: [{ index: 0, id: 1, name: 'A', action: 'created' }], ingredientsCreated: 0, conversionsAdded: 0, ...result } })
-  it('says which Courses were added and brought back', () => {
+  // RX-01: the result lists what the import also added as rows under "Also added" (label, count as the state), not as sentences.
+  it('says which Courses were added and brought back, as rows of Also added', () => {
     h.review = done({ coursesCreated: 2, coursesUnarchived: 1 })
     view()
-    expect(screen.getByText('Added 2 Courses')).toBeInTheDocument()
-    expect(screen.getByText('Brought back 1 Course')).toBeInTheDocument()
+    const row = (label: string) => screen.getByText(label).closest('.detail-row, li, div') as HTMLElement
+    expect(row('Courses added')).toHaveTextContent('2')
+    expect(row('Courses brought back')).toHaveTextContent('1')
   })
   it('says nothing about Courses when none changed', () => {
     h.review = done({ coursesCreated: 0 })
     view()
-    expect(screen.queryByText(/Added \d+ Course/)).toBeNull()
-    expect(screen.queryByText(/Brought back/)).toBeNull()
+    expect(screen.queryByText('Courses added')).toBeNull()
+    expect(screen.queryByText('Courses brought back')).toBeNull()
   })
 })

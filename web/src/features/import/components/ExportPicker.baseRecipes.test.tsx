@@ -30,6 +30,14 @@ describe('ExportPicker, Also exports', () => {
 
   it('keeps the download action', () => {
     show([{ id: 10, name: 'Béchamel' }])
-    expect(screen.getByRole('link', { name: 'Export Recipe File' })).toHaveAttribute('href', '/api/recipe-file/export?ids=1')
+    expect(screen.getByRole('link', { name: 'Export 1 Recipe' })).toHaveAttribute('href', '/api/recipe-file/export?ids=1')
+  })
+})
+
+// B9-28 (RX-15): the bar's meta counts the Base recipes the export adds.
+describe('ExportPicker, the count in the bar (RX-15)', () => {
+  it('says "1 Recipe and 1 Base recipe" for one ticked Recipe that calls for a Base recipe', () => {
+    show([{ id: 10, name: 'Béchamel' }])
+    expect(screen.getByText('1 Recipe and 1 Base recipe')).toBeInTheDocument()
   })
 })

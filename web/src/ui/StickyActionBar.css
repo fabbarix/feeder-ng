@@ -8,17 +8,6 @@
   --sticky-bar-clearance: 70px;
 }
 
-/* A short viewport: 8 px of padding, so the bar is 62 px. */
-@media (max-height: 499px) {
-  :root {
-    --sticky-bar-clearance: 62px;
-  }
-
-  .sticky-action-bar {
-    padding-block: var(--space-2);
-  }
-}
-
 /* A11Y-02: the focused control's ring (width + offset) stays clear of the bar, with --space-1 between them. The keyboard inset is
    in it too: with the keyboard up the bar sits on the keyboard. */
 html:has(.sticky-action-bar) {
@@ -46,6 +35,18 @@ html:has(.sticky-action-bar) {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-tile);
   box-shadow: var(--elev-2);
+}
+
+/* A short viewport: 8 px of padding, so the bar is 62 px. After the base rule, which it overrides (before it, the base rule's 12 px won
+   and the bar stayed 70 px under 500 px tall while the clearance said 62). */
+@media (max-height: 499px) {
+  :root {
+    --sticky-bar-clearance: 62px;
+  }
+
+  .sticky-action-bar {
+    padding-block: var(--space-2);
+  }
 }
 
 /* SHORT-08: the box takes its column's width, centred like the column. */

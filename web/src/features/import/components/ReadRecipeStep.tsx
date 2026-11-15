@@ -31,7 +31,7 @@ export interface ReadRecipeStepProps {
 type Tab = 'url' | 'text' | 'photo'
 
 /**
- * Step 1 of the import: "Read a recipe" (docs/dev/design/ra-e-import.md section 6). A Tile with the input choice
+ * The Recipe Assistant path of Import (RX-11): "Read a recipe" (docs/dev/design/ra-e-import.md section 6). A Tile with the input choice
  * (Web page, Text, Photo), its panel, the Read button, the progress while a read runs, the error tile after a failure,
  * and the disabled reason when the feature is off. Renders and wires; the work is in useRecipeRead and lib/.
  */
@@ -118,10 +118,11 @@ export function ReadRecipeStep({ read, availability, headingRef, headingDescribe
   }
 
   return (
-    <Tile as="section" overline={s.stepOverline(1)} overlineIcon="assistant">
+    <Tile as="section" className="import-path" overline={s.start.readOverline} overlineIcon="assistant">
       <h2 ref={headingRef} tabIndex={-1} aria-describedby={headingDescribedBy}>
         {t.stepTitle}
       </h2>
+      <p className="import-path__meta">{s.start.readMeta}</p>
       <Segmented
         label={t.readFrom}
         value={current}
@@ -193,7 +194,7 @@ export function ReadRecipeStep({ read, availability, headingRef, headingDescribe
         </Button>
       ) : null}
       {availability.settingsLink ? (
-        <Link className="import-text-link" to="/settings/recipe-assistant">
+        <Link className="button import-text-link" data-variant="secondary" data-size="sm" to="/settings/recipe-assistant">
           {t.settingsLink}
         </Link>
       ) : null}

@@ -31,6 +31,9 @@
 //      items, and 4 px, from the bar's inner edge (Today current on /, Settings current on /settings); the squircles are 40 x 40 and 6 px inside the bar;
 //      no label is clipped, wrapped or wider than its button where labels show, and (also at 376 px, the narrowest labelled width) every label keeps
 //      8 px from the bar's inner outline, its rounded ends included, and 4 px from its neighbour's label. At 375 px the bar is icons only (A1).
+//      USER (w2c) rings, on / and /scan (Scan current) at 375, 376, 390 and 430: each link, focused in turn, rings its 40 px squircle only
+//      (no ring on the link); the focus ring and the current Scan's outline stay 2 px inside the bar's inner outline, 1.5 px off every
+//      label and 1.5 px off each other (a neighbour's ring), and the focused label turns accent text.
 //      At 1024 and 1280 px (side rail) the bottom bar is hidden and the rail shows seven links of one size (within 1 px), all inside the rail.
 //  16. (phone, 390 and 412 px, dev route /_editor-fixture) hotfix 4.2: the photo editor, hosted inside a Tile as in the Read step, on a generated
 //      2268x3226 picture: the eight crop handles sit within 3 px of the crop box's corners and edge middles (whole picture and an inset crop),
@@ -477,6 +480,100 @@ for (const scheme of ['light', 'dark']) {
       }
     }
   }
+}
+// Rule 15, rings (USER w2c): focus rings the squircle only; the current Scan's outline. The outline box of an element is its border box
+// grown by outline-offset + outline-width (a negative offset draws inside it). Each link is focused in turn by script, which matches
+// :focus-visible in a page that saw no pointer.
+const ringProbe = `
+(async () => {
+  const bar = document.querySelector('nav.bottom-bar')
+  if (!bar || bar.getBoundingClientRect().width === 0) return null
+  const b = bar.getBoundingClientRect(), cs = getComputedStyle(bar)
+  const inner = { left: b.left + parseFloat(cs.borderLeftWidth), right: b.right - parseFloat(cs.borderRightWidth), top: b.top + parseFloat(cs.borderTopWidth), bottom: b.bottom - parseFloat(cs.borderBottomWidth) }
+  const ring = (el) => {
+    const s = getComputedStyle(el)
+    if (s.outlineStyle === 'none' || parseFloat(s.outlineWidth) === 0) return null
+    const r = el.getBoundingClientRect(), g = parseFloat(s.outlineOffset) + parseFloat(s.outlineWidth)
+    return { left: r.left - g, right: r.right + g, top: r.top - g, bottom: r.bottom + g, color: s.outlineColor }
+  }
+  const links = [...bar.querySelectorAll('.bottom-bar__link')]
+  const labelBox = (a) => { const l = a.querySelector('.bottom-bar__label'); if (!l || getComputedStyle(l).clipPath !== 'none') return null; const r = l.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom } }
+  const labels = links.map((a) => ({ text: a.textContent.trim(), box: labelBox(a) })).filter((x) => x.box)
+  const currentScan = links.find((a) => a.getAttribute('data-accent') === 'true' && a.getAttribute('aria-current') === 'page')
+  // The current Scan's ring is drawn as box-shadow spreads (so the focus outline can show with it): its box grows by the widest spread.
+  const spreadBox = (el) => {
+    const sh = getComputedStyle(el).boxShadow
+    if (!sh || sh === 'none') return null
+    const spread = Math.max(...sh.split(/,(?![^(]*\))/).map((x) => { const px = x.match(/-?[\d.]+px/g) ?? []; return px.length >= 4 ? parseFloat(px[3]) : 0 }))
+    const r = el.getBoundingClientRect()
+    return spread > 0 ? { left: r.left - spread, right: r.right + spread, top: r.top - spread, bottom: r.bottom + spread } : null
+  }
+  const outline = currentScan ? spreadBox(currentScan.querySelector('.bottom-bar__icon')) : null
+  const out = { inner, outline, labels, focus: [] }
+  for (const a of links) {
+    a.focus()
+    await new Promise((r) => requestAnimationFrame(() => r()))
+    const icon = a.querySelector('.bottom-bar__icon')
+    const ls = getComputedStyle(a)
+    const probe = document.createElement('span'); probe.style.color = 'var(--color-accent-text)'; a.append(probe)
+    const accentText = getComputedStyle(probe).color; probe.remove()
+    out.focus.push({ text: a.textContent.trim(), matched: a.matches(':focus-visible'), linkOutline: ls.outlineStyle !== 'none' && parseFloat(ls.outlineWidth) > 0, ring: icon ? ring(icon) : null, labelColor: ls.color, accentText, scan: a.getAttribute('data-accent') === 'true' })
+    a.blur()
+  }
+  return out
+})()`
+const gapBetween = (a, c) => Math.max(c.left - a.right, a.left - c.right, c.top - a.bottom, a.top - c.bottom)
+const insideBy = (r, i) => Math.min(r.left - i.left, i.right - r.right, r.top - i.top, i.bottom - r.bottom)
+const ringRoom = []
+for (const scheme of ['light', 'dark']) {
+  await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] })
+  for (const vp of [375, 376, 390, 430].map((width) => ({ width, height: 800, mobile: true }))) {
+    await cdp('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.mobile })
+    for (const route of ['/', '/scan']) {
+      const tag = `${vp.width}px ${route} (${scheme}) bar rings`
+      if (!(await load(base + route))) { fail(`${scheme} ${vp.width}px ${route}: the page did not render within ${LOAD_CAP_MS / 1000} s (rule 15 rings)`); continue }
+      const r = await evaluate(ringProbe).catch(() => null)
+      if (!r) { fail(`${tag}: no bottom bar`); continue }
+      const rings = []
+      if (route === '/scan') {
+        if (!r.outline) fail(`${tag}: the current Scan's squircle has no outline (USER w2c)`)
+        else rings.push({ what: 'current Scan outline', box: r.outline })
+      }
+      for (const f of r.focus) {
+        if (!f.matched) { fail(`${tag}: "${f.text}" focused by script does not match :focus-visible (cannot measure)`); continue }
+        if (f.linkOutline) fail(`${tag}: focused "${f.text}" rings the link; the ring is on the squircle only (USER w2c)`)
+        if (!f.ring) { fail(`${tag}: focused "${f.text}" draws no ring on its squircle`); continue }
+        if (f.labelColor !== f.accentText) fail(`${tag}: the focused "${f.text}" label is ${f.labelColor}, not accent text (USER w2c)`)
+        const rs = [{ what: `"${f.text}" focus ring`, box: f.ring, link: f.text }]
+        if (r.outline && !f.scan) rs.push({ what: 'current Scan outline', box: r.outline })
+        // Scan current and focused: the focus ring inside the squircle and the current ring outside both show (USER w2c).
+        if (r.outline && f.scan && !(f.ring.left > r.outline.left + 1.5 && f.ring.right < r.outline.right - 1.5)) fail(`${tag}: the focused current Scan's focus ring is not inside its current ring with room (fused or replaced)`)
+        for (const x of rs) {
+          const room = insideBy(x.box, r.inner)
+          ringRoom.push({ tag, what: x.what, border: room })
+          if (room < 2 - 0.25) fail(`${tag}: the ${x.what} is ${room.toFixed(1)} px inside the bar's inner outline, less than 2`)
+          for (const l of r.labels) {
+            const g = gapBetween(x.box, l.box)
+            if (g < 1.5 - 0.25) fail(`${tag}: the ${x.what} is ${g.toFixed(1)} px from the label "${l.text}", less than 1.5`)
+          }
+        }
+        if (rs.length === 2) {
+          const g = gapBetween(rs[0].box, rs[1].box)
+          ringRoom.push({ tag, what: `${rs[0].what} to the current Scan outline`, between: g })
+          if (g < 1.5 - 0.25) fail(`${tag}: the ${rs[0].what} is ${g.toFixed(1)} px from the current Scan outline, less than 1.5`)
+        }
+      }
+      for (const x of rings) {
+        const room = insideBy(x.box, r.inner)
+        ringRoom.push({ tag, what: x.what, border: room })
+        if (room < 2 - 0.25) fail(`${tag}: the ${x.what} is ${room.toFixed(1)} px inside the bar's inner outline, less than 2`)
+      }
+    }
+  }
+}
+if (process.env.SHELL_LAYOUT_RING_REPORT) {
+  const { writeFileSync } = await import('node:fs')
+  writeFileSync(process.env.SHELL_LAYOUT_RING_REPORT, JSON.stringify(ringRoom, null, 1))
 }
 await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
 // Rule 16 (hotfix 4.2): the crop handles sit on the crop box. The Read step's Tile restyled every button in it to position: relative, so the
