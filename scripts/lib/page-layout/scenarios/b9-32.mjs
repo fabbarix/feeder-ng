@@ -2,7 +2,7 @@
 // TEST-AUTHOR scenarios: the setups ASSERT what the chapters' guards name and throw when it does not hold, so a scenario is "not inspected"
 // (a failure) until the screens are built. They also bring the page to the state the probes measure. P38 (rules/P38-unique-names.mjs) is
 // reported with the layout rules listed in each scenario's `rules`.
-//   plan-grid      /plan at 375, 390, 834 and 1440 (PC-11; 820 and 1920 are not in SCENARIO_VIEWPORTS yet, see the hand-back) (PC-11, PC-06, PC-16 9, A11Y-08, A11Y-09):
+//   plan-grid      /plan at 375, 390, 834, 1440 and 1920x1080 (the 4-column week; 820 is not in SCENARIO_VIEWPORTS, 834 stands in) (PC-11, PC-06, PC-16 9, A11Y-08, A11Y-09):
 //                  - the container (.plan-grid) has min(4, floor((width + 12) / (21 rem + 12))) columns and every row of day tiles sums to 12 tracks
 //                    (their grid-column spans), with no hole: the last tile of a row ends at the container's end (PC 2: no lone day beside an empty track);
 //                  - no .plan-day is wider than 3 x the narrowest unless it has the whole row (data-row) and then its Meal Slots lie side by side;
@@ -184,7 +184,7 @@ async function planCouldnt() {
 export default {
   order: 332,
   scenarios: [
-    { name: 'plan-grid', route: '/plan', start: '/plan', setup: 'planGrid', widths: [375, 390, 834, 1440], rules: ['P1', 'P3', 'P13', 'P14', 'P16', 'P17', 'P18', 'P38'] },
+    { name: 'plan-grid', route: '/plan', start: '/plan', setup: 'planGrid', widths: [375, 390, 834, 1440, '1920x1080'], rules: ['P1', 'P3', 'P13', 'P14', 'P16', 'P17', 'P18', 'P38'] },
     { name: 'plan-couldnt', route: '/plan', start: '/plan', setup: 'planCouldnt', widths: [375, 390, 1440], rules: ['P1', 'P13', 'P14', 'P38'] },
   ],
   setups: { planGrid, planCouldnt },

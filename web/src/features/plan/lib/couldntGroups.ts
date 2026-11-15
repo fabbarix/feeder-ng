@@ -274,7 +274,7 @@ function isEntry(slot: PlanSlot | PlanEntry): slot is PlanEntry {
 
 /** B9-32 (PC-07): the short cause an unfilled Course row names in its one chip ("No Dessert Recipes", "Excluded"). */
 export function shortCause(cause: Cause, courseName?: string | null): string {
-  if (cause === 'no_course_recipes') return courseName ? s.causeChipCourse(courseName) : s.causeChip.no_course_recipes
+  if (cause === 'no_course_recipes') return courseName ? s.causeChip.course(courseName) : s.causeChip.no_course_recipes
   return s.causeChip[cause]
 }
 

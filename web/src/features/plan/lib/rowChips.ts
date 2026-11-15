@@ -61,13 +61,13 @@ function startChips(meal: PlannedMeal, start: StartContext | undefined): RowChip
   if (start.now >= Date.parse(start.slotAt)) return []
   const day = meal.startsAt ? weekdayName(meal.startsAt.date, 'short') : null
   if (meal.earlyStart) {
-    const label = day ? s.startChipDay(day, meal.startsAt!.time) : s.startChip(meal.earlyStart)
-    return [{ key: 'start:warn', kind: 'status', status: 'warn', icon: 'warning', label, title: s.startOutsideTitle }]
+    const label = day ? s.startChip.day(day, meal.startsAt!.time) : s.startChip.time(meal.earlyStart)
+    return [{ key: 'start:warn', kind: 'status', status: 'warn', icon: 'warning', label, title: s.startChip.outsideTitle }]
   }
   if (meal.startsAt && day) {
     return [{
-      key: 'start:info', kind: 'status', status: 'info', icon: 'timer', label: s.startChipDay(day, meal.startsAt.time),
-      title: s.startEarlierTitle(weekdayName(meal.startsAt.date), meal.startsAt.time),
+      key: 'start:info', kind: 'status', status: 'info', icon: 'timer', label: s.startChip.day(day, meal.startsAt.time),
+      title: s.startChip.earlierTitle(weekdayName(meal.startsAt.date), meal.startsAt.time),
     }]
   }
   return []

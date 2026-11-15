@@ -42,6 +42,11 @@ export const SCENARIO_VIEWPORTS = {
   // B9-14 (SHORT-02's sizes): phone landscape without insets, and a 390 px phone with the on-screen keyboard up (400 px left).
   '844x390': { width: 844, height: 390, mobile: true },
   '390x400': { width: 390, height: 400, mobile: true },
+  // Desktop sizes for the wide layouts (B9-32's plan-grid runs at 1920x1080, the 4-column week; the same keys are added on
+  // another branch, so the merge is a union).
+  '1024x768': { width: 1024, height: 768, mobile: false },
+  '1280x800': { width: 1280, height: 800, mobile: false },
+  '1920x1080': { width: 1920, height: 1080, mobile: false },
 }
 
 // B9-03: a scenario module that names a viewport this table lacks fails on load, not halfway through a run.

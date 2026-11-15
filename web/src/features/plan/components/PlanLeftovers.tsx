@@ -59,7 +59,7 @@ export function PlanLeftovers({ flow }: PlanLeftoversProps): ReactNode {
                 <span className="plan-leftovers__summary-meta">{summary.meta}</span>
               </p>
               <Button variant="secondary" size="sm" aria-label={summary.showLabel} onClick={() => setSheetOpen(true)}>
-                {planStrings.show}
+                {planStrings.leftoverSummary.show}
               </Button>
             </div>
           ) : null}

@@ -76,7 +76,7 @@ export function useMarkCourseRecipes(course: MarkCourse): MarkCourseRecipes {
         undoToast.show({
           headline: words.headline,
           subline: words.subline,
-          restored: s.unmarkedToast(markedIds.length, course.name),
+          restored: s.markSheet.unmarked(markedIds.length, course.name),
           undo: async () => {
             try {
               await planApi.unmarkRecipes(course.id, markedIds)

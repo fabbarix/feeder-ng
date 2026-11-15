@@ -61,7 +61,7 @@ function SheetBody({ onClose, course, count }: Omit<MarkCourseRecipesSheetProps,
       onClose={onClose}
       onCancel={onClose}
       title={s.markRecipesAs(course.name)}
-      submit={{ label: s.markPrimary(m.count, course.name), form: formId, disabled: m.count === 0, loading: m.saving }}
+      submit={{ label: s.markSheet.primary(m.count, course.name), form: formId, disabled: m.count === 0, loading: m.saving }}
     >
       <form
         id={formId}
@@ -72,20 +72,20 @@ function SheetBody({ onClose, course, count }: Omit<MarkCourseRecipesSheetProps,
         }}
       >
         {/* The context line sits at the top of the body: BottomSheet's own `context` would join the dialog's name. */}
-        {count > 0 ? <p className="mark-recipes__context">{s.markContext(count, count === 1 ? course.name : pluralName(course.name))}</p> : null}
-        <p className="mark-recipes__lede">{s.markLede(course.name)}</p>
+        {count > 0 ? <p className="mark-recipes__context">{s.markSheet.context(count, count === 1 ? course.name : pluralName(course.name))}</p> : null}
+        <p className="mark-recipes__lede">{s.markSheet.lede(course.name)}</p>
         <FormError>{m.error}</FormError>
         {m.status === 'loading' ? (
-          <Skeleton variant="row" count={3} label={s.markLoading} />
+          <Skeleton variant="row" count={3} label={s.markSheet.loading} />
         ) : m.status === 'error' ? (
-          <FormError>{s.markLoadFailed}</FormError>
+          <FormError>{s.markSheet.loadFailed}</FormError>
         ) : m.total === 0 ? (
-          <p className="mark-recipes__empty">{s.markAllMarked(course.name)}</p>
+          <p className="mark-recipes__empty">{s.markSheet.allMarked(course.name)}</p>
         ) : (
           <>
-            <SearchField label={s.markSearch} value={m.search} onChange={m.setSearch} />
+            <SearchField label={s.markSheet.search} value={m.search} onChange={m.setSearch} />
             {m.rows.length === 0 ? (
-              <p className="mark-recipes__empty">{s.markNoMatch}</p>
+              <p className="mark-recipes__empty">{s.markSheet.noMatch}</p>
             ) : (
               <ul className="list-group__list mark-recipes__list" aria-label={s.markRecipesAs(course.name)}>
                 {m.rows.map((row) => (

@@ -98,6 +98,8 @@ export const gridStrings = {
   },
   /** B9-32 (PC-07): the one chip of an unfilled Course row (lib/couldntGroups.ts shortCause). */
   causeChip: {
+    /** "No Dessert Recipes": no_course_recipes with the Course named. */
+    course: (course: string) => `No ${course} Recipes`,
     nobody_attending: 'Nobody attending',
     no_recipes: 'No Recipes',
     no_course_recipes: 'No Recipes for this Course',
@@ -107,7 +109,6 @@ export const gridStrings = {
     too_early: 'Outside your cooking times',
     no_fit: 'No Recipe fits',
   },
-  causeChipCourse: (course: string) => `No ${course} Recipes`,
   couldntFix: {
     nobody_attending: 'Choose who attends',
     no_recipes: 'Add Recipes',
@@ -144,25 +145,29 @@ export const gridStrings = {
     thisCourse: 'this Course',
   },
   couldntShowAll: (n: number) => `Show all ${n}`,
-  // B9-32 (PC-07): Mark Recipes as <Course> on the Plan (components/MarkCourseRecipesSheet, lib/markRecipes).
-  markContext: (n: number, noun: string) => `Couldn't plan ${n} ${noun}`,
-  markLede: (course: string) => `The planner fills ${course} only from Recipes marked with it. Tick the ones you would serve as ${course}.`,
-  markSearch: 'Search Recipes',
-  markPrimary: (n: number, course: string) => (n === 0 ? `Mark Recipes as ${course}` : n === 1 ? `Mark 1 Recipe as ${course}` : `Mark ${n} Recipes as ${course}`),
-  markNoCourse: 'No Course yet',
-  markAllMarked: (course: string) => `Every Recipe is already marked as ${course}.`,
-  markNoMatch: 'No Recipe has that name.',
-  markLoading: 'Loading the Recipes…',
-  markLoadFailed: 'The Recipes could not be loaded.',
-  markedToast: (n: number, course: string) => (n === 1 ? `1 Recipe marked as ${course}` : `${n} Recipes marked as ${course}`),
-  markedPlanned: (n: number) => (n === 1 ? '1 meal planned' : `${n} meals planned`),
-  markedNonePlanned: 'No new meals planned yet',
-  unmarkedToast: (n: number, course: string) => (n === 1 ? `1 Recipe is no longer marked as ${course}` : `${n} Recipes are no longer marked as ${course}`),
-  // B9-32 (PC-07, PLAN-19): Leftovers to use on the Plan, below 1024 px (lib/planLeftovers).
-  leftoverCount: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
-  firstUseBy: (weekday: string) => `first Use by ${weekday}`,
-  showLeftovers: (n: number) => (n === 1 ? 'Show 1 Leftover' : `Show ${n} Leftovers`),
-  show: 'Show',
+  /** B9-32 (PC-07): Mark Recipes as <Course> on the Plan (components/MarkCourseRecipesSheet, lib/markRecipes). */
+  markSheet: {
+    context: (n: number, noun: string) => `Couldn't plan ${n} ${noun}`,
+    lede: (course: string) => `The planner fills ${course} only from Recipes marked with it. Tick the ones you would serve as ${course}.`,
+    search: 'Search Recipes',
+    primary: (n: number, course: string) => (n === 0 ? `Mark Recipes as ${course}` : n === 1 ? `Mark 1 Recipe as ${course}` : `Mark ${n} Recipes as ${course}`),
+    noCourse: 'No Course yet',
+    allMarked: (course: string) => `Every Recipe is already marked as ${course}.`,
+    noMatch: 'No Recipe has that name.',
+    loading: 'Loading the Recipes…',
+    loadFailed: 'The Recipes could not be loaded.',
+    marked: (n: number, course: string) => (n === 1 ? `1 Recipe marked as ${course}` : `${n} Recipes marked as ${course}`),
+    planned: (n: number) => (n === 1 ? '1 meal planned' : `${n} meals planned`),
+    nonePlanned: 'No new meals planned yet',
+    unmarked: (n: number, course: string) => (n === 1 ? `1 Recipe is no longer marked as ${course}` : `${n} Recipes are no longer marked as ${course}`),
+  },
+  /** B9-32 (PC-07, PLAN-19): Leftovers to use on the Plan, below 1024 px (lib/planLeftovers). */
+  leftoverSummary: {
+    count: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
+    firstUseBy: (weekday: string) => `first Use by ${weekday}`,
+    showLabel: (n: number) => (n === 1 ? 'Show 1 Leftover' : `Show ${n} Leftovers`),
+    show: 'Show',
+  },
   /** B9-32 (PC-07): the compact tile's header button; it opens the sheet of the affected meals. */
   couldntShowMeals: 'Show which meals',
   couldntHideList: 'Hide the list',
@@ -202,16 +207,20 @@ export const gridStrings = {
   slotActions: (slot: string) => `${slot} actions`,
   /** B9-32 (A11Y-09): the IconSet of a hero Course row. */
   courseActions: (course: string) => `${course} actions`,
-  // B9-32 (A11Y-08): row action names (lib/actionNames.ts); `when` is "Sun 15 Breakfast".
-  actionSwap: (recipe: string, when: string) => `Swap ${recipe}, ${when}`,
-  actionPin: (recipe: string, when: string) => `Pin ${recipe}, ${when}`,
-  actionChoose: (course: string, when: string) => `Choose a Recipe for ${course}, ${when}`,
-  actionCook: (when: string) => `Cook ${when}`,
-  actionMore: (when: string) => `More for ${when}`,
-  // B9-32 (A2, PC-14): the start chips (lib/rowChips.ts).
-  startChip: (time: string) => `Start ${time}`,
-  startChipDay: (weekday: string, time: string) => `Start ${weekday} ${time}`,
-  startEarlierTitle: (weekday: string, time: string) => `Start cooking on ${weekday} at ${time}`,
-  startOutsideTitle: 'Cooking would start outside your cooking times',
+  /** B9-32 (A11Y-08): row action names (lib/actionNames.ts); `when` is "Sun 15 Breakfast". */
+  actionNames: {
+    swap: (recipe: string, when: string) => `Swap ${recipe}, ${when}`,
+    pin: (recipe: string, when: string) => `Pin ${recipe}, ${when}`,
+    choose: (course: string, when: string) => `Choose a Recipe for ${course}, ${when}`,
+    cook: (when: string) => `Cook ${when}`,
+    more: (when: string) => `More for ${when}`,
+  },
+  /** B9-32 (A2, PC-14): the start chips (lib/rowChips.ts). */
+  startChip: {
+    time: (time: string) => `Start ${time}`,
+    day: (weekday: string, time: string) => `Start ${weekday} ${time}`,
+    earlierTitle: (weekday: string, time: string) => `Start cooking on ${weekday} at ${time}`,
+    outsideTitle: 'Cooking would start outside your cooking times',
+  },
   courseLeftoverLabel: (course: string) => `${course} Leftover portions`,
 } as const

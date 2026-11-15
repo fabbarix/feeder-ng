@@ -25,14 +25,14 @@ export function actionName(kind: ActionKind, ctx: ActionContext): string {
   const when = `${ctx.day} ${ctx.slot}`
   switch (kind) {
     case 'swap':
-      return s.actionSwap(ctx.recipe ?? '', when)
+      return s.actionNames.swap(ctx.recipe ?? '', when)
     case 'pin':
-      return s.actionPin(ctx.recipe ?? '', when)
+      return s.actionNames.pin(ctx.recipe ?? '', when)
     case 'choose':
-      return s.actionChoose(ctx.course ?? '', when)
+      return s.actionNames.choose(ctx.course ?? '', when)
     case 'cook':
-      return s.actionCook(when)
+      return s.actionNames.cook(when)
     case 'more':
-      return s.actionMore(when)
+      return s.actionNames.more(when)
   }
 }

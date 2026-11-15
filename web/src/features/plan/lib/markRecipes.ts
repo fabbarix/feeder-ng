@@ -39,7 +39,7 @@ export function markRows(recipes: readonly MarkableRecipe[], names: ReadonlyMap<
     .filter((r) => q === '' || r.name.toLocaleLowerCase().includes(q))
     .map((r) => {
       const courses = courseNamesOf(r, names)
-      const what = courses.length > 0 ? courses.join(', ') : s.markNoCourse
+      const what = courses.length > 0 ? courses.join(', ') : s.markSheet.noCourse
       return { id: r.id, name: r.name, meta: `${what} · ${formatMinutes(r.totalMinutes)}`, checked: ticked.has(r.id) }
     })
 }
@@ -57,5 +57,5 @@ export function mealsPlanned(changes: readonly PlanChange[]): number {
 /** The toast after Mark: "2 Recipes marked as Dessert", subline "3 meals planned" (or that none was). */
 export function markedToast(marked: number, course: string, changes: readonly PlanChange[]): { headline: string; subline: string } {
   const n = mealsPlanned(changes)
-  return { headline: s.markedToast(marked, course), subline: n > 0 ? s.markedPlanned(n) : s.markedNonePlanned }
+  return { headline: s.markSheet.marked(marked, course), subline: n > 0 ? s.markSheet.planned(n) : s.markSheet.nonePlanned }
 }

@@ -14,16 +14,16 @@ export interface PlanGridLayout {
 interface Measure {
   width: number
   remPx?: number
-  gapPx?: number
 }
 
-/** The root font size and the grid's column gap, read from the page when it has them (jsdom has neither). */
-function metricsOf(el: Element): Pick<Measure, 'remPx' | 'gapPx'> {
+/**
+ * The root font size, read from the page when it has one (jsdom has none), so a larger text size reflows the week. The gap of
+ * the rule stays the chapter's 12 px (gridColumns' default) whatever the Bento gap of the band, so the cut-offs are fixed.
+ */
+function metricsOf(): Pick<Measure, 'remPx'> {
   if (typeof getComputedStyle !== 'function') return {}
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize)
-  const inner = el.firstElementChild
-  const gap = inner ? parseFloat(getComputedStyle(inner).columnGap) : NaN
-  return { remPx: Number.isFinite(rem) && rem > 0 ? rem : undefined, gapPx: Number.isFinite(gap) ? gap : undefined }
+  return { remPx: Number.isFinite(rem) && rem > 0 ? rem : undefined }
 }
 
 /** Measures the element it is given (a ResizeObserver on its content box) and answers the grid layout for `count` days. */
@@ -39,7 +39,7 @@ export function usePlanGrid(count: number): PlanGridLayout & { ref: RefCallback<
       const entry = entries[entries.length - 1]
       if (!entry) return
       const width = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width
-      setMeasure({ width, ...metricsOf(entry.target) })
+      setMeasure({ width, ...metricsOf() })
     })
     ro.observe(el)
     observer.current = ro
@@ -48,7 +48,7 @@ export function usePlanGrid(count: number): PlanGridLayout & { ref: RefCallback<
   useEffect(() => () => observer.current?.disconnect(), [])
 
   return useMemo(() => {
-    const columns = measure ? gridColumns(measure.width, { remPx: measure.remPx, gapPx: measure.gapPx }) : 1
+    const columns = measure ? gridColumns(measure.width, { remPx: measure.remPx }) : 1
     const spans = daySpans(count, columns)
     const rows = spans.map((span) => columns > 1 && span === GRID_TRACKS)
     return { columns, spans, rows, ref }

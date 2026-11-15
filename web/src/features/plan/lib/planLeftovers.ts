@@ -25,8 +25,8 @@ export function leftoverSummary(leftovers: Leftover[], today: string): LeftoverS
   const names = rest.map((l) => l.recipeName).join(', ')
   return {
     questions,
-    title: s.leftoverCount(rest.length),
-    meta: `${names} · ${s.firstUseBy(weekdayShort(rest[0]!.useBy))}`,
-    showLabel: s.showLeftovers(rest.length),
+    title: s.leftoverSummary.count(rest.length),
+    meta: `${names} · ${s.leftoverSummary.firstUseBy(weekdayShort(rest[0]!.useBy))}`,
+    showLabel: s.leftoverSummary.showLabel(rest.length),
   }
 }
