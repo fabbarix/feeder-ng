@@ -1,8 +1,8 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { cookRecipePath } from '../../cook'
 import { garlic, recipe } from '../fixtures.test-helper'
 import { household, prefs } from '../household.test-helper'
@@ -26,12 +26,14 @@ const Where = () => {
 const view = (entry = '/recipes/3') =>
   render(
     <MemoryRouter initialEntries={[entry]}>
+      <ToastProvider>
       <ConfirmProvider>
         <Routes>
           <Route path="/recipes/:id" element={<RecipeDetailScreen />} />
           <Route path="*" element={<Where />} />
         </Routes>
       </ConfirmProvider>
+      </ToastProvider>
     </MemoryRouter>,
   )
 
@@ -48,7 +50,7 @@ describe('RecipeDetailScreen: layout', () => {
   it('has the Recipe name as its h1, an Edit IconButton and the metric tiles', async () => {
     view()
     expect(screen.getByRole('heading', { level: 1, name: 'Roast tray' })).toBeInTheDocument()
-    expect(screen.getByText('4 portions per Batch')).toBeInTheDocument()
+    expect(screen.getByText('portions per Batch')).toBeInTheDocument()
     expect(screen.getByText('+ 4 h ahead')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/recipes/3/edit')
@@ -56,7 +58,7 @@ describe('RecipeDetailScreen: layout', () => {
   it('shows the error state with the shared primitive', () => {
     h.recipe = { ...h.recipe, recipe: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn(), state: 'failed' }
     view()
-    expect(screen.getByRole('alert')).toHaveTextContent('The Recipe could not be loaded.')
+    expect(screen.getByText('The Recipe could not be loaded.').closest('[role="alert"]')).not.toBeNull() // not an unscoped getByRole('alert'): the ToastProvider mounts empty live regions
   })
   it('the error state keeps a PageHeader, and Try again calls onRetry (refetch)', async () => {
     const refetch = vi.fn()
@@ -93,7 +95,8 @@ describe('RecipeDetailScreen: delete and archive (ConfirmDialog, no window.confi
     view()
     await openDelete()
     const dialog = await screen.findByRole('dialog', { name: 'Delete Roast tray?' })
-    expect(dialog).toHaveTextContent('Archive keeps it for history.')
+    expect(dialog).toHaveTextContent('Nobody has planned it yet.')
+    expect(dialog).toHaveTextContent("This can't be undone.")
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(h.recipe.remove).toHaveBeenCalledOnce()
     expect(await screen.findByTestId('where')).toHaveTextContent('/recipes')
@@ -116,6 +119,75 @@ describe('RecipeDetailScreen: delete and archive (ConfirmDialog, no window.confi
     await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }))
     expect(h.recipe.setArchived).toHaveBeenCalledWith(true)
+  })
+})
+
+// SAFE-05: Delete of a planned Recipe says why it cannot be deleted before asking. RX-04 (R-D+): a plain success toast, with the outline Undo.
+describe('RecipeDetailScreen: Delete of a planned Recipe (SAFE-05) and the Archive toast', () => {
+  const planned = () => {
+    h.recipe = { ...h.recipe, recipe: recipe({ deletable: false }) }
+  }
+  const openDelete = async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
+  }
+  const toast = () => document.querySelector('.toast') as HTMLElement | null
+  it('opens the dialog "can\'t be deleted" at once, with Cancel and Archive and no Close, and never calls remove', async () => {
+    planned()
+    view()
+    await openDelete()
+    const dialog = await screen.findByRole('dialog', { name: "Roast tray can't be deleted" })
+    expect(dialog).toHaveTextContent('It was planned before, so Feeder keeps it in the history of what was Cooked.')
+    expect(dialog).toHaveTextContent('Archive takes it out of the Recipes list, the pickers and the plan. You can unarchive it later.')
+    expect(within(dialog).getAllByRole('button').map((b) => b.textContent)).toEqual(['Cancel', 'Archive'])
+    expect(within(dialog).queryByRole('button', { name: 'Close' })).toBeNull()
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    expect(h.recipe.remove).not.toHaveBeenCalled()
+  })
+  it('Archive archives it and the toast says so, with an Undo', async () => {
+    planned()
+    view()
+    await openDelete()
+    await userEvent.click(await screen.findByRole('button', { name: 'Archive' }))
+    expect(h.recipe.setArchived).toHaveBeenCalledWith(true)
+    expect(h.recipe.remove).not.toHaveBeenCalled()
+    await waitFor(() => expect(toast()).not.toBeNull())
+    expect(toast()!.querySelector('.toast__title')).toHaveTextContent('Roast tray archived')
+    expect(within(toast()!).getByRole('button', { name: 'Undo: unarchive Roast tray' })).toBeInTheDocument()
+  })
+  it('the toast of a plain success has no icon', async () => {
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }))
+    await waitFor(() => expect(toast()).not.toBeNull())
+    expect(toast()!.querySelector('.toast__title svg')).toBeNull() // R-D+: a plain success toast has no icon
+    // B9-27 developer: the shared useUndoToast (B9-18) draws every Undo toast in the neutral status, which has no icon (was 'success').
+    expect(toast()).toHaveAttribute('data-status', 'neutral')
+  })
+  it('Undo unarchives it', async () => {
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }))
+    await userEvent.click(await within(await waitFor(() => toast()!)).findByRole('button', { name: 'Undo: unarchive Roast tray' }))
+    await waitFor(() => expect(h.recipe.setArchived).toHaveBeenLastCalledWith(false))
+  })
+  it('shows no error paragraph under the page: the old "can only be archived" words are gone', async () => {
+    planned()
+    view()
+    await openDelete()
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByText(/can only be archived/)).toBeNull()
+    expect(screen.queryByRole('alert', { name: /archived/ })).toBeNull()
+  })
+  it('a failed Archive is an error toast "Couldn\'t archive Roast tray" with Retry', async () => {
+    h.recipe = { ...h.recipe, setArchived: vi.fn().mockRejectedValue(new Error('offline')) }
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }))
+    await waitFor(() => expect(toast()).not.toBeNull())
+    expect(toast()).toHaveAttribute('data-status', 'error')
+    expect(toast()!.querySelector('.toast__title')).toHaveTextContent("Couldn't archive Roast tray")
+    expect(within(toast()!).getByRole('button', { name: 'Retry' })).toBeInTheDocument()
   })
 })
 

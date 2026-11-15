@@ -116,29 +116,43 @@ describe('RecipeDetailScreen: a Base recipe', () => {
       lines: [{ id: 9, ingredientId: 9, ingredient: 'milk', quantity: 1000, unit: 'ml', optional: false, note: '' }],
     })
 
-  it('shows the Yield with its unit, the Base recipe badge and no Course chips', () => {
+  // RX-06: the Yield is the metric ("1 l per Batch"), once; the duplicate "Yield 1 l" line is gone, and no portions are claimed.
+  it('shows the Yield with its unit as the metric, the Base recipe badge and no Course chips', () => {
     mockApi({})
     setRecipe(bech())
     view('/recipes/3')
-    expect(screen.getByText('Yield 1 l')).toBeInTheDocument()
+    const metric = document.querySelector('.bento-grid[data-min="metric"] .tile-metric') as HTMLElement
+    expect(metric.querySelector('.tile-metric__value')).toHaveTextContent('1 l')
+    expect(metric.querySelector('.tile-metric__label')).toHaveTextContent('per Batch')
+    expect(screen.queryByText('Yield 1 l')).toBeNull()
     expect(screen.getByText('Base recipe')).toBeInTheDocument()
-    expect(screen.queryByText('4 portions per Batch')).toBeNull()
+    expect(screen.queryByText(/portions/)).toBeNull()
+  })
+  it('the Cook hint states the Yield with its unit: "1 Batch · 1 l"', () => {
+    mockApi({})
+    setRecipe(bech())
+    view('/recipes/3')
+    expect(screen.getByText('1 Batch · 1 l')).toBeInTheDocument()
   })
 
-  it('lists the Recipes that use it as links, under "Used in 2 Recipes"', async () => {
+  it('lists the Recipes that use it as links, under the heading "Used in"', async () => {
     mockApi({})
     setRecipe(bech())
     view('/recipes/3')
-    expect(screen.getByText('Used in 2 Recipes')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Used in' })).toBeInTheDocument()
+    expect(screen.queryByText('Used in 2 Recipes')).toBeNull()
     await userEvent.click(screen.getByRole('link', { name: 'Moussaka' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/recipes/2')
   })
 
-  it('says "Not used yet" when nothing uses it', () => {
+  it('keeps the heading "Used in" when nothing uses it, and says so in a sentence (never a heading "Not used yet")', () => {
     mockApi({})
     setRecipe({ ...bech(), usedBy: [] })
     view('/recipes/3')
-    expect(screen.getByText('Not used yet')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Used in' })).toBeInTheDocument()
+    expect(screen.getByText("Not used in any Recipe yet. Link it from a Recipe's ingredient line.")).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Not used yet' })).toBeNull()
+    expect(screen.queryByText('Not used yet')).toBeNull()
   })
 
   it('keeps "Recipes with an Ingredient named béchamel (3)" until none is left, and opens the list', async () => {
@@ -163,5 +177,46 @@ describe('RecipeDetailScreen: a Base recipe', () => {
     setRecipe(recipe({ id: 7, name: 'Lasagne' }))
     view()
     expect(api.calls.some((c) => c.path.includes('link-candidates'))).toBe(false)
+  })
+})
+
+// Ruling 3 (main session, B9-27): a Base recipe in use can't be deleted, and the detail says why before anything is asked of the server.
+describe('RecipeDetailScreen: Delete of a Base recipe in use (ruling 3)', () => {
+  const inUse = () =>
+    recipe({
+      id: 3, name: 'Béchamel', yield: 1, yieldUnit: 'l', baseRecipe: true, baseIngredientId: 30, courses: [], wholeMeal: false,
+      deletable: false, deleteBlockedBy: 'in_use',
+      usedBy: [{ id: 1, name: 'Lasagne' }, { id: 2, name: 'Moussaka', archived: true }],
+      lines: [],
+    })
+  const openDelete = async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
+  }
+  it('opens "Béchamel can\'t be deleted" at once: "It is used in 2 Recipes.", the Recipes as rows, Cancel (focused) and Archive, no Close', async () => {
+    mockApi({})
+    setRecipe(inUse())
+    view('/recipes/3')
+    await openDelete()
+    const dialog = await screen.findByRole('dialog', { name: "Béchamel can't be deleted" })
+    expect(dialog).toHaveTextContent('It is used in 2 Recipes.')
+    expect(dialog).not.toHaveTextContent(/planned/)
+    const rows = within(dialog).getByRole('list')
+    expect(within(rows).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('Lasagne'), expect.stringContaining('Moussaka')])
+    expect(within(rows).getAllByRole('listitem')[1]).toHaveTextContent('Archived')
+    expect(within(dialog).getAllByRole('button').map((b) => b.textContent)).toEqual(['Cancel', 'Archive'])
+    expect(within(dialog).queryByRole('button', { name: 'Close' })).toBeNull()
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    expect(h.recipe.remove).not.toHaveBeenCalled()
+  })
+  it('Archive archives it', async () => {
+    mockApi({})
+    setRecipe(inUse())
+    ;(h.recipe.setArchived as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+    view('/recipes/3')
+    await openDelete()
+    await userEvent.click(within(await screen.findByRole('dialog', { name: "Béchamel can't be deleted" })).getByRole('button', { name: 'Archive' }))
+    expect(h.recipe.setArchived).toHaveBeenCalledWith(true)
+    expect(h.recipe.remove).not.toHaveBeenCalled()
   })
 })

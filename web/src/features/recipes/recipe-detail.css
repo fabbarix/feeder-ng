@@ -1,16 +1,18 @@
-/* Recipe detail (WP-RX-0: split from recipes.css): the hero, metrics, the two-column layout, preferences, the exclusion list,
-   ingredient lines, Steps and the Cook entry. Layout and text on tokens only; the primitives carry their own look. */
+/* Recipe detail (WP-RX-0, B9-27): lede, hero, metrics, layout, preferences, exclusions, lines, Steps, Cook entry. Tokens only. */
 
 .recipe-detail {
+  /* RX-04: one layout rule by the page's own width, not by viewport breakpoints. 5 px of focus-ring room for the chip line. */
+  container: recipe-detail / inline-size;
+  --ring-room: 5px;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-inline-size: 0;
 }
 
-/* Recipe detail */
-.recipe-detail__hint,
-.recipe-metric__ahead {
+/* Muted meta lines: the metric strip's "+ 12 h ahead" and "Not cooked yet" (RX-13), the Cook hint. */
+.recipe-metric__ahead,
+.cook-entry__hint {
   margin: 0;
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
@@ -18,38 +20,154 @@
   color: var(--color-muted);
 }
 
-.recipe-metric {
-  margin: 0;
-  font-size: var(--text-body-strong-size);
-  line-height: var(--text-body-strong-line);
-  font-weight: var(--text-body-strong-weight);
-  overflow-wrap: anywhere;
+/* RX-13: a metric value never wraps ("37 min"); on a phone (a page narrower than 45 rem) it is the title-2 role. */
+.recipe-detail .tile-metric__value {
+  white-space: nowrap;
 }
 
+@container recipe-detail (max-width: 44.99rem) {
+  .recipe-detail .tile-metric__value {
+    font-size: var(--text-title-2-size);
+    line-height: var(--text-title-2-line);
+    font-weight: var(--text-title-2-weight);
+  }
+}
+/* A phrase metric ("No time set") is title-2 at every width, so it fits half the side column. */
+.recipe-detail .tile[data-words='true'] .tile-metric__value {
+  font-size: var(--text-title-2-size);
+  line-height: var(--text-title-2-line);
+  font-weight: var(--text-title-2-weight);
+}
+
+/* RX-05: the lede, not a Tile: the description (3 lines, 2 from 45 rem, then Show more), then Show more and the Source line in one row. */
+.recipe-about {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  max-inline-size: 70ch;
+}
+.recipe-about__text {
+  margin: 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: var(--text-body-weight);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+@container recipe-detail (min-width: 45rem) {
+  .recipe-about__text {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+.recipe-about__text[data-expanded='true'] {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+  overflow: visible;
+}
+.recipe-about__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-inline-size: 0;
+}
+.recipe-source {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+.recipe-source__url {
+  overflow-wrap: anywhere;
+}
+.recipe-source .text-link {
+  min-block-size: 0;
+  padding-block: var(--space-2);
+  margin-block: calc(-1 * var(--space-2));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-half);
+  font-weight: var(--text-body-strong-weight);
+  color: var(--color-text);
+}
+
+/* RX-04: the hero fills its column (no cap, no centring). The Photo is 16:9, never taller than 40 % of the viewport; none is a 4:1 band. */
 .recipe-detail__hero {
   inline-size: 100%;
   min-inline-size: 0;
-  max-inline-size: 820px;
-  margin-inline: auto;
+  max-inline-size: none;
+  margin-inline: 0;
 }
-
-/* The detail hero is 16:9 (D-02); the thumb fills it and the image covers the box. */
 .recipe-detail__hero .tile__media {
   aspect-ratio: 16 / 9;
+  max-block-size: 40vh;
 }
-
+.recipe-detail__hero[data-photo='false'] .tile__media {
+  aspect-ratio: 4 / 1;
+}
 .recipe-detail__hero .recipe-thumb[data-size='hero'] {
+  aspect-ratio: auto;
   block-size: 100%;
 }
 
-/* D-01: one column below 80em (1280 px); from 80em a 360 px left column (sticky) and the Steps beside it. The two columns keep the
-   tiles' gap between them when they stack. */
+/* A hero tile with nothing under the photo drops the bottom padding strip. */
+.recipe-detail__hero[data-variant='media']:has(> .tile__media:last-child) {
+  padding-block-end: 0;
+}
+
+/* RX-04, ruling 6: lead chips never collapse (they wrap if alone too wide); Tags that do not fit go into "+N". Ring room all round. */
+.recipe-detail__hero .recipe-tags[data-fitted='true'] {
+  position: relative;
+  flex-wrap: wrap;
+  overflow: hidden;
+  padding: var(--ring-room);
+  margin: calc(-1 * var(--ring-room));
+}
+.recipe-detail__hero .recipe-tags[data-fitted='true'] > li, .recipe-tags__lead, .recipe-tags__tag, .recipe-tags__more-item {
+  flex: none;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.recipe-tags__more {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  cursor: pointer;
+}
+
+.recipe-detail__hero .recipe-tags[data-fitted='true'] > .recipe-tags__measure {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: flex;
+  gap: var(--space-2);
+  inline-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.recipe-source > svg, .recipe-tags__measure-tag, .recipe-tags__measure-more {
+  flex: none;
+}
+
+/* RX-04: one column below 45 rem of the page's width, then a 17 to 22.5 rem side column and the Steps. Nothing is sticky. */
 .recipe-detail__layout {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
-
 .recipe-detail__aside,
 .recipe-detail__main {
   display: flex;
@@ -58,27 +176,36 @@
   min-inline-size: 0;
 }
 
-@media (min-width: 80em) {
+@container recipe-detail (min-width: 45rem) {
   .recipe-detail__layout {
     display: grid;
-    grid-template-columns: 360px minmax(0, 1fr);
+    grid-template-columns: minmax(17rem, 22.5rem) minmax(0, 1fr);
     gap: var(--space-4);
     align-items: start;
   }
-
-  .recipe-detail__aside {
-    position: sticky;
-    inset-block-start: var(--space-6);
-  }
-
-  .recipe-detail__hero {
-    max-inline-size: none;
-  }
 }
 
-/* A hero tile with nothing under the photo drops the bottom padding strip. */
-.recipe-detail__hero[data-variant='media']:has(> .tile__media:last-child) {
-  padding-block-end: 0;
+/* RX-04: the Cook tile (from 1024 px of viewport) stacks its entry under its heading. */
+.recipe-cook {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.recipe-cook__title {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+.recipe-cook .cook-entry {
+  flex-direction: column;
+  align-items: stretch;
+}
+.recipe-cook .cook-entry__batches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
 }
 
 /* PT: the Recipe's preferences as a table, a row per Member, a 48 px column per state. Fits 360 px: the Member column
@@ -187,6 +314,15 @@
   min-inline-size: 0;
 }
 
+/* A11Y 3: one line under the title says who excludes the Ingredient. */
+.ingredient-exclusions__summary {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
 .ingredient-exclusions .list-row__text {
   min-inline-size: 0;
 }
@@ -197,131 +333,115 @@
   white-space: nowrap;
 }
 
-/*
- * Ingredient lines: [menu] [quantity] [name], no bullets. The menu column is as wide as the IconButton (40 visual,
- * 44 hit) on every line, empty where a line has no menu, so the menus, quantities and names each line up.
- * The text sits a half-button down, so the ⋮ is centred on the first text line, even when the name wraps.
- */
+/* RX-04, RX-14: a line is an R-E row: name, quantity (tabular), the ⋮ last over both lines (track kept empty), the muted detail under. */
 .ingredient-lines {
-  container: ingredient-lines / inline-size;
   display: grid;
-  gap: var(--space-2);
   margin: 0;
 }
-
 .ingredient-lines__row {
   display: grid;
-  grid-template-columns: var(--space-10) minmax(0, 7rem) minmax(0, 1fr);
-  align-items: start;
-  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto 44px;
+  column-gap: var(--space-3);
+  row-gap: var(--space-half);
+  align-items: center;
+  padding-block: var(--space-2);
+  border-block-start: 1px solid var(--color-line);
 }
-
-/* A narrow list (a phone, the side column from 80em): the menu column costs the name its room, so the quantity column
-   narrows to the list value column (system.md 3). */
-@container ingredient-lines (max-width: 25rem) {
-  .ingredient-lines__row {
-    grid-template-columns: var(--space-10) minmax(0, var(--row-value-min)) minmax(0, 1fr);
-  }
-}
-
 .ingredient-lines__row dt,
 .ingredient-lines__row dd {
   margin: 0;
   min-inline-size: 0;
 }
-
-.ingredient-lines__actions {
-  grid-column: 1;
+.ingredient-lines__name,
+.ingredient-lines__quantity {
   grid-row: 1;
-  display: flex;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
 }
 
-.ingredient-lines__quantity,
-.ingredient-lines__name {
-  grid-row: 1;
-  padding-block-start: calc((var(--space-10) - var(--text-body-line)) / 2);
-  line-height: var(--text-body-line);
+/* A Base recipe line reads as one sentence ("500 ml Béchamel (Base recipe)") across the name and quantity tracks. */
+.ingredient-lines__name--base {
+  grid-column: 1 / 3;
 }
-
 .ingredient-lines__quantity {
   grid-column: 2;
-  font-weight: var(--text-label-weight);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  text-align: end;
 }
-
-.ingredient-lines__name {
+.ingredient-lines__actions {
   grid-column: 3;
+  grid-row: 1 / span 2;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-2);
-  overflow-wrap: anywhere;
+  justify-content: flex-end;
 }
-
-/* A Base recipe line reads as one sentence ("500 ml Béchamel (Base recipe)") from the quantity column on. */
-.ingredient-lines__name--base {
-  grid-column: 2 / -1;
+.ingredient-lines__row:not(:has(> .ingredient-lines__detail)) > .ingredient-lines__actions {
+  grid-row: 1;
 }
-
-.ingredient-lines__tag,
-.ingredient-lines__note {
+.ingredient-lines__detail {
+  grid-column: 1 / 3;
+  grid-row: 2;
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
+  font-variant-numeric: tabular-nums;
   color: var(--color-muted);
 }
 
-/* Steps: numbered rows with a soft badge. */
+/* RX-04: a Step row: badge, the text (weight 500, never bold), the detail (wraps, never truncates: ruling 5), photo; the time at the end. */
 .steps-list {
+  --step-badge: 30px;
   display: grid;
-  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
-
 .steps-list__item {
-  display: flex;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: var(--step-badge) minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  align-items: start;
   min-inline-size: 0;
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--color-line);
   font-size: var(--text-body-size);
   line-height: var(--text-body-line);
   font-weight: var(--text-body-weight);
 }
-
+.ingredient-lines__row:first-child,
+.steps-list__item:first-child {
+  border-block-start: 0;
+}
+.steps-list__item:first-child {
+  padding-block-start: 0;
+}
 .steps-list__number {
-  flex: none;
   display: grid;
   place-items: center;
-  inline-size: 30px;
-  block-size: 30px;
+  inline-size: var(--step-badge);
+  block-size: var(--step-badge);
   border-radius: var(--radius-chip);
   background: var(--color-soft);
   color: var(--color-accent-text);
   font-weight: var(--text-label-weight);
   font-variant-numeric: tabular-nums;
 }
-
 .steps-list__body {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--space-half);
   min-inline-size: 0;
+  padding-block-start: calc((var(--step-badge) - var(--text-body-line)) / 2);
 }
-
-/* Step text is the body role at the Step weight (500, VC8): a Step sentence is never bold. */
 .steps-list__text {
   margin: 0;
   font-size: var(--text-body-size);
   line-height: var(--text-body-line);
   font-weight: var(--text-step-weight);
-  overflow-wrap: anywhere;
 }
-
-.steps-list__meta,
-.steps-list__uses {
+.steps-list__detail {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-1);
   margin: 0;
   font-size: var(--text-meta-size);
@@ -329,39 +449,75 @@
   font-weight: var(--text-meta-weight);
   color: var(--color-muted);
 }
-
+.steps-list__detail > svg {
+  flex: none;
+  block-size: var(--text-meta-line);
+}
 .steps-list__photo {
   inline-size: 72px;
   margin-block-start: var(--space-1);
 }
+.steps-list__time {
+  padding-block-start: calc((var(--step-badge) - var(--text-body-strong-line)) / 2);
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.steps-list__time[data-untimed='true'] {
+  color: var(--color-muted);
+}
 
-/* Cook / Batch entry (L-03): plain content; the StickyActionBar (below 80em) or the left column (from 80em) carries it. */
+/* SHORT-04: the Cook entry is one row (only the Cook tile stacks it); at 375 px and below the button reads "Cook" (named Start Cook Mode). */
 .cook-entry {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
 }
-
-@media (min-width: 80em) {
-  .cook-entry {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
 .cook-entry__batches {
+  flex: none;
   display: grid;
   gap: var(--space-1);
 }
+.cook-entry > .button {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+.cook-entry__short {
+  display: none;
+}
 
-.cook-entry__hint {
-  margin: 0;
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-  color: var(--color-muted);
+@media (width < 23.5em) {
+  .cook-entry__short {
+    display: inline;
+  }
+
+  .cook-entry__long {
+    display: none;
+  }
+}
+
+/* The hint describes the Stepper: hidden visually (never removed) in the bar (one row, at most 70 px: ruling 8) and when short. */
+.sticky-action-bar .cook-entry__hint {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-height: 499px) {
+  .cook-entry .cook-entry__hint {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 /* BR-D: the Base recipe picker and the bulk link sheet (the detail, the editor and the import screen open them). Tokens only; rows are 44 px tap targets; the lists scroll inside the sheet. */

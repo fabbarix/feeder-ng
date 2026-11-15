@@ -213,6 +213,10 @@ type recipeJSON struct {
 	UpdatedAt         string        `json:"updatedAt"`
 	// LastCookedOn: see summaryJSON. Filled by GET /api/recipes/{id} only; null on the write responses.
 	LastCookedOn *string `json:"lastCookedOn"`
+	// Deletable (SAFE-05): false when Delete would refuse; DeleteBlockedBy says why ("planned" or "in_use", absent when
+	// deletable). Filled by GET /api/recipes/{id} only; both absent on the write responses.
+	Deletable       *bool  `json:"deletable,omitempty"`
+	DeleteBlockedBy string `json:"deleteBlockedBy,omitempty"`
 	// Base recipes (§10): the kind, the Yield's unit (null for a plannable Recipe), its Ingredient, the Recipes that
 	// call for it, and the Ingredients inside it.
 	BaseRecipe       bool         `json:"baseRecipe"`
@@ -232,8 +236,10 @@ type summaryJSON struct {
 	Archived       bool     `json:"archived"`
 	TotalMinutes   int      `json:"totalMinutes"`
 	AdvanceMinutes int      `json:"advanceMinutes"`
-	CourseIDs      []int64  `json:"courseIds"`
-	WholeMeal      bool     `json:"wholeMeal"`
+	// StepCount (RX-07): how many Steps the Recipe has, so untimed Steps are not "No Steps".
+	StepCount int     `json:"stepCount"`
+	CourseIDs []int64 `json:"courseIds"`
+	WholeMeal bool    `json:"wholeMeal"`
 	// LastCookedOn is the latest date a Cooked fresh Planned Meal of the Recipe had, null when it was never cooked.
 	LastCookedOn *string `json:"lastCookedOn"`
 	BaseRecipe   bool    `json:"baseRecipe"`
@@ -439,7 +445,7 @@ func (a *api) list(w http.ResponseWriter, r *http.Request) {
 		j := summaryJSON{
 			ID: s.ID, Name: s.Name, Yield: s.Yield, ReadyMeal: s.ReadyMeal, Tags: nonNil(s.Tags),
 			ImageURL: imgs.URL(s.Image), Archived: s.Archived, TotalMinutes: s.TotalMinutes, AdvanceMinutes: s.AdvanceMinutes,
-			CourseIDs: nonNilIDs(s.CourseIDs), WholeMeal: s.WholeMeal,
+			StepCount: s.StepCount, CourseIDs: nonNilIDs(s.CourseIDs), WholeMeal: s.WholeMeal,
 			BaseRecipe: s.BaseRecipe, YieldUnit: yieldUnitPtr(s.YieldUnit), UsedByCount: s.UsedByCount,
 			BaseIngredientID: s.BaseIngredientID, WouldCycle: s.WouldCycle,
 		}
@@ -482,10 +488,17 @@ func (a *api) get(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	blocked, err := a.store.DeleteBlocker(r.Context(), id)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
 	j := toRecipeJSON(rec)
 	if d, ok := cooked[id]; ok {
 		j.LastCookedOn = &d
 	}
+	deletable := blocked == store.DeleteAllowed
+	j.Deletable, j.DeleteBlockedBy = &deletable, string(blocked)
 	httpx.WriteJSON(w, http.StatusOK, j)
 }
 

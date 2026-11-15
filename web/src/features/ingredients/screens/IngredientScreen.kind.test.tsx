@@ -61,7 +61,7 @@ describe('IngredientScreen: food', () => {
     expect(within(t).getByRole('button', { name: 'Change to Supply' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Restock level' })).toBeNull()
     expect(screen.getByLabelText('Shelf Life')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Excluded by' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Exclusions' })).toBeInTheDocument()
   })
   it('merges in its kind', async () => {
     setup()

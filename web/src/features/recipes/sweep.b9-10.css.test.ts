@@ -196,9 +196,10 @@ describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery'
     expect(queries.length).toBeGreaterThan(0)
     expect(queries.filter(({ a }) => /\d+(\.\d+)?(px|em)\b/.test(a.replace(/rem/g, ''))).map(({ r, a }) => `${label(r)} in ${a}`)).toEqual([])
   })
-  it('the two-column Recipe detail and editor start at (min-width: 80em), not 1280px', () => {
+  it('the two-column Recipe editor starts at (min-width: 80em), not 1280px; the detail (B9-27, RX-04) switches by its own width, in a container query', () => {
     const wide = rules.filter((r) => r.at.includes('@media (min-width: 80em)')).map((r) => r.file)
-    expect(wide.some((f) => /recipes\/recipe-detail\.css$/.test(f)), 'detail').toBe(true)
+    expect(wide.some((f) => /recipes\/recipe-detail\.css$/.test(f)), 'detail has no 80em media rule').toBe(false)
+    expect(rules.some((r) => /recipes\/recipe-detail\.css$/.test(r.file) && r.at.includes('@container recipe-detail (min-width: 45rem)')), 'detail container query').toBe(true)
     expect(wide.some((f) => /recipes\/recipe-editor\.css$/.test(f)), 'editor').toBe(true)
   })
   it('the Settings phone rules are (width < 37.5em), not max-width: 599px', () => {
@@ -220,11 +221,12 @@ describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery'
     const declared = rules.some((r) => declarations(r.body).some(([k, v]) => (k === 'container' && new RegExp(`^${name}\\s*/\\s*inline-size$`).test(v)) || (k === 'container-name' && v === name)))
     expect(declared, `container ${name} is declared`).toBe(true)
   })
-  it('useMediaQuery is not called by a component of the five folders: RecipeDetailScreen asks useBreakpoint("desktopWide")', () => {
+  // B9-27 (RX-04): the Cook tile shows from the side rail's breakpoint, 1024 px ('desktop'), no longer from 'desktopWide'.
+  it('useMediaQuery is not called by a component of the five folders: RecipeDetailScreen asks useBreakpoint("desktop")', () => {
     const calls = codeFiles().filter((f) => /\buseMediaQuery\s*\(/.test(stripComments(f.text))).map((f) => f.path)
     expect(calls).toEqual([])
     const detail = readSource('features/recipes/screens/RecipeDetailScreen.tsx')
-    expect(detail).toMatch(/useBreakpoint\(\s*'desktopWide'\s*\)/)
+    expect(detail).toMatch(/useBreakpoint\(\s*'desktop'\s*\)/)
     expect(detail).not.toMatch(/1280px/)
   })
 })

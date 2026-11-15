@@ -107,6 +107,8 @@ const ADDED = {
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
   // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-37: scenarios/b9-37.mjs (order 340): the editor flow (RX height budget, new Recipe, ring room, restored focus, Tag chooser) and P12's option-cover probe.
+  // B9-27: scenarios/recipe-detail.mjs (order 340, after b9-37 by file name): the Cook tile in the first viewport, the side column's edges and the phone Cook bar (RX-04, SHORT-04);
+  // the seed step page-layout-seed/recipe-detail.mjs gives the seeded Recipe its lede, Source, eight Tags and an untimed Step.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
@@ -117,6 +119,7 @@ const ADDED = {
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
     'recipe-editor-guard', 'recipe-new-empty-save',
     'recipe-editor-flow', 'recipe-new-flow', 'recipe-editor-ring-room', 'recipe-editor-restored-focus', 'recipe-editor-tag-chooser',
+    'recipe-detail-cook', 'recipe-detail-phone',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
   ],

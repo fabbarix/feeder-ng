@@ -194,19 +194,13 @@ describe('E-01: Tags as removable chips plus "Add Tag"', () => {
   })
 })
 
-describe('D-01: Recipe detail at 1280 and up', () => {
-  it('is one column below 1280', () => {
-    expect(valueFor('.recipe-detail__layout', 'grid-template-columns', 1279)).toBeUndefined()
-    expect(valueFor('.recipe-detail__layout', 'display', 1279)).not.toBe('grid')
-  })
-  it('is two columns from 1280: a 360 px left column and the Steps on the right', () => {
-    expect(valueFor('.recipe-detail__layout', 'display', 1280)).toBe('grid')
-    expect(valueFor('.recipe-detail__layout', 'grid-template-columns', 1280)).toBe('360px minmax(0, 1fr)')
-    expect(valueFor('.recipe-detail__layout', 'align-items', 1280)).toBe('start')
-  })
-  it('the left column is sticky from 1280', () => {
-    expect(valueFor('.recipe-detail__aside', 'position', 1280)).toBe('sticky')
-    expect(valueFor('.recipe-detail__aside', 'position', 1279)).toBeUndefined()
+// B9-27 (RX-04) replaced D-01 and D-02: the detail's two columns switch by the page's own width (a container query at 45 rem), nothing is sticky, the hero
+// has no 820 px cap and the Photo is at most 40 % of the viewport tall. Those rules are pinned in recipe-detail.b9-27.css.test.ts.
+describe('D-01 and D-02 (superseded by RX-04)', () => {
+  it('Recipe detail no longer switches at 80em and keeps no 360 px sticky left column', () => {
+    expect(valueFor('.recipe-detail__layout', 'grid-template-columns', 1280)).not.toBe('360px minmax(0, 1fr)')
+    expect(valueFor('.recipe-detail__aside', 'position', 1280)).not.toBe('sticky')
+    expect(valueFor('.recipe-detail__hero', 'max-inline-size', 0)).not.toBe('820px')
   })
   it('both columns are flex columns with the screen gap', () => {
     for (const sel of ['.recipe-detail__aside', '.recipe-detail__main']) {
@@ -214,19 +208,6 @@ describe('D-01: Recipe detail at 1280 and up', () => {
       expect(valueFor(sel, 'flex-direction', 0), sel).toBe('column')
       expect(valueFor(sel, 'gap', 0), sel).toBe('var(--space-4)')
     }
-  })
-})
-
-describe('D-02: hero photo', () => {
-  it('is 16:9 below 1280 with no 170 px strip, and fills the 360 px left column from 1280', () => {
-    expect(valueFor('.recipe-detail__hero .tile__media', 'aspect-ratio', 0)).toBe('16 / 9')
-    expect(valueFor('.recipe-detail__hero .tile__media', 'max-block-size', 0)).toBeUndefined()
-    expect(recipeRules.filter((r) => /170px/.test(r.body)).map((r) => r.selector)).toEqual([])
-  })
-  it('below 1280 the hero is capped at 820 px wide and centred (a phone is full width)', () => {
-    expect(valueFor('.recipe-detail__hero', 'max-inline-size', 0)).toBe('820px')
-    expect(valueFor('.recipe-detail__hero', 'margin-inline', 0)).toBe('auto')
-    expect(valueFor('.recipe-detail__hero', 'max-inline-size', 1280)).toBe('none')
   })
 })
 
@@ -239,7 +220,7 @@ describe('L-03: the bars are StickyActionBars, not their own sticky strips', () 
       expect(valueFor('.cook-entry', 'background', w)).toBeUndefined()
     }
   })
-  it('inline in the left column (>= 1280) the Cook entry is a plain stack: Batches stepper, hint, then a full-width button', () => {
-    expect(valueFor('.cook-entry', 'flex-direction', 1280)).toBe('column')
+  it('the Cook entry is one row at every width (SHORT-04); only the Cook tile stacks it (recipe-detail.b9-27.css.test.ts)', () => {
+    expect(valueFor('.cook-entry', 'flex-direction', 1280) ?? 'row').toBe('row')
   })
 })

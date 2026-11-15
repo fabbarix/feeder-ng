@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { displayName } from '../../ingredients/lib/names'
 import { Menu, type MenuItem } from '../../../ui'
 import type { UnitSystem } from '../../../lib/units'
+import { lineDetail } from '../lib/lineDetail'
 import { quantityText } from '../lib/lineUnits'
 import { recipeStrings } from '../strings'
 import type { IngredientRef, RecipeLine } from '../types'
@@ -19,9 +20,10 @@ export interface IngredientLinesListProps {
 }
 
 /**
- * The ingredient lines of a Recipe in the User's display system, as a grid (menu | quantity | name).
- * The ⋮ menu is the last cell in the DOM (after the name, so the keyboard order stays), but the grid draws it in the first
- * column, so every line's menu lines up; a line without one leaves that column empty.
+ * RX-04 and RX-14: the ingredient lines of a Recipe as R-E rows in the User's display system: the name (dt, the key), the quantity at the
+ * end (dd, tabular), the outlined ⋮ last (dd, only when the line has actions; the CSS keeps its track so the quantities line up), and the
+ * muted detail under them ("Optional · crushed"). A Base recipe line reads as one link ("500 ml Béchamel (Base recipe)") and has no
+ * separate quantity.
  */
 export function IngredientLinesList({ lines, refs, system, onLinkToBase, onUseAsPlain }: IngredientLinesListProps): ReactNode {
   return (
@@ -30,28 +32,20 @@ export function IngredientLinesList({ lines, refs, system, onLinkToBase, onUseAs
         const name = l.ingredient ?? ''
         const base = l.baseRecipe ?? null
         const actions = lineActions(l, onLinkToBase, onUseAsPlain)
+        const quantity = quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)
+        const detail = lineDetail(l)
         return (
           <div key={`${l.ingredientId}-${i}`} className="ingredient-lines__row">
-            {base ? null : <dt className="ingredient-lines__quantity">{quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)}</dt>}
-            <dd className={base ? 'ingredient-lines__name ingredient-lines__name--base' : 'ingredient-lines__name'}>
-              {base ? (
-                <BaseName
-                  id={base.id}
-                  label={`${quantityText(l.quantity, l.unit, refs.get(l.ingredientId), system)} ${displayName(name)}`}
-                  archived={base.archived}
-                  empty={base.empty}
-                />
-              ) : (
-                <span>{displayName(name)}</span>
-              )}
-              {l.optional ? <span className="ingredient-lines__tag">{recipeStrings.optional}</span> : null}
-              {l.note ? <span className="ingredient-lines__note">{l.note}</span> : null}
-            </dd>
+            <dt className={base ? 'ingredient-lines__name ingredient-lines__name--base' : 'ingredient-lines__name'}>
+              {base ? <BaseName id={base.id} label={`${quantity} ${displayName(name)}`} archived={base.archived} /> : displayName(name)}
+            </dt>
+            {base ? null : <dd className="ingredient-lines__quantity">{quantity}</dd>}
             {actions.length > 0 ? (
               <dd className="ingredient-lines__actions">
                 <Menu label={recipeStrings.lines.actions(name)} items={actions} />
               </dd>
             ) : null}
+            {detail ? <dd className="ingredient-lines__detail">{detail}</dd> : null}
           </div>
         )
       })}
@@ -72,17 +66,10 @@ function lineActions(l: RecipeLine, onLinkToBase?: (line: RecipeLine) => void, o
 }
 
 /**
- * BR-D: "500 ml Béchamel (Base recipe)" as one line, the whole line a link to the Base recipe, named by its text; archived and empty ones say so.
- * The quantity column is empty on a Base recipe line: the line reads as one sentence.
+ * BR-D: "500 ml Béchamel (Base recipe)" as one line, the whole line a link to the Base recipe, named by its text; an archived one says so
+ * (an empty one says it in the line's detail). A Base recipe line has no quantity cell: the line reads as one sentence.
  */
-function BaseName({ id, label, archived, empty }: { id: number; label: string; archived: boolean; empty?: boolean }): ReactNode {
+function BaseName({ id, label, archived }: { id: number; label: string; archived: boolean }): ReactNode {
   const t = recipeStrings.baseRecipe
-  return (
-    <>
-      <Link to={`/recipes/${id}`}>
-        {`${label} (${archived ? t.archivedLabel : t.badge})`}
-      </Link>
-      {empty ? <span className="ingredient-lines__note">{t.noIngredients}</span> : null}
-    </>
-  )
+  return <Link to={`/recipes/${id}`}>{`${label} (${archived ? t.archivedLabel : t.badge})`}</Link>
 }

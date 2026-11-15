@@ -5,8 +5,8 @@ import './RecipeDetailSkeleton.css'
 const lines = (n: number, variant: 'line' | 'row' = 'line') => Array.from({ length: n }, (_, i) => <SkeletonBlock key={i} variant={variant} />)
 
 /**
- * B9-20 (RES-02): a Recipe while it first loads, in its final shape (the detail's own layout classes): the hero photo with
- * its chip rows, the two metric Tiles and Ingredients on the side; Steps and preferences in the main column.
+ * B9-20 (RES-02): a Recipe while it first loads, in its final shape (the detail's own layout classes, so it switches to two columns at the
+ * same 45 rem): the hero photo with its one chip line, the metric strip (RX-13) and Ingredients on the side; Steps and preferences in the main column.
  */
 export function RecipeDetailSkeleton({ label }: { label: string }) {
   return (
@@ -14,14 +14,16 @@ export function RecipeDetailSkeleton({ label }: { label: string }) {
       <div className="recipe-detail__layout">
         <div className="recipe-detail__aside">
           <SkeletonTile media className="recipe-detail__hero recipe-detail-skeleton__hero">
-            {lines(3)}
+            {lines(1)}
           </SkeletonTile>
-          <BentoGrid min="card">
+          <BentoGrid min="metric">
             <SkeletonTile className="recipe-detail-skeleton__metric">
-              <SkeletonBlock variant="line" />
+              <SkeletonBlock variant="title" />
+              <SkeletonBlock variant="meta" />
             </SkeletonTile>
             <SkeletonTile className="recipe-detail-skeleton__metric">
-              <SkeletonBlock variant="line" />
+              <SkeletonBlock variant="title" />
+              <SkeletonBlock variant="meta" />
             </SkeletonTile>
           </BentoGrid>
           <SkeletonTile>

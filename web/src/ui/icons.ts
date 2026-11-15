@@ -70,6 +70,7 @@ import { KeyboardIcon } from '@phosphor-icons/react/dist/csr/Keyboard'
 import { KnifeIcon } from '@phosphor-icons/react/dist/csr/Knife'
 import { LeafIcon } from '@phosphor-icons/react/dist/csr/Leaf'
 import { LinkSimpleIcon } from '@phosphor-icons/react/dist/csr/LinkSimple'
+import { ArrowSquareOutIcon } from '@phosphor-icons/react/dist/csr/ArrowSquareOut'
 import { MinusIcon } from '@phosphor-icons/react/dist/csr/Minus'
 import { MinusCircleIcon } from '@phosphor-icons/react/dist/csr/MinusCircle'
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
@@ -193,6 +194,7 @@ export const icons = {
   photos: ImagesIcon, // photo-read: Choose photos
   clipboard: ClipboardTextIcon,
   link: LinkSimpleIcon,
+  external: ArrowSquareOutIcon, // B9-27 RX-05: a link that opens in a new tab (the Recipe's Source)
   rotateRight: ArrowClockwiseIcon,
   rotateLeft: ArrowCounterClockwiseIcon,
   import: DownloadSimpleIcon,

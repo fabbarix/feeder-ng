@@ -789,7 +789,8 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	}
 	q := `SELECT r.id, r.name, r.yield, r.ready_meal, r.image, r.archived, r.total_minutes, r.advance_minutes, r.reheat_minutes, r.whole_meal,
 	        r.base_ingredient_id, r.yield_unit, r.cooldown_days, r.leftover_use_by_days,
-	        (SELECT count(DISTINCT rl.recipe_id) FROM recipe_lines rl WHERE rl.ingredient_id = r.base_ingredient_id) FROM recipes r`
+	        (SELECT count(DISTINCT rl.recipe_id) FROM recipe_lines rl WHERE rl.ingredient_id = r.base_ingredient_id),
+	        (SELECT count(*) FROM recipe_steps st WHERE st.recipe_id = r.id) FROM recipes r`
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -803,11 +804,11 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 	out := []recipe.Summary{}
 	for rows.Next() {
 		var sum recipe.Summary
-		var ready, archived, whole, used int64
+		var ready, archived, whole, used, steps int64
 		var reheat, baseIng, cool, useBy sql.NullInt64
 		var yieldUnit sql.NullString
 		if err := rows.Scan(&sum.ID, &sum.Name, &sum.Yield, &ready, &sum.Image, &archived, &sum.TotalMinutes, &sum.AdvanceMinutes, &reheat, &whole,
-			&baseIng, &yieldUnit, &cool, &useBy, &used); err != nil {
+			&baseIng, &yieldUnit, &cool, &useBy, &used, &steps); err != nil {
 			return nil, err
 		}
 		if cool.Valid {
@@ -822,6 +823,7 @@ func (s *Store) List(ctx context.Context, f ListFilter) ([]recipe.Summary, error
 		sum.BaseIngredientID = baseIng.Int64
 		sum.YieldUnit = yieldUnit.String
 		sum.UsedByCount = int(used)
+		sum.StepCount = int(steps)
 		sum.CourseIDs = []int64{}
 		if needle != "" && !strings.Contains(strings.ToLower(sum.Name), needle) {
 			continue

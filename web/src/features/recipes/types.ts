@@ -14,6 +14,9 @@ export interface BaseRecipeRef {
   empty?: boolean
 }
 
+/** SAFE-05 and ruling 3 (B9-27): why a Recipe can't be deleted: it was planned before, or it is a Base recipe that Recipes call for. */
+export type DeleteBlockedBy = 'planned' | 'in_use'
+
 /** BR-D: a Recipe named in `usedBy`, in a refusal's `usedBy`, in a take-over ask. */
 export interface RecipeRef {
   id: number
@@ -142,6 +145,10 @@ export interface Recipe extends Omit<RecipeInput, 'courseIds' | 'lines' | 'yield
   updatedAt: string
   /** Beta.5 F7: the latest date (YYYY-MM-DD) a Cooked fresh Planned Meal of this Recipe had; null = never cooked. */
   lastCookedOn: string | null
+  /** SAFE-05 (B9-27): false when Delete would refuse (planned before, or a Base recipe in use). Absent = unknown, treated as deletable. */
+  deletable?: boolean
+  /** Ruling 3 (B9-27): why Delete would refuse; absent when deletable (and on write responses). */
+  deleteBlockedBy?: DeleteBlockedBy
 }
 
 export interface RecipeSummary {
@@ -157,6 +164,8 @@ export interface RecipeSummary {
   archived: boolean
   totalMinutes: number
   advanceMinutes: number
+  /** RX-07 (B9-27): how many Steps the Recipe has; absent in older payloads. */
+  stepCount?: number
   /** Beta.5 F7: see Recipe.lastCookedOn. */
   lastCookedOn: string | null
   /** BR-D: true = a Base recipe (the list is plannable only unless `?kind=base|all`). */
