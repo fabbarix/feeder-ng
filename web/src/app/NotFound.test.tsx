@@ -1,3 +1,4 @@
+import { bottomBarNav, queryBottomBar } from '../test/shellNav'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
@@ -31,7 +32,7 @@ describe('not-found route (B12)', () => {
     expect(screen.getByText('That page does not exist or has moved.')).toBeInTheDocument()
     expect(screen.queryByText(/Unexpected Application Error/i)).toBeNull()
     expect(screen.queryByText(/404 Not Found/i)).toBeNull()
-    expect(screen.getByRole('navigation', { name: 'Bottom bar' })).toBeInTheDocument()
+    expect(bottomBarNav()).toBeInTheDocument()
   })
 
   it('the page has one h1, "Page not found", and the document title "Page not found · Feeder" (A11Y-01)', () => {
@@ -49,13 +50,13 @@ describe('not-found route (B12)', () => {
 
   it('no nav tab is current on an unknown page', () => {
     at('/nope')
-    expect(screen.getByRole('navigation', { name: 'Bottom bar' }).querySelector('[aria-current]')).toBeNull()
+    expect(bottomBarNav().querySelector('[aria-current]')).toBeNull()
   })
 
   it('an unknown page under /board is also handled, without the bars (chromeless)', () => {
     at('/board/nope')
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
-    expect(screen.queryByRole('navigation', { name: 'Bottom bar' })).toBeNull()
+    expect(queryBottomBar()).toBeNull()
   })
 
   it('real routes still win over the catch-all', () => {

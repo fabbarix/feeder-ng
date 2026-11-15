@@ -87,7 +87,11 @@ for (const n of names) {
   const text = vm.runInNewContext(src.match(new RegExp("^const " + n + " = (`[\\s\\S]*?`)\\n", "m"))[1].replace(/\$\{[^}]*\}/g, "0"))
   try { new Function("return " + text) } catch (e) { console.error(n + ": " + e.message); process.exit(1) }
 }' "$F" && ok || bad "every in-page probe must parse as the page receives it (a regex backslash in a template literal is written doubled)"
-has "rounded end, less than 3" "an end label inside 3 px of the bar's rounded end must fail (int1)"
+# B9-49: the labelled bar gives its end label room (a smaller end radius in the 376 px to 37.5em band), so the guard asks for 8 px from the
+# rounded end again (int1 had relaxed it to 3 px as a call for the main session to confirm or revert; the call is closed).
+has "rounded end, less than 8" "an end label inside 8 px of the bar's rounded end must fail (B9-49 restores the 8 px int1 relaxed)"
+grep -Eq "rounded end, less than 3|labelEdgeRoom < 3 " "$F" && bad "the 3 px rounded-end allowance must be gone: an end label keeps 8 px from the curve (B9-49)" || ok
+has "labelEdgeRoom < 8 - 0\\.5" "the rounded-end check must use the same 8 px (with the half-pixel tolerance) as the straight-edge check"
 
 printf 'check-shell-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

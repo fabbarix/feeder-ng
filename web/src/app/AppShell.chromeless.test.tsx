@@ -1,3 +1,4 @@
+import { bottomBarNav, queryBottomBar, sideRailNav, querySideRail } from '../test/shellNav'
 import { render, screen } from '@testing-library/react'
 import { createElement } from 'react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
@@ -33,8 +34,8 @@ describe('AppShell on chromeless routes', () => {
   it('hides both bars, the avatar menu and the status slot on /board but still shows the page', () => {
     at('/board')
     expect(screen.getByRole('heading', { name: 'Board page' })).toBeInTheDocument()
-    expect(screen.queryByRole('navigation', { name: 'Bottom bar' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('navigation', { name: 'Side rail' })).not.toBeInTheDocument()
+    expect(queryBottomBar()).not.toBeInTheDocument()
+    expect(querySideRail()).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Your menu' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('shell-status')).not.toBeInTheDocument()
   })
@@ -42,7 +43,7 @@ describe('AppShell on chromeless routes', () => {
   it('does the same in Cook Mode', () => {
     at('/cook/recipe/12')
     expect(screen.getByRole('heading', { name: 'Cook page' })).toBeInTheDocument()
-    expect(screen.queryByRole('navigation', { name: 'Bottom bar' })).not.toBeInTheDocument()
+    expect(queryBottomBar()).not.toBeInTheDocument()
   })
 
   // B3: the desktop grid (side rail column) must not apply, and the page is not capped to the content width.
@@ -57,13 +58,13 @@ describe('AppShell on chromeless routes', () => {
   it('/scan/receipt: a ui Page there takes the route width from the table', () => {
     at('/scan/receipt')
     expect(screen.getByRole('heading', { name: 'Receipt page' }).closest('.page')).toHaveAttribute('data-page-width', 'narrow')
-    expect(screen.queryByRole('navigation', { name: 'Bottom bar' })).not.toBeInTheDocument()
+    expect(queryBottomBar()).not.toBeInTheDocument()
   })
 
   it('keeps the bars and the capped content width on ordinary routes', () => {
     at('/plan')
-    expect(screen.getByRole('navigation', { name: 'Bottom bar' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Side rail' })).toBeInTheDocument()
+    expect(bottomBarNav()).toBeInTheDocument()
+    expect(sideRailNav()).toBeInTheDocument()
     const main = screen.getByRole('main')
     expect(main).not.toHaveClass('app-main--full')
     expect(main.parentElement).not.toHaveClass('app-shell--chromeless')

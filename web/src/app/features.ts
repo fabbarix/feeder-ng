@@ -10,6 +10,8 @@ import { MENU_NAV, PRIMARY_NAV, sortByOrder, type NavItem } from './nav'
 /** What a feature tells the shell's status slot. The scan feature will export one from features/scan/index.ts. */
 export interface ShellStatusInfo {
   pendingScans?: number
+  /** B9-49 (RES-07): Ticks waiting to sync (RES-03, the shop feature's offline queue). */
+  pendingTicks?: number
   /** Access Requests waiting for an answer (the avatar badge). */
   pendingAccessRequests?: number
 }

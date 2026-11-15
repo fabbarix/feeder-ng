@@ -31,7 +31,7 @@ const fs = (await import(/* @vite-ignore */ nodeFs)) as {
   mkdtempSync: (p: string) => string
   cpSync: (a: string, b: string, o: { recursive: true }) => void
   writeFileSync: (p: string, s: string) => void
-  rmSync: (p: string, o: { recursive: true; force: true }) => void
+  rmSync: (p: string, o?: { recursive?: true; force?: true }) => void
 }
 const nodeVm = 'node:vm'
 const { Script } = (await import(/* @vite-ignore */ nodeVm)) as { Script: new (src: string) => unknown }
@@ -95,8 +95,8 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35; B9-32 P38; B9-40 P34; B9-44 P42.
-  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P34', 'P35', 'P36', 'P38', 'P39', 'P40', 'P41', 'P42', 'P43'],
+  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35; B9-32 P38; B9-40 P34; B9-44 P42; B9-49 P37.
+  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P34', 'P35', 'P36', 'P37', 'P38', 'P39', 'P40', 'P41', 'P42', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning, and shop-barcode-sheet (the Add Shop Barcode sheet,
@@ -130,6 +130,8 @@ const ADDED = {
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
   // B9-43: scenarios/b9-43.mjs (order 350, after b9-40 by file name): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete and shop-complete-restore (SSP-04, 09, 13, 14).
   // B9-47: scenarios/b9-47.mjs (order 350, after b9-43 by file name): the Kitchen board on real screens (TB-04, TB-07, TB-08, TB-15c/d, SHORT-03, A11Y-12, RES-09): board-wall, board-portrait, board-short, board-phone, board-close, board-error.
+  // B9-49: scenarios/b9-49.mjs (order 350, after b9-47 by file name): shell-skip-link (A11Y-10), shell-offline-banner (RES-07), nav-current-recipe,
+  // nav-current-recipe-edit and nav-current-ingredient (TB-13), toast-region-chromeless, boot-theme (RES-08). No rule number but P37 (titles): the setups measure and throw on a finding.
   // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
   // B9-53: scenarios/b9-53.mjs (order 370): first-run-zone, first-run-member, first-run-slots and first-run-compact (TB-06; the empty Household is a fetch stub installed by `emulate`). No rule number: the setups measure and throw.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
@@ -163,6 +165,7 @@ const ADDED = {
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
     'shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete', 'shop-complete-restore',
     'board-wall', 'board-portrait', 'board-short', 'board-phone', 'board-close', 'board-error',
+    'shell-skip-link', 'shell-offline-banner', 'nav-current-recipe', 'nav-current-recipe-edit', 'nav-current-ingredient', 'toast-region-chromeless', 'boot-theme',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',
     'first-run-zone', 'first-run-member', 'first-run-slots', 'first-run-compact',
     'offline-unknown', 'error-state-fast',
@@ -286,16 +289,17 @@ describe('a package adds its own files and edits no shared one', () => {
   const demoRule = (id: string) =>
     `export default { id: '${id}', title: 'demo rule of a package', always: true, evaluate: (m) => (m.demo ? [{ rule: '${id}', message: '${id} demo finding' }] : []) }\n`
 
+  // release: with B9-49's P37, every planned rule is added and none is reserved, so the demo stands in for P37 in a copy without its module.
   it('a rules/P37-*.mjs file activates the reserved P37: it runs, is always-fail and leaves RESERVED', () => {
     const s = scratchLib()
     try {
+      fs.rmSync(resolve(s.dir, 'page-layout/rules/P37-page-title.mjs'))
       put(s.dir, 'page-layout/rules/P37-demo.mjs', demoRule('P37'))
       const api = load(s.dir)
       expect(api.RULES.map((r) => r.id)).toContain('P37')
       expect(api.ALWAYS_FAIL).toContain('P37')
       expect(api.RESERVED.map((r) => r.id)).not.toContain('P37')
-      // int: with P38 (B9-32) and P42 (B9-44) added, P37 is the last reserved rule, so what stays reserved is every other unadded one (none).
-      expect(api.RESERVED.map((r) => r.id)).toEqual(['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P34', 'P35', 'P36', 'P37', 'P38', 'P39', 'P40', 'P41', 'P42', 'P43'].filter((id) => id !== 'P37' && !ADDED.rules.includes(id)))
+      expect(api.RESERVED.map((r) => r.id)).toEqual(['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P34', 'P35', 'P36', 'P37', 'P38', 'P39', 'P40', 'P41', 'P42', 'P43'].filter((id) => !ADDED.rules.includes(id)))
       expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P37'])
       expect(api.evaluateMetrics(metrics, ctx)).toEqual([])
     } finally {
@@ -306,6 +310,7 @@ describe('a package adds its own files and edits no shared one', () => {
     for (const [file, id, why] of [['P99-demo.mjs', 'P99', /P99/], ['P25-demo.mjs', 'P26', /P2[56]/], ['P37-other.mjs', 'P37', /P37/]] as const) {
       const s = scratchLib()
       try {
+        fs.rmSync(resolve(s.dir, 'page-layout/rules/P37-page-title.mjs'))
         put(s.dir, 'page-layout/rules/P37-demo.mjs', demoRule('P37'))
         put(s.dir, `page-layout/rules/${file}`, demoRule(id))
         expect(() => load(s.dir), file).toThrow(why)
@@ -343,8 +348,9 @@ describe('a package adds its own files and edits no shared one', () => {
     const s = scratchLib()
     try {
       put(s.dir, 'page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'zzDemo', dark: true, source: '[]' }\n")
-      // the demo takes a reserved always-fail number no package has added yet (B9-18: P43 is taken now)
-      const id = facade.RESERVED.find((r) => r.mode === 'always')!.id
+      // the demo takes an always-fail number; every planned rule is added now (B9-49: P37), so it replaces P37's module in the copy
+      const id = facade.RESERVED.find((r) => r.mode === 'always')?.id ?? 'P37'
+      if (id === 'P37') fs.rmSync(resolve(s.dir, 'page-layout/rules/P37-page-title.mjs'))
       put(s.dir, `page-layout/rules/${id}-demo.mjs`, `export default { id: '${id}', title: 'demo', always: true, evaluate: () => [], evaluateDark: (dm) => (dm.zzDemo ?? []).map((x) => ({ rule: '${id}', message: '${id} ' + x + ' (dark scheme)' })) }\n`)
       const api = load(s.dir)
       expect(api.DARK_PROBES.map((p) => p.name)).toEqual(['buttons', 'action-boundary', 'zz-demo'])
