@@ -114,6 +114,15 @@
   scroll-padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 }
 
+/* The body's own padding is its spacing: a paragraph's default margins add no blank line above the first line or under the last. */
+.sheet__body > :first-child {
+  margin-block-start: 0;
+}
+
+.sheet__body > :last-child {
+  margin-block-end: 0;
+}
+
 /* SHORT-02 rule 3: a squeezed body (the panel at its maximum height, the body scrolling: BottomSheet sets data-body="scroll") is
    never squeezed to nothing by the header and footer. A body that fits keeps its content's height: no floor, no blank space. */
 .sheet__panel[data-body='scroll'] .sheet__body {
