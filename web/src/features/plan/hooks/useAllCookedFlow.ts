@@ -14,6 +14,8 @@ import { invalidatePlan } from './planCache'
 import { cachedSlots } from './replanState'
 import { useReopen } from './useReopen'
 import { useStockSheet, type StockSheetController } from './useStockSheet'
+import { INERT_CORRECTION, type StockCorrectionController } from '../../stock/hooks/useStockCorrection'
+import type { ShortfallGroup } from '../../stock/lib/shortfall'
 import type { MarkAllCookedController } from './useMarkAllCooked'
 import { useMarkAllCooked } from './useMarkAllCooked'
 
@@ -35,9 +37,14 @@ export interface AllCookedFlow {
   quickAll: (slot: SlotDayKey, courseIds: number[]) => Promise<boolean>
   /** The slot whose one-tap All Cooked is being saved, or null. */
   quickBusy: SlotDayKey | null
+  /** B9-45 (PC-02), not built: the slot's group for the ONE notice (id "date/slot"; recipeName null with several Courses, the Recipe's name with one). */
+  shortfalls: ShortfallGroup[]
+  dismissShortfalls: () => void
+  /** B9-45 (PC-02), not built: the ONE Correct Stock sheet. */
+  correct: StockCorrectionController
 }
 
-export function useAllCookedFlow(): AllCookedFlow {
+export function useAllCookedFlow(_options: { toast?: boolean } = {}): AllCookedFlow {
   const toast = useToast()
   const client = useQueryClient()
   const [key, setKey] = useState<SlotDayKey | null>(null)
@@ -105,5 +112,5 @@ export function useAllCookedFlow(): AllCookedFlow {
     },
     [controller],
   )
-  return { key, open, close, controller, stock, warnings, dismissWarning, confirm, quickAll, quickBusy }
+  return { key, open, close, controller, stock, warnings, dismissWarning, confirm, quickAll, quickBusy, shortfalls: [], dismissShortfalls: () => {}, correct: INERT_CORRECTION }
 }

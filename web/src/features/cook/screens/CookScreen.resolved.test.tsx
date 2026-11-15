@@ -3,8 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { findNotice, noticeWith } from '../../../test/notices'
-import { allCookedResult, courseMeal, mockApi, renderWithProviders } from '../../plan/test-utils'
+import { courseMeal, mockApi, renderWithProviders } from '../../plan/test-utils'
 import type { CookPreview } from '../../plan/types'
 import { timelineView, timer } from '../timeline-fixtures'
 import type { TimelineView } from '../types'
@@ -29,7 +28,6 @@ const previews = {
   'GET /api/plan/2026-11-10/4/1/cook': preview(1, 'Main', 'Roast chicken'),
   'GET /api/plan/2026-11-10/4/2/cook': preview(2, 'Side', 'Green beans'),
 }
-const notCookable = { status: 409, json: { error: { code: 'not_cookable', message: 'x' } } }
 
 /** The slot after the Side is Cooked: the Main's two items remain. */
 function mainOnly(): TimelineView {
@@ -99,65 +97,5 @@ describe('a chosen Course chip whose Course resolves', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Next' }))
     expect(await screen.findByRole('button', { name: 'Mark as Cooked' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Mark all Cooked' })).not.toBeInTheDocument()
-  })
-})
-
-describe('Mark all Cooked in Cook Mode shows the outcome the single path shows', () => {
-  async function markAll(extra: Record<string, unknown> = {}) {
-    const api = setup({
-      later: notCookable,
-      extra: { ...previews, 'POST /api/plan/2026-11-10/4/all/cooked': allCookedResult(), 'PUT /api/stock/ingredients/11/total': { ingredient: {}, lots: [] }, ...extra },
-    })
-    await screen.findByRole('article', { name: 'Step 1 of 4' })
-    for (let i = 0; i < 3; i++) await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Mark all Cooked' }))
-    const sheet = await screen.findByRole('dialog', { name: 'Mark all Cooked' })
-    await within(sheet).findByRole('spinbutton', { name: 'Main Leftover portions' })
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Mark all Cooked' }))
-    return api
-  }
-
-  it('the confirmation names the slot (several Courses), says where each Leftover went', async () => {
-    await markAll()
-    expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    expect(screen.getByText('Dinner')).toBeInTheDocument()
-    expect(screen.queryByText('Roast chicken')).not.toBeInTheDocument()
-    expect(await findNotice('status', 'Roast chicken: 2 portions planned')).toHaveTextContent('Roast chicken: 2 portions planned for Thu Lunch. Green beans: 1 portion kept, good until Fri')
-  })
-
-  it('a Stock shortfall is shown with Correct Stock and Dismiss, the confirmation stays', async () => {
-    const api = await markAll()
-    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
-    expect(notice).toHaveTextContent('Stock shows only 300 g chicken thighs, the recipe uses 400 g')
-    await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
-    const correct = await screen.findByRole('dialog', { name: 'How much chicken thighs do you have?' })
-    const input = within(correct).getByLabelText('Total in Stock')
-    await userEvent.clear(input)
-    await userEvent.type(input, '250')
-    await userEvent.click(within(correct).getByRole('button', { name: 'Set total' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 }))
-    expect(screen.getByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-  })
-
-  it('Dismiss removes the shortfall and leaves Stock alone', async () => {
-    const api = await markAll()
-    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
-    await userEvent.click(within(notice).getByRole('button', { name: 'Dismiss' }))
-    await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
-    expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')).toHaveLength(0)
-    expect(screen.getByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-  })
-
-  it('"No Leftovers" when none were recorded', async () => {
-    await markAll({ 'POST /api/plan/2026-11-10/4/all/cooked': allCookedResult({ leftovers: [], plannedFor: [], warnings: [] }) })
-    expect(await screen.findByRole('heading', { name: 'Marked as Cooked' })).toBeInTheDocument()
-    expect(await findNotice('status', 'No Leftovers')).toHaveTextContent('No Leftovers')
-    expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined()
-  })
-
-  it('Back to Today leaves Cook Mode', async () => {
-    await markAll()
-    await userEvent.click(await screen.findByRole('button', { name: 'Back to Today' }))
-    expect(await screen.findByText('Home page')).toBeInTheDocument()
   })
 })

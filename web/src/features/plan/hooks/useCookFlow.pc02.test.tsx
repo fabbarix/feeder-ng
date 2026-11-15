@@ -80,9 +80,9 @@ describe('useCookFlow: the one Correct Stock sheet', () => {
     const { result, api } = setupCookFlow()
     await act(async () => void (await result.current.quickCook(keyA)))
     await act(async () => void (await result.current.quickCook(keyB)))
-    expect(result.current.stock.rows.map((r) => r.name)).toEqual(['barley', 'flour'])
-    act(() => result.current.stock.show())
-    await act(async () => void (await result.current.stock.save({ 11: 0, 12: 50 })))
+    expect(result.current.correct.rows.map((r) => r.name)).toEqual(['barley', 'flour'])
+    act(() => result.current.correct.show())
+    await act(async () => void (await result.current.correct.save({ 11: 0, 12: 50 })))
     expect(api.calls.filter((c) => c.method === 'PUT').map((c) => c.path)).toEqual(['/api/stock/ingredients/12/total'])
     expect(await findToastWith('Stock corrected for 1 Ingredient')).toBeTruthy()
     expect(result.current.shortfalls).toEqual([])
@@ -135,11 +135,11 @@ describe('useAllCookedFlow: Mark all Cooked', () => {
     expect(result.current.shortfalls[0]?.recipeName).toBe('Roast chicken')
   })
 
-  it('has a Correct Stock controller and Dismiss for the notice', async () => {
+  it('has a Correct Stock controller (flow.correct) and Dismiss for the notice', async () => {
     mockApi(routes())
     const { result } = renderHook(() => useAllCookedFlow(), { wrapper: wrapperFor(seededClient()) })
     await act(async () => void (await result.current.quickAll(slotKey, [1, 2])))
-    expect(result.current.stock.rows.map((r) => r.name)).toEqual(['chicken thighs'])
+    expect(result.current.correct.rows.map((r) => r.name)).toEqual(['chicken thighs'])
     act(() => result.current.dismissShortfalls())
     expect(result.current.shortfalls).toEqual([])
   })

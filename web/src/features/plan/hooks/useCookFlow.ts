@@ -10,6 +10,8 @@ import { cachedSlots } from './replanState'
 import { useReopen } from './useReopen'
 import { useMarkCooked, type MarkCookedController } from './useMarkCooked'
 import { useStockSheet, type StockSheetController } from './useStockSheet'
+import { INERT_CORRECTION, type StockCorrectionController } from '../../stock/hooks/useStockCorrection'
+import type { ShortfallGroup } from '../../stock/lib/shortfall'
 
 export interface CookFlow {
   /** Slot whose Mark as Cooked sheet is open, or null. */
@@ -34,10 +36,16 @@ export interface CookFlow {
   /** Stock shortfall warnings still to show, from either path. */
   warnings: StockWarning[]
   dismissWarning: (ingredientId: number) => void
+  /** B9-45 (PC-02), not built: one group per Cooked meal still to show in the ONE notice (id "date/slot/course"), newest last. */
+  shortfalls: ShortfallGroup[]
+  /** B9-45 (PC-02), not built: the notice's Dismiss: clears every group and warning. */
+  dismissShortfalls: () => void
+  /** B9-45 (PC-02), not built: the ONE Correct Stock sheet of the groups (replaces `stock`, which the developer removes with the old notice). */
+  correct: StockCorrectionController
 }
 
 /** Mark as Cooked orchestration shared by the Plan and Today: sheet flow (useMarkCooked + useStockSheet) and the one-tap path. */
-export function useCookFlow(): CookFlow {
+export function useCookFlow(_options: { toast?: boolean } = {}): CookFlow {
   const client = useQueryClient()
   const toast = useToast()
   const [cookKey, setCookKey] = useState<SlotKey | null>(null)
@@ -111,6 +119,9 @@ export function useCookFlow(): CookFlow {
     quickBusy,
     warnings,
     dismissWarning,
+    shortfalls: [],
+    dismissShortfalls: () => {},
+    correct: INERT_CORRECTION,
   }
 }
 

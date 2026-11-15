@@ -45,7 +45,7 @@ export function leftoverRow(l: Leftover, today: string): LeftoverRowModel {
  * Today's Leftovers tile: the questions first (frozen ones before the others, since they need a trip to the freezer; each
  * group oldest Use-by first), then the not frozen Leftovers (soonest Use-by first). Frozen Leftovers that are not to answer stay on the Pantry.
  */
-export function tileRows(leftovers: Leftover[], today: string): LeftoverRowModel[] {
+export function tileRows(leftovers: Leftover[], today: string, _plannedFor: Record<number, string[]> = {}): LeftoverRowModel[] {
   const shown = leftovers.filter((l) => !l.frozen || l.toAnswer)
   const frozenQuestions = shown.filter((l) => l.toAnswer && l.frozen).sort(byUseBy)
   const questions = shown.filter((l) => l.toAnswer && !l.frozen).sort(byUseBy)

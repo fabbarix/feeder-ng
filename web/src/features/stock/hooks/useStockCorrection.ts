@@ -17,3 +17,8 @@ export interface StockCorrectionController {
 export function useStockCorrection(_groups: ShortfallGroup[], _onSaved: (ingredientIds: number[]) => void, _system?: UnitSystem): StockCorrectionController {
   throw new Error('B9-45: not built yet')
 }
+
+/** B9-45 STUB: what a flow hands out until the hook is built (nothing to correct). */
+export const INERT_CORRECTION: StockCorrectionController = {
+  open: false, rows: [], show: () => {}, close: () => {}, save: async () => false, busy: false, error: null,
+}
