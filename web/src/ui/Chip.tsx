@@ -7,15 +7,21 @@ import './Chip.css'
 
 export type ChipKind = 'why' | 'state' | 'status' | 'tag' | 'filter' | 'count'
 /** Fixed status palette (plan 3.1): `--status-<name>-fg|bg|solid`. */
-export type ChipStatus = 'leftover' | 'spoil' | 'danger' | 'success' | 'pinned' | 'info'
+export type ChipStatus = 'leftover' | 'spoil' | 'danger' | 'success' | 'pinned' | 'info' | 'warn' | 'neutral'
 /** @deprecated use `kind` (+ `status`). */
 export type ChipTone = LegacyChipTone
 
 export interface ChipProps {
   /** Default `tag`; a clickable chip without a kind is a `filter`. */
   kind?: ChipKind
-  /** Colour of `state` and `status` chips. */
+  /** Colour of `state` and `status` chips. `neutral` is only for `kind="state"`. */
   status?: ChipStatus
+  /** B9-17 (TB-03): `button` renders a button for a chip that is not a filter; it needs `onClick` or `onRemove`. Default: a span, or a button when clickable. */
+  as?: 'span' | 'button'
+  /** B9-17 (DS-06): the Overdue info chip, a ring in the info colour. Only with `status="info"`. */
+  overdue?: boolean
+  /** B9-17: never shrink below the whole text (still capped at 100% of the line). */
+  whole?: boolean
   /** An outlined status chip (system.md 6): "Leftover for" is `kind="status" status="leftover" outline`. */
   outline?: boolean
   /** @deprecated use `kind` (+ `status`). */
