@@ -133,7 +133,7 @@
   "context": "__fn__(n, noun) => `Couldn't plan ${n} ${noun}`",
   "lede": "__fn__(course) => `The planner fills ${course} only from Recipes marked with it. Tick the ones you would serve as ${course}.`",
   "search": "Search Recipes",
-  "primary": "__fn__(n, course) => n === 0 ? `Mark Recipes as ${course}` : n === 1 ? `Mark 1 Recipe as ${course}` : `Mark ${n} Recipes as ${course}`",
+  "primary": "__fn__(n) => n === 0 ? \"Mark Recipes\" : n === 1 ? \"Mark 1 Recipe\" : `Mark ${n} Recipes`",
   "noCourse": "No Course yet",
   "allMarked": "__fn__(course) => `Every Recipe is already marked as ${course}.`",
   "noMatch": "No Recipe has that name.",

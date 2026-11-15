@@ -64,7 +64,7 @@ function SheetBody({ onClose, course, count }: Omit<MarkCourseRecipesSheetProps,
       onClose={onClose}
       onCancel={onClose}
       title={s.markRecipesAs(course.name)}
-      submit={{ label: s.markSheet.primary(m.count, course.name), form: formId, disabled: m.count === 0, loading: m.saving }}
+      submit={{ label: s.markSheet.primary(m.count), form: formId, disabled: m.count === 0, loading: m.saving }}
     >
       <form
         id={formId}
