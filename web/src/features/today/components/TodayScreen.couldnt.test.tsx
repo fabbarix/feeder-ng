@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PlanEntry } from '../../plan/types'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import type { SetupFacts } from '../lib/setup'
+import { THREE_DONE } from '../lib/setup.fixtures'
 import { TodayScreen } from './TodayScreen'
 
 const h = vi.hoisted(() => ({ couldnt: [] as unknown[], all: [] as unknown[], facts: null as unknown }))
@@ -37,7 +38,7 @@ const unplanned = (date: string, name: string, id: number): PlanEntry => ({
 // The screenshot of the bug: Tue to Mon dinners and the weekend breakfasts, all with nobody attending.
 const dinners = ['10', '11', '12', '13', '14', '15', '16'].map((d, i) => unplanned(`2026-11-${d}`, 'Dinner', 10 + i))
 const breakfasts = ['14', '15'].map((d, i) => unplanned(`2026-11-${d}`, 'Breakfast', 20 + i))
-const established: SetupFacts = { members: 2, mealSlots: 9, mealSlotsWithAttendance: 0, recipes: 5, plannedMeals: 0, unplannedMeals: 9 }
+const established: SetupFacts = { ...THREE_DONE, mealSlots: 9, mealSlotsWithAttendance: 0, recipes: 5, unplannedMeals: 9 }
 
 function setup(extra: Record<string, unknown> = {}) {
   mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 }, ...extra })

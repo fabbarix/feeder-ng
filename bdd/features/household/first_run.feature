@@ -86,3 +86,19 @@ Feature: First run: Meal Slots in one go, the hidden checklist, and the Househol
     And I am signed in as the User
     And I GET "/api/me"
     Then the response JSON field "householdTimeZone" is "Europe/Rome"
+
+  # B9-53 (TB-06): "Looks right" on the first-run checklist is one settings save with the zone and currency proposed from the browser.
+  Scenario: Looks right saves the device time zone and currency
+    When I GET "/api/household/settings"
+    Then the response JSON field "timeZoneConfigured" is false
+    When I PUT "/api/household/settings" with JSON:
+      """
+      {"timeZone": "Europe/Rome", "planningHorizonDays": 7, "defaultCooldownDays": 7, "defaultLeftoverUseByDays": 3,
+       "quietHours": {"start": "22:00", "end": "07:00"}, "plannerStyle": 0.5, "currency": "EUR"}
+      """
+    Then the response status is 200
+    When I GET "/api/household/settings"
+    Then the response JSON field "timeZone" is "Europe/Rome"
+    And the response JSON field "currency" is "EUR"
+    And the response JSON field "timeZoneConfigured" is true
+    And the response JSON field "setupHidden" is false

@@ -2,6 +2,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi, wrapper } from '../settings/test-utils'
+import { settings } from './lib/setup.fixtures'
 import { useSetupFacts } from './setupSeam'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -18,7 +19,7 @@ const course = (courseId: number, state: 'meal' | 'reason' | 'unserved') => ({
 const planView = (slots: unknown[]) => ({ today: '2026-11-10', horizonDays: 7, updating: false, slots })
 
 async function facts(slots: unknown[]) {
-  mockApi({ 'GET /api/members': [{ id: 1 }], 'GET /api/meal-slots': [mealSlot(1)], 'GET /api/recipes': [{ id: 1 }], 'GET /api/plan': planView(slots) })
+  mockApi({ 'GET /api/members': [{ id: 1 }], 'GET /api/meal-slots': [mealSlot(1)], 'GET /api/recipes': [{ id: 1 }], 'GET /api/plan': planView(slots), 'GET /api/household/settings': settings() })
   const { result } = renderHook(() => useSetupFacts(), { wrapper })
   await waitFor(() => expect(result.current.loading).toBe(false))
   return result.current.facts

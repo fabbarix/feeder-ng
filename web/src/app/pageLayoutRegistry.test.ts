@@ -123,6 +123,7 @@ const ADDED = {
   // B9-44: scenarios/b9-44.mjs (order 344): today-advance (TB-02), today-grid (TB-03, TB-09, TB-11, with the resize walk), today-shopping (TB-12), today-cls and plan-cls (RES-05).
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
   // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
+  // B9-53: scenarios/b9-53.mjs (order 370): first-run-zone, first-run-member, first-run-slots and first-run-compact (TB-06; the empty Household is a fetch stub installed by `emulate`). No rule number: the setups measure and throw.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
@@ -147,6 +148,7 @@ const ADDED = {
     'today-advance', 'today-grid', 'today-shopping', 'today-cls', 'plan-cls',
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',
+    'first-run-zone', 'first-run-member', 'first-run-slots', 'first-run-compact',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',
