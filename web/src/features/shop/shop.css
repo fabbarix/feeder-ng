@@ -290,7 +290,6 @@
    ring, which belongs to the row's target). A ticked tick keeps its success fill and takes the same accent border. */
 .line-row__tick:focus-visible {
   outline: none;
-  box-shadow: none;
 }
 
 .line-row__tick:focus-visible::before {
@@ -315,8 +314,9 @@
 
 /* B9-34 (SSP-05, P23): a long meta with a compact form keeps the compact one until its text column is wide enough for the long one
    (lib/rows metaWidth: 'm' up to 34 characters, 'l' longer), not only under ListRow's 12 rem, so "Added twice · Sam 50 g, you 50 g" is
-   never cut in a card of the grid. The same two declarations as ListRow's own switch (the long text stays the accessible text). */
-@container row-text (inline-size < 16rem) {
+   never cut in a card of the grid. The same two declarations as ListRow's own switch (the long text stays the accessible text). The
+   query is unnamed: the nearest container of a meta is ListRow's text column (row-text, declared in ui/ListRow.css). */
+@container (inline-size < 16rem) {
   .list-row[data-meta-wide] .list-row__meta-text:has(+ .list-row__meta-compact) {
     position: absolute;
     inline-size: 1px;
@@ -335,7 +335,7 @@
   }
 }
 
-@container row-text (inline-size < 22rem) {
+@container (inline-size < 22rem) {
   .list-row[data-meta-wide='l'] .list-row__meta-text:has(+ .list-row__meta-compact) {
     position: absolute;
     inline-size: 1px;
