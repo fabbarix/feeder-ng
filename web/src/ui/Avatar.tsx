@@ -10,6 +10,8 @@ export interface AvatarProps {
   colour?: string
   /** An emoji shown instead of the initials. */
   glyph?: string
+  /** SET-12: 'neutral' paints the monogram muted on --color-surface-2 instead of the accent fill (a person who is not a Member). */
+  tone?: 'neutral'
 }
 
 /** A person's picture; when there is none, or it fails to load, the emoji (`glyph`) or their initials. A new address gets a new try. */

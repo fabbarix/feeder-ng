@@ -43,15 +43,15 @@ describe('Pantry: Cooked from a frozen Leftover', () => {
     })
     renderWithProviders(<StockScreen />, '/stock')
     const freezer = await waitFor(() => screen.getByRole('list', { name: /^Garage Freezer/ }))
-    expect(await within(freezer).findByText('3 portions · Use by 10 Feb')).toBeInTheDocument()
+    expect(await within(freezer).findByText('Use by 10 Feb · 3 portions')).toBeInTheDocument()
 
     // Mark as Cooked on the Plan used 2 of the 3 portions; the server publishes on the plan topic.
     current = [one]
     expect(sse.handlers['plan']).toBeDefined()
     sse.handlers['plan']!()
 
-    expect(await within(screen.getByRole('list', { name: /^Garage Freezer/ })).findByText('1 portion · Use by 10 Feb')).toBeInTheDocument()
-    expect(screen.queryByText('3 portions · Use by 10 Feb')).toBeNull()
+    expect(await within(screen.getByRole('list', { name: /^Garage Freezer/ })).findByText('Use by 10 Feb · 1 portion')).toBeInTheDocument()
+    expect(screen.queryByText('Use by 10 Feb · 3 portions')).toBeNull()
     expect(api.callsTo('GET', '/api/plan/leftovers').length).toBeGreaterThanOrEqual(2)
   })
 

@@ -95,7 +95,7 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  rules: ['P26', 'P27', 'P29', 'P30', 'P39'],
+  rules: ['P24', 'P26', 'P27', 'P28', 'P29', 'P30', 'P39', 'P40', 'P41'], // B9-13 added P24, P28, P40, P41
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-10: scenarios/recipe-editor.mjs (order 40): the Recipe editor with the 36-character Tag (DS-04).
@@ -216,26 +216,26 @@ describe('a package adds its own files and edits no shared one', () => {
   const demoRule = (id: string) =>
     `export default { id: '${id}', title: 'demo rule of a package', always: true, evaluate: (m) => (m.demo ? [{ rule: '${id}', message: '${id} demo finding' }] : []) }\n`
 
-  it('a rules/P24-*.mjs file activates the reserved P24: it runs, is always-fail and leaves RESERVED', () => {
+  it('a rules/P37-*.mjs file activates the reserved P37: it runs, is always-fail and leaves RESERVED', () => {
     const s = scratchLib()
     try {
-      put(s.dir, 'page-layout/rules/P24-demo.mjs', demoRule('P24'))
+      put(s.dir, 'page-layout/rules/P37-demo.mjs', demoRule('P37'))
       const api = load(s.dir)
-      expect(api.RULES.map((r) => r.id)).toContain('P24')
-      expect(api.ALWAYS_FAIL).toContain('P24')
-      expect(api.RESERVED.map((r) => r.id)).not.toContain('P24')
-      expect(api.RESERVED.map((r) => r.id)).toContain('P25')
-      expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P24'])
+      expect(api.RULES.map((r) => r.id)).toContain('P37')
+      expect(api.ALWAYS_FAIL).toContain('P37')
+      expect(api.RESERVED.map((r) => r.id)).not.toContain('P37')
+      expect(api.RESERVED.map((r) => r.id)).toContain('P32')
+      expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P37'])
       expect(api.evaluateMetrics(metrics, ctx)).toEqual([])
     } finally {
       s.done()
     }
   })
   it('a rule outside P1..P43, a file number that is not its id, and a second module for an id all throw on load', () => {
-    for (const [file, id, why] of [['P99-demo.mjs', 'P99', /P99/], ['P25-demo.mjs', 'P26', /P2[56]/], ['P24-other.mjs', 'P24', /P24/]] as const) {
+    for (const [file, id, why] of [['P99-demo.mjs', 'P99', /P99/], ['P25-demo.mjs', 'P26', /P2[56]/], ['P37-other.mjs', 'P37', /P37/]] as const) {
       const s = scratchLib()
       try {
-        put(s.dir, 'page-layout/rules/P24-demo.mjs', demoRule('P24'))
+        put(s.dir, 'page-layout/rules/P37-demo.mjs', demoRule('P37'))
         put(s.dir, `page-layout/rules/${file}`, demoRule(id))
         expect(() => load(s.dir), file).toThrow(why)
       } finally {

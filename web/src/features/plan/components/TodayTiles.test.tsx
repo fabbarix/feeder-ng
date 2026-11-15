@@ -53,8 +53,8 @@ describe('LeftoversTile', () => {
     expect(container.querySelector('[data-variant="status"][data-status="leftover"]')).not.toBeNull()
     expect(screen.getByRole('heading', { name: 'Leftovers to use' })).toBeInTheDocument()
     expect(screen.getByText('Chicken')).toBeInTheDocument()
-    expect(screen.getByText('2 portions · Use by today')).toBeInTheDocument()
-    expect(screen.getByText('3 portions · Use by Thu')).toBeInTheDocument()
+    expect(screen.getByText('Use by today · 2 portions')).toBeInTheDocument()
+    expect(screen.getByText('Use by Thu · 3 portions')).toBeInTheDocument()
   })
 
   it('N2: the tile carries the plan-leftovers class, which lays the rows out as a stacked list', () => {

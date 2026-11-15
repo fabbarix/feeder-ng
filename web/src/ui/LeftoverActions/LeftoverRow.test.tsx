@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { frozenChilli, leftover, TODAY } from '../../lib/leftovers/fixtures'
+import { stubViewportWidth } from '../lib/viewport.test-helper'
 import { LeftoverRow, type LeftoverRowProps } from './LeftoverRow'
 
 const view = (over: Partial<LeftoverRowProps> = {}) => {
@@ -23,7 +24,7 @@ describe('LeftoverRow', () => {
   it('shows the Recipe name, portions and Use-by', () => {
     view()
     expect(screen.getByText('Chilli')).toBeInTheDocument()
-    expect(screen.getByText('3 portions · Use by tomorrow')).toBeInTheDocument()
+    expect(screen.getByText('Use by tomorrow · 3 portions')).toBeInTheDocument()
   })
   it('the row menu offers Had it, Threw it out and Freeze it', async () => {
     view()
@@ -48,5 +49,18 @@ describe('LeftoverRow', () => {
   it('Freeze it is not offered once the Use-by has passed', async () => {
     view({ leftover: leftover({ useBy: '2026-11-11' }) })
     expect(within(await menu()).queryByRole('menuitem', { name: 'Freeze it' })).toBeNull()
+  })
+  it('DS-01: on a phone the menu sheet is titled by the Recipe name; the trigger keeps "Actions for <Recipe name>"', async () => {
+    stubViewportWidth(390)
+    view()
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Chilli' }))
+    expect(screen.getByRole('dialog', { name: 'Chilli' })).toBeInTheDocument()
+  })
+  it('DS-05: the row names the Recipe, with the Use-by first on the meta line and the place last for a frozen one', () => {
+    view({ leftover: frozenChilli({ id: 5, useBy: '2026-11-20' }) })
+    const meta = document.querySelector('.list-row__meta-text')!.textContent!
+    expect(meta.startsWith('Use by ')).toBe(true)
+    expect(meta.endsWith(' · Garage Freezer')).toBe(true)
+    expect(meta).toMatch(/^Use by [^·]+ · 3 portions · Garage Freezer$/)
   })
 })

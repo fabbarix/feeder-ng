@@ -18,8 +18,18 @@ describe('tileRows', () => {
   })
   it('a Leftover shows portions and Use-by; spoil tone from tomorrow back, else leftover', () => {
     const rows = tileRows([soon, later], TODAY)
-    expect(rows[0]).toMatchObject({ text: '3 portions · Use by tomorrow', tone: 'spoil' })
-    expect(rows[1]).toMatchObject({ text: '1.5 portions · Use by Mon', tone: 'leftover' })
+    expect(rows[0]).toMatchObject({ text: 'Use by tomorrow · 3 portions', tone: 'spoil' })
+    expect(rows[1]).toMatchObject({ text: 'Use by Mon · 1.5 portions', tone: 'leftover' })
+  })
+  it('the meta leads with the Use-by so the deciding fact survives a cut (DS-05, decision DS 5): "Use by Tue · 1.25 portions"', () => {
+    const [row] = tileRows([leftover({ id: 9, portions: 1.25, useBy: '2026-11-17' })], TODAY)
+    expect(row!.text).toBe('Use by Tue · 1.25 portions')
+    expect(row!.text.startsWith('Use by ')).toBe(true)
+  })
+  it('a frozen Leftover that is to answer keeps its question text, never the Use-by-first meta', () => {
+    const [row] = tileRows([frozenChilli({ toAnswer: true, useBy: '2026-11-11' })], TODAY)
+    expect(row!.kind).toBe('question')
+    expect(row!.text).not.toMatch(/^Use by /)
   })
   it('frozen Leftovers that are not to answer are not on Today (they are on the Pantry page)', () => {
     expect(tileRows([frozenChilli(), soon], TODAY).map((r) => r.id)).toEqual([1])
