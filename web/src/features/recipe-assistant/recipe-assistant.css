@@ -57,11 +57,16 @@
   color: inherit;
   text-decoration: underline;
 }
-/* SET-14f: the Model Select takes the row; Refresh models sits right after it, level with the Select's control (not with its
+/* SET-14f: the Model Select is as wide as its size allows (never grown past it), shrinking on a phone so Refresh models stays beside
+   it; Refresh models sits right after it, level with the Select's control (not with its
    helper, which the end alignment would otherwise line it up with): below the label and the frame's gap (--space-1), centred on
    the 48 px trigger (another --space-1 above the 40 px button). */
+.ra__model-row {
+  flex-wrap: nowrap;
+}
 .ra__model-row > .ui-field {
-  flex: 1 1 12rem;
+  flex: 0 1 var(--field-control-max, 100%);
+  min-inline-size: 0;
 }
 .ra__model-row > .icon-button {
   align-self: flex-start;
