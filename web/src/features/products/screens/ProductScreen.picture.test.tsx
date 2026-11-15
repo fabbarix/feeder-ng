@@ -59,11 +59,13 @@ describe('ProductScreen: Picture', () => {
     expect(picker()).toHaveAttribute('data-value', '')
   })
 
-  it('comes first, before the Pack size Tile', async () => {
+  it('comes last, after the Pack size and Barcodes Tiles, and is compact (B9-30, SET-04)', async () => {
     setup()
     const tile = await screen.findByRole('region', { name: strings.pictureLabel })
     const pack = screen.getByRole('region', { name: strings.packSizeTitle })
-    expect(tile.compareDocumentPosition(pack) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(pack.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getAllByRole('region').at(-1)).toBe(tile)
+    expect(picker()).toHaveAttribute('data-compact', 'true')
   })
 
   it('shows the current picture id to the picker', async () => {
@@ -91,7 +93,8 @@ describe('ProductScreen: Picture', () => {
     setup(plain, { 'PATCH /api/products/5': { status: 400, json: { error: { code: 'invalid_product', message: 'image: The picture was not uploaded' } } } })
     await userEvent.click(await screen.findByRole('button', { name: `pick ${strings.pictureLabel}` }))
     // renderWithProviders always mounts an (empty) toast live region with role=alert, so match the screen's own alert by its text.
-    expect(await screen.findByText('image: The picture was not uploaded')).toHaveAttribute('role', 'alert')
+    // B9-30: it is a FormError, whose text sits in a span of the role=alert paragraph.
+    expect((await screen.findByText('image: The picture was not uploaded')).closest('[role="alert"]')).toHaveClass('form-error')
   })
 
   it('an archived Product can still change its picture', async () => {

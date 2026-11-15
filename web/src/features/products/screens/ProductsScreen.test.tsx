@@ -95,3 +95,30 @@ describe('ProductsScreen', () => {
     expect(document.querySelector('.search-field input[type=search]')).not.toBeNull()
   })
 })
+
+// B9-30 (SET-14a, decision SET 4): "New Product" on the Products list.
+describe('ProductsScreen: New Product', () => {
+  it('has a primary "New Product" in the PageHeader actions', async () => {
+    setup()
+    await screen.findByRole('link', { name: 'Passata' })
+    const button = screen.getByRole('button', { name: 'New Product' })
+    expect(button).toHaveAttribute('data-variant', 'primary')
+    expect(button.closest('.page-header__actions')).not.toBeNull()
+  })
+
+  it('opens the New Product sheet with the Ingredient Select first, and creates the Product', async () => {
+    const api = setup({
+      'GET /api/ingredients': [{ id: 3, name: 'tomato passata', baseUnit: 'g', kind: 'food', shelfLifeDays: null, conversions: [] }],
+      'POST /api/products': { ...passata, id: 9, barcodes: [], shops: [], shopBarcodes: [], latestPrices: [] },
+    })
+    await userEvent.click(await screen.findByRole('button', { name: 'New Product' }))
+    const dialog = await screen.findByRole('dialog', { name: 'New Product' })
+    await userEvent.click(await within(dialog).findByRole('combobox', { name: 'Ingredient' }))
+    await userEvent.click(await screen.findByRole('option', { name: /Tomato passata/i }))
+    await userEvent.type(within(dialog).getByLabelText('Pack size (g)'), '700')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Product' }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/products')).toHaveLength(1))
+    expect(api.callsTo('POST', '/api/products')[0]!.body).toMatchObject({ ingredientId: 3, packSize: 700 })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New Product' })).toBeNull())
+  })
+})
