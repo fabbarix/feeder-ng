@@ -16,10 +16,18 @@ describe('PageHeader.css, titles break between words (SF1)', () => {
     expect(declarations(css, '.page-header__row')['flex-wrap']).toBe('wrap')
   })
 
-  it('the text keeps a basis of at least 8rem to 16rem (it shrinks no further than that beside the actions)', () => {
+  it('RX-03: the text keeps a basis of 8rem (was 12rem), so "Recipes", New Recipe and the menu share one row from 375 px', () => {
     const d = declarations(css, '.page-header__text')
-    expect(`${d['flex'] ?? ''} ${d['flex-basis'] ?? ''}`).toMatch(/\b(([89]|1[0-6])(\.\d+)?rem)\b/)
+    expect(d['flex']).toBe('1 1 8rem')
     expect(d['min-inline-size']).toBe('0')
+  })
+
+  it('DS-03: the actions never reach past the gutter: they wrap, stay at the inline end, and may shrink to the column', () => {
+    const d = declarations(css, '.page-header__actions')
+    expect(d['flex-wrap']).toBe('wrap')
+    expect(d['justify-content']).toBe('flex-end')
+    expect(d['min-inline-size']).toBe('0')
+    expect(d['max-inline-size']).toBe('100%')
   })
 
   it('wrapped actions stay at the inline end', () => {

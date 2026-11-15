@@ -61,12 +61,13 @@ describe('Page', () => {
 describe('Page.css', () => {
   const css = readUiCss('Page.css')
   const d = (s: string) => declarations(css, s)
-  it('centres a content-width column: inline-size 100%, max from --page-max, margin-inline auto, gutter padding', () => {
+  it('centres a content-width column: inline-size 100%, max from --page-max, margin-inline auto, gutter padding (max with the safe-area insets)', () => {
     const p = d('.page')
     expect(p['inline-size']).toBe('100%')
     expect(p['max-inline-size']).toBe('var(--page-max)')
     expect(p['margin-inline']).toBe('auto')
-    expect(p['padding-inline']).toBe('var(--page-gutter)')
+    // SHORT-05 (B9-19): each side is max(gutter, the safe-area inset on that side).
+    expect(p['padding-inline']).toBe('max(var(--page-gutter), var(--safe-left)) max(var(--page-gutter), var(--safe-right))')
     expect(p['box-sizing']).toBe('border-box')
     expect(p['min-inline-size']).toBe('0')
   })
