@@ -50,10 +50,11 @@ export default {
       // the session's own Added toasts have gone by the time the list is ready: one more typed scan shows a fresh one
       const code = (ids.scanBarcodes ?? [])[0]
       if (!code) throw new Error('setup: the seed has no scan barcodes')
-      if (!(await evaluate(`!!document.querySelector('.camera-failure input')`))) await press(byText('.camera-failure button', 'Type the barcode instead'), '"Type the barcode instead"')
-      await until(`!!document.querySelector('.camera-failure input')`, 'the barcode field')
-      if (!(await evaluate(typeInto('.camera-failure input', code)))) throw new Error('setup: the barcode field went away')
-      await press(`document.querySelector('.camera-failure button[type=submit]')`, '"Use this barcode"')
+      // B9-35: the typed entry is open under the camera bar (no camera in a headless Chrome); with a camera it opens with "Type a barcode".
+      if (!(await evaluate(`!!document.querySelector('[data-typed-entry] input')`))) await press(byText('button[aria-controls][aria-expanded]', 'Type a barcode'), '"Type a barcode"')
+      await until(`!!document.querySelector('[data-typed-entry] input')`, 'the barcode field')
+      if (!(await evaluate(typeInto('[data-typed-entry] input', code)))) throw new Error('setup: the barcode field went away')
+      await press(`document.querySelector('[data-typed-entry] button[type=submit]')`, '"Use this barcode"')
       await until(`!!document.querySelector('.toast')`, 'the Added toast', 4000)
     },
   },

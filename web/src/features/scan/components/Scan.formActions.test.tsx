@@ -2,9 +2,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import type { CameraRecovery } from '../hooks/useCameraRecovery'
 import { AskWeightSheet } from './AskWeightSheet'
-import { ManualBarcodeEntry } from './ManualBarcodeEntry'
 import { StockTakeSheet } from './StockTakeSheet'
 import { UnarchiveProductSheet } from './UnarchiveProductSheet'
 
@@ -25,9 +23,5 @@ describe('Scan sheets use FormActions', () => {
     await userEvent.click(screen.getByRole('button', { name: /set total/i }))
     expect(inPrimary('Save')).not.toBeNull()
   })
-  it('Manual barcode: "Use barcode" is the primary and the cancel the tertiary', () => {
-    render(<ManualBarcodeEntry recovery={{ failure: null, manualOpen: true, openManual() {}, closeManual() {}, text: '', setText() {}, error: null, submit: () => true, retry() {} } as unknown as CameraRecovery} />)
-    expect(inPrimary(/Use this barcode/)).not.toBeNull()
-    expect(document.querySelector('.form-actions__tertiary button')).not.toBeNull()
-  })
+  // B9-35 (SSP-06): the typed barcode is one row (field and Use), not a FormActions form: ManualBarcodeEntry.test.tsx pins it.
 })

@@ -25,6 +25,7 @@ import { formatMinor } from '../../products/lib/money'
 import { formatQuantity } from '../../../lib/units'
 import { AskWeightSheet } from '../components/AskWeightSheet'
 import { CameraFailure } from '../components/CameraFailure'
+import { ManualBarcodeEntry } from '../components/ManualBarcodeEntry'
 import { PriceEntrySheet } from '../components/PriceEntrySheet'
 import { ScanNotices } from '../components/ScanNotices'
 import { ScannedList } from '../components/ScannedList'
@@ -39,6 +40,7 @@ import { useListView } from '../hooks/useListView'
 import { useScanController, type ScanController } from '../hooks/useScanController'
 import { useScanSession } from '../hooks/useScanSessionActive'
 import { useScrollAboveSheet } from '../hooks/useScrollAboveSheet'
+import { useTypedEntry } from '../hooks/useTypedEntry'
 import { useScanReceipt } from '../hooks/useScanReceipt'
 import { ReadReceiptFooter } from '../../receipt/components/ReadReceiptFooter'
 import { receiptStrings } from '../../receipt/strings'
@@ -170,8 +172,13 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   const isShop = mode === 'shop'
   const shopName = shop?.name ?? ''
   const product = sheet?.kind === 'stock_take' ? sheet.product : null
-  // A camera failure is explained by CameraFailure below; the strip only carries the starting text.
-  const viewfinderStatus = c.recovery.failure ? undefined : cameraText(c.camera.status)
+  // SSP-06: a failed camera is the camera bar (CameraFailure) in place of the strip, with the typed entry open under it; a working
+  // camera has Type a barcode in the strip's control row. The strip only carries the starting text.
+  const cameraWorks = c.recovery.failure === null
+  const viewfinderStatus = cameraText(c.camera.status)
+  // SSP-12: the typed entry closes while the Price entry is open, as the camera pauses.
+  const entry = useTypedEntry({ recovery: c.recovery, cameraWorks, blocked: flow.pricing !== null })
+  const closePriceFirstId = `${entry.id}-blocked`
   const scanned = c.scanned
   // Until the stored session is in, its scans coming back are not new scans (no switch to Scanned, no wash).
   const scanCount = scanned.loaded ? scanned.entries.length : null
@@ -185,7 +192,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
   // server's Result has re-keyed it to the Product id.
   const pricingRow = flow.pricing ? rowByKey(scanned.rows, flow.pricing.key) : undefined
   const pricingKey = pricingRow?.key ?? null
-  useScrollAboveSheet(pricingKey)
+  useScrollAboveSheet(pricingKey, justScanned)
   // The row went away while its Price entry was open (removed, or its scan was rejected or became an unarchive offer): the
   // entry closes, so the camera does not stay paused for a sheet that cannot show.
   const pricingLost = flow.pricing !== null && scanned.loaded && pricingRow === undefined
@@ -210,15 +217,37 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
 
   const cameraColumn = (
     <div className="scan-screen__camera">
-      <ViewfinderStrip
-        size="tall"
-        status={viewfinderStatus}
-        camera={flow.paused ? 'paused' : 'on'}
-        torch={{ supported: c.camera.torchSupported, on: c.camera.torchOn, onToggle: c.camera.toggleTorch }}
-        mute={{ muted: c.muted, onToggle: c.toggleMute }}
-      >
-        <video ref={c.camera.videoRef} playsInline muted autoPlay />
-      </ViewfinderStrip>
+      {cameraWorks ? (
+        <ViewfinderStrip
+          size="tall"
+          status={viewfinderStatus}
+          camera={flow.paused ? 'paused' : 'on'}
+          torch={{ supported: c.camera.torchSupported, on: c.camera.torchOn, onToggle: c.camera.toggleTorch }}
+          mute={{ muted: c.muted, onToggle: c.toggleMute }}
+          controls={
+            <>
+              <IconButton
+                ref={entry.toggleRef}
+                icon="typeBarcode"
+                label={scanStrings.typeBarcode}
+                onClick={entry.toggle}
+                disabled={entry.toggleDisabled}
+                aria-expanded={entry.open}
+                aria-controls={entry.id}
+                aria-describedby={entry.toggleDisabled ? closePriceFirstId : undefined}
+              />
+              <span id={closePriceFirstId} className="visually-hidden">
+                {scanStrings.closePriceFirst}
+              </span>
+            </>
+          }
+        >
+          <video ref={c.camera.videoRef} playsInline muted autoPlay />
+        </ViewfinderStrip>
+      ) : (
+        <CameraFailure recovery={c.recovery} />
+      )}
+      {entry.open ? <ManualBarcodeEntry ref={entry.entryRef} id={entry.id} recovery={c.recovery} onBack={cameraWorks ? entry.toggle : undefined} /> : null}
       {/* The Price entry is a non-modal sheet: fixed at the bottom on a phone, docked here, right under the paused camera, from 768 px. */}
       {isShop && pricingRow ? (
         <PriceEntrySheet
@@ -236,7 +265,6 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onClose={(entry) => savePrice(pricingRow, entry, 'close')}
         />
       ) : null}
-      <CameraFailure recovery={c.recovery} />
       {flow.banner ? <p className="scan-screen__banner" data-tone={flow.banner.tone}>{flow.banner.text}</p> : null}
       <ScanNotices online={c.online} pendingCount={c.pendingCount} rejectedCount={c.rejectedCount} onDismissRejected={c.dismissRejected} notices={c.notices} onDismiss={c.dismissNotice} />
     </div>
@@ -272,6 +300,7 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           system={c.system}
           pricingKey={pricingKey}
           justScanned={justScanned}
+          noCamera={!cameraWorks}
           onPrice={(key) => flow.startPriceEntry(key)}
           onIncrement={(key) => void flow.increment(key)}
           onDecrement={(key) => void flow.decrement(key)}

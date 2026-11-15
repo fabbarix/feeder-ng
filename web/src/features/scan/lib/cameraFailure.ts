@@ -6,16 +6,17 @@ export interface CameraFailure {
   status: Extract<CameraStatus, 'denied' | 'unsupported' | 'no_camera' | 'in_use' | 'error'>
   /** a retry can help; false when the browser cannot open any camera (`unsupported`) */
   canRetry: boolean
-  /** the message to show */
+  /** the camera bar's message (one short line) */
   message: string
 }
 
+// SSP-06: the camera bar's message, one short line at 375 px. A browser that cannot open a camera reads as no camera.
 const messages: Record<CameraFailure['status'], string> = {
-  denied: scanStrings.cameraDenied,
-  unsupported: scanStrings.cameraUnsupported,
-  no_camera: scanStrings.cameraNoCamera,
-  in_use: scanStrings.cameraInUse,
-  error: scanStrings.cameraError,
+  denied: scanStrings.cameraBarDenied,
+  unsupported: scanStrings.noCameraBar,
+  no_camera: scanStrings.noCameraBar,
+  in_use: scanStrings.cameraBarInUse,
+  error: scanStrings.cameraBarError,
 }
 
 export function cameraFailure(status: CameraStatus): CameraFailure | null {

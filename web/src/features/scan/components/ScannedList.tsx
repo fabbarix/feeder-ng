@@ -23,9 +23,11 @@ export interface ScannedListProps {
   footer?: ReactNode
   /** the row a scan just put on top, which washes briefly */
   justScanned?: JustScanned | null
+  /** SSP-06: there is no working camera, so the empty state says to type the digits */
+  noCamera?: boolean
 }
 
-export function ScannedList({ rows, currency, system, pricingKey, onPrice, onIncrement, onDecrement, onRemove, footer, justScanned }: ScannedListProps) {
+export function ScannedList({ rows, currency, system, pricingKey, onPrice, onIncrement, onDecrement, onRemove, footer, justScanned, noCamera }: ScannedListProps) {
   const [activeKey, setActiveKey] = useState<string | null>(null)
   // A scan of another Product puts its row on top: the active row is cleared. A rescan (the active row moves up) keeps it.
   const top = rows[0]?.key ?? null
@@ -38,7 +40,7 @@ export function ScannedList({ rows, currency, system, pricingKey, onPrice, onInc
   return (
     <>
       {rows.length === 0 ? (
-        <EmptyState title={scanStrings.nothingScanned} description={scanStrings.nothingScannedHint} />
+        <EmptyState title={scanStrings.nothingScanned} description={noCamera ? scanStrings.nothingScannedHintNoCamera : scanStrings.nothingScannedHint} />
       ) : (
         <ListGroup label={scanStrings.scannedListLabel}>
           {rows.map((row) => (

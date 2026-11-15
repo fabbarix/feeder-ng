@@ -6,7 +6,7 @@ import { AppShell } from './AppShell'
 import { buildRoutes } from './features'
 
 // B9-25 (PC-04): the shell's timer pill polls the household's timers through react-query; the shell tests have no QueryClient (AppShell.timers.test.tsx covers it).
-vi.mock('./ShellTimers', () => ({ ShellTimers: () => null, ShellTimerAlert: () => null }))
+vi.mock('./ShellTimers', () => ({ ShellTimers: () => null }))
 
 // A1: the shell shows how many sign-in requests wait, on the avatar button and again inside the menu.
 function setup(extra: Record<string, unknown>) {

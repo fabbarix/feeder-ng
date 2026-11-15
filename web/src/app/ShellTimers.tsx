@@ -1,11 +1,14 @@
-// The shell's timers (PC-04). ShellTimers (the framed pages): the timer pill, the finish banner and the Timers sheet. ShellTimerAlert
-// (the receipt screens, chromeless, where a cook can be when a timer ends): the banner and the sheet, no pill. AppShell mounts one
-// of them at a time, so there is one poll and one alarm; Cook Mode and the board show timers themselves and mount neither.
+// The shell's timers (PC-04): the timer pill, the finish banner and the Timers sheet. AppShell mounts one ShellTimers, keyed, in both
+// frames: in the framed pages with the pill, on the receipt screens (chromeless, where a cook can be when a timer ends) without it
+// (their sticky Save bar is there). Being the same mounted component in both, moving between them keeps one poll and one alarm, and
+// a ringing timer keeps ringing. Cook Mode and the board show timers themselves: it is not mounted there.
+import { useRef, type CSSProperties } from 'react'
 import { bannerText, type ShellTimer } from '../features/cook/lib/householdTimers'
 import { TimerPill } from '../ui/TimerPill'
 import { useEscapeKey } from './hooks/useEscapeKey'
 import { useHouseholdTimers, type HouseholdTimers } from './hooks/useHouseholdTimers'
 import { useShellTimerOpen, type ShellTimerOpen } from './hooks/useShellTimerOpen'
+import { useTimerPillDock } from './hooks/useTimerPillDock'
 import { ShellTimerBanner } from './ShellTimerBanner'
 import { TimersSheet } from './TimersSheet'
 import './ShellTimers.css'
@@ -25,28 +28,24 @@ function Alert({ timers, open }: { timers: HouseholdTimers; open: ShellTimerOpen
 }
 
 function Pill({ head, more, nameSeconds, onOpen }: { head: ShellTimer; more: number; nameSeconds: number; onOpen: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const dock = useTimerPillDock(ref, true)
+  const style = dock ? ({ '--timer-pill-dock-x': `${dock.x}px`, '--timer-pill-dock-y': `${dock.y}px` } as CSSProperties) : undefined
   return (
-    <div className="shell-timer" data-state={head.state}>
+    <div ref={ref} className="shell-timer" data-state={head.state} data-docked={dock ? '' : undefined} style={style}>
       <TimerPill label={head.title} seconds={head.seconds} running={head.state !== 'paused'} nameSeconds={nameSeconds} more={more} onOpen={onOpen} />
     </div>
   )
 }
 
-/** The framed pages' timers: the pill whenever a timer exists, the banner when one has finished, and the Timers sheet. */
-export function ShellTimers() {
+/** The pill whenever a timer exists (unless `pill` is false: the receipt screens), the banner when one has finished, and the Timers sheet. */
+export function ShellTimers({ pill = true }: { pill?: boolean }) {
   const timers = useHouseholdTimers()
   const open = useShellTimerOpen()
   return (
     <>
-      {timers.head ? <Pill head={timers.head} more={timers.more} nameSeconds={timers.nameSeconds} onOpen={() => open.openFor(timers.all)} /> : null}
+      {pill && timers.head ? <Pill head={timers.head} more={timers.more} nameSeconds={timers.nameSeconds} onOpen={() => open.openFor(timers.all)} /> : null}
       <Alert timers={timers} open={open} />
     </>
   )
-}
-
-/** The receipt screens' timers: only the finish banner (and the Timers sheet it may open). */
-export function ShellTimerAlert() {
-  const timers = useHouseholdTimers()
-  const open = useShellTimerOpen()
-  return <Alert timers={timers} open={open} />
 }

@@ -8,3 +8,11 @@ export function isChromeless(pathname: string): boolean {
   const path = pathname.split(/[?#]/)[0] ?? ''
   return CHROMELESS.test(path)
 }
+
+const RECEIPT = /^\/scan\/receipt(\/|$)/
+
+/** True for the receipt screens (/scan/receipt and anything under it): chromeless, but they show the timers' finish banner (PC-04). */
+export function isReceiptScreen(pathname: string): boolean {
+  const path = pathname.split(/[?#]/)[0] ?? ''
+  return RECEIPT.test(path)
+}

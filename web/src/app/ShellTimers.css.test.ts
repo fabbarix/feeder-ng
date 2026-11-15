@@ -1,7 +1,7 @@
 // B9-25 (PC-04): the CSS contract of app/ShellTimers.css, read as text (no layout in jsdom; the page-layout scenario `timer-pill`
 // measures the real thing in Chrome). The mocks: mocks/pc-04-timer-pill.html and pc-04-timer-done.html (.pc-shell-pill, .pc-alert).
 //   Pill   phone and tablet: fixed at the inline end, 16 px (--space-4) from it, above the bottom bar (--nav-top) and the keyboard
-//          (--keyboard-inset), lifted over a sticky action bar like the toast region; from 64em it sits in the top bar before Your menu.
+//          (--keyboard-inset), lifted over a sticky action bar like the toast region; from 64em it sits in the top bar, centred.
 //          The shell keeps 16 px around the pill so its ring is never clipped. No slide-in under reduced motion.
 //   Banner fixed under the top inset, success tone with a 2 px success boundary; Dismiss is a surface-filled secondary with a 1 px outline.
 import { describe, expect, it } from 'vitest'
@@ -62,11 +62,29 @@ describe('.shell-timer (the pill\'s place)', () => {
     expect(at('.shell-timer')['z-index']).toBe('30')
   })
 
-  it('from 64em it leaves the bottom corner for the top bar, before Your menu: top-anchored, not bottom-anchored', () => {
+  // Main-session call (w4a): centred in the top bar, as the mock's 1440 render draws it (not before Your menu).
+  it('from 64em it leaves the bottom corner for the top bar, centred in it: top-anchored, not bottom-anchored', () => {
     const d = at('.shell-timer', WIDE)
     expect(d['inset-block-end'] ?? d['bottom']).toBe('auto')
     expect(d['inset-block-start'] ?? d['top']).toBeTruthy()
-    expect(q(d['inset-inline-end'] ?? '')).toMatch(/var\(--space-\d+\)/)
+    expect(d['inset-inline']).toBe('0')
+    expect(d['inline-size']).toBe('fit-content')
+    expect(d['margin-inline']).toBe('auto')
+  })
+
+  it('below 48em it steps aside while a non-modal sheet (the Price keypad, fixed at the bottom there) is open', () => {
+    expect(at(":root:has(.sheet[data-modal='false'][open]) .shell-timer", ['@media (width < 48em)'])['display']).toBe('none')
+  })
+
+  it('in short landscape below 64em it steps aside on Scan with the camera strip (its controls sit in the pill\'s corner)', () => {
+    expect(at(":root:has(.viewfinder-strip:not([data-size='bar'])) .shell-timer", ['@media (width < 64em) and (height < 31.25em)'])['display']).toBe('none')
+  })
+
+  it('docked beside a Save bar in a short viewport (w4a): placed by the measured custom properties, flat, and toasts make no room', () => {
+    const d = at('.shell-timer[data-docked]')
+    expect(q(d['inset'] ?? '')).toBe('var(--timer-pill-dock-y) auto auto var(--timer-pill-dock-x)')
+    expect(q(at('.shell-timer[data-docked] .timer-pill')['box-shadow'] ?? '')).toBe('inset 0 0 0 1px var(--color-outline)')
+    expect(at(':root:has(.shell-timer[data-docked])')['--timer-pill-clearance']).toBe('0px')
   })
 
   it('the width queries are table widths in em (the breakpoint guard): 64em, nothing in px', () => {

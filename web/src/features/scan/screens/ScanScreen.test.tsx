@@ -215,18 +215,24 @@ describe('ScanScreen', () => {
     expect(screen.getByText('The camera is blocked. Allow it in the browser settings to scan.')).toBeInTheDocument()
   })
 
-  it('B4: a failed camera offers a retry and typing the barcode, wired to the recovery', async () => {
-    const recovery = { ...controller().recovery, failure: { status: 'denied' as const, canRetry: true, message: 'The camera is blocked. Allow it in the browser settings to scan.' } }
+  // B9-35 (SSP-06): a failed camera is the camera bar with Try again; the typed entry is open under it (ScanScreen.camera.test.tsx has the whole flow).
+  it('B4: a failed camera shows the bar with Try again wired to the recovery, and the typed entry open under it', async () => {
+    const recovery = { ...controller().recovery, failure: { status: 'denied' as const, canRetry: true, message: 'Feeder may not use the camera' } }
     await startShopping(controller({ camera: { ...controller().camera, status: 'denied' }, recovery }))
-    await userEvent.click(screen.getByRole('button', { name: 'Try the camera again' }))
+    expect(screen.getByRole('region', { name: 'Scanner' })).toHaveAttribute('data-size', 'bar')
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(recovery.retry).toHaveBeenCalled()
-    await userEvent.click(screen.getByRole('button', { name: 'Type the barcode instead' }))
-    expect(recovery.openManual).toHaveBeenCalled()
+    expect(screen.getByRole('textbox', { name: 'Barcode' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Type the barcode instead' })).toBeNull()
   })
 
-  it('B4: a working camera shows no retry or manual entry', async () => {
-    await startShopping()
-    expect(screen.queryByRole('button', { name: 'Type the barcode instead' })).toBeNull()
+  it('B4: a working camera shows no retry and the typed entry stays closed until Type a barcode is pressed', async () => {
+    const c = controller()
+    await startShopping(c)
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: 'Barcode' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Type a barcode' }))
+    expect(c.recovery.openManual).toHaveBeenCalled()
   })
 
   it('toggles the beep mute', async () => {
@@ -254,7 +260,7 @@ describe('ScanScreen', () => {
 
   it('B4: the typed-barcode form appears with the recovery state wired to it', async () => {
     const base = controller()
-    const recovery = { ...base.recovery, failure: { status: 'denied' as const, canRetry: true, message: 'The camera is blocked. Allow it in the browser settings to scan.' }, manualOpen: true, text: '8000500310427' }
+    const recovery = { ...base.recovery, failure: { status: 'denied' as const, canRetry: true, message: 'Feeder may not use the camera' }, manualOpen: true, text: '8000500310427' }
     await startShopping(controller({ camera: { ...base.camera, status: 'denied' }, recovery }))
     expect(screen.getByRole('textbox', { name: 'Barcode' })).toHaveValue('8000500310427')
     await userEvent.click(screen.getByRole('button', { name: 'Use this barcode' }))

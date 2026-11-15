@@ -112,6 +112,8 @@ const ADDED = {
   // B9-29: scenarios/b9-29.mjs (order 330): pantry-put-away (SSP-10), meta-fit-pantry and meta-fit-supplies (SSP-05, P23 at 1120), text-spacing-pantry (DS-03, DS-10).
   // B9-25: scenarios/b9-25.mjs (order 340): timer-pill and timer-pill-editor (PC-04). No rule number: the setup measures the pill and throws on a finding.
   // B9-34: scenarios/b9-34.mjs (order 340): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
+  // B9-35: scenarios/b9-35.mjs (order 340, after b9-25 and b9-34 by file name): scan-typed (no camera, P12 and P30), scan-camera-typed and scan-camera-landscape (a fake camera).
+  // scan-price-keypad (scenarios/scan.mjs) is also a P43 scenario now: its setup shows a toast while the Price keypad is open.
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
   // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
@@ -128,6 +130,7 @@ const ADDED = {
     'recipe-editor-guard', 'recipe-new-empty-save',
     'timer-pill', 'timer-pill-editor',
     'shop-ticked', 'shop-focus-after-tick',
+    'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',
     'offline-unknown', 'error-state-fast',
