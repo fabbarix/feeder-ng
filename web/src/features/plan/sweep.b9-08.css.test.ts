@@ -128,9 +128,9 @@ describe('DS-09: media queries on width are (min-width: Xem) or (width < Xem) wi
     expect(text).toContain(`@media ${wanted}`)
   })
 
-  it('plan.css: the hero actions use a named container query (@container plan-hero (min-width: 44rem)), not @media 820px', () => {
+  it('plan.css: the hero actions use a named container query (@container plan-hero (min-width: 35rem), TB-03), not @media 820px', () => {
     expect(FILES['plan/plan.css']).not.toMatch(/820px/)
-    expect(FILES['plan/plan.css']).toMatch(/@container plan-hero \(min-width: 44rem\)/)
+    expect(FILES['plan/plan.css']).toMatch(/@container plan-hero \(min-width: 35rem\)/)
     // the hero is that named size container (the unnamed `container-type` alone cannot be addressed by name)
     const hero = RULES.filter((r) => r.selectors.includes('.plan-hero') && r.file === 'plan/components/TonightHero.css')
     const decl = hero.flatMap((r) => r.decls).find(([p]) => p === 'container')

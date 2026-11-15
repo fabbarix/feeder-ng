@@ -52,7 +52,8 @@ describe('CouldntPlanNotice: one tile', () => {
     expect(within(row).getAllByRole('button')).toHaveLength(1)
     expect(screen.queryByText(/The planner fills each Course/)).not.toBeInTheDocument() // the long explanation lives in the sheets
     expect(screen.queryByText(/Dessert at every dinner/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument() // the tile is a section; its causes are rows, not a pile of headings
+    // the tile is a section; its causes are rows, not a pile of headings: the one heading is the TileHeader's title (TB-09, B9-44)
+    expect(screen.getAllByRole('heading').map((h) => h.textContent)).toEqual(["Couldn't plan"])
   })
 
   it('the fix button says what it acts on ("Mark Recipes as Dessert") and reports its group; it is a secondary button', async () => {

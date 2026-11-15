@@ -90,7 +90,12 @@ describe('LeftoversTile: the rows (TB-11)', () => {
   })
 
   it('without a flow the rows are plain (a static list)', () => {
-    const { container } = view(list, undefined)
+    // (view(list, undefined) would take the default flow: render without one)
+    const { container } = render(
+      <MemoryRouter>
+        <LeftoversTile leftovers={list} today={TODAY} />
+      </MemoryRouter>,
+    )
     expect(container.querySelectorAll('ul > li.list-row')).toHaveLength(2)
     expect(screen.queryAllByRole('button')).toHaveLength(0)
   })
