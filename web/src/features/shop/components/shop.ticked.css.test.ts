@@ -1,5 +1,5 @@
 // B9-34 (SSP-01, R-C+, SSP-05): the stylesheet of the tick and the ticked rows. The focused tick draws ONE ring: its visible 24 px
-// circle takes a 3 px --color-accent border on a --color-soft fill, and the 44 px button draws no outline of its own (only one ring
+// circle takes the standard 3 px ring at a 2 px offset (batch w3e), and the 44 px button draws no outline of its own (only one ring
 // shows, inside the row card). The Shop's narrow-row rule lives in ListRow.css (B9-13), not here; the viewport query for compact rows is gone.
 import { describe, expect, it } from 'vitest'
 import { declarations } from '../../../ui/test-utils'
@@ -16,16 +16,16 @@ describe('shop.css: the focused tick (R-C+)', () => {
     expect(d['box-shadow'] ?? 'none').toBe('none')
   })
 
-  it('the circle takes the ring: a --focus-ring-width accent border on a soft fill', () => {
+  // Batch w3e: the ring is the standard one around the circle (an accent border on the ticked success fill could not be seen).
+  it('the circle takes the standard ring around itself (ring width, offset and colour tokens) and keeps its own state', () => {
     const d = declarations(css, '.line-row__tick:focus-visible::before')
-    expect(d['border-color'] ?? d['border']).toMatch(/var\(--color-accent\)/)
-    expect(d['border-width'] ?? d['border']).toMatch(/var\(--focus-ring-width\)/)
-    expect(d['background']).toMatch(/var\(--color-soft\)/)
+    expect(d['outline']).toMatch(/var\(--focus-ring-width\) solid var\(--focus-ring-color\)/)
+    expect(d['outline-offset']).toBe('var(--focus-ring-offset)')
+    expect(d['border'] ?? d['border-color'] ?? d['background']).toBeUndefined()
   })
 
-  it('a focused TICKED tick keeps its success fill and takes the same ring', () => {
-    const d = declarations(css, ".line-row__tick[aria-pressed='true']:focus-visible::before")
-    expect(d['border-color']).toMatch(/var\(--color-accent\)/)
+  it('a focused TICKED tick keeps its success fill (no rule repaints it)', () => {
+    expect(css).not.toMatch(/\.line-row__tick\[aria-pressed='true'\]:focus-visible::before/)
   })
 
   it('a busy tick looks the same and shows the wait (no pointer, no change of size)', () => {

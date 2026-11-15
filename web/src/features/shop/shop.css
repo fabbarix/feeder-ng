@@ -285,22 +285,17 @@
   color: var(--status-success-on-solid);
 }
 
-/* B9-34 (R-C+, A11Y-02): the one ring is the visible 24 px circle itself: a --focus-ring-width accent border on a soft fill. The 44 px
-   button draws no outline (an outer ring would be cut by the list's clipped edge below 24 rem, and must never fuse with the row's own
-   ring, which belongs to the row's target). A ticked tick keeps its success fill and takes the same accent border. */
+/* B9-34 (R-C+, A11Y-02): the one ring belongs to the visible 24 px circle. The 44 px button draws no outline (an outer ring would be
+   cut by the list's clipped edge below 24 rem, and must never fuse with the row's own ring, which belongs to the row's target).
+   Batch w3e: the circle keeps its own state (muted outline, or the ticked success fill) and takes the standard ring around it,
+   3 px at a 2 px offset (34 px across, inside the 44 px button): an accent border on a ticked success fill could not be told apart. */
 .line-row__tick:focus-visible {
   outline: none;
 }
 
 .line-row__tick:focus-visible::before {
-  border: var(--focus-ring-width) solid var(--color-accent);
-  background: var(--color-soft);
-}
-
-.line-row__tick[aria-pressed='true']:focus-visible::before {
-  border-color: var(--color-accent);
-  border-width: var(--focus-ring-width);
-  background: var(--status-success-solid);
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* B9-34 (SSP-01): a tick in flight looks the same (no size change) and shows the wait; a second press does nothing. */
