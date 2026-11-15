@@ -384,6 +384,9 @@ function ToastView({ toast, onDismiss, onAction, onPause, onResume }: ToastViewP
   const startY = useRef<number | null>(null)
   // Whether focus was inside the toast when the pointer went down (the click then moves focus to the button it pressed).
   const focusBeforePointer = useRef<boolean | null>(null)
+  // Where keyboard focus came from when it entered the toast (the end of the page): it goes back there when the toast closes
+  // under it, never to <body>. The action runs after, so a screen can still move focus on (to the row Undo brought back).
+  const cameFrom = useRef<HTMLElement | null>(null)
   const icon = STATUS_ICON[toast.status]
   const stacked = Boolean(toast.subline || toast.body) || toast.actions.length > 1
   const hasDismiss = !toast.actions.some((a) => a.role === 'dismiss')
@@ -395,10 +398,18 @@ function ToastView({ toast, onDismiss, onAction, onPause, onResume }: ToastViewP
     if (startY.current !== null && e.clientY - startY.current > SWIPE_DISTANCE_PX) onDismiss()
     startY.current = null
   }
-  const runAction = (action: ToastAction) => {
+  /** Whether focus was in the toast before this press; if so it is handed back first, as the toast is about to go. */
+  const leaving = () => {
     const focusWasInToast = focusBeforePointer.current ?? focusInside()
     focusBeforePointer.current = null
-    onAction(action, { focusWasInToast })
+    const back = cameFrom.current
+    if (focusWasInToast && back?.isConnected) back.focus({ preventScroll: true })
+    return focusWasInToast
+  }
+  const runAction = (action: ToastAction) => onAction(action, { focusWasInToast: leaving() })
+  const dismiss = () => {
+    leaving()
+    onDismiss()
   }
   return (
     <div
@@ -413,7 +424,11 @@ function ToastView({ toast, onDismiss, onAction, onPause, onResume }: ToastViewP
       onPointerCancel={() => (startY.current = null)}
       onPointerEnter={() => onPause('hover')}
       onPointerLeave={() => onResume('hover')}
-      onFocus={() => onPause('focus')}
+      onFocus={(e) => {
+        const from = e.relatedTarget
+        if (from instanceof HTMLElement && !root.current?.contains(from)) cameFrom.current = from
+        onPause('focus')
+      }}
       onBlur={(e) => {
         if (!root.current?.contains(e.relatedTarget as Node | null)) onResume('focus')
       }}
@@ -441,7 +456,7 @@ function ToastView({ toast, onDismiss, onAction, onPause, onResume }: ToastViewP
           ) : null}
         </div>
         {hasDismiss ? (
-          <button type="button" className="toast__dismiss" aria-label={uiStrings.dismiss} onClick={onDismiss}>
+          <button type="button" className="toast__dismiss" aria-label={uiStrings.dismiss} onClick={dismiss}>
             <Icon name="close" size={16} />
           </button>
         ) : null}

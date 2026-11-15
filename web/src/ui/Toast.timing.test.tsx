@@ -399,6 +399,30 @@ describe('keyboard and screen reader (A11Y)', () => {
     expect(screen.getByRole('button', { name: 'Undo: put Sam back' })).not.toHaveAttribute('tabindex', '-1')
   })
 
+  // B9-18 review: a toast that closes under keyboard focus hands it back to where it came from, never to <body>.
+  it('after Undo or Dismiss from the keyboard, focus goes back to where it came from (the end of the page), then the action runs', async () => {
+    let focusedWhenUndoRan: Element | null = null
+    const { user, mount } = setupTimed()
+    mount(
+      <main>
+        <Fire arg={undoToast(() => void (focusedWhenUndoRan = document.activeElement))} />
+      </main>,
+    )
+    await user.click(fireButton())
+    await user.tab()
+    await user.keyboard('{Enter}')
+    expect(toasts()).toHaveLength(0)
+    expect(fireButton()).toHaveFocus()
+    expect(focusedWhenUndoRan).toBe(fireButton())
+    await user.click(fireButton())
+    await user.tab()
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(toasts()).toHaveLength(0)
+    expect(fireButton()).toHaveFocus()
+  })
+
   it('Undo stays reachable: a Tab to it pauses the toast even after 7 s', async () => {
     const { user, mount } = setupTimed()
     mount(<Fire arg={undoToast()} />)
