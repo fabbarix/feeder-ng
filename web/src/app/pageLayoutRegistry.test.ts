@@ -107,7 +107,7 @@ const ADDED = {
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
   // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
-  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'toast-pricing', 'toast-over-bar', 'recipe-editor-guard', 'recipe-new-empty-save', 'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop', 'offline-unknown', 'error-state-fast'],
+  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'toast-pricing', 'toast-over-bar', 'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop', 'recipe-editor-guard', 'recipe-new-empty-save', 'offline-unknown', 'error-state-fast'],
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
 }
 
@@ -233,7 +233,7 @@ describe('a package adds its own files and edits no shared one', () => {
       expect(api.RULES.map((r) => r.id)).toContain('P37')
       expect(api.ALWAYS_FAIL).toContain('P37')
       expect(api.RESERVED.map((r) => r.id)).not.toContain('P37')
-      expect(api.RESERVED.map((r) => r.id)).toContain('P32')
+      expect(api.RESERVED.map((r) => r.id)).toContain('P34')
       expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P37'])
       expect(api.evaluateMetrics(metrics, ctx)).toEqual([])
     } finally {
