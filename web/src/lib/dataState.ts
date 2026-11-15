@@ -1,5 +1,5 @@
-// B9-20 (RES-02, RES-06): the one state model of a data screen. Plain TypeScript, no React.
-// STUB for the tests: the developer replaces every body. The shapes below are the public API the tests pin.
+// B9-20 (RES-02, RES-06): the one state model of a data screen, and the retry policy behind it. Plain TypeScript, no React.
+import { ApiError, GET_TIMEOUT_MS } from './http'
 
 export type ScreenState = 'loading' | 'ready' | 'empty' | 'filteredEmpty' | 'offlineSaved' | 'offlineUnknown' | 'failed'
 
@@ -20,14 +20,29 @@ export interface ScreenStateOptions {
 }
 
 export const RETRY_DELAY_MS = 1000
-export const GET_TIMEOUT_MS = 10_000
+export { GET_TIMEOUT_MS }
 
-export function screenState(_q: QueryShape, _o: ScreenStateOptions): ScreenState {
-  throw new Error('not implemented (B9-20)')
+/**
+ * "Unknown is not empty": an empty or "matches" state needs a successful answer. Without data, offline is always
+ * offlineUnknown (Try again could not work), online is loading until the request fails. A refetch that fails over
+ * held data keeps the data.
+ */
+export function screenState(q: QueryShape, o: ScreenStateOptions): ScreenState {
+  if (q.data === undefined) {
+    if (!o.online) return 'offlineUnknown'
+    return q.isError ? 'failed' : 'loading'
+  }
+  if (o.isEmpty) return o.hasFilter ? 'filteredEmpty' : 'empty'
+  return o.online ? 'ready' : 'offlineSaved'
 }
 
-export function retryPolicy(_failureCount: number, _error: unknown): boolean {
-  throw new Error('not implemented (B9-20)')
+/** One retry, only for what a second try can fix: a network error, a timeout or a 5xx. Never a 4xx or a bug. */
+export function retryPolicy(failureCount: number, error: unknown): boolean {
+  if (failureCount >= 1 || !(error instanceof ApiError)) return false
+  return error.status === 0 || error.status >= 500
 }
 
-export const queryDefaults: { queries: Record<string, unknown>; mutations: Record<string, unknown> } = { queries: {}, mutations: {} }
+export const queryDefaults = {
+  queries: { networkMode: 'offlineFirst' as const, retry: retryPolicy, retryDelay: RETRY_DELAY_MS },
+  mutations: { networkMode: 'offlineFirst' as const, retry: 0 },
+}
