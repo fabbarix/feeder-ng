@@ -13,6 +13,7 @@ import { RecipeDetailSkeleton } from '../features/recipes/components/RecipeDetai
 import { RecipesSkeleton } from '../features/recipes/components/RecipesSkeleton'
 import { routeLoadingFor, type LoadingBody } from './routeLoading'
 import { shellStrings } from './strings'
+import { markRouteLoading } from './useRouteFocus'
 import './RouteLoading.css'
 
 function Body({ body }: { body: LoadingBody }) {
@@ -44,6 +45,8 @@ export function RouteLoading() {
   useLayoutEffect(() => {
     if (title) document.title = title
   }, [title])
+  // B9-49 (A11Y-01): route focus waits for the screen's own h1, not this loading header.
+  useLayoutEffect(() => markRouteLoading(), [])
   if (view.frame === 'chromeless') {
     return (
       <SkeletonGroup label={shellStrings.loading} className="route-loading--chromeless">

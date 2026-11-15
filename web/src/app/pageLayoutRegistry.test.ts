@@ -95,8 +95,8 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35.
-  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P39', 'P40', 'P41', 'P43'],
+  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35; B9-49 P37.
+  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P37', 'P39', 'P40', 'P41', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning, and shop-barcode-sheet (the Add Shop Barcode sheet,
@@ -118,6 +118,8 @@ const ADDED = {
   // B9-35: scenarios/b9-35.mjs (order 340, after b9-34 by file name): scan-typed (no camera, P12 and P30), scan-camera-typed and scan-camera-landscape (a fake camera).
   // scan-price-keypad (scenarios/scan.mjs) is also a P43 scenario now: its setup shows a toast while the Price keypad is open.
   // B9-51: scenarios/b9-51.mjs (order 340, after b9-35 by file name): tags-rows (SET-11), assistant-bar (SHORT-06), toast-over-preferences-bar, planning-cooking-times (PC-14, A2, SAFE-04).
+  // B9-49: scenarios/b9-49.mjs (order 350, after b9-51 by file name): shell-skip-link (A11Y-10), shell-offline-banner (RES-07), nav-current-recipe,
+  // nav-current-recipe-edit and nav-current-ingredient (TB-13), toast-region-chromeless, boot-theme (RES-08). No rule number but P37 (titles): the setups measure and throw on a finding.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
@@ -137,6 +139,7 @@ const ADDED = {
     'shop-ticked', 'shop-focus-after-tick',
     'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',
     'tags-rows', 'assistant-bar', 'toast-over-preferences-bar', 'planning-cooking-times',
+    'shell-skip-link', 'shell-offline-banner', 'nav-current-recipe', 'nav-current-recipe-edit', 'nav-current-ingredient', 'toast-region-chromeless', 'boot-theme',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',
@@ -257,26 +260,26 @@ describe('a package adds its own files and edits no shared one', () => {
   const demoRule = (id: string) =>
     `export default { id: '${id}', title: 'demo rule of a package', always: true, evaluate: (m) => (m.demo ? [{ rule: '${id}', message: '${id} demo finding' }] : []) }\n`
 
-  it('a rules/P37-*.mjs file activates the reserved P37: it runs, is always-fail and leaves RESERVED', () => {
+  it('a rules/P34-*.mjs file activates the reserved P34: it runs, is always-fail and leaves RESERVED', () => {
     const s = scratchLib()
     try {
-      put(s.dir, 'page-layout/rules/P37-demo.mjs', demoRule('P37'))
+      put(s.dir, 'page-layout/rules/P34-demo.mjs', demoRule('P34'))
       const api = load(s.dir)
-      expect(api.RULES.map((r) => r.id)).toContain('P37')
-      expect(api.ALWAYS_FAIL).toContain('P37')
-      expect(api.RESERVED.map((r) => r.id)).not.toContain('P37')
-      expect(api.RESERVED.map((r) => r.id)).toContain('P34')
-      expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P37'])
+      expect(api.RULES.map((r) => r.id)).toContain('P34')
+      expect(api.ALWAYS_FAIL).toContain('P34')
+      expect(api.RESERVED.map((r) => r.id)).not.toContain('P34')
+      expect(api.RESERVED.map((r) => r.id)).toContain('P38')
+      expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P34'])
       expect(api.evaluateMetrics(metrics, ctx)).toEqual([])
     } finally {
       s.done()
     }
   })
   it('a rule outside P1..P43, a file number that is not its id, and a second module for an id all throw on load', () => {
-    for (const [file, id, why] of [['P99-demo.mjs', 'P99', /P99/], ['P25-demo.mjs', 'P26', /P2[56]/], ['P37-other.mjs', 'P37', /P37/]] as const) {
+    for (const [file, id, why] of [['P99-demo.mjs', 'P99', /P99/], ['P25-demo.mjs', 'P26', /P2[56]/], ['P34-other.mjs', 'P34', /P34/]] as const) {
       const s = scratchLib()
       try {
-        put(s.dir, 'page-layout/rules/P37-demo.mjs', demoRule('P37'))
+        put(s.dir, 'page-layout/rules/P34-demo.mjs', demoRule('P34'))
         put(s.dir, `page-layout/rules/${file}`, demoRule(id))
         expect(() => load(s.dir), file).toThrow(why)
       } finally {

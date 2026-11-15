@@ -17,6 +17,9 @@ export const notificationStrings = {
   removeShort: 'Remove',
   unsupported: 'This browser cannot receive push notifications.',
   needsInstall: 'On iPhone and iPad, add Feeder to your Home Screen first, then open it from there to turn on notifications.',
+  /** B9-49 (SET-14g): the same state in Safari on iPhone. */
+  needsInstallIosSafari:
+    'Safari on iPhone sends notifications only to Feeder added to the Home Screen. Use Share, then Add to Home Screen, then open Feeder from there.',
   denied: 'Notifications are blocked for Feeder in this browser. Allow them in the browser settings, then come back.',
   quietHours: (start: string, end: string) => `No notifications between ${start} and ${end}, except Timer finished.`,
   types: {

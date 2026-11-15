@@ -3,6 +3,7 @@ import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ListPage, PageHeader, Tile } from '../../../ui'
 import { useNotificationSettings } from '../hooks/useNotificationSettings'
 import { notificationStrings as s } from '../strings'
+import { isIosSafari } from '../lib/ios'
 import { NotificationSettingsView } from './NotificationSettingsView'
 import '../notifications.css'
 
@@ -31,6 +32,7 @@ export function NotificationSettingsScreen(): ReactElement {
           thisDevice={state.thisDevice}
           otherDevices={state.otherDevices}
           busy={state.busy}
+          iosSafari={isIosSafari(navigator.userAgent)}
           onEnable={() => void state.enable()}
           onDisable={() => void state.disable()}
           onSetType={(id, type, on) => void state.setType(id, type, on)}

@@ -1,3 +1,4 @@
+import { useDocumentTitle } from '../../../ui/lib/useDocumentTitle'
 import { Tile } from '../../../ui'
 import { signinStrings } from '../strings'
 import '../signin.css'
@@ -6,6 +7,7 @@ import { GoogleLink } from './GoogleLink'
 
 /** Bento "Email not verified" page: says Google has not verified the email and links "Use a different Google sign-in" to /auth/google/login. */
 export function EmailNotVerifiedPage() {
+  useDocumentTitle([signinStrings.emailNotVerifiedTitle])
   return (
     <main className="signin">
       <Tile variant="hero" as="section" className="signin__tile">

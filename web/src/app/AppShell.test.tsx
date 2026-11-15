@@ -1,3 +1,4 @@
+import { bottomBarNav, sideRailNav } from '../test/shellNav'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
@@ -43,8 +44,8 @@ function setup(opts: { path?: string; onSignOut?: () => void; navItems?: NavItem
   return router
 }
 
-const bottomBar = () => screen.getByRole('navigation', { name: 'Bottom bar' })
-const sideRail = () => screen.getByRole('navigation', { name: 'Side rail' })
+const bottomBar = () => bottomBarNav()
+const sideRail = () => sideRailNav()
 const labels = (nav: HTMLElement) => within(nav).getAllByRole('link').map((a) => a.textContent?.trim())
 const iconOf = (link: HTMLElement) => {
   const icon = within(link).getByTestId('icon')

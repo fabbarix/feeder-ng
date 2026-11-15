@@ -23,10 +23,12 @@ describe('OfflineBanner', () => {
     expect(screen.getByRole('status')).not.toHaveTextContent(/AM|PM/)
   })
 
-  it('without a time says only that data was saved', () => {
+  // B9-49 (B9-20 follow-up): with no moment known nothing was ever saved on this phone, so the banner must not claim it shows saved data
+  // (a LoadState on the screen says nothing is saved yet): it says only "Offline".
+  it('without a time (nothing ever answered) says only "Offline", never that saved data is showing', () => {
     render(<OfflineBanner offline />)
-    expect(screen.getByRole('status')).toHaveTextContent('Offline · showing what was saved')
-    expect(screen.getByRole('status')).not.toHaveTextContent(/saved at/)
+    expect(screen.getByRole('status')).toHaveTextContent(/^Offline$/)
+    expect(screen.getByRole('status')).not.toHaveTextContent(/saved/)
   })
 
   it('counts Scans waiting to sync, singular and plural, hidden at 0', () => {

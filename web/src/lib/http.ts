@@ -1,4 +1,5 @@
 // Typed JSON client for the Feeder API. Plain TypeScript, no React.
+import { recordServerContact } from './serverContact'
 
 export class ApiError extends Error {
   readonly status: number
@@ -76,6 +77,8 @@ export function createHttpClient(opts: HttpClientOptions = {}): HttpClient {
       if (res.status === 401) opts.onUnauthenticated?.()
       throw err
     }
+    // B9-49 (RES-07): an OK answer is the moment the offline banner calls "saved".
+    recordServerContact()
     if (res.status === 204) return undefined as T
     const text = await res.text()
     return (text ? JSON.parse(text) : undefined) as T

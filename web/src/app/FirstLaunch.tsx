@@ -1,7 +1,8 @@
 // B9-20 (RES-02, RES-06): a first launch (no remembered User) while /api/me has not answered: a status from the first
-// frame that says what is happening, and the shared ErrorState with Try again when the server cannot be reached.
+// frame that says what is happening (B9-49: the boot shell skeleton), and the shared ErrorState with Try again when the server cannot be reached.
 import { useEffect, useState } from 'react'
 import { ErrorState } from '../ui'
+import { BootShell } from './BootShell'
 import { shellStrings } from './strings'
 import './FirstLaunch.css'
 
@@ -16,12 +17,8 @@ export function FirstLaunchWaiting() {
     const timer = setTimeout(() => setSlow(true), SLOW_AFTER_MS)
     return () => clearTimeout(timer)
   }, [])
-  return (
-    <main className="first-launch" role="status" aria-busy="true">
-      <span className="visually-hidden">{shellStrings.loading}</span>
-      {slow ? <p className="first-launch__slow">{STILL_TRYING}</p> : null}
-    </main>
-  )
+  // B9-49 (RES-08): the shell skeleton (app/BootShell, "Opening Feeder"), never a bare "Loading".
+  return <BootShell note={slow ? STILL_TRYING : undefined} />
 }
 
 export function FirstLaunchFailed({ onRetry }: { onRetry: () => void }) {

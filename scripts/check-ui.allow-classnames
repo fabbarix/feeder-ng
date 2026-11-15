@@ -1,2 +1,12 @@
 # Rule class-hooks: className tokens that are intentionally unstyled (JS/test hooks,
 # third-party classes). One token per line; a trailing * allows a prefix. Say why.
+# B9-49 (RES-08): the boot shell skeleton. app/BootShell.tsx draws the same markup as web/index.html, whose inline <style> styles it
+# (no app stylesheet has loaded when index.html paints it), so the rules are there, not in a .css file the guard reads.
+boot-shell__top
+boot-shell__brand
+boot-shell__avatar
+boot-shell__rail
+boot-shell__page
+boot-shell__title
+boot-shell__tile
+boot-shell__bar

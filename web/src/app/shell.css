@@ -32,6 +32,13 @@ html {
   --nav-clearance: 0px;
 }
 
+/* B9-49: the toast region lives outside .app-shell (ToastProvider), so the frame's own --nav-top never reached it and a toast floated
+   82 px up over nothing on the board and in Cook Mode. With a chromeless frame on the page the root takes the bottom inset alone. */
+html:has(.app-shell--chromeless) {
+  --nav-top: var(--safe-bottom);
+  --nav-clearance: 0px;
+}
+
 /* A chromeless screen that is a ui Page (the receipt screens) has no top bar above it: the gutter keeps its header off the edge,
    and the page ends a gutter above the bottom. */
 .app-shell--chromeless .page {
@@ -82,8 +89,56 @@ html {
   fill: var(--brand-heart);
 }
 
+/* A11Y-10: "Skip to content", the first focusable element of the framed shell. It rests above the viewport (a transform, so it stays
+   in the Tab order) and slides into the top-start corner on keyboard focus: an accent pill, its ring in the text colour. */
+.skip-link {
+  position: fixed;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-button);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--space-4)));
+}
+
+.skip-link:focus-visible {
+  transform: none;
+  --focus-ring-color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skip-link {
+    transition: transform var(--dur-1) var(--ease-out);
+  }
+}
+
+/* A11Y-01: <main> takes script focus only (a route change with no h1, the skip link's fallback); it is not a control, so no ring. */
+.app-main:focus {
+  outline: none;
+}
+
+/* RES-07 / SHORT-05: the offline banner's slot. Sticky at the top while the page scrolls (below sheets and toasts, above content), in
+   the page gutter and clear of the safe-area insets, click-through: only the pill (OfflineBanner.css) takes pointer events. Online
+   it is empty and takes no room. */
 .app-status {
   grid-column: 1 / -1;
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  box-sizing: border-box;
+  padding-inline: max(var(--gutter), var(--safe-left)) max(var(--gutter), var(--safe-right));
+  padding-top: var(--space-2);
+  pointer-events: none;
+}
+
+.app-status:empty {
+  display: none;
 }
 
 .app-main {
@@ -255,6 +310,15 @@ html {
   }
 }
 
+/* DS-02 / R-F (int1 call, B9-49): where a phone shows the labels (376 to 599 px), they sit low in the bar (the user's w2c geometry:
+   6 px under the 40 px squircle), so a 24 px end would cut into the end label's lower corner. The bar takes the smaller end radius
+   there, which keeps "Settings" 8 px from the rounded end; 375 px and below and from 600 px keep --radius-nav. */
+@media (min-width: 23.5em) and (width < 37.5em) {
+  .bottom-bar {
+    border-radius: var(--radius-nav-compact);
+  }
+}
+
 /* SHORT-04: short and narrow (under 500 px tall, under 600 px wide): the bar stays, compact. 52 px with an 8 px inset, icons only with
    R-F's squircles, which sit 6 px clear of the bar's top and bottom (52 - 2 border - 40 = 2 x 5, + the border). */
 @media (max-height: 499px) and (width < 37.5em) {
@@ -266,6 +330,8 @@ html {
   .bottom-bar {
     padding-inline: calc(var(--space-1) + var(--space-half));
     column-gap: 0;
+    /* icons only here: the approved radius (the compact one is for the labels) */
+    border-radius: var(--radius-nav);
   }
 
   /* No gap, and the 52 px bar has no room above its squircles for an inset: the links are exactly their tracks. */
@@ -492,7 +558,37 @@ html[data-keyboard='open'] .bottom-bar {
     grid-column: 1 / -1;
   }
 
+  /* RES-07: the banner aligns with the page column (column 2, row 2) and the rail stays directly under the top bar (rows 2 and 3).
+     The slot takes the page's own width and gutters, so the pill starts where the page's content does. */
+  .app-shell:not(.app-shell--chromeless) > .app-status {
+    grid-column: 2;
+    grid-row: 2;
+    inline-size: 100%;
+    max-inline-size: calc(var(--page-default) + 2 * var(--page-gutter));
+    margin-inline: auto;
+    padding-inline: max(var(--page-gutter), var(--safe-left)) max(var(--page-gutter), var(--safe-right));
+  }
+
+  .app-shell:not(.app-shell--chromeless) > .app-status[data-page-width='narrow'] {
+    max-inline-size: calc(var(--page-narrow) + 2 * var(--page-gutter));
+  }
+
+  .app-shell:not(.app-shell--chromeless) > .app-status[data-page-width='wide'] {
+    max-inline-size: calc(var(--page-wide) + 2 * var(--page-gutter));
+  }
+
+  .app-shell:not(.app-shell--chromeless) > .app-status[data-page-width='full'] {
+    max-inline-size: none;
+  }
+
+  .app-shell:not(.app-shell--chromeless) > .app-main {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
   .side-rail {
+    grid-column: 1;
+    grid-row: 2 / 4;
     display: flex;
     flex-direction: column;
     align-items: stretch;

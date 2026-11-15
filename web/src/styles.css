@@ -108,6 +108,8 @@
   --radius-thumb: 12px;
   --radius-thumb-lg: 16px;
   --radius-nav: 24px;
+  /* B9-49 (DS-02): the bottom bar's end radius where a phone shows the labels (376 to 599 px), so the end label clears the curve. */
+  --radius-nav-compact: 16px;
   --radius-pill: 999px;
   /* the Checkbox tick box, and the receipt's crop corners (DS-11) */
   --radius-tick: 6px;

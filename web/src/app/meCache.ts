@@ -1,6 +1,8 @@
 import { isValidTimeZone } from '../lib/householdDate'
 // The last successful /api/me, kept in localStorage so the shell can open offline (R10). Plain TypeScript, no React.
 import type { Me } from './useMe'
+import { resetServerContact } from '../lib/serverContact'
+import { clearThemeCache } from '../theme/themeCache'
 
 export const ME_CACHE_KEY = 'feeder.me'
 
@@ -41,6 +43,9 @@ export function clearCachedMe(): void {
   } catch {
     // nothing to forget
   }
+  // B9-49: the signed-in cache goes together: the User's theme (RES-08) and the last server answer (RES-07).
+  clearThemeCache()
+  resetServerContact()
 }
 
 /** B9-20 (RES-05): the Household's IANA zone from the last /api/me, or null. */
