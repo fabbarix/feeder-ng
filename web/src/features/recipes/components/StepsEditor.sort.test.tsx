@@ -99,7 +99,7 @@ describe('StepsEditor: keyboard reorder', () => {
 describe('StepsEditor: after-chips while a Step is lifted', () => {
   it('name the Steps by the positions shown in the preview, matching the badges', async () => {
     render(<Harness initial={three()} />)
-    const chipNames = (card: HTMLElement) => within(card).getAllByRole('button', { name: /^After step/ }).map((b) => b.textContent)
+    const chipNames = (card: HTMLElement) => within(card).getAllByRole('button', { name: /after step/i }).map((b) => b.textContent)
     const two = () => cards().find((c) => (within(c).getByRole('textbox', { name: 'Step text' }) as HTMLTextAreaElement).value === 'two')!
     expect(chipNames(two())).toEqual(['After step 1'])
     screen.getByRole('button', { name: 'Reorder Step 3' }).focus()
@@ -135,12 +135,12 @@ describe('StepsEditor: pointer reorder', () => {
 describe('StepsEditor: the actions menu is still the accessible fallback', () => {
   it('Move Step down in the menu still reorders, next to the handle', async () => {
     render(<Harness initial={three()} />)
-    await userEvent.click(within(cards()[0]!).getByRole('button', { name: 'Step actions' }))
+    await userEvent.click(within(cards()[0]!).getByRole('button', { name: /^Step( \d+)? actions$/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Move Step down' }))
     expect(texts()).toEqual(['two', 'one', 'three'])
   })
   it('Remove Step is still there', () => {
     render(<Harness initial={three()} />)
-    expect(within(cards()[0]!).getByRole('button', { name: 'Remove Step' })).toBeInTheDocument()
+    expect(within(cards()[0]!).getByRole('button', { name: /^Remove Step( \d+)?$/ })).toBeInTheDocument()
   })
 })

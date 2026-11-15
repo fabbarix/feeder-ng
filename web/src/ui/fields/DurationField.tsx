@@ -12,6 +12,8 @@ export interface DurationFieldProps extends FieldProps {
   /** Whole minutes; null is empty. */
   value: number | null
   onChange: (minutes: number | null) => void
+  /** B9-37 (A11Y-08): the number's accessible name in place of the label when the field repeats down a list ("Duration of Step 2"); its unit Select becomes "<name> unit". */
+  ariaLabel?: string
   /** The units offered. Default min and h (a Step's Duration); a Lead time adds d. */
   units?: DurationUnit[]
 }
@@ -43,7 +45,7 @@ const minutesOf = (text: string, unit: DurationUnit): number | null | undefined 
  * shown. Changing the unit converts the shown number and keeps the minutes. The number commits on blur or Enter; the arrows step
  * it by 1 in the shown unit.
  */
-export function DurationField({ label, helper, error, disabled, required, name, value, onChange, units = DEFAULT_UNITS }: DurationFieldProps) {
+export function DurationField({ label, helper, error, disabled, required, name, value, onChange, units = DEFAULT_UNITS, ariaLabel }: DurationFieldProps) {
   const ids = useFieldIds()
   const [shown, setShown] = useState<Shown>(() => shownFor(value, units, units[0] ?? 'min'))
 
@@ -110,7 +112,7 @@ export function DurationField({ label, helper, error, disabled, required, name, 
             type="text"
             inputMode="decimal"
             role="spinbutton"
-            aria-label={label}
+            aria-label={ariaLabel ?? label}
             className="ui-field__input ui-field__number"
             value={shown.text}
             disabled={disabled}
@@ -131,6 +133,7 @@ export function DurationField({ label, helper, error, disabled, required, name, 
           <Select<DurationUnit>
             size="full"
             label={fieldStrings.durationUnit(label)}
+            ariaLabel={ariaLabel ? fieldStrings.durationUnit(ariaLabel) : undefined}
             options={units.map((u) => ({ value: u, label: u }))}
             value={shown.unit}
             disabled={disabled}

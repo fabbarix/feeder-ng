@@ -18,7 +18,8 @@ const near = <T,>(list: T[], index: number): T | undefined => list[Math.min(inde
 function targetOf(root: HTMLElement, want: RemovalFocus): HTMLElement | undefined {
   if (want.kind === 'step') {
     const card = near(Array.from(root.querySelectorAll<HTMLElement>('li.step-card')), want.index)
-    return card ? named(card, (n) => n === recipeStrings.steps.actions) : named(root, (n) => n === recipeStrings.steps.add)
+    // B9-37 (P38): the Step's buttons name their Step ("Step 2 actions"), so they are found by their place, not their name.
+    return card ? (card.querySelector<HTMLElement>('.step-card__actions button[aria-haspopup="menu"]') ?? undefined) : named(root, (n) => n === recipeStrings.steps.add)
   }
   if (want.kind === 'line') {
     const row = near(Array.from(root.querySelectorAll<HTMLElement>('.recipe-editor__lines > li')), want.index)
@@ -28,7 +29,7 @@ function targetOf(root: HTMLElement, want: RemovalFocus): HTMLElement | undefine
   const card = Array.from(root.querySelectorAll<HTMLElement>('li.step-card')).find((c) => c.dataset.focusKey === want.stepKey)
   if (!card) return undefined
   const use = near(Array.from(card.querySelectorAll<HTMLElement>('[data-use]')), want.index) // B9-37: each use is a chip with its remove
-  return use ? named(use, (n) => n === recipeStrings.steps.removeUse) : named(card, (n) => n === recipeStrings.steps.addUse)
+  return (use ?? card.querySelector('.step-card__adds'))?.querySelector<HTMLElement>(use ? '.use-chip__remove' : 'button') ?? undefined
 }
 
 /** Returns `focusAfter(want)`: call it in the same event as the change; focus moves once the change has rendered. */

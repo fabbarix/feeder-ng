@@ -48,7 +48,7 @@ const recipeName = () => screen.getByRole('textbox', { name: recipeStrings.field
 const sheet = () => screen.getByRole('dialog', { name: 'New Ingredient' })
 
 async function typeInPicker(text: string) {
-  await userEvent.click(screen.getByRole('combobox', { name: 'Ingredient' }))
+  await userEvent.click(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }))
   await userEvent.keyboard(text)
 }
 
@@ -81,7 +81,7 @@ describe('Quick create: the draft survives creating an Ingredient', () => {
     await userEvent.click(within(sheet()).getByRole('button', { name: 'Create Ingredient' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New Ingredient' })).toBeNull())
     expect(iApi.create).toHaveBeenCalledWith({ name: 'saffron', baseUnit: 'g', kind: 'food' })
-    expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('Saffron')
+    expect(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toHaveTextContent('Saffron')
     expect(recipeName()).toHaveValue('Paella')
     expect(screen.getByLabelText(recipeStrings.lines.quantity)).toHaveFocus()
     expect(where()).toHaveTextContent('/recipes/new')
@@ -93,7 +93,7 @@ describe('Quick create: the draft survives creating an Ingredient', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New Ingredient' })).toBeNull())
     expect(iApi.create).not.toHaveBeenCalled()
     expect(recipeName()).toHaveValue('Paella')
-    expect(screen.getByRole('combobox', { name: 'Ingredient' })).not.toHaveTextContent('Saffron')
+    expect(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).not.toHaveTextContent('Saffron')
   })
   it('a failed create keeps the sheet and the draft', async () => {
     iApi.create.mockRejectedValue(new ApiError(409, 'name_taken', 'exists'))
@@ -129,7 +129,7 @@ describe('Quick create: near duplicates', () => {
     await userEvent.click(within(sheet()).getByRole('button', { name: 'Use garlic' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New Ingredient' })).toBeNull())
     expect(iApi.create).not.toHaveBeenCalled()
-    expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('garlic')
+    expect(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toHaveTextContent('garlic')
     expect(screen.getByLabelText(recipeStrings.lines.quantity)).toHaveFocus()
   })
 })
@@ -212,7 +212,7 @@ describe('Ready Meal reuses an existing Ingredient', () => {
     view()
     await userEvent.type(recipeName(), 'lasagne PACK')
     await userEvent.click(screen.getByRole('radio', { name: recipeStrings.fields.readyMeal })) // B9-37: the Kind control
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('Lasagne pack'))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toHaveTextContent('Lasagne pack'))
     expect(screen.queryByText(recipeStrings.readyMealIngredient.newBadge)).toBeNull()
     expect(screen.queryByText(/Feeder adds an Ingredient called/)).toBeNull()
     expect(screen.getByLabelText(recipeStrings.lines.quantity)).toHaveValue('1')

@@ -96,7 +96,7 @@ describe('RecipeEditorScreen', () => {
     view()
     expect(screen.queryAllByTestId('fake-image-picker')).toHaveLength(0)
     await userEvent.click(screen.getByRole('button', { name: /^Photo of the Recipe/ }))
-    await userEvent.click(screen.getByRole('button', { name: 'Add Photo' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Add Photo( to Step \d+)?$/ }))
     expect(screen.getAllByTestId('fake-image-picker')).toHaveLength(2)
   })
 })

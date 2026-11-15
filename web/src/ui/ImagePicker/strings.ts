@@ -73,3 +73,14 @@ export const imagePickerStrings = {
  */
 export const pictureActionLabels = (noun?: string): { add: string; replace: string; remove: string } =>
   noun ? { add: `Add ${noun}`, replace: `Replace ${noun}`, remove: `Remove ${noun}` } : { add: imagePickerStrings.addImage, replace: imagePickerStrings.replaceImage, remove: imagePickerStrings.removeImage }
+
+/**
+ * B9-37 (A11Y-08, P38): the compact picker's button names when the picker repeats down a list ("Step 2"): "Choose a file for Step 2",
+ * "Take photo for Step 2", "Change Photo of Step 2", "Remove Photo of Step 2". The visible words stay Choose a file, Take photo, Change, Remove.
+ */
+export const compactActionNames = (context: string, noun = 'image'): { choose: string; take: string; change: string; remove: string } => ({
+  choose: `${imagePickerStrings.chooseFile} for ${context}`,
+  take: `${imagePickerStrings.takePhoto} for ${context}`,
+  change: `Change ${noun} of ${context}`,
+  remove: `Remove ${noun} of ${context}`,
+})

@@ -15,7 +15,7 @@ const view = (p: IngredientLineRowProps) => {
   render(<ul><IngredientLineRow {...p} /></ul>)
   return p
 }
-const ingredientBox = () => screen.getByRole('combobox', { name: 'Ingredient' })
+const ingredientBox = () => screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })
 
 describe('IngredientLineRow: Create Ingredient (R14)', () => {
   it('offers Create Ingredient "<typed name>" as the last option when nothing matches exactly', async () => {
@@ -99,7 +99,7 @@ describe('IngredientLineRow: the pending Ready Meal line', () => {
     expect(screen.getByText('Fish pie pack')).toBeInTheDocument()
     expect(screen.getByText(recipeStrings.readyMealIngredient.newBadge)).toBeInTheDocument()
     expect(screen.getByText(recipeStrings.readyMealIngredient.helper('Fish pie pack'))).toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: 'Ingredient' })).toBeNull()
+    expect(screen.queryByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toBeNull()
     expect(screen.queryByLabelText(recipeStrings.lines.quantity)).toBeNull()
   })
   it('"Choose another Ingredient" turns it into an ordinary blank line', async () => {

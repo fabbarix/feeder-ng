@@ -131,9 +131,9 @@ describe('the row keeps its parts in reading order', () => {
     const { row } = view(props({ handle: <button type="button" aria-label="Reorder garlic">h</button> }))
     const order = [
       screen.getByRole('button', { name: 'Reorder garlic' }),
-      screen.getByRole('combobox', { name: 'Ingredient' }),
+      screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }),
       screen.getByRole('textbox', { name: 'Quantity' }),
-      screen.getByRole('combobox', { name: 'Unit' }),
+      screen.getByRole('combobox', { name: /^Unit( for .+)?$/ }),
       screen.getByRole('textbox', { name: 'Note' }),
       screen.getByRole('checkbox', { name: 'Optional: garlic' }),
       screen.getByRole('button', { name: 'Actions for garlic' }),

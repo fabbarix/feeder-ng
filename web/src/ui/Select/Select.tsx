@@ -17,6 +17,11 @@ export type { SelectFilter, SelectSort } from './buildList'
 
 export interface SelectFieldProps extends FieldSizeProps {
   label: string
+  /**
+   * B9-37 (A11Y-08, P38): the trigger's accessible name in place of the visible label, for a Select repeated down a list that must
+   * name what it belongs to ("Unit for Flour"). The label stays on screen; the value is still the combobox's own.
+   */
+  ariaLabel?: string
   helper?: string
   error?: string
   placeholder?: string
@@ -134,6 +139,7 @@ function SelectCore<V extends string | number>({
   appearance,
   icon,
   iconOnly,
+  ariaLabel,
 }: CoreProps<V>) {
   const ids = useFieldIds()
   const baseId = useId()
@@ -400,8 +406,8 @@ function SelectCore<V extends string | number>({
           aria-expanded={open}
           aria-controls={open ? listboxId : undefined}
           aria-activedescendant={activeId}
-          aria-labelledby={iconOnlyOn ? undefined : ids.labelId}
-          aria-label={iconOnlyName}
+          aria-labelledby={iconOnlyOn || ariaLabel ? undefined : ids.labelId}
+          aria-label={iconOnlyName ?? ariaLabel}
           aria-describedby={helper || error ? [helper ? ids.helperId : '', error ? ids.errorId : ''].filter(Boolean).join(' ') : undefined}
           aria-invalid={error ? true : undefined}
           aria-required={required || undefined}

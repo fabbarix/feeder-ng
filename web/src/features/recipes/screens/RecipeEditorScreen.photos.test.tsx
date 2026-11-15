@@ -50,7 +50,7 @@ describe('RecipeEditorScreen: photos', () => {
     view()
     await openRecipePhoto()
     expect(screen.getByRole('group', { name: recipeStrings.photo })).toHaveAttribute('data-value', 'cover1')
-    await userEvent.click(screen.getByRole('button', { name: 'Add Photo' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Add Photo( to Step \d+)?$/ }))
     const steps = screen.getAllByRole('group', { name: recipeStrings.steps.image })
     expect(steps.map((s) => s.getAttribute('data-value'))).toEqual(['one', ''])
   })
@@ -80,7 +80,7 @@ describe('RecipeEditorScreen: photos', () => {
 
   it('a picked Step photo goes to that Step through setSteps and leaves the Recipe photo alone', async () => {
     view()
-    await userEvent.click(screen.getByRole('button', { name: 'Add Photo' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Add Photo( to Step \d+)?$/ }))
     await userEvent.click(screen.getAllByRole('button', { name: `pick ${recipeStrings.steps.image}` })[1]!)
     const setSteps = h.editor.setSteps as ReturnType<typeof vi.fn>
     expect(setSteps).toHaveBeenCalledTimes(1)

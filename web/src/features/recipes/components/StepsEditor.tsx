@@ -26,11 +26,11 @@ export interface StepsEditorProps {
 
 const t = recipeStrings.steps
 
-const kindOptions: { value: StepKind; label: string; ariaLabel?: string }[] = [
-  { value: 'active', label: t.active },
-  { value: 'passive', label: t.passive },
-  // B9-37 (RX-02): "Advance" on screen so the compact control never wraps; the name stays "Advance Step".
-  { value: 'advance', label: t.advanceShort, ariaLabel: t.advance },
+/** B9-37 (RX-02): "Advance" on screen so the compact control never wraps; each option names its Step ("Step 2: Advance Step", P38). */
+const kindOptions = (n: number): { value: StepKind; label: string; ariaLabel: string }[] => [
+  { value: 'active', label: t.active, ariaLabel: t.kindOption(n, t.active) },
+  { value: 'passive', label: t.passive, ariaLabel: t.kindOption(n, t.passive) },
+  { value: 'advance', label: t.advanceShort, ariaLabel: t.kindOption(n, t.advance) },
 ]
 
 /** Step-level problems with no field of their own (SAFE-04: the text, Duration and Lead time show theirs under the field). */
@@ -131,10 +131,11 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
               <div className="step-card__body">
                 <TextArea label={t.text} rows={2} value={s.text} error={fieldError(i, 'text')} onChange={(text) => patch(i, { text })} />
                 <div className="step-card__timing">
-                  <Segmented compact labelHidden label={t.kindOf(position + 1)} options={kindOptions} value={s.kind} onChange={(kind) => onChange(changeKind(steps, i, kind))} />
+                  <Segmented compact labelHidden label={t.kindOf(position + 1)} options={kindOptions(position + 1)} value={s.kind} onChange={(kind) => onChange(changeKind(steps, i, kind))} />
                   {s.kind === 'advance' ? (
                     <DurationField
                       label={t.lead}
+                      ariaLabel={t.leadOf(position + 1)}
                       units={['min', 'h', 'd']}
                       error={fieldError(i, 'leadTimeMinutes')}
                       value={numberValue(s.leadTimeMinutes)}
@@ -143,6 +144,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                   ) : (
                     <DurationField
                       label={t.duration}
+                      ariaLabel={t.durationOf(position + 1)}
                       error={fieldError(i, 'durationMinutes')}
                       value={numberValue(s.durationMinutes)}
                       onChange={(n) => patch(i, { durationMinutes: numberText(n) })}
@@ -154,7 +156,13 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                   <div role="group" aria-label={t.after} className="step-card__after">
                     <span className="step-card__label">{t.after}</span>
                     {afterChoices.map((j) => (
-                      <Chip key={j} kind="filter" selected={s.after.includes(j)} onClick={() => onChange(toggleAfter(steps, i, j, !s.after.includes(j)))}>
+                      <Chip
+                        key={j}
+                        kind="filter"
+                        selected={s.after.includes(j)}
+                        label={t.afterOf(position + 1, positionOf(j) + 1)}
+                        onClick={() => onChange(toggleAfter(steps, i, j, !s.after.includes(j)))}
+                      >
                         {t.afterStep(positionOf(j) + 1)}
                       </Chip>
                     ))}
@@ -167,6 +175,8 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                       use={u}
                       text={useChipText(u, nameOf(u), t.useChip)}
                       open={isOpen(u, j)}
+                      name={t.useIn(useChipText(u, nameOf(u), t.useChip), position + 1)}
+                      removeLabel={t.removeUseFrom(useChipText(u, nameOf(u), t.useChip), position + 1)}
                       onToggle={() => setOpenUse((current) => (current === u.key ? null : u.key))}
                       onRemove={() => {
                         if (openUse === u.key) setOpenUse(null)
@@ -176,11 +186,11 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                     />
                   ))}
                   <li className="step-card__adds">
-                    <ChoiceChip variant="outline" icon="add" label={t.addUse} onClick={() => addUseTo(i)}>
+                    <ChoiceChip variant="outline" icon="add" label={t.addUseTo(position + 1)} onClick={() => addUseTo(i)}>
                       {t.useChip}
                     </ChoiceChip>
                     {showsPhoto ? null : (
-                      <ChoiceChip variant="outline" icon="camera" label={t.addPhoto} onClick={() => setPhotoShown((cur) => new Set(cur).add(s.key))}>
+                      <ChoiceChip variant="outline" icon="camera" label={t.addPhotoTo(position + 1)} onClick={() => setPhotoShown((cur) => new Set(cur).add(s.key))}>
                         {t.photoChip}
                       </ChoiceChip>
                     )}
@@ -188,6 +198,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                 </ul>
                   {showsPhoto ? (
                     <StepPhoto
+                      stepName={t.stepNumber(position + 1)}
                       imageId={s.image}
                       onChange={(id) => onChange(setStepImage(steps, i, id))}
                       onBusyChange={onPhotoBusyChange ? (busy) => onPhotoBusyChange(s.key, busy) : undefined}
@@ -202,6 +213,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                         ingredients={ingredients}
                         errors={errors}
                         index={{ step: i, use: j }}
+                        stepNumber={position + 1}
                         onPick={(ing) => pickUse(i, j, ing)}
                         onChange={(change) => patchUse(i, j, change)}
                         onClose={(refocus) => closeUse(u.key, refocus)}
@@ -217,7 +229,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
               </div>
               <div className="step-card__actions">
                 <Menu
-                  label={t.actions}
+                  label={t.actionsOf(position + 1)}
                   items={[
                     { id: 'up', label: t.up, icon: 'moveUp', disabled: i === 0, onSelect: () => onChange(moveStep(steps, i, i - 1)) },
                     { id: 'down', label: t.down, icon: 'moveDown', disabled: i === steps.length - 1, onSelect: () => onChange(moveStep(steps, i, i + 1)) },
@@ -225,7 +237,7 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
                   ]}
                 />
                 <span className="step-card__remove">
-                  <IconButton icon="delete" label={t.remove} onClick={() => removeStepAt(i)} />
+                  <IconButton icon="delete" label={t.removeOf(position + 1)} onClick={() => removeStepAt(i)} />
                 </span>
               </div>
             </li>
@@ -242,19 +254,22 @@ export function StepsEditor({ steps, errors, onChange, ingredients = [], onPhoto
 interface UseChipProps {
   use: UseDraft
   text: string
+  /** "2 clove Garlic in Step 2" and "Remove 2 clove Garlic from Step 2" (P38: unique across Steps; the chip shows "2 clove Garlic"). */
+  name: string
+  removeLabel: string
   open: boolean
   onToggle: () => void
   onRemove: () => void
 }
 
 /** One use as a chip: the chip is a button that opens the use's fields; the × beside it, inside the chip, removes it. Two buttons, each with its own ring. */
-function UseChip({ use, text, open, onToggle, onRemove }: UseChipProps): ReactNode {
+function UseChip({ use, text, name, removeLabel, open, onToggle, onRemove }: UseChipProps): ReactNode {
   return (
     <li className="use-chip" data-use="" data-focus-scope="" data-use-key={use.key} data-open={open || undefined}>
-      <button type="button" className="use-chip__edit" aria-expanded={open} onClick={onToggle}>
+      <button type="button" className="use-chip__edit" aria-label={name} aria-expanded={open} onClick={onToggle}>
         {text}
       </button>
-      <button type="button" className="use-chip__remove" aria-label={t.removeUse} onClick={onRemove}>
+      <button type="button" className="use-chip__remove" aria-label={removeLabel} onClick={onRemove}>
         <Icon name="close" size={16} />
       </button>
     </li>
@@ -266,6 +281,8 @@ interface UseRowProps {
   ingredients: IngredientRef[]
   errors: DraftErrors
   index: { step: number; use: number }
+  /** The Step's number as shown (its position), for the Selects' names. */
+  stepNumber: number
   onPick: (ingredient: IngredientRef) => void
   onChange: (change: Partial<UseDraft>) => void
   /** Enter (refocus: the chip takes the cursor back) or the cursor leaving the row (refocus false). */
@@ -273,7 +290,7 @@ interface UseRowProps {
 }
 
 /** The open use: Ingredient, quantity (text, fractions typeable) and unit in one row, and a hint for a unit the Ingredient does not know. */
-function UseRow({ use, ingredients, errors, index, onPick, onChange, onClose }: UseRowProps): ReactNode {
+function UseRow({ use, ingredients, errors, index, stepNumber, onPick, onChange, onClose }: UseRowProps): ReactNode {
   const ingredient = ingredients.find((ing) => ing.id === use.ingredientId)
   const base = `steps.${index.step}.uses.${index.use}`
   const asks = needsConversion(use.unit, ingredient)
@@ -295,6 +312,7 @@ function UseRow({ use, ingredients, errors, index, onPick, onChange, onClose }: 
         <IngredientSelect
           size="full"
           label={t.useIngredient}
+          ariaLabel={t.useIngredientIn(stepNumber)}
           ingredients={ingredients}
           value={use.ingredientId}
           error={err('ingredient')}
@@ -311,6 +329,7 @@ function UseRow({ use, ingredients, errors, index, onPick, onChange, onClose }: 
         <UnitSelect
           size="sm"
           label={t.useUnit}
+          ariaLabel={t.useUnitIn(stepNumber)}
           units={ingredient ? unitChoicesOf(ingredient) : { baseUnit: use.unit, conversions: [], globalUnits: [] }}
           value={use.unit || null}
           disabled={!ingredient}

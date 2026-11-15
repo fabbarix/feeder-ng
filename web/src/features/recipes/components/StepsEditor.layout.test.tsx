@@ -22,16 +22,16 @@ describe('StepsEditor: card layout', () => {
   it('Kind and Duration share one timing row; Duration is a DurationField in minutes', () => {
     view([step()])
     const kind = within(card()).getByRole('radiogroup', { name: 'Kind of Step 1' })
-    const duration = within(card()).getByRole('group', { name: 'Duration' })
+    const duration = within(card()).getByRole('group', { name: /^Duration( of Step \d+)?$/ })
     const row = kind.closest('.step-card__timing')
     expect(row).not.toBeNull()
     expect(row).toContainElement(duration)
-    expect(within(duration).getByRole('spinbutton', { name: 'Duration' })).toHaveValue('5')
-    expect(within(duration).getByRole('combobox', { name: 'Duration unit' })).toHaveTextContent('min')
+    expect(within(duration).getByRole('spinbutton', { name: /^Duration( of Step \d+)?$/ })).toHaveValue('5')
+    expect(within(duration).getByRole('combobox', { name: /^Duration( of Step \d+)? unit$/ })).toHaveTextContent('min')
   })
   it('an Advance Step shows Lead time in the same place', () => {
     view([step({ kind: 'advance', leadTimeMinutes: '240', durationMinutes: '' })])
-    const lead = within(card()).getByRole('group', { name: 'Lead time' })
+    const lead = within(card()).getByRole('group', { name: /^Lead time( of Step \d+)?$/ })
     expect(lead.closest('.step-card__timing')).not.toBeNull()
   })
   it('the Kind Segmented is compact (each option as wide as its label, never wrapping): Active, Passive, Advance', () => {
@@ -51,9 +51,9 @@ describe('StepsEditor: Step actions', () => {
   it('Remove Step is an IconButton in the actions; the "Step actions" menu holds Move up, Move down and Remove Step', async () => {
     view([step({ key: 'a' }), step({ key: 'b' })])
     const actions = card().querySelector('.step-card__actions') as HTMLElement
-    expect(within(actions).getByRole('button', { name: 'Remove Step' })).toBeInTheDocument()
+    expect(within(actions).getByRole('button', { name: /^Remove Step( \d+)?$/ })).toBeInTheDocument()
     expect(within(card()).queryByRole('button', { name: 'Move Step up' })).toBeNull()
-    const more = within(actions).getByRole('button', { name: 'Step actions' })
+    const more = within(actions).getByRole('button', { name: /^Step( \d+)? actions$/ })
     expect(more).toHaveAttribute('aria-haspopup', 'menu')
     await userEvent.click(more)
     expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['Move Step up', 'Move Step down', 'Remove Step'])
@@ -64,20 +64,20 @@ describe('StepsEditor: Uses as chips', () => {
   it('shows no "Uses" label; the "Ingredient use" ChoiceChip adds a use', async () => {
     const { p } = view([step()])
     expect(within(card()).queryByText('Uses')).toBeNull()
-    const add = within(card()).getByRole('button', { name: 'Add ingredient use' })
+    const add = within(card()).getByRole('button', { name: /^Add ingredient use( to Step \d+)?$/ })
     expect(add).toHaveClass('choice-chip')
     await userEvent.click(add)
     expect(vi.mocked(p.onChange).mock.calls[0]![0][0]!.uses).toHaveLength(1)
   })
   it('with uses, each use is a chip before the add chip, which stays', () => {
     view([step({ uses: [{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '2', unit: 'clove' }] })])
-    const use = within(card()).getByRole('button', { name: '2 clove Garlic' })
-    const add = within(card()).getByRole('button', { name: 'Add ingredient use' })
+    const use = within(card()).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ })
+    const add = within(card()).getByRole('button', { name: /^Add ingredient use( to Step \d+)?$/ })
     expect(use.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(add).toHaveClass('choice-chip')
   })
   it('"After step" chips stay', () => {
     view([step({ key: 'a' }), step({ key: 'b' })])
-    expect(within(card(1)).getByRole('button', { name: 'After step 1' })).toHaveClass('chip')
+    expect(within(card(1)).getByRole('button', { name: /^(Step \d+ after Step|After step) 1$/ })).toHaveClass('chip')
   })
 })

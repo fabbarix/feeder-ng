@@ -5,6 +5,8 @@ import { recipeStrings } from '../strings'
 export interface StepPhotoProps {
   /** The Step's image id, '' when it has no photo. */
   imageId: string
+  /** "Step 2": the compact picker's buttons name it ("Choose a file for Step 2"; P38). */
+  stepName?: string
   onChange: (imageId: string) => void
   /** PE: true while the picker uploads. */
   onBusyChange?: (busy: boolean) => void
@@ -15,7 +17,7 @@ export interface StepPhotoProps {
  * Photo is chosen, "No Photo yet." with Choose a file (and Take photo where there is a camera). Each picker keeps its own upload state,
  * so one Step never affects another.
  */
-export function StepPhoto({ imageId, onChange, onBusyChange }: StepPhotoProps): ReactNode {
+export function StepPhoto({ imageId, stepName, onChange, onBusyChange }: StepPhotoProps): ReactNode {
   return (
     <div className="step-card__photo">
       <ImagePicker
@@ -23,6 +25,7 @@ export function StepPhoto({ imageId, onChange, onBusyChange }: StepPhotoProps): 
         hideLabel
         label={recipeStrings.steps.image}
         noun={recipeStrings.photo}
+        context={stepName}
         helper={recipeStrings.steps.noPhotoYet}
         value={imageId}
         onChange={onChange}

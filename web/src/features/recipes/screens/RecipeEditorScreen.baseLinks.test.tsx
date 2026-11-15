@@ -170,7 +170,7 @@ describe('RecipeEditorScreen: Use as a plain Ingredient with nothing to go back 
   it('opens the ordinary Ingredient picker, never the Base recipe picker', async () => {
     await open()
     const dialog = await screen.findByRole('dialog', { name: /Choose.*Ingredient/ })
-    expect(within(dialog).getByRole('combobox', { name: 'Ingredient' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Link to a Base recipe' })).toBeNull()
     expect(h.editor.unlinkLine).not.toHaveBeenCalled()
   })
@@ -178,7 +178,7 @@ describe('RecipeEditorScreen: Use as a plain Ingredient with nothing to go back 
   it('offers plain Ingredients only (no Base recipe\'s) and turns the line into the chosen one', async () => {
     await open()
     const dialog = await screen.findByRole('dialog', { name: /Choose.*Ingredient/ })
-    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Ingredient' }))
+    await userEvent.click(within(dialog).getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }))
     expect(screen.queryByRole('option', { name: /Base recipe/ })).toBeNull()
     await userEvent.click(screen.getByRole('option', { name: /garlic/ }))
     expect(h.editor.unlinkLine).toHaveBeenCalledWith('l2', garlic)

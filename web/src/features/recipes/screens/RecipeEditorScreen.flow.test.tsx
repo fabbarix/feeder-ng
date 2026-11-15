@@ -142,7 +142,7 @@ describe('the Photo is one 96 px button beside the Name', () => {
     expect(screen.getByRole('button', { name: 'Photo of the Recipe: change' })).toHaveFocus()
     // and it is the one that gets saved
     await userEvent.type(nameField(), 'Aioli')
-    await pick(screen.getByRole('combobox', { name: 'Ingredient' }), /garlic/)
+    await pick(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }), /garlic/)
     await userEvent.type(screen.getByRole('textbox', { name: 'Quantity' }), '2')
     await save()
     await waitFor(() => expect(scratch.callsTo('POST', '/api/recipes')).toHaveLength(1))
@@ -334,7 +334,7 @@ describe('a new Recipe starts typing at once (RX-02)', () => {
   it('opens with one empty line and one empty Step, no Photo drop zone anywhere', async () => {
     mount('/recipes/new')
     await screen.findByRole('textbox', { name: 'Name' })
-    expect(within(ingredients()).getAllByRole('combobox', { name: 'Ingredient' })).toHaveLength(1)
+    expect(within(ingredients()).getAllByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toHaveLength(1)
     expect(within(steps()).getAllByRole('textbox', { name: 'Step text' })).toHaveLength(1)
     expect(screen.queryByTestId('fake-image-picker')).toBeNull()
   })
@@ -367,12 +367,12 @@ describe('a new Recipe starts typing at once (RX-02)', () => {
   it('an untouched empty line and Step are dropped on Save: only what was filled in is sent', async () => {
     mount('/recipes/new')
     await userEvent.type(await screen.findByRole('textbox', { name: 'Name' }), 'Aioli')
-    await pick(within(ingredients()).getByRole('combobox', { name: 'Ingredient' }), /garlic/)
+    await pick(within(ingredients()).getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }), /garlic/)
     await userEvent.type(within(ingredients()).getByRole('textbox', { name: 'Quantity' }), '2')
     await userEvent.type(within(steps()).getByRole('textbox', { name: 'Step text' }), 'Mix')
     await userEvent.click(screen.getByRole('button', { name: 'Add ingredient' }))
     await userEvent.click(screen.getByRole('button', { name: 'Add Step' }))
-    expect(within(ingredients()).getAllByRole('combobox', { name: 'Ingredient' })).toHaveLength(2)
+    expect(within(ingredients()).getAllByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toHaveLength(2)
     expect(within(steps()).getAllByRole('textbox', { name: 'Step text' })).toHaveLength(2)
     await save()
     await waitFor(() => expect(scratch.callsTo('POST', '/api/recipes')).toHaveLength(1))
@@ -397,7 +397,7 @@ describe('Ingredient lines are quick to fill (RX-02, RX-08, RX-10)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add ingredient' }))
     const lines = () => within(ingredients()).getAllByRole('textbox', { name: 'Quantity' }) as HTMLInputElement[]
     await userEvent.type(lines()[1]!, '25')
-    await pick(within(ingredients()).getAllByRole('combobox', { name: 'Ingredient' })[1]!, /flour/)
+    await pick(within(ingredients()).getAllByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })[1]!, /flour/)
     await waitFor(() => expect(lines()[1]).toHaveFocus())
     expect(lines()[1]!.selectionStart).toBe(0)
     expect(lines()[1]!.selectionEnd).toBe(2)
@@ -407,8 +407,8 @@ describe('Ingredient lines are quick to fill (RX-02, RX-08, RX-10)', () => {
     mount()
     await ready()
     const first = stepCards()[0]!
-    await userEvent.click(within(first).getByRole('button', { name: 'Add ingredient use' }))
-    await pick(within(first).getByRole('combobox', { name: 'Ingredient used' }), /flour/)
+    await userEvent.click(within(first).getByRole('button', { name: /^Add ingredient use( to Step \d+)?$/ }))
+    await pick(within(first).getByRole('combobox', { name: /^Ingredient used( in Step \d+)?$/ }), /flour/)
     await waitFor(() => expect(within(first).getByRole('textbox', { name: 'Quantity used' })).toHaveFocus())
   })
 
@@ -416,7 +416,7 @@ describe('Ingredient lines are quick to fill (RX-02, RX-08, RX-10)', () => {
     mount()
     await ready()
     await userEvent.type(within(ingredients()).getByRole('textbox', { name: 'Note' }), 'sliced{Enter}')
-    const pickers = within(ingredients()).getAllByRole('combobox', { name: 'Ingredient' })
+    const pickers = within(ingredients()).getAllByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })
     expect(pickers).toHaveLength(2)
     await waitFor(() => expect(pickers[1]).toHaveFocus())
   })
@@ -426,7 +426,7 @@ describe('Ingredient lines are quick to fill (RX-02, RX-08, RX-10)', () => {
     await ready()
     await userEvent.click(screen.getByRole('button', { name: 'Add ingredient' }))
     await userEvent.type(within(ingredients()).getAllByRole('textbox', { name: 'Note' })[0]!, 'sliced{Enter}')
-    expect(within(ingredients()).getAllByRole('combobox', { name: 'Ingredient' })).toHaveLength(2)
+    expect(within(ingredients()).getAllByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toHaveLength(2)
   })
 
   it('Optional is a checkbox "Optional: garlic" on the line, and what it says is saved', async () => {
@@ -459,10 +459,10 @@ describe('a Step card (RX-02, RX-08)', () => {
     })
     mount()
     await ready()
-    const advance = within(stepCards()[0]!).getByRole('group', { name: 'Lead time' })
-    expect(within(advance).getByRole('spinbutton', { name: 'Lead time' })).toHaveValue('12')
-    expect(within(advance).getByRole('combobox', { name: 'Lead time unit' })).toHaveTextContent('h')
-    expect(within(within(stepCards()[1]!).getByRole('group', { name: 'Duration' })).getByRole('spinbutton', { name: 'Duration' })).toHaveValue('45')
+    const advance = within(stepCards()[0]!).getByRole('group', { name: /^Lead time( of Step \d+)?$/ })
+    expect(within(advance).getByRole('spinbutton', { name: /^Lead time( of Step \d+)?$/ })).toHaveValue('12')
+    expect(within(advance).getByRole('combobox', { name: /^Lead time( of Step \d+)? unit$/ })).toHaveTextContent('h')
+    expect(within(within(stepCards()[1]!).getByRole('group', { name: /^Duration( of Step \d+)?$/ })).getByRole('spinbutton', { name: /^Duration( of Step \d+)?$/ })).toHaveValue('45')
     await save()
     await waitFor(() => expect(scratch.callsTo('PUT', '/api/recipes/3')).toHaveLength(1))
     const sent = (scratch.callsTo('PUT', '/api/recipes/3')[0]!.body as { steps: { leadTimeMinutes: number; durationMinutes: number }[] }).steps
@@ -482,9 +482,9 @@ describe('a Step card (RX-02, RX-08)', () => {
   it('the ⋮ of a Step holds Move up, Move down and Remove Step (a phone has no trash button)', async () => {
     mount()
     await ready()
-    await userEvent.click(within(stepCards()[0]!).getByRole('button', { name: 'Step actions' }))
+    await userEvent.click(within(stepCards()[0]!).getByRole('button', { name: /^Step( \d+)? actions$/ }))
     expect(within(screen.getByRole('menu')).getAllByRole('menuitem').map((i) => i.textContent)).toEqual(['Move Step up', 'Move Step down', 'Remove Step'])
-    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Remove Step' }))
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /^Remove Step( \d+)?$/ }))
     await waitFor(() => expect(toastText()).toContain('Step 1 removed'))
   })
 

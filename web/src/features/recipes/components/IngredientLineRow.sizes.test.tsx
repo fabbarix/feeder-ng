@@ -21,9 +21,9 @@ const sizeOf = (el: HTMLElement) => el.closest('.ui-field')!.getAttribute('data-
 describe('IngredientLineRow: sizes', () => {
   it('Ingredient and Note take the free space (full); Quantity is xs and Unit is sm', () => {
     view()
-    expect(sizeOf(screen.getByRole('combobox', { name: 'Ingredient' }))).toBe('full')
+    expect(sizeOf(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }))).toBe('full')
     expect(sizeOf(screen.getByRole('textbox', { name: 'Quantity' }))).toBe('xs')
-    expect(sizeOf(screen.getByRole('combobox', { name: 'Unit' }))).toBe('sm')
+    expect(sizeOf(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ }))).toBe('sm')
     expect(sizeOf(screen.getByRole('textbox', { name: 'Note' }))).toBe('full')
   })
   it('Note has the placeholder "note" (the label is hidden from 720 px by CSS)', () => {

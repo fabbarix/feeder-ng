@@ -40,10 +40,10 @@ const card = (n: number) => screen.getAllByRole('listitem').filter((li) => li.ma
 describe('a use is a chip with its own remove', () => {
   it('shows "2 clove Garlic" as a button (closed) and a "Remove ingredient use" button; no use fields until it is pressed', () => {
     render(<Harness initial={[step({ uses: [use()] })]} />)
-    const chip = within(card(1)).getByRole('button', { name: '2 clove Garlic' })
+    const chip = within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ })
     expect(chip).toHaveAttribute('aria-expanded', 'false')
     expect(chip.closest('[data-use]')).not.toBeNull()
-    const remove = within(card(1)).getByRole('button', { name: 'Remove ingredient use' })
+    const remove = within(card(1)).getByRole('button', { name: /^Remove (ingredient use|.+ from Step \d+)$/ })
     expect(remove.closest('[data-use]')).toBe(chip.closest('[data-use]'))
     expect(remove).not.toBe(chip)
     expect(within(card(1)).queryByRole('textbox', { name: 'Quantity used' })).toBeNull()
@@ -52,7 +52,7 @@ describe('a use is a chip with its own remove', () => {
   it('the × removes through onRemoveUse (B9-31\'s Undo), with the Step and use indexes', async () => {
     const onRemoveUse = vi.fn()
     render(<Harness initial={[step(), step({ key: 'k2', uses: [use(), use({ key: 'u2', ingredientId: 8, quantity: '100', unit: 'g' })] })]} onRemoveUse={onRemoveUse} />)
-    await userEvent.click(within(card(2)).getAllByRole('button', { name: 'Remove ingredient use' })[1]!)
+    await userEvent.click(within(card(2)).getAllByRole('button', { name: /^Remove (ingredient use|.+ from Step \d+)$/ })[1]!)
     expect(onRemoveUse).toHaveBeenCalledWith(1, 1)
   })
 })
@@ -60,48 +60,48 @@ describe('a use is a chip with its own remove', () => {
 describe('pressing a use chip opens its fields under the chips', () => {
   it('opens Ingredient used, Quantity used and Unit used in one row, and says it is open', async () => {
     render(<Harness initial={[step({ uses: [use()] })]} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))
-    expect(within(card(1)).getByRole('button', { name: '2 clove Garlic' })).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ }))
+    expect(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ })).toHaveAttribute('aria-expanded', 'true')
     const row = within(card(1)).getByRole('textbox', { name: 'Quantity used' }).closest('.use-row')!
     expect(row).not.toBeNull()
-    expect(within(row as HTMLElement).getByRole('combobox', { name: 'Unit used' })).toHaveTextContent('clove')
-    expect(within(row as HTMLElement).getByRole('combobox', { name: 'Ingredient used' })).toHaveTextContent('garlic')
+    expect(within(row as HTMLElement).getByRole('combobox', { name: /^Unit used( in Step \d+)?$/ })).toHaveTextContent('clove')
+    expect(within(row as HTMLElement).getByRole('combobox', { name: /^Ingredient used( in Step \d+)?$/ })).toHaveTextContent('garlic')
     expect(within(card(1)).getByRole('textbox', { name: 'Quantity used' })).toHaveValue('2')
   })
 
   it('one use is open at a time', async () => {
     render(<Harness initial={[step({ uses: [use(), use({ key: 'u2', ingredientId: 8, quantity: '100', unit: 'g' })] })]} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))
-    await userEvent.click(within(card(1)).getByRole('button', { name: '100 g Flour' }))
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ }))
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^100 g Flour( in Step \d+)?$/ }))
     expect(within(card(1)).getAllByRole('textbox', { name: 'Quantity used' })).toHaveLength(1)
     expect(within(card(1)).getByRole('textbox', { name: 'Quantity used' })).toHaveValue('100')
-    expect(within(card(1)).getByRole('button', { name: '2 clove Garlic' })).toHaveAttribute('aria-expanded', 'false')
+    expect(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('typing changes the use; Enter closes the row and gives the chip the focus back', async () => {
     const onSteps = vi.fn()
     render(<Harness initial={[step({ uses: [use()] })]} onSteps={onSteps} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ }))
     const qty = within(card(1)).getByRole('textbox', { name: 'Quantity used' })
     await userEvent.clear(qty)
     await userEvent.type(qty, '3{Enter}')
     expect(onSteps).toHaveBeenLastCalledWith([expect.objectContaining({ uses: [expect.objectContaining({ quantity: '3' })] })])
     expect(within(card(1)).queryByRole('textbox', { name: 'Quantity used' })).toBeNull()
-    expect(within(card(1)).getByRole('button', { name: '3 clove Garlic' })).toHaveFocus()
+    expect(within(card(1)).getByRole('button', { name: /^3 clove Garlic( in Step \d+)?$/ })).toHaveFocus()
   })
 
   it('Escape in a field closes the row and gives the chip the focus back (w4b review)', async () => {
     render(<Harness initial={[step({ uses: [use()] })]} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ }))
     await userEvent.click(within(card(1)).getByRole('textbox', { name: 'Quantity used' }))
     await userEvent.keyboard('{Escape}')
     expect(within(card(1)).queryByRole('textbox', { name: 'Quantity used' })).toBeNull()
-    expect(within(card(1)).getByRole('button', { name: '2 clove Garlic' })).toHaveFocus()
+    expect(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ })).toHaveFocus()
   })
 
   it('the open row comes right after the chip row, before a Photo, so the chip and its fields stay together (w4b review)', async () => {
     render(<Harness initial={[step({ uses: [use()], image: 'img1' })]} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ }))
     const row = card(1).querySelector('.use-row')!
     expect(row.parentElement).toBe(card(1).querySelector('.step-card__extras'))
     expect(row.previousElementSibling?.matches('.step-card__photo, .step-card__more')).toBe(true)
@@ -109,7 +109,7 @@ describe('pressing a use chip opens its fields under the chips', () => {
 
   it('leaving the row closes it', async () => {
     render(<Harness initial={[step({ uses: [use()] })]} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: '2 clove Garlic' }))
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ }))
     await userEvent.click(within(card(1)).getByRole('textbox', { name: 'Quantity used' }))
     await userEvent.click(screen.getByRole('button', { name: 'elsewhere' }))
     expect(within(card(1)).queryByRole('textbox', { name: 'Quantity used' })).toBeNull()
@@ -120,15 +120,15 @@ describe('"Add ingredient use" adds a use and opens its picker', () => {
   it('the new use is open and its Ingredient picker has the cursor', async () => {
     const onSteps = vi.fn()
     render(<Harness initial={[step()]} onSteps={onSteps} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: 'Add ingredient use' }))
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^Add ingredient use( to Step \d+)?$/ }))
     expect(onSteps).toHaveBeenLastCalledWith([expect.objectContaining({ uses: [expect.objectContaining({ ingredientId: null })] })])
-    expect(within(card(1)).getByRole('combobox', { name: 'Ingredient used' })).toHaveFocus()
+    expect(within(card(1)).getByRole('combobox', { name: /^Ingredient used( in Step \d+)?$/ })).toHaveFocus()
   })
 
   it('after a pick the cursor is in "Quantity used"', async () => {
     render(<Harness initial={[step()]} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: 'Add ingredient use' }))
-    await userEvent.click(within(card(1)).getByRole('combobox', { name: 'Ingredient used' }))
+    await userEvent.click(within(card(1)).getByRole('button', { name: /^Add ingredient use( to Step \d+)?$/ }))
+    await userEvent.click(within(card(1)).getByRole('combobox', { name: /^Ingredient used( in Step \d+)?$/ }))
     await userEvent.click(screen.getByRole('option', { name: /flour/ }))
     expect(within(card(1)).getByRole('textbox', { name: 'Quantity used' })).toHaveFocus()
   })

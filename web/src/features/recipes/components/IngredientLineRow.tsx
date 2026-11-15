@@ -174,6 +174,7 @@ export function IngredientLineRow({
           <IngredientSelect
             size="full"
             label={recipeStrings.lines.ingredient}
+            ariaLabel={recipeStrings.lines.ingredientOf(index + 1)}
             ingredients={ingredients}
             value={line.ingredientId}
             error={fieldError(errors, `lines.${index}.ingredient`)}
@@ -213,6 +214,7 @@ export function IngredientLineRow({
         <UnitSelect
           size="sm"
           label={recipeStrings.lines.unit}
+          ariaLabel={recipeStrings.lines.unitFor(who)}
           units={units}
           value={line.unit || null}
           disabled={!ingredient}

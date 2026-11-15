@@ -12,7 +12,7 @@ import { PreviewPane } from './components/PreviewPane'
 import { SourceActions } from './components/SourceActions'
 import { useImagePicker } from './hooks/useImagePicker'
 import { ACCEPT } from './lib/limits'
-import { imagePickerStrings as t, limitHelperFor, pictureActionLabels } from './strings'
+import { compactActionNames, imagePickerStrings as t, limitHelperFor, pictureActionLabels } from './strings'
 import type { ImagePickerProps } from './types'
 import './ImagePicker.css'
 
@@ -68,6 +68,7 @@ export function ImagePicker(props: ImagePickerProps) {
             onReject={p.onReject}
             onTakePhoto={p.takePhoto}
             onRemove={p.remove}
+            names={props.context ? compactActionNames(props.context, props.noun) : undefined}
           />
           {p.panel === 'camera' ? <CameraPanel camera={p.camera} disabled={p.busy} onCapture={() => void p.capture()} onClose={p.closeCamera} /> : null}
         </>

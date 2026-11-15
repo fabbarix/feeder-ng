@@ -89,7 +89,7 @@ describe('detail: Use as a plain Ingredient with nothing to go back to (design Â
     view()
     await useAsPlain()
     const dialog = await screen.findByRole('dialog', { name: 'Choose an Ingredient' })
-    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Ingredient' }))
+    await userEvent.click(within(dialog).getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }))
     expect(screen.queryByRole('option', { name: /Base recipe/ })).toBeNull()
     await userEvent.click(screen.getByRole('option', { name: /garlic/ }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/recipes/7/lines/71/base')[0]?.body).toEqual({ ingredientId: 7 }))

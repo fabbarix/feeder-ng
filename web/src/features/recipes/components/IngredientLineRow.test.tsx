@@ -21,8 +21,8 @@ describe('IngredientLineRow', () => {
   it('uses only field primitives: no native select or datalist', () => {
     view()
     expect(document.querySelector('select, datalist')).toBeNull()
-    expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('garlic')
-    expect(screen.getByRole('combobox', { name: 'Unit' })).toHaveTextContent('clove')
+    expect(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })).toHaveTextContent('garlic')
+    expect(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ })).toHaveTextContent('clove')
     // B9-37 (RX-10): Optional is the line's Checkbox (the menu item is gone; IngredientLineRow.flow.test.tsx pins it).
     expect(screen.getByRole('checkbox', { name: 'Optional: garlic' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Optional/ })).toBeNull()
@@ -30,14 +30,14 @@ describe('IngredientLineRow', () => {
 
   it('picks an Ingredient from the IngredientSelect', async () => {
     const p = view(props({ line: line({ ingredientId: null, ingredientName: '', unit: '' }), ingredient: undefined }))
-    await userEvent.click(screen.getByRole('combobox', { name: 'Ingredient' }))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Ingredient( of line \d+)?$/ }))
     await userEvent.click(screen.getByRole('option', { name: /flour/ }))
     expect(p.onPick).toHaveBeenCalledWith(flour)
   })
 
   it('chooses a unit of the Ingredient from the UnitSelect', async () => {
     const p = view()
-    await userEvent.click(screen.getByRole('combobox', { name: 'Unit' }))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ }))
     await userEvent.click(screen.getByRole('option', { name: /^kg/ }))
     expect(p.onChange).toHaveBeenCalledWith({ unit: 'kg' })
   })
@@ -59,7 +59,7 @@ describe('IngredientLineRow', () => {
 
   it('has no Unit choice before an Ingredient is picked', () => {
     view(props({ line: line({ ingredientId: null, ingredientName: '', unit: '' }), ingredient: undefined }))
-    expect(screen.getByRole('combobox', { name: 'Unit' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: /^Unit( for .+)?$/ })).toBeDisabled()
   })
 
   it('keeps fractions typeable in Quantity (a text field, "1 1/2")', async () => {

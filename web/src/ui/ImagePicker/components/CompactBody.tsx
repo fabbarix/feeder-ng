@@ -21,13 +21,15 @@ export interface CompactBodyProps {
   onReject: (files: File[]) => void
   onTakePhoto: () => void
   onRemove: () => void
+  /** B9-37: the buttons' names when the picker repeats down a list (compactActionNames); the visible words are unchanged. */
+  names?: { choose: string; take: string; change: string; remove: string }
 }
 
 /**
  * B9-30 (SET-04, SET-05): the compact picker of an entity page's last tile. Empty: the 72 px monogram, "No Picture yet." and outline
  * small "Choose a file" (and "Take photo" where a camera route exists). Filled: the 72 px picture with "Change" and "Remove".
  */
-export function CompactBody({ label, monogram, hasValue, previewSrc, helper, helperId, camera, disabled, onFiles, onReject, onTakePhoto, onRemove }: CompactBodyProps) {
+export function CompactBody({ label, monogram, hasValue, previewSrc, helper, helperId, camera, disabled, onFiles, onReject, onTakePhoto, onRemove, names }: CompactBodyProps) {
   const input = useRef<ImageFileInputHandle>(null)
   const choose = () => input.current?.open()
   return (
@@ -42,20 +44,20 @@ export function CompactBody({ label, monogram, hasValue, previewSrc, helper, hel
         <div className="image-picker__compact-actions">
           {hasValue ? (
             <>
-              <Button variant="secondary" size="sm" disabled={disabled} onClick={choose}>
+              <Button variant="secondary" size="sm" disabled={disabled} onClick={choose} aria-label={names?.change}>
                 {t.change}
               </Button>
-              <Button variant="secondary" size="sm" disabled={disabled} onClick={onRemove}>
+              <Button variant="secondary" size="sm" disabled={disabled} onClick={onRemove} aria-label={names?.remove}>
                 {t.remove}
               </Button>
             </>
           ) : (
             <>
-              <Button variant="secondary" size="sm" icon="photos" disabled={disabled} onClick={choose}>
+              <Button variant="secondary" size="sm" icon="photos" disabled={disabled} onClick={choose} aria-label={names?.choose}>
                 {t.chooseFile}
               </Button>
               {camera ? (
-                <Button variant="secondary" size="sm" disabled={disabled} data-picker-action="camera" onClick={onTakePhoto}>
+                <Button variant="secondary" size="sm" disabled={disabled} data-picker-action="camera" onClick={onTakePhoto} aria-label={names?.take}>
                   {t.takePhoto}
                 </Button>
               ) : null}

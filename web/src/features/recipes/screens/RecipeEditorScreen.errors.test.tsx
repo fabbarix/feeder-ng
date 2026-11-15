@@ -131,7 +131,7 @@ describe('a line without an Ingredient', () => {
     // B9-37: the new Recipe's empty line counts once it is touched (an untouched one is dropped on Save).
     await userEvent.type(screen.getByRole('textbox', { name: 'Quantity' }), '2')
     await save()
-    const picker = await screen.findByRole('combobox', { name: 'Ingredient' })
+    const picker = await screen.findByRole('combobox', { name: /^Ingredient( of line \d+)?$/ })
     await waitFor(() => expect(picker).toHaveFocus())
     expect(picker).toHaveAttribute('aria-invalid', 'true')
     expect(formAlerts()).toHaveLength(0)
