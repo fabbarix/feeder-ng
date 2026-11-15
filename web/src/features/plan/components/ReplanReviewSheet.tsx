@@ -26,7 +26,7 @@ function Day({ day }: { day: ReviewDay }) {
             label={row.key}
             detail={
               <span className="replan-review__detail">
-                <span className="replan-review__line">
+                <span>
                   {row.place ? <>{row.place} · </> : null}
                   <span className="replan-review__was">
                     <Icon name="refresh" size={14} />
