@@ -29,9 +29,25 @@ describe('CourseRow: reading', () => {
     expect(within(row).queryByTestId('course-main-chip')).toBeNull()
   })
 
-  it('marks the main Course with a "Main" chip', () => {
+  // B9-51 (SET-14c): the main Course drops its "Main" badge; its meta says it instead.
+  it('the main Course has no "Main" chip: its meta reads "main Course · 12 Recipes · 5 Meal Slots"', () => {
     setup({ course: mainCourse })
-    expect(screen.getByTestId('course-main-chip')).toHaveTextContent('Main')
+    const row = screen.getByRole('listitem')
+    expect(within(row).queryByTestId('course-main-chip')).toBeNull()
+    expect(row.querySelector('.chip')).toBeNull()
+    expect(within(row).getByText('main Course · 12 Recipes · 5 Meal Slots')).toBeInTheDocument()
+    expect(within(row).getByTestId('course-name')).toHaveTextContent(/^Main$/)
+  })
+
+  it('says only "main Course" when the counts are not known, and a Course that is not main never says it', () => {
+    setup({ course: { ...mainCourse, recipeCount: undefined, mealSlotCount: undefined } })
+    expect(screen.getByText('main Course')).toBeInTheDocument()
+  })
+
+  it('a Course that is not main keeps its meta as it was', () => {
+    setup({ course: sideCourse })
+    expect(screen.getByText('8 Recipes · 3 Meal Slots')).toBeInTheDocument()
+    expect(screen.queryByText(/main Course/)).toBeNull()
   })
 
   it('a plain User gets no drag handle and no actions', () => {

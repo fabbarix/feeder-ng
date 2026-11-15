@@ -19,3 +19,13 @@ export function usageLine(tag: Pick<Tag, 'recipes' | 'slotRules' | 'varietyRule'
 export function rowLabel(tag: Pick<Tag, 'name' | 'recipes' | 'slotRules' | 'varietyRule'>): string {
   return `${tag.name}, ${usageLine(tag)}`
 }
+
+/** B9-51 test-author stub (SET-11): the row's value, "12 Recipes", "1 Recipe", "None". */
+export function recipeValue(_n: number): string {
+  return ''
+}
+
+/** B9-51 test-author stub (SET-11): what else uses the Tag, "1 Slot Rule · Variety Rule"; '' when nothing does. */
+export function usageExtras(_tag: Pick<Tag, 'slotRules' | 'varietyRule'>): string {
+  return ''
+}

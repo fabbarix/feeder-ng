@@ -11,19 +11,27 @@ const body = (selector: string) => {
   return m?.[1] ?? ''
 }
 
+// B9-51 (SET-11, P40): the Tag is the row's title (at most two lines, a long one ends in an ellipsis), the count its value, which never
+// shrinks; the leading is the 40 px TagSwatch, so the old rules that let a pill shrink to 65 % of the row are gone.
 describe('tags.css: a long Tag fits its row', () => {
   it('the Tags screen scopes its rules with .tags-screen on its ListPage', () => {
     expect(screen).toMatch(/<ListPage className="tags-screen"/)
   })
-  it("a row's pill may shrink, to at most 65% of the row", () => {
-    const b = body('.tags-screen .list-row__leading')
-    expect(b).toMatch(/flex:\s*0 1 auto/)
-    expect(b).toMatch(/min-inline-size:\s*0/)
-    expect(b).toMatch(/max-inline-size:\s*65%/)
+  it('the title takes at most two lines', () => {
+    const b = body('.tags-screen .list-row__title')
+    expect(b).toMatch(/-webkit-line-clamp:\s*2/)
+    expect(b).toMatch(/overflow:\s*hidden/)
+    expect(b).toMatch(/overflow-wrap:\s*(anywhere|break-word)/)
   })
-  it('the pill itself can shrink below its text (its label ends in an ellipsis)', () => {
-    const b = body('.tags-screen .list-row__leading > .chip')
-    expect(b).toMatch(/min-inline-size:\s*0/)
-    expect(b).toMatch(/max-inline-size:\s*100%/)
+  it('the count never shrinks, so "12 Recipes" is never cut', () => {
+    expect(body('.tags-screen .list-row__value')).toMatch(/flex-shrink:\s*0|flex:\s*none|flex:\s*0 0 auto|white-space:\s*nowrap/)
+  })
+  it('the old pill rules are gone', () => {
+    expect(css).not.toContain('max-inline-size: 65%')
+    expect(css).not.toMatch(/\.list-row__leading\s*>\s*\.chip/)
+  })
+  it('the screen draws the swatch, not a Chip, as the leading', () => {
+    expect(screen).toMatch(/TagSwatch/)
+    expect(screen).not.toMatch(/leading=\{<Chip/)
   })
 })

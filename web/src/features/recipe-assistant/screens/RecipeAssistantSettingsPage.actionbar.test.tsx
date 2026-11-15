@@ -14,7 +14,7 @@ describe('Recipe Assistant settings actions', () => {
     mockApi({ 'GET /api/me': ADMIN_ME, 'GET /api/recipe-assistant/settings': settingsOn, 'POST /api/recipe-assistant/models': { models: [] } })
     renderWithProviders(<RecipeAssistantSettingsPage />, '/settings/recipe-assistant')
     await screen.findByRole('switch', { name: 'Use the Recipe Assistant' })
-    const bar = screen.getByRole('group', { name: 'Settings actions' })
+    const bar = screen.getByRole('group', { name: 'Recipe Assistant actions' })
     expect(bar).toHaveClass('sticky-action-bar')
     expect(bar).toHaveAttribute('data-column', 'narrow')
     expect(bar.querySelector('.form-actions')).not.toBeNull()
