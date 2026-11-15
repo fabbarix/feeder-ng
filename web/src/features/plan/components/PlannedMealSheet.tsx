@@ -3,6 +3,7 @@ import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
 import { fromLeftoverLabel } from '../../../lib/leftovers/copy'
 import { guestsNote } from '../lib/slotDate'
 import { usePhraseContext } from '../hooks/usePhraseContext'
+import { useSheetTitleFocus } from '../hooks/useSheetTitleFocus'
 import { sheetChips } from '../lib/chips'
 import { warningContextOf } from '../lib/bought'
 import { courseKey, courseOf, slotCourses } from '../lib/courses'
@@ -137,6 +138,8 @@ export function PlannedMealSheet({
         ))
       : []
   if (undoActions.length > 0) actions.push(...undoActions)
+  // Opening the sheet of a resolved meal focuses its title, never Undo Cooked (Enter must not undo it).
+  const { bodyRef, titleRef } = useSheetTitleFocus<HTMLDivElement>()
 
   return (
     <BottomSheet
@@ -144,9 +147,10 @@ export function PlannedMealSheet({
       onClose={onClose}
       title={meal?.recipeName ?? slot?.name ?? ''}
       footer={actions.length > 0 ? <div className="plan-sheet__actions">{actions}</div> : undefined}
+      initialFocusRef={resolution ? titleRef : undefined}
     >
       {slot && meal ? (
-        <div className="plan-sheet">
+        <div ref={bodyRef} className="plan-sheet">
           <p className="plan-sheet__meta">{several && course ? `${weekdayName(slot.date, 'short')} ${slot.name} · ${course.name}` : `${slot.name} · ${slot.time}`}</p>
           <p className="plan-sheet__facts">{meal.servedFromLeftover ? s.portionsNeeded(meal.portions) : s.plannedFacts(s.batches(meal.batches), s.portionsNeeded(meal.portions))}</p>
           {meal.servedFromLeftover?.leftoverId != null && onOpenLeftover ? (

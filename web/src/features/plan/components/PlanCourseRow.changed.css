@@ -10,8 +10,18 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  vertical-align: bottom;
   color: var(--color-muted);
   white-space: nowrap;
+}
+
+/* A long Recipe name ends in an ellipsis on the one meta line; the whole text stays in the row's accessible name. */
+.plan-row__was-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .plan-row__was svg {

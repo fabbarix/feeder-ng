@@ -23,10 +23,23 @@
   color: var(--color-muted);
 }
 
-/* The detail line, then the first why chip on its own line under it when it does not fit beside it. */
+/* The detail line, then the first why chip on its own line under it (the mock). */
 .replan-review__detail {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+}
+
+/* Each changed meal keeps the info-tone bar of its row on the Plan (PC-01). */
+.replan-review .detail-row {
+  padding-inline-start: var(--space-3);
+  box-shadow: inset 3px 0 0 var(--color-info-fg);
+}
+
+/* Undo all and Keep the changes share the footer's width equally (the mock's two halves). */
+.replan-review__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  inline-size: 100%;
 }

@@ -1,8 +1,9 @@
 // B9-26 (PC-01): the sheet "What changed": the edit as its context line, a lede, the changed meals as R-E rows grouped by day,
 // Undo all (secondary) and Keep the changes (primary) for the signed-in User's own edit, and the one circular Close (R-B).
-import { useId, useMemo, useRef, type ReactNode, type RefObject } from 'react'
+import { useId, type ReactNode } from 'react'
 import { BottomSheet, Button, Chip, DetailList, DetailRow } from '../../../ui'
 import type { ReplanReviewController } from '../hooks/useReplanReview'
+import { useSheetTitleFocus } from '../hooks/useSheetTitleFocus'
 import type { ReviewDay } from '../lib/replan'
 import { undoStrings as u } from '../strings/undo'
 import './ReplanReviewSheet.css'
@@ -36,23 +37,10 @@ function Day({ day }: { day: ReviewDay }) {
   )
 }
 
-/** The sheet's title, found from the body when it opens: Review focuses its title (PC-01), never Undo all. */
-function useTitleFocus(anchor: RefObject<HTMLElement | null>): RefObject<HTMLElement | null> {
-  return useMemo(
-    () => ({
-      get current() {
-        return anchor.current?.closest('dialog')?.querySelector<HTMLElement>('.sheet__title') ?? null
-      },
-      set current(_value) {},
-    }),
-    [anchor],
-  )
-}
-
 export function ReplanReviewSheet({ controller }: ReplanReviewSheetProps): ReactNode {
   const { open, model, canUndo, busy } = controller
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const titleRef = useTitleFocus(bodyRef)
+  // Review focuses its title (PC-01), never Undo all.
+  const { bodyRef, titleRef } = useSheetTitleFocus<HTMLDivElement>()
   if (!open || !model) return null
   return (
     <BottomSheet
@@ -63,14 +51,14 @@ export function ReplanReviewSheet({ controller }: ReplanReviewSheetProps): React
       initialFocusRef={titleRef}
       footer={
         canUndo ? (
-          <>
+          <div className="replan-review__actions">
             <Button variant="secondary" icon="undo" loading={busy} onClick={() => void controller.undoAll()}>
               {u.undoAll}
             </Button>
             <Button variant="primary" onClick={controller.keep}>
               {u.keepChanges}
             </Button>
-          </>
+          </div>
         ) : undefined
       }
     >
