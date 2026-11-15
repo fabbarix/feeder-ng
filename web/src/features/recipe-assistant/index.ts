@@ -1,13 +1,12 @@
-import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
-import { RecipeAssistantSettingsPage } from './screens/RecipeAssistantSettingsPage'
+import { lazyScreen } from '../../app/lazyScreen'
 
-export { RecipeAssistantSettingsPage }
+export { RecipeAssistantSettingsPage } from './screens/RecipeAssistantSettingsPage'
 
 /** The route object the settings feature registers (features/settings/index.ts); its Settings index row is in settingsSections. */
 export const recipeAssistantSettingsRoute: RouteObject = {
   path: '/settings/recipe-assistant',
-  element: createElement(RecipeAssistantSettingsPage),
+  element: lazyScreen(() => import('./screens/RecipeAssistantSettingsPage'), 'RecipeAssistantSettingsPage'),
 }
 
 /** Nothing is registered here: the settings feature registers the route, so auto-discovery gets an empty list. */

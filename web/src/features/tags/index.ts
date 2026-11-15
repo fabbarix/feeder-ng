@@ -1,10 +1,9 @@
 // Settings > Tags: /settings/tags (TagsScreen). Reached from the Settings index, so no nav item.
-import { createElement } from 'react'
 import type { FeatureModule } from '../../app/features'
-import { TagsScreen } from './screens/TagsScreen'
+import { lazyScreen } from '../../app/lazyScreen'
 
 const feature: FeatureModule = {
-  routes: [{ path: '/settings/tags', element: createElement(TagsScreen) }],
+  routes: [{ path: '/settings/tags', element: lazyScreen(() => import('./screens/TagsScreen'), 'TagsScreen') }],
 }
 
 export const routes = feature.routes

@@ -1,12 +1,10 @@
 // The receipt feature (docs/design/receipt-reading.md): two full-screen routes, reached from the Scanned list's footer row.
-import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
-import { ReceiptPhotosScreen } from './screens/ReceiptPhotosScreen'
-import { ReceiptReviewRoute } from './screens/ReceiptReviewRoute'
+import { lazyScreen } from '../../app/lazyScreen'
 
 export const routes: RouteObject[] = [
-  { path: '/scan/receipt', element: createElement(ReceiptPhotosScreen) },
-  { path: '/scan/receipt/review', element: createElement(ReceiptReviewRoute) },
+  { path: '/scan/receipt', element: lazyScreen(() => import('./screens/ReceiptPhotosScreen'), 'ReceiptPhotosScreen') },
+  { path: '/scan/receipt/review', element: lazyScreen(() => import('./screens/ReceiptReviewRoute'), 'ReceiptReviewRoute') },
 ]
 
 export { ReadReceiptFooter } from './components/ReadReceiptFooter'

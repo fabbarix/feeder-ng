@@ -1,8 +1,7 @@
-import { createElement } from 'react'
 import type { FeatureModule } from '../../app/features'
-import { NotificationSettingsScreen } from './components/NotificationSettingsScreen'
+import { lazyScreen } from '../../app/lazyScreen'
 
-const feature: FeatureModule = { routes: [{ path: '/settings/notifications', element: createElement(NotificationSettingsScreen) }] }
+const feature: FeatureModule = { routes: [{ path: '/settings/notifications', element: lazyScreen(() => import('./components/NotificationSettingsScreen'), 'NotificationSettingsScreen') }] }
 
 export const routes = feature.routes
 

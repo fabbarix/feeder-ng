@@ -1,12 +1,10 @@
-import { createElement } from 'react'
 import type { FeatureModule } from '../../app/features'
-import { ShopScreen } from './screens/ShopScreen'
-import { ShopsScreen } from './screens/ShopsScreen'
+import { lazyScreen } from '../../app/lazyScreen'
 
 const feature: FeatureModule = {
   routes: [
-    { path: '/settings/shops', element: createElement(ShopsScreen) },
-    { path: '/settings/shops/:id', element: createElement(ShopScreen) },
+    { path: '/settings/shops', element: lazyScreen(() => import('./screens/ShopsScreen'), 'ShopsScreen') },
+    { path: '/settings/shops/:id', element: lazyScreen(() => import('./screens/ShopScreen'), 'ShopScreen') },
   ],
   navItems: [],
 }
