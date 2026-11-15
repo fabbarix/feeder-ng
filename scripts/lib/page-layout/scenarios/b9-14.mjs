@@ -8,6 +8,12 @@
 // SHORT-02's sizes: 844x390 (phone landscape) and 390x400 (a 390 px phone with the keyboard up) are SCENARIO_VIEWPORTS keys (B9-14).
 import { byText, evaluate, press, until } from '../helpers.mjs'
 
+// P25 judges tap targets: the scenarios that run it emulate touch, so `(pointer: coarse)` holds and the controls' coarse ::after hit
+// areas (A11Y-09, B9-16) apply, as B9-16's touch-targets scenario does for P36.
+const TOUCH = [
+  { method: 'Emulation.setTouchEmulationEnabled', params: { enabled: true, maxTouchPoints: 5 } },
+  { method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } },
+]
 const dialogOpen = `!!document.querySelector('dialog.sheet[open]')`
 async function openAddMember() {
   await until(`!!document.querySelector('main') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the Members page')
@@ -18,9 +24,9 @@ async function openAddMember() {
 export default {
   order: 310,
   scenarios: [
-    { name: 'leftover-menu-sheet', route: '/', start: '/', setup: 'leftoverMenuSheet', widths: [375, 390], rules: ['P25', 'P33'] },
-    { name: 'sheet-planned-meal', route: '/plan', start: '/plan', setup: 'plannedMealSheet', widths: [390, '844x390'], rules: ['P25', 'P33'] },
-    { name: 'sheet-add-member', route: '/settings/members', start: '/settings/members', setup: 'addMemberSheet', widths: [390, '390x400', 1440], rules: ['P25', 'P33'] },
+    { name: 'leftover-menu-sheet', route: '/', start: '/', setup: 'leftoverMenuSheet', widths: [375, 390], emulate: TOUCH, rules: ['P25', 'P33'] },
+    { name: 'sheet-planned-meal', route: '/plan', start: '/plan', setup: 'plannedMealSheet', widths: [390, '844x390'], emulate: TOUCH, rules: ['P25', 'P33'] },
+    { name: 'sheet-add-member', route: '/settings/members', start: '/settings/members', setup: 'addMemberSheet', widths: [390, '390x400', 1440], emulate: TOUCH, rules: ['P25', 'P33'] },
     { name: 'sheet-short-landscape', route: '/settings/members', start: '/settings/members', setup: 'addMemberSheet', widths: ['667x375', '844x390-inset'], rules: ['P33'] },
     { name: 'sheet-zoom-400', route: '/settings/members', start: '/settings/members', setup: 'addMemberSheet', widths: ['375x256'], rules: ['P33'] },
     { name: 'focus-ring-room-sheet', route: '/settings/members', start: '/settings/members', setup: 'addMemberSheet', widths: [390, 1440], rules: ['P39'] },

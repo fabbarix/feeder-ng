@@ -1,7 +1,8 @@
 // P25 (always fails; B9-14, DS-01 and DS-02): a target under 44 px in an open sheet, two overlapping targets, or touching bottom-bar
 // labels. Metrics from probes/sheet-targets.mjs, key sheetMetrics (only on the opted-in scenarios; absent elsewhere, so nothing is reported):
 //   sheetMetrics: { sheetTargets: [{ sel, w, h, hitW, hitH }], sheetOverlaps: [{ a, b }], barLabels: [{ text, box: { x, y, r, b } }] }
-// A target counts by its hit area: the larger of its box and the ::after that extends it (a 40 px Close has a 52 px hit area).
+// A target counts by its hit area: its border box united with its ::after box, as B9-16's P36 judges it (a 40 px Close has a 52 px
+// hit area; a 40 px swatch or Segmented option has 44 px through the coarse-pointer ::after). The scenarios emulate touch.
 // Pure, so vitest tests it (web/src/app/pageLayoutRules.b9-14.test.ts).
 const f = (text) => ({ rule: 'P25', message: `P25 ${text}` })
 export const MIN_TARGET = 44

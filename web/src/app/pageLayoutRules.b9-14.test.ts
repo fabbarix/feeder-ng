@@ -142,6 +142,16 @@ describe('probes and scenarios', () => {
     expect(api.SCENARIO_VIEWPORTS['844x390']).toEqual({ width: 844, height: 390, mobile: true })
     expect(api.SCENARIO_VIEWPORTS['390x400']).toEqual({ width: 390, height: 400, mobile: true })
   })
+  // Ruling 3 (B9-14 review): P25 judges a target as B9-16's P36 does, its border box united with its ::after box, on a touch
+  // emulation (the coarse-pointer ::after hit areas of the swatches and Segmented options apply).
+  it('P25 measures box united with ::after, and every P25 scenario emulates touch', () => {
+    const src = probe('sheet-targets')!.source
+    expect(src).toMatch(/getComputedStyle\(t, '::after'\)/)
+    expect(src).toMatch(/Math\.min\(box\.x, x\)/)
+    for (const s of api.SCENARIOS.filter((x) => x.rules?.includes('P25'))) {
+      expect(s.emulate?.map((c: { method: string }) => c.method), s.name).toContain('Emulation.setTouchEmulationEnabled')
+    }
+  })
   it('each scenario reports only its own rules: P25/P33 for the sheets, P39 for the ring room', () => {
     expect(api.SCENARIOS.find((s) => s.name === 'focus-ring-room-sheet')?.rules).toEqual(['P39'])
     expect(api.SCENARIOS.find((s) => s.name === 'leftover-menu-sheet')?.rules).toEqual(['P25', 'P33'])
