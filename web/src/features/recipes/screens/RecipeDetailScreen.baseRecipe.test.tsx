@@ -179,3 +179,44 @@ describe('RecipeDetailScreen: a Base recipe', () => {
     expect(api.calls.some((c) => c.path.includes('link-candidates'))).toBe(false)
   })
 })
+
+// Ruling 3 (main session, B9-27): a Base recipe in use can't be deleted, and the detail says why before anything is asked of the server.
+describe('RecipeDetailScreen: Delete of a Base recipe in use (ruling 3)', () => {
+  const inUse = () =>
+    recipe({
+      id: 3, name: 'Béchamel', yield: 1, yieldUnit: 'l', baseRecipe: true, baseIngredientId: 30, courses: [], wholeMeal: false,
+      deletable: false, deleteBlockedBy: 'in_use',
+      usedBy: [{ id: 1, name: 'Lasagne' }, { id: 2, name: 'Moussaka', archived: true }],
+      lines: [],
+    })
+  const openDelete = async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
+  }
+  it('opens "Béchamel can\'t be deleted" at once: "It is used in 2 Recipes.", the Recipes as rows, Cancel (focused) and Archive, no Close', async () => {
+    mockApi({})
+    setRecipe(inUse())
+    view('/recipes/3')
+    await openDelete()
+    const dialog = await screen.findByRole('dialog', { name: "Béchamel can't be deleted" })
+    expect(dialog).toHaveTextContent('It is used in 2 Recipes.')
+    expect(dialog).not.toHaveTextContent(/planned/)
+    const rows = within(dialog).getByRole('list')
+    expect(within(rows).getAllByRole('listitem').map((li) => li.textContent)).toEqual([expect.stringContaining('Lasagne'), expect.stringContaining('Moussaka')])
+    expect(within(rows).getAllByRole('listitem')[1]).toHaveTextContent('Archived')
+    expect(within(dialog).getAllByRole('button').map((b) => b.textContent)).toEqual(['Cancel', 'Archive'])
+    expect(within(dialog).queryByRole('button', { name: 'Close' })).toBeNull()
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    expect(h.recipe.remove).not.toHaveBeenCalled()
+  })
+  it('Archive archives it', async () => {
+    mockApi({})
+    setRecipe(inUse())
+    ;(h.recipe.setArchived as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
+    view('/recipes/3')
+    await openDelete()
+    await userEvent.click(within(await screen.findByRole('dialog', { name: "Béchamel can't be deleted" })).getByRole('button', { name: 'Archive' }))
+    expect(h.recipe.setArchived).toHaveBeenCalledWith(true)
+    expect(h.recipe.remove).not.toHaveBeenCalled()
+  })
+})
