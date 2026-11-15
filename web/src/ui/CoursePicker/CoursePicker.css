@@ -18,22 +18,40 @@
   gap: var(--space-2);
 }
 
+/* SET-09: one row anatomy for every chosen Course, by the list's width, never the viewport's (the Meal Slot editor, Change a date
+   and the Recipe editor share it):
+   [handle 44] [name + meta 1fr] [up, down, remove]
+               [extras: Optional, Who eats it ...] */
 .course-picker__list {
+  container-type: inline-size;
   display: grid;
-  gap: var(--space-1);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* R-C+: the row has a boundary of its own; a focused ↑ ↓ × draws its ring inside itself, and the boundary steps back meanwhile. */
 .course-picker__row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-areas: 'handle text actions' '. extras extras';
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
+  column-gap: var(--space-2);
+  row-gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-tile-sm);
   background: var(--color-surface);
+}
+
+.course-picker__row:has(:focus-visible) {
+  border-color: var(--color-outline);
+}
+
+.course-picker__row :focus-visible {
+  outline-offset: -2px;
+  background: var(--color-soft);
 }
 
 .course-picker__row[data-state='lifted'],
@@ -41,15 +59,28 @@
   background: var(--color-surface-2);
 }
 
-.course-picker__name {
-  flex: 1 1 auto;
+.course-picker__row > .sortable-handle {
+  grid-area: handle;
+}
+
+.course-picker__text {
+  grid-area: text;
+  display: grid;
   min-inline-size: 0;
+}
+
+.course-picker__name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   font-size: var(--text-body-strong-size);
   font-weight: var(--text-body-strong-weight);
   line-height: var(--text-body-strong-line);
 }
 
-.course-picker__main {
+.course-picker__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--text-meta-size);
   font-weight: var(--text-meta-weight);
   line-height: var(--text-meta-line);
@@ -57,21 +88,22 @@
 }
 
 .course-picker__extras {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
+  grid-area: extras;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2) var(--space-4);
+  min-inline-size: 0;
 }
 
+/* An IconSet: its gap keeps the up, down and remove rings apart (A11Y-09); a disabled button keeps its place. */
 .course-picker__actions {
-  margin-inline-start: auto; /* an IconSet: its gap keeps the up, down and remove rings apart (A11Y-09) */
+  grid-area: actions;
 }
 
-/* Phone: the extras take a line of their own under the name; the actions stay on the first line. */
-@media (width < 48em) {
+@container (max-width: 26rem) {
   .course-picker__extras {
-    order: 1;
-    flex-basis: 100%;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

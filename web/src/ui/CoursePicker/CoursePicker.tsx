@@ -47,7 +47,7 @@ export interface CoursePickerProps {
   renderRowExtras?: (row: CoursePickerRowContext) => ReactNode
   /**
    * SET-09, ordered form only: more words for the row's muted second line, after "main Course" and a dot ("Chiara does not eat it").
-   * Null or empty adds nothing. Stub: not rendered yet (B9-42).
+   * Null or empty adds nothing.
    */
   renderRowMeta?: (row: CoursePickerRowContext) => string | null
 }
@@ -66,6 +66,7 @@ export function CoursePicker({
   helper,
   error,
   renderRowExtras,
+  renderRowMeta,
 }: CoursePickerProps): ReactNode {
   const baseId = useId()
   const labelId = `${baseId}-label`
@@ -137,6 +138,7 @@ export function CoursePicker({
           rows={rows}
           disabled={disabled}
           renderRowExtras={renderRowExtras}
+          renderRowMeta={renderRowMeta}
           onReorder={reorder}
           onMove={move}
           onRemove={remove}
