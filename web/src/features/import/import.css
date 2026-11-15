@@ -959,10 +959,10 @@
   align-items: flex-start;
 }
 
-/* The result's state ("Kept as Lasagne (2)") wraps in a narrow end column instead of squeezing the Recipe name. */
+/* The result's state ("Kept as Lasagne (2)") wraps in a narrow (6.5 rem) end column instead of squeezing the Recipe name. */
 .import-result .list-row__value {
   min-inline-size: 0;
-  max-inline-size: 7rem;
+  max-inline-size: 6.5rem;
   white-space: normal;
 }
 
