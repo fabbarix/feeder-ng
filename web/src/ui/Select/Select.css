@@ -95,9 +95,22 @@
   padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 }
 
-/* In a bottom sheet the body already keeps the ring room on every side (BottomSheet.css), so the panel adds none of its own. */
+/* In a bottom sheet the body already keeps the ring room on every side (BottomSheet.css), so the panel adds none of its own. The
+   list is the sheet's one scroller and takes the room left under the search and the chip line: an option scrolled into view never
+   scrolls the sheet body, so the search field (and its ring) stays in place. */
+.sheet__body:has(> .select__panel) {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
+
 .sheet__body > .select__panel {
+  flex: 1 1 auto;
   padding: 0;
+}
+
+.sheet__body > .select__panel > .select__list {
+  max-block-size: none;
 }
 
 /* SET-06: the filter chips are one line: what does not fit is "+N" (SelectTools). The line clips its overflow, so it is padded by the
