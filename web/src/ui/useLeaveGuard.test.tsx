@@ -23,13 +23,13 @@ import { useLeaveGuard } from './useLeaveGuard'
 
 afterEach(() => vi.restoreAllMocks())
 
-function Editor({ dirty, isNew, what = 'Pasta al pomodoro', onDiscard, onGuard }: { dirty: boolean; isNew?: boolean; what?: string; onDiscard?: () => void; onGuard?: (g: ReturnType<typeof useLeaveGuard>) => void }) {
+function Editor({ dirty, isNew, what = 'Pasta al pomodoro', onDiscard, onGuard, plainTitle }: { dirty: boolean; isNew?: boolean; what?: string; onDiscard?: () => void; onGuard?: (g: ReturnType<typeof useLeaveGuard>) => void; plainTitle?: boolean }) {
   const guard = useLeaveGuard(dirty, { what, isNew, onDiscard })
   onGuard?.(guard)
   const navigate = useNavigate()
   return (
     <main>
-      <h1 tabIndex={-1}>Edit Recipe</h1>
+      {plainTitle ? <h1>Edit Recipe</h1> : <h1 tabIndex={-1}>Edit Recipe</h1>}
       <input aria-label="Name" />
       <Link to="/plan">Plan</Link>
       <Link to="/recipes/7/edit#steps">Steps</Link>
@@ -244,5 +244,19 @@ describe('where focus goes after Keep editing (SHORT 2: the keyboard stays down)
     await userEvent.click(keep)
     expect(screen.getByLabelText('Name')).not.toHaveFocus()
     expect(screen.getByRole('heading', { name: 'Edit Recipe' })).toHaveFocus()
+  })
+})
+
+// B9-18 review: a PageHeader title is a plain <h1> (no tabindex) until B9-19's title hook; focus must still land on it.
+describe('the page title takes focus even when it is a plain <h1>', () => {
+  it('Keep editing after typing puts focus on a plain <h1>, never back into the field', async () => {
+    mount({ dirty: true, plainTitle: true })
+    act(() => screen.getByLabelText('Name').focus())
+    await userEvent.click(screen.getByRole('button', { name: 'go plan' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Keep editing' }))
+    const title = screen.getByRole('heading', { name: 'Edit Recipe' })
+    expect(title).toHaveFocus()
+    expect(title).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByLabelText('Name')).not.toHaveFocus()
   })
 })

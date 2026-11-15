@@ -53,9 +53,15 @@ const isTextField = (el: Element | null) => Boolean(el && el !== document.body &
  */
 function returnTarget(focusBefore: Element | null): HTMLElement | null {
   const active = document.activeElement
-  const h1 = document.querySelector<HTMLElement>('main h1, h1')
-  if (isTextField(focusBefore)) return h1
+  if (isTextField(focusBefore)) return pageTitle()
   if (active instanceof HTMLElement && active !== document.body && !isTextField(active)) return active
+  return pageTitle()
+}
+
+/** The page's <h1>, made focusable from script (tabindex -1) if it is not already: a PageHeader title is a plain <h1>. */
+function pageTitle(): HTMLElement | null {
+  const h1 = document.querySelector<HTMLElement>('main h1') ?? document.querySelector<HTMLElement>('h1')
+  if (h1 && !h1.hasAttribute('tabindex')) h1.setAttribute('tabindex', '-1')
   return h1
 }
 
