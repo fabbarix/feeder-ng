@@ -41,7 +41,7 @@ export const MAX_LINE_CHIPS = 8
  * The unticked Lines that still need something (quantity above 0; a partly covered Line counts), one per Ingredient, food Lines first
  * and Restock Lines of Supplies after them, each group in the list's own order.
  */
-export function lineChips(lines: LineCandidate[], limit = MAX_LINE_CHIPS): LineChips {
+export function lineChips(lines: LineCandidate[], limit = MAX_LINE_CHIPS, opts: { gramsFirst?: boolean } = {}): LineChips {
   const seen = new Set<number>()
   const open: LineChip[] = []
   for (const line of lines) {
@@ -52,7 +52,9 @@ export function lineChips(lines: LineCandidate[], limit = MAX_LINE_CHIPS): LineC
     if (line.imageUrl) chip.imageUrl = line.imageUrl
     open.push(chip)
   }
-  const ordered = [...open.filter((c) => c.kind === 'food'), ...open.filter((c) => c.kind === 'supply')]
+  const grouped = [...open.filter((c) => c.kind === 'food'), ...open.filter((c) => c.kind === 'supply')]
+  // B9-41 (SSP-07): a weighed code counts grams, so the Lines in g come first; the order is otherwise kept.
+  const ordered = opts.gramsFirst ? [...grouped.filter((c) => c.baseUnit === 'g'), ...grouped.filter((c) => c.baseUnit !== 'g')] : grouped
   return { chips: ordered.slice(0, limit), more: ordered.slice(limit) }
 }
 

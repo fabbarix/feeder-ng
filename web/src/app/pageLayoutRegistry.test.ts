@@ -121,11 +121,14 @@ const ADDED = {
   // B9-51: scenarios/b9-51.mjs (order 340, after b9-37 by file name): tags-rows (SET-11), assistant-bar (SHORT-06), toast-over-preferences-bar, planning-cooking-times (PC-14, A2, SAFE-04).
   // B9-27: scenarios/recipe-detail.mjs (order 340, after b9-51 by file name): the Cook tile in the first viewport, the side column's edges and the phone Cook bar (RX-04, SHORT-04);
   // the seed step page-layout-seed/recipe-detail.mjs gives the seeded Recipe its lede, Source, eight Tags and an untimed Step.
+  // B9-41: scenarios/b9-41.mjs (order 341): scan-weighed (SSP-07, SSP-20: the weighed header, the keypad on per kg, the focused key's ring).
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
+  // B9-43: scenarios/b9-43.mjs (order 350, after b9-40 by file name): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete and shop-complete-restore (SSP-04, 09, 13, 14).
   // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
+  // B9-50: scenarios/b9-50.mjs (order 500): receipt-review-add and receipt-add-sheet (SSP-08), receipt-photos-bar (SSP-19, A11Y-09).
   scenarios: [
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
@@ -144,11 +147,14 @@ const ADDED = {
     'recipe-editor-flow', 'recipe-new-flow', 'recipe-editor-ring-room', 'recipe-editor-restored-focus', 'recipe-editor-tag-chooser',
     'tags-rows', 'assistant-bar', 'toast-over-preferences-bar', 'planning-cooking-times',
     'recipe-detail-cook', 'recipe-detail-phone',
+    'scan-weighed',
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
+    'shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete', 'shop-complete-restore',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',
+    'receipt-review-add', 'receipt-add-sheet', 'receipt-photos-bar',
   ],
 }
 

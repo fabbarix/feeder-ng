@@ -33,6 +33,18 @@ export interface ScanApiOptions {
   timeoutSignal?: (ms: number) => AbortSignal
 }
 
+/**
+ * B9-41 (SSP-07): the Ops as the server takes them. A new weighed Product's shop_unknown Op says `weighed` on the phone (its row is a weighed
+ * row at once), but the server takes the flag on a shop_scan only (a shop_unknown with a rule is weighed by its rule), so it is left out.
+ */
+export function wireOps(ops: Op[]): Op[] {
+  return ops.map((op) => {
+    if (op.kind === 'shop_scan' || op.weighed === undefined) return op
+    const { weighed: _weighed, ...rest } = op
+    return rest
+  })
+}
+
 /** Typed calls for /api/scan. */
 export function createScanApi(client: HttpClient, opts: ScanApiOptions = {}): ScanApi {
   const syncTimeoutMs = opts.syncTimeoutMs ?? 20_000
@@ -40,10 +52,10 @@ export function createScanApi(client: HttpClient, opts: ScanApiOptions = {}): Sc
   const timeoutSignal = opts.timeoutSignal ?? ((ms: number) => AbortSignal.timeout(ms))
   return {
     offlineData: (shopId) => client.get<OfflineData>(`/api/scan/offline${shopId != null ? `?shop=${shopId}` : ''}`),
-    apply: (op) => client.post<ScanResult>('/api/scan', op),
+    apply: (op) => client.post<ScanResult>('/api/scan', wireOps([op])[0]),
     async sync(ops) {
       const signal = timeoutSignal(syncTimeoutMs)
-      return (await client.post<{ results: ScanResult[] }>('/api/scan/sync', { ops }, { signal })).results
+      return (await client.post<{ results: ScanResult[] }>('/api/scan/sync', { ops: wireOps(ops) }, { signal })).results
     },
     async uploadPicture(blob) {
       const dataUrl = await blobToDataUrl(blob)

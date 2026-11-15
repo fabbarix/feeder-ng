@@ -28,7 +28,8 @@ describe('useLineSheet', () => {
     act(() => view.result.current.open(hinted, 'open'))
     expect(view.result.current.entry).toBe(hinted)
     expect(view.result.current.group).toBe('open')
-    expect(view.result.current.actions).toEqual(['mark-it', 'not-needed'])
+    // B9-43 (SSP-14): an open Line also offers Get something else…
+    expect(view.result.current.actions).toEqual(['mark-it', 'get-something-else', 'not-needed'])
     act(() => view.result.current.close())
     expect(view.result.current.entry).toBeNull()
   })
@@ -52,6 +53,17 @@ describe('useLineSheet', () => {
     act(() => view.result.current.run('delete'))
     expect(h.onDelete).not.toHaveBeenCalled()
     expect(view.result.current.entry).toBe(plain)
+  })
+
+  it('B9-43 (SSP-14): Get something else… closes the sheet and hands the Line to onGetSomethingElse', () => {
+    const onGetSomethingElse = vi.fn()
+    const h = { onNotNeeded: vi.fn(), onNeededAfterAll: vi.fn(), onMarkIt: vi.fn(), onDelete: vi.fn(), onGetSomethingElse }
+    const view = renderHook(() => useLineSheet(h))
+    act(() => view.result.current.open(plain, 'open'))
+    act(() => view.result.current.run('get-something-else'))
+    expect(onGetSomethingElse).toHaveBeenCalledExactlyOnceWith(plain)
+    expect(h.onNotNeeded).not.toHaveBeenCalled()
+    expect(view.result.current.entry).toBeNull()
   })
 
   it('run() with nothing open does nothing', () => {

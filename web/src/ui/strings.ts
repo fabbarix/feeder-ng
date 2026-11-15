@@ -14,6 +14,8 @@ export const uiStrings = {
   noCamera: 'No camera available',
   // PriceKeypad (beta.7 SR2, shop-scan-proposals.md 13.4)
   priceOf: (product: string) => `Price of ${product}`,
+  /** B9-43: the Shop the Price sheet records the Price at ("At Coop") */
+  priceAt: (shop: string) => `At ${shop}`,
   priceBasis: 'Price basis',
   keypad: 'Keypad',
   decimalKey: 'Decimal separator',
@@ -28,4 +30,6 @@ export const uiStrings = {
   impliedPerKg: (perKg: string, unit: string, size: string) => `= ${perKg}/${unit} for ${size}`,
   impliedPack: (price: string, size: string) => `= ${price} for ${size}`,
   impliedWeighed: (weight: string, price: string) => `× ${weight} = ${price}`,
+  /** B9-41 (SSP-07): the spoken display of a weighed row: "14.90 dollars per kg, 4.65 dollars for 312 grams" */
+  spokenWeighed: (perKg: string, per: 'kg' | 'l', cost: string, amount: number, unit: 'grams' | 'millilitres') => `${perKg} per ${per}, ${cost} for ${amount} ${unit}`,
 }

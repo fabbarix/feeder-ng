@@ -78,11 +78,12 @@ describe('rowValue: the quantity column', () => {
 })
 
 describe('lineActions: what the row sheet offers', () => {
-  it('an open Line: Not needed', () => {
-    expect(lineActions(plain, 'open')).toEqual(['not-needed'])
+  // B9-43 (SSP-14, SSP 6): an open Line also offers "Get something else…", before Not needed
+  it('an open Line: Get something else…, then Not needed', () => {
+    expect(lineActions(plain, 'open')).toEqual(['get-something-else', 'not-needed'])
   })
-  it('an open Line with unconfirmed past meals: Mark it first, then Not needed', () => {
-    expect(lineActions(hinted, 'open')).toEqual(['mark-it', 'not-needed'])
+  it('an open Line with unconfirmed past meals: Mark it first, then Get something else…, then Not needed', () => {
+    expect(lineActions(hinted, 'open')).toEqual(['mark-it', 'get-something-else', 'not-needed'])
   })
   it('an open extra: Delete (extras can be deleted, Lines cannot)', () => {
     expect(lineActions(extraEntry(makeExtra(), 'metric'), 'open')).toEqual(['delete'])

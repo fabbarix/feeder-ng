@@ -220,6 +220,12 @@
   row-gap: 0;
 }
 
+/* batch w5a: a long pack ("1 × Washing-up liquid 750 ml") wraps inside its own part too, so no part is wider than the line */
+.list-row[data-meta-wrap='true'] .scanned-row__meta > :first-child {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
 .scanned-row__tick {
   color: var(--status-success-fg);
 }
@@ -259,13 +265,6 @@
   outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
   outline-offset: calc(-1 * var(--focus-ring-inner-width));
   border-radius: var(--radius-tile-sm);
-}
-
-.price-entry__error {
-  margin: 0;
-  color: var(--status-danger-fg);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
 }
 
 /* The Price entry is a non-modal half sheet fixed at the bottom on a phone: the page gets room under the list, so even the

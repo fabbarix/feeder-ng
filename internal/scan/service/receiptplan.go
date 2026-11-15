@@ -211,6 +211,9 @@ func (s *Service) ApplyReceiptPlan(ctx context.Context, plan receipt.Plan) (Rece
 
 // applyReceiptPlan is ApplyReceiptPlan with the scan lock held.
 func (s *Service) applyReceiptPlan(ctx context.Context, plan receipt.Plan) (ReceiptApplyResult, error) {
+	if err := s.checkAddProducts(ctx, plan); err != nil {
+		return ReceiptApplyResult{}, err
+	}
 	r := &planRun{s: s, refs: map[string]int64{}, scanOf: map[string]string{}, index: map[string]int{}, uuids: map[string]string{}}
 	for _, st := range plan.Steps {
 		if st.Op.Kind == receipt.OpNewScan && st.Op.Ref != "" {
@@ -236,6 +239,27 @@ func (s *Service) applyReceiptPlan(ctx context.Context, plan receipt.Plan) (Rece
 		s.publish()
 	}
 	return ReceiptApplyResult{Results: r.results, Undone: r.undone}, nil
+}
+
+// checkAddProducts (B9-50) refuses a plan whose Add scans an existing Product that is unknown or archived, before any step
+// runs: a *receipt.PlanError with code unknown_product naming the Add's id.
+func (s *Service) checkAddProducts(ctx context.Context, plan receipt.Plan) error {
+	checked := map[int64]bool{}
+	for _, st := range plan.Steps {
+		op := st.Op
+		if op.Kind != receipt.OpNewScan || op.AddID == "" || op.Ref != "" || checked[op.ProductID] {
+			continue
+		}
+		p, err := s.d.Catalogue.Product(ctx, op.ProductID)
+		if errors.Is(err, ErrProductGone) || (err == nil && p.Archived) {
+			return &receipt.PlanError{Code: receipt.PlanUnknownProduct, ID: op.AddID}
+		}
+		if err != nil {
+			return err
+		}
+		checked[op.ProductID] = true
+	}
+	return nil
 }
 
 // planRun is one plan's state: the Products made for each Ref, the plan's scan uuid for each Ref, and the Results so far.
@@ -429,9 +453,19 @@ func (r *planRun) newScan(ctx context.Context, op receipt.Op) (scan.Result, erro
 	if err != nil {
 		return scan.Result{}, err
 	}
+	qty := op.Quantity
+	if qty == 0 {
+		// B9-50: a new_scan with no quantity is one pack of the Product (an Add of an existing Product: the plan does not
+		// know its pack size).
+		p, err := r.s.d.Catalogue.Product(ctx, pid)
+		if err != nil {
+			return scan.Result{}, err
+		}
+		qty = p.PackSize
+	}
 	shop := op.ShopID
 	so := scan.Op{ClientUUID: uuid, ScannedAt: op.Date + "T12:00:00Z", Kind: scan.KindShopScan, ShopID: &shop,
-		ProductID: pid, Quantity: op.Quantity}
+		ProductID: pid, Quantity: qty}
 	if op.PriceCents >= 0 {
 		c := op.PriceCents
 		so.PriceCents = &c

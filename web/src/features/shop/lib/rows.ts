@@ -10,7 +10,7 @@ import { changeTargetOf } from './tickAmount'
 export type RowGroup = 'open' | 'ticked' | 'not-needed'
 
 /** The actions of a row's sheet. The row itself only opens the sheet; the tick stays on the row. */
-export type LineAction = 'mark-it' | 'not-needed' | 'needed-after-all' | 'delete' | 'change-amount' | 'untick'
+export type LineAction = 'mark-it' | 'not-needed' | 'needed-after-all' | 'delete' | 'change-amount' | 'untick' | 'get-something-else'
 
 export interface RowMeta {
   text: string
@@ -125,9 +125,30 @@ export function lineActions(entry: ListEntry, group: RowGroup): LineAction[] {
   if (entry.kind === 'extra') {
     if (group !== 'not-needed') out.push('delete')
   } else if (group === 'open') {
+    // B9-43 (SSP-14, SSP 6): a substitute for an open Line; not on the "more since your tick" row (it takes only the difference off)
+    if (!entry.moreSince) out.push('get-something-else')
     out.push('not-needed')
   } else if (group === 'not-needed') {
     out.push('needed-after-all')
   }
   return out
+}
+
+/**
+ * Batch w5a (P38: every button on a page has its own accessible name): what a row is called, in its tick ("Tick …") and its target.
+ * A row is called by its title, except where two rows on the page would share it: then the "more since your tick" row is
+ * "750 g more of Chestnut mushrooms" and an Ingredient extra is "the extra 200 g of Chestnut mushrooms"; the plain Line keeps its title.
+ * Returns the names by entry key.
+ */
+export function rowNames(entries: readonly ListEntry[]): Map<string, string> {
+  const count = new Map<string, number>()
+  for (const e of entries) count.set(e.title, (count.get(e.title) ?? 0) + 1)
+  const names = new Map<string, string>()
+  for (const e of entries) {
+    if ((count.get(e.title) ?? 0) < 2) names.set(e.key, e.title)
+    else if (e.moreSince) names.set(e.key, shopStrings.moreOf(e.quantityText, e.title))
+    else if (e.kind === 'extra') names.set(e.key, shopStrings.extraOf(e.quantityText, e.title))
+    else names.set(e.key, e.title)
+  }
+  return names
 }

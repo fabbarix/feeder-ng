@@ -1,6 +1,7 @@
 // The short new-Product sheet for an unknown barcode (SR5, shop-scan-proposals 13.5): Which Line is it?, Ingredient | Supply, pack chips,
 // an optional Picture from the phone's own camera, a summary line, Add. It replaced UnknownBarcodeSheet (beta.7). The sheet only opens the form;
 // the form's state and steps live in hooks/useNewProductForm.
+import { useId } from 'react'
 import { BottomSheet } from '../../../ui'
 import type { LineCandidate } from '../lib/lineChoice'
 import type { PackProduct } from '../lib/packChips'
@@ -9,12 +10,30 @@ import type { NewProductInitial } from '../lib/newProductSelect'
 import type { IngredientChoice, UnknownFormValues, UnknownMode } from '../lib/unknownForm'
 import type { SearchResult } from '../../ingredients/types'
 import type { UnitSystem } from '../../../lib/units'
+import type { BaseUnit } from '../types'
 import { newProductStrings } from '../newProductStrings'
 import { NewProductForm } from './NewProductForm'
 import './NewProductSheet.css'
 
 export type { PictureHandlers } from '../lib/newProductPicture'
 export type { NewProductInitial } from '../lib/newProductSelect'
+
+/** B9-50 (SSP-08): the line of a receipt, as the sheet's "On the receipt" block says it (the receipt feature words it). */
+export interface ReceiptLineInfo {
+  /** the line as printed ("KITCHEN ROLL 4 PACK") */
+  text: string
+  /** its price at the row's end ("$3.49"); absent when the line has none */
+  priceText?: string
+  /** the muted detail under it ("×1 at $3.49", "450 g at $2.25") */
+  detail: string
+  /** how many Scans the line makes (the note says "1 Scan at $3.49") */
+  scans: number
+}
+
+/** B9-50 (SSP-08): a name match of the receipt line: an existing Product, or an open Line. At most three, Products first. */
+export type ReceiptMatch =
+  | { kind: 'product'; productId: number; name: string; ingredientId: number; baseUnit: BaseUnit; packSize: number }
+  | { kind: 'line'; ingredientId: number; name: string; baseUnit: BaseUnit; quantity: number }
 
 /** The sheet of an unknown barcode. ScanScreen passes what it has: the barcode, the live Lines, the offline Products, the unit system. */
 export interface NewProductSheetProps {
@@ -37,8 +56,8 @@ export interface NewProductSheetProps {
   barcode?: string
   /** the Shopping List's Lines; the sheet picks the open ones (lib/lineChoice.lineChips). Absent or none open: step 1 is skipped. */
   lines?: LineCandidate[]
-  /** the known Products, for the pack chips (OfflineProduct fits) */
-  products?: PackProduct[]
+  /** the known Products, for the pack chips (OfflineProduct fits); B9-50: their id and name feed a receipt line's Product-name guard */
+  products?: (PackProduct & { id?: number; name?: string })[]
   /** the Household's unit system for amounts on the Line chips; default metric */
   system?: UnitSystem
   /** replaceable Picture handling; the defaults are the shared ImagePicker pipeline and POST /api/images */
@@ -61,12 +80,34 @@ export interface NewProductSheetProps {
   noBarcode?: boolean
   /** what the form opens with (the receipt line's name and size, or the Add's saved choices) */
   initial?: NewProductInitial
+  /**
+   * B9-41 (SSP-07): a weighed code with a Weight Barcode Rule whose item code is new: the sheet's header line reads "312 g · weighed at
+   * Coop · item 012300" (instead of the barcode line) and the Lines in g come first. `grams` is the decoded weight.
+   */
+  weighed?: { grams: number; itemCode: string }
+  /**
+   * B9-41 (SSP-15): an unknown in-store code at a Shop with no Weight Barcode Rule: the sheet opens with an info tile saying so, the Admin
+   * gets "Set up the rule" (onSetUp), a User "Ask the Admin to set one up.", and the scope starts on This Shop only.
+   */
+  weightCodeHint?: { admin: boolean; onSetUp: () => void }
+  /** B9-50 (SSP-08, no-barcode mode only): the receipt line, shown on top as "On the receipt" and as the sheet's description. */
+  receiptLine?: ReceiptLineInfo
+  /** B9-50 (SSP-08, no-barcode mode only): "Is it one of these?": the name matches of the line. Absent or empty: "Which Line is it?" as before. */
+  matches?: ReceiptMatch[]
+  /** B9-50 (SSP-08): the Product the receipt line already is was chosen ("Use Kitchen roll 4 pack", or the near-duplicate guard's "Use it"). */
+  onUseProduct?: (productId: number) => void
 }
 
 export function NewProductSheet(props: NewProductSheetProps) {
+  const describeIds = { note: useId(), code: useId(), receipt: useId() }
+  // B9-41: the hint tile is the sheet's first description, then the code line (SSP-07, SSP-15).
+  const hasCode = props.weighed !== undefined || (Boolean(props.barcode) && !props.noBarcode)
+  // B9-50 (SSP-08): a receipt line's Add… is described by its "On the receipt" row.
+  const hasReceipt = Boolean(props.noBarcode && props.receiptLine)
+  const describedBy = [props.weightCodeHint ? describeIds.note : null, hasCode ? describeIds.code : null, hasReceipt ? describeIds.receipt : null].filter(Boolean).join(' ')
   return (
-    <BottomSheet open={props.open} onClose={props.onClose} title={newProductStrings.title}>
-      {props.open ? <NewProductForm {...props} /> : null}
+    <BottomSheet open={props.open} onClose={props.onClose} title={newProductStrings.title} describedBy={describedBy}>
+      {props.open ? <NewProductForm {...props} describeIds={describeIds} /> : null}
     </BottomSheet>
   )
 }

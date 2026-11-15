@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -22,6 +23,9 @@ vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices:
 // B9-34: the ticked Line's sheet shows times in the Household zone, read from /api/me (app/useMe)
 vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 import { ShoppingScreen } from './ShoppingScreen'
+// B9-43: the screen reads Stock Lots (Put away) and the Recipe Assistant's status (Read the receipt) through react-query
+const testQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
 
 type Status = 'loading' | 'error' | 'offline' | 'empty' | 'ready'
 
@@ -31,12 +35,14 @@ function show(list: ShoppingList | undefined, extra: Record<string, unknown> = {
   const state = ({ loading: 'loading', error: 'failed', offline: 'offlineSaved', empty: 'empty', ready: 'ready' } as const)[status]
   listHook.useShoppingList.mockReturnValue({ data: list, isLoading: !list, error: null, stale: false, status, state, retry, ...extra })
   render(
+    <QueryClientProvider client={testQueryClient()}>
     <MemoryRouter initialEntries={['/shop']}>
       <Routes>
         <Route path="/shop" element={<ShoppingScreen />} />
         <Route path="/scan" element={<p>Scan screen</p>} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+    </QueryClientProvider>,
   )
   return { retry }
 }
@@ -193,13 +199,17 @@ describe('ShoppingScreen', () => {
     expect(listHook.useShoppingList).toHaveBeenLastCalledWith(expect.objectContaining({ to: '2026-11-10' }))
   })
 
-  it('QA: the celebration sits on top, before every tile', () => {
+  it('QA: the celebration sits under the metric strip, before the rows (B9-43, mocks/ssp-09-complete.html)', () => {
     show(makeList({ lines: [makeLine({ ticked: true, quantity: 0, pack: null, estimatedCostCents: null }), makeLine({ ingredientId: 5, name: 'rice', ticked: true, quantity: 0, pack: null, estimatedCostCents: null })], progress: { ticked: 2, total: 2 }, complete: true, summary: { lines: 2, spentCents: 318, lotsAdded: 2 } }))
     const celebration = screen.getByRole('status')
     expect(celebration).toHaveTextContent('Shopping List complete')
-    expect(celebration).toHaveTextContent('$3.18 spent')
-    for (const article of document.querySelectorAll('article')) {
-      expect(celebration.compareDocumentPosition(article) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // B9-43 (SSP-09): the facts are rows now ("Spent at Coop · $3.18")
+    expect(celebration).toHaveTextContent(/Spent at Coop\s*\$3\.18/)
+    // batch w5a (main-session call): the mock draws the tile under the metric strip, so the strip comes first and every row after it
+    const strip = screen.getByRole('group', { name: 'Summary' })
+    expect(strip.compareDocumentPosition(celebration) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    for (const row of document.querySelectorAll('.shop-lines .list-row')) {
+      expect(celebration.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     }
   })
 

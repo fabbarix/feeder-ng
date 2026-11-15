@@ -5,6 +5,7 @@ import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { defaultTickAmount, tickedMeta, type TickedMeta } from './tickAmount'
 import type { BaseUnit, LineTick, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 import { shopStrings } from '../strings'
+import { lineDetails, type LineDetails } from './lineDetails'
 import { slotsLabel } from './rows'
 import { restockText } from './supplies'
 
@@ -69,6 +70,8 @@ export interface ListEntry {
   tick?: LineTick | null
   /** B9-34 (SSP-01): what a ticked entry's meta line says (lib/tickAmount tickedMeta); null while open or without a tick. */
   tickMeta?: TickedMeta | null
+  /** B9-43 (SSP-13, SSP-14): what the open Line's sheet says (To get, Estimated, For, the consequence of Not needed); undefined for an extra. */
+  details?: LineDetails
   /** B9-34 (SSP-02): true on the open entry "more:<ingredientId>" that carries a ticked Line's growth. */
   moreSince?: boolean
 }
@@ -115,6 +118,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     packChoice: line.pack ? { count: line.pack.count, name: line.pack.name, size: line.pack.size } : null,
     tick: line.tick ?? null,
     tickMeta: line.ticked ? tickedMeta(line.tick, line.baseUnit, system) : null,
+    details: lineDetails(line, currency, system),
     moreSince: false,
   }
 }

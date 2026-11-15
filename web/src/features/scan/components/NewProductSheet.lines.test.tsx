@@ -11,7 +11,8 @@ describe('NewProductSheet: Which Line is it?', () => {
   it('opens as "What is this?" on the Line chips, with the barcode and no form fields yet', () => {
     setup({ lines })
     expect(dialog()).toBeInTheDocument()
-    expect(within(dialog()).getByText('8001234567890 · not in Feeder yet')).toBeInTheDocument()
+    // B9-41 (SSP-20): the code as printed under the bars, in 1-6-6 groups
+    expect(within(dialog()).getByText('8 001234 567890').closest('p')).toHaveTextContent('8 001234 567890 · not in Feeder yet')
     expect(within(dialog()).queryByRole('radiogroup', { name: 'What it is' })).toBeNull()
     expect(within(dialog()).queryByRole('combobox')).toBeNull()
   })

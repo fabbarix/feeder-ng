@@ -132,3 +132,24 @@ describe('ScannedList', () => {
     for (const b of screen.getAllByRole('button')) expect(b.getAttribute('aria-label') ?? b.textContent?.trim()).toBeTruthy()
   })
 })
+
+describe('ScannedList: every button has its own name (P38, batch w5a)', () => {
+  it('two rows of one Product name are told apart, in the row and in its Price, Remove and Quantity controls', async () => {
+    const [first, second] = rowsOf(base)
+    // a second Product of the same name (another pack size)
+    const twin = { ...second!, name: first!.name }
+    view(props({ rows: [first!, twin] }))
+    const names = within(screen.getByRole('list', { name: 'Scanned list' }))
+      .getAllByRole('button')
+      .map((b) => b.getAttribute('aria-label'))
+    expect(new Set(names).size).toBe(names.length)
+    for (const row of items()) await userEvent.click(within(row).getAllByRole('button')[0]!)
+    const all = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)
+    expect(all.filter((n, i) => all.indexOf(n) !== i)).toEqual([])
+  })
+
+  it('a Product name that is unique on the list keeps its plain name', () => {
+    view(props())
+    expect(within(items()[0]!).getAllByRole('button')[0]).toHaveAccessibleName(rowsOf(base)[0]!.name)
+  })
+})

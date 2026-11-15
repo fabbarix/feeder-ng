@@ -110,10 +110,12 @@ type addChoice struct {
 	ProductName string `json:"productName"`
 	PackSize    int    `json:"packSize"`
 	Scope       string `json:"scope"`
+	// ProductID (B9-50): an existing Product of the Household; the other fields are then ignored.
+	ProductID int64 `json:"productId"`
 }
 
 func (c addChoice) choice() receipt.AddChoice {
-	out := receipt.AddChoice{ProductName: strings.TrimSpace(c.ProductName), PackSize: c.PackSize}
+	out := receipt.AddChoice{ProductName: strings.TrimSpace(c.ProductName), PackSize: c.PackSize, ProductID: c.ProductID}
 	if name := strings.TrimSpace(c.Ingredient.Name); name != "" {
 		out.Ingredient = receipt.IngredientChoice{New: &receipt.NewIngredient{Name: name, BaseUnit: c.Ingredient.BaseUnit, Kind: c.Ingredient.Kind}}
 	} else {
@@ -123,7 +125,7 @@ func (c addChoice) choice() receipt.AddChoice {
 }
 
 // apply answers 200 {applied, results, undone}; 409 receipt_session_changed, receipt_read_not_done or assistant_unavailable;
-// 410 receipt_read_gone; 422 unknown_proposal or add_incomplete with the proposal's id; 500 receipt_apply_failed with
+// 410 receipt_read_gone; 422 unknown_proposal, add_incomplete or unknown_product with the proposal's id; 500 receipt_apply_failed with
 // the results of the scans the put-back wrote.
 func (a *applier) apply(w http.ResponseWriter, r *http.Request) {
 	var body applyBody
@@ -253,6 +255,9 @@ func planRefused(w http.ResponseWriter, pe *receipt.PlanError) {
 	msg := "That line is no longer on the receipt. Read the receipt again."
 	if pe.Code == receipt.PlanAddIncomplete {
 		msg = "Choose the Ingredient and the Product name and pack size for this line first."
+	}
+	if pe.Code == receipt.PlanUnknownProduct {
+		msg = "That Product is no longer in Feeder. Choose another for this line."
 	}
 	httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": map[string]string{
 		"code": string(pe.Code), "message": msg, "id": pe.ID}})

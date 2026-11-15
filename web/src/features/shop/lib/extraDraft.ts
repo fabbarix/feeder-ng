@@ -1,6 +1,7 @@
 // Checks the Add to Shopping List sheet's fields for the mode it is in (no React). A note is free text; an Ingredient
 // is an Ingredient with a quantity above 0. Fields of the other mode are ignored, never sent.
 import { parseAmount } from '../../stock/lib/amount'
+import { displayName } from '../../ingredients/lib/names'
 import type { ExtraInput } from '../types'
 
 export type ExtraMode = 'ingredient' | 'note'
@@ -27,4 +28,14 @@ export function checkExtraDraft(draft: ExtraDraft): ExtraDraftResult {
   const amount = parseAmount(draft.quantityText, 'positive')
   if (!amount.ok) return { ok: false, field: 'quantity', error: 'mustBePositive' }
   return { ok: true, input: { ingredientId: draft.ingredientId, quantity: amount.value } }
+}
+
+/**
+ * B9-43 (SSP-14): what an extra is called in a toast ("…; Shallot added"): an Ingredient's display name, or the typed text as it was typed.
+ * An Ingredient not in `ingredients` (not loaded) is '' .
+ */
+export function addedNameOf(input: ExtraInput, ingredients: readonly { id: number; name: string }[]): string {
+  if ('text' in input) return input.text
+  const found = ingredients.find((i) => i.id === input.ingredientId)
+  return found ? displayName(found.name) : ''
 }

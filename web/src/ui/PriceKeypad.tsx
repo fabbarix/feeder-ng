@@ -4,7 +4,7 @@ import { Chip } from './Chip'
 import { Icon } from './Icon'
 import { Segmented } from './fields/Segmented'
 import { decimalSeparator, formatTyped, hasDecimalKey, lastPriceHint, noPriceHint, pressBackspace, pressDecimal, pressDigit, typedFromMinor, typedToMinor } from './lib/moneyInput'
-import { impliedLine, type PackSize } from './lib/priceImplication'
+import { impliedLine, spokenWeighed, type PackSize } from './lib/priceImplication'
 import { packFromPerKg, perKgFromPack, priceBasisOptions, supportsPerKg, type PriceBasis } from './lib/perKgPrice'
 import { uiStrings } from './strings'
 import './PriceKeypad.css'
@@ -198,6 +198,7 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
 
   const separator = decimalSeparator(currency, locale) ?? '.'
   const implied = impliedLine({ basis, cents: valid ? cents : null, packCents: entry().packCents, pack: pack, weighed, currency, locale })
+  const spoken = spokenWeighed({ basis, cents: valid ? cents : null, pack, weighed, currency, locale })
 
   return (
     <div ref={rootRef} className="price-keypad" data-compact={compact ? 'true' : undefined}>
@@ -208,12 +209,16 @@ export function PriceKeypad({ productName, currency, locale = 'en-US', initialCe
       <output className="price-keypad__display" aria-live="polite" aria-label={uiStrings.priceOf(productName)} aria-describedby={refused ? errorId : undefined}>
         {formatTyped(typed, currency, locale)}
       </output>
+      {/* B9-41 (SSP-07): a weighed row's display said in words, both prices ("14.90 dollars per kg, 4.65 dollars for 312 grams") */}
+      <p className="visually-hidden" aria-live="polite">
+        {spoken ?? ''}
+      </p>
       {refused ? (
         <p id={errorId} role="alert" className="price-keypad__error">
           {uiStrings.enterAbove0}
         </p>
       ) : null}
-      {/* What the Price implies and the Last-time chip (or the no-Price hint): one line in a compact keypad. */}
+      {/* What the Price implies and the Last-time chip (or the no-Price hint): stacked and centred in a compact keypad (SSP-07). */}
       <div className="price-keypad__notes">
         {implied ? <p className="price-keypad__implied">{implied}</p> : null}
         {last ? (

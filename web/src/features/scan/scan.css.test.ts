@@ -62,6 +62,8 @@ describe('scan.css: the cover line beside "Add price"', () => {
     expect(meta['white-space']).toBe('normal')
     expect(meta['overflow']).toBe('visible')
     expect(declarations(css, ".list-row[data-meta-wrap='true'] .scanned-row__meta")['flex-wrap']).toBe('wrap')
+    // batch w5a: the pack part may shrink and wrap too, so no part of the line is wider than the row
+    expect(declarations(css, ".list-row[data-meta-wrap='true'] .scanned-row__meta > :first-child")['min-inline-size']).toBe('0')
     expect(declarations(css, '.scanned-row__cover')['display']).toBe('inline-flex')
   })
 })

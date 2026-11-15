@@ -6,7 +6,7 @@ import { EmptyState } from '../../../ui/EmptyState'
 import { ListGroup } from '../../../ui/ListRow'
 import type { UnitSystem } from '../../../lib/units'
 import type { JustScanned } from '../hooks/useJustScanned'
-import type { ScannedRow as Row } from '../lib/scannedList'
+import { scannedRowNames, type ScannedRow as Row } from '../lib/scannedList'
 import { scanStrings } from '../strings'
 import { ScannedRow } from './ScannedRow'
 
@@ -37,16 +37,19 @@ export function ScannedList({ rows, currency, system, pricingKey, onPrice, onInc
     if (top !== activeKey) setActiveKey(null)
   }
 
+  // batch w5a (P38): two rows of one Product name are told apart ("Passata, 700 g")
+  const names = scannedRowNames(rows, system)
   return (
     <>
       {rows.length === 0 ? (
         <EmptyState title={scanStrings.nothingScanned} description={noCamera ? scanStrings.nothingScannedHintNoCamera : scanStrings.nothingScannedHint} />
       ) : (
-        <ListGroup label={scanStrings.scannedListLabel}>
+        <ListGroup title={scanStrings.scannedListLabel}>
           {rows.map((row) => (
             <ScannedRow
               key={row.key}
               row={row}
+              name={names.get(row.key)}
               currency={currency}
               system={system}
               active={activeKey === row.key}

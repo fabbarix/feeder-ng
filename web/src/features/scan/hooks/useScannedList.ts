@@ -12,6 +12,7 @@ import {
   repriceEntries,
   scannedTotals,
   settleEntries,
+  toGetExtras,
   toGetLines,
   type PriceUpdate,
   type ScannedRow,
@@ -94,6 +95,8 @@ export function useScannedList(options: UseScannedListOptions): ScannedList {
   const rows = useMemo(() => displayOrder(buildScannedRows(state.entries, products, list)), [state.entries, products, list])
   const totals = useMemo(() => scannedTotals(rows), [rows])
   const toGet = useMemo(() => toGetLines(list, rows), [list, rows])
+  // B9-41 (SSP-11): the open manual extras are in To get too, so the count equals the Shop's "left".
+  const extrasCount = useMemo(() => toGetExtras(list).length, [list])
 
   const record = useCallback((op: Op, result: ScanResult | null) => setState((s) => ({ ...s, entries: recordEntry(s.entries, op, result) })), [])
   const settle = useCallback((results: ScanResult[]) => setState((s) => ({ ...s, entries: settleEntries(s.entries, results) })), [])
@@ -112,7 +115,7 @@ export function useScannedList(options: UseScannedListOptions): ScannedList {
     rows,
     totals,
     toGet,
-    toGetCount: toGet.length,
+    toGetCount: toGet.length + extrasCount,
     nextUnpriced,
     record,
     settle,

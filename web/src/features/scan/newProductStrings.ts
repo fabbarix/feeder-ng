@@ -6,10 +6,23 @@ import { scanStrings } from './strings'
 export const newProductStrings = {
   title: 'What is this?',
   barcodeNotKnown: (code: string) => `${code} · not in Feeder yet`,
+  /** B9-41 (SSP-20): what follows the code as printed on the barcode line */
+  notKnownSuffix: ' · not in Feeder yet',
+  /** B9-41 (SSP-07): the header line of a weighed code: "312 g · weighed at Coop · item 012300" */
+  weighedAt: (weight: string, shop: string, itemCode: string) => `${weight} · weighed at ${shop} · item ${itemCode}`,
+  /** B9-41 (SSP-15): the info tile of an in-store code at a Shop with no Weight Barcode Rule */
+  weightCode: {
+    title: (shop: string) => `This looks like a ${shop} code for weighed goods`,
+    text: (shop: string) => `${shop} has no Weight Barcode Rule, so every weighed pack would become a Product of its own.`,
+    setUp: 'Set up the rule',
+    askAdmin: 'Ask the Admin to set one up.',
+  },
 
   // Step 1: Which Line is it?
   whichLine: 'Which Line is it?',
   whichLineHint: 'Picking a Line sets what it is and ticks it. Lines you still need are listed first.',
+  /** B9-41 (SSP-07): a weighed code lists the Lines in g first */
+  whichLineHintWeighed: 'Lines in grams are listed first.',
   restock: 'Restock',
   somethingElse: 'Something else',
   moreLines: 'More Lines',
@@ -63,4 +76,20 @@ export const newProductStrings = {
   needName: 'Give it a name',
   needPack: 'Pick a pack size',
   mustBePositive: 'Enter a number above 0',
+
+  // B9-50 (SSP-08): a receipt line's Add… (no barcode): the line on top, its name matches, and an existing Product.
+  receipt: {
+    onReceipt: 'On the receipt',
+    lineList: 'Receipt line',
+    matches: 'Is it one of these?',
+    otherLines: 'Other Lines',
+    product: 'Product',
+    line: 'Line',
+    use: (product: string) => `Use ${product}`,
+    scans: (n: number) => (n === 1 ? '1 Scan' : `${n} Scans`),
+    /** "Kitchen roll 4 pack: 1 Scan at $3.49, and it ticks Kitchen roll." */
+    useNote: (product: string, scans: string, price: string | undefined, line: string | undefined) =>
+      `${product}: ${scans}${price ? ` at ${price}` : ''}${line ? `, and it ticks ${line}` : ''}.`,
+    alreadyProduct: (product: string) => `${product} is already a Product. Use it?`,
+  },
 } as const

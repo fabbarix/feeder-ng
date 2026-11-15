@@ -57,14 +57,24 @@ export const shopStrings = {
   extraChooseIngredient: 'Choose an Ingredient',
   howMuch: 'How much?',
   tickTitle: (name: string) => `Tick ${name}`,
+  /** batch w5a (P38): a row's name when another row on the page has the same title */
+  moreOf: (quantity: string, name: string) => (quantity ? `${quantity} more of ${name}` : `more of ${name}`),
+  extraOf: (quantity: string, name: string) => (quantity ? `the extra ${quantity} of ${name}` : `the extra ${name}`),
   tickSave: 'Tick and add to Stock',
   tickOnly: 'Tick without adding',
   untick: (name: string) => `Untick ${name}`,
   deleteExtra: (name: string) => `Delete ${name}`,
   celebrationTitle: 'Shopping List complete',
-  celebrationLines: (n: number) => `${n} ${n === 1 ? 'line' : 'lines'}`,
-  celebrationSpent: (text: string) => `${text} spent`,
-  celebrationLots: (n: number) => `${n} Stock ${n === 1 ? 'Lot' : 'Lots'} added`,
+  // B9-43 (SSP-09): the complete tile's rows ("This shop") and next steps
+  celebrationRows: 'This shop',
+  linesTicked: 'Lines ticked',
+  spent: 'Spent',
+  spentAt: (shop: string) => `Spent at ${shop}`,
+  lotsAdded: (n: number) => (n === 1 ? 'Stock Lot added' : 'Stock Lots added'),
+  notSortedYet: (n: number) => `${n} not sorted into a Storage Place yet`,
+  putAwayLots: (n: number) => (n === 1 ? 'Put away 1 Stock Lot' : `Put away ${n} Stock Lots`),
+  readReceipt: 'Read the receipt',
+  everyLineTicked: 'Every Line is ticked',
   packLine: (qty: string, count: number, name: string) => `${qty} · ${count} × ${name}`,
   offlineList: 'Showing the last list you loaded',
   save: 'Save',
@@ -93,9 +103,10 @@ export const shopStrings = {
   slotMore: (slot: string, n: number) => `${slot} +${n}`,
   unconfirmedMeals: (slots: string) => `Includes ${slots}, not marked Cooked yet`,
   // DS-SHOP round 2: the short notice ("Tue Dinner isn't marked Cooked yet") and the metric strip's meta line
-  isnt: " isn't marked Cooked yet",
-  arent: " aren't marked Cooked yet",
-  andMore: (n: number) => ` and ${n} more`,
+  // B9-43 (SSP-04): "and 2 more" after the named slots (the notice) and after the five "For" rows
+  andMore: (n: number) => `and ${n} more`,
+  /** the count chip's visually hidden words: "3 Meal Slots to mark" */
+  slotsToMark: (n: number) => (n === 1 ? ' Meal Slot to mark' : ' Meal Slots to mark'),
   leftOf: (total: number) => `of ${total} left`,
   tickedCount: (n: number) => `${n} ticked`,
   untilToday: 'today',
@@ -116,6 +127,9 @@ export const shopStrings = {
   scanned: 'Scanned',
   scannedAmount: (amount: string) => `Scanned · ${amount}`,
   addedTimes: (n: number) => (n === 2 ? 'Added twice' : `Added ${n} times`),
+  // B9-43: the compact form of a ticked row's meta drops "Added" ("Twice · 15 pieces"): the long form was cut at 375 px on a row whose value
+  // is a count of pieces with a Price under it (P23, shop-complete)
+  addedTimesCompact: (n: number) => (n === 2 ? 'Twice' : `${n} times`),
   tickYou: 'you',
   // SSP-02 (decision SSP 3): need that grew after the tick
   moreSince: 'More since your tick',
@@ -145,6 +159,17 @@ export const shopStrings = {
   tickedNote: 'Take back removes what is left of that Stock Lot. Untick takes back every addition.',
   takenBackMine: (amount: string, name: string) => `Your ${amount} of ${name} was taken back from Stock`,
   takenBackOf: (who: string, amount: string, name: string) => `${who}'s ${amount} of ${name} was taken back from Stock`,
+  // B9-43 (SSP-13, SSP-14): the open Line's sheet
+  lineRows: 'Line',
+  estimatedAtShop: (shop: string) => `Estimated at ${shop}`,
+  notBoughtHereYet: (price: string, date: string) => `${price} a pack, ${date} · not bought here yet`,
+  changePrice: 'Change the Price',
+  noProductYet: 'No Product yet: scan one in the Shop',
+  forTitle: 'For',
+  leavesShortMany: (n: number, ingredient: string) => `Not needed leaves these ${n} Planned Meals short of ${ingredient}.`,
+  leavesShortOne: (slot: string, ingredient: string) => `Not needed leaves ${slot} short of ${ingredient}.`,
+  getSomethingElse: 'Get something else…',
+  substituted: (line: string, added: string) => `${line} is Not needed; ${added} added`,
   // H7′: the Supplies group (the Restock reason's "x of y" is lib/amountOf amountOfText, b8-polish)
   supplies: 'Supplies',
 }

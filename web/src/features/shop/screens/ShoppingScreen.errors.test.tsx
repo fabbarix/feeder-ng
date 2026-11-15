@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -24,16 +25,21 @@ vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices:
 // B9-34: the ticked Line's sheet shows times in the Household zone, read from /api/me (app/useMe)
 vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 import { ShoppingScreen } from './ShoppingScreen'
+// B9-43: the screen reads Stock Lots (Put away) and the Recipe Assistant's status (Read the receipt) through react-query
+const testQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
 
 function show() {
   listHook.useShoppingList.mockReturnValue({ data: makeList(), isLoading: false, error: null, stale: false, status: 'ready', state: 'ready', retry: vi.fn() })
   render(
     <ToastProvider>
-      <MemoryRouter initialEntries={['/shop']}>
+      <QueryClientProvider client={testQueryClient()}>
+    <MemoryRouter initialEntries={['/shop']}>
         <Routes>
           <Route path="/shop" element={<ShoppingScreen />} />
         </Routes>
       </MemoryRouter>
+    </QueryClientProvider>
     </ToastProvider>,
   )
 }

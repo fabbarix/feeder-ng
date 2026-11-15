@@ -6,8 +6,9 @@
 // read (the Pantry's status, the Supplies' Restock reason, any list): a meta is never cut, whatever screen it is on.
 // w3c integration: P23 always fails, so the routes whose owners have not cleaned their metas yet keep the old reach (the Shop's info
 // hints only) until that package lands and deletes its entry here: /settings and /settings/planning (B9-51), /scan (B9-41).
-// int1: B9-34 and B9-51 have landed; /shop, /settings and /settings/planning are clean, so they get the full reach. Only /scan is left.
-const PENDING_ROUTES = ['/scan']
+// int1: B9-34 and B9-51 have landed; /shop, /settings and /settings/planning are clean, so they get the full reach.
+// int2: B9-41 has landed (To get rows with a pack take their compact meta), so /scan gets the full reach too: nothing is pending.
+const PENDING_ROUTES = []
 const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')
@@ -39,6 +40,13 @@ const cutMetaProbe = `
     label = label.trim()
     const cut = Math.max(t.scrollWidth - t.clientWidth, right > left ? right - left - box.width : 0)
     if (cut > 0.5) out.push({ sel: t === long ? 'span.list-row__meta-text' : 'span.list-row__meta-compact', label, shown: Math.round(box.width), px: Math.round(cut) })
+  }
+  // B9-43 (SSP-04): the notice's title ("Not marked Cooked yet") is the sentence's predicate and is never cut: its own text must fit its box (it
+  // may wrap, never clip). The slots line below it may clamp to two lines, so it is not read.
+  for (const t of (main ? main.querySelectorAll('.shop-notice__title') : [])) {
+    if (t.getClientRects().length === 0) continue
+    const cut = Math.max(t.scrollWidth - t.clientWidth, t.scrollHeight - t.clientHeight)
+    if (cut > 0.5) out.push({ sel: 'p.shop-notice__title', label: t.textContent.trim(), shown: Math.round(t.getBoundingClientRect().width), px: Math.round(cut) })
   }
   return out
 })()`

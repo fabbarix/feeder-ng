@@ -195,7 +195,8 @@ describe('shop.css: metric strip and notice', () => {
   it('the notice lays its sentence and its action out with token gaps; its colour comes from the info status Tile', () => {
     const d = declarations(css, '.shop-notice')
     expect(d['gap']).toMatch(/^var\(--space-\d+\)$/)
-    expect(css).not.toMatch(/\.shop-notice[^{]*\{[^}]*(background|color)\s*:/)
+    // B9-43 (SSP-04): the count chip is the one exception, on the surface fill in the info text colour (shop.notice.css.test)
+    expect(css).not.toMatch(/\.shop-notice(?!__count)[^{]*\{[^}]*(background|color)\s*:/)
   })
 
   it('the Not needed group toggle is a 44 px target in the muted label style', () => {
@@ -260,8 +261,9 @@ describe('shop.css: round 2', () => {
     expect(pill['min-block-size']).toBe('var(--text-title-3-line)')
   })
 
-  it('the notice sentence is clamped to two lines with an ellipsis (the full text is in its title)', () => {
-    const d = declarations(css, '.shop-notice__text')
+  it('B9-43 (SSP-04): the two-line clamp moved from the whole notice text to its slots line (the title is never clamped)', () => {
+    expect(declarations(css, '.shop-notice__text')['-webkit-line-clamp']).toBeUndefined()
+    const d = declarations(css, '.shop-notice__slots')
     expect(d['display']).toBe('-webkit-box')
     expect(d['-webkit-line-clamp']).toBe('2')
     expect(d['overflow']).toBe('hidden')

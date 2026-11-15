@@ -25,7 +25,7 @@ describe('rowMeta of a ticked row (SSP-01)', () => {
 
   it('two additions: success, long and compact', () => {
     const tick = makeTick({ additions: [makeAddition({ who: 'Sam', mine: false, quantity: 50 }), makeAddition({ quantity: 50, clientUuid: 'u-2' })] })
-    expect(rowMeta(tickedGarlic(tick))).toEqual({ text: 'Added twice · Sam 50 g, you 50 g', compact: 'Added twice · 100 g', status: 'success', icon: 'rotateRight' }) // ArrowClockwise (res.md; batch w3e)
+    expect(rowMeta(tickedGarlic(tick))).toEqual({ text: 'Added twice · Sam 50 g, you 50 g', compact: 'Twice · 100 g', status: 'success', icon: 'rotateRight' }) // ArrowClockwise (res.md; batch w3e)
   })
 
   it('a ticked entry without a tick from the server (an older list) says nothing, as before', () => {
@@ -84,8 +84,8 @@ describe('lineActions of a ticked Line (SSP-18)', () => {
     expect(lineActions(extraEntry(makeExtra({ ticked: true, tick: makeTick({ added: null, additions: [makeAddition({ quantity: null })] }) }), 'metric'), 'ticked')).toEqual(['change-amount', 'untick', 'delete'])
   })
 
-  it('open and Not needed Lines are as before', () => {
-    expect(lineActions(lineEntry(makeGarlic(), 'USD', 'metric'), 'open')).toEqual(['not-needed'])
+  it('open Lines add Get something else… (B9-43); Not needed Lines are as before', () => {
+    expect(lineActions(lineEntry(makeGarlic(), 'USD', 'metric'), 'open')).toEqual(['get-something-else', 'not-needed'])
     expect(lineActions(lineEntry(makeGarlic(), 'USD', 'metric'), 'not-needed')).toEqual(['needed-after-all'])
   })
 

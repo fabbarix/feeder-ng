@@ -1,6 +1,7 @@
 // B9-34 (SSP-01, SSP-02, SSP-18, A11Y-07, RES-06): the Shop screen wires the tick flow. One tap ticks (no sheet); the toast offers
 // Change; a "more since your tick" row is an ordinary open row; a ticked row opens a sheet with Take back, Change amount and Untick;
 // a failed tick is the failure toast. The domain is in lib/tickAmount and hooks/useTickFlow (their own tests).
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -28,15 +29,20 @@ vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitS
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
 
 import { ShoppingScreen } from './ShoppingScreen'
+// B9-43: the screen reads Stock Lots (Put away) and the Recipe Assistant's status (Read the receipt) through react-query
+const testQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
 
 function show(list: ShoppingList) {
   listHook.useShoppingList.mockReturnValue({ data: list, isLoading: false, error: null, stale: false, status: 'ready', state: 'ready', retry: vi.fn() })
   return render(
+    <QueryClientProvider client={testQueryClient()}>
     <MemoryRouter initialEntries={['/shop']}>
       <Routes>
         <Route path="/shop" element={<ShoppingScreen />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 const mine = makeAddition({ quantity: 500, clientUuid: 'u-1' })
@@ -89,7 +95,8 @@ describe('ShoppingScreen: more since your tick (SSP-02)', () => {
   it('Garlic is in Ticked ("+500 g in Stock") and again in To get with "More since your tick"', () => {
     show(grown())
     const open = within(screen.getByRole('list', { name: 'To get' }))
-    expect(open.getByRole('button', { name: 'Garlic' })).toHaveAccessibleDescription(/500 g.*more since your tick/i)
+    // batch w5a (P38): the open row is named apart from the ticked Garlic ("500 g more of Garlic")
+    expect(open.getByRole('button', { name: '500 g more of Garlic' })).toHaveAccessibleDescription(/500 g.*more since your tick/i)
     const ticked = within(screen.getByRole('list', { name: 'Ticked' }))
     expect(ticked.getByRole('button', { name: 'Tick Garlic', pressed: true })).toBeInTheDocument()
     expect(ticked.getByText('+500 g in Stock')).toBeInTheDocument()
@@ -97,7 +104,7 @@ describe('ShoppingScreen: more since your tick (SSP-02)', () => {
 
   it('ticking the open row ticks the difference', async () => {
     show(grown())
-    await userEvent.click(within(screen.getByRole('list', { name: 'To get' })).getByRole('button', { name: 'Tick Garlic' }))
+    await userEvent.click(within(screen.getByRole('list', { name: 'To get' })).getByRole('button', { name: 'Tick 500 g more of Garlic' }))
     expect(actions.tick).toHaveBeenCalledWith(expect.objectContaining({ ingredientId: 9, quantity: 500 }))
   })
 })
@@ -155,11 +162,13 @@ describe('ShoppingScreen: the loading state (B9-20 left the old two-tile skeleto
   it('loads as a list of rows, like the screen it becomes: no tile skeleton', () => {
     listHook.useShoppingList.mockReturnValue({ data: undefined, isLoading: true, error: null, stale: false, status: 'loading', state: 'loading', retry: vi.fn() })
     const { container } = render(
-      <MemoryRouter initialEntries={['/shop']}>
+      <QueryClientProvider client={testQueryClient()}>
+    <MemoryRouter initialEntries={['/shop']}>
         <Routes>
           <Route path="/shop" element={<ShoppingScreen />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter>
+    </QueryClientProvider>,
     )
     expect(container.querySelector('.skeleton-list')).not.toBeNull()
     expect(container.querySelector('.skeleton[data-variant="tile"], .skeleton-block[data-variant="tile"]')).toBeNull()

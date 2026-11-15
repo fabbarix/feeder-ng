@@ -13,7 +13,7 @@ import { PageHeader } from '../../../ui/PageHeader'
 import { ShopSelect } from '../../../ui/Select/ShopSelect'
 import { SkeletonGroup, SkeletonList } from '../../../ui/Skeleton'
 import { useToast } from '../../../ui/Toast'
-import { CelebrationTile } from '../components/CelebrationTile'
+import { PriceSheet } from '../../../ui/PriceSheet'
 import { ExtraSheet } from '../components/ExtraSheet'
 import { LineSheet } from '../components/LineSheet'
 import { RangePicker } from '../components/RangePicker'
@@ -23,6 +23,10 @@ import { ANY_SHOP_ID, shopPickerChoices } from '../lib/anyShop'
 import { listEntries, notNeededEntries, type ListEntry } from '../lib/lines'
 import type { RowGroup } from '../lib/rows'
 import { changeTargetOf } from '../lib/tickAmount'
+import { addedNameOf } from '../lib/extraDraft'
+import { useChangePrice } from '../hooks/useChangePrice'
+import { useCompleteTile } from '../hooks/useCompleteTile'
+import { useSubstitute } from '../hooks/useSubstitute'
 import { useLineSheet } from '../hooks/useLineSheet'
 import { useTickFlow } from '../hooks/useTickFlow'
 import { useShopChoice } from '../hooks/useShopChoice'
@@ -58,6 +62,14 @@ export function ShoppingScreen() {
   const onUndone = useCallback((entry: ListEntry) => setRestoreFocusKey(entry.key), [])
   const onFocusRestored = useCallback(() => setRestoreFocusKey(null), [])
   const flow = useTickFlow({ to: data?.to, shopId: choice.shopId, system, onUndone })
+  // B9-43 (SSP-09): "Shopping List complete" with Put away and Read the receipt
+  const complete = useCompleteTile({ list: data, shopId: choice.shopId, shopName })
+  // B9-43 (SSP-13): Change the Price of the Line's Product, at the picked Shop (or the priced fallback's under Any Shop)
+  const changePrice = useChangePrice({ shopId: choice.shopId, today: data?.today })
+  const priceShopId = changePrice.target ? (choice.shopId ?? changePrice.target.details?.priceShopId ?? null) : null
+  const priceShopName = choice.shops.find((s) => s.id === priceShopId)?.name ?? ''
+  // B9-43 (SSP-14): Get something else… (add an extra, take the Line off, one Undo)
+  const substitute = useSubstitute({ to: data?.to, shopId: choice.shopId })
 
   // B9-20 (RES-06): a failed action is a toast that names it ("Couldn’t mark Passata Not needed"), with Try again running
   // the same action; a refusal with its own message is that one line. The inline ErrorState is for load failures only.
@@ -119,6 +131,7 @@ export function ShoppingScreen() {
       onDelete,
       onChangeAmount,
       onUntick,
+      onGetSomethingElse: substitute.start,
     },
     resolve,
   )
@@ -129,6 +142,12 @@ export function ShoppingScreen() {
   }
 
   const onExtraSubmit = (input: Parameters<typeof actions.addExtra>[0]) => {
+    if (substitute.target) {
+      // B9-43: a failure leaves the sheet open for another try (all or nothing: the Line is untouched)
+      const phrase = shopStrings.failed.addExtra('text' in input ? input.text : null)
+      substitute.submit(input, addedNameOf(input, ingredients.choices)).catch((err: unknown) => toast.show(failureToast(actionFailed(phrase, err, { serverMessage: true }))))
+      return
+    }
     setSheet(null)
     run(shopStrings.failed.addExtra('text' in input ? input.text : null), () => actions.addExtra(input))
   }
@@ -170,7 +189,6 @@ export function ShoppingScreen() {
       ) : null}
       {list.state === 'offlineUnknown' ? <LoadState title={shopStrings.offlineUnknownTitle} text={shopStrings.offlineUnknownText} /> : null}
       {list.state === 'failed' ? <ErrorState message={shopStrings.loadFailed} onRetry={list.retry} /> : null}
-      {data?.complete ? <CelebrationTile summary={data.summary} currency={data.currency} /> : null}
       {list.status === 'offline' ? <p className="shop-screen__stale">{shopStrings.offlineList}</p> : null}
       {data ? (
         <ShoppingBody
@@ -185,6 +203,7 @@ export function ShoppingScreen() {
           pendingKeys={flow.pendingKeys}
           restoreFocusKey={restoreFocusKey}
           onFocusRestored={onFocusRestored}
+          complete={complete}
         />
       ) : null}
       <LineSheet
@@ -195,7 +214,22 @@ export function ShoppingScreen() {
         system={system}
         timeZone={timeZone}
         onTakeBack={onTakeBack}
+        shopName={shopName}
+        onChangePrice={changePrice.open}
       />
+      {changePrice.target && changePrice.product && data ? (
+        <PriceSheet
+          productName={changePrice.product.name}
+          shopName={priceShopName}
+          currency={data.currency}
+          pack={changePrice.product.pack}
+          last={changePrice.last}
+          error={changePrice.error}
+          onSave={(entry) => void changePrice.save(entry)}
+          onClose={changePrice.close}
+          entryKey={changePrice.target.key}
+        />
+      ) : null}
       <TickChangeSheet flow={flow} system={system} timeZone={timeZone ?? undefined} onFailed={onChangeFailed} />
       <AddShopSheet
         open={sheet?.kind === 'addShop'}
@@ -206,8 +240,17 @@ export function ShoppingScreen() {
           choice.setShopId(shop.id)
         }}
       />
-      {sheet?.kind === 'extra' ? (
-        <ExtraSheet open onClose={() => setSheet(null)} ingredients={ingredients.choices} onSubmit={onExtraSubmit} />
+      {sheet?.kind === 'extra' || substitute.target ? (
+        <ExtraSheet
+          open
+          autoOpenIngredient={substitute.target !== null}
+          onClose={() => {
+            setSheet(null)
+            substitute.cancel()
+          }}
+          ingredients={ingredients.choices}
+          onSubmit={onExtraSubmit}
+        />
       ) : null}
     </section>
   )

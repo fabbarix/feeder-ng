@@ -10,7 +10,7 @@
 //                       covered by anything (elementFromPoint at their centres) and take the R-A surface (P29). P29, P32, P36.
 // The guard's headless Chrome has no camera. The fake camera is a script that runs before the page's own: navigator.mediaDevices.getUserMedia
 // answers with a canvas stream, so useCamera reaches `ready` and the viewfinder strip shows (no torch: a canvas track has none).
-import { byText, evaluate, ids, press, scanSession, typeInto, until } from '../helpers.mjs'
+import { SCANNED_ROWS, SCANNED_UL, byText, evaluate, ids, press, scanSession, typeInto, until } from '../helpers.mjs'
 
 const FAKE_CAMERA = `(() => {
   const stream = () => {
@@ -52,7 +52,7 @@ export default {
       if (!(await evaluate(`document.querySelector('[role=region][aria-label=Scanner]')?.dataset.size === 'bar'`))) throw new Error('setup: not inspected: the camera bar is not shown (is there a camera?)')
       if (!(await evaluate(`document.activeElement === document.querySelector(${JSON.stringify(FIELD)})`))) throw new Error('SSP-06: after Use the Barcode field does not have focus (several codes cannot be typed)')
       const hidden = await evaluate(`(() => {
-        const row = document.querySelector('ul[aria-label="Scanned list"] > .list-row'); const bar = document.querySelector('nav.bottom-bar')
+        const row = (${SCANNED_UL})?.querySelector(':scope > .list-row'); const bar = document.querySelector('nav.bottom-bar')
         if (!row) return 'no Scanned row'
         const r = row.getBoundingClientRect(); const b = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect() : null
         if (r.bottom > innerHeight || r.top < 0) return 'the newest row is outside the window (' + Math.round(r.top) + '-' + Math.round(r.bottom) + ' of ' + innerHeight + ')'
@@ -71,7 +71,7 @@ export default {
       if (!code) throw new Error('setup: the seed has no scan barcodes')
       if (!(await evaluate(typeInto(FIELD, code)))) throw new Error('setup: the barcode field went away')
       await press(`document.querySelector('[data-typed-entry] button[type=submit]')`, '"Use this barcode"')
-      await until(`document.querySelectorAll('ul[aria-label="Scanned list"] > .list-row').length > 0`, 'the typed scan as a Scanned row')
+      await until(`${SCANNED_ROWS} > 0`, 'the typed scan as a Scanned row')
       if (!(await evaluate(`document.activeElement === document.querySelector(${JSON.stringify(FIELD)})`))) throw new Error('SSP-06: after Use the Barcode field does not have focus')
       await evaluate(`document.querySelectorAll('.toast > button:last-child').forEach((b) => b.click())`)
     },

@@ -105,6 +105,8 @@ export interface AddDraft {
   productName: string
   packSize: number
   scope?: 'global' | 'shop'
+  /** B9-50 (SSP-08): an existing Product the line already is. The Add then makes no Product: the other fields are ignored. */
+  productId?: number
 }
 
 export interface ReviewState {
@@ -123,11 +125,13 @@ export interface ReviewSection {
   proposals: Proposal[]
 }
 
+/** A new Product's choices (`ingredient`, `productName`, `packSize`, `scope`), or, B9-50 (SSP-08), an existing Product by `productId` alone. */
 export interface ApplyAdd {
   id: string
-  ingredient: { id: number } | { name: string; baseUnit: string; kind: string }
-  productName: string
-  packSize: number
+  productId?: number
+  ingredient?: { id: number } | { name: string; baseUnit: string; kind: string }
+  productName?: string
+  packSize?: number
   scope?: 'global' | 'shop'
 }
 export interface ApplyBody {

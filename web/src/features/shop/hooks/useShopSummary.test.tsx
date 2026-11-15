@@ -10,7 +10,9 @@ describe('useShopSummary', () => {
     const { result } = renderHook(() => useShopSummary(list, 'Coop'))
     expect(result.current.summary.left).toBe(1)
     expect(result.current.summary.estimated).toEqual({ text: '$3.18', caption: 'est. at Coop' })
-    expect(result.current.notice?.text).toBe("Tue Dinner isn't marked Cooked yet")
+    // B9-43 (SSP-04): the predicate is the title, the slots a plain line under it
+    expect(result.current.notice?.title).toBe('Not marked Cooked yet')
+    expect(result.current.notice?.slots.map((s) => s.text).join('')).toBe('Tue Dinner')
   })
 
   it('no notice without unconfirmed past meals', () => {

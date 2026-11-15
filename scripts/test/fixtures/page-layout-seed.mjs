@@ -75,6 +75,10 @@ if (!login.ok) {
 const ctx = await seedAll({ api, step, ean13 })
 const { members, ing, shops, recipeId, ingredientId, productId, shopId, toConfirm, sideCourse, longTagRecipe, LONG_TAG, placeIds, longPlaceId } = ctx
 const { supplyId, scanBarcodes, unknownBarcode, assistant } = ctx
+// B9-41: the scan-weighed scenario's Weight Barcode Rule and its code (page-layout-seed/b9-41.mjs).
+const b941 = { weightRuleId: ctx.weightRuleId ?? null, weighedBarcode: ctx.weighedBarcode ?? null }
+// B9-50: the receipt-review-add and receipt-add-sheet scenarios' Product that matches the fake read's Kitchen roll line (page-layout-seed/b9-50.mjs).
+const b950 = { kitchenRollIngredientId: ctx.kitchenRollIngredientId ?? null, kitchenRollProductId: ctx.kitchenRollProductId ?? null, receiptUnpricedBarcode: ctx.receiptUnpricedBarcode ?? null }
 
 mkdirSync(dirname(out), { recursive: true })
 // hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.
@@ -83,7 +87,7 @@ const sideCourseId = sideCourse?.id ?? null
 const beta7 = { supplyId, shopName: shops[0]?.name ?? null, scanBarcodes, unknownBarcode, assistant }
 // B9-40 review: the rich Cook Mode Recipe (page-layout-seed/cook.mjs: Advance Steps, a Step photo) of the cook-step scenarios.
 const cookRecipeId = ctx.cookRecipeId ?? null
-writeFileSync(out, JSON.stringify({ ...beta7, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, cookRecipeId, longPlaceId }, null, 2) + '\n')
+writeFileSync(out, JSON.stringify({ ...beta7, ...b941, ...b950, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, cookRecipeId, longPlaceId }, null, 2) + '\n')
 if (longTagRecipe === null || sideCourseId === null) {
   console.error(`page-layout-seed: the Side Recipe tagged "${LONG_TAG}" was not created; the filtered /recipes scenarios would show no Recipe`)
   process.exit(1)

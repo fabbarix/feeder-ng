@@ -7,6 +7,8 @@ import { newProductStrings } from '../newProductStrings'
 import { suggestPackChips, type PackProduct } from './packChips'
 import { choicesOfKind, unitOptions, type IngredientChoice } from './unknownForm'
 import type { BaseUnit } from '../types'
+import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import { displayCode } from './barcode'
 
 /** The Select value of an Ingredient or Supply created in this sheet (it has no id yet). */
 export const NEW_CHOICE_VALUE = -1
@@ -88,4 +90,21 @@ export function initialPackSelection(choice: IngredientChoice, products: PackPro
   const unit = initial?.packUnit ?? choice.baseUnit
   if (size !== undefined && size > 0 && unitOptions(choice.baseUnit).includes(unit)) return { size: String(size), unit, key: null, other: true }
   return packSelectionFor(choice, products)
+}
+
+/** B9-41 (SSP-07): the header line of a weighed code, the weight said as Feeder says amounts: "1.25 kg · weighed at Coop · item 000042". */
+export function weighedLine(grams: number, shopName: string, itemCode: string, system: UnitSystem): string {
+  return newProductStrings.weighedAt(formatQuantity(grams, 'g', system), shopName, itemCode)
+}
+
+/** Batch w5a: the same line in its two parts, the weight (set in the stronger weight, as the mock) and the rest (" · weighed at Coop · item 012300"). */
+export function weighedLineParts(grams: number, shopName: string, itemCode: string, system: UnitSystem): { weight: string; rest: string } {
+  const weight = formatQuantity(grams, 'g', system)
+  return { weight, rest: newProductStrings.weighedAt(weight, shopName, itemCode).slice(weight.length) }
+}
+
+/** B9-41 (SSP-20): the code as printed ("8 000000 009999") and its accessible name, the same digits without the spaces. */
+export function printedCode(code: string): { text: string; spoken: string } {
+  const text = displayCode(code)
+  return { text, spoken: text.replace(/ /g, '') }
 }

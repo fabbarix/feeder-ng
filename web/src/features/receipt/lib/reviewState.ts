@@ -34,6 +34,8 @@ function ingredientOk(ingredient: AddIngredient | null): boolean {
 /** What a draft still lacks, in the order the form asks for it. [] when it is complete. */
 export function addProblems(draft: AddDraft | undefined): AddProblem[] {
   if (!draft) return ['ingredient', 'productName', 'packSize']
+  // B9-50 (SSP-08): an existing Product is a whole choice on its own.
+  if (draft.productId !== undefined && draft.productId > 0) return []
   const out: AddProblem[] = []
   if (!ingredientOk(draft.ingredient)) out.push('ingredient')
   if (draft.productName.trim() === '') out.push('productName')
@@ -57,6 +59,11 @@ export function setAdd(state: ReviewState, id: string, draft: AddDraft): ReviewS
 
 /** A row that Accept all checks: never an Add (its form comes first) and never Not on the receipt (removing Stock is not a default). */
 const acceptable = (p: Proposal) => p.kind !== 'add' && p.kind !== 'missing'
+
+/** B9-50 (SSP-08): the rows that need no choice (every kind but an Add and Not on the receipt), checked or not: the N of "Accept all N". */
+export function acceptableCount(proposals: Proposal[]): number {
+  return proposals.filter(acceptable).length
+}
 
 export function isChecked(state: ReviewState, p: Proposal): boolean {
   return state.checked[p.id] === true && (p.kind !== 'add' || isAddComplete(state.adds[p.id]))
@@ -84,7 +91,7 @@ export function applyCount(state: ReviewState, proposals: Proposal[]): number {
   return proposals.filter((p) => isChecked(state, p)).length
 }
 
-function ingredientOf(ingredient: AddIngredient | null): ApplyAdd['ingredient'] {
+function ingredientOf(ingredient: AddIngredient | null): { id: number } | { name: string; baseUnit: string; kind: string } {
   // An Add is sent only when complete, so the ingredient is set here.
   if (ingredient === null) return { name: '', baseUnit: 'g', kind: 'food' }
   if ('id' in ingredient) return { id: ingredient.id }
@@ -92,6 +99,8 @@ function ingredientOf(ingredient: AddIngredient | null): ApplyAdd['ingredient'] 
 }
 
 function toApplyAdd(id: string, draft: AddDraft): ApplyAdd {
+  // B9-50 (SSP-08): an existing Product goes alone; it wins over any other field of the draft.
+  if (draft.productId !== undefined && draft.productId > 0) return { id, productId: draft.productId }
   return {
     id,
     ingredient: ingredientOf(draft.ingredient),

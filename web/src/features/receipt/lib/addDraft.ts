@@ -22,7 +22,8 @@ export function draftFromValues(values: UnknownFormValues): AddDraft {
  * line's name and its pack size, or its weight in grams.
  */
 export function initialFromAdd(proposal: Proposal, draft: AddDraft | undefined, choices: IngredientChoice[]): NewProductInitial {
-  if (draft) {
+  // B9-50: a draft that names a Product opens the sheet as a fresh line does, so Edit comes back to the matches.
+  if (draft && !(draft.productId !== undefined && draft.productId > 0)) {
     const ing = draft.ingredient
     const ingredient: IngredientChoice | undefined = !ing ? undefined : 'id' in ing ? choices.find((c) => c.id === ing.id) : { name: ing.name, baseUnit: ing.baseUnit, kind: ing.kind }
     const out: NewProductInitial = { productName: draft.productName }
@@ -45,4 +46,9 @@ export function initialFromAdd(proposal: Proposal, draft: AddDraft | undefined, 
     out.packUnit = 'g'
   }
   return out
+}
+
+/** B9-50 (SSP-08): the draft of a line that is already a Product: it names the Product and nothing else. */
+export function draftFromProduct(productId: number): AddDraft {
+  return { ingredient: null, productName: '', packSize: 0, productId }
 }

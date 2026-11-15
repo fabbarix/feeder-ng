@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { Icon } from '../../../ui/Icon'
-import { makeLine } from '../../shop/testData'
+import { makeExtra, makeLine } from '../../shop/testData'
 import { toGetRows, type ToGetRow } from '../lib/toGet'
 import { ToGetList, type ToGetListProps } from './ToGetList'
 
@@ -70,6 +70,13 @@ describe('ToGetList: tick by hand', () => {
     expect(row).toHaveTextContent('2 × Mutti 700 g')
   })
 
+  it('a row with a pack may wrap its second line (data-meta-wrap), so "2 × Mutti 700 g · 0 of 1.4 kg" is never cut (P23, batch w5a); a row without a pack keeps one line', () => {
+    const { list } = setup()
+    const [withPack, withoutPack] = within(list).getAllByRole('listitem')
+    expect(withPack).toHaveAttribute('data-meta-wrap', 'true')
+    expect(withoutPack).not.toHaveAttribute('data-meta-wrap')
+  })
+
   it('the second line has exactly one tick, hollow, and "x of y"', () => {
     const { list } = setup()
     const meta = within(list).getAllByRole('listitem')[0]!.querySelector('.list-row__meta')!
@@ -127,5 +134,49 @@ describe('ToGetList: accessibility', () => {
   it('the tick glyph is decorative: the cover reads as text next to it', () => {
     const { list } = setup()
     expect(list.querySelector('.list-row__meta svg')).toHaveAttribute('aria-hidden', 'true')
+  })
+})
+
+// B9-43 (SSP-09; mocks/ssp-09-complete.html): with nothing left to get, Scan's To get shows the SAME CelebrationTile as the Shop (shared), not
+// the plain "Nothing left to get" empty state, when the screen passes it a `celebration` (the tile's props). Without it, the empty state stays.
+describe('ToGetList: the complete tile as the empty state (SSP-09)', () => {
+  const celebration = {
+    summary: { lines: 20, spentCents: 1079, lotsAdded: 23 },
+    currency: 'USD',
+    shopName: 'Coop',
+    unsorted: 17,
+    canReadReceipt: false,
+    onPutAway: vi.fn(),
+    onReadReceipt: vi.fn(),
+  }
+
+  it('shows "Shopping List complete" with its rows and the Put away primary', async () => {
+    setup({ rows: [], celebration })
+    const tile = screen.getByRole('status')
+    expect(tile).toHaveTextContent('Shopping List complete')
+    expect(within(tile).getByRole('list', { name: 'This shop' })).toHaveTextContent('Lines ticked')
+    await userEvent.click(within(tile).getByRole('button', { name: 'Put away 17 Stock Lots' }))
+    expect(celebration.onPutAway).toHaveBeenCalledOnce()
+    expect(screen.queryByText('Nothing left to get')).toBeNull()
+  })
+
+  it('keeps the plain empty state without a celebration', () => {
+    setup({ rows: [] })
+    expect(screen.getByText('Nothing left to get')).toBeInTheDocument()
+    expect(screen.queryByText('Shopping List complete')).toBeNull()
+  })
+
+  it('shows the list, not the tile, while rows are left', () => {
+    setup({ celebration })
+    expect(screen.queryByText('Shopping List complete')).toBeNull()
+  })
+})
+
+describe('ToGetList: every button has its own name (P38, batch w5a)', () => {
+  it('a Line and an Ingredient extra of the same Ingredient are told apart', () => {
+    const extra = makeExtra({ id: 9, text: null, ingredientId: 2, name: 'Passata', baseUnit: 'g', quantity: 200 })
+    setup({ rows: toGetRows([passata], [], 'USD', 'metric', [extra]) })
+    const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? '')
+    expect(names).toEqual(['Tick Passata', 'Tick the extra 200 g of Passata'])
   })
 })

@@ -5,7 +5,7 @@
 //   No session published -> <Navigate to="/scan" replace />.
 //   A finished read (useReceiptRead.phase === 'done') -> navigate to /scan/receipt/review (replace).
 //   Hooks: ../hooks/useReceiptSession exports useReceiptSession(): ReceiptSession | undefined.
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -98,7 +98,11 @@ describe('the page', () => {
     show()
     expect(screen.getByText('The receipt photos and your Scanned list are sent to Anthropic to read the receipt. Feeder does not keep the photos.')).toBeInTheDocument()
   })
-  it('the action sits in a sticky action bar', () => {
+  it('the action sits in a sticky action bar: Take a photo with no photo (B9-50, SSP-19), Read the receipt from the first', () => {
+    show()
+    expect(within(screen.getByRole('group', { name: 'Actions' })).getByRole('button', { name: 'Take a photo' })).toBeInTheDocument()
+    cleanup()
+    setPhotos(1)
     show()
     expect(within(screen.getByRole('group', { name: 'Actions' })).getByRole('button', { name: 'Read the receipt' })).toBeInTheDocument()
   })
@@ -161,9 +165,10 @@ describe('taking photos', () => {
 })
 
 describe('Read the receipt', () => {
-  it('is disabled until there is a photo', () => {
+  it('is not offered until there is a photo: the first action is Take a photo (B9-50, SSP-19)', () => {
     show()
-    expect(readButton()).toBeDisabled()
+    expect(readButton()).toBeNull()
+    expect(within(screen.getByRole('group', { name: 'Actions' })).getByRole('button', { name: 'Take a photo' })).toBeInTheDocument()
   })
   it('is disabled while photos are being prepared', () => {
     setPhotos(1, { busy: true })

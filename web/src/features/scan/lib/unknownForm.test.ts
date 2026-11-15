@@ -119,6 +119,8 @@ describe('toUnknownOp', () => {
       ruleId: 3,
       itemCode: '00009',
       quantity: 500,
+      // B9-41 (SSP-07): a weighed code's Op says it is weighed, so its row is a weighed row
+      weighed: true,
       // SR5 review: the existing Ingredient's name, Base Unit and kind ride along with its id.
       ingredient: { id: 4, name: 'carrots', baseUnit: 'g', kind: 'food' },
       productName: 'Loose carrots',

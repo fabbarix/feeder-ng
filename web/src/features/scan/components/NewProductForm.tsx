@@ -2,6 +2,7 @@
 // every opening starts empty.
 import { useEffect, useRef } from 'react'
 import { Button, FormActions, NumberField, useMediaQuery } from '../../../ui'
+import { useFocusStepStart } from '../../../ui/lib/focusStepStart'
 import { scanStrings } from '../strings'
 import { useNewProductForm } from '../hooks/useNewProductForm'
 import { newProductStrings } from '../newProductStrings'
@@ -12,9 +13,24 @@ import { NewProductKind } from './NewProductKind'
 import { NewProductPack } from './NewProductPack'
 import { NewProductPicture } from './NewProductPicture'
 import { NewProductSummary } from './NewProductSummary'
+import { NewProductCodeLine } from './NewProductCodeLine'
+import { WeightCodeNote } from './WeightCodeNote'
+// B9-50 (SSP-08): a receipt line's Add…
+import { useReceiptMatchStep } from '../hooks/useReceiptMatchStep'
+import { ReceiptLineBlock } from './ReceiptLineBlock'
+import { ReceiptMatchChips } from './ReceiptMatchChips'
+import { ProductNameGuard } from './ProductNameGuard'
 import './NewProductSheet.css'
 
-export function NewProductForm(p: NewProductSheetProps) {
+/** B9-41: the ids of the sheet's description (the hint tile, then the code line), set by NewProductSheet on the dialog. */
+export interface NewProductDescribeIds {
+  note: string
+  code: string
+  /** B9-50: the "On the receipt" row */
+  receipt?: string
+}
+
+export function NewProductForm(p: NewProductSheetProps & { describeIds?: NewProductDescribeIds }) {
   const coarseMedia = useMediaQuery('(pointer: coarse)')
   const form = useNewProductForm({
     mode: p.mode,
@@ -30,8 +46,26 @@ export function NewProductForm(p: NewProductSheetProps) {
     // Without a barcode (a receipt line's Add…) the sheet only hands its values back: no row to price afterwards.
     onAdded: p.noBarcode ? undefined : p.onAdded,
     initial: p.initial,
+    gramsFirst: p.weighed !== undefined,
+    ...(p.weightCodeHint ? { defaultScope: 'shop' as const } : {}),
+  })
+  // B9-50 (SSP-08): "Is it one of these?", "Use <Product>" and the Product-name guard of a receipt line's Add…
+  const receipt = useReceiptMatchStep({
+    noBarcode: p.noBarcode === true,
+    matches: p.matches,
+    receiptLine: p.receiptLine,
+    lines: p.lines ?? [],
+    chips: form.lines,
+    products: p.products ?? [],
+    choice: form.choice,
+    onPickLine: form.pickLine,
+    onUseProduct: p.onUseProduct,
+    guardKind: form.guard.kind,
+    clearGuard: form.keepNew,
   })
   const formRef = useRef<HTMLFormElement>(null)
+  // A11Y-07: a step change moves the focus to the new step's heading (never left on <body> when the focused chip goes).
+  useFocusStepStart(formRef, form.stepKey)
 
   // A refused Add moves the focus to the first field that needs an answer (or to the near-duplicate guard that waits for one).
   useEffect(() => {
@@ -54,10 +88,31 @@ export function NewProductForm(p: NewProductSheetProps) {
         void form.save()
       }}
     >
-      {p.barcode && !p.noBarcode ? <p className="new-product__barcode">{newProductStrings.barcodeNotKnown(p.barcode)}</p> : null}
+      {p.weighed ? (
+        <NewProductCodeLine id={p.describeIds?.code} weighed={p.weighed} shopName={p.shopName} system={p.system ?? 'metric'} />
+      ) : p.barcode && !p.noBarcode ? (
+        <NewProductCodeLine id={p.describeIds?.code} barcode={p.barcode} />
+      ) : null}
+
+      {p.weightCodeHint ? <WeightCodeNote id={p.describeIds?.note} shopName={p.shopName} admin={p.weightCodeHint.admin} onSetUp={p.weightCodeHint.onSetUp} /> : null}
+
+      {/* B9-50 (SSP-08) */}
+      {p.noBarcode && p.receiptLine ? <ReceiptLineBlock line={p.receiptLine} id={p.describeIds?.receipt} /> : null}
+      {form.showLines && receipt.active ? (
+        <ReceiptMatchChips matches={receipt.matches} value={receipt.chosen} system={p.system ?? 'metric'} onPick={receipt.pick} />
+      ) : null}
 
       {form.showLines ? (
-        <NewProductLines chips={form.lines} system={p.system ?? 'metric'} expanded={form.moreOpen} onExpand={form.expandLines} onPick={form.pickLine} onSomethingElse={form.openSomethingElse} />
+        <NewProductLines
+          {...(receipt.active ? { title: newProductStrings.receipt.otherLines, hint: '' } : {})}
+          chips={receipt.chips}
+          system={p.system ?? 'metric'}
+          expanded={form.moreOpen}
+          {...(receipt.active ? {} : { hint: p.weighed ? newProductStrings.whichLineHintWeighed : newProductStrings.whichLineHint })}
+          onExpand={form.expandLines}
+          onPick={form.pickLine}
+          onSomethingElse={form.openSomethingElse}
+        />
       ) : null}
 
       {form.showKind ? (
@@ -77,9 +132,14 @@ export function NewProductForm(p: NewProductSheetProps) {
         />
       ) : null}
 
+      {/* B9-50 (SSP-08) */}
+      {form.showKind && receipt.clash && p.onUseProduct ? <ProductNameGuard product={receipt.clash} onUse={p.onUseProduct} /> : null}
+
       {choice ? (
         <div className="new-product__eyebrow">
-          <p>{newProductStrings.eyebrow(choice.name, eyebrowKind)}</p>
+          <h3 className="new-product__eyebrow-title" tabIndex={-1} data-step-heading="">
+            {newProductStrings.eyebrow(choice.name, eyebrowKind)}
+          </h3>
           {form.line ? (
             <Button variant="secondary" size="sm" onClick={form.pickAnotherLine}>
               {newProductStrings.otherLine}
@@ -131,6 +191,20 @@ export function NewProductForm(p: NewProductSheetProps) {
       ) : null}
 
       {!form.showLines ? <FormActions primary={<Button type="submit" disabled={form.busy}>{addLabel}</Button>} /> : null}
+
+      {/* B9-50 (SSP-08): a chosen Product needs nothing more */}
+      {form.showLines && receipt.product && receipt.use ? (
+        <>
+          <p className="new-product__hint new-product__use-note">{receipt.note}</p>
+          <FormActions
+            primary={
+              <Button type="button" onClick={receipt.use}>
+                {newProductStrings.receipt.use(receipt.product.name)}
+              </Button>
+            }
+          />
+        </>
+      ) : null}
     </form>
   )
 }

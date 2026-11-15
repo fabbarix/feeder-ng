@@ -10,11 +10,13 @@ import { LineRow } from './LineRow'
 
 export interface NotNeededGroupProps {
   entries: ListEntry[]
+  /** batch w5a (P38): the rows' names by key (lib/rows rowNames); default their titles */
+  names?: ReadonlyMap<string, string>
   /** a row was tapped: its sheet offers "Needed after all" */
   onOpen: (entry: ListEntry, group: RowGroup) => void
 }
 
-export function NotNeededGroup({ entries, onOpen }: NotNeededGroupProps) {
+export function NotNeededGroup({ entries, onOpen, names }: NotNeededGroupProps) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
   if (entries.length === 0) return null
@@ -28,7 +30,7 @@ export function NotNeededGroup({ entries, onOpen }: NotNeededGroupProps) {
         <div id={panelId} className="shop-lines">
           <ListGroup label={shopStrings.notNeeded}>
             {entries.map((entry) => (
-              <LineRow key={entry.key} entry={entry} group="not-needed" onOpen={onOpen} />
+              <LineRow key={entry.key} entry={entry} group="not-needed" onOpen={onOpen} name={names?.get(entry.key)} />
             ))}
           </ListGroup>
         </div>

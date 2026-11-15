@@ -21,6 +21,9 @@ export const receiptStrings = {
   photoLabel: (n: number) => `Photo ${n}`,
   removePhoto: (n: number) => `Remove photo ${n}`,
   editPhoto: (n: number) => `Edit photo ${n}`,
+  /** B9-50 (SSP-19): the first action with no photo; "Choose a photo" on a computer. */
+  choosePhoto: 'Choose a photo',
+  firstHint: 'Take a photo of the whole receipt. Long receipt? Take it in parts, top to bottom.',
 
   // Progress (design 3.3).
   reading: 'Reading the receipt…',
@@ -44,9 +47,20 @@ export const receiptStrings = {
   tileScanned: 'Scanned',
   tileLines: 'Lines',
   acceptAll: 'Accept all',
+  /** B9-50 (SSP-08): Accept all says how many rows it checks. */
+  acceptAllN: (n: number) => `Accept all ${n}`,
+  acceptNothing: 'Accept all has nothing to check: every line below needs you to say what it is.',
   clearAll: 'Clear all',
   add: 'Add…',
   edit: 'Edit',
+  /** B9-50: a row's buttons are named after their line, so no two buttons on the page share a name. */
+  addLine: (line: string) => `Add ${line}`,
+  editLine: (line: string) => `Edit ${line}`,
+  removeRow: (name: string) => `Remove ${name}`,
+  keepRow: (name: string) => `Undo remove of ${name}`,
+  /** "PANE CASERECCIO, line 7": the position that tells two identical printed lines apart. */
+  atLine: (text: string, n: number) => `${text}, line ${n}`,
+  isProduct: (product: string) => `${product} is a Product`,
   ready: 'Set up, ready to apply',
   remove: 'Remove',
   undo: 'Undo',
@@ -92,6 +106,7 @@ export const receiptStrings = {
   notDone: 'The receipt is still being read.',
   unknownProposal: 'That line is no longer on the receipt. Read the receipt again.',
   addIncomplete: 'Choose the Ingredient and the Product name and pack size for this line first.',
+  unknownProduct: 'That Product is no longer in Feeder. Choose another for this line.',
   applyFailed: 'The receipt could not be applied. Check the Scanned list and try again.',
   generic: 'Something went wrong. Try again.',
 }

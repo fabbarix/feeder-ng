@@ -15,7 +15,7 @@ describe('ShoppingBody: structure', () => {
     const list = makeList({ lines: [makeLine({ pastPlannedMeals: [makePast()] })] })
     render(<ShoppingBody {...base} list={list} onMarkIt={() => {}} />)
     const strip = screen.getByRole('group', { name: 'Summary' })
-    const notice = screen.getByRole('region', { name: 'Not marked Cooked yet' })
+    const notice = screen.getByRole('region', { name: /^Not marked Cooked yet/ })
     const rows = screen.getByRole('list', { name: 'To get' })
     after(strip, notice)
     after(notice, rows)
@@ -105,11 +105,11 @@ describe('ShoppingBody: the notice is said once', () => {
     expect(screen.getAllByRole('button', { name: /Mark it/ })).toHaveLength(1)
   })
 
-  it('round 2: the notice names the slots shortly and in bold, not the Line sentence', () => {
+  it('B9-43 (SSP-04): the notice names the slots shortly under its title, nothing set bold, not the Line sentence', () => {
     render(<ShoppingBody {...base} list={hinted} onMarkIt={() => {}} />)
-    const region = screen.getByRole('region', { name: 'Not marked Cooked yet' })
-    expect(region).toHaveTextContent("Tue Dinner isn't marked Cooked yet")
-    expect(region.querySelector('strong')).toHaveTextContent('Tue Dinner')
+    const region = screen.getByRole('region', { name: /^Not marked Cooked yet/ })
+    expect(region.querySelector('.shop-notice__slots')).toHaveTextContent(/^Tue Dinner$/)
+    expect(region.querySelector('strong')).toBeNull()
   })
 
   it('each affected row carries only the small info marker', () => {
@@ -125,14 +125,14 @@ describe('ShoppingBody: the notice is said once', () => {
     expect(onMarkIt).toHaveBeenCalledExactlyOnceWith({ date: '2026-11-03', mealSlotId: 3 })
   })
 
-  it('without onMarkIt the notice is the sentence only', () => {
+  it('without onMarkIt the notice is the title and the slots only', () => {
     render(<ShoppingBody {...base} list={hinted} />)
-    expect(screen.getByRole('region', { name: 'Not marked Cooked yet' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /^Not marked Cooked yet/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Mark it/ })).toBeNull()
   })
 
   it('no notice for a list without unconfirmed past meals', () => {
     render(<ShoppingBody {...base} list={makeList()} onMarkIt={() => {}} />)
-    expect(screen.queryByRole('region', { name: 'Not marked Cooked yet' })).toBeNull()
+    expect(screen.queryByRole('region', { name: /^Not marked Cooked yet/ })).toBeNull()
   })
 })

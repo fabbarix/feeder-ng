@@ -23,7 +23,6 @@
   color: var(--color-text);
 }
 
-.new-product__barcode,
 .new-product__hint {
   margin: 0;
   font-size: var(--text-meta-size);
@@ -50,13 +49,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-}
-
-.new-product__eyebrow p {
-  margin: 0;
-  font-size: var(--text-body-strong-size);
-  line-height: var(--text-body-strong-line);
-  font-weight: var(--text-body-strong-weight);
 }
 
 .new-product__guard {
@@ -131,4 +123,112 @@
   background: var(--color-primary-container);
   border-color: var(--color-primary-container);
   color: var(--color-on-primary-container);
+}
+
+/* B9-41 (SSP-07, SSP-20): the code line: the code as printed (or the weight) after its icon, in tabular figures. */
+.new-product__code {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.new-product__code > svg {
+  flex: none;
+}
+
+.new-product__code-digits {
+  color: var(--color-text);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* B9-41 (SSP-15): the weighed-goods tile: the icon, then the title, the text and the way in. */
+.weight-code-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.weight-code-note > svg {
+  margin-block-start: var(--space-half);
+}
+
+.weight-code-note__title {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+
+.weight-code-note__text {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.weight-code-note__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+.new-product__eyebrow-title {
+  margin: 0;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: var(--text-body-strong-weight);
+}
+
+/* B9-50 (SSP-08; mock ssp-08-add.html): a receipt line's Add…. "On the receipt" is one DetailList row on a surface-2 block; "Is it one of
+   these?" is a radiogroup of choice chips whose chosen one wears the selected container, its ring and a Check (A11Y-06). */
+.receipt-context {
+  display: grid;
+  gap: var(--space-half);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-2);
+}
+
+.receipt-context__over {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-overline-size);
+  line-height: var(--text-overline-line);
+  font-weight: var(--text-overline-weight);
+  letter-spacing: var(--text-overline-tracking);
+  text-transform: uppercase;
+}
+
+.receipt-context .detail-row {
+  padding-block: 0;
+}
+
+.receipt-context .detail-row__label {
+  overflow-wrap: anywhere;
+}
+
+.new-product__match[aria-checked='true'] {
+  background: var(--selected-bg);
+  border-color: var(--selected-ring);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+
+.new-product__match[aria-checked='true'] .choice-chip__note {
+  color: inherit;
+}
+
+.new-product__use-note {
+  margin-block-end: calc(-1 * var(--space-2));
+}
+
+.new-product__matches .new-product__chips {
+  align-items: flex-start;
 }
