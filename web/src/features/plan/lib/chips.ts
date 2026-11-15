@@ -1,4 +1,5 @@
 import type { ChipStatus } from '../../../ui'
+import type { IconName } from '../../../ui/icons'
 import type { PlannedMeal, WhyCode } from '../types'
 import { planStrings as s } from '../strings'
 import { phraseWhy, weekdayName, type PhraseContext } from './phrase'
@@ -11,6 +12,8 @@ export interface PlanChip {
   kind: 'why' | 'state' | 'status'
   /** Needed by 'state' and 'status'. */
   status?: ChipStatus
+  /** A glyph the status has no default for: Not cooked is neutral with the notCooked glyph (DS-06). */
+  icon?: IconName
   label: string
 }
 
@@ -20,7 +23,7 @@ const HERO_LIMIT = 2
 /** The state chip of a meal: Cooked (success), Not cooked (neutral, DS-06), else Pinned when pinned. */
 function stateChips(meal: PlannedMeal): PlanChip[] {
   if (meal.state === 'cooked') return [{ key: 'state:cooked', kind: 'state', status: 'success', label: s.cooked }]
-  if (meal.state === 'skipped') return [{ key: 'state:skipped', kind: 'state', status: 'neutral', label: s.skipped }]
+  if (meal.state === 'skipped') return [{ key: 'state:skipped', kind: 'state', status: 'neutral', icon: 'notCooked', label: s.skipped }]
   return meal.pinned ? [{ key: 'state:pinned', kind: 'state', status: 'pinned', label: s.pinned }] : []
 }
 
