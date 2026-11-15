@@ -5,7 +5,8 @@
 const clippedRingsProbe = `
 (() => {
   const main = document.querySelector('main')
-  if (!main) return []
+  const modal = document.querySelector('dialog[open]:modal')
+  if (!main && !modal) return []
   const sel = (e) => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]
   const bounds = (el) => {
     const out = []
@@ -26,9 +27,18 @@ const clippedRingsProbe = `
   const worst = (rect, list) => Math.max(0, ...list.map((c) => Math.max(c.l - rect.l, rect.r - c.r, c.t - rect.t, rect.b - c.b)))
   const out = []
   // The chip line of both headers, and the chip lines of an open Filters panel (Course; the Pantry's Show and Kind).
-  const targets = [...main.querySelectorAll('.filter-chips > .chip, .course-filter > .chip, .filter-chip-group > .chip')]
+  const targets = [...(main ? main.querySelectorAll('.filter-chips > .chip, .course-filter > .chip, .filter-chip-group > .chip') : [])]
+  // B9-14 (P18 extended to sheet and dialog bodies): the controls of an open modal's body (fields, chips, buttons, steppers).
+  const inModal = new Set()
+  if (modal) {
+    const bodies = [...modal.querySelectorAll('.sheet__body, .dialog__body')]
+    const controls = bodies.flatMap((b) => [...b.querySelectorAll('button:not([disabled]), input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [role=combobox], [role=switch], .chip')]).slice(0, 24)
+    for (const c of controls) { targets.push(c); inModal.add(c) }
+  }
   for (const el of targets) {
     if (el.getBoundingClientRect().width <= 2) continue
+    // A control of a sheet body is scrolled to as focus does (nearest), so the body's own scroll position does not read as a cut.
+    if (inModal.has(el)) el.scrollIntoView({ block: 'nearest' })
     el.focus({ focusVisible: true })
     const r = el.getBoundingClientRect()
     const list = bounds(el)
