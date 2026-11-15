@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, Chip, IconButton, Menu } from '../../../ui'
+import { IconSet } from '../../../ui/IconSet'
+import { actionName, dayLabel } from '../lib/actionNames'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { dayChip } from '../lib/chips'
 import { causeOf, shortReason, toneOf, toneStyle } from '../lib/couldntGroups'
@@ -13,10 +15,16 @@ import './CourseRow.css'
 /** `cooked` is a loose Mark as Cooked icon; `more` puts Mark as Cooked in the row's ⋮ (DS-TODAY hero). */
 export type CourseAction = 'swap' | 'pin' | 'cooked' | 'more'
 
+/** B9-39 (TB-10): where the Planned Meal sheet opens: a why chip opens it at "Why this Recipe", that reason highlighted. */
+export interface PlannedMealOpenAt {
+  section: 'why'
+  reason: string
+}
+
 /** What a Course row can do; every handler gets the key of that Course's Planned Meal (courseId included). */
 export interface CourseRowHandlers {
-  /** The Recipe name is a button that opens the Planned Meal sheet of the Course. */
-  onOpen: (key: SlotKey) => void
+  /** The Recipe name is a button that opens the Planned Meal sheet of the Course; the hero's why chips also say where (`at`). */
+  onOpen: (key: SlotKey, at?: PlannedMealOpenAt) => void
   onSwap?: (key: SlotKey) => void
   onPin?: (key: SlotKey) => void
   onUnpin?: (key: SlotKey) => void
@@ -54,6 +62,8 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
   // CRS G2 (spec 7.4, "On Plan"): an empty Course says why, in the tone of its cause.
   const reason = !meal && course.unfilled !== null
   const cause = causeOf(course)
+  // A11Y-08: the Plan's names: "Swap Green beans, Tue 10 Dinner".
+  const names = { recipe: meal?.recipeName ?? '', course: course.name, day: dayLabel(slot.date), slot: slot.name }
 
   return (
     <li aria-label={course.name} className="plan-course" data-compact={compact ? 'true' : undefined}>
@@ -81,14 +91,16 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
               </span>
             </span>
             {planned ? (
-              <span className="plan-course__actions" role="group" aria-label={`${course.name} actions`}>
-                {actions.includes('swap') ? <IconButton icon="swap" label={s.swap} size="compact" onClick={() => onSwap?.(key)} /> : null}
+              <IconSet className="plan-course__actions" label={s.courseActions(course.name)}>
+                {actions.includes('swap') ? <IconButton icon="swap" label={actionName('swap', names)} size="compact" onClick={() => onSwap?.(key)} /> : null}
                 {actions.includes('pin') ? (
-                  meal.pinned ? (
-                    <IconButton icon="unpin" label={s.unpin} size="compact" onClick={() => onUnpin?.(key)} />
-                  ) : (
-                    <IconButton icon="pin" label={s.pin} size="compact" onClick={() => onPin?.(key)} />
-                  )
+                  <IconButton
+                    icon="pin"
+                    label={actionName('pin', names)}
+                    size="compact"
+                    pressed={meal.pinned}
+                    onClick={() => (meal.pinned ? onUnpin?.(key) : onPin?.(key))}
+                  />
                 ) : null}
                 {actions.includes('cooked') && mayResolve(meal.date, today) ? (
                   <IconButton icon="markCooked" label={s.markCooked} size="compact" onClick={() => onMarkCooked?.(key)} />
@@ -96,7 +108,7 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
                 {actions.includes('more') && mayResolve(meal.date, today) ? (
                   <Menu label={`More for ${course.name}`} size="compact" items={[{ id: 'cooked', label: s.markCooked, onSelect: () => onMarkCooked?.(key) }]} />
                 ) : null}
-              </span>
+              </IconSet>
             ) : null}
           </>
         ) : (
@@ -105,7 +117,7 @@ export function CourseRow({ row, slot, today, actions = ['swap'], compact = fals
             {reason && !compact ? <span className="plan-course__reason">{shortReason(cause)}</span> : null}
             {/* CRS G2: nobody attends, so there is nobody to cook for (as a lone slot). */}
             {cause !== 'nobody_attending' ? (
-              <Button variant="secondary" size="sm" onClick={() => onChoose?.(key)}>
+              <Button variant="secondary" size="sm" aria-label={actionName('choose', names)} onClick={() => onChoose?.(key)}>
                 {s.choose}
               </Button>
             ) : null}

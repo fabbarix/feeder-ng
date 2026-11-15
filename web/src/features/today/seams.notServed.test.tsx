@@ -8,6 +8,11 @@ const dinner = { date: '2026-11-10', mealSlotId: 4, name: 'Dinner', notServed: t
 const h = vi.hoisted(() => ({ plan: { slots: [] as unknown[], today: '2026-11-10', isLoading: false, failed: false, refetch: vi.fn() } }))
 vi.mock('../plan', () => ({
   heroSelection: () => null,
+  // B9-39: the clock and the just-served rows (the seam merges them into To confirm)
+  useHeroClock: () => new Date('2026-11-09T12:00:00Z'),
+  heroNextChange: () => null,
+  justServed: () => [],
+  withJustServed: (served: unknown[], server: unknown[]) => [...served, ...server],
   notServedToday: (slots: { notServed?: boolean }[]) => slots.filter((s) => s.notServed),
   usePlan: () => h.plan,
   useToConfirm: () => ({ slots: [], isLoading: false, failed: false }),

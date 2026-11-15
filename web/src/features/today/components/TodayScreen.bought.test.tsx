@@ -47,7 +47,7 @@ describe('Today: Bought meals match Plan', () => {
     h.nextSlot = dinner({}, { bought })
     mockApi(api)
     renderWithProviders(routed, '/')
-    await userEvent.click(within(await screen.findByRole('listitem', { name: 'Side' })).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await screen.findByRole('listitem', { name: 'Side' })).getByRole('button', { name: /^Swap / }))
     expect(await screen.findByText('You bought green beans, butter for this; it stays in Stock.')).toBeInTheDocument()
   })
 
@@ -55,7 +55,7 @@ describe('Today: Bought meals match Plan', () => {
     h.nextSlot = dinner()
     mockApi(api)
     renderWithProviders(routed, '/')
-    await userEvent.click(within(await screen.findByRole('listitem', { name: 'Side' })).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await screen.findByRole('listitem', { name: 'Side' })).getByRole('button', { name: /^Swap / }))
     await screen.findByRole('dialog')
     expect(screen.queryByText(/You bought/)).not.toBeInTheDocument()
   })

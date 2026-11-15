@@ -7,7 +7,6 @@ import { TonightHero } from './TonightHero'
 
 const key = { date: '2026-11-10', mealSlotId: 2, courseId: 1 }
 const before = new Date('2026-11-10T17:00:00Z')
-const after = new Date('2026-11-10T20:00:00Z')
 
 function setup(s: PlanSlot, now = before, busy = false) {
   const h = { onCook: vi.fn(), onYesCooked: vi.fn(), onAdjust: vi.fn() }
@@ -22,8 +21,8 @@ describe('TonightHero before the slot time', () => {
     const { container } = setup(dinner())
     expect(container.querySelector('[data-variant="hero"]')).not.toBeNull()
     expect(container.querySelector('[data-span="full"]')).not.toBeNull()
-    // DS-TODAY (changed on purpose): one eyebrow line "Today · Dinner · start 18:45" (spans), not "DINNER · 19:30" + a separate paragraph.
-    expect(container.querySelector('.plan-hero .tile__overline')!.textContent).toBe('Today · Dinner · start 18:45')
+    // B9-39 (changed on purpose, TB-01, TB-15b): on Today a today slot has no "Today" word; the eyebrow is parts, each after the first led by its "·".
+    expect([...container.querySelectorAll('.plan-hero .tile__overline .plan-hero__eyebrow-part')].map((p) => p.textContent!.replace(/\\s+/g, ' ').trim())).toEqual(['Dinner', '· start 18:45'])
     expect(screen.getByText('start 18:45')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Chicken curry' })).toBeInTheDocument()
   })
@@ -56,28 +55,8 @@ describe('TonightHero before the slot time', () => {
   })
 })
 
-describe('TonightHero after the slot time', () => {
-  // DS-TODAY round 2 (changed on purpose): the title stays the Recipe; "<Recipe> cooked?" is the ask line; Cooked (primary), Adjust, ⋮.
-  it('keeps the Recipe as the title, asks "<Recipe> cooked?" and offers Cooked (primary) and Adjust (secondary)', async () => {
-    const h = setup(dinner(), after)
-    expect(screen.getByRole('heading', { name: 'Chicken curry' })).toBeInTheDocument()
-    expect(document.querySelector('.plan-hero__ask')).toHaveTextContent('Chicken curry cooked?')
-    const yes = screen.getByRole('button', { name: 'Cooked' })
-    expect(yes).toHaveAttribute('data-variant', 'primary')
-    await userEvent.click(yes)
-    expect(h.onYesCooked).toHaveBeenCalledWith(key)
-    await userEvent.click(screen.getByRole('button', { name: 'Adjust' }))
-    expect(h.onAdjust).toHaveBeenCalledWith(key)
-    expect(screen.queryByRole('button', { name: /^Cook ·/ })).not.toBeInTheDocument() // no Cook Mode button; "Cooked" is the primary
-    expect(screen.queryByRole('button', { name: /^More for / })).not.toBeInTheDocument() // round 3: the slot's ⋮ is the only menu
-  })
-
-  it('disables the buttons while Cooked is being saved', () => {
-    setup(dinner(), after, true)
-    expect(screen.getByRole('button', { name: 'Cooked' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Adjust' })).toBeDisabled()
-  })
-})
+// B9-39 (TB-01): the "after the slot time" hero ("<Recipe> cooked?", Cooked, Adjust) is gone: the hero moves on at the slot time and the past
+// meal is the first row of To confirm. TonightHero.tb01.test.tsx pins that a render with a past clock shows none of it.
 
 // N3
 describe('TonightHero day and action (N3)', () => {
@@ -94,7 +73,7 @@ describe('TonightHero day and action (N3)', () => {
   // DS-TODAY (changed on purpose): the eyebrow is mixed case (CSS upper-cases it) and keeps the day word.
   it('tomorrow: a day label eyebrow "Tomorrow · Lunch" instead of the slot time', () => {
     render2(lunch(), { day: 'tomorrow', action: 'none' })
-    expect(document.querySelector('.plan-hero .tile__overline')!.textContent).toMatch(/^Tomorrow · Lunch/)
+    expect([...document.querySelectorAll('.plan-hero .tile__overline .plan-hero__eyebrow-part')].map((p) => p.textContent!.replace(/\s+/g, ' ').trim()).slice(0, 2)).toEqual(['Tomorrow', '· Lunch'])
     expect(screen.queryByText(/13:00/)).not.toBeInTheDocument()
   })
 

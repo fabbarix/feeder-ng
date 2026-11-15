@@ -52,14 +52,14 @@ function setup(extra: Record<string, unknown> = {}) {
 
 describe('Scenario: 23:56, tonight\'s dinner is already past', () => {
   // Given Tuesday's dinner time has gone (no Planned Meal, no reason) and the six dinners after it cannot be planned
-  // Then Today still says "Every dinner this week"
+  // Then Today counts the six dinners that can still be planned (B9-32: the summary line is in the Plan's sheet)
   it('the past slot is not counted in "all"', async () => {
     const gone: PlanEntry = { ...unplanned('2026-11-10', 'Dinner', 10), unfilled: null }
     h.couldnt = dinners.slice(1)
     h.all = [gone, ...dinners.slice(1)]
     h.facts = established
     setup()
-    expect(await screen.findByText('Every dinner this week')).toBeInTheDocument()
+    expect(await screen.findByRole('group', { name: '6 Meal Slots' })).toBeInTheDocument()
   })
 })
 
@@ -69,7 +69,7 @@ describe('Scenario: a plain User cannot reach Admin-only settings', () => {
     h.all = h.couldnt
     h.facts = established
     setup({ 'GET /api/me': { id: 2, email: 'u@example.com', displayName: 'U', isAdmin: false } })
-    expect(await screen.findByRole('heading', { name: "Couldn't plan 9 Meal Slots. Nobody is set to attend." })).toBeInTheDocument()
+    expect(await screen.findByRole('group', { name: '9 Meal Slots' })).toHaveTextContent('Nobody is set to attend.')
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Choose who attends' })).not.toBeInTheDocument())
     expect(screen.getByText(/Ask an Admin/)).toBeInTheDocument()
   })
@@ -84,13 +84,12 @@ describe('Scenario: nobody is set to attend nine meals', () => {
     h.all = h.couldnt
     h.facts = established
     setup()
-    const slotEl = (await screen.findByRole('heading', { name: "Couldn't plan 9 Meal Slots. Nobody is set to attend." })).closest('[data-tile="couldntPlan"]') as HTMLElement
+    const slotEl = (await screen.findByRole('group', { name: '9 Meal Slots' })).closest('[data-tile="couldntPlan"]') as HTMLElement
     expect(slotEl).not.toBeNull()
-    expect(within(slotEl).getByText('Every dinner this week, plus weekend breakfasts')).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't plan Tuesday dinner/)).not.toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
     // a tile in the Bento grid taking the full row (never a 2-wide tile that leaves a hole on three columns), warm info tone, never the pink danger tile
-    const tile = slotEl.querySelector('[data-cause="nobody_attending"]') as HTMLElement
+    const tile = slotEl.querySelector('.plan-couldnt') as HTMLElement
     expect(tile).toHaveAttribute('data-span', 'full')
     expect(tile).toHaveAttribute('data-variant', 'status')
     expect(slotEl.querySelector('[data-status="danger"]')).toBeNull()
@@ -105,13 +104,29 @@ describe('Scenario: nobody is set to attend nine meals', () => {
     expect(await screen.findByText('Meal Slots page')).toBeInTheDocument()
   })
 
-  it('"Show all 9" expands the full list on request', async () => {
+  // B9-39 (B9-32 question 2): Today's compact tile gets "Show which meals" too; it opens the same sheet, on Today (Today is never left).
+  it('has no "Show all 9" any more, and offers "Show which meals" (a secondary button)', async () => {
     h.couldnt = [...dinners, ...breakfasts]
     h.all = h.couldnt
     h.facts = established
     setup()
-    await userEvent.click(await screen.findByRole('button', { name: 'Show all 9' }))
-    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(9)
+    await screen.findByRole('group', { name: '9 Meal Slots' })
+    expect(screen.queryByRole('button', { name: /Show all/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show which meals' })).toHaveAttribute('data-variant', 'secondary')
+  })
+
+  it('"Show which meals" opens the Couldn\'t plan sheet over Today, with the meals by day, and Close returns to Today', async () => {
+    h.couldnt = [...dinners, ...breakfasts]
+    h.all = h.couldnt
+    h.facts = established
+    setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Show which meals' }))
+    const sheet = await screen.findByRole('dialog', { name: "Couldn't plan" })
+    expect(within(sheet).getAllByRole('list').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Plan screen')).not.toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: "Couldn't plan" })).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Show which meals' })).toHaveFocus()
   })
 })
 

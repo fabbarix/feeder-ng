@@ -23,11 +23,11 @@ describe('ToConfirmTile', () => {
   it('offers Cooked (one tap, primary), Adjust (secondary) and Not cooked (in the ⋮), each reporting the slot', async () => {
     const h = setup()
     const key = { date: '2026-11-09', mealSlotId: 2, courseId: 1 }
-    const cooked = screen.getByRole('button', { name: 'Cooked' })
+    const cooked = screen.getByRole('button', { name: /^Cooked / })
     expect(cooked).toHaveAttribute('data-variant', 'primary')
     await userEvent.click(cooked)
     expect(h.onYesCooked).toHaveBeenCalledWith(key)
-    const adjust = screen.getByRole('button', { name: 'Adjust' })
+    const adjust = screen.getByRole('button', { name: /^Adjust / })
     expect(adjust).toHaveAttribute('data-variant', 'secondary')
     await userEvent.click(adjust)
     expect(h.onAdjust).toHaveBeenCalledWith(key)

@@ -18,7 +18,7 @@ describe('MealTile (on a day tile)', () => {
   it('shows the Meal Slot with its time and the Recipe name, no Batches or portions', () => {
     setup(slot({ meal: meal({ batches: 2, portions: 3.5 }) }))
     expect(screen.getByText('Dinner')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Chicken curry/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Chicken curry$/ })).toBeInTheDocument()
     expect(screen.getByText(/19:00/)).toBeInTheDocument()
     expect(screen.queryByText(/Batch/)).not.toBeInTheDocument()
     expect(screen.queryByText(/portions/)).not.toBeInTheDocument()
@@ -71,20 +71,20 @@ describe('MealTile (on a day tile)', () => {
 
   it('tapping the Recipe name opens the Planned Meal sheet for the slot', async () => {
     const h = setup()
-    await userEvent.click(screen.getByRole('button', { name: /Chicken curry/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Chicken curry$/ }))
     expect(h.onOpen).toHaveBeenCalledWith(key)
   })
 
   it('a planned meal has a compact Swap icon button, labelled', async () => {
     const h = setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Swap' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Swap / }))
     expect(h.onSwap).toHaveBeenCalledWith(key)
   })
 
   // ds-plan: Pin is an icon action of the row now (was: only in the sheet).
   it('has Swap and Pin on the row, and no Confirm, Unpin or Mark as Cooked buttons: those live in the sheet', () => {
     setup()
-    expect(screen.getByRole('button', { name: 'Pin' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Pin / })).toBeInTheDocument()
     for (const name of ['Confirm', 'Unpin', 'Mark as Cooked']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     }
@@ -93,19 +93,19 @@ describe('MealTile (on a day tile)', () => {
   describe('B2: Cook Mode from the tile', () => {
     it("today's planned meal has a Cook icon button", async () => {
       const h = setup()
-      await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
+      await userEvent.click(screen.getByRole('button', { name: /^Cook / }))
       expect(h.onCook).toHaveBeenCalledWith({ date: '2026-11-10', mealSlotId: 2 }) // ds-plan: the header Cook is the slot's
     })
 
     it('a future meal has none', () => {
       setup(slot({ date: '2026-11-11', meal: meal({ date: '2026-11-11' }) }), '2026-11-10')
-      expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Swap' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^Swap / })).toBeInTheDocument()
     })
 
     it("a past meal has none, nor Swap", () => {
       setup(slot({ date: '2026-11-08', meal: meal({ date: '2026-11-08', state: 'cooked' }) }), '2026-11-10')
-      expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
     })
   })
 
@@ -113,8 +113,8 @@ describe('MealTile (on a day tile)', () => {
     const { container } = setup(slot({ meal: meal({ state: 'cooked', pinned: true }) }))
     expect(container.querySelector('[data-state="cooked"]')).not.toBeNull()
     expect(screen.getByText('Cooked')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Swap / })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
     expect(chipsOf(container)).toHaveLength(1)
   })
 
@@ -129,7 +129,7 @@ describe('MealTile (on a day tile)', () => {
   it('a Not cooked meal says so and has no icon buttons', () => {
     setup(slot({ meal: meal({ state: 'skipped' }) }))
     expect(screen.getByText('Not cooked')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Swap' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Swap / })).not.toBeInTheDocument()
   })
 
   // ds-plan: the empty Course is a dashed ListRow: the short reason is its title, the "Not planned" chip its chip line, and the
@@ -143,7 +143,7 @@ describe('MealTile (on a day tile)', () => {
     expect(block).not.toBeNull()
     const chip = within(block).getByText('Not planned').closest('.chip')!
     expect(chip).toHaveAttribute('data-kind', 'status')
-    expect(chip).toHaveAttribute('data-status', 'spoil') // warn: a rule conflict
+    expect(chip).toHaveAttribute('data-status', 'warn') // warn: a rule conflict
     expect(block.querySelector('[data-status="danger"]')).toBeNull()
     expect(screen.getByText('Every Recipe is excluded.')).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't plan Thursday dinner/)).not.toBeInTheDocument()
@@ -169,7 +169,7 @@ describe('MealTile (on a day tile)', () => {
   it('a slot with nothing planned and no reason just says so', () => {
     setup(slot({ meal: null }))
     expect(screen.getByText('Nothing planned')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Choose a Recipe' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Choose a Recipe for / })).toBeInTheDocument()
   })
 
   // ds-plan: the 2-line clamp is ListRow's; the full name stays the row's accessible name.
