@@ -136,3 +136,21 @@ export function cookedAllSuccessText(result: CookedAllResult): string {
   const parts = outcomes.map((o, i) => `${result.leftovers[i]!.recipeName}: ${successPart(o)}`)
   return `${s.cookedCheer} ${parts.join('; ')}`
 }
+
+// ---- B9-45 (PC-02): the Cooked confirmation's Leftover tile and the entry link with its origin. STUBS: the developer builds them. ----
+
+/** The "Where the Leftover went" tile of Cook Mode's Cooked confirmation: "1.25 portions kept" / "Planned for Mon Dinner · Use by Tue". */
+export interface LeftoverTile {
+  title: string
+  meta: string
+}
+
+/** null when no Leftover was recorded (the confirmation shows no tile then). */
+export function leftoverTile(_outcome: LeftoverOutcome): LeftoverTile | null {
+  throw new Error('B9-45: not built yet')
+}
+
+/** The route and state that opens Cook Mode for a Planned Meal from `from` (a path such as "/plan"): `{ to: "/cook/meal/<date>/<slot>", state: { from } }`. */
+export function cookLinkFor(_key: SlotDayKey, _from: string): { to: string; state: { from: string } } {
+  throw new Error('B9-45: not built yet')
+}

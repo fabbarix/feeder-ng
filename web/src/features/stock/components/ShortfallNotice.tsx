@@ -1,31 +1,21 @@
 import type { ReactElement } from 'react'
-import { Button, Tile } from '../../../ui'
 import type { UnitSystem } from '../../../lib/units'
-import { shortfallMessage } from '../lib/shortfall'
-import type { StockWarning } from '../types'
-import { stockStrings as strings } from '../strings'
-import { uiStrings } from '../../../ui/strings'
+import type { ShortfallGroup } from '../lib/shortfall'
 
 export interface ShortfallNoticeProps {
-  warning: StockWarning
-  onCorrect: (warning: StockWarning) => void
-  onDismiss: () => void
+  /** One group per Cooked meal; the notice lists their rows, grouped by meal when there are several (PC-02). */
+  groups: ShortfallGroup[]
   system?: UnitSystem
+  /** `cooked`: Cook Mode's confirmation (the foot line "Stock stays where it is. Correct it if some was left."). `list`: Today and the Plan (a subline naming the meal). */
+  placement?: 'cooked' | 'list'
+  onCorrect: () => void
+  onDismiss: () => void
 }
 
-/** A spoil status Tile (variant="status"); Correct Stock secondary, Dismiss tertiary. Shows the shortfall sentence with a "Correct Stock" button (one tap -> onCorrect) and "Dismiss". */
-export function ShortfallNotice({ warning, onCorrect, onDismiss, system = 'metric' }: ShortfallNoticeProps): ReactElement | null {
-  return (
-    <Tile as="section" variant="status" status="spoil">
-      <p className="shortfall-notice__text">{shortfallMessage(warning, system)}</p>
-      <div className="shortfall-notice__actions">
-        <Button variant="secondary" onClick={() => onCorrect(warning)}>
-          {strings.correctStock}
-        </Button>
-        <Button variant="secondary" onClick={onDismiss}>
-          {uiStrings.dismiss}
-        </Button>
-      </div>
-    </Tile>
-  )
+/**
+ * B9-45 (PC-02) STUB. ONE info status Tile (role status, never danger or spoil) for every shortfall of the Cooked meals: a title, DetailList rows
+ * (key, state, detail), Correct Stock and Dismiss as secondary buttons. The developer builds it.
+ */
+export function ShortfallNotice(_props: ShortfallNoticeProps): ReactElement | null {
+  throw new Error('B9-45: not built yet')
 }

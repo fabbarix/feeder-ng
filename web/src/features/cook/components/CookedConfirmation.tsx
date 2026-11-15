@@ -1,11 +1,21 @@
 import type { ReactNode } from 'react'
+import type { LeftoverOutcome } from '../../plan/lib/cook'
 import { Button, Icon, Tile } from '../../../ui'
 import { cookStrings } from '../strings'
 
 export interface CookedConfirmationProps {
   recipeName: string
-  /** Sentence from plan/lib/cook leftoverOutcomeText. */
-  outcomeText: string
+  /** Sentence from plan/lib/cook leftoverOutcomeText. B9-45 replaces it with `outcome` (the Leftover tile). */
+  outcomeText?: string
+  /** B9-45 (PC-02), not built: "Sat Dinner", after the Recipe name. */
+  mealLabel?: string
+  /** B9-45 (PC-02), not built: where the Leftover went (plan/lib/cook leftoverTile); no tile for kind "none". */
+  outcome?: LeftoverOutcome | null
+  /** B9-45 (PC-02), not built: "Back to Plan" or "Back to Today" (lib/origin backLabel); default "Back to Today". */
+  leaveLabel?: string
+  /** B9-45 (PC-02), not built: Undo Cooked (SAFE-03), named `undoLabel`; no button without it. */
+  onUndo?: () => void
+  undoLabel?: string
   /** Shortfall notices and the Stock correction, rendered under the outcome. */
   children?: ReactNode
   /** "Back to Today": leaves Cook Mode. */
@@ -27,7 +37,7 @@ export function CookedConfirmation({ recipeName, outcomeText, children, onLeave 
       </h2>
       <p className="cook-confirmation__recipe">{recipeName}</p>
       <p role="status" className="cook-confirmation__outcome">
-        {outcomeText}
+        {outcomeText ?? ''}
       </p>
       {children}
       <div className="cook-confirmation__actions">
