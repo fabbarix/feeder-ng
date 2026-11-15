@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Avatar, BottomSheet, Button, Select } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
+import { EmailText, NameText } from './BreakText'
 import { linkableMembers, unlinkedMembers } from '../lib/members'
 import { accessStrings } from '../strings'
 import type { AccessMember, AccessRequest } from '../types'
@@ -38,12 +40,18 @@ export function ApproveSheet({ request, members, membersFailed, busy, error, onA
   return (
     <BottomSheet open onClose={onCancel} onCancel={onCancel} cancelLabel={t.cancel} cancelProps={{ disabled: busy }} title={t.title} footer={footer}>
       <div className="access__stack">
-        <p className="access__muted access__wrap">{t.explain(request.name, request.email)}</p>
-        {error ? (
-          <p role="alert" className="access__error">
-            {error}
-          </p>
-        ) : null}
+        <p className="access__muted access__wrap">
+          {t.explainLead}{' '}
+          {request.name.trim() ? (
+            <>
+              <NameText name={request.name} /> <EmailText email={request.email} parenthesised />
+            </>
+          ) : (
+            <EmailText email={request.email} />
+          )}{' '}
+          {t.explainTail}
+        </p>
+        <FormError>{error}</FormError>
         {membersFailed ? (
           <p className="access__muted">{t.membersFailed}</p>
         ) : offered.length === 0 ? (

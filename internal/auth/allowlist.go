@@ -48,6 +48,48 @@ func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	return out, rows.Err()
 }
 
+// AllowedUser is a User as the Allowlist shows it: SignedIn is true once a session was ever started for them
+// (users.signed_in_at, migration 1579), so the Admin sees their name or "Not signed in yet" (SET-03).
+type AllowedUser struct {
+	User
+	SignedIn bool
+}
+
+// ListAllowed returns every User on the allowlist with whether they have signed in, ordered by id.
+func (s *Service) ListAllowed(ctx context.Context) ([]AllowedUser, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, email, display_name, is_admin, created_at, signed_in_at IS NOT NULL FROM users ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []AllowedUser
+	for rows.Next() {
+		var (
+			a       AllowedUser
+			created string
+		)
+		if err := rows.Scan(&a.ID, &a.Email, &a.DisplayName, &a.IsAdmin, &created, &a.SignedIn); err != nil {
+			return nil, err
+		}
+		if a.CreatedAt, err = time.Parse(timeFormat, created); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// HasSignedIn reports whether a session was ever started for the User. ErrNotFound if absent.
+func (s *Service) HasSignedIn(ctx context.Context, id int64) (bool, error) {
+	var signedIn bool
+	err := s.db.QueryRowContext(ctx, `SELECT signed_in_at IS NOT NULL FROM users WHERE id = ?`, id).Scan(&signedIn)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, ErrNotFound
+	}
+	return signedIn, err
+}
+
 // SetAdmin grants or revokes Admin. ErrNotFound if absent; ErrLastAdmin when
 // revoking the only Admin. Sessions stay open; the role is read on every request.
 func (s *Service) SetAdmin(ctx context.Context, id int64, admin bool) (User, error) {

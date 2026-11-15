@@ -186,9 +186,42 @@
 .allowlist__actions {
   display: flex;
   flex-wrap: nowrap;
-  flex: none;
+  flex-grow: 1; /* on its own line below 35 rem: the Switch at the start, the icon set at the end */
+  flex-shrink: 0;
   align-items: center;
-  gap: var(--space-2); /* A11Y-02: the Admin switch's ring and the remove button's never touch. */
+  justify-content: space-between;
+  gap: var(--space-2); /* A11Y-02: the Admin switch's ring and the icon buttons' never touch. */
+}
+/* SET-03: the row's icon set, always two 44 px IconButtons (Share and More, or Copy and Remove). */
+.allowlist__icons,
+.allowlist__more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* R-A on a surface (SET round 1, as the mock): the row's icon buttons are filled with the surface, inside the 1 px outline. */
+.allowlist__icons .icon-button {
+  background: var(--color-surface);
+}
+/* The email takes as many lines as it needs and breaks only at its <wbr> pieces, never mid-word (no ellipsis: it is the row's name). */
+.allowlist__list .list-row__title {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+/* The meta ("You · Admin · Last Admin", a display name) takes the lines it needs at 375 and wraps only at its spaces (NameText),
+   never an ellipsis or a mid-word break. */
+.allowlist__list .list-row__meta,
+.allowlist__list .list-row__meta-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+/* From 35 rem of row the controls sit at the end of line 1; they keep their own width there. */
+@container (width >= 35rem) {
+  .allowlist__actions {
+    flex-grow: 0;
+    justify-content: flex-end;
+  }
 }
 @media (width < 37.5em) {
   .allowlist__field {
@@ -197,16 +230,6 @@
   }
   .allowlist__button {
     margin-block-start: 0;
-  }
-  /* Phone: the email wraps instead of truncating in the ~130 px left beside Admin and Remove, and the row grows with it. */
-  .allowlist__list .list-row[data-height] {
-    block-size: auto;
-    min-block-size: 64px;
-    padding-block: var(--space-2);
-  }
-  .allowlist__list .list-row__title {
-    white-space: normal;
-    overflow-wrap: anywhere;
   }
 }
 

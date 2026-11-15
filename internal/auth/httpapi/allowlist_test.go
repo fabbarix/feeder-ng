@@ -13,6 +13,29 @@ type allowed struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"displayName"`
 	IsAdmin     bool   `json:"isAdmin"`
+	SignedIn    bool   `json:"signedIn"`
+}
+
+// B9-52 (SET-03): each entry says whether the User has signed in, so the Allowlist shows their name or "Not signed in yet".
+func TestAllowlistSaysWhoHasSignedIn(t *testing.T) {
+	env := testkit.Start(t)
+	admin := env.LoginAdmin(t) // the Admin has a session; the seeded User has none yet
+	var list []allowed
+	admin.Get("/api/allowlist").MustJSON(t, &list)
+	if len(list) != 2 || !list[0].SignedIn || list[1].SignedIn {
+		t.Fatalf("list = %+v, want the Admin signed in and the User not", list)
+	}
+	var created allowed
+	admin.Post("/api/allowlist", map[string]any{"email": "nonna@example.test"}).MustJSON(t, &created)
+	if created.SignedIn {
+		t.Fatalf("a new entry has not signed in: %+v", created)
+	}
+	env.LoginUser(t)
+	var patched allowed
+	admin.Patch("/api/allowlist/"+strconv.FormatInt(list[1].ID, 10), map[string]any{"isAdmin": false}).MustJSON(t, &patched)
+	if !patched.SignedIn {
+		t.Fatalf("PATCH answers with the entry as it is now (signed in): %+v", patched)
+	}
 }
 
 func TestAllowlistIsAdminOnly(t *testing.T) {

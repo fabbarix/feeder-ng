@@ -145,6 +145,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['guests', 'UserPlus'], // beta.5 WP D
   ['bellRinging', 'BellRinging'], // B9-17: the finished Timer pill (PC-04)
   ['typeBarcode', 'Keyboard'], // B9-17: Type a barcode on Scan (SSP-06)
+  ['share', 'ShareNetwork'], // B9-52: Share sign-in message on the Allowlist (SET-03)
   ['receipt', 'Receipt'], // beta.7 SR2: "Read the receipt" (receipt-reading.md 3.1)
   ['key', 'Key'], // WP-D
   ['assistant', 'Robot'], // WP-D

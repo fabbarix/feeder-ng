@@ -3,22 +3,9 @@ import { actionFailed, failureLine } from '../../../lib/errorCopy'
 import { ApiError } from '../../../lib/http'
 import { accessStrings } from '../strings'
 import type { AccessEvent } from '../types'
-import { elapsedSince } from './requests'
 
-/** "just now", "5 minutes ago", "1 hour ago", "2 days ago". */
-export function agoText(iso: string, now: Date): string {
-  const e = elapsedSince(iso, now)
-  switch (e.unit) {
-    case 'now':
-      return accessStrings.ago.justNow
-    case 'minutes':
-      return accessStrings.ago.minutes(e.n)
-    case 'hours':
-      return accessStrings.ago.hours(e.n)
-    case 'days':
-      return accessStrings.ago.days(e.n)
-  }
-}
+/** "just now", "5 minutes ago", "1 hour ago", "2 days ago" (it lives with requestWhen, which uses it). */
+export { agoText } from './requests'
 
 /** One audit line: "user@x approved zia@x". */
 export function historyLine(e: AccessEvent): string {

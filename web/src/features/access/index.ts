@@ -10,3 +10,5 @@ export const routes: RouteObject[] = [{ path: ACCESS_REQUESTS_PATH, element: cre
 export { useAccessBadge } from './hooks/useAccessBadge'
 export { AccessBadge } from './components/AccessBadge'
 export { useShellStatus } from './hooks/useShellStatus'
+// B9-52: an email or a name that never breaks mid-word (the Allowlist uses it too).
+export { EmailText, NameText } from './components/BreakText'

@@ -10,7 +10,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { memberEmailProblem } from '../lib/memberForm'
 import { admin, cook } from './fixtures'
 import { AllowlistPanel, type AllowlistPanelProps } from './AllowlistPanel'
@@ -19,9 +19,11 @@ function setup(over: Partial<AllowlistPanelProps> = {}) {
   const props: AllowlistPanelProps = { users: [admin, cook], currentUserId: 1, onAdd: vi.fn().mockResolvedValue(undefined), onSetAdmin: vi.fn(), onRemove: vi.fn(), ...over }
   const view = render(
     <MemoryRouter>
-      <ConfirmProvider>
-        <AllowlistPanel {...props} />
-      </ConfirmProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AllowlistPanel {...props} />
+        </ConfirmProvider>
+      </ToastProvider>
     </MemoryRouter>,
   )
   return { props, ...view }
@@ -59,7 +61,9 @@ describe('AllowlistPanel: add form', () => {
 
   it('a general error stays a separate alert and does not mark the field', () => {
     setup({ error: 'The Household needs at least one Admin.' })
-    expect(screen.getByRole('alert')).toHaveTextContent(/at least one Admin/)
+    // B9-52: the panel's one alert is a <FormError> (the ToastProvider's own live region is not it)
+    const alert = screen.getByText(/at least one Admin/).closest('[role="alert"]')!
+    expect(alert).toHaveClass('form-error')
     expect(screen.getByLabelText('Email to allow')).not.toHaveAttribute('aria-invalid')
   })
 
@@ -87,7 +91,7 @@ describe('AllowlistPanel: rows', () => {
     expect(within(row).queryByRole('checkbox')).toBeNull()
   })
 
-  it('Remove is an icon button named "Remove <email>" with no visible text', () => {
+  it('Remove is an icon button named "Remove <email>" with no visible text (no share sheet: it sits beside Copy)', () => {
     setup()
     const row = screen.getByText('cook@example.test').closest('li')!
     const remove = within(row).getByRole('button', { name: 'Remove cook@example.test' })
@@ -95,26 +99,39 @@ describe('AllowlistPanel: rows', () => {
     expect(remove.querySelector('svg')).not.toBeNull()
   })
 
-  it('meta is one line: "You", "Last Admin", both, or nothing; no Chip is used', () => {
-    const second = { ...cook, id: 3, email: 'third@example.test' }
+  // B9-52 (SET-03, main-session ruling): your row reads "You · Admin · Last Admin" (the parts that apply); another row reads the
+  // User's display name once they have signed in, else "Not signed in yet". No Chip.
+  it('meta: "You · Admin · Last Admin" on your row, the display name or "Not signed in yet" on the others; no Chip is used', () => {
+    const second = { ...cook, id: 3, email: 'third@example.test', displayName: 'third', signedIn: false }
     setup({ users: [admin, cook, second] })
-    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('You · Last Admin')).toBeInTheDocument()
+    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('You · Admin · Last Admin')).toBeInTheDocument()
+    expect(within(screen.getByText('cook@example.test').closest('li')!).getByText('Cook')).toBeInTheDocument()
     expect(within(screen.getByText('cook@example.test').closest('li')!).queryByText(/You|Last Admin/)).toBeNull()
+    expect(within(screen.getByText('third@example.test').closest('li')!).getByText('Not signed in yet')).toBeInTheDocument()
     expect(document.querySelector('.chip')).toBeNull()
   })
 
-  it('a row that is only "Last Admin" (someone else is signed in) reads "Last Admin"', () => {
-    setup({ currentUserId: 2 })
-    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('Last Admin')).toBeInTheDocument()
+  it('your row as a plain User reads "You"; with two Admins your row reads "You · Admin"', () => {
+    setup({ users: [admin, { ...cook, isAdmin: true }], currentUserId: 1 })
+    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('You · Admin')).toBeInTheDocument()
   })
 
-  it('the row has one controls wrapper that cannot shrink away (.allowlist__actions)', () => {
+  it('another row that is the Last Admin (someone else is signed in) reads its name and "Last Admin"', () => {
+    setup({ currentUserId: 2 })
+    expect(within(screen.getByText('admin@example.test').closest('li')!).getByText('Admin · Last Admin')).toBeInTheDocument()
+    expect(within(screen.getByText('cook@example.test').closest('li')!).getByText('You')).toBeInTheDocument()
+  })
+
+  it('the row has one controls wrapper that cannot shrink away (.allowlist__actions), in the ListRow actions slot (B9-52)', () => {
     setup()
     const row = screen.getByText('cook@example.test').closest('li')!
     const actions = row.querySelector('.allowlist__actions')!
     expect(actions).not.toBeNull()
+    expect(actions.closest('.list-row__actions')).not.toBeNull()
+    expect(actions.closest('.list-row__trailing')).toBeNull()
+    expect(row).toHaveAttribute('data-actions', 'true')
     expect(within(actions as HTMLElement).getAllByRole('switch')).toHaveLength(1)
-    expect(within(actions as HTMLElement).getAllByRole('button')).toHaveLength(1) // Remove
+    expect(within(actions as HTMLElement).getAllByRole('button')).toHaveLength(2) // Copy sign-in message, Remove
   })
 })
 

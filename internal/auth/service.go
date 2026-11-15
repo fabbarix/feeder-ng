@@ -156,6 +156,11 @@ func (s *Service) CreateSession(ctx context.Context, userID int64) (string, time
 	if err != nil {
 		return "", time.Time{}, err
 	}
+	// B9-52: the first session marks the User as signed in (the Allowlist's "Not signed in yet" until then).
+	if _, err := s.db.ExecContext(ctx, `UPDATE users SET signed_in_at = ? WHERE id = ? AND signed_in_at IS NULL`,
+		now.Format(timeFormat), userID); err != nil {
+		return "", time.Time{}, err
+	}
 	return token, exp, nil
 }
 
