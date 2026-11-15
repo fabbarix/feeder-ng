@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { slot } from '../test-utils'
 import { RecipeChooserSheet } from './RecipeChooserSheet'
 
 const recipes = [
@@ -11,7 +12,7 @@ const recipes = [
 
 function setup(over: Partial<React.ComponentProps<typeof RecipeChooserSheet>> = {}) {
   const onPick = vi.fn()
-  render(<RecipeChooserSheet open onClose={() => {}} recipes={recipes} isLoading={false} onPick={onPick} {...over} />)
+  render(<RecipeChooserSheet open onClose={() => {}} recipes={recipes} isLoading={false} onPick={onPick} slot={slot()} courseId={1} {...over} />)
   return { onPick }
 }
 

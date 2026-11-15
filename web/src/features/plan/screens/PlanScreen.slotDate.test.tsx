@@ -80,7 +80,7 @@ describe('PlanScreen: Time today', () => {
     })
     renderWithProviders(<PlanScreen />)
     await openMenu('Time today')
-    const dialog = await screen.findByRole('dialog', { name: 'Time for Tue Dinner' })
+    const dialog = await screen.findByRole('dialog', { name: 'Time for Tue 10 Dinner' })
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('{ArrowUp}')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
@@ -101,7 +101,7 @@ describe('PlanScreen: Who\'s eating', () => {
     [`GET /api/meal-slots/4/attendance?date=${TODAY}`]: att,
     ...extra,
   })
-  const SHEET = "Who's eating Dinner on 2026-11-10"
+  const SHEET = "Tue 10 Nov · Dinner Who's eating"
 
   it('opens the Date Attendance sheet from the slot menu, with the date read-only', async () => {
     mockApi(routes())

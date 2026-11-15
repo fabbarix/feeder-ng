@@ -18,6 +18,8 @@ export interface RecipeThumbProps {
   label?: string
   /** The generated tile's initial. Default true; a Select option passes false so its text is the Recipe name alone. */
   initial?: boolean
+  /** B9-38 (PC-16 8): `neutral` is the neutral monogram (surface-2 with a muted letter, the initial only, no Tag icon); sets `data-tone="neutral"` like Avatar. A photo wins. */
+  tone?: 'neutral'
 }
 
 const TAG_ICON_SIZE: Record<RecipeThumbSize, 16 | 20 | 24 | 28> = { 40: 16, 48: 20, 72: 24, hero: 28 }

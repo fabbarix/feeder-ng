@@ -1,5 +1,5 @@
 // B9-32 (PC-07, FLOW-18): the sheet "Mark Recipes as Dessert". Title and context, the lede, a search field, Recipes with our own checkboxes (meta
-// "Main · 30 min" or "No Course yet · 50 min"), the primary "Mark 2 Recipes as Dessert", Cancel (so no Close). Saving POSTs /api/courses/<id>/recipes
+// "Main · 30 min" or "No Course yet · 50 min"), the primary "Mark 2 Recipes", Cancel (so no Close). Saving POSTs /api/courses/<id>/recipes
 // and the Plan says what it did in a toast with Undo. TEST-AUTHOR tests: the component is a stub that renders nothing.
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -55,16 +55,16 @@ describe('MarkCourseRecipesSheet', () => {
     expect(dialog.querySelector('input[type="checkbox"]')).toBeNull() // never the browser's checkbox
   })
 
-  it('the primary is disabled until one is ticked, then counts them: "Mark 2 Recipes as Dessert" ("Mark 1 Recipe as Dessert" for one)', async () => {
+  it('the primary is disabled until one is ticked, then counts them: "Mark 2 Recipes" ("Mark 1 Recipe" for one)', async () => {
     open()
     const dialog = await sheet()
-    const primary = within(dialog).getByRole('button', { name: 'Mark Recipes as Dessert' })
+    const primary = within(dialog).getByRole('button', { name: 'Mark Recipes' })
     expect(primary).toBeDisabled()
     expect(primary).toHaveAttribute('data-variant', 'primary')
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
-    expect(within(dialog).getByRole('button', { name: 'Mark 1 Recipe as Dessert' })).toBeEnabled()
+    expect(within(dialog).getByRole('button', { name: 'Mark 1 Recipe' })).toBeEnabled()
     await userEvent.click(within(dialog).getByRole('checkbox', { name: /Panna cotta/ }))
-    expect(within(dialog).getByRole('button', { name: 'Mark 2 Recipes as Dessert' })).toBeEnabled()
+    expect(within(dialog).getByRole('button', { name: 'Mark 2 Recipes' })).toBeEnabled()
   })
 
   it('a search field narrows the list by name, ticks are kept while it is narrowed', async () => {
@@ -74,7 +74,7 @@ describe('MarkCourseRecipesSheet', () => {
     await userEvent.type(within(dialog).getByRole('searchbox', { name: 'Search Recipes' }), 'crum')
     expect(within(dialog).queryByRole('checkbox', { name: /Tiramisu/ })).not.toBeInTheDocument()
     expect(within(dialog).getByRole('checkbox', { name: /Apple crumble/ })).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: 'Mark 1 Recipe as Dessert' })).toBeEnabled() // Tiramisu is still ticked
+    expect(within(dialog).getByRole('button', { name: 'Mark 1 Recipe' })).toBeEnabled() // Tiramisu is still ticked
   })
 
   it('has Cancel and no Close (the footer has Cancel: one way out)', async () => {
@@ -96,7 +96,7 @@ describe('MarkCourseRecipesSheet', () => {
     const dialog = await sheet()
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
     await userEvent.click(within(dialog).getByRole('checkbox', { name: /Panna cotta/ }))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 2 Recipes as Dessert' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 2 Recipes' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/courses/3/recipes')).toHaveLength(1))
     expect(api.callsTo('POST', '/api/courses/3/recipes')[0]!.body).toEqual({ recipeIds: [11, 12] })
     await waitFor(() => expect(onClose).toHaveBeenCalled())
@@ -118,7 +118,7 @@ describe('MarkCourseRecipesSheet', () => {
     const dialog = await sheet()
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
     await userEvent.click(within(dialog).getByRole('checkbox', { name: /Panna cotta/ }))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 2 Recipes as Dessert' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 2 Recipes' }))
     const toast = await findToast(/1 Recipe marked as Dessert/)
     await userEvent.click(within(toast).getByRole('button', { name: /^Undo/ }))
     await waitFor(() => expect(api.callsTo('POST', '/api/courses/3/recipes/unmark')[0]?.body).toEqual({ recipeIds: [12] }))
@@ -132,7 +132,7 @@ describe('MarkCourseRecipesSheet', () => {
     })
     const dialog = await sheet()
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe as Dessert' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe' }))
     const toast = await findToast(/1 Recipe marked as Dessert/)
     await userEvent.click(within(toast).getByRole('button', { name: /^Undo/ }))
     const refused = await findToast(/Nothing was undone/)
@@ -143,7 +143,7 @@ describe('MarkCourseRecipesSheet', () => {
     open({ 'POST /api/courses/3/recipes': { marked: 1, markedIds: [11], changes: [] } })
     const dialog = await sheet()
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe as Dessert' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe' }))
     const toast = await findToast(/1 Recipe marked as Dessert/)
     expect(within(toast).getByRole('button', { name: /^Undo/ })).toBeInTheDocument()
   })
@@ -152,7 +152,7 @@ describe('MarkCourseRecipesSheet', () => {
     open({ 'POST /api/courses/3/recipes': { marked: 1, changes: [] } })
     const dialog = await sheet()
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe as Dessert' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe' }))
     const toast = await waitFor(() => {
       const t = [...document.querySelectorAll<HTMLElement>('.toast')].find((e) => /1 Recipe marked as Dessert/.test(e.textContent ?? ''))
       if (!t) throw new Error('no toast')
@@ -166,7 +166,7 @@ describe('MarkCourseRecipesSheet', () => {
     const { onClose } = open({ 'POST /api/courses/3/recipes': { status: 422, json: { error: { code: 'validation_failed', message: 'A Recipe was removed.', field: 'recipeIds' } } } })
     const dialog = await sheet()
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Tiramisu/ }))
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe as Dessert' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark 1 Recipe' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('A Recipe was removed.')
     expect(onClose).not.toHaveBeenCalled()
     expect(within(dialog).getByRole('checkbox', { name: /Tiramisu/ })).toHaveAttribute('aria-checked', 'true')

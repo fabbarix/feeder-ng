@@ -42,7 +42,7 @@ describe('PlanScreen: Mark Recipes as Dessert stays on the Plan', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Mark Recipes as Dessert' })
     expect(within(sheet).getByText("Couldn't plan 2 Desserts")).toBeInTheDocument()
     await userEvent.click(await within(sheet).findByRole('checkbox', { name: /Tiramisu/ }))
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Mark 1 Recipe as Dessert' }))
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Mark 1 Recipe' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/courses/3/recipes')).toHaveLength(1))
     // the plan refreshes in place: the notice goes, the Dessert rows are filled
     await waitFor(() => expect(screen.queryByRole('region', { name: "Couldn't plan" })).not.toBeInTheDocument())

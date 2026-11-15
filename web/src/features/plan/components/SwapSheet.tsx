@@ -17,6 +17,8 @@ export interface SwapSheetProps {
   onPick: (recipeId: number) => void
   /** B5-BOW: the swapped meal's Bought info; when Bought the sheet notes what stays in Stock (lib/bought swapBoughtNote). */
   bought?: BoughtInfo | null
+  /** B9-38 (PC-10): the Course being swapped (absent = the main Course): its Recipe is "Now" and the context line names it. */
+  courseId?: number
 }
 
 /** Bottom sheet with the top 3 alternatives as rows (thumb, Recipe, first reason and the Leftover); a tap swaps and pins. */

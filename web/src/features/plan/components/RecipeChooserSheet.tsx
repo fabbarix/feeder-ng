@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { BottomSheet, ListGroup, ListRow, RecipeThumb, SearchField } from '../../../ui'
 import { matchRecipes } from '../lib/choose'
 import { planStrings as s } from '../strings'
-import type { RecipeChoice } from '../types'
+import type { PlanSlot, RecipeChoice } from '../types'
 import { leftoverStrings } from '../../../lib/leftovers/copy'
 import { freezerChoices } from '../../../lib/leftovers/rows'
 import type { Leftover } from '../../../lib/leftovers/types'
@@ -18,6 +18,9 @@ export interface RecipeChooserSheetProps {
   frozenLeftovers?: Leftover[]
   /** B5-LOW: a frozen Leftover was chosen: the Planned Meal is pinned to it, not to its Recipe. */
   onPickLeftover?: (leftoverId: number) => void
+  /** B9-38 (PC-10): the slot and the Course the Recipe is for: the context line, the search label and the groups. */
+  slot?: PlanSlot | null
+  courseId?: number
 }
 
 /**
