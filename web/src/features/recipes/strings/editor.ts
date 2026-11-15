@@ -86,6 +86,12 @@ export const recipeEditorStrings = {
     frozenUse: 'Frozen Use-by',
     reheat: 'Reheat time',
     reheatHint: 'Blank: Reheat works it out from the portions',
+    /** B9-37 stubs (RX-02, RX-10): the words are pinned by strings.editorFlow.test.ts. */
+    kind: 'Kind',
+    kindHelp: '',
+    householdDefaults: (_cooldownDays: number, _leftoverUseByDays: number, _frozenUseByDays: number): string => {
+      throw new Error('B9-37: householdDefaults is not built yet')
+    },
     sourceUrl: 'Source link',
     attribution: 'Attribution',
   },

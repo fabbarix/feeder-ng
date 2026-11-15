@@ -176,3 +176,16 @@ export function baseTileMeta(recipe: Pick<RecipeSummary, 'baseRecipe' | 'yield' 
 export function neededAtOverride(step: number | null, defaultStep: number | null): number | null {
   return step === null || step === defaultStep ? null : step
 }
+
+// ---- B9-37 stubs (RX-10; pinned by lib/baseRecipe.kind.test.ts) ----
+
+/** B9-37 (RX-10): the one kind the Kind control shows. */
+export type EditorKind = 'recipe' | 'readyMeal' | 'base'
+
+export function kindOf(_draft: RecipeDraft): EditorKind {
+  throw new Error('B9-37: kindOf is not built yet')
+}
+
+export function setKind(_draft: RecipeDraft, _kind: EditorKind): RecipeDraft {
+  throw new Error('B9-37: setKind is not built yet')
+}

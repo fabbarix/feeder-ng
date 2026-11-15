@@ -475,3 +475,15 @@ export function restoreLine(draft: RecipeDraft, removed: RemovedLine): RecipeDra
   lines.splice(Math.max(0, Math.min(removed.index, lines.length)), 0, removed.line)
   return { ...draft, lines }
 }
+
+// ---- B9-37 stubs (the test author's: the developer replaces the bodies; the tests in lib/draft.untouched.test.ts pin them) ----
+
+/** B9-37 (RX-02): true for a line or Step the person never touched (blank in every field). */
+export function isUntouched(_item: LineDraft | StepDraft): boolean {
+  throw new Error('B9-37: isUntouched is not built yet')
+}
+
+/** B9-37 (RX-02): the draft without its untouched lines and Steps (other Steps' `after` follow the removal). The same object when nothing is untouched. */
+export function dropUntouched(_draft: RecipeDraft): RecipeDraft {
+  throw new Error('B9-37: dropUntouched is not built yet')
+}
