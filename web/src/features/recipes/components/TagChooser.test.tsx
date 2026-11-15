@@ -24,7 +24,10 @@ const colourOf = (n: string) => colours[n.toLowerCase()]
 
 afterEach(() => vi.unstubAllGlobals())
 
-function Harness({ initial = ['quick', 'family'], onChange, tags: all = known, colours: c = colourOf }: { initial?: string[]; onChange?: (t: string[]) => void; tags?: TagCount[]; colours?: ((n: string) => string | undefined) | undefined }) {
+function Harness(props: { initial?: string[]; onChange?: (t: string[]) => void; tags?: TagCount[]; colours?: ((n: string) => string | undefined) | undefined }) {
+  const { initial = ['quick', 'family'], onChange, tags: all = known } = props
+  // An explicit `colours={undefined}` means "the Tags are still loading" (a destructuring default would replace it).
+  const c = 'colours' in props ? props.colours : colourOf
   const [tags, setTags] = useState(initial)
   return (
     <TagChooser
