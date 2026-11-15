@@ -58,11 +58,12 @@
   text-decoration: underline;
 }
 /* SET-14f: the Model Select takes the row; Refresh models sits right after it, level with the Select's control (not with its
-   helper, which the end alignment would otherwise line it up with): below the label, centred on the 48 px trigger. */
+   helper, which the end alignment would otherwise line it up with): below the label and the frame's gap (--space-1), centred on
+   the 48 px trigger (another --space-1 above the 40 px button). */
 .ra__model-row > .ui-field {
   flex: 1 1 12rem;
 }
 .ra__model-row > .icon-button {
   align-self: flex-start;
-  margin-block-start: calc(var(--text-meta-line) + var(--space-1) + 4px);
+  margin-block-start: calc(var(--text-meta-line) + var(--space-1) + var(--space-1));
 }

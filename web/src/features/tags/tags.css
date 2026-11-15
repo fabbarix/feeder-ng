@@ -5,7 +5,8 @@
 }
 
 /* SET-11: the Tag is the row's title, at most two lines (a long one ends in an ellipsis; its full name stays in the row's accessible
-   name); the Recipe count is the value, which never shrinks, so "12 Recipes" is never cut at 375. */
+   name); the Recipe count is the value, which never shrinks, so "12 Recipes" is never cut at 375. The title wraps at a word, never
+   mid-word (system.md 3, check-ui word-break, in fail mode here). */
 .tags-screen {
   min-inline-size: 0;
 }
@@ -15,7 +16,6 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  overflow-wrap: anywhere;
 }
 
 .tags-screen .list-row__value {
