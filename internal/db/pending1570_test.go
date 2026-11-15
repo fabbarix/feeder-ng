@@ -12,9 +12,10 @@ import (
 
 // db.Pre1570Prefixes and db.NeedsPre1570Snapshot decide whether start-up takes feeder-pre-1570.db before the beta.9
 // migrations 1570 to 1578 (docs/dev/design/b9-snap.md, plan section 7). They reuse withBeta6 (pending1550_test.go).
-// One snapshot covers all nine files (1578 is B9-58, added by the user after the plan), so no later beta.9 package ever touches db.go.
+// One snapshot covers all ten files (1578 is B9-58, added by the user after the plan; 1579 is B9-52, users.signed_in_at, a
+// main-session ruling after the plan).
 
-var beta9Prefixes = []string{"1570_", "1571_", "1572_", "1573_", "1574_", "1575_", "1576_", "1577_", "1578_"}
+var beta9Prefixes = []string{"1570_", "1571_", "1572_", "1573_", "1574_", "1575_", "1576_", "1577_", "1578_", "1579_"}
 
 func TestPre1570PrefixesListAllNineBeta9Migrations(t *testing.T) {
 	if !reflect.DeepEqual(db.Pre1570Prefixes, beta9Prefixes) {
@@ -76,10 +77,10 @@ func TestNeedsSnapshotForPre1570Prefixes(t *testing.T) {
 }
 
 // A later 157x file (here 1573) is covered by the same snapshot with no change to db.go.
-func TestPre1570CoversEveryFileOf1570To1578(t *testing.T) {
+func TestPre1570CoversEveryFileOf1570To1579(t *testing.T) {
 	ctx := context.Background()
 	beta8 := []string{"1500_a.sql", "1540_b.sql", "1550_c.sql", "1560_d.sql"}
-	for _, n := range []string{"1570_a.sql", "1571_a.sql", "1572_a.sql", "1573_a.sql", "1574_a.sql", "1575_a.sql", "1576_a.sql", "1577_a.sql", "1578_a.sql"} {
+	for _, n := range []string{"1570_a.sql", "1571_a.sql", "1572_a.sql", "1573_a.sql", "1574_a.sql", "1575_a.sql", "1576_a.sql", "1577_a.sql", "1578_a.sql", "1579_a.sql"} {
 		d, _ := openTemp(t)
 		if err := db.Migrate(ctx, d, withBeta6(t, beta8...)); err != nil {
 			t.Fatal(err)
@@ -92,8 +93,8 @@ func TestPre1570CoversEveryFileOf1570To1578(t *testing.T) {
 	if err := db.Migrate(ctx, d, withBeta6(t, beta8...)); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := db.NeedsSnapshotFor(ctx, d, withBeta6(t, append(append([]string{}, beta8...), "1579_a.sql")...), db.Pre1570Prefixes); err != nil || got {
-		t.Errorf("1579 is outside the beta.9 table: NeedsSnapshotFor = %v, %v; want false (the main session extends the table, not a package)", got, err)
+	if got, err := db.NeedsSnapshotFor(ctx, d, withBeta6(t, append(append([]string{}, beta8...), "1580_a.sql")...), db.Pre1570Prefixes); err != nil || got {
+		t.Errorf("1580 is outside the beta.9 table: NeedsSnapshotFor = %v, %v; want false (the main session extends the table, not a package)", got, err)
 	}
 }
 

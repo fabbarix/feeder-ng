@@ -1,0 +1,3 @@
+# B9-52 (SET-03, SET-12; plan section 9): the word-break rule fails in the Allowlist and Sign-in requests folders, which are clean: an
+# email wraps only before "@" and after "." (<wbr> pieces inside nowrap), a name only at its spaces, never mid-word.
+word-break.fail_paths=web/src/features/settings web/src/features/access

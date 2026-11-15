@@ -12,7 +12,7 @@ export interface PreferenceTheme {
  *  signed out or loading (and then without fetching preferences). */
 export function usePreferenceTheme(): PreferenceTheme {
   const me = useMe()
-  const { preferences } = usePreferences(Boolean(me.data))
+  const { effective: preferences } = usePreferences(Boolean(me.data))
   const p = me.data ? preferences : DEFAULT_PREFERENCES
   return { accent: p.accent, scheme: p.scheme }
 }

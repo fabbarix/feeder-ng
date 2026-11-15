@@ -1,7 +1,8 @@
-import { Button, ListGroup, ListRow } from '../../../ui'
+import { Button, ListGroup, ListRow, Muted } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
+import { EmailText, NameText } from './BreakText'
 import { RequestAvatar } from './RequestAvatar'
-import { agoText } from '../lib/format'
-import { daysLeft } from '../lib/requests'
+import { requestWhen } from '../lib/requests'
 import { accessStrings } from '../strings'
 import type { AccessRequest } from '../types'
 import '../access.css'
@@ -14,44 +15,48 @@ export interface AccessRequestListProps {
   onDeny: (id: number) => void
 }
 
-/** A row per pending request: avatar, name, email, "asked N days ago", days left, Approve and Deny. Google text is shown as text. */
+/**
+ * SET-12: an R-E row per pending request. Leading the neutral monogram (or the Google photo); the name is the title and the email
+ * the meta (with no name, the email is the title and the meta "No name from Google"); the state is the value ("12 days left",
+ * warn tone at 2 days or fewer) with "asked 2 days ago" under it; Deny (danger secondary) and Approve in the actions slot.
+ * Google text is shown as text.
+ */
 export function AccessRequestList({ requests, now = new Date(), error, onApprove, onDeny }: AccessRequestListProps) {
   return (
     <div className="access__stack">
-      {error ? (
-        <p role="alert" className="access__error">
-          {error}
-        </p>
-      ) : null}
+      <FormError>{error}</FormError>
       {requests.length === 0 ? (
-        <p className="access__muted">{accessStrings.empty}</p>
+        <Muted>{accessStrings.empty}</Muted>
       ) : (
         <>
-          <p className="access__muted">{accessStrings.approvalNote}</p>
+          <Muted>{accessStrings.approvalNote}</Muted>
           <div className="access__list">
             <ListGroup label={accessStrings.title}>
-              {requests.map((r) => (
-                <ListRow
-                  key={r.id}
-                  title={r.name}
-                  meta={r.email}
-                  leading={<RequestAvatar name={r.name} picture={r.picture} size="md" />}
-                  trailing={
-                    <span className="access__actions">
-                      <Button variant="secondary" aria-label={accessStrings.denyLabel(r.email)} onClick={() => onDeny(r.id)}>
-                        {accessStrings.deny}
-                      </Button>
-                      <Button variant="secondary" aria-label={accessStrings.approveLabel(r.email)} onClick={() => onApprove(r.id)}>
-                        {accessStrings.approve}
-                      </Button>
-                    </span>
-                  }
-                >
-                  <span className="access__when">
-                    {accessStrings.asked(agoText(r.requestedAt, now))} · {accessStrings.daysLeft(daysLeft(r.expiresAt, now))}
-                  </span>
-                </ListRow>
-              ))}
+              {requests.map((r) => {
+                const when = requestWhen(r, now)
+                const named = r.name.trim() !== ''
+                return (
+                  <ListRow
+                    key={r.id}
+                    title={named ? <NameText name={r.name} /> : <EmailText email={r.email} />}
+                    wrapTitle
+                    meta={named ? <EmailText email={r.email} /> : accessStrings.noName}
+                    leading={<RequestAvatar name={r.name || r.email} picture={r.picture} size="md" />}
+                    value={<span data-tone={when.soon ? 'warn' : undefined}>{when.value}</span>}
+                    subValue={when.subValue}
+                    actions={
+                      <span className="access__actions">
+                        <Button variant="danger-secondary" aria-label={accessStrings.denyLabel(r.email)} onClick={() => onDeny(r.id)}>
+                          {accessStrings.deny}
+                        </Button>
+                        <Button variant="secondary" aria-label={accessStrings.approveLabel(r.email)} onClick={() => onApprove(r.id)}>
+                          {accessStrings.approve}
+                        </Button>
+                      </span>
+                    }
+                  />
+                )
+              })}
             </ListGroup>
           </div>
         </>

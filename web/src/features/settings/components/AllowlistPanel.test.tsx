@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { admin, cook } from './fixtures'
@@ -13,9 +13,11 @@ function setup(over: Partial<React.ComponentProps<typeof AllowlistPanel>> = {}) 
   }
   render(
     <MemoryRouter>
-      <ConfirmProvider>
-        <AllowlistPanel {...props} />
-      </ConfirmProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AllowlistPanel {...props} />
+        </ConfirmProvider>
+      </ToastProvider>
     </MemoryRouter>,
   )
   return props
@@ -89,7 +91,7 @@ describe('AllowlistPanel', () => {
     setup()
     expect(screen.getByRole('switch', { name: 'Admin: admin@example.test' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Remove admin@example.test' })).toBeDisabled()
-    expect(screen.getByText('You · Last Admin')).toBeInTheDocument() // F-02: one meta line, no Chip
+    expect(screen.getByText('You · Admin · Last Admin')).toBeInTheDocument() // F-02: one meta line, no Chip; B9-52: "Admin" too
   })
 
   it('unlocks Admins when there are two', () => {
@@ -100,6 +102,6 @@ describe('AllowlistPanel', () => {
 
   it('shows a server error', () => {
     setup({ error: 'There must always be at least one Admin.' })
-    expect(screen.getByRole('alert')).toHaveTextContent(/at least one Admin/)
+    expect(screen.getByText(/at least one Admin/).closest('[role="alert"]')).toHaveClass('form-error') // B9-52: <FormError>
   })
 })

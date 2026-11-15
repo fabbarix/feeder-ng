@@ -17,23 +17,25 @@ type allowedBody struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"displayName"`
 	IsAdmin     bool   `json:"isAdmin"`
+	// SignedIn: a session was ever started for them (B9-52: their name, or "Not signed in yet").
+	SignedIn bool `json:"signedIn"`
 }
 
-func allowed(u auth.User) allowedBody {
-	return allowedBody{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsAdmin: u.IsAdmin}
+func allowed(u auth.User, signedIn bool) allowedBody {
+	return allowedBody{ID: u.ID, Email: u.Email, DisplayName: u.DisplayName, IsAdmin: u.IsAdmin, SignedIn: signedIn}
 }
 
 // mountAllowlist registers the Admin-only allowlist routes.
 func mountAllowlist(r *app.Router, d app.Deps) {
 	r.Admin("GET /api/allowlist", func(w http.ResponseWriter, req *http.Request) {
-		users, err := d.Auth.ListUsers(req.Context())
+		users, err := d.Auth.ListAllowed(req.Context())
 		if err != nil {
 			httpx.WriteAPIError(w, err)
 			return
 		}
 		out := make([]allowedBody, 0, len(users))
 		for _, u := range users {
-			out = append(out, allowed(u))
+			out = append(out, allowed(u.User, u.SignedIn))
 		}
 		httpx.WriteJSON(w, http.StatusOK, out)
 	})
@@ -77,7 +79,7 @@ func mountAllowlist(r *app.Router, d app.Deps) {
 			httpx.WriteAPIError(w, err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusCreated, allowed(u))
+		httpx.WriteJSON(w, http.StatusCreated, allowed(u, false))
 	})
 
 	r.Admin("PATCH /api/allowlist/{id}", func(w http.ResponseWriter, req *http.Request) {
@@ -101,7 +103,11 @@ func mountAllowlist(r *app.Router, d app.Deps) {
 		if !writeAllowlistError(w, err) {
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, allowed(u))
+		signedIn, err := d.Auth.HasSignedIn(req.Context(), id)
+		if !writeAllowlistError(w, err) {
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, allowed(u, signedIn))
 	})
 
 	r.Admin("DELETE /api/allowlist/{id}", func(w http.ResponseWriter, req *http.Request) {

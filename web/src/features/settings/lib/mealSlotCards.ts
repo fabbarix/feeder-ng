@@ -18,7 +18,7 @@ export interface CourseChip {
 
 /** One weekday of the 7-day strip: a day the name runs (its slot, its time, whether it differs from the card's usual) or a free day ("+ add"). */
 export type WeekCell =
-  | { weekday: number; state: 'runs'; slot: MealSlot; time: string; differs: boolean }
+  | { weekday: number; state: 'runs'; slot: MealSlot; time: string; differs: boolean; /** SET-08: this day's time is not the card's usual time, so the strip prints it. */ timeDiffers: boolean }
   | { weekday: number; state: 'free' }
 
 /** A weekday of a card that differs from the card's usual; only the fields that differ are set. */
@@ -44,8 +44,8 @@ export interface MealSlotCard {
   week: WeekCell[]
   /** Only the weekdays that differ, in week order. */
   differences: DayDifference[]
-  /** 'full' when the name runs all seven days, else 'half' (Bento sizing). */
-  span: 'full' | 'half'
+  /** Bento sizing. SET-08: a card never spans the whole row, even one that runs every day (the grid is two-up from 1024 px). */
+  span: 'half'
   /** The slot "Edit <name>" opens: the earliest weekday whose values equal the usual ones (else the earliest weekday). */
   editSlot: MealSlot
   /** The slot and date "Change a date" opens: the soonest upcoming run (today counts). */
@@ -142,7 +142,7 @@ function buildCard(list: MealSlot[], members: Member[], today: string, weekStart
   const week: WeekCell[] = order.map((weekday) => {
     const e = entries.find((x) => x.weekday === weekday)
     if (!e) return { weekday, state: 'free' }
-    return { weekday, state: 'runs', slot: e.slot, time: e.time, differs: differsOn(e) }
+    return { weekday, state: 'runs', slot: e.slot, time: e.time, differs: differsOn(e), timeDiffers: e.time !== usualTime }
   })
 
   const editEntry = entries.find(matchesUsual) ?? entries[0]!
@@ -159,7 +159,7 @@ function buildCard(list: MealSlot[], members: Member[], today: string, weekStart
     usualCourses,
     week,
     differences,
-    span: days.length === 7 ? 'full' : 'half',
+    span: 'half',
     editSlot: editEntry.slot,
     next,
   }
@@ -272,7 +272,8 @@ function monthShort(date: string, locale: string): string {
   }
 }
 
-function dateLabel(date: string, locale: string): string {
+/** "Sat 14 Nov": a date as the Meal Slots page words it (the Change a date title, the Dates that differ rows). */
+export function dateLabel(date: string, locale = 'en'): string {
   const day = Number(date.slice(8, 10))
   const weekday = weekdayOfDate(date)
   const short = weekday === null ? '' : weekdayShortName(weekday, locale)

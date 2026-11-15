@@ -118,7 +118,7 @@ describe('DS-09: media queries on width are (min-width: Xem) or (width < Xem) wi
   })
 
   it.each([
-    ['access/access.css', '(width < 37.5em)', /\(max-width:\s*599px\)/],
+    // access/access.css is no longer listed: SET-12 (B9-52) removed its phone block; the request rows use ListRow's actions slot.
     ['board/board.css', '(min-width: 37.5em)', /\(min-width:\s*600px\)/],
     ['today/today.css', '(min-width: 48em)', /\(min-width:\s*768px\)/],
     ['cook/cook.css', '(min-width: 48em)', /\(min-width:\s*768px\)/],

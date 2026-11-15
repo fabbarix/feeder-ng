@@ -45,6 +45,11 @@ export interface CoursePickerProps {
    * attendance default here). Called once per row; never called by the unordered form.
    */
   renderRowExtras?: (row: CoursePickerRowContext) => ReactNode
+  /**
+   * SET-09, ordered form only: more words for the row's muted second line, after "main Course" and a dot ("Chiara does not eat it").
+   * Null or empty adds nothing.
+   */
+  renderRowMeta?: (row: CoursePickerRowContext) => string | null
 }
 
 /** Focus target after an update: a `data-focus-key` button inside the picker, or a finder for the chip. */
@@ -61,6 +66,7 @@ export function CoursePicker({
   helper,
   error,
   renderRowExtras,
+  renderRowMeta,
 }: CoursePickerProps): ReactNode {
   const baseId = useId()
   const labelId = `${baseId}-label`
@@ -132,6 +138,7 @@ export function CoursePicker({
           rows={rows}
           disabled={disabled}
           renderRowExtras={renderRowExtras}
+          renderRowMeta={renderRowMeta}
           onReorder={reorder}
           onMove={move}
           onRemove={remove}

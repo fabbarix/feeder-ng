@@ -37,6 +37,14 @@ describe('Menu: trigger', () => {
     expect(screen.queryByRole('menu')).toBeNull()
     expect(screen.queryByRole('dialog')).toBeNull()
   })
+  // B9-52 (SET-03): like every IconButton that names an action, the ⋮ shows its name as a tooltip.
+  it('with triggerTitle the icon trigger has a title equal to its accessible name; without it, none', () => {
+    const { unmount } = view({ triggerTitle: true })
+    expect(trigger()).toHaveAttribute('title', 'More actions')
+    unmount()
+    view()
+    expect(trigger()).not.toHaveAttribute('title')
+  })
   it('opens on click and reports aria-expanded', async () => {
     view()
     await open()

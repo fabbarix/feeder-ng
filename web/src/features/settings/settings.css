@@ -27,43 +27,143 @@
   color: var(--color-on-surface);
   font-weight: 600;
 }
-/* Accent preview tile: a label and a sample chip drawn in the draft accent (scoped override of --color-accent). */
-.settings__preview {
-  --color-accent: var(--preview-accent);
-  --color-on-accent: var(--preview-on-accent);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-tile);
-  background: var(--color-surface-2);
+/* B9-36 (SAFE-08): Your preferences. The form holds the tile and, while dirty, the sticky actions bar under it (the app is the preview). */
+.prefs {
+  display: grid;
+  gap: var(--space-4);
 }
-.settings__preview-label {
+.prefs__intro {
+  margin: 0;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
-  font-weight: var(--text-label-weight);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-weight: var(--text-meta-weight);
+}
+/* An info notice ("Not saved yet", the changed time zone): the info status pair, a 16 px icon and one line of meta text in a bordered box. */
+.settings__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-info-fg);
+  border-radius: var(--radius-control);
+  background: var(--color-info-bg);
+  color: var(--color-info-fg);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  /* A sentence of running text: the meta weight (500), never bold (standing ruling). */
+  font-weight: var(--text-meta-weight);
+}
+.settings__notice > svg {
+  flex: none;
+  /* 16 px on an 18 px first line: centred on it. */
+  margin-block-start: 1px;
+}
+.settings__field-with-notice {
+  display: grid;
+  gap: var(--space-2);
+}
+.prefs__actions {
+  margin-block-start: var(--space-2);
 }
 /* A Member's colour: the wrapper carries --member-colour; the Avatar draws the ring (its colour prop), so the fill is never repainted. */
 .member-avatar {
   display: inline-flex;
   border-radius: var(--radius-pill);
 }
-.attendance {
+.attendance-editor {
   display: grid;
   gap: var(--space-2);
+  min-inline-size: 0;
 }
+
+/* SET-10: one row anatomy per Member (system.md 3), by the list's width, never the viewport's. */
+.attendance {
+  container-type: inline-size;
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .attendance__row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 44px 40px minmax(0, 1fr) auto;
+  grid-template-areas: 'check av name step';
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  /* the stepper icon buttons' 6 px hit area sticks out of the row; leave room so the sheet never scrolls sideways */
-  padding-inline-end: var(--space-2);
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  min-block-size: var(--row-min);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--color-line);
+}
+
+.attendance__row:last-child {
+  border-block-end: 0;
+}
+
+.attendance__check {
+  grid-area: check;
+  display: grid;
+  place-items: center;
+}
+
+.attendance__av {
+  grid-area: av;
+  display: flex;
+}
+
+.attendance__main {
+  grid-area: name;
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+/* Two lines at most, wrapped at a word and ending in an ellipsis, so one long name can never widen the row or push the stepper
+   onto a line of nobody's (system.md 3: never broken mid-word). */
+.attendance__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-inline-size: 0;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  cursor: pointer;
+}
+
+.attendance__step {
+  grid-area: step;
+  justify-self: end;
+}
+
+/* Every row's stepper is as wide as the widest Portion Factor ("0.75"), so the − and + line up down the list. */
+.attendance__step .stepper__value {
+  min-inline-size: 4ch;
+}
+
+.attendance__off {
+  grid-area: step;
+  justify-self: end;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+/* A narrow sheet: every stepper goes under its name, in the same row, so it still reads as that Member's. All rows switch together. */
+@container (max-width: 20rem) {
+  .attendance__row {
+    grid-template-areas: 'check av name name' '. . step step';
+  }
+
+  .attendance__step {
+    justify-self: start;
+  }
 }
 
 /* F-02: the Allowlist add form. The field keeps a real width beside its button; on a phone it takes the row. */
@@ -86,9 +186,42 @@
 .allowlist__actions {
   display: flex;
   flex-wrap: nowrap;
-  flex: none;
+  flex-grow: 1; /* on its own line below 35 rem: the Switch at the start, the icon set at the end */
+  flex-shrink: 0;
   align-items: center;
-  gap: var(--space-2); /* A11Y-02: the Admin switch's ring and the remove button's never touch. */
+  justify-content: space-between;
+  gap: var(--space-2); /* A11Y-02: the Admin switch's ring and the icon buttons' never touch. */
+}
+/* SET-03: the row's icon set, always two 44 px IconButtons (Share and More, or Copy and Remove). */
+.allowlist__icons,
+.allowlist__more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* R-A on a surface (SET round 1, as the mock): the row's icon buttons are filled with the surface, inside the 1 px outline. */
+.allowlist__icons .icon-button {
+  background: var(--color-surface);
+}
+/* The email takes as many lines as it needs and breaks only at its <wbr> pieces, never mid-word (no ellipsis: it is the row's name). */
+.allowlist__list .list-row__title {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+/* The meta ("You · Admin · Last Admin", a display name) takes the lines it needs at 375 and wraps only at its spaces (NameText),
+   never an ellipsis or a mid-word break. */
+.allowlist__list .list-row__meta,
+.allowlist__list .list-row__meta-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+/* From 35 rem of row the controls sit at the end of line 1; they keep their own width there. */
+@container (width >= 35rem) {
+  .allowlist__actions {
+    flex-grow: 0;
+    justify-content: flex-end;
+  }
 }
 @media (width < 37.5em) {
   .allowlist__field {
@@ -97,16 +230,6 @@
   }
   .allowlist__button {
     margin-block-start: 0;
-  }
-  /* Phone: the email wraps instead of truncating in the ~130 px left beside Admin and Remove, and the row grows with it. */
-  .allowlist__list .list-row[data-height] {
-    block-size: auto;
-    min-block-size: 64px;
-    padding-block: var(--space-2);
-  }
-  .allowlist__list .list-row__title {
-    white-space: normal;
-    overflow-wrap: anywhere;
   }
 }
 
@@ -262,16 +385,6 @@
   line-height: var(--text-label-line);
   font-weight: var(--text-label-weight);
 }
-.course-remove__list {
-  margin: 0;
-  padding-left: var(--space-4);
-  display: grid;
-  gap: var(--space-1);
-}
-.course-remove__pinned {
-  font-weight: var(--text-label-weight);
-  color: var(--color-muted);
-}
 .meal-slot-summary__pinned {
   font-weight: var(--text-label-weight);
 }
@@ -282,4 +395,44 @@
   line-height: var(--text-body-line);
   font-weight: var(--text-body-weight);
   color: var(--color-muted);
+}
+
+/* B9-36 (SAFE-02, SHORT-02): the Member sheet's footer. BottomSheet puts its slots in the order Cancel, Remove Member, Save Member. On a
+   phone Cancel and Save Member share the first row and Remove Member takes its own row under a divider, one thumb away from the commit
+   (as FormActions' destructive row); from 600 px it is one row with Remove Member at the far start and Cancel and Save Member at the end. */
+.sheet__footer[data-cancel]:has(> .member-sheet__remove) {
+  flex-wrap: wrap;
+}
+.sheet__footer[data-cancel] > .member-sheet__remove {
+  order: 1;
+  display: flex;
+  flex: 1 1 100%;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-line);
+}
+.member-sheet__remove > .button {
+  flex: 1 1 auto;
+}
+@media (min-width: 37.5em) {
+  .sheet__footer[data-cancel]:has(> .member-sheet__remove) {
+    flex-wrap: nowrap;
+  }
+  .sheet__footer[data-cancel]:has(> .member-sheet__remove) > * {
+    flex: 0 0 auto;
+  }
+  .sheet__footer[data-cancel] > .member-sheet__remove {
+    order: -1;
+    margin-inline-end: auto;
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
+}
+
+/* A11Y-02 (P39): the footer sits right under the scrolling body, so the last field's ring keeps --space-1 clear of it, also when focus
+   scrolls a field into view at the body's lower edge. */
+.sheet__body:has(> .member-sheet__form) {
+  scroll-padding-block-end: calc(var(--focus-ring-width) + var(--focus-ring-offset) + var(--space-1));
+}
+.member-sheet__form {
+  padding-block-end: var(--space-1);
 }

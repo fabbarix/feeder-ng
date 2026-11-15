@@ -128,7 +128,7 @@ describe('CoursePicker: ordered form', () => {
 
   it('marks the main Course on its row with text', () => {
     render(<Controlled initial={[2, 1]} />)
-    expect(within(rows()[1]!).getByText('main Course')).toBeInTheDocument()
+    expect(within(rows()[1]!).getByText('main Course')).toHaveClass('course-picker__meta')
     expect(within(rows()[0]!).queryByText('main Course')).toBeNull()
   })
 
@@ -359,5 +359,49 @@ describe('CoursePicker: native-free', () => {
   it('shows decorative icons only', () => {
     const { container } = render(<Controlled initial={[1, 2]} />)
     for (const svg of container.querySelectorAll('svg')) expect(svg).toHaveAttribute('aria-hidden', 'true')
+  })
+})
+
+// SET-09: one anatomy for every chosen Course, in the Meal Slot editor, Change a date and the Recipe editor alike.
+describe('CoursePicker: one row anatomy (SET-09)', () => {
+  it('a row\'s text block holds the name and, under it, the meta line', () => {
+    render(<Controlled initial={[2, 1]} />)
+    const text = rows()[1]!.querySelector('.course-picker__text') as HTMLElement
+    expect(text).not.toBeNull()
+    expect(text.querySelector('.course-picker__name')).toHaveTextContent('Main')
+    expect(text.querySelector('.course-picker__meta')).toHaveTextContent('main Course')
+  })
+  it('a row with nothing to say has a name and no meta element at all', () => {
+    render(<Controlled initial={[2, 1]} />)
+    expect(rows()[0]!.querySelector('.course-picker__meta')).toBeNull()
+  })
+  it('renderRowMeta adds to the meta line, after "main Course" and a dot, and is called once per row with the row context', () => {
+    const renderRowMeta = vi.fn(({ course }) => (course.id === 1 ? 'Sam does not eat it' : null))
+    render(<Controlled initial={[2, 1]} renderRowMeta={renderRowMeta} />)
+    expect(rows()[1]!.querySelector('.course-picker__meta')).toHaveTextContent('main Course \u00b7 Sam does not eat it')
+    expect(rows()[0]!.querySelector('.course-picker__meta')).toBeNull()
+    expect(renderRowMeta).toHaveBeenCalledWith(expect.objectContaining({ course: courses[0], index: 1, count: 2 }))
+  })
+  it('a non-main Course shows only the renderRowMeta text', () => {
+    render(<Controlled initial={[1, 2]} renderRowMeta={({ course }) => (course.id === 2 ? 'Chiara does not eat it' : null)} />)
+    expect(rows()[1]!.querySelector('.course-picker__meta')).toHaveTextContent(/^Chiara does not eat it$/)
+  })
+  it('Move up, Move down and Remove are wrapped in one IconSet (8 px apart, so their focus rings never touch), in that order', () => {
+    render(<Controlled initial={[1, 2, 3]} />)
+    const set = rows()[1]!.querySelector('.icon-set') as HTMLElement
+    expect(set).not.toBeNull()
+    expect(set.parentElement).toHaveClass('course-picker__actions')
+    expect(within(set).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Move Side up', 'Move Side down', 'Remove Side'])
+  })
+  it('the first row\'s Move up and the last row\'s Move down stay in place, disabled (the three buttons never shift)', () => {
+    render(<Controlled initial={[1, 2]} />)
+    expect(within(rows()[0]!).getAllByRole('button', { name: /^(Move|Remove) Main/ })).toHaveLength(3)
+    expect(within(rows()[0]!).getByRole('button', { name: 'Move Main up' })).toBeDisabled()
+    expect(within(rows()[1]!).getByRole('button', { name: 'Move Side down' })).toBeDisabled()
+  })
+  it('keeps the DOM order handle, text, extras, actions (only the grid places them)', () => {
+    render(<Controlled initial={[1]} renderRowExtras={() => <button type="button">Extra</button>} />)
+    const kids = [...rows()[0]!.children].map((c) => (c.classList.contains('sortable-handle') ? 'handle' : c.className.split(' ')[0]))
+    expect(kids).toEqual(['handle', 'course-picker__text', 'course-picker__extras', 'course-picker__actions'])
   })
 })

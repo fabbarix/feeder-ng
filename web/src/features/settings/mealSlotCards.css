@@ -1,4 +1,5 @@
-/* MS redesign (beta.5): the Meal Slots cards. Tokens only. A full-width card splits in two from a 44rem card (its own container, DS-09); one column below. Mockup: option-B.html. */
+/* MS redesign (beta.5): the Meal Slots cards. Tokens only. SET-08: the cards sit on BentoGrid min="wide" (two-up from two 28 rem tracks)
+   and never span the row; each card is its own container, so its strip answers to the card's width, never the viewport's. */
 
 .ms-cards {
   display: grid;
@@ -65,7 +66,8 @@
 .ms-card__clock {
   font-size: var(--text-title-1-size);
   line-height: var(--text-title-1-line);
-  font-weight: var(--text-title-1-weight);
+  /* Round 1 taste: display numbers are large but not extra-bold. */
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -85,16 +87,6 @@
   display: grid;
   gap: var(--space-3);
   align-content: start;
-}
-
-/* A name that runs every day: the strip and the "Differs on" list side by side once the card is 44rem wide (the card's own container:
-   about an 807 px viewport for a full-width card, where it was an 820 px media query). */
-@container ms-card (min-width: 44rem) {
-  .ms-card[data-span='full'] .ms-card__split {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--space-6);
-    align-items: start;
-  }
 }
 
 .ms-card__foot {
@@ -165,9 +157,17 @@
   list-style: none;
 }
 
+.ms-stack__item {
+  display: flex;
+  border-radius: var(--radius-pill);
+  /* The card's own surface rings each Avatar, so two neighbours never read as one shape. */
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+/* A quarter of a 28 px Avatar at most: every face stays readable. */
 .ms-stack__item + .ms-stack__item,
 .ms-stack__more {
-  margin-inline-start: calc(-1 * var(--space-2));
+  margin-inline-start: calc(-1 * var(--space-1));
 }
 
 .ms-stack__more {
@@ -210,7 +210,7 @@
 .ms-strip {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .ms-day {
@@ -220,11 +220,11 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-half);
-  min-block-size: 56px;
-  padding: var(--space-1);
+  min-block-size: 44px;
+  padding: var(--space-1) var(--space-half);
   min-inline-size: 0;
   border: 0;
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-control);
   background: var(--color-soft);
   color: var(--color-accent-text);
   font: inherit;
@@ -251,10 +251,21 @@ button.ms-day:disabled {
 }
 
 .ms-day__time {
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: var(--text-label-weight);
   font-variant-numeric: tabular-nums;
+}
+
+/* SET-08: below a 22 rem card the cells print no time; the dot marks the day and "Differs on" says the time. */
+@container (max-width: 22rem) {
+  .ms-day__time {
+    display: none;
+  }
 }
 
 /* DS-11: the time is muted by its colour, not an opacity (a free day already draws the whole chip muted). */
@@ -265,10 +276,10 @@ button.ms-day:disabled {
 .ms-day[data-differs]::after {
   content: '';
   position: absolute;
-  inset-block-start: var(--space-2);
-  inset-inline-end: var(--space-2);
-  inline-size: 7px;
-  block-size: 7px;
+  inset-block-start: var(--space-1);
+  inset-inline-end: var(--space-1);
+  inline-size: 6px;
+  block-size: 6px;
   border-radius: 50%;
   background: var(--color-accent);
 }
@@ -342,59 +353,36 @@ button.ms-day[data-state='free']:hover {
   gap: var(--space-3);
 }
 
-.ms-dates__list {
-  display: grid;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ms-date {
-  display: grid;
-  grid-template-columns: minmax(0, 96px) minmax(0, 1fr);
-  gap: var(--space-3);
-  align-items: start;
-}
-
-.ms-date__day {
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-label-weight);
-  color: var(--color-muted);
-}
-
-.ms-date__what {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-half);
-  min-inline-size: 0;
-}
-
-.ms-date__slot {
-  font-weight: var(--text-body-strong-weight);
-}
-
-.ms-date__part {
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-  color: var(--color-muted);
-}
-
-.ms-date__part[data-kind='notServed'] {
-  padding: var(--space-half) var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--status-danger-bg);
-  color: var(--status-danger-fg);
-  font-weight: var(--text-label-weight);
-}
-
 .ms-dates__note {
   margin: 0;
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
   font-weight: var(--text-meta-weight);
   color: var(--color-muted);
+}
+
+/* Touch: the foot actions are 44 px high (the A11Y target rule). */
+@media (pointer: coarse) {
+  .ms-card__foot .button {
+    min-block-size: 44px;
+  }
+}
+
+/* SET-15: the Removed Meal Slots tile. One sentence for the whole list, said once. */
+.rm-tile {
+  gap: var(--space-3);
+}
+
+.rm-note {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+/* The page: the cards, then the Removed Meal Slots tile. */
+.ms-page {
+  display: grid;
+  gap: var(--space-4);
 }

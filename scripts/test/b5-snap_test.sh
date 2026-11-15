@@ -3,7 +3,7 @@
 # migration prefixes live in db.go, start-up uses them, and every embedded 15NN migration is covered by a prefix, so a
 # later 15NN file cannot slip in without the snapshot. 1540_ is accepted because Pre1540Prefixes lists it (b6-snap_test.sh)
 # and 1550_ because Pre1550Prefixes lists it (b7-snap_test.sh), and 1560_ because Pre1560Prefixes lists it (b8-snap_test.sh),
-# and 1570_ to 1578_ because Pre1570Prefixes lists them (b9-snap_test.sh).
+# and 1570_ to 1579_ because Pre1570Prefixes lists them (b9-snap_test.sh).
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,7 +22,7 @@ has "$ROOT/cmd/feeder/startup.go" 'NeedsPre1500Snapshot|NeedsSnapshotFor' 'start
 
 # Every 15NN migration file is covered by the pre-1500 prefixes (beta.5) or, for 1540_, by Pre1540Prefixes (beta.6,
 # docs/dev/design/b6-snap.md) or, for 1550_, by Pre1550Prefixes (beta.7, docs/dev/design/b7-snap.md) or, for 1560_, by
-# Pre1560Prefixes (beta.8, docs/dev/design/b8-snap.md) or, for 1570_ to 1578_, by Pre1570Prefixes (beta.9,
+# Pre1560Prefixes (beta.8, docs/dev/design/b8-snap.md) or, for 1570_ to 1579_, by Pre1570Prefixes (beta.9,
 # docs/dev/design/b9-snap.md), so 1580 and later force a conscious change here.
 for f in "$ROOT"/internal/db/migrations/15*.sql; do
   [ -e "$f" ] || continue
@@ -32,7 +32,7 @@ for f in "$ROOT"/internal/db/migrations/15*.sql; do
     1540_*) has "$ROOT/internal/db/db.go" 'Pre1540Prefixes *= *\[\]string\{[^}]*"1540_"' "$n is covered only if Pre1540Prefixes in db.go lists \"1540_\"" ;;
     1550_*) has "$ROOT/internal/db/db.go" 'Pre1550Prefixes *= *\[\]string\{[^}]*"1550_"' "$n is covered only if Pre1550Prefixes in db.go lists \"1550_\"" ;;
     1560_*) has "$ROOT/internal/db/db.go" 'Pre1560Prefixes *= *\[\]string\{[^}]*"1560_"' "$n is covered only if Pre1560Prefixes in db.go lists \"1560_\"" ;;
-    157[0-8]_*) has "$ROOT/internal/db/db.go" "Pre1570Prefixes *= *\\[\\]string\\{[^}]*\"${n:0:5}\"" "$n is covered only if Pre1570Prefixes in db.go lists \"${n:0:5}\"" ;;
+    157[0-9]_*) has "$ROOT/internal/db/db.go" "Pre1570Prefixes *= *\\[\\]string\\{[^}]*\"${n:0:5}\"" "$n is covered only if Pre1570Prefixes in db.go lists \"${n:0:5}\"" ;;
     *) bad "$n is a 15NN migration outside the pre-1500 snapshot prefixes: extend Pre1500Prefixes or name the next snapshot" ;;
   esac
 done

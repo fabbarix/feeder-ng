@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { findNotice } from '../../../test/notices'
 import { admin, anna, cook, householdSettings, marco, mondayLunch, sam, thursdayDinner } from '../components/fixtures'
-import { ADMIN_ME, mockApi, openOptionNames, renderWithProviders, USER_ME } from '../test-utils'
+import { ADMIN_ME, mockApi, openOptionNames, renderWithDataRouter, renderWithProviders, USER_ME } from '../test-utils'
 import { AllowlistPage } from './AllowlistPage'
 import { HouseholdPage } from './HouseholdPage'
 import { MealSlotsPage } from './MealSlotsPage'
@@ -41,7 +41,8 @@ describe('every Settings sub-page', () => {
     ['Your preferences', PreferencesPage, '/settings/preferences'],
   ] as const)('%s has its own h1 and a Settings breadcrumb to the index', async (title, Page, path) => {
     routes(ADMIN_ME)
-    renderWithProviders(<Page />, path)
+    // B9-36: Your preferences blocks leaving while it has a preview (useLeaveGuard), which needs a data router.
+    renderWithDataRouter(<Page />, path)
     expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
     expect(screen.queryByRole('link', { name: /^back to/i })).toBeNull()
@@ -177,7 +178,7 @@ describe('MealSlotsPage', () => {
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Brunch')
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('1100')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add Meal Slot' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/meal-slots')).toHaveLength(3))
     expect(api.callsTo('POST', '/api/meal-slots').map((c) => (c.body as { weekday: number }).weekday)).toEqual([5, 6, 7])
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
@@ -201,7 +202,7 @@ describe('MealSlotsPage', () => {
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Dinner')
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('1930')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add Meal Slot' }))
     const alert = await within(dialog).findByRole('alert')
     expect(alert).toHaveTextContent(/Tuesday/)
     expect(alert).toHaveTextContent(/already has a Meal Slot/)
@@ -218,7 +219,7 @@ describe('MealSlotsPage', () => {
     })
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Change a date for Dinner' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Dinner on 2026-11-12' })
+    const dialog = await screen.findByRole('dialog', { name: 'Dinner on Thu 12 Nov' })
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Sam' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save for this date' }))
     await waitFor(() => expect(api.callsTo('PUT', url)).toHaveLength(1))
@@ -228,11 +229,14 @@ describe('MealSlotsPage', () => {
   it('an Admin tapping a day gets the MealSlot sheet, which leads to "Change a date"', async () => {
     const url = '/api/meal-slots/11/attendance?date=2026-11-12'
     routes(ADMIN_ME, { [`GET ${url}`]: { slotId: 11, date: '2026-11-12', isOverride: false, attendance: thursdayDinner.attendance, portionsNeeded: 2.5 } })
+    // The sheet's ⋮ is a popover menu from 768 px (a sheet of rows below): read it as the popover.
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: /min-width/.test(q), media: q, addEventListener() {}, removeEventListener() {} }))
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: /^Dinner on Thursday, 19:00$/ }))
     expect(await screen.findByRole('dialog', { name: 'Edit Meal Slot' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Change a date' }))
-    expect(await screen.findByRole('dialog', { name: 'Dinner on 2026-11-12' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change a date' }))
+    expect(await screen.findByRole('dialog', { name: 'Dinner on Thu 12 Nov' })).toBeInTheDocument()
   })
 
   it('edits an existing slot through one batch call that cannot move it to another weekday', async () => {
@@ -273,12 +277,12 @@ describe('AllowlistPage', () => {
 describe('PreferencesPage', () => {
   it('saves own preferences with Segmented controls', async () => {
     const api = routes(USER_ME, { 'PUT /api/me/preferences': (c: { body: object }) => c.body })
-    renderWithProviders(<PreferencesPage />)
+    renderWithDataRouter(<PreferencesPage />, '/settings/preferences')
     await userEvent.click(await screen.findByRole('radio', { name: 'Dark' }))
     await userEvent.click(screen.getByRole('radio', { name: 'Imperial' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/me/preferences')).toHaveLength(1))
     expect(api.callsTo('PUT', '/api/me/preferences')[0]!.body).toEqual({ ...prefs, scheme: 'dark', units: 'imperial' })
-    expect(await findNotice('status', 'Preferences saved')).toBeInTheDocument()
+    expect(await findNotice('status', 'Your preferences are saved')).toBeInTheDocument()
   })
 })

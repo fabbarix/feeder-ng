@@ -105,9 +105,12 @@ const ADDED = {
   // B9-14: scenarios/b9-14.mjs (order 310): the sheet scenarios of P25 and P33 and the sheet page of P39.
   // B9-16: scenarios/b9-16.mjs (order 310, after b9-14 by file name): P36's touch-targets-controls and the household-errors check.
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
+  // B9-42: scenarios/b9-42.mjs (order 320, after b9-18 by file name): the Meal Slots cards, editor, Remove confirm, Removed tile, Change a date.
   // B9-26: scenarios/b9-26.mjs (order 326): plan-after-swap (PC-01), regenerate (SAFE-07) and to-confirm-not-cooked (SAFE-03).
-  // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
+  // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
+  // B9-36: scenarios/b9-36.mjs (order 330): preferences-preview (SAFE-08).
+  // B9-52: scenarios/b9-52.mjs (order 330): allowlist-actions, allowlist-share and access-requests-rows (SET-03, SET-12).
   // B9-32: scenarios/b9-32.mjs (order 332): plan-grid (PC-11, PC-06, A11Y-08, A11Y-09) and plan-couldnt (PC-07); rules/P38-unique-names.mjs (A11Y-08).
   // B9-38: scenarios/b9-38.mjs (order 338): plan-sheet-actions, plan-sheet-mark-cooked, plan-sheet-swap, plan-sheet-choose, plan-sheet-choose-ring and plan-sheet-whos-eating (PC-09, PC-10, SHORT-02).
   // B9-34: scenarios/b9-34.mjs (order 340): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
@@ -118,9 +121,12 @@ const ADDED = {
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
     'planning-recipe-select', 'toast-pricing', 'toast-over-bar',
+    'meal-slots-cards', 'meal-slot-editor', 'meal-slot-editor-narrow', 'meal-slot-editor-short', 'meal-slot-remove-confirm', 'removed-meal-slots', 'change-date',
     'plan-after-swap', 'regenerate', 'to-confirm-not-cooked',
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
     'recipe-editor-guard', 'recipe-new-empty-save',
+    'preferences-preview',
+    'allowlist-actions', 'allowlist-share', 'access-requests-rows',
     'plan-grid', 'plan-couldnt',
     'plan-sheet-actions', 'plan-sheet-mark-cooked', 'plan-sheet-swap', 'plan-sheet-choose', 'plan-sheet-choose-ring', 'plan-sheet-whos-eating',
     'shop-ticked', 'shop-focus-after-tick',

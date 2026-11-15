@@ -1,0 +1,3 @@
+# B9-42 (batch w3d review): the Course Delete / Archive dialog is a danger ConfirmDialog, so no danger confirm is built outside
+# ConfirmDialog in web/src/features/settings any more: danger-sheet fails there.
+danger-sheet.fail_paths=web/src/features/settings

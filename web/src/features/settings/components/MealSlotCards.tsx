@@ -14,6 +14,8 @@ export interface MealSlotCardsProps {
   addDisabled?: boolean
   locale?: string
   onEdit: (slot: MealSlot) => void
+  /** SET-14h: "Edit <name>" on a card hands over the whole card (the sheet starts with every day of the name). */
+  onEditCard?: (card: Card) => void
   onFix: (slot: MealSlot) => void
   onChangeDate: (card: Card) => void
   onAddOn: (weekday: number, name: string) => void
@@ -21,13 +23,13 @@ export interface MealSlotCardsProps {
 
 const text = settingsStrings.slot
 
-/** The Meal Slots overview: the Household line once, one card per name in a two-up Bento grid (one column on a phone), then "Dates that differ". */
-export function MealSlotCards({ cards, dateRows, members, canEdit, addDisabled, locale, onEdit, onFix, onChangeDate, onAddOn }: MealSlotCardsProps) {
+/** The Meal Slots overview: the Household line once, one card per name on a "wide" Bento grid (two-up from two 28 rem tracks, SET-08), then "Dates that differ". */
+export function MealSlotCards({ cards, dateRows, members, canEdit, addDisabled, locale, onEdit, onEditCard, onFix, onChangeDate, onAddOn }: MealSlotCardsProps) {
   if (cards.length === 0) return <EmptyState title={text.empty} description={text.emptyHint} />
   return (
     <div className="ms-cards">
       <p className="ms-household">{text.householdLine}</p>
-      <BentoGrid min="card">
+      <BentoGrid min="wide">
         {cards.map((card) => (
           <MealSlotCard
             key={card.key}
@@ -37,6 +39,7 @@ export function MealSlotCards({ cards, dateRows, members, canEdit, addDisabled, 
             addDisabled={addDisabled}
             locale={locale}
             onEdit={onEdit}
+            onEditCard={onEditCard}
             onFix={onFix}
             onChangeDate={onChangeDate}
             onAddOn={onAddOn}

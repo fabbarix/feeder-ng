@@ -90,10 +90,11 @@ describe('MealSlotsPage: the cards', () => {
     expect(screen.queryByText('Everyone eats unless a Meal Slot says otherwise')).toBeNull()
   })
 
+  // B9-20 / B9-42: skeleton cards (one busy status), not a "Loading" line.
   it('shows a loading status first', () => {
     routes(ADMIN_ME)
     renderWithProviders(<MealSlotsPage />)
-    expect(screen.getByText('Loading')).toBeInTheDocument()
+    expect(screen.getAllByRole('status').some((s) => s.getAttribute('aria-busy') === 'true')).toBe(true)
   })
 })
 
@@ -162,7 +163,7 @@ describe('MealSlotsPage: Admin actions on a card', () => {
     routes(ADMIN_ME, [lunch], [mia, fabio], { [`GET ${url}`]: { slotId: lunch.id, date: '2026-11-15', isOverride: false, attendance: both, portionsNeeded: 2 } })
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Change a date for Lunch' }))
-    expect(await screen.findByRole('dialog', { name: 'Lunch on 2026-11-15' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Lunch on Sun 15 Nov' })).toBeInTheDocument()
   })
 
   it('saves a multi-day edit through one batch call, as before', async () => {
@@ -198,7 +199,7 @@ describe('MealSlotsPage: a plain User', () => {
     routes(USER_ME, dinner, [mia, fabio], { [`GET ${url}`]: { slotId: monday.id, date: '2026-11-09', isOverride: false, attendance: both, portionsNeeded: 2 } })
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Change a date for Dinner' }))
-    expect(await screen.findByRole('dialog', { name: 'Dinner on 2026-11-09' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Dinner on Mon 9 Nov' })).toBeInTheDocument()
   })
 })
 

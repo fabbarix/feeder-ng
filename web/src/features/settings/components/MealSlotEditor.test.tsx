@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { members, tuesdayDinner } from './fixtures'
 import { MealSlotEditor } from './MealSlotEditor'
 
@@ -13,6 +13,11 @@ async function typeTime(digits: string) {
   hour().focus()
   await userEvent.keyboard(digits)
 }
+
+// jsdom has no scrollIntoView; focusFirstInvalid scrolls the field it focuses into view.
+beforeEach(() => {
+  Element.prototype.scrollIntoView = vi.fn()
+})
 
 describe('MealSlotEditor', () => {
   it('renders nothing when closed', () => {
@@ -41,7 +46,7 @@ describe('MealSlotEditor', () => {
     await typeTime('2015')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Marco' })) // opt out: everyone starts checked
     await userEvent.click(screen.getByRole('button', { name: 'Increase Portion Factor for Sam' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     const attendance = [
       { memberId: 1, portionFactorOverride: null },
       { memberId: 3, portionFactorOverride: 0.75 },
@@ -60,7 +65,7 @@ describe('MealSlotEditor', () => {
     for (const name of ['Anna', 'Marco', 'Sam']) expect(screen.getByRole('checkbox', { name })).toBeChecked()
     await userEvent.type(screen.getByLabelText('Name'), 'Dinner')
     await typeTime('1930')
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     expect(onSave).toHaveBeenCalledWith([
       expect.objectContaining({
         weekday: 2,
@@ -84,7 +89,7 @@ describe('MealSlotEditor', () => {
     expect(days('Days')).toEqual(['Friday'])
     await userEvent.type(screen.getByLabelText('Name'), 'Lunch')
     await typeTime('1230')
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     expect(onSave).toHaveBeenCalledWith([expect.objectContaining({ weekday: 5, name: 'Lunch', time: '12:30' })])
   })
 
@@ -93,7 +98,7 @@ describe('MealSlotEditor', () => {
     render(<MealSlotEditor open members={members} onSave={onSave} onClose={() => {}} />)
     await userEvent.type(screen.getByLabelText('Name'), 'Dinner')
     await typeTime('1930')
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
     expect(screen.getByRole('alert')).toHaveTextContent(/at least one weekday/i)
     expect(onSave).not.toHaveBeenCalled()
   })
@@ -102,8 +107,9 @@ describe('MealSlotEditor', () => {
     const onSave = vi.fn()
     render(<MealSlotEditor open members={members} onSave={onSave} onClose={() => {}} />)
     await userEvent.click(day('Monday'))
-    await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
-    expect(screen.getByRole('alert')).toHaveTextContent(/name/i)
+    await userEvent.click(screen.getByRole('button', { name: 'Add Meal Slot' }))
+    // B9-16: the problem is on the field (aria-invalid, described by its message) and the field has focus.
+    expect(screen.getByLabelText('Name')).toHaveAccessibleDescription(/name/i)
     expect(onSave).not.toHaveBeenCalled()
   })
 
@@ -121,16 +127,19 @@ describe('MealSlotEditor', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Marco' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
     expect(onApply).toHaveBeenCalledWith({ match: 'Dinner', weekdays: [2], set: { attendance: [tuesdayDinner.attendance[0], tuesdayDinner.attendance[2]] } })
-    await userEvent.click(screen.getByRole('button', { name: 'Remove Meal Slot' }))
+    // SHORT-02: Remove sits in the sheet's ⋮ menu (danger tone), never as a button of the footer.
+    await userEvent.click(screen.getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove Meal Slot' }))
     expect(onDelete).toHaveBeenCalled()
   })
 
   it('offers "Change a date" only when editing, for the one-date Attendance', async () => {
     const onChangeDate = vi.fn()
     const { rerender } = render(<MealSlotEditor open members={members} onSave={() => {}} onClose={() => {}} onChangeDate={onChangeDate} />)
-    expect(screen.queryByRole('button', { name: 'Change a date' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^More for/ })).toBeNull()
     rerender(<MealSlotEditor open members={members} slot={tuesdayDinner} onSave={() => {}} onClose={() => {}} onChangeDate={onChangeDate} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Change a date' }))
+    await userEvent.click(screen.getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change a date' }))
     expect(onChangeDate).toHaveBeenCalled()
   })
 

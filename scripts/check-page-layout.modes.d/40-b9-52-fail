@@ -1,0 +1,3 @@
+# B9-52 (SET-12): the Sign-in requests page is a guarded route once its rows are rebuilt (it was in no fail list). The seed's pending
+# requests (page-layout-seed/access.mjs) make the page show its rows; the guard then fails on any by-mode finding there.
+fail_routes=/settings/access-requests

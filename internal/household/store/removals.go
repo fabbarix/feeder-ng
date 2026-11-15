@@ -39,36 +39,84 @@ func (s *Store) RemoveSlot(ctx context.Context, id int64) error {
 		if err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM meal_slot_removals WHERE meal_slot_id = ?`, id); err != nil {
+		return removeSlotTx(ctx, tx, id, now, today, hhmm)
+	})
+}
+
+// RemoveSlots removes several Meal Slots in one transaction, all or nothing, each exactly as RemoveSlot does and with
+// one removal time (so the Removed Meal Slots read shows them as one row). B9-42: the batch Remove of the Edit sheet.
+// A ValidationError on ids; a SlotIDError (ErrNotFound, or ErrSlotRemoved for one already removed) names the slot
+// that refused the whole call.
+func (s *Store) RemoveSlots(ctx context.Context, ids []int64) error {
+	if err := household.ValidateSlotIDs(ids); err != nil {
+		return err
+	}
+	now := s.stamp()
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		for _, id := range ids {
+			removed, err := slotRemovedAt(ctx, tx, id)
+			if err != nil {
+				return &household.SlotIDError{ID: id, Err: err}
+			}
+			if removed.Valid {
+				return &household.SlotIDError{ID: id, Err: household.ErrSlotRemoved}
+			}
+		}
+		today, hhmm, err := s.householdNow(ctx, tx)
+		if err != nil {
 			return err
 		}
-		// The To confirm rows, each with its Bought rows, as one JSON object (the planned_meals columns by name).
-		if _, err := tx.ExecContext(ctx, `INSERT INTO meal_slot_removals (meal_slot_id, removed_at, meal_json)
-			SELECT pm.meal_slot_id, ?, json_object(
-				'id', pm.id, 'date', pm.date, 'course_id', pm.course_id, 'recipe_id', pm.recipe_id,
-				'batches', pm.batches, 'portions', pm.portions, 'pinned', pm.pinned,
-				'from_leftover_id', pm.from_leftover_id, 'from_date', pm.from_date,
-				'from_meal_slot_id', pm.from_meal_slot_id, 'from_course_id', pm.from_course_id,
-				'relaxed', pm.relaxed, 'why_json', pm.why_json, 'created_at', pm.created_at, 'updated_at', pm.updated_at,
-				'bought', (SELECT json_group_array(json_object('ingredient_id', b.ingredient_id, 'lot_id', b.lot_id,
-						'quantity', b.quantity, 'bought_at', b.bought_at))
-					FROM planned_meal_bought b WHERE b.planned_meal_id = pm.id))
-			FROM planned_meals pm
-			WHERE pm.meal_slot_id = ? AND pm.state = 'planned' AND `+slotPassed+`
-			ORDER BY pm.date, pm.id`, now, id, today, today, hhmm); err != nil {
-			return err
-		}
-		for _, q := range []string{
-			`DELETE FROM planned_meals WHERE meal_slot_id = ? AND state = 'planned'`,
-			`DELETE FROM plan_unfilled WHERE meal_slot_id = ?`,
-		} {
-			if _, err := tx.ExecContext(ctx, q, id); err != nil {
+		for _, id := range ids {
+			if err := removeSlotTx(ctx, tx, id, now, today, hhmm); err != nil {
 				return err
 			}
 		}
-		_, err = tx.ExecContext(ctx, `UPDATE meal_slots SET removed_at = ? WHERE id = ?`, now, id)
-		return err
+		return nil
 	})
+}
+
+// removeSlotTx is the removal of one active Meal Slot inside tx: the To confirm rows are kept for Undo, the unresolved
+// Planned Meals and plan_unfilled rows go, and removed_at is set to now. The Cooked history stays.
+func removeSlotTx(ctx context.Context, tx *sql.Tx, id int64, now, today, hhmm string) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM meal_slot_removals WHERE meal_slot_id = ?`, id); err != nil {
+		return err
+	}
+	// The To confirm rows, each with its Bought rows, as one JSON object (the planned_meals columns by name).
+	if _, err := tx.ExecContext(ctx, `INSERT INTO meal_slot_removals (meal_slot_id, removed_at, meal_json)
+		SELECT pm.meal_slot_id, ?, json_object(
+			'id', pm.id, 'date', pm.date, 'course_id', pm.course_id, 'recipe_id', pm.recipe_id,
+			'batches', pm.batches, 'portions', pm.portions, 'pinned', pm.pinned,
+			'from_leftover_id', pm.from_leftover_id, 'from_date', pm.from_date,
+			'from_meal_slot_id', pm.from_meal_slot_id, 'from_course_id', pm.from_course_id,
+			'relaxed', pm.relaxed, 'why_json', pm.why_json, 'created_at', pm.created_at, 'updated_at', pm.updated_at,
+			'bought', (SELECT json_group_array(json_object('ingredient_id', b.ingredient_id, 'lot_id', b.lot_id,
+					'quantity', b.quantity, 'bought_at', b.bought_at))
+				FROM planned_meal_bought b WHERE b.planned_meal_id = pm.id))
+		FROM planned_meals pm
+		WHERE pm.meal_slot_id = ? AND pm.state = 'planned' AND `+slotPassed+`
+		ORDER BY pm.date, pm.id`, now, id, today, today, hhmm); err != nil {
+		return err
+	}
+	for _, q := range []string{
+		`DELETE FROM planned_meals WHERE meal_slot_id = ? AND state = 'planned'`,
+		`DELETE FROM plan_unfilled WHERE meal_slot_id = ?`,
+	} {
+		if _, err := tx.ExecContext(ctx, q, id); err != nil {
+			return err
+		}
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE meal_slots SET removed_at = ? WHERE id = ?`, now, id)
+	return err
+}
+
+// slotRemovedAt reads a Meal Slot's removed_at inside q; household.ErrNotFound for an unknown id.
+func slotRemovedAt(ctx context.Context, q querier, id int64) (sql.NullString, error) {
+	var removed sql.NullString
+	err := q.QueryRowContext(ctx, `SELECT removed_at FROM meal_slots WHERE id = ?`, id).Scan(&removed)
+	if errors.Is(err, sql.ErrNoRows) {
+		return removed, household.ErrNotFound
+	}
+	return removed, err
 }
 
 // RestoreSlot brings a removed Meal Slot back with the same id, Attendance, Courses, Slot Rules and date changes.
@@ -78,37 +126,114 @@ func (s *Store) RemoveSlot(ctx context.Context, id int64) error {
 // the change, which replans.
 func (s *Store) RestoreSlot(ctx context.Context, id int64) (household.MealSlot, error) {
 	err := s.inTx(ctx, func(tx *sql.Tx) error {
-		var removed sql.NullString
-		err := tx.QueryRowContext(ctx, `SELECT removed_at FROM meal_slots WHERE id = ?`, id).Scan(&removed)
-		if errors.Is(err, sql.ErrNoRows) || (err == nil && !removed.Valid) {
-			return household.ErrNotFound
+		removed, err := slotRemovedAt(ctx, tx, id)
+		if err == nil && !removed.Valid {
+			err = household.ErrNotFound
 		}
 		if err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE meal_slots SET removed_at = NULL WHERE id = ?`, id); err != nil {
-			if isUnique(err) {
-				return household.ErrSlotNameTaken
-			}
-			return err
-		}
-		if s.undoable(removed.String) {
-			if err := putBackToConfirm(ctx, tx, id); err != nil {
-				return err
-			}
-		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM meal_slot_removals WHERE meal_slot_id = ?`, id); err != nil {
-			return err
-		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO meal_slot_courses (meal_slot_id, course_id, position, optional)
-			SELECT ?, id, 0, 0 FROM courses WHERE is_main = 1
-			AND NOT EXISTS (SELECT 1 FROM meal_slot_courses WHERE meal_slot_id = ?)`, id, id)
-		return err
+		return s.restoreSlotTx(ctx, tx, id, removed.String)
 	})
 	if err != nil {
 		return household.MealSlot{}, err
 	}
 	return s.Slot(ctx, id)
+}
+
+// RestoreSlots puts several removed Meal Slots back in one transaction, all or nothing, each exactly as RestoreSlot
+// does (B9-42: one Undo for a Remove of several days, and one Put back for a Removed Meal Slots row). It returns the
+// slots in the order asked. A ValidationError on ids; a SlotIDError{ErrNotFound} names an unknown or active slot; a
+// household.SlotNameTakenError names every weekday where an active Meal Slot has the name now.
+func (s *Store) RestoreSlots(ctx context.Context, ids []int64) ([]household.MealSlot, error) {
+	if err := household.ValidateSlotIDs(ids); err != nil {
+		return nil, err
+	}
+	err := s.inTx(ctx, func(tx *sql.Tx) error {
+		at := make(map[int64]string, len(ids))
+		var taken household.SlotNameTakenError
+		for _, id := range ids {
+			removed, err := slotRemovedAt(ctx, tx, id)
+			if err == nil && !removed.Valid {
+				err = household.ErrNotFound
+			}
+			if err != nil {
+				return &household.SlotIDError{ID: id, Err: err}
+			}
+			at[id] = removed.String
+			var name string
+			var weekday, clash int
+			if err := tx.QueryRowContext(ctx, `SELECT ms.name, ms.weekday, EXISTS (SELECT 1 FROM meal_slots a
+					WHERE a.removed_at IS NULL AND a.weekday = ms.weekday AND a.name = ms.name)
+				FROM meal_slots ms WHERE ms.id = ?`, id).Scan(&name, &weekday, &clash); err != nil {
+				return err
+			}
+			if clash == 1 {
+				taken.Name = name
+				taken.Weekdays = append(taken.Weekdays, weekday)
+				taken.IDs = append(taken.IDs, id)
+			}
+		}
+		if len(taken.IDs) > 0 {
+			sortTaken(&taken)
+			return &taken
+		}
+		for _, id := range ids {
+			if err := s.restoreSlotTx(ctx, tx, id, at[id]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]household.MealSlot, 0, len(ids))
+	for _, id := range ids {
+		slot, err := s.Slot(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, slot)
+	}
+	return out, nil
+}
+
+// sortTaken orders a refusal's days ascending, keeping each id with its weekday.
+func sortTaken(e *household.SlotNameTakenError) {
+	idx := make([]int, len(e.IDs))
+	for i := range idx {
+		idx[i] = i
+	}
+	sort.SliceStable(idx, func(a, b int) bool { return e.Weekdays[idx[a]] < e.Weekdays[idx[b]] })
+	days, ids := make([]int, len(idx)), make([]int64, len(idx))
+	for i, j := range idx {
+		days[i], ids[i] = e.Weekdays[j], e.IDs[j]
+	}
+	e.Weekdays, e.IDs = days, ids
+}
+
+// restoreSlotTx puts one removed Meal Slot back inside tx; removedAt is its removal time (the To confirm rows return
+// only within household.RestoreWindowMinutes of it). household.ErrSlotNameTaken when the name is taken on its weekday.
+func (s *Store) restoreSlotTx(ctx context.Context, tx *sql.Tx, id int64, removedAt string) error {
+	if _, err := tx.ExecContext(ctx, `UPDATE meal_slots SET removed_at = NULL WHERE id = ?`, id); err != nil {
+		if isUnique(err) {
+			return household.ErrSlotNameTaken
+		}
+		return err
+	}
+	if s.undoable(removedAt) {
+		if err := putBackToConfirm(ctx, tx, id); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM meal_slot_removals WHERE meal_slot_id = ?`, id); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `INSERT INTO meal_slot_courses (meal_slot_id, course_id, position, optional)
+		SELECT ?, id, 0, 0 FROM courses WHERE is_main = 1
+		AND NOT EXISTS (SELECT 1 FROM meal_slot_courses WHERE meal_slot_id = ?)`, id, id)
+	return err
 }
 
 // putBackToConfirm re-inserts the To confirm rows RemoveSlot kept, with their ids and Bought rows. A row whose Recipe

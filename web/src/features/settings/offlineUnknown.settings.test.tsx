@@ -11,12 +11,13 @@ import { MealSlotsPage } from './screens/MealSlotsPage'
 import { PreferencesPage } from './screens/PreferencesPage'
 
 const TITLE = 'Your settings aren’t on this phone yet'
-const PAGES: Array<[string, React.ReactElement, string]> = [
-  ['Meal Slots', <MealSlotsPage />, '/settings/meal-slots'],
-  ['Household', <HouseholdPage />, '/settings/household'],
-  ['Courses', <CoursesPage />, '/settings/courses'],
-  ['Your preferences', <PreferencesPage />, '/settings/preferences'],
-  ['Allowlist (an Admin)', <AllowlistPage />, '/settings/allowlist'],
+// B9-42: the Meal Slots page names what is missing (MealSlotsPage.states.test.tsx).
+const PAGES: Array<[string, React.ReactElement, string, string]> = [
+  ['Meal Slots', <MealSlotsPage />, '/settings/meal-slots', 'Your Meal Slots aren’t on this phone yet'],
+  ['Household', <HouseholdPage />, '/settings/household', TITLE],
+  ['Courses', <CoursesPage />, '/settings/courses', TITLE],
+  ['Your preferences', <PreferencesPage />, '/settings/preferences', TITLE],
+  ['Allowlist (an Admin)', <AllowlistPage />, '/settings/allowlist', TITLE],
 ]
 
 beforeEach(() => {
@@ -29,13 +30,13 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe.each(PAGES)('%s', (_name, element, path) => {
+describe.each(PAGES)('%s', (_name, element, path, title) => {
   it('offline and never loaded: one LoadState, no Loading line, no form, no error', async () => {
     goOffline()
     const { container } = mountScreen(element, path)
     await advance(12_000)
     expect(container.querySelectorAll('.load-state')).toHaveLength(1)
-    expect(screen.getByRole('heading', { name: TITLE })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
     expect(container.textContent).not.toMatch(/Loading/)
     expect(container.querySelector('form, .error-state, .empty-state')).toBeNull()
   })
