@@ -12,6 +12,11 @@ export interface ReadyListProps {
 }
 
 export function ReadyList({ sections, ticked, onToggle }: ReadyListProps): ReactNode {
+  // P38-style unique names: an Ingredient in two Courses' lists names its Course too ("Onion, 1 piece, Side · Green beans")
+  const seen = new Map<string, number>()
+  for (const section of sections) for (const row of section.rows) seen.set(readyLabel(row), (seen.get(readyLabel(row)) ?? 0) + 1)
+  const labelOf = (row: ReadySection['rows'][number], title: string | null | undefined) =>
+    (seen.get(readyLabel(row)) ?? 0) > 1 && title ? `${readyLabel(row)}, ${title}` : readyLabel(row)
   return (
     <div className="get-ready__sections">
       {sections.map((section) => (
@@ -29,7 +34,7 @@ export function ReadyList({ sections, ticked, onToggle }: ReadyListProps): React
                   value={row.amount}
                   control={
                     <span className="get-ready__check">
-                      <Checkbox label={readyLabel(row)} checked={on} onChange={() => onToggle(row.key)} />
+                      <Checkbox label={labelOf(row, section.title)} checked={on} onChange={() => onToggle(row.key)} />
                     </span>
                   }
                 />
