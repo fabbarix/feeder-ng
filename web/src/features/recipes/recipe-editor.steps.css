@@ -110,8 +110,9 @@
 
 /* The Duration or Lead time takes its own width (the shared frame is 100 % wide), so it sits beside the kind when there is room. */
 .step-card__timing > .ui-field + .ui-field {
-  flex: 0 1 auto;
+  flex: 0 1 13.5rem; /* the xs number, the 6 rem unit and their gap; an auto width let the number collapse */
   inline-size: auto;
+  min-inline-size: 11rem;
 }
 
 .step-card__timing > .ui-field:has(.segmented) {
