@@ -22,3 +22,8 @@ export function exportHref(ids: readonly number[], selected: readonly number[]):
   if (allSelected(ids, selected)) return '/api/recipe-file/export?all=1'
   return `/api/recipe-file/export?ids=${[...selected].sort((a, b) => a - b).join(',')}`
 }
+
+/** B9-28 (RX-15): the "All Recipes" Checkbox: none, some (mixed) or all of the ids selected. Throws until built. */
+export function selectionState(_ids: readonly number[], _selected: readonly number[]): 'none' | 'some' | 'all' {
+  throw new Error('not implemented')
+}

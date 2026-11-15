@@ -106,7 +106,8 @@ const ADDED = {
   // B9-18: scenarios/b9-18.mjs (order 320): the toast scenarios.
   // B9-19: scenarios/b9-19.mjs (order 330): the bottom bar, the landscape and zoom chrome, and the safe gutters.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
-  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'shop-barcode-sheet', 'toast-pricing', 'toast-over-bar', 'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop', 'offline-unknown', 'error-state-fast'],
+  // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
+  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'shop-barcode-sheet', 'toast-pricing', 'toast-over-bar', 'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop', 'offline-unknown', 'error-state-fast', 'import-review', 'import-result'],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {

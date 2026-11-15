@@ -130,7 +130,7 @@ describe('ImportScreen: the review of a read', () => {
     at()
     const sw = screen.getByRole('switch', { name: 'Use this photo for the Recipe' })
     expect(sw).toHaveAttribute('aria-checked', 'false')
-    const confirm = screen.getByRole('button', { name: 'Confirm import' })
+    const confirm = screen.getByRole('button', { name: /^Import \d+ Recipes?$/ })
     expect(sw.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
   it('wires the switch, the thumbnails and the Recipe choice to the hook', async () => {
@@ -165,7 +165,7 @@ describe('ImportScreen: the review of a read', () => {
   it('Import Review itself is unchanged: Confirm calls confirm()', async () => {
     hook.review = photoReview()
     at()
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm import' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Import \d+ Recipes?$/ }))
     expect(hook.review.confirm).toHaveBeenCalledOnce()
   })
   it('the photo tile is gone once the import is done', () => {

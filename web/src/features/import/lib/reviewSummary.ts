@@ -1,5 +1,5 @@
 // Pure view-model of an Import Review: which step tiles to show and how much is still open.
-import type { IngredientMatch, Plan } from '../types'
+import type { ImportResult, IngredientMatch, Plan, RecipeStatus, UnitPrompt } from '../types'
 import { questionRows } from './courseRows'
 import { unansweredCount } from './baseRecipeLines'
 
@@ -76,4 +76,68 @@ export function ingredientOptions(m: IngredientMatch): IngredientOption[] {
   for (const s of m.suggestions) out.push({ kind: 'suggestion', id: s.id, label: s.name })
   out.push({ kind: 'create', label: m.name })
   return out
+}
+
+// ---- B9-28 (RX-01, RX-12): stubs. The tests of reviewSummary.rx.test.ts pin the behaviour; nothing below is built yet. ----
+
+/** One open question of the review, in page order. `id` is the key of the row that asks it (see openQuestions). */
+export interface Question {
+  kind: 'recipe' | 'baseLine' | 'course' | 'ingredient' | 'unit'
+  id: string
+}
+
+/** The state shown at a row's end: `text`, and the info tone while the row asks something. */
+export interface RowState {
+  text: string
+  tone?: 'info'
+}
+
+/** The Recipe, Ingredient and skipped counts of the notice, the Recipes tile and the bar. */
+export interface ReviewCounts {
+  /** Recipes of the file that the import will save (not skipped). */
+  recipes: number
+  skipped: number
+  ingredients: number
+}
+
+/** A row of "Also added" in the result. */
+export interface AddedRow {
+  key: 'ingredients' | 'conversions' | 'courses' | 'coursesBack'
+  label: string
+  state: string
+  detail?: string
+}
+
+export function openQuestions(_plan: Plan): Question[] {
+  throw new Error('not implemented')
+}
+export function reviewCounts(_plan: Plan): ReviewCounts {
+  throw new Error('not implemented')
+}
+export function recipeRowState(_r: RecipeStatus): RowState {
+  throw new Error('not implemented')
+}
+export function recipeRowMeta(_r: RecipeStatus): string {
+  throw new Error('not implemented')
+}
+export function resultRowState(_r: ImportResult['recipes'][number], _status?: RecipeStatus): string {
+  throw new Error('not implemented')
+}
+export function resultRowMeta(_status: RecipeStatus): string {
+  throw new Error('not implemented')
+}
+export function addedRows(_result: ImportResult, _plan: Plan): AddedRow[] {
+  throw new Error('not implemented')
+}
+export function ingredientRowState(_m: IngredientMatch, _openPrompt?: UnitPrompt): RowState {
+  throw new Error('not implemented')
+}
+export function ingredientRowMeta(_m: IngredientMatch, _openPrompt?: UnitPrompt): string {
+  throw new Error('not implemented')
+}
+export function orderIngredientRows(_plan: Plan): IngredientMatch[] {
+  throw new Error('not implemented')
+}
+export function exactMatches(_plan: Plan): IngredientMatch[] {
+  throw new Error('not implemented')
 }
