@@ -34,4 +34,4 @@ const source = `
   return { sel: name(dialog), bodyH: body.clientHeight, bodyScroll: body.scrollHeight, panelH: panel.clientHeight, innerHeight, flow: panel.dataset.footer === 'flow', firstControl, footerVisible }
 })()`
 
-export default { name: 'sheet-body', key: 'sheetBody', order: 210, soft: true, scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'plan-sheet-actions', 'plan-sheet-mark-cooked', 'plan-sheet-swap', 'plan-sheet-choose', 'plan-sheet-whos-eating'], source }
+export default { name: 'sheet-body', key: 'sheetBody', order: 210, soft: true, scenarios: ['leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'plan-sheet-actions', 'plan-sheet-mark-cooked', 'plan-sheet-swap', 'plan-sheet-choose', 'plan-sheet-whos-eating', 'away-sheet', 'away-sheet-open', 'whos-eating-away'], source }

@@ -8,7 +8,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { ConfirmProvider, ToastProvider } from '../../../ui'
-import { mockApi, newQueryClient, pickOption } from '../../settings/test-utils'
+import { mockApi, newQueryClient } from '../../settings/test-utils'
 import type { Away, AwayPreview } from '../types'
 import { AwaySheet, type AwaySheetProps } from './AwaySheet'
 

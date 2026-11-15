@@ -53,7 +53,7 @@ describe("Who's eating: a Member who is away", () => {
     const props = setup()
     await userEvent.click(screen.getByRole('switch', { name: 'Marco eats here anyway' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save for this date' }))
-    const sent = props.onSave.mock.calls[0]![0] as { memberId: number; despiteAway?: boolean }[]
+    const sent = (props.onSave as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0] as { memberId: number; despiteAway?: boolean }[]
     expect(sent.find((e) => e.memberId === 2)).toEqual({ memberId: 2, portionFactorOverride: null, despiteAway: true })
     expect(sent.filter((e) => e.despiteAway)).toHaveLength(1)
   })
