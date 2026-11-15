@@ -473,6 +473,7 @@ function TonesChipsTimersGroup() {
           <Chip kind="count">3</Chip>
           <Chip kind="count">+2</Chip>
           <Chip kind="count">12</Chip>
+          <Chip kind="count">128</Chip>
         </Cluster>
       </Cell>
       <Cell caption="long Tag ends in an ellipsis; whole is never cut">
@@ -498,6 +499,12 @@ function TonesChipsTimersGroup() {
           </Chip>
           <Chip kind="filter" selected tagColour="apricot" onClick={noop}>
             Spicy
+          </Chip>
+          <Chip kind="filter" tagColour="apricot" onClick={noop}>
+            Mild
+          </Chip>
+          <Chip kind="filter" onClick={noop}>
+            Meat
           </Chip>
         </Cluster>
       </Cell>
@@ -544,6 +551,20 @@ function TonesChipsTimersGroup() {
           />
         </div>
       </Cell>
+      <Cell caption="tiles spoil, danger, warn, info (one row)">
+        <Cluster>
+          <Chip kind="status" status="spoil">Use soon</Chip>
+          <Chip kind="status" status="danger">Went off</Chip>
+          <Chip kind="status" status="warn">Rule conflict</Chip>
+          <Chip kind="status" status="info">To confirm</Chip>
+        </Cluster>
+      </Cell>
+      <Cell caption="MemberPill chosen and not chosen">
+        <Cluster>
+          <MemberPill name="Anna" colour={memberColour(51, 102, 204)} selected />
+          <MemberPill name="Sam" colour={memberColour(129, 178, 154)} selected={false} />
+        </Cluster>
+      </Cell>
       <Cell caption="hero and its why chips (this panel's scheme)">
         <div className="gallery__stack">
           <Tile variant="hero" overline="Tonight">
@@ -554,6 +575,9 @@ function TonesChipsTimersGroup() {
               </Chip>
               <Chip kind="why" icon="favourite">
                 Anna's favourite
+              </Chip>
+              <Chip kind="why" icon="why">
+                Again soon: also on Sat
               </Chip>
             </Cluster>
             <Button variant="primary" onClick={noop}>
