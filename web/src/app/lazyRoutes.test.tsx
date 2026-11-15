@@ -216,6 +216,22 @@ describe('lazyScreen', () => {
     expect(screen.getByRole('heading', { name: 'Plan page' })).toBeInTheDocument()
   })
 
+  it('navigating from one lazy route to another still loading shows the new route\'s loading state at once, not the old page', async () => {
+    const d = deferred<{ S: ComponentType }>()
+    const mods: Record<string, FeatureModule> = {
+      plan: { routes: [{ path: '/plan', element: lazyScreen(async () => ({ P: () => <h1>The week</h1> }), 'P') }] },
+      stock: { routes: [{ path: '/pantry', element: lazyScreen(() => d.promise, 'S') }] },
+    }
+    await shellAt('/plan', buildRoutes(mods))
+    expect(screen.getByRole('heading', { name: 'The week' })).toBeInTheDocument()
+    await settle(() => fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom bar' })).getByRole('link', { name: 'Pantry' })))
+    expect(screen.queryByRole('heading', { name: 'The week' })).toBeNull()
+    expect(within(screen.getByRole('main')).getByRole('heading', { level: 1, name: 'Pantry' })).toBeInTheDocument()
+    expect(screen.getByRole('main').querySelector('[aria-busy="true"]')).not.toBeNull()
+    await settle(() => d.resolve({ S: () => <h1>Stock list</h1> }))
+    expect(screen.getByRole('heading', { name: 'Stock list' })).toBeInTheDocument()
+  })
+
   it('navigating from Today to a route that is still loading shows that route\'s loading state at once, not the old page', async () => {
     const d = deferred<{ PlanScreen: ComponentType }>()
     const mods: Record<string, FeatureModule> = {

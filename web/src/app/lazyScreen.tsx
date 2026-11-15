@@ -17,6 +17,9 @@ interface LazyScreenProps {
 
 /** One chunk per (importer, export name): two routes of one screen (Cook Mode, the Recipe editor) share it. */
 const chunks = new WeakMap<object, Map<string, ScreenChunk>>()
+/** Each chunk's element key: see lazyScreen. */
+const keys = new WeakMap<ScreenChunk, string>()
+let nextKey = 0
 
 function chunkFor<M>(importer: () => Promise<M>, name: string): ScreenChunk {
   let byName = chunks.get(importer)
@@ -51,8 +54,17 @@ function LazyScreen({ chunk }: LazyScreenProps) {
   )
 }
 
+/**
+ * The element is keyed by its chunk. Every lazy route renders the same LazyScreen type at the same place, so without a key
+ * going from one lazy route to another would reuse the Suspense boundary that already shows the old page, and React keeps
+ * that page on screen until the new chunk arrives (a navigation is a transition). With a key per screen, each route mounts
+ * its own boundary and shows its loading state at once, and a screen remounts on a route change as it did before.
+ */
 export function lazyScreen<M>(importer: () => Promise<M>, name: keyof M & string): ReactElement {
-  return createElement(LazyScreen, { chunk: chunkFor(importer, name) })
+  const chunk = chunkFor(importer, name)
+  let key = keys.get(chunk)
+  if (key === undefined) keys.set(chunk, (key = `lazy-screen-${nextKey++}`))
+  return createElement(LazyScreen, { chunk, key })
 }
 
 /** The chunk behind a route element made by lazyScreen, or undefined for any other element. */
