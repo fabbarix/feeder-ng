@@ -28,7 +28,10 @@ export function readNavTop(viewportHeight: number, doc: Document = document): nu
   const rect = bar.getBoundingClientRect()
   // display: none (from 1024, or a chromeless page without the bar) measures 0 × 0.
   if (rect.width === 0 && rect.height === 0) return null
-  const fromProperty = parsePx(getComputedStyle(bar).getPropertyValue('--nav-top'))
+  const style = getComputedStyle(bar)
+  // B9-19: with the keyboard up the bar slides away and is visibility: hidden; it floats over nothing, so it sets no floor.
+  if (style.visibility === 'hidden') return null
+  const fromProperty = parsePx(style.getPropertyValue('--nav-top'))
   if (fromProperty !== null) return fromProperty > 0 ? fromProperty : null
   return viewportHeight - rect.top
 }
