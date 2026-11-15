@@ -95,7 +95,8 @@ describe('Pantry list', () => {
       expect.stringContaining('Peas'),
       expect.stringContaining('Rice'),
     ])
-    expect(within(all).getByText('Not sorted')).toBeInTheDocument()
+    // B9-29 (SSP-05): ungrouped, the place follows the status in the meta ("Good until Fri · Not sorted"); the value column holds the quantity.
+    expect(within(all).getAllByText(/ · Not sorted$/).length).toBeGreaterThan(0)
   })
 
   it('moves part of a Lot to the Freezer, saying the frozen Shelf Life starts', async () => {

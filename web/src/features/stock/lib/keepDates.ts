@@ -43,6 +43,13 @@ export function keepDayLabel(date: string): string {
   return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
 }
 
+/** The chip's short day, "Thu 12" (the radio's name carries the full "Thu 12 Nov"). */
+export function keepShortDay(date: string): string {
+  const d = parse(date)
+  if (!d) return date
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()}`
+}
+
 const CHOICES: Array<{ id: KeepChoiceId; label: string; days: number }> = [
   { id: 'today', label: 'Today', days: 0 },
   { id: 'tomorrow', label: 'Tomorrow', days: 1 },

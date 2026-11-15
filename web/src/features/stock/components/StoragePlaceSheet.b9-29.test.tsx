@@ -46,3 +46,13 @@ describe('StoragePlaceSheet errors', () => {
     expect(name).not.toHaveAttribute('aria-invalid', 'true')
   })
 })
+
+describe('StoragePlaceSheet: a name already in use (B9-29 developer)', () => {
+  it('409 name_taken, as the server answers it (no field), is the Name field\'s own error too', async () => {
+    const sheet = setup(vi.fn().mockRejectedValue(new ApiError(409, 'name_taken', 'A Storage Place with that name already exists')))
+    await fill(sheet)
+    const name = within(sheet).getByRole('textbox', { name: 'Name' })
+    await waitFor(() => expect(name).toHaveAttribute('aria-invalid', 'true'))
+    expect(within(sheet).queryByRole('alert')).toBeNull()
+  })
+})

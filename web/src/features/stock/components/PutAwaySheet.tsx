@@ -105,6 +105,7 @@ export function PutAwaySheet({ open, onClose, lots, places, today, system = 'met
       <div className="put-away">
         <Select<number>
           label={strings.putAway.into}
+          size="full"
           entityName="Storage Place"
           options={places.map((p) => ({ value: p.id, label: p.name, meta: strings.kinds[p.kind], leading: <Icon name={KIND_ICON[p.kind]} size={20} /> }))}
           value={placeId}

@@ -11,7 +11,10 @@ export interface PantryLotRowProps {
   lot: StockLot
   today: string
   system?: UnitSystem
-  /** The Storage Place's name, shown on the right when the list is not grouped by place. */
+  /**
+   * The Storage Place's name, when the list is not grouped by place. It follows the status in the meta ("Good until Thu · Kitchen
+   * Pantry"); the value column keeps the quantity, and under 12 rem of text the compact meta is the status alone.
+   */
   placeName?: string
   /** H6: a Supply's Restock level and Stock; a Supply below it is marked info. Food ignores it. */
   restock?: Restock | null
@@ -33,10 +36,9 @@ export function PantryLotRow({ lot, today, system = 'metric', placeName, restock
       <ListRow
         title={capitalise(lot.ingredientName)}
         value={value}
-        meta={reason ? reason.long : undefined}
-        metaCompact={reason && reason.compact ? reason.compact : undefined}
+        meta={withPlace(reason?.long, placeName)}
+        metaCompact={placeName ? reason?.compact || reason?.long || undefined : reason?.compact || undefined}
         metaStatus={reason && isBelowRestock(restock) ? 'info' : undefined}
-        trailing={placeName}
         leading={leading}
         haspopup="dialog"
         onActivate={() => onOpen(lot)}
@@ -49,13 +51,19 @@ export function PantryLotRow({ lot, today, system = 'metric', placeName, restock
     <ListRow
       title={capitalise(lot.ingredientName)}
       value={value}
-      meta={goOff.label}
+      meta={withPlace(goOff.label, placeName)}
+      metaCompact={placeName ? goOff.label : undefined}
       metaStatus={spoil ? 'spoil' : undefined}
       metaIcon={spoil ? (lot.spoiled ? 'spoiled' : 'useSoon') : undefined}
-      trailing={placeName}
       leading={leading}
       haspopup="dialog"
       onActivate={() => onOpen(lot)}
     />
   )
+}
+
+/** The meta of an ungrouped row: the status first, then the Storage Place; either alone when the other is missing. */
+function withPlace(status: string | undefined, placeName: string | undefined): string | undefined {
+  const parts = [status, placeName].filter((p): p is string => Boolean(p))
+  return parts.length > 0 ? parts.join(' · ') : undefined
 }

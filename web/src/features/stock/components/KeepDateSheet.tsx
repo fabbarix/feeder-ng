@@ -5,7 +5,7 @@ import { BottomSheet, Button, DateField, FormActions, Icon } from '../../../ui'
 import '../../../ui/ChoiceChip.css'
 import { useRovingRadios } from '../../../ui/fields/useRovingRadios'
 import { capitalise } from '../lib/display'
-import { isKeepDate, keepChoices, keepUntilLabel, type KeepChoiceId } from '../lib/keepDates'
+import { isKeepDate, keepChoices, keepShortDay, keepUntilLabel, type KeepChoiceId } from '../lib/keepDates'
 import { stockStrings as strings } from '../strings'
 import type { StockLot } from '../types'
 
@@ -37,8 +37,8 @@ function KeepDateForm({ today, onKeep }: { today: string; onKeep: KeepDateSheetP
   const [picked, setPicked] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const options: { value: Choice; label: string; note?: string }[] = [
-    ...choices.map((c) => ({ value: c.id as Choice, label: c.label, note: c.dayLabel })),
+  const options: { value: Choice; label: string; note?: string; name?: string }[] = [
+    ...choices.map((c) => ({ value: c.id as Choice, label: c.label, note: keepShortDay(c.date), name: `${c.label}, ${c.dayLabel}` })),
     { value: 'pick', label: strings.keepDate.pick },
   ]
   const roving = useRovingRadios(options.map((o) => ({ value: o.value })), choice, setChoice)
@@ -78,6 +78,7 @@ function KeepDateForm({ today, onKeep }: { today: string; onKeep: KeepDateSheetP
             ref={roving.register(o.value)}
             type="button"
             role="radio"
+            aria-label={o.name}
             aria-checked={o.value === choice}
             data-selected={o.value === choice}
             tabIndex={o.value === roving.tabStop ? 0 : -1}

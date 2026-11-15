@@ -51,8 +51,9 @@ function PlaceForm({ initial, onSave, onDelete }: { initial: StoragePlace | null
         setNameError(null)
         onSave({ name: name.trim(), kind, default: isDefault })
           .catch((err: unknown) => {
-            // A refusal that names the Name field is that field's own error; anything else is the form's one alert.
-            if (err instanceof ApiError && err.details.field === 'name') setNameError(err.message)
+            // A refusal that names the Name field (or a name already in use, 409 name_taken) is that field's own error; anything else is
+            // the form's one alert.
+            if (err instanceof ApiError && (err.details.field === 'name' || err.code === 'name_taken')) setNameError(err.message)
             else setError(errorText(err))
             setRefusals((n) => n + 1)
           })

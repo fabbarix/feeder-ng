@@ -1,4 +1,4 @@
-import { useId, useState, type ReactElement } from 'react'
+import { useId, useRef, useState, type ReactElement, type RefObject } from 'react'
 import { BottomSheet, Button, FormActions, Muted, Select, Stack, TextField, useConfirm } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { capitalise, formatLotDate } from '../lib/display'
@@ -46,10 +46,12 @@ export function LotSheet({ lot, places, today, system = 'metric', onClose, onMov
     onClose()
     onEdit(l)
   } : undefined
+  // The sheet opens on its first action (Edit), never on Delete, which comes first in the action row's DOM.
+  const first = useRef<HTMLButtonElement>(null)
   return (
-    <BottomSheet open={lot !== null} onClose={onClose} title={lot ? capitalise(lot.ingredientName) : ''}>
+    <BottomSheet open={lot !== null} onClose={onClose} title={lot ? capitalise(lot.ingredientName) : ''} initialFocusRef={onEdit ? first : undefined}>
       {lot ? (
-        <LotDetail key={lot.id} lot={lot} places={places} today={today} system={system} onMove={onMove} onSeeIngredient={onSeeIngredient} onEdit={edit} onDelete={onDelete} onUsedUp={onUsedUp} />
+        <LotDetail key={lot.id} lot={lot} places={places} today={today} system={system} onMove={onMove} onSeeIngredient={onSeeIngredient} onEdit={edit} onDelete={onDelete} onUsedUp={onUsedUp} firstRef={first} />
       ) : null}
     </BottomSheet>
   )
@@ -58,7 +60,7 @@ export function LotSheet({ lot, places, today, system = 'metric', onClose, onMov
 /** The words of a refused "Used up" amount. */
 const usedUpErrors = { tooMuch: strings.moveTooMuch, notPositive: strings.errors.notPositive, negative: strings.errors.negative, invalid: strings.errors.invalid } as const
 
-function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredient, onEdit, onDelete, onUsedUp }: Omit<LotSheetProps, 'lot' | 'onClose'> & { lot: StockLot }) {
+function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredient, onEdit, onDelete, onUsedUp, firstRef }: Omit<LotSheetProps, 'lot' | 'onClose'> & { lot: StockLot; firstRef: RefObject<HTMLButtonElement | null> }) {
   const { confirm: ask } = useConfirm()
   const from = places.find((p) => p.id === lot.storagePlaceId) ?? null
   const supply = isSupply(lot)
@@ -110,7 +112,7 @@ function LotDetail({ lot, places, today, system = 'metric', onMove, onSeeIngredi
           }
           primary={
             onEdit ? (
-              <Button variant="secondary" onClick={() => onEdit(lot)}>
+              <Button ref={firstRef} variant="secondary" onClick={() => onEdit(lot)}>
                 {strings.edit}
               </Button>
             ) : null
