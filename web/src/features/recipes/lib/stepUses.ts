@@ -55,3 +55,14 @@ export function restoreUse(steps: StepDraft[], removed: RemovedUse): StepDraft[]
     return { ...s, uses }
   })
 }
+
+/**
+ * B9-37 (RX-02): the words of a use's chip, "2 clove Garlic": quantity, unit and the Ingredient's name (capitalised), as typed; a use
+ * with no Ingredient yet is `fallback` ("Ingredient use").
+ */
+export function useChipText(use: UseDraft, ingredientName: string | undefined, fallback: string): string {
+  const name = (use.ingredientName || ingredientName || '').trim()
+  if (name === '') return fallback
+  const cap = name.charAt(0).toLocaleUpperCase() + name.slice(1)
+  return [use.quantity.trim(), use.unit.trim(), cap].filter((p) => p !== '').join(' ')
+}

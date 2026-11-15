@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -40,7 +40,7 @@ describe('StepsEditor', () => {
     expect(container.querySelector('select')).toBeNull()
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
     const second = within(rows()[1]!)
-    expect(second.getByRole('radiogroup', { name: 'Kind' })).toBeInTheDocument()
+    expect(second.getByRole('radiogroup', { name: 'Kind of Step 2' })).toBeInTheDocument() // B9-37: named per Step
     expect(second.getByRole('radio', { name: 'Active' })).toHaveAttribute('aria-checked', 'true')
     expect(second.getByRole('button', { name: 'After step 1' })).toHaveAttribute('aria-pressed', 'false')
   })
@@ -53,9 +53,11 @@ describe('StepsEditor', () => {
     expect(next[1]).toMatchObject({ kind: 'advance', after: [] })
   })
 
-  it('shows Duration for timeline Steps and Lead time for an Advance Step, as number fields', () => {
+  // B9-37 (RX-08): DurationFields; 240 minutes of Lead time read "4 h".
+  it('shows Duration for timeline Steps and Lead time for an Advance Step, as duration fields', () => {
     render(<StepsEditor {...props([step({ kind: 'advance', leadTimeMinutes: '240', durationMinutes: '' }), step({ key: 'j' })])} />)
-    expect(within(rows()[0]!).getByRole('spinbutton', { name: 'Lead time' })).toHaveDisplayValue('240')
+    expect(within(rows()[0]!).getByRole('spinbutton', { name: 'Lead time' })).toHaveDisplayValue('4')
+    expect(within(rows()[0]!).getByRole('combobox', { name: 'Lead time unit' })).toHaveTextContent('h')
     expect(within(rows()[0]!).queryByRole('spinbutton', { name: 'Duration' })).toBeNull()
     expect(within(rows()[1]!).getByRole('spinbutton', { name: 'Duration' })).toHaveDisplayValue('5')
   })
@@ -112,6 +114,9 @@ describe('StepsEditor', () => {
   })
 })
 
+// B9-37 (ruling 3): a use is a chip; pressing it opens its fields (StepsEditor.useChips.test.tsx pins the chip itself).
+const openUse = (name: string) => userEvent.click(screen.getByRole('button', { name }))
+
 describe('StepsEditor: Step uses (G2)', () => {
   it('adds a blank use', async () => {
     const p = props([step()])
@@ -124,6 +129,7 @@ describe('StepsEditor: Step uses (G2)', () => {
     const uses = [{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '2', unit: 'clove' }]
     const p = props([step({ uses })])
     render(<StepsEditor {...p} />)
+    await openUse('2 clove Garlic')
     expect(screen.getByRole('combobox', { name: 'Ingredient used' })).toHaveTextContent('garlic')
     expect(screen.getByRole('textbox', { name: 'Quantity used' })).toHaveValue('2')
     expect(screen.getByRole('combobox', { name: 'Unit used' })).toHaveTextContent('clove')
@@ -134,6 +140,7 @@ describe('StepsEditor: Step uses (G2)', () => {
   it('picking an Ingredient for a use sets its Base Unit', async () => {
     const p = props([step({ uses: [{ key: 'u1', ingredientId: null, ingredientName: '', quantity: '1', unit: '' }] })])
     render(<StepsEditor {...p} />)
+    await openUse('Ingredient use')
     await userEvent.click(screen.getByRole('combobox', { name: 'Ingredient used' }))
     await userEvent.click(screen.getByRole('option', { name: /flour/ }))
     expect(vi.mocked(p.onChange).mock.calls[0]![0][0]!.uses[0]).toMatchObject({ ingredientId: 8, ingredientName: 'flour', unit: 'g' })
@@ -147,9 +154,10 @@ describe('StepsEditor: Step uses (G2)', () => {
     expect(vi.mocked(p.onChange).mock.calls[0]![0][0]!.uses).toEqual([])
   })
 
-  it('says a custom unit will need a Unit Conversion', () => {
+  it('says a custom unit will need a Unit Conversion', async () => {
     const uses = [{ key: 'u1', ingredientId: 7, ingredientName: 'garlic', quantity: '1', unit: 'head' }]
     render(<StepsEditor {...props([step({ uses })])} />)
+    await openUse('1 head Garlic')
     expect(screen.getByText('Feeder will ask how much 1 head is when you save.')).toBeInTheDocument()
   })
 })
@@ -157,8 +165,9 @@ describe('StepsEditor: Step uses (G2)', () => {
 describe('StepsEditor: Step photo (IM2)', () => {
   const pickers = () => screen.getAllByRole('group', { name: recipeStrings.steps.image })
 
+  // B9-37 (RX-02): a picker shows once the Step has a Photo or "Add Photo" was pressed (StepsEditor.flow.test.tsx pins the chip).
   it('gives each Step a shared ImagePicker named Step photo, 72 px, landscape crop, in upload mode', () => {
-    render(<StepsEditor {...props([step({ key: 'a' }), step({ key: 'b' })])} />)
+    render(<StepsEditor {...props([step({ key: 'a', image: 'img1' }), step({ key: 'b', image: 'img2' })])} />)
     expect(pickers()).toHaveLength(2)
     for (const p of pickers()) {
       expect(p).toHaveAttribute('data-mode', 'upload')
@@ -171,6 +180,7 @@ describe('StepsEditor: Step photo (IM2)', () => {
   it('stores the picked image id on that Step only', async () => {
     const p = props([step({ key: 'a' }), step({ key: 'b' })])
     render(<StepsEditor {...p} />)
+    await userEvent.click(within(rows()[1]!).getByRole('button', { name: 'Add Photo' }))
     await userEvent.click(within(rows()[1]!).getByRole('button', { name: `pick ${recipeStrings.steps.image}` }))
     const next = vi.mocked(p.onChange).mock.calls[0]![0]
     expect(next[0]!.image).toBe('')
@@ -200,9 +210,11 @@ describe('StepsEditor: stable keys for use rows', () => {
       return <StepsEditor {...props(steps, { onChange: setSteps })} />
     }
     render(<Harness />)
-    const second = screen.getAllByRole('textbox', { name: 'Quantity used' })[1]!
+    await openUse('2 g Flour')
+    const second = screen.getByRole('textbox', { name: 'Quantity used' })
     second.focus()
-    await userEvent.click(screen.getAllByRole('button', { name: 'Remove ingredient use' })[0]!)
+    // A pointer click would take the focus out of the open row, which closes it (B9-37); a click without a focus move keeps the point.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove ingredient use' })[0]!)
     const left = screen.getByRole('textbox', { name: 'Quantity used' })
     expect(left).toHaveValue('2')
     expect(left).toBe(second)

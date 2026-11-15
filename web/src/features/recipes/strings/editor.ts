@@ -189,6 +189,12 @@ export const recipeEditorStrings = {
     image: 'Step photo',
     usesTitle: 'Uses',
     addUse: 'Add ingredient use',
+    /** B9-37: the visible words of the Step's chips (their names stay addUse and addPhoto). */
+    useChip: 'Ingredient use',
+    addPhoto: 'Add Photo',
+    photoChip: 'Photo',
+    kindOf: (n: number) => `Kind of Step ${n}`,
+    advanceShort: 'Advance',
     removeUse: 'Remove ingredient use',
     useIngredient: 'Ingredient used',
     useQuantity: 'Quantity used',

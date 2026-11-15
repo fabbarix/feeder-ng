@@ -39,11 +39,12 @@ beforeEach(() => {
 })
 
 describe('StepsEditor: drag handles', () => {
-  it('every Step card has a handle "Reorder Step N" in its head, with the shared instructions', () => {
+  // B9-37 (RX-02): the handle sits in the card's lead column, under the Step number (it had a head row before).
+  it('every Step card has a handle "Reorder Step N" in its lead column, with the shared instructions', () => {
     render(<Harness initial={three()} />)
     for (const [i, card] of cards().entries()) {
       const handle = within(card).getByRole('button', { name: `Reorder Step ${i + 1}` })
-      expect(card.querySelector('.step-card__head')).toContainElement(handle)
+      expect(card.querySelector('.step-card__lead')).toContainElement(handle)
       expect(handle).toHaveAccessibleDescription(/Press Space to pick up/)
     }
   })
