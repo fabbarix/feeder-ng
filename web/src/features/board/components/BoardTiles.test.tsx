@@ -66,7 +66,7 @@ describe('BoardLeftoversTile', () => {
     render(<BoardLeftoversTile today="2026-11-09" rows={[{ id: 1, recipeName: 'Stew', portions: 2, useBy: '2026-11-12' }]} />)
     expect(screen.getByText('Leftovers')).toBeInTheDocument()
     expect(screen.getByText('Stew')).toBeInTheDocument()
-    expect(screen.getByText('2 portions · Use by Thu')).toBeInTheDocument() // B9-47 (TB-08): Today's meta, a capital U
+    expect(screen.getByText('Use by Thu · 2 portions')).toBeInTheDocument() // B9-47 (TB-08): Today's meta, a capital U
   })
   it('a Leftover to answer is a read-only line "Stew, Use-by passed", with no buttons', () => {
     render(<BoardLeftoversTile today="2026-11-09" rows={[{ id: 1, recipeName: 'Stew', portions: 2, useBy: '2026-11-10', toAnswer: true }]} />)

@@ -17,16 +17,16 @@ describe('tomorrowLine: one format (TB-08), "Breakfast: Potato gratin"', () => {
   })
 })
 
-describe('leftoverLine: the name over Today\'s meta, "1.25 portions · Use by Tue"', () => {
+describe('leftoverLine: the name over Today\'s meta, "Use by Tue · 1.25 portions"', () => {
   const row = (over: Partial<LeftoverRow> = {}): LeftoverRow => ({ id: 1, recipeName: 'Slow cooker beef and barley stew', portions: 1.25, useBy: '2026-11-10', ...over })
   it('a Use-by beyond tomorrow names the short weekday: "Use by Thu"', () => {
-    expect(leftoverLine(row({ portions: 2, useBy: '2026-11-12' }), '2026-11-09')).toEqual({ title: 'Slow cooker beef and barley stew', meta: '2 portions · Use by Thu' })
+    expect(leftoverLine(row({ portions: 2, useBy: '2026-11-12' }), '2026-11-09')).toEqual({ title: 'Slow cooker beef and barley stew', meta: 'Use by Thu · 2 portions' })
   })
-  it('1.25 portions, a Use-by of tomorrow: "1.25 portions · Use by tomorrow"', () => {
-    expect(leftoverLine(row(), '2026-11-09').meta).toBe('1.25 portions · Use by tomorrow')
+  it('1.25 portions, a Use-by of tomorrow: "Use by tomorrow · 1.25 portions"', () => {
+    expect(leftoverLine(row(), '2026-11-09').meta).toBe('Use by tomorrow · 1.25 portions')
   })
   it('a Use-by of today: "Use by today"; one portion is singular', () => {
-    expect(leftoverLine(row({ portions: 1, useBy: '2026-11-09' }), '2026-11-09').meta).toBe('1 portion · Use by today')
+    expect(leftoverLine(row({ portions: 1, useBy: '2026-11-09' }), '2026-11-09').meta).toBe('Use by today · 1 portion')
   })
   it('the capital U: the board never writes lowercase "use by"', () => {
     expect(leftoverLine(row({ useBy: '2026-11-13' }), '2026-11-09').meta).not.toMatch(/use by/)

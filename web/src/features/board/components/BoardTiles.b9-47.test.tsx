@@ -93,11 +93,11 @@ describe('Tomorrow: one line per Meal Slot, the Meal Slot in bold (TB-07, TB-08)
   })
 })
 
-describe('Leftovers: the name over "1.25 portions · Use by Tue" (TB-07, TB-08)', () => {
+describe('Leftovers: the name over "Use by Tue · 1.25 portions" (TB-07, TB-08)', () => {
   it('a title and a meta element, with Today\'s meta', () => {
     const { container } = render(<BoardLeftoversTile today="2026-11-09" rows={[{ id: 1, recipeName: 'Slow cooker beef and barley stew', portions: 1.25, useBy: '2026-11-10' }]} />)
     expect(container.querySelector('.board-list__title')?.textContent).toBe('Slow cooker beef and barley stew')
-    expect(container.querySelector('.board-list__meta')?.textContent).toBe('1.25 portions · Use by tomorrow')
+    expect(container.querySelector('.board-list__meta')?.textContent).toBe('Use by tomorrow · 1.25 portions')
   })
 })
 

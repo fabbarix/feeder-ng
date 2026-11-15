@@ -209,7 +209,8 @@ describe('the hero is Today\'s selection, in Today\'s eyebrow (TB-01, TB-08, TB 
     h.data = boardData({ slots: undefined })
     h.planSlots = [dinner(TODAY)]
     view()
-    expect(eyebrow()).toBe('Today · Dinner · start 13:00')
+    // B9-47 review: the fixture's Dinner starts by 13:00 and the clock reads 17:00, so the start is now (as Today's heroPhase says)
+    expect(eyebrow()).toBe('Today · Dinner · start now')
     expect(screen.getByText('Roast chicken')).toBeInTheDocument()
   })
   it('the tiles carry the board\'s vocabulary: Leftovers with "Use by", Use soon with the day, Tomorrow as "Slot: Recipe"', () => {
@@ -217,7 +218,7 @@ describe('the hero is Today\'s selection, in Today\'s eyebrow (TB-01, TB-08, TB 
     h.leftovers = [{ id: 1, recipeId: 1, recipeName: 'Slow cooker beef and barley stew', portions: 1.25, useBy: '2026-11-10' }]
     h.totals = [{ ingredientId: 1, name: 'Flour', baseUnit: 'g', total: 500, nextGoesOff: TOMORROW, useSoon: true, spoiledCount: 0 }]
     view()
-    expect(screen.getByText('1.25 portions · Use by tomorrow')).toBeInTheDocument()
+    expect(screen.getByText('Use by tomorrow · 1.25 portions')).toBeInTheDocument()
     expect(screen.getByLabelText('Flour, good until tomorrow')).toBeInTheDocument()
     expect(screen.getByText('Breakfast:').closest('li')?.textContent).toBe('Breakfast: Porridge')
   })

@@ -189,10 +189,10 @@ function dayWord(date: string, today: string): string {
   return shortWeekday(date)
 }
 
-/** The Leftover row of the board: the name over "1.25 portions · Use by Tue" (Today's meta), or "Use-by passed" for one to answer. */
+/** The Leftover row of the board: the name over "Use by Tue · 1.25 portions" (Today's meta; DS 5: the Use-by leads), or "Use-by passed" for one to answer. */
 export function leftoverLine(row: LeftoverRow, today: string): { title: string; meta: string } {
   if (row.toAnswer === true) return { title: row.recipeName, meta: boardStrings.useByPassed }
-  return { title: row.recipeName, meta: `${boardStrings.portions(row.portions)} · ${boardStrings.useBy(dayWord(row.useBy, today))}` }
+  return { title: row.recipeName, meta: `${boardStrings.useBy(dayWord(row.useBy, today))} · ${boardStrings.portions(row.portions)}` }
 }
 
 /** The Use soon chip: "Flour · tomorrow" and its full accessible name "Flour, good until tomorrow"; just the name without a go-off date. */

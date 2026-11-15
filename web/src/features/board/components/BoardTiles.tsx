@@ -163,7 +163,7 @@ export function NextAdvanceTile({ next, nowMs, timeZone, onDone }: NextAdvanceTi
   )
 }
 
-/** Heading "Leftovers", one row per Leftover: the name over "1.25 portions · Use by Tue" (or "Use-by passed"); "No Leftovers" when empty. */
+/** Heading "Leftovers", one row per Leftover: the name over "Use by Tue · 1.25 portions" (or "Use-by passed"); "No Leftovers" when empty. */
 export function BoardLeftoversTile({ rows, today }: { rows: LeftoverRow[]; today: string }): ReactNode {
   const id = useId()
   const fit = useFitRows<HTMLUListElement>(rows.length, rows.map((r) => `${r.id}:${r.recipeName}:${r.useBy}`).join('|'))
