@@ -11,7 +11,7 @@
 //                  - Today's tile is the first day tile.
 //   plan-couldnt   /plan at 375, 390 and 1440 with Dessert unplannable (the Dessert Recipe is archived and the plan regenerated; undone at the end):
 //                  the Couldn't plan tile is ONE region, the first .plan-day starts inside the first viewport (PC-07), the unfilled Dessert rows are
-//                  that carry a cause chip are titled "Not planned" (a past empty row reads "Nothing planned") and no more than 3 other rows share a title, "Mark Recipes as Dessert" opens the sheet ON the Plan.
+//                  that carry a cause chip are titled "Not planned" (a past empty row reads "Nothing planned"), "Mark Recipes as Dessert" opens the sheet ON the Plan.
 import { evaluate, js, press, until } from '../helpers.mjs'
 
 const PLAN_READY = `!!document.querySelector('main .plan article') && !document.querySelector('[aria-busy="true"], .skeleton')`
@@ -162,11 +162,9 @@ async function planCouldnt() {
         const bad = unfilled.find((r) => r.querySelector('.list-row__title')?.textContent.trim() !== 'Not planned')
         if (bad) return 'an unfilled row with a cause chip is titled "' + bad.querySelector('.list-row__title')?.textContent.trim() + '", not "Not planned"'
         if (!unfilled.some((r) => /^No Dessert Recipes$/.test(r.querySelector('.plan-row__chips .chip')?.textContent.trim() ?? ''))) return 'no unfilled row names its cause "No Dessert Recipes"'
-        // The same sentence is never the title of many rows (unfilled rows say "Not planned" and name the cause in a chip).
-        const titles = new Map()
-        for (const r of document.querySelectorAll('.plan-day .list-row:not([data-unfilled]) .list-row__title')) titles.set(r.textContent.trim(), (titles.get(r.textContent.trim()) ?? 0) + 1)
-        const repeated = [...titles].find(([, n]) => n > 3)
-        if (repeated) return 'more than 3 rows share the title "' + repeated[0] + '" (' + repeated[1] + ')'
+        // PC-07's "no more than 3 rows share a title" was about a cause sentence used as many rows' title; that sentence is now a
+        // chip, so the remaining titles are Recipe names, and a Recipe planned four times (the seed pins one on today's slots) is
+        // the plan's data, not a layout finding. The cause chips are checked above instead.
         return ''
       })()`)
       if (finding) throw new Error(`setup: not inspected: ${finding}`)
