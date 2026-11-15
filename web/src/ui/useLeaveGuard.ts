@@ -59,7 +59,7 @@ function returnTarget(focusBefore: Element | null): HTMLElement | null {
 }
 
 export function useLeaveGuard(dirty: boolean, { what, isNew, onDiscard }: LeaveGuardOptions): LeaveGuard {
-  const { confirm } = useConfirm()
+  const confirmApi = useConfirm()
   const dirtyRef = useRef(dirty)
   const bypassing = useRef(false)
   const asking = useRef(false)
@@ -97,10 +97,10 @@ export function useLeaveGuard(dirty: boolean, { what, isNew, onDiscard }: LeaveG
     // The dialog gives focus back to what had it when it opened: put focus on the return target first.
     if (target && document.activeElement !== target) target.focus({ preventScroll: true })
     const { what: w, isNew: n, onDiscard: discard } = latest.current
-    const leave = await confirm(leaveDialog(w, n))
+    const leave = await confirmApi.confirm(leaveDialog(w, n))
     if (leave) discard?.()
     return leave
-  }, [confirm])
+  }, [confirmApi])
 
   useEffect(() => {
     if (blocker.state !== 'blocked' || asking.current) return
