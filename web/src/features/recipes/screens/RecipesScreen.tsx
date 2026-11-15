@@ -53,12 +53,9 @@ export function RecipesScreen(): ReactNode {
     filters.clear()
   }
 
-  // B9-20 (RES-02): one state model; "unknown is not empty". The hook reads the same filter; until it catches up with a
-  // cleared search, a filtered-empty answer with nothing filtered any more is simply empty.
-  const anyFilter = Boolean(filter.q || filter.tags || filter.course !== undefined || showArchived)
-  const state = list.state === 'filteredEmpty' && !anyFilter ? 'empty' : list.state
+  // B9-20 (RES-02): one state model, from the hook; "unknown is not empty".
   let body: ReactNode
-  switch (state) {
+  switch (list.state) {
     case 'loading':
       body = <RecipesSkeleton label={recipeStrings.loading} />
       break
