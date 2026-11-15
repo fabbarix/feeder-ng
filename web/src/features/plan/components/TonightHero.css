@@ -2,47 +2,6 @@
    the hero is a size container, so its title and Course rows follow its own width (container queries, not the viewport). */
 
 /* ---- To confirm (docs/design/system.md §9): one row per Meal Slot ---- */
-.to-confirm__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-block-end: var(--space-3);
-}
-.to-confirm__badge {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  inline-size: 2rem;
-  block-size: 2rem;
-  border-radius: var(--radius-chip);
-}
-.to-confirm__badge[data-tone='info'] {
-  background: var(--color-info-bg);
-  color: var(--color-info-fg);
-}
-.to-confirm__heading {
-  flex: 1 1 auto;
-  margin: 0;
-  font-size: var(--text-title-3-size);
-  line-height: var(--text-title-3-line);
-  font-weight: 800;
-}
-/* The count of rows is a pill: a neutral container, round, padded. On the meta line it is a circle for one digit (as wide as it
-   is tall) and a pill from two digits (VC6). */
-.to-confirm__count {
-  box-sizing: border-box;
-  min-inline-size: calc(var(--text-meta-line) + 2 * var(--space-1));
-  padding-inline: var(--space-2);
-  padding-block: var(--space-1);
-  border-radius: var(--radius-chip);
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
 .to-confirm__list {
   list-style: none;
   margin: 0;

@@ -29,6 +29,9 @@ export { CookFlowSheets } from './components/CookFlowSheets'
 export { useCookFlow, useNotCooked } from './hooks/useCookFlow'
 export type { CookFlow } from './hooks/useCookFlow'
 export { cookPath } from './lib/cook'
+// B9-44 (PC-02 on Today): Cook from Today comes back to Today (state.from '/'), and Today shows the flows' ONE shortfall notice itself.
+export { cookLinkFor } from './lib/cook'
+export { ShortfallSheets } from './components/ShortfallSheets'
 export { markSlotPath } from './lib/markSlot'
 export { SlotDateSheets } from './components/SlotDateSheets'
 export { useSlotDate } from './hooks/useSlotDate'
@@ -40,6 +43,8 @@ export { heroNextChange, heroSelection, justServed, movedToConfirm, withJustServ
 // B9-39 (TB-01): the clock Today's hero moves on by.
 export { useHeroClock } from './hooks/useHeroClock'
 export { useMovedToConfirm } from './hooks/useMovedToConfirm'
+// B9-44 (TB-02): Today's Advance Steps move focus the same way when a row goes after Done.
+export { useRowFocusAfterRemoval } from './hooks/useRowFocusAfterRemoval'
 export type { HeroAction, HeroDay } from './lib/hero'
 export { useCouldntPlan, useLeftovers, useToConfirm } from './hooks/useTodayTiles'
 export { usePickLeftover } from './hooks/usePickLeftover'

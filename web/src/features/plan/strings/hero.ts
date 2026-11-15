@@ -26,4 +26,10 @@ export const heroStrings = {
   movedToConfirm: (names: string) => `${names} moved to To confirm.`,
   // B9-39 (A11Y-08): a To confirm button's name, "Cooked Lentil soup, Mon 9 Lunch"
   toConfirmAction: (action: string, recipe: string, when: string) => `${action} ${recipe}, ${when}`,
+  // B9-44 (TB-09): the shared tile headers on Today: count names, the Leftovers tile's title and its link to the Pantry
+  toConfirmCount: (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`,
+  couldntCauseCount: (n: number) => `${n} ${n === 1 ? 'cause' : 'causes'}`,
+  leftoversTileTitle: 'Leftovers',
+  leftoversCount: (n: number) => `${n} ${n === 1 ? 'Leftover' : 'Leftovers'}`,
+  pantryLink: 'Pantry',
 } as const

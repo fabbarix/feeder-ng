@@ -1,18 +1,15 @@
-import type { ReactNode } from 'react'
-import { ActionGroup, Icon, ListGroup, ListRow, Tile } from '../../../ui'
-import { LeftoverItems } from '../../../ui/LeftoverActions/LeftoverItems'
-import type { LeftoverActionKind, LeftoverAnswer } from '../../../lib/leftovers/types'
-import type { Leftover as LeftoverFull } from '../../../lib/leftovers/types'
-import type { LeftoverFlow } from '../../../lib/leftovers/useLeftoverFlow'
+import { useId, type ReactNode } from 'react'
+import { ActionGroup, Tile, TileHeader } from '../../../ui'
 import { toConfirmRows, type ToConfirmRow } from '../lib/toConfirm'
 import { toConfirmRowKey, toConfirmRowView, type ToConfirmRowView } from '../lib/toConfirmView'
 import { useRowFocusAfterRemoval } from '../hooks/useRowFocusAfterRemoval'
-import { asLeftover, leftoverRows } from '../lib/leftovers'
-import { tileRows } from '../../../lib/leftovers/rows'
 import { planStrings as s } from '../strings'
-import type { Leftover, PlanEntry, SlotDayKey, SlotKey } from '../types'
+import type { PlanEntry, SlotDayKey, SlotKey } from '../types'
 import '../plan.css'
 import './TonightHero.css'
+
+/** The TileHeader badge tone, spread (the native-controls check reads a tone attribute on a Tile-named element as the legacy prop). */
+const INFO_BADGE = { tone: 'info' } as const
 
 export interface ToConfirmTileProps {
   slots: PlanEntry[]
@@ -83,19 +80,13 @@ function ToConfirmRowItem({ row, view, handlers }: { row: ToConfirmRow; view: To
 export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onAllCooked = noop, onMarkAllCooked = noop, onNotCookedSlot = noop, today }: ToConfirmTileProps): ReactNode {
   const rows = toConfirmRows(slots)
   const focus = useRowFocusAfterRemoval(rows.map(toConfirmRowKey))
+  const titleId = useId()
   if (rows.length === 0) return null
   const handlers = { onYesCooked, onAdjust, onNotCooked, onAllCooked, onMarkAllCooked, onNotCookedSlot }
   return (
-    <Tile as="section" span="full">
-      <div className="to-confirm__head">
-        <span className="to-confirm__badge" data-tone="info">
-          <Icon name="markCooked" size={20} />
-        </span>
-        <h2 className="to-confirm__heading">{s.toConfirmTitle}</h2>
-        <span className="to-confirm__count" data-shape="pill">
-          {rows.length}
-        </span>
-      </div>
+    <Tile as="section" span="full" aria-labelledby={titleId}>
+      {/* B9-44 (TB-09): the shared tile header (an info badge, the title that names the section, a count). */}
+      <TileHeader icon="markCooked" {...INFO_BADGE} title={s.toConfirmTitle} titleId={titleId} count={rows.length} countLabel={s.toConfirmCount(rows.length)} />
       <ul className="to-confirm__list" onFocus={focus.onFocus}>
         {rows.map((row) => (
           <ToConfirmRowItem key={toConfirmRowKey(row)} row={row} view={toConfirmRowView(row, slots, today)} handlers={handlers} />
@@ -105,53 +96,6 @@ export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onAll
   )
 }
 
-export interface LeftoversTileProps {
-  leftovers: Leftover[]
-  today: string
-  /** The tile's tone: "info" while a question is open (round 2), else the Leftover tone. */
-  tone?: 'info' | 'leftover'
-  /** Makes the whole tile open the Plan (stretched target named "Leftovers to use"); the rows sit above it. */
-  onOpen?: () => void
-  /** B5-LOW: the rows act in place: a question answers (after the dry run), a row opens its sheet from the flow. */
-  flow?: LeftoverFlow
-}
-
-/**
- * Today: the Leftovers to use, soonest Use-by first. Half tile, variant status leftover, overline "LEFTOVERS" with the
- * leftover icon, a row per Leftover "Chicken curry" with meta "2 portions · Use by Thu" (the spoil tone when due
- * today or tomorrow). Renders nothing when there are none.
- */
-export function LeftoversTile({ leftovers, today, onOpen, flow, tone = 'leftover' }: LeftoversTileProps): ReactNode {
-  // With a flow the frozen Leftovers that are not to answer stay on the Pantry: the tile lists what it shows.
-  const rows = flow ? [] : leftoverRows(leftovers, today)
-  if (flow ? tileRows(leftovers.map(asLeftover), today).length === 0 : rows.length === 0) return null
-  return (
-    <Tile
-      as="section"
-      variant="status"
-      status={tone}
-      className="plan-leftovers"
-      overline={s.leftoversOverline}
-      overlineIcon="leftover"
-      stretched={onOpen ? { label: s.leftoversTitle, onActivate: onOpen } : undefined}
-    >
-      <h2 className="plan__tile-title">{s.leftoversTitle}</h2>
-      {flow ? (
-        <LeftoverItems
-          leftovers={leftovers.map(asLeftover)}
-          today={today}
-          busy={flow.busy}
-          plannedFor={flow.plannedFor}
-          onAction={(kind: LeftoverActionKind, l: LeftoverFull) => flow.openSheet(kind, l)}
-          onAnswer={(l: LeftoverFull, answer: LeftoverAnswer) => void flow.answer(l, answer)}
-        />
-      ) : (
-        <ListGroup label={s.leftoversTitle}>
-          {rows.map((row) => (
-            <ListRow key={row.id} title={row.recipeName} meta={s.leftoverRowMeta(row.portions, row.useBy)} />
-          ))}
-        </ListGroup>
-      )}
-    </Tile>
-  )
-}
+// B9-44 (TB-11): the Leftovers tile lives in its own file; re-exported here for the callers that import it from TodayTiles.
+export { LeftoversTile } from './LeftoversTile'
+export type { LeftoversTileProps } from './LeftoversTile'
