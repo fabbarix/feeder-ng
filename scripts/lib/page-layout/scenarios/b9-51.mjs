@@ -30,6 +30,9 @@ const SHOW_SAVE_FAILED_TOAST = `(() => {
 
 const BAR = `document.querySelector('[role="group"][aria-label="Recipe Assistant actions"]')`
 // A group by its accessible name: aria-label, or the text of its aria-labelledby (the TimeField's group is labelled by its label).
+// A switch by its accessible name (the Switch is labelled by its visible label through aria-labelledby).
+const SWITCH = (name) =>
+  `[...document.querySelectorAll('main [role="switch"]')].find((s) => (s.getAttribute('aria-label') || (s.getAttribute('aria-labelledby') && document.getElementById(s.getAttribute('aria-labelledby'))?.textContent.trim())) === ${JSON.stringify(name)})`
 const GROUP = (root, name) =>
   `[...${root}.querySelectorAll('[role="group"]')].find((g) => (g.getAttribute('aria-label') || (g.getAttribute('aria-labelledby') && document.getElementById(g.getAttribute('aria-labelledby'))?.textContent.trim())) === ${JSON.stringify(name)})`
 
@@ -118,16 +121,18 @@ export default {
       if (seen.switches.join('|') !== 'Earliest start|Latest start') throw new Error(`setup: the switches read ${js(seen.switches)}`)
       if (seen.native) throw new Error('setup: the tile uses a native time input or select')
       // Latest start Off hides its field, On brings it back.
-      await press(byText('[role="switch"]', 'Latest start'), 'the Latest start switch')
+      await press(SWITCH('Latest start'), 'the Latest start switch')
       await until(`!${GROUP(tile, 'Latest start time')}`, 'the Latest start field going away')
-      await press(byText('[role="switch"]', 'Latest start'), 'the Latest start switch again')
+      await press(SWITCH('Latest start'), 'the Latest start switch again')
       await until(`!!${GROUP(tile, 'Latest start time')}`, 'the Latest start field coming back')
-      // Move the Earliest start to 23:00 with the arrow keys and Save: the Latest start (22:00) is now not later.
-      await evaluate(`(() => {
-        const hour = ${GROUP(tile, 'Earliest start time')}.querySelector('[aria-label="Hour"]')
-        hour.focus()
-        for (let i = 0; i < 17; i++) hour.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
-      })()`)
+      // Type 23 into the Earliest start's Hour (one key per evaluate: React renders between keys, as a person's typing does);
+      // the Latest start (22:00) is then not later.
+      const hour = `${GROUP(tile, 'Earliest start time')}.querySelector('[aria-label="Hour"]')`
+      await evaluate(`${hour}.focus()`)
+      for (const [key, shows] of [['2', '02'], ['3', '23']]) {
+        await evaluate(`${hour}.dispatchEvent(new KeyboardEvent('keydown', { key: '${key}', bubbles: true, cancelable: true }))`)
+        await until(`${hour}.value === '${shows}'`, `the Earliest start hour reading ${shows}`)
+      }
       await press(byText('button', 'Save Cooking times'), 'Save Cooking times')
       await until(`${GROUP(tile, 'Latest start time')}?.getAttribute('aria-invalid') === 'true'`, 'the Latest start error')
       const err = await evaluate(`(() => {
