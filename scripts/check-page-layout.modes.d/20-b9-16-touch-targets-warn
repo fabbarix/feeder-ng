@@ -1,5 +1,0 @@
-# B9-16 (A11Y-09, P36): the touch-targets-controls scenario (Your preferences at 375 and 390, touch emulated) finds the 42 px Chip
-# (button.chip), whose coarse ::after is B9-17's, and may find the Your menu button (.your-menu-button, B9-19's). Until both land,
-# Your preferences warns. The modes file reads a scenario finding by its route, so this line demotes every finding on
-# /settings/preferences, not only P36's. Delete this file once B9-17 and B9-19 are merged: the route then fails again (blocking).
-warn_routes=/settings/preferences
