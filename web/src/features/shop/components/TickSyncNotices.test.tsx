@@ -75,11 +75,12 @@ describe('TickSyncNotices', () => {
     const { container } = render(<TickSyncNotices notices={[twice('c-1'), refused('c-2')]} onAction={() => {}} />)
     const names = within(stack(container)).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent ?? '')
     expect(new Set(names).size).toBe(names.length)
+    // newest first (the stack's contract): the refused notice, given last, is drawn first
     expect(names).toEqual([
-      'Take mine back: Carrot was ticked twice',
-      'Dismiss: Carrot was ticked twice',
       'Add to Stock: Couldn’t sync the Tick of Carrot.',
       'Dismiss: Couldn’t sync the Tick of Carrot.',
+      'Take mine back: Carrot was ticked twice',
+      'Dismiss: Carrot was ticked twice',
     ])
   })
 
