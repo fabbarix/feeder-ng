@@ -37,6 +37,8 @@ export { NotServedRow } from './components/NotServedRow'
 export { notServedToday } from './lib/slotDate'
 export { heroMeal } from './lib/days'
 export { heroNextChange, heroSelection, justServed, movedToConfirm, withJustServed } from './lib/hero'
+// B9-47 (TB 7): the Kitchen board builds its hero's eyebrow from the same parts as Today's.
+export { heroEyebrow, isStartPart } from './lib/hero'
 // B9-39 (TB-01): the clock Today's hero moves on by.
 export { useHeroClock } from './hooks/useHeroClock'
 export { useMovedToConfirm } from './hooks/useMovedToConfirm'
