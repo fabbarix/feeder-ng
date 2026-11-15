@@ -1,6 +1,7 @@
-/* TimerPill (B9-17, PC-03, PC-04): one timer as a pill. A surface fill, a 1 px outline boundary and a light shadow, 52 px high. It
-   is a focus scope (ui/focusLayer.css): a focused control rings inside itself on the soft fill, with the pill's 4 px of fill between
-   that ring and the boundary. Placement (fixed above the bottom bar, in the top bar, in Cook Mode's strip) is the caller's. */
+/* TimerPill (B9-17, PC-03, PC-04): one timer as a pill. A surface fill and a 1 px outline boundary, 52 px high. It is a focus
+   scope (ui/focusLayer.css): a focused control rings inside itself on the soft fill, with the pill's 4 px of fill between that ring
+   and the boundary. Placement and the floating shadow (fixed above the bottom bar, in the top bar, in Cook Mode's strip) are the
+   caller's: an --elev-* token is `none` in dark, and `inset …, none` is not a valid box-shadow, so the boundary would vanish. */
 .timer-pill {
   display: inline-flex;
   align-items: center;
@@ -12,7 +13,7 @@
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: inset 0 0 0 1px var(--color-outline), var(--elev-1);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
 }
 
 /* The open button fills the pill: 16 px from the pill's start to the icon, the "+N" badge 12 px from its end. */
@@ -50,6 +51,8 @@
 
 .timer-pill__time {
   flex: none;
+  /* a pill wider than its content (a stretched cell) keeps the time and the badge at its end */
+  margin-inline-start: auto;
   font-size: var(--text-title-3-size);
   line-height: var(--text-title-3-line);
   font-weight: var(--text-title-3-weight);
@@ -82,7 +85,7 @@
 
 /* The timer that holds Next: a 2 px accent boundary, only while nothing inside has focus (one accent ring at a time, R-C+). */
 .timer-pill[data-gate]:not(:has(:focus-visible)) {
-  box-shadow: inset 0 0 0 2px var(--color-accent), var(--elev-1);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 
 .timer-pill[data-state='paused'] .timer-pill__time {
@@ -93,7 +96,7 @@
 .timer-pill[data-state='finished'] {
   background: var(--status-success-bg);
   color: var(--status-success-fg);
-  box-shadow: inset 0 0 0 2px var(--status-success-fg), var(--elev-1);
+  box-shadow: inset 0 0 0 2px var(--status-success-fg);
 }
 
 .timer-pill[data-state='finished'] .timer-pill__more {
