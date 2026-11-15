@@ -50,7 +50,9 @@ function setup(entry = '/supplies/21') {
   )
 }
 const keeping = () => screen.getByRole('region', { name: 'Keeping' })
-const restockField = () => within(keeping()).getByRole('textbox', { name: /Restock level/ })
+// B9-48 developer, user decision "type or step": the Restock level is an EditableStepper (a spinbutton text input with − and +),
+// its unit suffix inside the Stepper group.
+const restockField = () => within(keeping()).getByRole('spinbutton', { name: /Restock level/ })
 // B9-48 (SET-05): Merge, Change kind and Delete live in the header's More menu, named for the Supply.
 const more = async (name = 'More for Dish soap') => {
   await userEvent.click(screen.getByRole('button', { name }))
@@ -145,7 +147,7 @@ describe('SupplyScreen: the Restock level row of Keeping', () => {
     system.value = 'imperial'
     setup()
     expect(restockField()).toHaveValue('500')
-    expect(within(restockField().closest('.ui-field') as HTMLElement).getByText('ml')).toBeInTheDocument() // the suffix, not the Base Unit option
+    expect(within(restockField().closest('.stepper') as HTMLElement).getByText('ml')).toBeInTheDocument() // the suffix, not the Base Unit option
     expect(within(keeping()).getByText('Below 2 cups')).toBeInTheDocument()
   })
   it('counts the field\'s unit with the level ("6 pieces", not "6 piece")', () => {

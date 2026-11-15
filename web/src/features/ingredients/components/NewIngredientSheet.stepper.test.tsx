@@ -4,6 +4,8 @@
 //   not set at first: an empty value, Decrease disabled; Increase gives 1; Decrease from 1 is "not set" again, so the body has no
 //   shelfLifeDays. (If the shared StepperField cannot draw "not set" yet, an additive `format` prop on ui/fields/StepperField is the
 //   one edit outside this package: say so in the hand-back.)
+// B9-48 developer, user decision "type or step": the value is our own text input (role spinbutton, inputmode numeric) inside the
+//   Stepper, so it is read with toHaveValue, and typing 365 reaches it at once. A Restock level is the same control (decimal).
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -32,13 +34,13 @@ describe('New Ingredient: Shelf Life as a Stepper field', () => {
   })
   it('starts not set: empty value, Decrease disabled', () => {
     setup()
-    expect(value()).toHaveTextContent('')
+    expect(value()).toHaveValue('')
     expect(down()).toBeDisabled()
   })
   it('Increase gives 1 day, then 2; the body carries it', async () => {
     const p = setup({ initialName: 'Milk' })
     await userEvent.click(up())
-    expect(value()).toHaveTextContent('1')
+    expect(value()).toHaveValue('1')
     await userEvent.click(up())
     await userEvent.click(create())
     expect(p.onCreate).toHaveBeenCalledWith({ name: 'Milk', baseUnit: 'g', shelfLifeDays: 2, kind: 'food' })
@@ -47,15 +49,25 @@ describe('New Ingredient: Shelf Life as a Stepper field', () => {
     const p = setup({ initialName: 'Salt' })
     await userEvent.click(up())
     await userEvent.click(down())
-    expect(value()).toHaveTextContent('')
+    expect(value()).toHaveValue('')
     await userEvent.click(create())
     expect((p.onCreate as ReturnType<typeof vi.fn>).mock.calls[0]![0]).not.toHaveProperty('shelfLifeDays')
+  })
+  it('365 is reached by typing; the placeholder says "Not set"; the body carries the typed value', async () => {
+    const p = setup({ initialName: 'Rice' })
+    expect(value()).toHaveAttribute('placeholder', 'Not set')
+    expect(value()).toHaveAttribute('inputmode', 'numeric')
+    await userEvent.type(value(), '365')
+    expect(value()).toHaveValue('365')
+    expect(value()).toHaveAttribute('aria-valuenow', '365')
+    await userEvent.click(create())
+    expect(p.onCreate).toHaveBeenCalledWith({ name: 'Rice', baseUnit: 'g', shelfLifeDays: 365, kind: 'food' })
   })
   it('the arrow keys step it too', async () => {
     setup()
     value().focus()
     await userEvent.keyboard('{ArrowUp}{ArrowUp}')
-    expect(value()).toHaveTextContent('2')
+    expect(value()).toHaveValue('2')
   })
   it('a Supply has no Shelf Life Stepper', () => {
     setup({ kind: 'supply' })
@@ -74,7 +86,7 @@ describe('New Ingredient: errors (SAFE-04)', () => {
   })
   it('a Supply with a bad Restock level: the message under the field, aria-invalid, focus there, no alert', async () => {
     const p = setup({ kind: 'supply', initialName: 'bin bags' })
-    const field = screen.getByRole('textbox', { name: /Restock level/ })
+    const field = screen.getByRole('spinbutton', { name: /Restock level/ })
     await userEvent.type(field, '0')
     await userEvent.click(screen.getByRole('button', { name: 'Create Supply' }))
     expect(p.onCreate).not.toHaveBeenCalled()

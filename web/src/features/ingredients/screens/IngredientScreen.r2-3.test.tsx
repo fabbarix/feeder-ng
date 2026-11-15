@@ -87,6 +87,6 @@ describe('IngredientScreen Base Unit (F-05)', () => {
   it('Shelf Life shows the number only in its Stepper (no "3 days" text above it)', () => {
     setup()
     expect(screen.queryByText('3 days')).toBeNull()
-    expect(screen.getByRole('spinbutton', { name: 'Shelf Life' })).toHaveTextContent('3')
+    expect(screen.getByRole('spinbutton', { name: 'Shelf Life' })).toHaveValue('3') // B9-48 "type or step": the value is a text input
   })
 })

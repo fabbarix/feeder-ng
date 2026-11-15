@@ -68,7 +68,7 @@ describe('IngredientScreen', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Garlic' })).toBeInTheDocument()
     expect(document.querySelector('.page-header__subtitle')).toHaveTextContent('Food')
     const keeping = screen.getByRole('region', { name: 'Keeping' })
-    expect(within(keeping).getByRole('spinbutton', { name: 'Shelf Life' })).toHaveTextContent('30')
+    expect(within(keeping).getByRole('spinbutton', { name: 'Shelf Life' })).toHaveValue('30') // B9-48 "type or step": a text input
     expect(screen.getByText('1 clove = 5 g')).toBeInTheDocument()
   })
   it('Rename and More are the header\'s two outline IconButtons (no text Rename button, no Kind, Merge or Delete tile)', () => {

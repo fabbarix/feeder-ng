@@ -23,7 +23,7 @@ function setup(over: Partial<NewIngredientSheetProps> = {}) {
 const kindGroup = () => screen.getByRole('radiogroup', { name: 'Kind' })
 const name = () => screen.getByLabelText('Name')
 const shelfLife = () => screen.queryByRole('group', { name: 'Shelf Life' }) // B9-48: a Stepper group, not a text field
-const restock = () => screen.queryByRole('textbox', { name: /Restock level/ })
+const restock = () => screen.queryByRole('spinbutton', { name: /Restock level/ }) // B9-48: "type or step" (user decision)
 
 describe('NewIngredientSheet: the kind choice', () => {
   it('opens on Food with a Segmented Food | Supply, and no Restock level', () => {

@@ -63,7 +63,7 @@ describe('IngredientScreen: food', () => {
     expect(screen.queryByRole('region', { name: 'Kind' })).toBeNull()
     expect(screen.queryByText('This is food')).toBeNull()
     expect(within(await more()).getByRole('menuitem', { name: 'Change to Supply' })).toBeInTheDocument()
-    expect(screen.queryByRole('textbox', { name: /Restock level/ })).toBeNull()
+    expect(screen.queryByRole('spinbutton', { name: /Restock level/ })).toBeNull() // B9-48 "type or step": a spinbutton now
     expect(screen.getByRole('group', { name: 'Shelf Life' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Excluded by' })).toBeInTheDocument()
   })

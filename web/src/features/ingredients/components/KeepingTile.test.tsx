@@ -19,6 +19,11 @@
 //     summary line (lib/kind restockSummary, in the Household display) as the row hint, "Clear" named "Clear Restock level" while it has text.
 // Footer: "Save changes" (type submit, the only accent), disabled and described by "No changes to save" until dirty; "Cancel" (outline)
 //   only while dirty. Save stays ENABLED when the draft is invalid (SAFE-04): the error appears at its field.
+// B9-48 developer, user decision "type or step": Shelf Life, Frozen Shelf Life and the Restock level are each an EditableStepper:
+//   the value is our own text input (role spinbutton, read with .value), with − and + beside it; empty shows the placeholder
+//   "Not set"; 365 is reached by typing. The Restock level is that control too (decimal), so it is a spinbutton, not a textbox;
+//   only digits and one decimal mark can be typed, so the bad level below is "0" (was "abc"), and its unit suffix sits in the
+//   Stepper group (was a TextField's .ui-field).
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -50,7 +55,7 @@ const setup = (saved: Ingredient = flour, referenceCount = 0, save = vi.fn().moc
 }
 const tile = () => screen.getByRole('region', { name: 'Keeping' })
 const stepper = (name: string) => within(tile()).getByRole('group', { name })
-const value = (name: string) => within(stepper(name)).getByRole('spinbutton', { name }).textContent
+const value = (name: string) => (within(stepper(name)).getByRole('spinbutton', { name }) as HTMLInputElement).value
 const saveBtn = () => within(tile()).getByRole('button', { name: 'Save changes' })
 
 describe('KeepingTile: anatomy', () => {
@@ -65,7 +70,7 @@ describe('KeepingTile: anatomy', () => {
     setup()
     const labels = [...tile().querySelectorAll('.kp-row__label')].map((l) => l.textContent)
     expect(labels).toEqual(['Base Unit', 'Shelf Life', 'Frozen Shelf Life'])
-    expect(within(tile()).queryByRole('textbox', { name: /Restock level/ })).toBeNull()
+    expect(within(tile()).queryByRole('spinbutton', { name: /Restock level/ })).toBeNull()
   })
   it('a Supply: Base Unit and Restock level rows, no Shelf Life at all', () => {
     setup(dishSoapJSON)
@@ -144,6 +149,27 @@ describe('KeepingTile: the two Steppers', () => {
     expect(value('Frozen Shelf Life')).toBe('1')
     expect(within(tile()).getByRole('button', { name: 'Clear Frozen Shelf Life' })).toBeInTheDocument()
   })
+  it('type or step: 365 is typed in at once, the placeholder says "Not set", and only digits go in', async () => {
+    setup()
+    const frozen = within(stepper('Frozen Shelf Life')).getByRole('spinbutton', { name: 'Frozen Shelf Life' })
+    expect(frozen).toHaveAttribute('placeholder', 'Not set')
+    expect(frozen).toHaveAttribute('aria-valuetext', 'Not set')
+    expect(frozen).toHaveAttribute('inputmode', 'numeric')
+    await userEvent.type(frozen, '3a65')
+    expect(value('Frozen Shelf Life')).toBe('365')
+    expect(frozen).toHaveAttribute('aria-valuenow', '365')
+    expect(within(tile()).getByText('Changed from not set')).toBeInTheDocument()
+  })
+  it('a typed value out of range is not clamped: Save names the field', async () => {
+    const save = setup()
+    const shelf = within(stepper('Shelf Life')).getByRole('spinbutton', { name: 'Shelf Life' })
+    await userEvent.clear(shelf)
+    await userEvent.type(shelf, '4000')
+    await userEvent.click(saveBtn())
+    expect(save).not.toHaveBeenCalled()
+    expect(shelf).toHaveAccessibleDescription(/Enter a whole number of days, 1 to 3650/)
+    expect(shelf).toHaveFocus()
+  })
   it('stops at 1 day going down with a value, and at 3650 going up', async () => {
     setup({ ...flour, shelfLifeDays: 3650 })
     expect(within(stepper('Shelf Life')).getByRole('button', { name: 'Increase Shelf Life' })).toBeDisabled()
@@ -188,7 +214,7 @@ describe('KeepingTile: one Save, one Cancel', () => {
   })
   it('Enter in the Restock field saves too (one form)', async () => {
     const save = setup(dishSoapJSON)
-    const field = within(tile()).getByRole('textbox', { name: /Restock level/ })
+    const field = within(tile()).getByRole('spinbutton', { name: /Restock level/ })
     await userEvent.clear(field)
     await userEvent.type(field, '750{Enter}')
     expect(save).toHaveBeenCalledWith({ restockLevel: 750 })
@@ -198,9 +224,9 @@ describe('KeepingTile: one Save, one Cancel', () => {
 describe('KeepingTile: errors at the field, focus to the first invalid (SAFE-04)', () => {
   it('a bad Restock level: Save stays enabled; submit puts the message under the field, marks it invalid and focuses it', async () => {
     const save = setup(dishSoapJSON)
-    const field = within(tile()).getByRole('textbox', { name: /Restock level/ })
+    const field = within(tile()).getByRole('spinbutton', { name: /Restock level/ })
     await userEvent.clear(field)
-    await userEvent.type(field, 'abc')
+    await userEvent.type(field, '0')
     expect(saveBtn()).toBeEnabled()
     await userEvent.click(saveBtn())
     expect(save).not.toHaveBeenCalled()
@@ -225,27 +251,27 @@ describe('KeepingTile: errors at the field, focus to the first invalid (SAFE-04)
 describe('KeepingTile: a Supply\'s Restock level', () => {
   it('a field in Base Units with the unit counted by the level, and the summary in the Household display as the row hint', () => {
     setup(toiletPaperJSON)
-    expect(within(tile()).getByRole('textbox', { name: /Restock level/ })).toHaveValue('6')
+    expect(within(tile()).getByRole('spinbutton', { name: /Restock level/ })).toHaveValue('6')
     expect(within(tile()).getByText('pieces')).toBeInTheDocument()
     expect(within(tile()).getByText('Below 6 pieces')).toBeInTheDocument()
   })
   it('imperial: the field stays metric, the summary follows the Household', () => {
     setup(dishSoapJSON, 0, vi.fn(), 'imperial')
-    expect(within(tile()).getByRole('textbox', { name: /Restock level/ })).toHaveValue('500')
-    const field = within(tile()).getByRole('textbox', { name: /Restock level/ })
-    expect(within(field.closest('.ui-field') as HTMLElement).getByText('ml')).toBeInTheDocument() // the suffix, not the Base Unit option
+    expect(within(tile()).getByRole('spinbutton', { name: /Restock level/ })).toHaveValue('500')
+    const field = within(tile()).getByRole('spinbutton', { name: /Restock level/ })
+    expect(within(field.closest('.stepper') as HTMLElement).getByText('ml')).toBeInTheDocument() // the suffix, not the Base Unit option
     expect(within(tile()).getByText('Below 2 cups')).toBeInTheDocument()
   })
   it('no level: an empty field and "No Restock level"; no Clear', () => {
     setup({ ...dishSoapJSON, restockLevel: null })
-    expect(within(tile()).getByRole('textbox', { name: /Restock level/ })).toHaveValue('')
+    expect(within(tile()).getByRole('spinbutton', { name: /Restock level/ })).toHaveValue('')
     expect(within(tile()).getByText('No Restock level')).toBeInTheDocument()
     expect(within(tile()).queryByRole('button', { name: 'Clear Restock level' })).toBeNull()
   })
   it('Clear empties the field (saved with the rest as null)', async () => {
     const save = setup(dishSoapJSON)
     await userEvent.click(within(tile()).getByRole('button', { name: 'Clear Restock level' }))
-    expect(within(tile()).getByRole('textbox', { name: /Restock level/ })).toHaveValue('')
+    expect(within(tile()).getByRole('spinbutton', { name: /Restock level/ })).toHaveValue('')
     await userEvent.click(saveBtn())
     expect(save).toHaveBeenCalledWith({ restockLevel: null })
   })
