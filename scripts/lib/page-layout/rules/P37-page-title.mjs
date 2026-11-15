@@ -26,7 +26,8 @@ export default {
     if (title === 'Feeder' || title === '') return [f(`document.title is "${title}": every page names itself, "<h1> · Feeder" (A11Y-01)`)]
     if (title === 'Sign in to Feeder') return []
     if (!title.endsWith(SUFFIX)) return [f(`document.title "${title}" does not end with " · Feeder" (A11Y-01)`)]
-    const route = ctx?.route ?? ''
+    // B9-55: the path the page is on (a scenario that starts on /scan and opens the receipt review is judged as the review).
+    const route = typeof t.path === 'string' && t.path ? t.path : (ctx?.route ?? '')
     const override = TITLE_OVERRIDES[route]
     const head = override ?? (route.startsWith('/cook') ? 'Cook Mode' : t.h1)
     if (head && !title.startsWith(head)) {

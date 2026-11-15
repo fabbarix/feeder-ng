@@ -108,7 +108,7 @@ function ReceiptPhotosPage({ session }: { session: ReceiptSession }) {
   const problem = photos.problem ? describeReceiptError({ code: photos.problem }, { isAdmin }).message : undefined
 
   return (
-    <Page header={<ReceiptPageHeader title={t.readTitle} leading={<IconButton icon="back" label={t.back} onClick={leave} />} />}>
+    <Page header={<ReceiptPageHeader title={t.readTitle} documentTitle={t.photosDocumentTitle} leading={<IconButton icon="back" label={t.back} onClick={leave} />} />}>
       <section className="receipt-section" ref={photosSection}>
         <h2 className="receipt-section__title">{photosTitle(photos.count)}</h2>
         {photos.count > 0 ? <ReceiptPhotoList photos={photos.photos} disabled={rowsBusy} onRemove={photos.remove} onEdit={openEdit} /> : null}

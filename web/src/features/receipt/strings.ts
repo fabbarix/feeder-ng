@@ -41,6 +41,10 @@ export const receiptStrings = {
 
   // The review (design 3.4).
   reviewTitle: 'Review the receipt',
+  /** A11Y-01 title override: the tab says "Receipt review · Feeder" whatever the heading says. */
+  reviewDocumentTitle: 'Receipt review',
+  /** A11Y-01 title override: the photos step's tab says "Receipt · Feeder". */
+  photosDocumentTitle: 'Receipt',
   nothingChanges: 'Nothing changes until you apply.',
   receiptTotals: 'Receipt totals',
   tileReceipt: 'Receipt',
