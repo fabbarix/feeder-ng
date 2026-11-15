@@ -1,4 +1,5 @@
-import type { CookedAllResult, CookedResult, SlotDayKey, StockWarning } from '../types'
+import type { ShortfallGroup } from '../../stock/lib/shortfall'
+import type { CookedAllResult, CookedResult, PlanSlot, SlotDayKey, StockWarning } from '../types'
 import { planStrings as s } from '../strings'
 import { weekdayName } from './phrase'
 
@@ -12,25 +13,6 @@ export function adjustLeftover(value: number, direction: 1 | -1, max: number, st
 /** "1 portion", "1.5 portions", "2 portions", "0 portions". */
 export function formatPortions(n: number): string {
   return n === 1 ? '1 portion' : `${n} portions`
-}
-
-export interface Correction {
-  ingredientId: number
-  ingredient: string
-  /** The prefilled total: what Stock holds after the floored deduction (0). */
-  total: number
-}
-
-/** What "Correct Stock" offers for a shortfall warning. */
-export function correctionFor(warning: StockWarning): Correction {
-  return { ingredientId: warning.ingredientId, ingredient: warning.name, total: 0 }
-}
-
-/** Parses the number a User types for a Stock total; null when it is not a non-negative number. Accepts a comma as the decimal mark. */
-export function parseTotal(text: string): number | null {
-  const t = text.trim().replace(',', '.')
-  if (!/^\d+(\.\d+)?$/.test(t)) return null
-  return Number(t)
 }
 
 /** Where the Leftover of a Cooked meal went (R4 B13). */
@@ -137,7 +119,7 @@ export function cookedAllSuccessText(result: CookedAllResult): string {
   return `${s.cookedCheer} ${parts.join('; ')}`
 }
 
-// ---- B9-45 (PC-02): the Cooked confirmation's Leftover tile and the entry link with its origin. STUBS: the developer builds them. ----
+// ---- B9-45 (PC-02): the Cooked confirmation's Leftover tile, the shortfall groups and the entry link with its origin. ----
 
 /** The "Where the Leftover went" tile of Cook Mode's Cooked confirmation: "1.25 portions kept" / "Planned for Mon Dinner · Use by Tue". */
 export interface LeftoverTile {
@@ -146,11 +128,41 @@ export interface LeftoverTile {
 }
 
 /** null when no Leftover was recorded (the confirmation shows no tile then). */
-export function leftoverTile(_outcome: LeftoverOutcome): LeftoverTile | null {
-  throw new Error('B9-45: not built yet')
+export function leftoverTile(outcome: LeftoverOutcome): LeftoverTile | null {
+  if (outcome.kind === 'none') return null
+  const title = `${formatPortions(outcome.portions)} kept`
+  const useBy = `Use by ${weekdayName(outcome.useBy, 'short')}`
+  if (outcome.kind === 'kept') return { title, meta: useBy }
+  const meals = outcome.meals.map((m) => `${weekdayName(m.date, 'short')} ${m.mealSlotName}`).join(' and ')
+  return { title, meta: `Planned for ${meals} · ${useBy}` }
 }
 
-/** The route and state that opens Cook Mode for a Planned Meal from `from` (a path such as "/plan"): `{ to: "/cook/meal/<date>/<slot>", state: { from } }`. */
-export function cookLinkFor(_key: SlotDayKey, _from: string): { to: string; state: { from: string } } {
-  throw new Error('B9-45: not built yet')
+/** The Cook Mode route and state of a Planned Meal opened from `from` (a path such as "/plan"): `{ to: "/cook/meal/<date>/<slot>", state: { from } }`. */
+export function cookLinkFor(key: SlotDayKey, from: string): { to: string; state: { from: string } } {
+  return { to: cookPath(key), state: { from } }
+}
+
+/** "Sat Dinner": the slot's weekday and name as the plan holds it (the weekday alone when the slot is not in the plan). */
+export function slotDayLabel(slots: PlanSlot[], key: SlotDayKey): string {
+  const slot = slots.find((x) => x.date === key.date && x.mealSlotId === key.mealSlotId)
+  const day = weekdayName(key.date, 'short')
+  return slot ? `${day} ${slot.name}` : day
+}
+
+/** One Cooked meal's group of the ONE shortfall notice; null when nothing was short. `key.courseId` absent: a Mark all of the slot. */
+export function shortfallGroupFor(slots: PlanSlot[], key: SlotDayKey & { courseId?: number }, recipeName: string | null, warnings: StockWarning[]): ShortfallGroup | null {
+  if (warnings.length === 0) return null
+  const id = key.courseId === undefined ? `${key.date}/${key.mealSlotId}` : `${key.date}/${key.mealSlotId}/${key.courseId}`
+  return { id, mealLabel: slotDayLabel(slots, key), recipeName: recipeName || null, warnings }
+}
+
+/** The Recipe of a Mark all Cooked for the notice: the one Course's Recipe, null when several Courses were cooked. */
+export function cookedAllRecipe(result: CookedAllResult): string | null {
+  return result.meals.length === 1 ? result.meals[0]!.recipeName || null : null
+}
+
+/** Adds a group to the notice's list (the same meal again replaces its group), newest last. */
+export function withGroup(groups: ShortfallGroup[], group: ShortfallGroup | null): ShortfallGroup[] {
+  if (!group) return groups
+  return [...groups.filter((g) => g.id !== group.id), group]
 }

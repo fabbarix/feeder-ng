@@ -4,7 +4,6 @@ import { mockApi, wrapper } from '../test-utils'
 import type { CookedResult, CookPreview } from '../types'
 import { useMarkCooked } from './useMarkCooked'
 import { usePlanActions } from './usePlanActions'
-import { useStockCorrection } from './useStockCorrection'
 
 const key = { date: '2026-11-09', mealSlotId: 2, courseId: 1 }
 
@@ -133,29 +132,5 @@ describe('usePlanActions', () => {
       await result.current.setMeal({ date: '2026-11-10', mealSlotId: 3, courseId: 1 }, 9).catch(() => {})
     })
     await waitFor(() => expect(result.current.error).toBe('The Recipe is archived'))
-  })
-})
-
-describe('useStockCorrection', () => {
-  it('sets the Stock total through T10 and reports success', async () => {
-    const api = mockApi({ 'PUT /api/stock/ingredients/11/total': { ingredient: {}, lots: [] } })
-    const { result } = renderHook(() => useStockCorrection(), { wrapper })
-    let ok = false
-    await act(async () => {
-      ok = await result.current.correct(11, 250)
-    })
-    expect(ok).toBe(true)
-    expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 })
-  })
-
-  it('reports a failure without throwing', async () => {
-    mockApi({ 'PUT /api/stock/ingredients/11/total': { status: 422, json: { error: { code: 'validation_failed', message: 'negative' } } } })
-    const { result } = renderHook(() => useStockCorrection(), { wrapper })
-    let ok = true
-    await act(async () => {
-      ok = await result.current.correct(11, -1)
-    })
-    expect(ok).toBe(false)
-    expect(result.current.error).toBe('negative')
   })
 })

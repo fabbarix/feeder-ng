@@ -15,7 +15,6 @@ function flow(over: Partial<CookFlow> = {}): CookFlow {
       preview: null, isLoading: false, leftover: 0, setLeftover: vi.fn(), confirm: vi.fn(), notCooked: vi.fn(), busy: false, error: null,
       result: null, outcome: null, warnings: [], dismissWarning: vi.fn(), courseId: null, usedFrom: noUsedFrom(),
     },
-    stock: { correction: null, open: vi.fn(), close: vi.fn(), save: vi.fn(), busy: false, error: null },
     confirm: vi.fn(), skip: vi.fn(), quickCook: vi.fn(), quickBusy: null, warnings: [], dismissWarning: vi.fn(),
     shortfalls: [], dismissShortfalls: vi.fn(), correct: INERT_CORRECTION,
     ...over,

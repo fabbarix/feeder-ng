@@ -21,6 +21,9 @@ export const cookStrings = {
   otherTimersRegion: 'Other timers',
   timerFinished: (label: string) => `${label} is ready`,
   markedAsCooked: 'Marked as Cooked',
+  /** B9-45 (PC-02): the Cooked moment. */
+  cookedCheer: 'Cooked, nice one!',
+  undoCooked: 'Undo Cooked',
   backToToday: 'Back to Today',
   voice: 'Voice commands',
   voiceUnsupported: 'Voice commands are not available in this browser',
