@@ -82,7 +82,9 @@ describe('useToGetTick', () => {
   })
 
   it('offline (or any failure): Scan\'s own error toast, no Undo toast, and the Line is free to tick again', async () => {
-    actions.tick.mockRejectedValueOnce(new ApiError(0, 'network', 'offline'))
+    // B9-54 (RES-03): a send that cannot reach the server (status 0 or 5xx) now queues the Tick (shop/hooks/useTickFlow.offline.test);
+    // a refusal with an answer is still a failure
+    actions.tick.mockRejectedValueOnce(new ApiError(422, 'validation_failed', 'no'))
     const { result } = setup()
     await act(() => result.current.tick(passata))
     expect(undoToast.show).not.toHaveBeenCalled()

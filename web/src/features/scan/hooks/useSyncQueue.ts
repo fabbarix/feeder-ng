@@ -1,7 +1,7 @@
 // Flushes the offline queue when the phone is online: on mount, on the window `online` event, and after each
 // enqueue (React hook; the queue and API are injected).
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { backoffMs, type OfflineQueue, type SyncApi } from '../lib/queue'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { backoffMs, type EnqueueResult, type OfflineQueue, type SyncApi } from '../lib/queue'
 import { pictureNotices, syncNotices, type SyncNotice } from '../lib/notices'
 import type { Op, ScanResult } from '../types'
 
@@ -14,6 +14,8 @@ export interface UseSyncQueueOptions {
   onResults?: (results: ScanResult[], notices: SyncNotice[], sent: Op[]) => void
   /** PPX: called with the operation when enqueue could not keep its Picture (the scan is queued without it) */
   onPictureNotStored?: (op: Op) => void
+  /** B9-54: false = inert (no flush, no listeners): a screen under the shell's SyncQueueProvider keeps no queue of its own. Default true. */
+  enabled?: boolean
 }
 
 export interface UseSyncQueueResult {
@@ -59,15 +61,22 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
   const [online, setOnline] = useState(() => isOnlineRef.current())
   const [pendingCount, setPendingCount] = useState(0)
   const [rejectedCount, setRejectedCount] = useState(0)
+  const [pendingOps, setPendingOps] = useState<readonly Op[]>(NO_OPS)
+  const [rejectedOps, setRejectedOps] = useState<readonly Op[]>(NO_OPS)
   // Automatic retries after an unreachable server (network error or 5xx) while the phone thinks it is online.
   const retryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const failuresRef = useRef(0)
   const flushRef = useRef<() => Promise<void>>(async () => {})
+  /** B9-54: enqueues of this owner under way: their change notice is not a reason to flush (enqueue flushes itself) */
+  const enqueuingRef = useRef(0)
 
   const refreshCounts = useCallback(async () => {
     const [pending, rejected] = await Promise.all([queueRef.current.pending(), queueRef.current.rejected()])
     setPendingCount(pending.length)
     setRejectedCount(rejected.length)
+    // B9-54: the same array while nothing changed, so a screen that applies them (shop/lib/pendingTicks) keeps its memo
+    setPendingOps((prev) => sameOps(prev, pending.map((e) => e.op)))
+    setRejectedOps((prev) => sameOps(prev, rejected.map((e) => e.op)))
   }, [])
 
   const clearRetry = useCallback(() => {
@@ -78,7 +87,7 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
   const flush = useCallback(async () => {
     clearRetry()
     if (!isOnlineRef.current()) return
-    const { offline, results, pictureFailures } = await queueRef.current.flush(apiRef.current)
+    const { offline, results, pictureFailures, sent = [] } = await queueRef.current.flush(apiRef.current)
     // PPX: Pictures given up in this flush are reported even when the batch itself is waiting for the server.
     const pictureFound = pictureNotices(pictureFailures ?? [])
     if (offline) {
@@ -95,15 +104,21 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
       await refreshCounts()
       return
     }
-    onResultsRef.current?.(results, [...syncNotices(results), ...pictureFound], [])
+    onResultsRef.current?.(results, [...syncNotices(results, sent), ...pictureFound], sent)
     await refreshCounts()
   }, [clearRetry, refreshCounts])
   flushRef.current = flush
 
   const enqueue = useCallback(
     async (op: Op, picture?: Blob) => {
-      const { pictureStored } = await queueRef.current.enqueue(op, picture)
-      if (picture && !pictureStored) onPictureNotStoredRef.current?.(op)
+      enqueuingRef.current += 1
+      let result: EnqueueResult
+      try {
+        result = await queueRef.current.enqueue(op, picture)
+      } finally {
+        enqueuingRef.current -= 1
+      }
+      if (picture && !result.pictureStored) onPictureNotStoredRef.current?.(op)
       await refreshCounts()
       await flush()
     },
@@ -124,8 +139,15 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     [refreshCounts],
   )
 
+  const enabled = options.enabled ?? true
   useEffect(() => {
+    if (!enabled) return
     void refreshCounts()
+    // B9-54: another owner of the same queue (or a direct call) changed it; an operation it added is sent from here too when online
+    const offChange = queueRef.current.onChange((kind) => {
+      void refreshCounts()
+      if (kind === 'enqueue' && enqueuingRef.current === 0 && isOnlineRef.current()) void flush()
+    })
     if (isOnlineRef.current()) void flush()
     const goOnline = () => {
       setOnline(true)
@@ -135,16 +157,38 @@ export function useSyncQueue(options: UseSyncQueueOptions): UseSyncQueueResult {
     window.addEventListener('online', goOnline)
     window.addEventListener('offline', goOffline)
     return () => {
+      offChange()
       clearRetry()
       window.removeEventListener('online', goOnline)
       window.removeEventListener('offline', goOffline)
     }
-  }, [clearRetry, flush, refreshCounts])
+  }, [enabled, clearRetry, flush, refreshCounts])
 
   const updateQueuedPrice = useCallback(
     async (clientUuid: string, priceCents: number, pricePerKgCents?: number) => queueRef.current.updatePrice(clientUuid, priceCents, pricePerKgCents),
     [],
   )
 
-  return { online, pendingCount, rejectedCount, pendingOps: [], rejectedOps: [], updateQueuedTick: async () => false, updateQueuedPrice, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }
+  const updateQueuedTick = useCallback(
+    async (clientUuid: string, quantity: number) => {
+      const changed = await queueRef.current.updateTick(clientUuid, quantity)
+      await refreshCounts()
+      return changed
+    },
+    [refreshCounts],
+  )
+
+  return useMemo(
+    () => ({ online, pendingCount, rejectedCount, pendingOps, rejectedOps, updateQueuedTick, updateQueuedPrice, enqueue, flush, dismissRejected, cancel, refresh: refreshCounts }),
+    [online, pendingCount, rejectedCount, pendingOps, rejectedOps, updateQueuedTick, updateQueuedPrice, enqueue, flush, dismissRejected, cancel, refreshCounts],
+  )
+}
+
+const NO_OPS: readonly Op[] = []
+
+/** `prev` when `next` holds the same Ops (same ids and contents), else `next`. */
+function sameOps(prev: readonly Op[], next: readonly Op[]): readonly Op[] {
+  if (next.length === 0) return NO_OPS
+  if (prev.length === next.length && prev.every((op, i) => JSON.stringify(op) === JSON.stringify(next[i]))) return prev
+  return next
 }

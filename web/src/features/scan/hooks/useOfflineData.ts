@@ -53,6 +53,8 @@ export function useOfflineData(shopId: number | null): OfflineDataState {
   }, [queryClient])
 
   if (query.data) return { offline: query.data, status: 'ready', error: null }
+  // B9-54: no answer at all (offline) and no saved copy: the data is not on this phone yet; it loads once the connection is back
+  if (query.error instanceof ApiError && query.error.status === 0) return { offline: null, status: 'unavailable', error: null }
   if (query.error) return { offline: null, status: 'error', error: query.error.message }
   return { offline: null, status: 'loading', error: null }
 }

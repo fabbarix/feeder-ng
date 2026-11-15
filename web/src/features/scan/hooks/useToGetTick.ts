@@ -10,6 +10,7 @@ import type { ListEntry } from '../../shop/lib/lines'
 import { useToast } from '../../../ui/Toast'
 import { tickRequest } from '../lib/toGet'
 import { scanStrings } from '../strings'
+import type { SharedSyncQueue } from '../components/SyncQueueProvider'
 
 /** Scan's Undo toast lasts 5 s (the Shop's lasts the Undo default, 8 s). */
 export const SCAN_UNDO_MS = 5000
@@ -22,8 +23,19 @@ export interface ToGetTick {
   flow?: Pick<TickFlow, 'changing' | 'change' | 'closeChange'>
 }
 
-export function useToGetTick({ to, shopId, system = 'metric' }: { to: string | undefined; shopId: number | null; system?: UnitSystem }): ToGetTick {
-  const flow = useTickFlow({ to, shopId, system, durationMs: SCAN_UNDO_MS })
+export function useToGetTick({
+  to,
+  shopId,
+  system = 'metric',
+  queue,
+}: {
+  to: string | undefined
+  shopId: number | null
+  system?: UnitSystem
+  /** B9-54: the offline queue the Scan screen holds (its tick queues there too); default the shared one */
+  queue?: SharedSyncQueue
+}): ToGetTick {
+  const flow = useTickFlow({ to, shopId, system, durationMs: SCAN_UNDO_MS, ...(queue ? { queue } : {}) })
   const toast = useToast()
   const flowTick = flow.tick
 

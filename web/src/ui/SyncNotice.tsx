@@ -64,7 +64,7 @@ export function SyncNotice({ tone, title, subtitle, rows, actions }: SyncNoticeP
       {actions && actions.length > 0 ? (
         <div className="sync-notice__actions">
           {actions.map((a) => (
-            <Button key={a.label} variant="secondary" size="sm" onClick={a.onClick}>
+            <Button key={a.label} variant="secondary" size="sm" onClick={a.onClick} {...(a.ariaLabel ? { 'aria-label': a.ariaLabel } : {})}>
               {a.label}
             </Button>
           ))}

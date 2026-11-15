@@ -100,6 +100,7 @@ export function useUndoToast(): UndoToastApi {
         body: input.body,
         actions: [...(input.actions ?? []), undo],
         durationMs: input.durationMs,
+        ...(input.status ? { status: input.status } : {}),
       })
     },
     [toast],

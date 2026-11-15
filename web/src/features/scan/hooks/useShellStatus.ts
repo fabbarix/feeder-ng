@@ -1,10 +1,12 @@
 // The Scan feature's contribution to the app shell's status banner (the WP5 extension point, see
 // docs/dev/design/wp5-shell.md "useShellStatus"): how many scans sit in the persisted offline queue. It is called on
 // EVERY screen, so it owns no sync queue and no network: it only counts the persisted entries. React hook.
+// B9-54: Ticks by hand (shop_tick, shop_untick) are counted apart from the Scans.
 import { useEffect, useMemo, useState } from 'react'
 import { appOpStore } from '../lib/idbStore'
 import type { OpStore } from '../lib/queue'
 import { onQueueChange } from '../lib/queueEvents'
+import { countPending } from '../../shop/lib/pendingTicks'
 
 export interface ShellStatus {
   pendingScans: number
@@ -19,7 +21,7 @@ export interface ShellStatus {
  */
 export function useShellStatus(store?: OpStore): ShellStatus {
   const source = useMemo(() => store ?? appOpStore(), [store])
-  const [pendingScans, setPendingScans] = useState(0)
+  const [counts, setCounts] = useState<ShellStatus>(NONE)
 
   useEffect(() => {
     let alive = true
@@ -27,8 +29,12 @@ export function useShellStatus(store?: OpStore): ShellStatus {
       Promise.resolve()
         .then(() => source.all())
         .then(
-          (entries) => alive && setPendingScans(entries.length),
-          () => alive && setPendingScans(0),
+          (entries) => {
+            if (!alive) return
+            const { scans, ticks } = countPending(entries.map((e) => e.op))
+            setCounts((prev) => (prev.pendingScans === scans && prev.pendingTicks === ticks ? prev : { pendingScans: scans, pendingTicks: ticks }))
+          },
+          () => alive && setCounts(NONE),
         )
     }
     const onVisible = () => {
@@ -48,5 +54,7 @@ export function useShellStatus(store?: OpStore): ShellStatus {
     }
   }, [source])
 
-  return { pendingScans, pendingTicks: 0 }
+  return counts
 }
+
+const NONE: ShellStatus = { pendingScans: 0, pendingTicks: 0 }

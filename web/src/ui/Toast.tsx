@@ -112,7 +112,7 @@ const STATUS_ICON: Record<ToastStatus, IconName | null> = {
   warning: 'warning',
   offline: 'offline',
   syncing: 'refresh',
-  pending: null, // B9-54 STUB: 'duration' (Phosphor Clock) once built
+  pending: 'duration', // B9-54 (RES-03): Phosphor Clock, "waiting to sync"
 }
 
 type PauseReason = 'hover' | 'focus' | 'hidden'

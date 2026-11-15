@@ -1,4 +1,4 @@
-// Notices after a sync (functional spec §10.3). Plain TypeScript. Stubs until implemented.
+// Notices after a sync (functional spec §10.3). Plain TypeScript.
 import { scanStrings } from '../strings'
 import type { Op, ScanResult } from '../types'
 import type { PictureFailure } from './queue'
@@ -10,10 +10,14 @@ export interface SyncNotice {
 }
 
 /**
+ * B9-54: `sent` (FlushResult.sent) tells a Tick's result from a Scan's; Ticks are left out.
  * One notice per rejected result and one per result merged into a Product that this same batch did NOT create
  * (a merge into the sender's own earlier creation is not news). Order follows the results. Texts from scanStrings.
  */
-export function syncNotices(results: readonly ScanResult[], _sent?: readonly Op[]): SyncNotice[] {
+export function syncNotices(results: readonly ScanResult[], sent?: readonly Op[]): SyncNotice[] {
+  // B9-54: a result answering a Tick (shop_tick / shop_untick) is the Shop's to tell (shop/lib/tickNotices), never a Scan notice
+  const ticks = new Set((sent ?? []).filter((o) => o.kind === 'shop_tick' || o.kind === 'shop_untick').map((o) => o.clientUuid))
+  results = results.filter((r) => !ticks.has(r.clientUuid))
   const createdInBatch = new Set<number>()
   for (const r of results) if (r.scan?.productCreated) createdInBatch.add(r.scan.productId)
   const notices: SyncNotice[] = []
