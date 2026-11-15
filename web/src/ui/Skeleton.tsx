@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import './Skeleton.css'
 
 export interface SkeletonProps {
-  variant?: 'tile' | 'row' | 'line' | 'circle'
+  variant?: 'tile' | 'row' | 'line' | 'circle' | 'card' | 'hero' | 'title' | 'meta'
   /** How many blocks. Default 1. */
   count?: number
   /** Nothing is painted until this long has passed. Default 300. */

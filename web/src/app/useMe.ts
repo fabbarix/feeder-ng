@@ -7,6 +7,8 @@ export interface Me {
   email: string
   displayName: string
   isAdmin: boolean
+  /** the Household's IANA zone (GET /api/me householdTimeZone, B9-12); absent in a copy kept by an older build */
+  householdTimeZone?: string
 }
 
 export const ME_QUERY_KEY = ['me'] as const

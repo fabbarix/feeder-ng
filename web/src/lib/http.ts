@@ -32,6 +32,8 @@ export interface RequestOptions {
   keepalive?: boolean
   /** aborts the request; an abort with a TimeoutError reason is raised as ApiError(0, 'timeout') */
   signal?: AbortSignal
+  /** B9-20 (RES-06): a GET ends in ApiError(0, 'timeout') after this long; default GET_TIMEOUT_MS, 0 = none. Writes carry none. */
+  timeoutMs?: number
 }
 
 export interface HttpClient {
