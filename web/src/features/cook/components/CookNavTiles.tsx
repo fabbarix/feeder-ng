@@ -40,7 +40,7 @@ export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, on
   let forward: ReactNode = null
   if (!isLast) {
     forward = (
-      <Button size="lg" icon="next" className="cook-nav__tile" onClick={onNext} disabled={Boolean(held)} aria-describedby={held ? lineId : undefined}>
+      <Button size="lg" icon="next" className="cook-nav__tile" data-arrow="end" onClick={onNext} disabled={Boolean(held)} aria-describedby={held ? lineId : undefined}>
         {cookStrings.next}
       </Button>
     )
@@ -58,7 +58,7 @@ export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, on
     )
   } else if (onDone) {
     forward = (
-      <Button size="lg" icon="next" className="cook-nav__tile" onClick={onDone}>
+      <Button size="lg" icon="next" className="cook-nav__tile" data-arrow="end" onClick={onDone}>
         {cookStrings.done}
       </Button>
     )

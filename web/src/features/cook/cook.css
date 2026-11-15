@@ -108,7 +108,9 @@
   object-fit: cover;
 }
 
-.cook-step__photo .icon-button {
+/* `.cook-step` raises the specificity over ui/IconButton.css's own `position: relative` (loaded later). */
+.cook-step__photo .icon-button,
+.cook-step .cook-step__photo > .icon-button {
   position: absolute;
   inset-block-end: var(--space-2);
   inset-inline-end: var(--space-2);
@@ -121,13 +123,15 @@
   position: fixed;
   inset: 0;
   inline-size: 100vw;
-  max-inline-size: 100vw;
+  max-inline-size: none;
   block-size: 100dvh;
-  max-block-size: 100dvh;
+  max-block-size: none;
   margin: 0;
   padding: 0;
   border: 0;
+  /* the scrim three times over (backdrop, fill, inset shadow): about 85 % dark, so the photo reads on its own */
   background: var(--scrim);
+  box-shadow: inset 0 0 0 100vmax var(--scrim);
   color: var(--color-text);
 }
 
@@ -169,7 +173,7 @@
 .cook-step__zone--back {
   left: 0;
   justify-content: flex-start;
-  padding-inline-start: var(--space-2);
+  padding-inline-start: var(--space-half);
 }
 
 .cook-step__zone--back svg {
@@ -179,7 +183,7 @@
 .cook-step__zone--next {
   right: 0;
   justify-content: flex-end;
-  padding-inline-end: var(--space-2);
+  padding-inline-end: var(--space-half);
 }
 
 .cook-step__coach {
@@ -216,13 +220,26 @@
 }
 
 /* R-C: the page scrolls a focused control clear of the sticky nav, so its ring is never under the band. */
-.cook-screen:has(.cook-nav) {
+:root:has(.cook-nav) {
   scroll-padding-block-end: 12rem;
+  /* Toasts sit above the sticky nav (Undo of a cancelled timer must not cover the strip or Next). Cook Mode mounts no shell pill,
+     so it publishes the nav's room through the pill's clearance, which ui/Toast.css adds: tiles 64 + padding 8 + 12, plus the strip
+     (52 + 2 x 5 + 12) when there is one. */
+  --timer-pill-clearance: 84px;
+}
+
+:root:has(.cook-nav .cook-strip) {
+  --timer-pill-clearance: 158px;
 }
 
 .cook-nav__tile {
   width: 100%;
   min-height: 64px;
+}
+
+/* A forward arrow follows its label ("Next →"); short landscape stacks it above the label instead. */
+.cook-nav__tile[data-arrow='end'] {
+  flex-direction: row-reverse;
 }
 
 /* Why Next is held, or when a future meal can be marked (PC-12): a full-width line under the tiles, an icon on its first line;
@@ -729,6 +746,10 @@
     border-radius: var(--radius-tile);
   }
 
+  .cook-nav__tile[data-arrow='end'] {
+    flex-direction: column;
+  }
+
   .cook-nav__tile:nth-of-type(1) {
     grid-column: 1;
   }
@@ -740,6 +761,14 @@
   .cook-nav__held {
     grid-row: 4;
     grid-column: 2 / 5;
+  }
+}
+
+/* In short landscape the nav is the side columns: toasts clear the strip and the held line only. */
+@media (max-height: 499px) and (min-width: 37.5em) {
+  :root:has(.cook-nav),
+  :root:has(.cook-nav .cook-strip) {
+    --timer-pill-clearance: 56px;
   }
 }
 
