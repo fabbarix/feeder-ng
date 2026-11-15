@@ -149,7 +149,7 @@ describe('probes and scenarios', () => {
     expect(src).toMatch(/getComputedStyle\(t, '::after'\)/)
     expect(src).toMatch(/Math\.min\(box\.x, x\)/)
     for (const s of api.SCENARIOS.filter((x) => x.rules?.includes('P25'))) {
-      expect(s.emulate?.map((c: { method: string }) => c.method), s.name).toContain('Emulation.setTouchEmulationEnabled')
+      expect((s as { emulate?: { method: string }[] }).emulate?.map((c) => c.method), s.name).toContain('Emulation.setTouchEmulationEnabled')
     }
   })
   it('each scenario reports only its own rules: P25/P33 for the sheets, P39 for the ring room', () => {
