@@ -1,6 +1,6 @@
 // B9-29 (SSP-10, mock ssp-10-put-away.html): Put away the Not sorted Stock Lots, many at once, into one Storage Place.
 // Render and wiring only: the rules are lib/putAway, the request is usePutAway (the screen passes it as onMove).
-import { useId, useRef, useState, type ReactElement } from 'react'
+import { useEffect, useId, useRef, useState, type ReactElement } from 'react'
 import { BottomSheet, Button, Checkbox, Icon, ListGroup, ListRow, Select, Thumb } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
@@ -40,6 +40,11 @@ export function PutAwaySheet({ open, onClose, lots, places, today, system = 'met
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
+  const [moves, setMoves] = useState(0)
+  useEffect(() => {
+    if (moves === 0) return
+    listRef.current?.querySelector<HTMLInputElement>('input[type="checkbox"]')?.focus()
+  }, [moves])
   const lineId = useId()
   // Opening again starts from the Lots the screen has now; the place last used in this sheet stays the first choice.
   if (open !== wasOpen) {
@@ -77,8 +82,8 @@ export function PutAwaySheet({ open, onClose, lots, places, today, system = 'met
         onAllPutAway?.()
         return
       }
-      // The next row to sort takes the focus, once the moved rows are gone.
-      requestAnimationFrame(() => listRef.current?.querySelector<HTMLInputElement>('input[type="checkbox"]')?.focus())
+      // The next row to sort takes the focus, once the moved rows are gone (the effect below runs after that render).
+      setMoves((n) => n + 1)
     } catch (err) {
       setError(errorText(err))
     } finally {
