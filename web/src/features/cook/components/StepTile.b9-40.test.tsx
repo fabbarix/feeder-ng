@@ -26,7 +26,7 @@ describe('StepTile overline (PC-03: the Step count moves into the overline)', ()
     const { el } = tile()
     const overline = within(el).getByRole('status')
     expect(overline).toHaveTextContent('Step 2 of 5 · Active · 2 min')
-    expect(overline).toHaveClass('tile__overline')
+    expect(el.querySelector('.tile__overline')!.contains(overline)).toBe(true)
   })
   it('a Passive Step of 6 hours reads "Step 2 of 4 · Passive · 6 h timer" (PC-16 item 3)', () => {
     const { el } = tile({}, { number: 2, of: 4, kind: 'passive', durationMinutes: 360, timer: { label: 'x', durationSeconds: 21600 } })
