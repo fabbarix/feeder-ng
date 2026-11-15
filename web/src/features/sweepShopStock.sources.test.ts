@@ -59,8 +59,8 @@ describe('B9-09: the .pg__* styling is gone from Products, Shops and Stock (DS-0
   it('no component uses pg, pg__stack, pg__row, pg__group, pg__tile-title, pg__muted, pg__subhead or pg__add-price', () => {
     expect(used.filter((u) => !u.endsWith(': pg__error'))).toEqual([])
   })
-  it('the only .pg__ class left is pg__error (its field-error pattern belongs to SAFE; it is not decided here)', () => {
-    expect(new Set(used.map((u) => u.split(': ')[1]))).toEqual(new Set(['pg__error']))
+  it('no .pg__ class is left: pg__error went too, for FormError and the field errors (SAFE-04, B9-29 and B9-30)', () => {
+    expect(used).toEqual([])
   })
   it('products.css keeps no layout, title or subhead class: .pg, .pg__stack, .pg__row, .pg__group, .pg__tile-title, .pg__subhead, .pg__add-price', () => {
     const selectors = cssRules(readFeature('products/products.css')).flatMap((r) => r.selector.split(',').map((s) => s.trim()))
