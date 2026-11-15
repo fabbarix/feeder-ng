@@ -234,8 +234,12 @@
    At the top it gives back only the row gap, so the target ends where the name above it ends and never covers it. */
 .plan-hero__chips {
   --plan-hero-chip-reach: 9px;
+  /* w4d review (P39): the clipping row also keeps a focused chip's whole ring at its start and end, given back by negative margins. */
+  --plan-hero-ring-room: calc(var(--focus-ring-width) + var(--focus-ring-offset));
   padding-block: var(--plan-hero-chip-reach);
   margin-block: calc(-1 * var(--space-2)) calc(-1 * var(--plan-hero-chip-reach));
+  padding-inline: var(--plan-hero-ring-room);
+  margin-inline: calc(-1 * var(--plan-hero-ring-room));
 }
 .plan-hero__chips .chip {
   position: relative;

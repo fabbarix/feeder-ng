@@ -99,3 +99,12 @@ describe('leftovers of earlier rounds (B9-STATE: B9-01 and B9-08 notes)', () => 
     expect(source).not.toMatch(/\bonAccent\b/)
   })
 })
+
+describe('the why chips keep their focus ring whole (w4d review, P39)', () => {
+  it('the clipping chip row has ring room at its start and end (focus-ring width + offset), given back by negative margins', () => {
+    const css = readSource('features/plan/components/TonightHero.css')
+    expect(css).toMatch(/--plan-hero-ring-room:\s*calc\(var\(--focus-ring-width\) \+ var\(--focus-ring-offset\)\)/)
+    expect(css).toMatch(/padding-inline:\s*var\(--plan-hero-ring-room\)/)
+    expect(css).toMatch(/margin-inline:\s*calc\(-1 \* var\(--plan-hero-ring-room\)\)/)
+  })
+})
