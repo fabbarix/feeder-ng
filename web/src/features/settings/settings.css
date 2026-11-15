@@ -439,9 +439,16 @@
 
 /* B9-46 (PC-08): an away Member's row in Who's eating: the Away's days in the info tone, then the "Eats here anyway" switch. */
 .attendance__away {
-  display: grid;
-  gap: 0;
+  grid-column: 3 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: var(--space-3);
   min-inline-size: 0;
+}
+.attendance__away .switch-row {
+  flex: 0 1 auto;
 }
 .attendance__away-line {
   font-size: var(--text-meta-size);

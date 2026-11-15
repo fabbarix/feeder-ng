@@ -166,9 +166,10 @@ export function useAwaySheet(target: AwaySheetTarget, data: AwaySheetData, onClo
         },
         (err: unknown) => {
           if (id !== runId.current) return
+          // A refusal at a field says itself there; What changes has nothing to show until the field is fixed.
           const field = awayErrorField(err, draft.noLastDay)
           if (field && err instanceof Error) setErrors({ [field]: err.message })
-          setPreview({ status: 'failed' })
+          setPreview(field ? { status: 'none' } : { status: 'failed' })
         },
       )
     }, 300)

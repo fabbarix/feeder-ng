@@ -64,16 +64,16 @@ function AwayForm({ target, data, onClose }: { target: AwaySheetTarget; data: Aw
         {sheet.chooseWho ? <AwayWhoPills label={s.who} members={sheet.members} value={draft.memberId} onChange={sheet.setMember} /> : null}
         <div className="away-sheet__when" data-one={draft.noLastDay ? 'true' : undefined}>
           <div className="away-sheet__end">
-            <DateField label={s.firstDay} value={draft.from} onChange={sheet.setFirstDay} min={sheet.started ? undefined : sheet.today} today={sheet.today} disabled={sheet.started} error={errors.first} />
+            <DateField size="full" label={s.firstDay} value={draft.from} onChange={sheet.setFirstDay} min={sheet.started ? undefined : sheet.today} today={sheet.today} disabled={sheet.started} error={errors.first} />
             {sheet.fromOptions.length > 0 ? (
-              <Select label={s.fromSlot} options={sheet.fromOptions} value={sheet.fromValue} onChange={sheet.setFromSlot} disabled={sheet.started} error={errors.fromSlot} />
+              <Select size="full" label={s.fromSlot} options={sheet.fromOptions} value={sheet.fromValue} onChange={sheet.setFromSlot} disabled={sheet.started} error={errors.fromSlot} />
             ) : null}
           </div>
           {draft.noLastDay ? null : (
             <div className="away-sheet__end">
-              <DateField label={s.lastDay} value={draft.through} onChange={sheet.setLastDay} rangeStart={draft.from} today={sheet.today} error={errors.last} />
+              <DateField size="full" label={s.lastDay} value={draft.through} onChange={sheet.setLastDay} rangeStart={draft.from} today={sheet.today} error={errors.last} />
               {sheet.throughOptions.length > 0 ? (
-                <Select label={s.throughSlot} options={sheet.throughOptions} value={sheet.throughValue} onChange={sheet.setThroughSlot} error={errors.throughSlot} />
+                <Select size="full" label={s.throughSlot} options={sheet.throughOptions} value={sheet.throughValue} onChange={sheet.setThroughSlot} error={errors.throughSlot} />
               ) : null}
             </div>
           )}

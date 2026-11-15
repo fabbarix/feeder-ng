@@ -33,6 +33,7 @@ function AwaySection({ member }: { member: Member }): ReactNode {
               title={row.title}
               aria-label={row.name}
               meta={row.detail}
+              metaLines={2}
               value={row.state}
               chevron
               haspopup="dialog"

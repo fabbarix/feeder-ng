@@ -2,7 +2,7 @@
 // TEST-AUTHOR scenarios: each setup ASSERTS what the chapters' guards name and throws when it does not hold, so the scenario is "not
 // inspected" (a failure) until the Away UI is built; the rules then measure what is open. The setups make their own data through the
 // API (an Away of the first Member, tomorrow and the day after, whole days; a 422 `overlap` on a re-run is fine).
-//   plan-away             /plan, 375, 390 and 1440: a whole-day Away is ONE line under the day's name (`.plan-day__away`, one text line, a 44 px
+//   plan-away             /plan, 375, 390 and 1440: a whole-day Away is ONE line under the day's name (`.plan-day__away`, never cut, at most two text lines (ruling 7), a 44 px
 //                         button named with the day); a part-day label is in the Meal Slot's header. P13, P38 (unique button names).
 //   away-sheet            /plan, 375, 390, 667x375 and 1440: the Away sheet from a Meal Slot ⋮ ("Someone is away…") with a Member chosen. Context
 //                         line "Ben · from …", no Close and a Cancel, the footer one row, the From and Through values on one line (no wrap),
@@ -139,8 +139,10 @@ export default {
             const r = l.getBoundingClientRect()
             if (r.height < 43.5) return 'an Away line is ' + r.height + ' px tall (a 44 px target)'
             const line = parseFloat(getComputedStyle(l).lineHeight) || 20
-            const text = l.querySelector('span, .plan-day__away-text') ?? l
-            if (text.getBoundingClientRect().height > line * 1.6) return 'the Away line "' + l.textContent.trim() + '" takes more than one line'
+            // Main-session ruling 7: the line never cuts; at 375 it may wrap to a second line, never a third.
+            const text = l.querySelector('.plan-day__away-text') ?? l
+            if (text.getBoundingClientRect().height > line * 2.6) return 'the Away line "' + l.textContent.trim() + '" takes more than two lines'
+            if (text.scrollWidth > text.clientWidth + 1 || l.scrollWidth > l.clientWidth + 1) return 'the Away line "' + l.textContent.trim() + '" is cut'
             if (!/ away all day/.test(l.textContent)) return 'the line says "' + l.textContent.trim() + '"'
             const tile = l.closest('article')
             const title = tile?.querySelector('.plan-day__title')
@@ -166,11 +168,13 @@ export default {
       await withSnapshot(async () => {
         await planWithAway()
         await openAwaySheet()
-        await until(`!!${DIALOG}.querySelector('details summary')`, 'the What changes disclosure', 8000)
-        await evaluate(`${DIALOG}.querySelector('details summary').click()`)
-        await until(`${DIALOG}.querySelector('details')?.open === true`, 'the disclosure open', 2000)
+        // Ruling 1 (main session): What changes is the shared ui Disclosure (its toggle is a button with aria-expanded), not a <details>.
+        const TOGGLE = `${DIALOG}.querySelector('[data-disclosure] .disclosure__button')`
+        await until(`!!${TOGGLE} && !${DIALOG}.querySelector('[data-disclosure]').closest('[aria-busy="true"]')`, 'the What changes disclosure', 8000)
+        await evaluate(`${TOGGLE}.click()`)
+        await until(`${TOGGLE}?.getAttribute('aria-expanded') === 'true'`, 'the disclosure open', 2000)
         const why = await evaluate(`(() => {
-          const d = ${DIALOG}.querySelector('details')
+          const d = ${DIALOG}.querySelector('[data-disclosure]')
           if (!d.querySelector('.detail-row')) return 'no R-E rows in the opened disclosure'
           if ([...d.querySelectorAll('li')].some((li) => !li.classList.contains('detail-row'))) return 'a free-text li in the disclosure (R-E rows only)'
           for (const s of d.querySelectorAll('.detail-row__state')) { const r = s.getBoundingClientRect(); const line = parseFloat(getComputedStyle(s).lineHeight) || 20; if (r.height > line * 1.6) return 'a row state wraps: ' + s.textContent.trim() }

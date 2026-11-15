@@ -57,7 +57,6 @@ export function AttendanceEditor({ members, value, onChange, memberExtra, away }
                   {m.name}
                 </label>
                 {extra ?? null}
-                {awayHere ? <AttendanceAway name={m.name} line={dateAwayLine(awayHere)} eatsHere={eats} onChange={(on) => onChange(withDespiteAway(value, m.id, on))} /> : null}
               </div>
               {entry && eats ? (
                 <div className="attendance__step">
@@ -73,6 +72,8 @@ export function AttendanceEditor({ members, value, onChange, memberExtra, away }
               ) : (
                 <span className="attendance__off">{text.notEating}</span>
               )}
+              {/* B9-46: under the name and the stepper, across both: the Away's days and "Eats here anyway". */}
+              {awayHere ? <AttendanceAway name={m.name} line={dateAwayLine(awayHere)} eatsHere={eats} onChange={(on) => onChange(withDespiteAway(value, m.id, on))} /> : null}
             </li>
           )
         })}

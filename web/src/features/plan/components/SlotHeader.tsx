@@ -31,9 +31,9 @@ export function SlotHeader({ slot, today, onCook, onMarkAllCooked, onNotCookedSl
       <span className="plan-slot-head__label">
         <Icon name={slotIcon(slot.name)} size={16} />
         <span className="plan-slot-head__name">{slot.name}</span>
+        {awayLabel ? <SlotAwayLabel text={awayLabel.text} everyone={awayLabel.everyone} /> : null}
       </span>
       <span className="plan-slot-head__time">{timeCaption(slot) ?? slot.time}</span>
-      {awayLabel ? <SlotAwayLabel text={awayLabel.text} everyone={awayLabel.everyone} /> : null}
       {head.cook || head.menu ? (
         <IconSet className="plan-slot-head__actions">
           {head.cook ? <IconButton icon="cook" label={actionName('cook', { day, slot: slot.name })} size="compact" onClick={() => onCook(slotKey)} /> : null}
