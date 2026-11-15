@@ -4,7 +4,7 @@
 //                          seed has no notice ("not inspected"), or when the title is not the first text of the tile, or the clamp is on the title.
 //   shop-line-sheet        /shop: the first open Line's sheet (To get and Estimated rows, "For", the footer) at 375, 390, 834, 1440 with touch
 //                          emulation: P25 (targets), P33 (sheet body), P23. The setup throws unless the sheet has its two R-E lists and ONE Close.
-//   shop-line-sheet-price  the same Line sheet with "Change the Price" pressed: the Price sheet over it (one Close, the keypad's), P25 and P33
+//   shop-line-sheet-price  the first open Line's sheet that has "Change the Price", with it pressed: the Price sheet over it (one Close, the keypad's), P25 and P33
 //                          at 375, 390 and 1440. The setup throws when the Product has no button (no seeded Product for the first Line).
 //   shop-complete          /shop with every open Line ticked (by the setup, through the API): the "Shopping List complete" status tile with its
 //                          three rows and at most ONE primary button inside it; the strip's Scan is not primary; its buttons are not cut.
@@ -21,6 +21,26 @@ const TOUCH = [
 const dialogOpen = `!!document.querySelector('dialog.sheet[open]')`
 /** The Lines (ingredient ids) and range end shop-complete ticked, for shop-complete-restore. */
 let tickedByComplete = { to: null, ids: [], extras: [], mores: [], off: [] }
+
+/**
+ * The first open Line whose sheet offers "Change the Price" (main-session ruling 3: under Any Shop a last-bought pack has no Shop to price
+ * at, so its sheet has no button): each Line's sheet is opened and closed in turn. false when none has it.
+ */
+async function openPriceableLineSheet() {
+  await until(`document.querySelectorAll('.shop-open .shop-lines .list-row__target').length > 0 && !document.querySelector('.skeleton')`, 'the Shop\'s open Lines')
+  return evaluate(`(async () => {
+    const wait = async (f) => { for (let i = 0; i < 40 && !f(); i++) await new Promise((r) => setTimeout(r, 100)) }
+    for (const t of document.querySelectorAll('.shop-open .shop-lines .list-row__target')) {
+      t.click()
+      await wait(() => document.querySelector('dialog.sheet[open]'))
+      const d = document.querySelector('dialog.sheet[open]')
+      if (d && [...d.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Change the Price')) return true
+      d?.querySelector('button[aria-label="Close"]')?.click()
+      await wait(() => !document.querySelector('dialog.sheet[open]'))
+    }
+    return false
+  })()`)
+}
 
 async function openFirstLineSheet() {
   await until(`document.querySelectorAll('.shop-open .shop-lines .list-row__target').length > 0 && !document.querySelector('.skeleton')`, 'the Shop\'s open Lines')
@@ -74,8 +94,7 @@ export default {
       if (!facts.footer.includes('Not needed') || !facts.footer.includes('Get something else…')) throw new Error('setup: SSP-14: the footer lacks "Get something else…" and "Not needed"')
     },
     async shopLineSheetPrice() {
-      await openFirstLineSheet()
-      if (!(await evaluate(`!!${byText('dialog.sheet[open] button', 'Change the Price')}`))) throw new Error('setup: SSP-13: the first open Line has no "Change the Price" (the seed needs a Product for it)')
+      if (!(await openPriceableLineSheet())) throw new Error('setup: SSP-13: no open Line has "Change the Price" (the seed needs a priced Product at a Shop for one)')
       await press(byText('dialog.sheet[open] button', 'Change the Price'), '"Change the Price"')
       await until(`document.querySelectorAll('dialog.sheet[open]').length >= 2 && !!document.querySelector('.price-keypad')`, 'the Price sheet over the Line sheet')
       const closes = await evaluate(`[...document.querySelectorAll('dialog.sheet[open]')].pop().querySelectorAll('button[aria-label="Close"], .price-keypad button').length`)
