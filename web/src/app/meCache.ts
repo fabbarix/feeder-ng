@@ -39,3 +39,8 @@ export function clearCachedMe(): void {
     // nothing to forget
   }
 }
+
+/** B9-20 (RES-05): the Household's IANA zone from the last /api/me, or null. STUB for the tests. */
+export function readCachedTimeZone(): string | null {
+  throw new Error('not implemented (B9-20)')
+}
