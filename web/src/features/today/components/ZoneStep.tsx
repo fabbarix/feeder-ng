@@ -22,15 +22,19 @@ export function ZoneStep({ rows, canChange, busy, onChange, onConfirm }: ZoneSte
     <>
       <ul className="setup-facts" aria-label={s.setupFacts.label}>
         {rows.map((row) => (
-          <li key={row.id} className="setup-fact" data-change={canChange ? 'true' : undefined}>
-            <span className="setup-fact__key">{row.key}</span>
-            <span className="setup-fact__state">{row.state}</span>
-            <span className="setup-fact__detail">{row.detail}</span>
-            {canChange ? (
-              <Button variant="secondary" size="sm" className="setup-fact__change" aria-label={row.changeLabel} onClick={() => onChange(row.id)}>
-                {s.setupFacts.change}
-              </Button>
-            ) : null}
+          <li key={row.id} className="setup-fact">
+            <span className="setup-fact__line">
+              <span className="setup-fact__key">{row.key}</span>
+              <span className="setup-fact__state">{row.state}</span>
+            </span>
+            <span className="setup-fact__line">
+              <span className="setup-fact__detail">{row.detail}</span>
+              {canChange ? (
+                <Button variant="secondary" size="sm" className="setup-fact__change" aria-label={row.changeLabel} onClick={() => onChange(row.id)}>
+                  {s.setupFacts.change}
+                </Button>
+              ) : null}
+            </span>
           </li>
         ))}
       </ul>

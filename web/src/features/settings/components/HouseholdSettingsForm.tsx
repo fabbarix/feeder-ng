@@ -140,7 +140,7 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
       <CurrencySelect size="sm" label={text.currency} value={draft.currency} disabled={readOnly} error={errors.currency} onChange={(currency) => set({ currency })} />
       {canEdit && value.setupHidden === true ? (
         <ul className="settings__rows" aria-label={text.rowsLabel}>
-          <li className="list-row" data-height="auto" data-actions="true" aria-labelledby={setupRowId}>
+          <li className="list-row" data-height="64" aria-labelledby={setupRowId}>
             <span className="list-row__text">
               <span id={setupRowId} className="list-row__title">
                 {text.setupChecklist}
@@ -149,11 +149,11 @@ export function HouseholdSettingsForm({ value, canEdit, saving, suggestedTimeZon
                 <span className="list-row__meta-text">{text.setupHidden}</span>
               </span>
             </span>
-            <div className="list-row__actions">
+            <span className="list-row__trailing">
               <Button variant="secondary" size="sm" loading={showingSetup} onClick={() => void onShowSetup?.()}>
                 {text.showSetup}
               </Button>
-            </div>
+            </span>
           </li>
         </ul>
       ) : null}
