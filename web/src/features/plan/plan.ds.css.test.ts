@@ -202,3 +202,10 @@ describe('source scans (the old week is gone)', () => {
     expect(readSource('features/plan/screens/CouldntPlanExclusionsScreen.tsx')).not.toMatch(/columns=/)
   })
 })
+
+describe('B9-19: the Plan header sits at the same height as every page header', () => {
+  it('.plan adds no top padding above its PageHeader', () => {
+    const plan = declarations(css, '.plan')
+    expect(plan['padding-top'] ?? plan['padding-block-start'] ?? plan['padding-block'] ?? plan['padding'] ?? '0').toBe('0')
+  })
+})
