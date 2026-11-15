@@ -179,11 +179,6 @@
   margin-block-start: var(--space-2);
 }
 
-/* A11Y-07: a step heading takes the focus from the program (tabIndex -1) and draws no ring. */
-.new-product__form [data-step-heading]:focus {
-  outline: none;
-}
-
 .new-product__eyebrow-title {
   margin: 0;
   font-size: var(--text-body-strong-size);
