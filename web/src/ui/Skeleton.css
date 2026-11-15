@@ -64,13 +64,13 @@
   border-radius: var(--radius-pill);
 }
 
-@media (min-width: 600px) {
+@media (min-width: 37.5em) /* 600px */ {
   :root {
     --skeleton-hero: 208px;
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64em) /* 1024px */ {
   :root {
     --skeleton-hero: 220px;
   }
