@@ -1,7 +1,7 @@
 import { Button, EmptyState, ListGroup, ListRow } from '../../../ui'
 import { settingsStrings } from '../strings'
 import type { Away } from '../../plan/types'
-import { awayMeta, memberRowName } from '../lib/away'
+import { awayMeta, awayMetaCompact, memberRowName } from '../lib/away'
 import type { Member } from '../types'
 import { MemberAvatar } from './MemberAvatar'
 import '../settings.css'
@@ -38,6 +38,8 @@ export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEd
           const linked = m.userId !== null ? linkedUserNames[m.userId] : undefined
           // B9-46 (SET-16): the next current or coming Away leads the meta line, in the info tone; the row is named with it.
           const away = aways && today ? awayMeta(aways[m.id] ?? [], today) : null
+          // A narrow row drops "· +1 more" (the full line stays the row's name).
+          const compact = aways && today ? awayMetaCompact(aways[m.id] ?? [], today) : null
           return (
             <ListRow
               key={m.id}
@@ -45,6 +47,7 @@ export function MemberList({ members, canEdit, linkedUserNames = {}, onAdd, onEd
               aria-label={memberRowName(m.name, away)}
               meta={[away, linked, m.email].filter(Boolean).join(' · ') || undefined}
               metaStatus={away ? 'info' : undefined}
+              metaCompact={compact && compact !== away ? compact : undefined}
               leading={<MemberAvatar name={m.name} colour={m.colour} avatar={m.avatar} photo={m.photo} size="sm" />}
               trailing={<span className="settings__portion-factor">{text.portionFactor(m.portionFactor)}</span>}
               onActivate={canEdit ? () => onEdit(m) : undefined}

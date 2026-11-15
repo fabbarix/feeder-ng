@@ -12,11 +12,17 @@ const current = (a: Away, today: string) => a.through === null || a.through >= t
 
 /** The Members list's meta line (info tone): "Away 20–27 Nov", "Away until Sun 16 Nov", "Away from Tue 1 Dec", "… · +1 more"; null when none is current or coming. */
 export const awayMeta = (aways: Away[], today: string): string | null => {
-  const live = aways.filter((a) => current(a, today)).sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0))
-  const next = live[0]
-  if (!next) return null
-  const words = next.through === null ? s.metaFrom(dayLong(next.from)) : next.started ? s.metaUntil(dayLong(next.through)) : s.metaRange(awayCompact(next))
+  const live = liveAways(aways, today)
+  const words = awayMetaCompact(aways, today)
+  if (!words) return null
   return live.length > 1 ? `${words} · ${s.metaMore(live.length - 1)}` : words
+}
+const liveAways = (aways: Away[], today: string) => aways.filter((a) => current(a, today)).sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : 0))
+/** The next Away alone ("Away until Mon 16 Nov"), for a narrow row; the full line stays the row's name. */
+export const awayMetaCompact = (aways: Away[], today: string): string | null => {
+  const next = liveAways(aways, today)[0]
+  if (!next) return null
+  return next.through === null ? s.metaFrom(dayLong(next.from)) : next.started ? s.metaUntil(dayLong(next.through)) : s.metaRange(awayCompact(next))
 }
 
 export interface AwayRowModel {
