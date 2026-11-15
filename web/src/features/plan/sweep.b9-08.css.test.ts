@@ -268,7 +268,6 @@ describe('DS-07 drift (B9-DRIFT-W1): a class that sets a font size also sets its
   // The listed cases of B9-DRIFT-W1.md (items 1-4 and 10), each by name, so a regression names the class.
   it.each([
     ['plan/components/TonightHero.css', '.to-confirm__when', 'var(--text-meta-line)'],
-    ['plan/components/TonightHero.css', '.to-confirm__count', 'var(--text-meta-line)'],
   ])('%s %s has line-height %s (B9-DRIFT-W1 items 1 and 2: the badge is 52 px tall, the count pill 30 px, on the body line)', (file, selector, line) => {
     const d = merged.get(`${file}\u0000${selector}`)?.d
     expect(d, `no rule for ${selector}`).toBeDefined()

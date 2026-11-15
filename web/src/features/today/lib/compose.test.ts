@@ -35,23 +35,25 @@ function tilesOf(data: TodayData) {
 }
 
 describe('composeToday', () => {
-  it('is the Shopping List while a scan session is active, whatever else is going on', () => {
-    expect(composeToday({ ...busy, scanSessionActive: true })).toEqual({ mode: 'shopping' })
-    expect(composeToday({ ...quiet, scanSessionActive: true })).toEqual({ mode: 'shopping' })
+  // B9-44 (TB-12, changed on purpose): a Scan session is a tile (`shopping`, first), no longer a mode (see compose.tb03.test.ts).
+  it('a scan session adds the shopping tile first and keeps the rest of Today', () => {
+    expect(composeToday({ ...busy, scanSessionActive: true })).toMatchObject({ mode: 'today' })
+    expect(tilesOf({ ...busy, scanSessionActive: true }).tiles[0]).toEqual({ id: 'shopping' })
   })
 
-  it('orders tiles by the Today hierarchy: the hero, To confirm, the metric strip, then the rest (DS-TODAY: streak became metrics)', () => {
+  // B9-44 (TB-03, changed on purpose): Advance Steps and the metric strip sit in the aside, right after To confirm; Throw out or keep? comes before Leftovers.
+  it('orders tiles by the Today hierarchy: the hero, To confirm, the aside (Advance Steps, the metric strip), then the rest', () => {
     const { tiles, empty } = tilesOf(busy)
     expect(empty).toBe(false)
     expect(tiles).toEqual([
       { id: 'nextMeal' },
       { id: 'toConfirm' },
-      { id: 'metrics' },
       { id: 'advanceSteps' },
+      { id: 'metrics' },
+      { id: 'couldntPlan' },
+      { id: 'spoiled' },
       { id: 'leftovers' },
       { id: 'useSoon' },
-      { id: 'spoiled' },
-      { id: 'couldntPlan' },
     ])
   })
 
@@ -79,7 +81,7 @@ describe('composeToday', () => {
   })
 
   it('is empty when nothing but the metric strip could show', () => {
-    expect(tilesOf(quiet)).toEqual({ mode: 'today', tiles: [], empty: true, failed: false })
+    expect(tilesOf(quiet)).toEqual({ mode: 'today', tiles: [], aside: [], empty: true, failed: false })
     const withStreak = tilesOf({ ...quiet, streakDays: 12, linesToGet: 4 })
     expect(withStreak.empty).toBe(true)
     expect(withStreak.tiles.map((t) => t.id)).toEqual(['metrics'])
@@ -89,8 +91,8 @@ describe('composeToday', () => {
     expect(tilesOf({ ...quiet, advanceSteps: 1 }).empty).toBe(false)
   })
 
-  it('without a next meal the rest keeps its order, spoiled lots after the half tiles', () => {
-    expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['leftovers', 'spoiled'])
+  it('without a next meal the rest keeps its order, Throw out or keep? before the Leftovers', () => {
+    expect(tilesOf({ ...quiet, spoiled: 1, leftovers: 1 }).tiles.map((t) => t.id)).toEqual(['spoiled', 'leftovers'])
   })
 
   // DS-TODAY (changed on purpose): no `heroSpan`. The hero always takes the whole row; the 2x2 back-fill on the 3-column

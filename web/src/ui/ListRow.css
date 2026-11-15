@@ -388,6 +388,27 @@
   }
 }
 
+/* B9-44 (TB-11): a row inside a tile takes the tile's padding instead of adding its own inset (as To confirm rows do). A row inside a
+   list group keeps its inset: the group is its own surface. */
+.tile .list-row {
+  padding-inline: 0;
+}
+.tile .list-group .list-row {
+  padding-inline: var(--space-4);
+}
+@container (width < 24rem) {
+  .tile .list-group .list-row {
+    padding-inline: var(--space-3);
+  }
+}
+/* B9-44 (TB-11): the value column's minimum follows the row's own width (the row is a size container): under 20 rem of row it is
+   --row-value-narrow, whatever the viewport, so a one-line meta such as "Good until tomorrow" keeps its line in a narrow track. */
+@container (width < 20rem) {
+  .list-row__value {
+    min-inline-size: var(--row-value-narrow);
+  }
+}
+
 /* SET-03: row actions (a Switch, two IconButtons, Deny and Approve). Below 35 rem of row they take their own line under the text,
    end-aligned; from 35 rem they sit at the end of line 1. They catch the pointer; the rest of the row stays the target. */
 .list-row[data-actions='true'] {

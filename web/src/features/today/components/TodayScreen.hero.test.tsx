@@ -128,11 +128,5 @@ describe('TodayScreen: To confirm and Leftovers', () => {
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')).toHaveLength(1))
   })
 
-  it('the Leftovers tile opens the Plan', async () => {
-    h.leftovers = [{ id: 1, recipeId: 1, recipeName: 'Soup', portions: 2, cookedOn: '2026-11-09', useBy: '2026-11-12', fromDate: '2026-11-09', fromMealSlotId: 2 }]
-    mockApi(base)
-    renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Leftovers to use' }))
-    expect(await screen.findByText('Plan screen')).toBeInTheDocument()
-  })
+  // B9-44 (TB-11, removed on purpose): the Leftovers tile no longer opens the Plan; its header links to the Pantry (LeftoversTile.tb11.test.tsx).
 })

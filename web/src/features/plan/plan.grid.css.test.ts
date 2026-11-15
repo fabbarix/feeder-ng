@@ -90,10 +90,7 @@ describe("PC-07: the compact Couldn't plan tile", () => {
     expect(bodyOf(".couldnt-cause[data-tone='warn'] .couldnt-cause__icon")).toMatch(/var\(--status-warn-fg\)/)
     expect(css).not.toMatch(/--status-spoil/)
   })
-  it('the tile header holds the overline and "Show which meals" on one row', () => {
-    expect(bodyOf('.couldnt-head')).toMatch(/display\s*:\s*flex/)
-    expect(bodyOf('.couldnt-head')).toMatch(/justify-content\s*:\s*space-between/)
-  })
+  // B9-44 (TB-09, removed on purpose): the header is the shared TileHeader with "Show which meals" as its action (CouldntPlanNotice.tb09.test.tsx).
 })
 
 describe('DS-06: Plan tones in plan.css', () => {

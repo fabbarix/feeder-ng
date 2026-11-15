@@ -8,13 +8,6 @@ import { findToast } from '../../../test/notices'
 import { allCookedResult, courseMeal, courseSlot, mockApi, planCourse, renderWithProviders, slot } from '../../plan/test-utils'
 import type { CookPreview, PlanSlot } from '../../plan/types'
 
-/** B9-45 (PC-02): the ONE shortfall notice (an info status tile with DetailList rows), not one danger alert per warning. */
-const findShortfallNotice = () =>
-  waitFor(() => {
-    const el = document.querySelector<HTMLElement>('.shortfall-notice')
-    if (!el) throw new Error('no shortfall notice')
-    return el
-  })
 import { TodayScreen } from './TodayScreen'
 
 const h = vi.hoisted(() => ({ toConfirm: [] as unknown[], nextSlot: null as unknown }))
@@ -95,24 +88,39 @@ describe.each([
     expect(toast.querySelector('.toast__body')).toHaveTextContent('Roast chicken: 2 portions planned for Thu Lunch. Green beans: 1 portion kept as a Leftover, good until Fri.')
   })
 
-  // B9-45 (PC-02): the ONE shortfall notice (info rows) and the ONE Correct Stock sheet, as on the Plan (PlanScreen.allCooked.test).
-  it('shows the Stock shortfall with Correct Stock and Dismiss', async () => {
-    const api = await open()
+  // B9-45 (PC-02, waits for it; B9-44 wires it on Today): ONE info notice for every short Ingredient, with DetailList rows, no alert; Correct
+  // Stock is ONE sheet with a Stepper per Ingredient (every row starts at 0, g by 10) and one Save.
+  const shortNotice = async () => (await screen.findByText('Stock was short for chicken thighs')).closest('.shortfall-notice') as HTMLElement
+
+  it('shows ONE shortfall notice (placement list) with a row per Ingredient, not an alert, and no duplicate in the sheets', async () => {
+    await open()
     await confirmAll()
-    const notice = await findShortfallNotice()
-    expect(notice).toHaveTextContent('Stock was short for chicken thighs')
-    expect(notice).toHaveTextContent('Cooking used 400 g · Stock showed 300 g')
-    await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
-    const correct = await screen.findByRole('dialog', { name: /Correct Stock/ })
-    await userEvent.click(within(within(correct).getByRole('group', { name: 'chicken thighs left now' })).getByRole('button', { name: /^Increase/ }))
-    await userEvent.click(within(correct).getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 10 }))
+    const notice = await shortNotice()
+    expect(notice).toHaveAttribute('data-status', 'info')
+    expect(notice).toHaveAttribute('role', 'status')
+    expect(within(notice).getByText('chicken thighs')).toBeInTheDocument()
+    expect(within(notice).getByText('Cooking used 400 g · Stock showed 300 g')).toBeInTheDocument()
+    expect(notice.querySelector('.shortfall-notice__subline')).toHaveTextContent(/Stock stays where it is/)
+    expect(document.querySelectorAll('.shortfall-notice')).toHaveLength(1)
+    expect(document.querySelector('[role="alert"]:not(.toast-live)')).toBeNull()
   })
 
-  it('Dismiss removes the shortfall', async () => {
+  it('Correct Stock opens the one sheet; Save writes the typed total and settles the notice', async () => {
     const api = await open()
     await confirmAll()
-    await userEvent.click(within(await findShortfallNotice()).getByRole('button', { name: 'Dismiss' }))
+    await userEvent.click(within(await shortNotice()).getByRole('button', { name: 'Correct Stock' }))
+    const correct = await screen.findByRole('dialog', { name: /Correct Stock/ })
+    const stepper = within(correct).getByRole('group', { name: 'chicken thighs left now' })
+    for (let n = 0; n < 25; n++) await userEvent.click(within(stepper).getByRole('button', { name: /^Increase/ }))
+    await userEvent.click(within(correct).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 }))
+    await waitFor(() => expect(document.querySelector('.shortfall-notice')).toBeNull())
+  })
+
+  it('Dismiss removes the shortfall and writes nothing', async () => {
+    const api = await open()
+    await confirmAll()
+    await userEvent.click(within(await shortNotice()).getByRole('button', { name: 'Dismiss' }))
     await waitFor(() => expect(document.querySelector('.shortfall-notice')).toBeNull())
     expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')).toHaveLength(0)
   })

@@ -354,5 +354,10 @@
   "partPlanned": "__fn__(planned, rest) => `${planned} planned. ${rest} not planned yet.`",
   "noneYet": "None planned yet.",
   "allPlanned": "All planned."
- }
+ },
+ "toConfirmCount": "__fn__(n) => `${n} ${n === 1 ? \"item\" : \"items\"}`",
+ "couldntCauseCount": "__fn__(n) => `${n} ${n === 1 ? \"cause\" : \"causes\"}`",
+ "leftoversTileTitle": "Leftovers",
+ "leftoversCount": "__fn__(n) => `${n} ${n === 1 ? \"Leftover\" : \"Leftovers\"}`",
+ "pantryLink": "Pantry"
 }

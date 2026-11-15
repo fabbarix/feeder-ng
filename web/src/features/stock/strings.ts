@@ -7,6 +7,9 @@ export const stockStrings = {
   emptyHint: 'Scan at a Shop, add by hand, or do a Stock-take.',
   useSoon: 'Use soon',
   spoiledHeading: 'Throw out or keep?',
+  // B9-44 (TB-09): the tile header's count name and its link to the Pantry
+  spoiledCount: (n: number) => `${n} Stock ${n === 1 ? 'Lot' : 'Lots'}`,
+  pantryLink: 'Pantry',
   throwOut: 'Throw out',
   keep: 'Keep',
   /** DS-TODAY: the cap of a long list. */

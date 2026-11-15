@@ -68,11 +68,13 @@ describe('Today: a Leftover past its Use-by waits for an answer', () => {
     expect(screen.getByText(QUESTION)).toBeInTheDocument()
   })
 
-  it('does not offer a row menu on the question, and keeps a Leftover still good as a normal row', async () => {
+  // B9-44 (TB-11, changed on purpose): a row has no ⋮; pressing the row opens its action sheet.
+  it('does not offer a row target on the question, and keeps a Leftover still good as a normal row', async () => {
     setup([asked, soup])
     await screen.findByText(QUESTION)
-    expect(screen.queryByRole('button', { name: 'Actions for Chilli' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Actions for Soup' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Chilli, / })).toBeNull()
+    expect(screen.getByRole('button', { name: /^Soup, 2 portions, Use by Sat/ })).toBeInTheDocument()
     expect(screen.getByText('Use by Sat · 2 portions')).toBeInTheDocument()
   })
 
@@ -156,16 +158,20 @@ describe('Today: answering', () => {
   })
 })
 
-describe('Today: the row menu', () => {
+// B9-44 (TB-11, changed on purpose): the row is the target and opens the Leftover's action sheet (the details sheet), with the three actions as buttons.
+describe('Today: the row’s action sheet', () => {
+  const openRow = async () => userEvent.click(await screen.findByRole('button', { name: /^Soup, 2 portions, Use by Sat/ }))
   const menu = async (name: string) => {
-    await userEvent.click(await screen.findByRole('button', { name: 'Actions for Soup' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name }))
+    await openRow()
+    const sheet = await screen.findByRole('dialog', { name: /Soup/ })
+    await userEvent.click(within(sheet).getByRole('button', { name }))
   }
 
   it('offers Had it, Threw it out and Freeze it', async () => {
     setup([asked, soup])
-    await userEvent.click(await screen.findByRole('button', { name: 'Actions for Soup' }))
-    expect((await screen.findAllByRole('menuitem')).map((m) => m.textContent)).toEqual(['Had it', 'Threw it out', 'Freeze it'])
+    await openRow()
+    const sheet = await screen.findByRole('dialog', { name: /Soup/ })
+    expect(within(sheet).getAllByRole('button').map((b) => b.textContent).filter((t) => ['Had it', 'Threw it out', 'Freeze it'].includes(t ?? ''))).toEqual(['Had it', 'Threw it out', 'Freeze it'])
   })
 
   it('Freeze it opens its sheet, names the Planned Meals it would replan, and posts only on confirm', async () => {
@@ -174,10 +180,10 @@ describe('Today: the row menu', () => {
       'POST /api/plan/leftovers/4/freeze': { frozen: frozenChilli({ id: 9, recipeName: 'Soup', useBy: '2027-02-10' }), left: null, replanned: [friDinner] },
     })
     await menu('Freeze it')
+    // B9-45 (PC-13, waits for it): the Freeze sheet asks "How many portions to freeze?" and says where it goes and the Use-by.
     const sheet = await screen.findByRole('dialog', { name: /How many portions to freeze\?/ })
     expect(await within(sheet).findByText('Fri Dinner was going to have it; it is planned again.')).toBeInTheDocument()
-    // B9-45 (PC-13): one meta line "Goes to <freezer> · Use by <date>"
-    expect(within(sheet).getByText(/Goes to/)).toHaveTextContent('Use by 10 Feb')
+    expect(within(sheet).getByText(/Goes to .*Use by 10 Feb/)).toBeInTheDocument()
     expect(api.callsTo('POST', '/api/plan/leftovers/4/freeze')).toHaveLength(0)
     await userEvent.click(within(sheet).getByRole('button', { name: 'Freeze 2 portions' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/leftovers/4/freeze')).toHaveLength(1))
@@ -236,8 +242,8 @@ describe('Today: the tile and the sheets', () => {
 
   it('Freeze it with no Freezer says so and links to Storage Places', async () => {
     setup([soup], { 'GET /api/storage-places': [places[0]] })
-    await userEvent.click(await screen.findByRole('button', { name: 'Actions for Soup' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Freeze it' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Soup, 2 portions, Use by Sat/ }))
+    await userEvent.click(within(await screen.findByRole('dialog', { name: /Soup/ })).getByRole('button', { name: 'Freeze it' }))
     const sheet = await screen.findByRole('dialog', { name: /How many portions to freeze\?/ })
     expect(within(sheet).getByText(/Add a Freezer first/)).toBeInTheDocument()
     expect(within(sheet).getByRole('link', { name: 'Storage Places' })).toHaveAttribute('href', '/settings/storage-places')

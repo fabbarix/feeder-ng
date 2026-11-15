@@ -22,15 +22,17 @@ describe('composeToday: the first-run setup checklist (R13)', () => {
     expect(ids({ ...quiet, needsSetup: true, couldntPlan: 9 })).toEqual(['setup'])
   })
 
-  it('without setup, Couldn\'t plan is a tile as before (last, after Throw out or keep)', () => {
-    expect(ids({ ...quiet, couldntPlan: 9, spoiled: 1 })).toEqual(['spoiled', 'couldntPlan'])
+  // B9-44 (TB-03, changed on purpose): Couldn't plan comes before Throw out or keep? on a phone.
+  it('without setup, Couldn\'t plan is a tile as before (before Throw out or keep?)', () => {
+    expect(ids({ ...quiet, couldntPlan: 9, spoiled: 1 })).toEqual(['couldntPlan', 'spoiled'])
   })
 
   it('needsSetup left out means not needed', () => {
     expect(ids({ ...quiet, couldntPlan: 1 })).toEqual(['couldntPlan'])
   })
 
-  it('a scan session still wins over everything', () => {
-    expect(composeToday({ ...quiet, needsSetup: true, scanSessionActive: true })).toEqual({ mode: 'shopping' })
+  // B9-44 (TB-12, changed on purpose): the session is a tile on top of Today, not a replacement of it.
+  it('a scan session adds the shopping tile before the setup checklist', () => {
+    expect(ids({ ...quiet, needsSetup: true, scanSessionActive: true })).toEqual(['shopping', 'setup'])
   })
 })

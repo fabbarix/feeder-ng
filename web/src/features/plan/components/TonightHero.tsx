@@ -203,13 +203,13 @@ export function TonightHero(props: TonightHeroProps): ReactNode {
       {hint ? <p className="plan-hero__hint">{hint}</p> : null}
       {action === 'cook' ? (
         <div className="plan-hero__actions">
-          <Button variant="primary" size="lg" block="phone" icon="cook" onClick={() => onCook(several ? slotKey : heroKey)}>
+          <Button variant="primary" size="lg" icon="cook" onClick={() => onCook(several ? slotKey : heroKey)}>
             {several ? slotCookLabel(slot) : heroCookLabel(meal)}
           </Button>
         </div>
       ) : canReheat ? (
         <div className="plan-hero__actions">
-          <Button variant="primary" size="lg" block="phone" icon="reheat" onClick={() => onReheat(heroKey)}>
+          <Button variant="primary" size="lg" icon="reheat" onClick={() => onReheat(heroKey)}>
             {s.reheat}
           </Button>
         </div>

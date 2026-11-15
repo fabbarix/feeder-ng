@@ -134,3 +134,8 @@
   line-height: var(--text-meta-line);
   color: var(--color-muted);
 }
+
+/* B9-44 (TB-11): a question among the rows of Today's Leftovers tile (its own li in the tile's list). */
+.leftover-items__question {
+  padding-block: var(--space-2);
+}

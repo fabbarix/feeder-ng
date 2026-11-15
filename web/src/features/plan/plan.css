@@ -27,20 +27,6 @@
   container-type: inline-size;
   gap: var(--space-2);
 }
-.couldnt-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.couldnt-head > .tile__overline {
-  margin: 0;
-  min-width: 0;
-}
-.couldnt-head > .button {
-  flex: none;
-}
 .couldnt-cause {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -655,6 +641,16 @@
   padding-block: var(--space-2);
   padding-inline: var(--space-3);
 }
+/* B9-44 (TB-11): Today's Leftovers tile lists its rows in a real list; a row takes the tile's padding (no inset of its own). */
+.plan-leftovers__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plan-leftovers__list .list-row[data-height] {
+  padding-inline: 0;
+}
 /* DS-05: the title clamp and the one-line meta are ListRow's (system.md §3); this tile does not override them. */
 /* B9-32 (PC-07): the Plan's Leftovers tile lists its rows (questions first) from 1024 px, and in its sheet. */
 .plan-leftovers__rows {
@@ -700,11 +696,17 @@
   flex: none;
 }
 
-/* R2-2 (L-07): the hero actions sit at the tile's end on a wide hero (44 rem of the hero's own width, DS-09); the button keeps
-   its own width. */
-@container plan-hero (min-width: 44rem) {
+/* B9-44 (TB-03): Cook follows the hero's own width, never the viewport: below 35 rem of hero it is full width; from 35 rem it keeps its
+   own width at the tile's end. One container rule, so it never changes sides as the page around it resizes. */
+.plan-hero__actions > .button {
+  flex: 1 1 100%;
+}
+@container plan-hero (min-width: 35rem) {
   .plan-hero__actions {
     justify-content: flex-end;
+  }
+  .plan-hero__actions > .button {
+    flex: none;
   }
 }
 

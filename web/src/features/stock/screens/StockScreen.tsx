@@ -293,7 +293,11 @@ export function StockScreen(): ReactElement | null {
         places={pantry.places}
         today={today}
         system={system}
-        onClose={() => setOpenLot(null)}
+        onClose={() => {
+          setOpenLot(null)
+          // B9-44 (TB-11): a sheet opened from ?lot= takes the parameter away when it closes, so the address no longer opens it.
+          if (filters.lot !== null) filters.clearLot()
+        }}
         onMove={(lot, placeId, quantity) => {
           setOpenLot(null)
           const place = pantry.places.find((p) => p.id === placeId)

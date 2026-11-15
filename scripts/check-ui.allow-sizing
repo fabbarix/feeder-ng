@@ -2,3 +2,4 @@
 # entry without a reason is ignored). An entry matches only that exact selector, so keep it to a tile whose floor is part
 # of its design, never a content tile (content tiles size to content).
 .tile-error   # RES-09: a crashed tile keeps its slot with a 96 px floor, so the Today grid does not jump when it fails
+.tile-header__link   # B9-44 (TB-09): the TileHeader's trailing link is not a tile but a 44 px link target ("Pantry ›"); its floor is the touch target

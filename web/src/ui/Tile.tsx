@@ -5,6 +5,7 @@ import type { IconName } from './icons'
 import { ActionSurface } from './lib/actionSurface'
 import { resolveTile, type LegacyTileSize, type LegacyTileTone } from './lib/legacy'
 import './Tile.css'
+import './fields/Field.css' // the shared .visually-hidden utility (TileMetric's spelled-out value)
 
 export type TileVariant = 'surface' | 'hero' | 'soft' | 'status' | 'media' | 'action'
 export type TileSpan = 1 | 2 | 'full'
@@ -130,13 +131,18 @@ export interface TileMetricProps {
   value: string
   /** What it counts, e.g. "left to get". */
   label: string
+  /** B9-44 (TB-08): the value spelled out for assistive technology when its short form needs it ("12 d" reads "12 days"). */
+  name?: string
 }
 
 /** A `display` number with its label, for metric tiles. */
-export function TileMetric({ value, label }: TileMetricProps) {
+export function TileMetric({ value, label, name }: TileMetricProps) {
   return (
     <span className="tile-metric">
-      <span className="tile-metric__value">{value}</span>
+      <span className="tile-metric__value" aria-hidden={name ? true : undefined}>
+        {value}
+      </span>
+      {name ? <span className="visually-hidden">{name}</span> : null}
       {/* A space for the text and screen readers ("8 portions per Batch"); the flex column drops it from the layout. */}{' '}
       <span className="tile-metric__label">{label}</span>
     </span>

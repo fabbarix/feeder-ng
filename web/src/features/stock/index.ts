@@ -11,7 +11,13 @@ export const routes: RouteObject[] = [
 
 // For the Today screen (a later team).
 export { SpoiledTile } from './components/SpoiledTile'
-export { useSpoiledLots, useStockTotals } from './hooks/useStock'
+export { useAllLots, useSpoiledLots, useStockTotals } from './hooks/useStock'
+// B9-44 (TB-11, SAFE-09, SSP-17): the Pantry's Lot sheet over Today (loaded on demand), and Throw out or keep? with Undo and Change.
+export { LotSheetHost } from './components/LotSheetHost.lazy'
+export type { LotSheetHostProps } from './components/LotSheetHost'
+export { useSpoiledFlow } from './hooks/useSpoiledFlow'
+export type { SpoiledFlow, SpoiledFlowInput, ThrowOutCalls } from './hooks/useSpoiledFlow'
+export { KeepDateSheet } from './components/KeepDateSheet'
 
 // B9-45 (PC-02): the one Stock-shortfall notice and the one Correct Stock sheet (the Plan, Today and Cook Mode share them).
 export { ShortfallNotice } from './components/ShortfallNotice'

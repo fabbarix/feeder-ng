@@ -147,7 +147,9 @@ async function leftoverFreezeSheet() {
     name = await evaluate(`(async () => { const l = (await (await fetch('/api/plan/leftovers')).json()); const a = Array.isArray(l) ? l : l.leftovers ?? []; return a.find((x) => !x.frozen && !x.toAnswer)?.recipeName ?? null })()`)
     if (!name) throw new Error('setup: not inspected: no Leftover to freeze')
   }
-  await press(`document.querySelector('button[aria-label=${JSON.stringify('Actions for ' + name)}]')`, 'the Leftover row menu')
+  // B9-44 (TB-11): on Today the row itself opens the Leftover's actions (no ⋮); elsewhere the row menu is still the way in.
+  const ROW = `([...document.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') ?? '').startsWith(${JSON.stringify(name + ', ')})) ?? document.querySelector('button[aria-label=${JSON.stringify('Actions for ' + name)}]'))`
+  await press(ROW, 'the Leftover row')
   const FREEZE = `([...document.querySelectorAll('[role="menuitem"]')].find((e) => e.textContent.trim() === 'Freeze it') ?? [...document.querySelectorAll('dialog[open] *')].filter((e) => e.children.length === 0 && e.textContent.trim() === 'Freeze it').map((e) => e.closest('button, a') ?? e.closest('li')?.querySelector('button, a') ?? e)[0])`
   await until(`!!(${FREEZE})`, 'the Freeze it menu item')
   await press(FREEZE, '"Freeze it"')
