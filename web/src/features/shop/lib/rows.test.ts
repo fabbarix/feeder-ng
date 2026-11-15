@@ -43,8 +43,8 @@ describe('lineEntry: the short hint', () => {
 })
 
 describe('rowMeta: one line, tone-able', () => {
-  it('a Line with a pack suggestion shows the pack, untoned', () => {
-    expect(rowMeta(plain)).toEqual({ text: '2 × Mutti 700 g' })
+  it('a Line with a pack suggestion shows the pack, untoned (B9-34: with "2 × 700 g" as its compact form for a narrow row)', () => {
+    expect(rowMeta(plain)).toEqual({ text: '2 × Mutti 700 g', compact: '2 × 700 g' })
   })
   it('a Line with unconfirmed past meals shows the short info marker instead (info tone)', () => {
     expect(rowMeta(hinted)).toEqual({ text: 'Tue Dinner', status: 'info' })
@@ -87,14 +87,15 @@ describe('lineActions: what the row sheet offers', () => {
   it('an open extra: Delete (extras can be deleted, Lines cannot)', () => {
     expect(lineActions(extraEntry(makeExtra(), 'metric'), 'open')).toEqual(['delete'])
   })
-  it('a ticked Line: nothing to do but Mark it, when it has a hint; the tick control unticks it', () => {
+  // B9-34 (SSP-18): a ticked Line's sheet is not a dead end any more: it offers Untick (and Change amount with the viewer's hand addition)
+  it('a ticked Line: Untick, after Mark it when it has a hint (no tick from the server: no Change amount)', () => {
     const ticked = lineEntry(makeLine({ ticked: true, quantity: 0 }), 'USD', 'metric')
-    expect(lineActions(ticked, 'ticked')).toEqual([])
+    expect(lineActions(ticked, 'ticked')).toEqual(['untick'])
     const tickedHinted = lineEntry(makeLine({ ticked: true, quantity: 0, pastPlannedMeals: [makePast()] }), 'USD', 'metric')
-    expect(lineActions(tickedHinted, 'ticked')).toEqual(['mark-it'])
+    expect(lineActions(tickedHinted, 'ticked')).toEqual(['mark-it', 'untick'])
   })
-  it('a ticked extra can still be deleted', () => {
-    expect(lineActions(extraEntry(makeExtra({ ticked: true }), 'metric'), 'ticked')).toEqual(['delete'])
+  it('a ticked extra can still be deleted (after Untick)', () => {
+    expect(lineActions(extraEntry(makeExtra({ ticked: true }), 'metric'), 'ticked')).toEqual(['untick', 'delete'])
   })
   it('a Not needed Line: Needed after all (and Mark it with a hint)', () => {
     expect(lineActions(plain, 'not-needed')).toEqual(['needed-after-all'])

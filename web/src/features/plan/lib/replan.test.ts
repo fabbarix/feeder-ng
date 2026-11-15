@@ -171,6 +171,8 @@ describe('reviewModel: the sheet "What changed"', () => {
     expect(lunch!.why).toBeUndefined()
     expect(dinnerSide!.detail).toBe('Dinner · Side · was not planned')
     expect(model.days[1]!.rows[0]).toMatchObject({ key: 'Lentil soup', detail: 'Dinner · Main · was Chicken curry', why: 'uses Lentils by Thu' })
+    // Batch w3e review: the sheet draws the parts (the mock's glyphs).
+    expect(model.days[1]!.rows[0]).toMatchObject({ place: 'Dinner · Main', was: 'was Chicken curry', whyIcon: 'useSoon' })
   })
 
   it('a cell that is now empty is "Nothing planned"', () => {

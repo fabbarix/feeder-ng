@@ -11,10 +11,10 @@ const model: ReviewModel = {
   context: 'After your Swap · 2 other meals',
   lede: 'Your Swap on Tue Breakfast moved 2 other meals. Meals you Pinned or shopped for did not move.',
   days: [
-    { date: '2026-11-17', heading: 'Tue 17', rows: [{ key: 'Chicken curry', detail: 'Lunch · Main · was Lentil soup', cell: { date: '2026-11-17', mealSlotId: 2, courseId: 1 } }] },
+    { date: '2026-11-17', heading: 'Tue 17', rows: [{ key: 'Chicken curry', detail: 'Lunch · Main · was Lentil soup', place: 'Lunch · Main', was: 'was Lentil soup', cell: { date: '2026-11-17', mealSlotId: 2, courseId: 1 } }] },
     {
       date: '2026-11-18', heading: 'Wed 18',
-      rows: [{ key: 'Lentil soup', detail: 'Dinner · Main · was Chicken curry', why: 'uses Lentils by Thu', cell: { date: '2026-11-18', mealSlotId: 3, courseId: 1 } }],
+      rows: [{ key: 'Lentil soup', detail: 'Dinner · Main · was Chicken curry', place: 'Dinner · Main', was: 'was Chicken curry', why: 'uses Lentils by Thu', whyIcon: 'useSoon', cell: { date: '2026-11-18', mealSlotId: 3, courseId: 1 } }],
     },
   ],
 }
@@ -51,6 +51,15 @@ describe('ReplanReviewSheet', () => {
     expect(rows[0]!.querySelector('.detail-row__detail')).toHaveTextContent('Lunch · Main · was Lentil soup')
     expect(within(rows[1] as HTMLElement).getByText('uses Lentils by Thu')).toBeInTheDocument()
     expect(dialog().querySelector('li:not(.detail-row)')).toBeNull()
+  })
+
+  // Batch w3e review: the mock draws "was …" with its ArrowsClockwise glyph, and the why chip with its glyph as on the Plan.
+  it('"was …" carries its glyph and the why chip its own glyph (the mock)', () => {
+    setup()
+    const rows = dialog().querySelectorAll('li.detail-row')
+    expect(rows[0]!.querySelector('.replan-review__was svg')).not.toBeNull()
+    expect(rows[0]!.querySelector('.replan-review__was')).toHaveTextContent('was Lentil soup')
+    expect(within(rows[1] as HTMLElement).getByText('uses Lentils by Thu').closest('.chip')!.querySelector('svg')).not.toBeNull()
   })
 
   it('the footer has Undo all (secondary) and Keep the changes (primary); no Cancel; one Close', () => {

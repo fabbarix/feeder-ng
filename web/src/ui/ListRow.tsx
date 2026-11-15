@@ -46,7 +46,7 @@ interface ListRowBase {
   busy?: boolean
   /** A11Y-08: ids of elements that also describe the target (merged before the row's own value, sub-value and meta ids). */
   'aria-describedby'?: string
-  /** DS-10: 2 lets the meta of a navigation row (with `href`) take two lines, then an ellipsis. Ignored on any other row. */
+  /** DS-10: 2 lets the meta of a navigation row (with `href`, or an `onActivate` row with a `chevron`) take two lines, then an ellipsis. Ignored on any other row. */
   metaLines?: 1 | 2
   /** SSP-05: the short form of `meta`, shown while the row's text column is under 12 rem; the long `meta` stays the accessible text. */
   metaCompact?: ReactNode
@@ -192,8 +192,8 @@ export function ListRow(props: ListRowProps) {
   // A11Y-08: the target is named by the title and described by the value, sub-value and meta (in reading order), after the caller's ids.
   const describedBy =
     [props['aria-describedby'], hasValue ? valueId : '', hasSubValue ? subValueId : '', hasMeta ? metaId : ''].filter(Boolean).join(' ') || undefined
-  // DS-10: only a navigation row may take a two-line description; a status row keeps its one line.
-  const metaTwoLines = metaLines === 2 && href !== undefined
+  // DS-10: only a navigation row may take a two-line description (a link, or a chevron row that opens a page); a status row keeps its one line.
+  const metaTwoLines = metaLines === 2 && (href !== undefined || (chevron === true && onActivate !== undefined))
   let target: ReactNode = null
   if (href !== undefined) {
     target = inRouter ? (

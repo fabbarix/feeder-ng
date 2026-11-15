@@ -50,6 +50,7 @@ import { priceContext } from '../lib/priceContext'
 import type { PriceEntry, PriceIntent } from '../lib/priceEntry'
 import { rowByKey, type ScannedRow } from '../lib/scannedList'
 import { scanStrings } from '../strings'
+import { TickChangeSheet } from '../../shop/components/TickChangeSheet'
 import '../scan.css'
 
 type Choice = ScanChoice
@@ -386,6 +387,8 @@ function ScanSession({ mode, shop, onChangeShop, elsewhere }: ScanSessionProps) 
           onCreateNew={flow.createNewInstead}
         />
       ) : null}
+      {/* B9-34 (SSP-01): Change in a To get tick's toast opens the Shop's Change sheet */}
+      {c.toGetTick.flow ? <TickChangeSheet flow={c.toGetTick.flow} system={c.system} /> : null}
     </section>
   )
 }

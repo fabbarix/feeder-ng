@@ -33,7 +33,7 @@ export interface StartContext {
 }
 
 /** The glyph of each why code (a neutral why chip always has one). */
-const WHY_ICON: Partial<Record<Why['code'], IconName>> = {
+export const WHY_ICON: Partial<Record<Why['code'], IconName>> = {
   favourite: 'favourite',
   slot_rule: 'slotRule',
   perishable_use: 'useSoon',

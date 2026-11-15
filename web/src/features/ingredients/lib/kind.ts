@@ -1,9 +1,10 @@
 // H5 (ADR 0017, household-items.md section 6): the pure rules of Supplies in the web catalogue. Plain TypeScript, no React.
 import { ApiError } from '../../../lib/http'
+import { restockReason } from '../../../lib/restock'
 import { baseUnitLabel, formatQuantity, type BaseUnit, type UnitSystem } from '../../../lib/units'
 import { strings } from '../strings'
 import type { Ingredient, IngredientKind, NewIngredient } from '../types'
-import { ingredientMeta } from './names'
+import { ingredientMeta, tidyName } from './names'
 
 /** A food Ingredient unless its kind says otherwise (older fixtures have no kind). */
 export function kindOf(ingredient: { kind?: IngredientKind }): IngredientKind {
@@ -65,10 +66,14 @@ export function restockSummary(level: number | null, baseUnit: BaseUnit, system:
   return strings.restock.below(formatQuantity(level, baseUnit, system))
 }
 
-/** The row meta of a Supply: its Base Unit label, then the level when there is one ("piece · restocks below 6 pieces"). */
+/**
+ * The row meta of a Supply: its Base Unit label, then the level when there is one, in the one Restock wording of lib/restock
+ * ("piece · Restocks below 6", "g · Restocks below 1.2 kg").
+ */
 export function supplyMeta(label: string, level: number | null, baseUnit: BaseUnit, system: UnitSystem): string {
   if (level === null) return label
-  return `${label} · ${strings.restock.metaBelow(formatQuantity(level, baseUnit, system))}`
+  // The Stock plays no part here: any amount at or above the level gives the "Restocks below" form without the Stock.
+  return `${label} · ${restockReason(level, level, baseUnit, system, { stockInReason: false }).long}`
 }
 
 /** The row meta of any Ingredient in a list: a Supply shows its Restock level, food its Shelf Life. */
@@ -87,8 +92,17 @@ export function asFood(body: NewIngredient): NewIngredient {
 
 /** The words of a list and page for one kind: food keeps the Ingredients words, a Supply has its own. */
 export function wordsFor(kind: IngredientKind) {
-  return kind === 'supply' ? strings.supply : foodWords
+  const words = kind === 'supply' ? strings.supply : foodWords
+  return {
+    ...words,
+    /** SET-14e: the empty search names what was typed (trimmed, runs of spaces collapsed). */
+    noMatchFor: (q: string) => words.noMatchFor(tidyQuery(q)),
+    newFromSearch: (q: string) => words.newFromSearch(tidyQuery(q)),
+  }
 }
+
+/** A typed search as the empty-search words quote it: trimmed, runs of spaces collapsed. */
+export const tidyQuery = tidyName
 
 const foodWords = {
   title: strings.title,
@@ -101,6 +115,8 @@ const foodWords = {
   emptyTitle: strings.emptyTitle,
   emptyText: strings.emptyText,
   noMatches: strings.noMatches,
+  noMatchFor: strings.noMatchFor,
+  newFromSearch: strings.newFromSearch,
   listError: strings.listError,
   itemError: strings.itemError,
   offlineListTitle: strings.offlineListTitle,

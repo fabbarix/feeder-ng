@@ -33,6 +33,12 @@ export interface IngredientDetail extends Ingredient {
   references: Record<string, number>
 }
 
+/** B9-06 / SAFE-02: GET /api/ingredients/{id}/impact: what still uses it (mover -> count) and the sum. */
+export interface IngredientImpact {
+  references: Record<string, number>
+  total: number
+}
+
 export interface Suggestion {
   ingredient: Ingredient
   score: number

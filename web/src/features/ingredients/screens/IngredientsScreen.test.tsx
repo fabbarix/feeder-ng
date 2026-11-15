@@ -42,7 +42,7 @@ describe('IngredientsScreen', () => {
     state.ingredients = []
     state.isLoading = true
     setup()
-    expect(screen.queryByText('No Ingredient matches that search')).toBeNull()
+    expect(screen.queryByText(/^No Ingredient matches/)).toBeNull()
     expect(await screen.findByText('Loading')).toBeInTheDocument()
   })
   it('lists the Ingredients under a heading', () => {
@@ -66,11 +66,12 @@ describe('IngredientsScreen', () => {
     setup()
     expect(screen.getByText(strings.emptyTitle)).toBeInTheDocument()
   })
-  it('says nothing matches when the search finds none', () => {
+  it('says nothing matches the typed search (SET-14e: it names the query; the create offer is in IngredientsScreen.search.test.tsx)', async () => {
     state.ingredients = []
     state.isEmpty = false
     setup()
-    expect(screen.getByText(strings.noMatches)).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('searchbox', { name: strings.searchLabel }), 'xyz')
+    expect(screen.getByText('No Ingredient matches “xyz”.')).toBeInTheDocument()
   })
   it('searches with the shared SearchField, not a native search input', () => {
     setup()

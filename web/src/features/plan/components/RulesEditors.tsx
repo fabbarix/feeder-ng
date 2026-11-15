@@ -8,6 +8,7 @@ import { rulesStrings } from '../lib/rulesStrings'
 import { planStrings as s } from '../strings'
 import type { MealSlotChoice, RecipeChoice, SlotRule, VarietyRule } from '../types'
 import '../plan.css'
+import './RulesEditors.css'
 
 /**
  * Enter in a field commits its value (NumberField) and must not submit the form with the values from before the commit.
@@ -71,6 +72,7 @@ export function SlotRulesEditor({ rules, mealSlots, recipes, tags, onAdd, onRemo
               key={r.id}
               title={slotRuleTitle(labelOf(r.mealSlotId), ruleCourseName(slotOf(r.mealSlotId), r.courseId))}
               meta={r.recipeId !== undefined ? describeSlotRule(r) : undefined}
+              data-rule=""
               trailing={
                 <Button variant="secondary" size="sm" onClick={() => onRemove(r.id)}>
                   {s.removeRule}

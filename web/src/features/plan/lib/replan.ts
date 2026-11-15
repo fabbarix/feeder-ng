@@ -2,7 +2,9 @@
 // rows. Plain TypeScript, no React.
 import { undoStrings as u } from '../strings/undo'
 import type { PlanSlot, SlotKey, Why } from '../types'
+import type { IconName } from '../../../ui/icons'
 import { dayNumber, phraseWhy, weekdayName } from './phrase'
+import { WHY_ICON } from './rowChips'
 
 /** One side of a change (null: the cell is empty on that side). */
 export interface CellState {
@@ -46,8 +48,13 @@ export interface ReviewRow {
   key: string
   /** "Lunch · Main · was Lentil soup". */
   detail: string
+  /** The detail's parts as the sheet draws them (the mock): "Lunch · Main", then "was Lentil soup" with its glyph. */
+  place: string
+  was: string
   /** The first why chip, phrased ("uses Lentils by Thu"); absent without one. */
   why?: string
+  /** The glyph of that why chip, as on the Plan's rows. */
+  whyIcon?: IconName
   cell: SlotKey
 }
 
@@ -162,11 +169,11 @@ function compare(a: [string, number, number], b: [string, number, number]): numb
   return a[1] - b[1] || a[2] - b[2]
 }
 
-/** The first why chip that has words. */
-function firstWhy(why: Why[], date: string): string | undefined {
+/** The first why chip that has words, with its glyph. */
+function firstWhy(why: Why[], date: string): { text: string; icon: IconName } | undefined {
   for (const w of why) {
     const text = phraseWhy(w, { slotDate: date })
-    if (text) return text
+    if (text) return { text, icon: WHY_ICON[w.code] ?? 'why' }
   }
   return undefined
 }
@@ -174,10 +181,14 @@ function firstWhy(why: Why[], date: string): string | undefined {
 function reviewRow(slots: PlanSlot[], c: PlanChange): ReviewRow {
   const found = find(slots, c)
   const was = c.before ? u.was(c.before.recipeName) : u.wasNotPlanned
-  const detail = [found?.slot.name, found?.course?.name, was].filter((p): p is string => Boolean(p)).join(' · ')
+  const place = [found?.slot.name, found?.course?.name].filter((p): p is string => Boolean(p)).join(' · ')
+  const detail = place ? `${place} · ${was}` : was
   const why = firstWhy(c.why, c.date)
-  const row: ReviewRow = { key: c.after?.recipeName ?? u.nothingPlanned, detail, cell: { date: c.date, mealSlotId: c.mealSlotId, courseId: c.courseId } }
-  if (why) row.why = why
+  const row: ReviewRow = { key: c.after?.recipeName ?? u.nothingPlanned, detail, place, was, cell: { date: c.date, mealSlotId: c.mealSlotId, courseId: c.courseId } }
+  if (why) {
+    row.why = why.text
+    row.whyIcon = why.icon
+  }
   return row
 }
 

@@ -4,7 +4,7 @@ import type { ScreenState } from '../../../lib/dataState'
 import { ingredientsApi } from '../api'
 import { totalReferences } from '../lib/references'
 import type { BaseUnit } from '../../../lib/units'
-import type { Conversion, Ingredient, IngredientDetail, IngredientKind } from '../types'
+import type { Conversion, Ingredient, IngredientDetail, IngredientKind, IngredientPatch } from '../types'
 
 export interface UseIngredient {
   /** B9-20 (RES-02): loading, ready, offlineSaved, offlineUnknown or failed (a 404 is failed after one request). */
@@ -18,6 +18,8 @@ export interface UseIngredient {
   /** Sum of the reference counts; the Base Unit and deletion are locked while > 0. */
   referenceCount: number
   rename: (name: string) => Promise<Ingredient>
+  /** B9-48 (SET-05): ONE PATCH with all the Keeping values; rejects with the server refusal. */
+  save: (patch: IngredientPatch) => Promise<Ingredient>
   setBaseUnit: (base: BaseUnit) => Promise<Ingredient>
   /** null clears the Shelf Life. */
   setShelfLife: (days: number | null) => Promise<Ingredient>
@@ -58,6 +60,7 @@ export function useIngredient(id: number): UseIngredient {
     refetch: () => void query.refetch(),
     referenceCount,
     rename: (name) => changed(ingredientsApi.patch(id, { name })),
+    save: (patch) => changed(ingredientsApi.patch(id, patch)),
     setBaseUnit: (baseUnit) => changed(ingredientsApi.patch(id, { baseUnit })),
     setShelfLife: (shelfLifeDays) => changed(ingredientsApi.patch(id, { shelfLifeDays })),
     setFrozenShelfLife: (frozenShelfLifeDays) => changed(ingredientsApi.patch(id, { frozenShelfLifeDays })),

@@ -1,0 +1,8 @@
+/* Batch w3e (P23 on /settings/planning at 390 and 430): a Slot Rule's "Recipe: Cauliflower al gorgonzola with chestnut mushrooms"
+   wraps under the rule instead of being cut with an ellipsis; a Recipe's name is the point of the row. */
+.list-row[data-rule] .list-row__meta,
+.list-row[data-rule] .list-row__meta-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}

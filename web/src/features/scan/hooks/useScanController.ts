@@ -101,7 +101,7 @@ export function useScanController(options: ScanControllerOptions): ScanControlle
   const ingredientChoices = useIngredientChoices()
   const totals = useStockTotals()
   const shopList = useShoppingList({ shopId })
-  const toGetTick = useToGetTick({ to: shopList.data?.to, shopId })
+  const toGetTick = useToGetTick({ to: shopList.data?.to, shopId, system })
   const [picturePicking, setPicturePicking] = useState(false)
   const camera = useCamera({ enabled: !picturePicking })
   const sessionStore = useMemo(() => appSessionStore(), [])

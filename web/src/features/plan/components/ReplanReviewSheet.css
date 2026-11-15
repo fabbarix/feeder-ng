@@ -30,6 +30,19 @@
   gap: var(--space-1);
 }
 
+/* "was Lentil soup" with its ArrowsClockwise glyph, info-toned at 600 like the changed row on the Plan (the mock's .pc-was). */
+/* Inline, so a long "was …" wraps with the line instead of dropping whole onto a line of its own after a dangling "·". */
+.replan-review__was {
+  color: var(--color-info-fg);
+  font-weight: 600;
+}
+
+.replan-review__was svg {
+  display: inline-block;
+  margin-inline-end: var(--space-1);
+  vertical-align: -0.15em;
+}
+
 /* Each changed meal keeps the info-tone bar of its row on the Plan (PC-01). */
 .replan-review .detail-row {
   padding-inline-start: var(--space-3);

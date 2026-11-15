@@ -41,7 +41,8 @@ export function focusFirstInvalid(root: ParentNode | null | undefined): HTMLElem
     const target = focusTargetOf(candidate)
     if (!target) continue
     openDisclosuresAround(target)
-    target.scrollIntoView({ block: 'center' })
+    // Optional: an environment without layout (jsdom) has no scrollIntoView; focus still moves.
+    target.scrollIntoView?.({ block: 'center' })
     target.focus({ preventScroll: true })
     return target
   }

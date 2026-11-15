@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { markKey } from '../lib/replan'
 import { meal, mockApi } from '../test-utils'
 import { cell, dinnerChange, findToastWith, lunchChange, noToast, pressInToast, seededClient, toastWith, wrapperFor } from '../test-utils.undo'
+import { ApiError } from '../../../lib/http'
+import { planApi } from '../api'
 import { usePlanActions } from './usePlanActions'
 import { useReplanReview } from './useReplanReview'
 
@@ -90,6 +92,17 @@ describe('a Swap that changed other meals (PC-01)', () => {
     expect(result.current.review.model?.days.map((d) => d.heading)).toEqual(['Tue 17', 'Wed 18'])
     expect(result.current.review.marks).toEqual({})
     expect(result.current.review.canUndo).toBe(true)
+  })
+
+  // Batch w3e review: the toast's Undo pressed offline fails gracefully, as a warning that says Feeder is offline.
+  it('an Undo pressed offline is the warning "Nothing was undone" / "Feeder is offline."', async () => {
+    const { result } = setup({ [`PUT ${tueBreakfastPath}`]: written() })
+    await act(async () => void (await result.current.actions.setMeal(tueBreakfast, 21, 'swap')))
+    vi.spyOn(planApi, 'restore').mockRejectedValueOnce(new ApiError(0, 'network', 'The network is unreachable'))
+    await pressInToast(await findToastWith('Swapped Tue Breakfast'), /^Undo the Swap/)
+    const refused = await findToastWith('Nothing was undone')
+    expect(refused).toHaveTextContent('Feeder is offline.')
+    expect(refused).toHaveAttribute('data-status', 'warning')
   })
 
   it('"Undo all" in the sheet restores with the same token, closes the sheet and answers true', async () => {

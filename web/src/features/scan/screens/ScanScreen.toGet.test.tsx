@@ -5,6 +5,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ScanController } from '../hooks/useScanController'
+import { lineEntry } from '../../shop/lib/lines'
+import { makeLine } from '../../shop/testData'
 import { controllerFake, scannedFake, sessionEntries } from './scanScreen.testKit'
 
 const controllerHook = vi.hoisted(() => ({ useScanController: vi.fn() }))
@@ -15,6 +17,9 @@ vi.mock('../../shops/hooks/useNearestShop', () => ({ useNearestShop: () => ({ ne
 vi.mock('../../import/hooks/useReadAvailability', () => ({
   useReadAvailability: () => ({ loading: false, enabled: false, isAdmin: false, photos: false, settingsLink: false, statusFailed: false, retry: () => {} }),
 }))
+
+// B9-34: the Change sheet shows times in the Household zone, read from /api/me
+vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 
 import { ScanScreen } from './ScanScreen'
 
@@ -67,5 +72,13 @@ describe('Scan screen: To get ticks by hand', () => {
   it('no row of this tab links to /shop', () => {
     open(controllerFake({ scanned: scannedFake(sessionEntries()) }))
     expect(toGet().querySelector('a[href="/shop"]')).toBeNull()
+  })
+
+  it('B9-34: Change in the tick\'s toast opens the Shop\'s Change sheet over Scan, for the controller\'s tick flow', async () => {
+    const flow = { changing: { entry: lineEntry(makeLine(), 'USD', 'metric'), added: 1400, tickedAt: '2026-11-14T10:12:00Z', clientUuid: 'u-1' }, change: vi.fn(async () => {}), closeChange: vi.fn() }
+    open(controllerFake({ scanned: scannedFake(sessionEntries()), toGetTick: { tick: vi.fn(async () => {}), pendingKeys: new Set<string>(), flow } }))
+    const sheet = screen.getByRole('dialog', { name: 'Passata: how much?' })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Tick without adding' }))
+    expect(flow.change).toHaveBeenCalledExactlyOnceWith(0)
   })
 })
