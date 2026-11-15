@@ -27,10 +27,12 @@ describe('Select chip with a triggerLabel', () => {
 })
 
 describe('ShopSelect shortName', () => {
-  it('a Shop with a shortName shows it in the chip (title = its name)', () => {
+  // B9-15: shortName is the chip's shortLabel (shown only when the chip's container has no room); unmeasured, jsdom shows the Shop's name.
+  // The fitted behaviour is in Select.chipFit.test.tsx.
+  it('a Shop with a shortName shows its name in full while the chip is unmeasured', () => {
     render(<ShopSelect label="Shop" appearance="chip" icon="shops" shops={[{ id: 0, name: 'Any Shop', shortName: 'Any' }, { id: 1, name: 'Coop' }]} value={0} onChange={() => {}} />)
     const trigger = screen.getByRole('combobox', { name: 'Shop' })
-    expect(trigger).toHaveTextContent(/^Any$/)
-    expect(trigger).toHaveAttribute('title', 'Any Shop')
+    expect(trigger).toHaveTextContent(/^Any Shop$/)
+    expect(trigger).not.toHaveAttribute('title')
   })
 })
