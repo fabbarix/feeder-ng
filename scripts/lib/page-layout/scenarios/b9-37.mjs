@@ -178,7 +178,7 @@ export default {
         await press(`document.querySelector('#${id} button[aria-expanded="false"]')`, `the ${id} heading`)
       }
       await until(`document.querySelectorAll('#recipe-section-about button[aria-expanded="true"], #recipe-section-planning button[aria-expanded="true"]').length === 2`, 'both Disclosures open')
-      await press(byText('button', 'Add ingredient use'), '"Add ingredient use"')
+      await press(`document.querySelector('.step-card .step-card__adds button')`, '"Add ingredient use" of the first Step') // its name says its Step (P38)
       await until(`!!document.querySelector('.step-card .use-row, .step-card [data-use]')`, 'a use row in a Step')
     },
 
