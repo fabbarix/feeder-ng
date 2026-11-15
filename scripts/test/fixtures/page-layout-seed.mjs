@@ -77,13 +77,15 @@ const { members, ing, shops, recipeId, ingredientId, productId, shopId, toConfir
 const { supplyId, scanBarcodes, unknownBarcode, assistant } = ctx
 // B9-41: the scan-weighed scenario's Weight Barcode Rule and its code (page-layout-seed/b9-41.mjs).
 const b941 = { weightRuleId: ctx.weightRuleId ?? null, weighedBarcode: ctx.weighedBarcode ?? null }
+// B9-50: the receipt-review-add and receipt-add-sheet scenarios' Product that matches the fake read's Kitchen roll line (page-layout-seed/b9-50.mjs).
+const b950 = { kitchenRollIngredientId: ctx.kitchenRollIngredientId ?? null, kitchenRollProductId: ctx.kitchenRollProductId ?? null }
 
 mkdirSync(dirname(out), { recursive: true })
 // hf-recipes-filter round 2: the filtered /recipes scenarios of the guard (page-layout-rules.mjs SCENARIOS) read these two.
 const sideCourseId = sideCourse?.id ?? null
 // beta.7: the Supply page, the Scan session's Shop and codes, and whether the assistant is on (the guard's beta.7 scenarios).
 const beta7 = { supplyId, shopName: shops[0]?.name ?? null, scanBarcodes, unknownBarcode, assistant }
-writeFileSync(out, JSON.stringify({ ...beta7, ...b941, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, longPlaceId }, null, 2) + '\n')
+writeFileSync(out, JSON.stringify({ ...beta7, ...b941, ...b950, recipeId, ingredientId, productId, shopId, toConfirm, sideCourseId, longTag: LONG_TAG, longPlaceId }, null, 2) + '\n')
 if (longTagRecipe === null || sideCourseId === null) {
   console.error(`page-layout-seed: the Side Recipe tagged "${LONG_TAG}" was not created; the filtered /recipes scenarios would show no Recipe`)
   process.exit(1)
