@@ -16,6 +16,8 @@ const h = vi.hoisted(() => ({
   invalidate: vi.fn(),
   request: vi.fn(),
   toast: vi.fn(),
+  release: vi.fn(),
+  hold: vi.fn(),
   list: undefined as unknown,
   api: {
     sync: vi.fn(),
@@ -38,7 +40,7 @@ vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitS
 vi.mock('../../products/hooks/useCurrency', () => ({ useCurrency: () => 'USD' }))
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [], isLoading: false }) }))
 vi.mock('../../stock/hooks/useStock', () => ({ useStockTotals: () => ({ data: [] }) }))
-vi.mock('../../../ui/Toast', () => ({ useToast: () => ({ show: h.toast }) }))
+vi.mock('../../../ui/Toast', () => ({ useToast: () => ({ show: h.toast, hold: h.hold }) }))
 vi.mock('../api', () => ({ scanApi: h.api }))
 vi.mock('../../shop/api', () => ({ shopApi: h.shopApi }))
 vi.mock('./useCamera', () => ({
@@ -205,6 +207,59 @@ describe('useScanController: group Price and Undo', () => {
     const hook = useIt()
     await waitFor(() => expect(hook.result.current.scanned.loaded).toBe(true))
     await read(hook)
-    await waitFor(() => expect(h.toast).toHaveBeenCalledWith('Added Mutti passata 700 g', expect.objectContaining({ status: 'success', actionLabel: 'Undo', durationMs: 5000 })))
+    // B9-35: the "Added" toast is an Undo toast (useUndoToast): the headline as its title, Undo with the 'undo' role, 5 s, no status icon.
+    await waitFor(() =>
+      expect(h.toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Added Mutti passata 700 g',
+          durationMs: 5000,
+          actions: [expect.objectContaining({ label: 'Undo', role: 'undo', ariaLabel: 'Undo: Added Mutti passata 700 g' })],
+        }),
+      ),
+    )
+    const content = h.toast.mock.calls.find((c) => typeof c[0] === 'object' && (c[0] as { title: string }).title.startsWith('Added'))![0] as { status?: string }
+    expect(content.status).toBeUndefined()
+  })
+})
+
+// B9-35 (SSP-12): the controller holds the toasts while the Price entry is open: one hold() for the whole entry, released when it closes.
+describe('useScanController: toasts are held while the Price keypad is open', () => {
+  beforeEach(() => {
+    h.hold.mockReset()
+    h.release.mockReset()
+    h.hold.mockReturnValue(h.release)
+  })
+
+  it('holds once the keypad opens and releases when it closes', async () => {
+    const hook = useIt()
+    await waitFor(() => expect(hook.result.current.scanned.loaded).toBe(true))
+    await read(hook)
+    await waitFor(() => expect(hook.result.current.scanned.rows).toHaveLength(1))
+    expect(h.hold).not.toHaveBeenCalled()
+    act(() => hook.result.current.flow.startPriceEntry('7'))
+    expect(h.hold).toHaveBeenCalledTimes(1)
+    expect(h.release).not.toHaveBeenCalled()
+    act(() => hook.result.current.flow.closePriceEntry())
+    expect(h.release).toHaveBeenCalledTimes(1)
+  })
+
+  it('moving the keypad to the next row keeps the one hold', async () => {
+    const hook = useIt()
+    await waitFor(() => expect(hook.result.current.scanned.loaded).toBe(true))
+    await read(hook)
+    await waitFor(() => expect(hook.result.current.scanned.rows).toHaveLength(1))
+    act(() => hook.result.current.flow.startPriceEntry('7'))
+    act(() => hook.result.current.flow.startPriceEntry('7'))
+    expect(h.hold).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaving the screen with the keypad open releases the hold', async () => {
+    const hook = useIt()
+    await waitFor(() => expect(hook.result.current.scanned.loaded).toBe(true))
+    await read(hook)
+    await waitFor(() => expect(hook.result.current.scanned.rows).toHaveLength(1))
+    act(() => hook.result.current.flow.startPriceEntry('7'))
+    hook.unmount()
+    expect(h.release).toHaveBeenCalledTimes(1)
   })
 })

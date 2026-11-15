@@ -111,7 +111,7 @@ describe('ScanScreen with the real controller', () => {
     await screen.findByRole('heading', { name: 'Nothing scanned yet' })
     await read()
     await screen.findByText('Added Mutti passata 700 g')
-    await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Undo: Added Mutti passata 700 g' }))
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Nothing scanned yet' })).toBeInTheDocument())
     expect(h.api.undo).toHaveBeenCalledTimes(1)
   })
