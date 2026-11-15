@@ -5,8 +5,8 @@ import { ExtraSheet } from './ExtraSheet'
 import { TickSheet } from './TickSheet'
 
 describe('Shop sheets use FormActions', () => {
-  it('"How much?": the add-to-Stock button is the primary and "tick only" the secondary of one FormActions row', () => {
-    render(<TickSheet open onClose={() => {}} name="Passata" baseUnit="g" defaultQuantity={1400} onSubmit={() => {}} />)
+  it('Change: Save is the primary and "Tick without adding" the secondary of one FormActions row (B9-34)', () => {
+    render(<TickSheet open onClose={() => {}} name="Passata" baseUnit="g" system="metric" added={1400} tickedAt="2026-11-14T10:12:00Z" timeZone="UTC" choices={{ pack: null, need: { amount: 1400 } }} onSubmit={() => {}} />)
     const dialog = screen.getByRole('dialog')
     const primary = dialog.querySelector('.form-actions__primary button')!
     const secondary = dialog.querySelector('.form-actions__secondary button')!

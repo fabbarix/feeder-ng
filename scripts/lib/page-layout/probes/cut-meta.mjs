@@ -7,7 +7,9 @@ const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')
   const out = []
-  for (const long of (main ? main.querySelectorAll('.shop-lines .list-row__meta[data-status="info"] .list-row__meta-text') : [])) {
+  // B9-34 (SSP-01) and B9-29: every visible row meta line is read, not only the Shop's info ones: a ticked row's "+500 g in Stock"
+  // (success), "Not added to Stock" and "Scanned · 700 g" (muted), "Added twice · Sam 50 g, you 50 g" are cut like any hint (P23).
+  for (const long of (main ? main.querySelectorAll('.list-row__meta-text') : [])) {
     // B9-13 (SSP-05): a row with a compact form shows it while its text column is under 12 rem; the long text is then visually
     // hidden (a 1 px clip), so the painted form is the one measured.
     const compact = long.nextElementSibling && long.nextElementSibling.matches('.list-row__meta-compact') ? long.nextElementSibling : null

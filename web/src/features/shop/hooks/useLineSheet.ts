@@ -9,6 +9,9 @@ export interface LineSheetHandlers {
   onNeededAfterAll: (entry: ListEntry) => void
   onMarkIt: (entry: ListEntry) => void
   onDelete: (entry: ListEntry) => void
+  /** B9-34 (SSP-18): the ticked sheet's Change amount and Untick */
+  onChangeAmount?: (entry: ListEntry) => void
+  onUntick?: (entry: ListEntry) => void
 }
 
 export interface LineSheetController {
@@ -20,8 +23,13 @@ export interface LineSheetController {
   run: (action: LineAction) => void
 }
 
-export function useLineSheet(handlers: LineSheetHandlers): LineSheetController {
-  const [sheet, setSheet] = useState<{ entry: ListEntry; group: RowGroup } | null>(null)
+/**
+ * `resolve` (B9-34) gives the current copy of the held entry after the list refreshed (a Take back changes a ticked entry's additions
+ * while its sheet is open); without it, or when it finds none, the entry as it was opened stays.
+ */
+export function useLineSheet(handlers: LineSheetHandlers, resolve?: (entry: ListEntry, group: RowGroup) => ListEntry | null): LineSheetController {
+  const [held, setSheet] = useState<{ entry: ListEntry; group: RowGroup } | null>(null)
+  const sheet = held ? { entry: resolve?.(held.entry, held.group) ?? held.entry, group: held.group } : null
   const actions = sheet ? lineActions(sheet.entry, sheet.group) : []
 
   const run = (action: LineAction) => {
@@ -40,6 +48,12 @@ export function useLineSheet(handlers: LineSheetHandlers): LineSheetController {
         return
       case 'delete':
         handlers.onDelete(entry)
+        return
+      case 'change-amount':
+        handlers.onChangeAmount?.(entry)
+        return
+      case 'untick':
+        handlers.onUntick?.(entry)
         return
     }
   }

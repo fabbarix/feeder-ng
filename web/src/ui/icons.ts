@@ -5,6 +5,7 @@
 import { AlarmIcon } from '@phosphor-icons/react/dist/csr/Alarm'
 import { ArchiveIcon } from '@phosphor-icons/react/dist/csr/Archive'
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowCounterClockwise'
+import { ArrowBendDownRightIcon } from '@phosphor-icons/react/dist/csr/ArrowBendDownRight'
 import { ArrowClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowClockwise'
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/csr/ArrowLeft'
 import { ArrowDownIcon } from '@phosphor-icons/react/dist/csr/ArrowDown'
@@ -270,6 +271,9 @@ export const icons = {
   // B9-17: the finished Timer pill (PC-04) and Scan's Type a barcode (SSP-06)
   bellRinging: BellRingingIcon,
   typeBarcode: KeyboardIcon,
+  // B9-34: a ticked Shop row that added nothing to Stock (SSP-01), and need that grew since a tick (SSP-02)
+  notAdded: MinusCircleIcon,
+  moreSince: ArrowBendDownRightIcon,
 } as const
 
 export type IconName = keyof typeof icons
