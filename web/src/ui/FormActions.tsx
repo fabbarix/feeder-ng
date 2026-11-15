@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { MenuEntry } from './Menu'
 import './FormActions.css'
 
 export interface FormActionsProps {
@@ -10,6 +11,10 @@ export interface FormActionsProps {
   tertiary?: ReactNode
   /** Optional destructive Button (danger-secondary), first in the DOM and at the far left from 600 px. */
   destructive?: ReactNode
+  /** B9-14 STUB (types only): items of the ⋮ Menu at the start of the row. */
+  more?: MenuEntry[]
+  /** B9-14 STUB: the ⋮'s accessible name ("More for Dinner"). Default "More actions". */
+  moreLabel?: string
 }
 
 /** Consistent action row for pages, sheets and dialogs. */

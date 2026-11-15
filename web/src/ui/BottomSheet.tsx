@@ -7,6 +7,15 @@ import { overlayStrings } from './overlayStrings'
 import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
 import './BottomSheet.css'
 
+/** B9-14: the footer commit of a sheet whose body is a form (see BottomSheet.footer.test.tsx). */
+export interface SheetSubmit {
+  label: ReactNode
+  /** The id of the `<form>` in the body. */
+  form: string
+  disabled?: boolean
+  tone?: 'danger'
+}
+
 export interface BottomSheetProps {
   open: boolean
   onClose: () => void
@@ -32,6 +41,14 @@ export interface BottomSheetProps {
    * and the header Close still dismiss it. Default true.
    */
   modal?: boolean
+  /** B9-14 STUB (types only, behaviour is the developer's): false hides the header Close. Default true. */
+  closeButton?: boolean
+  /** B9-14 STUB: a muted meta line above the title; part of the dialog's accessible name. */
+  context?: string
+  /** B9-14 STUB: the caller's dirty flag. While true every dismissal asks "Discard changes?" first. */
+  confirmDismiss?: boolean
+  /** B9-14 STUB: the footer's primary submit Button bound to a body form by its `form` attribute. */
+  submit?: SheetSubmit
   /** 'half': about half the viewport high on a phone, the body scrolling inside (a keypad beside a list). Default 'auto'. */
   size?: 'auto' | 'half'
 }

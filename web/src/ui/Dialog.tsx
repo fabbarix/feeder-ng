@@ -35,6 +35,8 @@ export interface DialogProps {
   cancelLabel?: string
   /** Extra state for the Cancel button: `data-autofocus` (a danger confirm focuses Cancel), `disabled` (while busy). */
   cancelProps?: CancelButtonProps
+  /** B9-14 STUB: a muted meta line above the title; part of the dialog's accessible name. */
+  context?: string
   /** Default true. Destructive confirms pass false. */
   dismissOnBackdrop?: boolean
   /** Element to focus on open. Default: the first [data-autofocus], else the first focusable, else the title. */
