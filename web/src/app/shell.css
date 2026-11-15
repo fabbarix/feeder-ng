@@ -612,7 +612,8 @@ html[data-keyboard='open'] .bottom-bar {
    neighbour). Scan's accent fill would fuse with it (and with the current Scan's soft ring there), so on Scan the ring is drawn inside
    the fill in the on-accent colour, 2 px in from its edge, as in the bottom bar. */
 .side-rail__link[data-accent='true']:focus-visible {
-  outline: var(--focus-ring-inner-width) solid var(--color-on-accent);
+  --focus-ring-color: var(--color-on-accent);
+  outline: var(--focus-ring-inner-width) solid var(--focus-ring-color);
   outline-offset: calc(-2 * var(--focus-ring-inner-width));
 }
 
@@ -633,9 +634,7 @@ html[data-keyboard='open'] .bottom-bar {
     outline-offset: calc(-1 * var(--focus-ring-inner-width));
   }
 
-  .side-rail__link[data-accent='true']:focus-visible .side-rail__pill {
-    outline-color: var(--color-on-accent);
-  }
+  /* (On Scan the pill's ring is on-accent: the link above sets --focus-ring-color, which the pill inherits.) */
 }
 
 /* Avatar menu (5.17): trigger, scrim and popover */

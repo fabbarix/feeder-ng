@@ -22,9 +22,14 @@ const inForced = (b: CssBlock) => b.atrules.some((a) => /forced-colors/.test(a))
 
 const RING = /^var\(--focus-ring-width\) solid var\(--focus-ring-color\)$/
 const INNER = /^var\(--focus-ring-inner-width\) solid var\(--focus-ring-color\)$/
-const OFFSETS = ['var(--focus-ring-offset)', 'var(--focus-ring-offset-inset)', 'calc(-1 * var(--focus-ring-inner-width))', '0']
-/** The only :focus-visible rules that may turn the outline off: a text entry whose frame rings, a Segmented option whose track rings. */
-const OUTLINE_NONE_ALLOWED = ['.ui-field__input', '.search-field__input', '.ui-field__textarea', '.time-field__segment', '.segmented__option']
+// USER w2c: Scan's on-accent ring in the bar and the rails sits 2 px further in (calc(-2 * inner)), so an accent edge stays between it
+// and the current Scan's ring outside.
+const OFFSETS = ['var(--focus-ring-offset)', 'var(--focus-ring-offset-inset)', 'calc(-1 * var(--focus-ring-inner-width))', 'calc(-2 * var(--focus-ring-inner-width))', '0']
+/**
+ * The only :focus-visible rules that may turn the outline off: a text entry whose frame rings, a Segmented option whose track rings, and
+ * (USER w2c) a bottom-bar or compact-rail link whose icon squircle or capsule rings.
+ */
+const OUTLINE_NONE_ALLOWED = ['.ui-field__input', '.search-field__input', '.ui-field__textarea', '.time-field__segment', '.segmented__option', '.bottom-bar__link', '.side-rail__link']
 
 const focusBlocks = uiApp.filter((b) => /:focus-visible/.test(b.selector) && !inForced(b))
 
@@ -62,7 +67,7 @@ describe('every ring in ui/ and app/ is an outline in the tokens', () => {
       if (outline === undefined && color === undefined) continue
       for (const s of selectorList(q(b.selector)).filter((x) => /:focus-visible/.test(x))) {
         if (outline === 'none' || outline === '0') {
-          if (!OUTLINE_NONE_ALLOWED.includes(lastCompound(s).replace(/:[a-z-]+(\([^)]*\))?/g, ''))) bad.push(`${b.file}:${b.line} ${s}: outline ${outline} is not on the allow-list`)
+          if (!OUTLINE_NONE_ALLOWED.includes(lastCompound(s).replace(/:[a-z-]+(\([^)]*\))?/g, '').replace(/\[[^\]]*\]/g, ''))) bad.push(`${b.file}:${b.line} ${s}: outline ${outline} is not on the allow-list`)
         } else if (outline !== undefined && !RING.test(outline) && !INNER.test(outline)) bad.push(`${b.file}:${b.line} ${s}: outline ${outline}`)
         else if (outline === undefined && color !== undefined && color !== 'var(--focus-ring-color)') bad.push(`${b.file}:${b.line} ${s}: outline-color ${color}`)
       }

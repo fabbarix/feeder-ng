@@ -340,7 +340,8 @@ describe('USER w2c: rail focus rings', () => {
   const COMPACT = ['(max-height: 499px)', '(min-width: 37.5em)', '(width < 64em)']
   it("Scan's ring is drawn inside its accent fill, on-accent, 2 px in", () => {
     const d = at(".side-rail__link[data-accent='true']:focus-visible")
-    expect(d['outline']).toBe('var(--focus-ring-inner-width) solid var(--color-on-accent)')
+    expect(d['--focus-ring-color']).toBe('var(--color-on-accent)')
+    expect(d['outline']).toBe('var(--focus-ring-inner-width) solid var(--focus-ring-color)')
     expect(d['outline-offset']).toBe('calc(-2 * var(--focus-ring-inner-width))')
   })
   it('the compact rail rings the icon capsule from inside, never the link, and the focused label turns accent text', () => {
@@ -349,6 +350,5 @@ describe('USER w2c: rail focus rings', () => {
     const pill = at('.side-rail__link:focus-visible .side-rail__pill', COMPACT)
     expect(pill['outline']).toBe('var(--focus-ring-inner-width) solid var(--focus-ring-color)')
     expect(pill['outline-offset']).toBe('calc(-1 * var(--focus-ring-inner-width))')
-    expect(at(".side-rail__link[data-accent='true']:focus-visible .side-rail__pill", COMPACT)['outline-color']).toBe('var(--color-on-accent)')
   })
 })
