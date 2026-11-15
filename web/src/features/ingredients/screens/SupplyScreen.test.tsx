@@ -80,12 +80,12 @@ describe('SupplyScreen: what a Supply has', () => {
     expect(screen.getByRole('region', { name: 'Merge Supply' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: /Ingredient/ })).toBeNull()
   })
-  it('has no Shelf Life, Frozen Shelf Life or Excluded by Tile', () => {
+  it('has no Shelf Life, Frozen Shelf Life or Exclusions Tile', () => {
     setup()
     expect(screen.queryByLabelText(/Shelf Life/)).toBeNull()
     expect(screen.queryByRole('region', { name: /Shelf Life/ })).toBeNull()
     expect(screen.queryByRole('region', { name: 'Frozen Shelf Life' })).toBeNull()
-    expect(screen.queryByRole('heading', { name: 'Excluded by' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Exclusions' })).toBeNull()
     expect(screen.queryByText('exclusion list')).toBeNull()
     expect(screen.queryByText(/Shelf Life|Freezer/)).toBeNull()
   })

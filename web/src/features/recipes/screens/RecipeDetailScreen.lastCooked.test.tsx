@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { garlic, recipe } from '../fixtures.test-helper'
 import { household } from '../household.test-helper'
 
@@ -24,11 +24,13 @@ const show = (lastCookedOn: string | null) => {
   h.recipe = { recipe: recipe({ lastCookedOn }), isLoading: false, error: null, setArchived: vi.fn(), remove: vi.fn() }
   render(
     <MemoryRouter initialEntries={['/recipes/3']}>
+      <ToastProvider>
       <ConfirmProvider>
         <Routes>
           <Route path="/recipes/3" element={<RecipeDetailScreen />} />
         </Routes>
       </ConfirmProvider>
+      </ToastProvider>
     </MemoryRouter>,
   )
 }

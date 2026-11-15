@@ -2,7 +2,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { courseChoices, garlic, recipe } from '../fixtures.test-helper'
 import { household } from '../household.test-helper'
 
@@ -23,11 +23,13 @@ import { RecipeDetailScreen } from './RecipeDetailScreen'
 const view = () =>
   render(
     <MemoryRouter initialEntries={['/recipes/3']}>
+      <ToastProvider>
       <ConfirmProvider>
         <Routes>
           <Route path="/recipes/:id" element={<RecipeDetailScreen />} />
         </Routes>
       </ConfirmProvider>
+      </ToastProvider>
     </MemoryRouter>,
   )
 const show = (over: Parameters<typeof recipe>[0]) => {
@@ -43,12 +45,12 @@ beforeEach(() => {
 describe('RecipeDetailScreen Courses', () => {
   it('shows the Courses as chips, in the Recipe\'s order', () => {
     show({ courses: [{ id: 1, name: 'Main' }, { id: 2, name: 'Side' }] })
-    const list = screen.getByRole('list', { name: 'Courses' })
-    expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Main', 'Side'])
+    const list = screen.getByRole('list', { name: 'Courses and Tags' }) // RX-04: Courses, then the Tags, on one line
+    expect(within(list).getAllByRole('listitem').map((li) => li.textContent).slice(0, 2)).toEqual(['Main', 'Side'])
   })
   it('adds the Whole meal chip for a Whole meal Recipe in the main Course', () => {
     show({ courses: [{ id: 1, name: 'Main' }], wholeMeal: true })
-    expect(within(screen.getByRole('list', { name: 'Courses' })).getByText('Whole meal')).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Courses and Tags' })).getByText('Whole meal')).toBeInTheDocument()
   })
   it('has no Whole meal chip when the Recipe is not in the main Course, whatever its stored value', () => {
     show({ courses: [{ id: 2, name: 'Side' }], wholeMeal: true })

@@ -196,9 +196,10 @@ describe('DS-09: em breakpoints, container queries in rem, no raw useMediaQuery'
     expect(queries.length).toBeGreaterThan(0)
     expect(queries.filter(({ a }) => /\d+(\.\d+)?(px|em)\b/.test(a.replace(/rem/g, ''))).map(({ r, a }) => `${label(r)} in ${a}`)).toEqual([])
   })
-  it('the two-column Recipe detail and editor start at (min-width: 80em), not 1280px', () => {
+  it('the two-column Recipe editor starts at (min-width: 80em), not 1280px; the detail (B9-27, RX-04) switches by its own width, in a container query', () => {
     const wide = rules.filter((r) => r.at.includes('@media (min-width: 80em)')).map((r) => r.file)
-    expect(wide.some((f) => /recipes\/recipe-detail\.css$/.test(f)), 'detail').toBe(true)
+    expect(wide.some((f) => /recipes\/recipe-detail\.css$/.test(f)), 'detail has no 80em media rule').toBe(false)
+    expect(rules.some((r) => /recipes\/recipe-detail\.css$/.test(r.file) && r.at.includes('@container recipe-detail (min-width: 45rem)')), 'detail container query').toBe(true)
     expect(wide.some((f) => /recipes\/recipe-editor\.css$/.test(f)), 'editor').toBe(true)
   })
   it('the Settings phone rules are (width < 37.5em), not max-width: 599px', () => {

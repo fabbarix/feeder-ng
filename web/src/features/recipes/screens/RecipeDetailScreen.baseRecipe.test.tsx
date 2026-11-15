@@ -116,29 +116,43 @@ describe('RecipeDetailScreen: a Base recipe', () => {
       lines: [{ id: 9, ingredientId: 9, ingredient: 'milk', quantity: 1000, unit: 'ml', optional: false, note: '' }],
     })
 
-  it('shows the Yield with its unit, the Base recipe badge and no Course chips', () => {
+  // RX-06: the Yield is the metric ("1 l per Batch"), once; the duplicate "Yield 1 l" line is gone, and no portions are claimed.
+  it('shows the Yield with its unit as the metric, the Base recipe badge and no Course chips', () => {
     mockApi({})
     setRecipe(bech())
     view('/recipes/3')
-    expect(screen.getByText('Yield 1 l')).toBeInTheDocument()
+    const metric = document.querySelector('.bento-grid[data-min="metric"] .tile-metric') as HTMLElement
+    expect(metric.querySelector('.tile-metric__value')).toHaveTextContent('1 l')
+    expect(metric.querySelector('.tile-metric__label')).toHaveTextContent('per Batch')
+    expect(screen.queryByText('Yield 1 l')).toBeNull()
     expect(screen.getByText('Base recipe')).toBeInTheDocument()
-    expect(screen.queryByText('4 portions per Batch')).toBeNull()
+    expect(screen.queryByText(/portions/)).toBeNull()
+  })
+  it('the Cook hint states the Yield with its unit: "1 Batch · 1 l"', () => {
+    mockApi({})
+    setRecipe(bech())
+    view('/recipes/3')
+    expect(screen.getByText('1 Batch · 1 l')).toBeInTheDocument()
   })
 
-  it('lists the Recipes that use it as links, under "Used in 2 Recipes"', async () => {
+  it('lists the Recipes that use it as links, under the heading "Used in"', async () => {
     mockApi({})
     setRecipe(bech())
     view('/recipes/3')
-    expect(screen.getByText('Used in 2 Recipes')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Used in' })).toBeInTheDocument()
+    expect(screen.queryByText('Used in 2 Recipes')).toBeNull()
     await userEvent.click(screen.getByRole('link', { name: 'Moussaka' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/recipes/2')
   })
 
-  it('says "Not used yet" when nothing uses it', () => {
+  it('keeps the heading "Used in" when nothing uses it, and says so in a sentence (never a heading "Not used yet")', () => {
     mockApi({})
     setRecipe({ ...bech(), usedBy: [] })
     view('/recipes/3')
-    expect(screen.getByText('Not used yet')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Used in' })).toBeInTheDocument()
+    expect(screen.getByText("Not used in any Recipe yet. Link it from a Recipe's ingredient line.")).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Not used yet' })).toBeNull()
+    expect(screen.queryByText('Not used yet')).toBeNull()
   })
 
   it('keeps "Recipes with an Ingredient named béchamel (3)" until none is left, and opens the list', async () => {

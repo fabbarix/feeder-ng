@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { garlic, recipe } from '../fixtures.test-helper'
 import { emptyDraft } from '../lib/draft'
 
@@ -26,13 +26,15 @@ const view = (path: string) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[path]}>
-        <ConfirmProvider>
+        <ToastProvider>
+      <ConfirmProvider>
           <Routes>
             <Route path="/recipes/new" element={<RecipeEditorScreen />} />
             <Route path="/recipes/:id/edit" element={<RecipeEditorScreen />} />
             <Route path="/recipes/:id" element={<RecipeDetailScreen />} />
           </Routes>
         </ConfirmProvider>
+      </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   )

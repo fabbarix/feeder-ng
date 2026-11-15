@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider } from '../../../ui'
+import { ConfirmProvider, ToastProvider } from '../../../ui'
 import { garlic, recipe } from '../fixtures.test-helper'
 import { household } from '../household.test-helper'
 
@@ -31,12 +31,14 @@ const show = (tags: string[]) => {
   h.recipe = { recipe: recipe({ tags }), isLoading: false, error: null, setArchived: vi.fn(), remove: vi.fn() }
   render(
     <MemoryRouter initialEntries={['/recipes/3']}>
+      <ToastProvider>
       <ConfirmProvider>
         <Routes>
           <Route path="/recipes/3" element={<RecipeDetailScreen />} />
           <Route path="*" element={<Where />} />
         </Routes>
       </ConfirmProvider>
+      </ToastProvider>
     </MemoryRouter>,
   )
 }
@@ -49,8 +51,8 @@ beforeEach(() => {
 describe('RecipeDetailScreen Tags', () => {
   it('shows every Tag (no "+N"), in the Recipe\'s order, in colour', () => {
     show(['quick', 'roast', 'kids', 'sweet'])
-    const list = screen.getByRole('list', { name: 'Tags' })
-    expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['quick', 'roast', 'kids', 'sweet'])
+    const list = screen.getByRole('list', { name: 'Courses and Tags' }) // RX-04: one line with the Courses
+    expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Main', 'quick', 'roast', 'kids', 'sweet'])
     expect(within(list).getByRole('button', { name: 'quick' })).toHaveAttribute('data-tag-colour', 'sage')
     expect(within(list).getByRole('button', { name: 'kids' })).not.toHaveAttribute('data-tag-colour')
   })
@@ -63,8 +65,9 @@ describe('RecipeDetailScreen Tags', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Purée' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/recipes?tag=Pur%C3%A9e')
   })
-  it('shows no Tags list for a Recipe without Tags', () => {
+  it('shows no Tag chip for a Recipe without Tags (its Course chip stays on the line)', () => {
     show([])
     expect(screen.queryByRole('list', { name: 'Tags' })).toBeNull()
+    expect(within(screen.getByRole('list', { name: 'Courses and Tags' })).queryByRole('button')).toBeNull()
   })
 })
