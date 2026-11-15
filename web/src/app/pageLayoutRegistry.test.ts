@@ -95,8 +95,8 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35.
-  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P39', 'P40', 'P41', 'P43'],
+  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35; B9-32 P38.
+  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P38', 'P39', 'P40', 'P41', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning. Its shop-barcode-sheet (the Add Shop Barcode
@@ -108,6 +108,7 @@ const ADDED = {
   // B9-26: scenarios/b9-26.mjs (order 326): plan-after-swap (PC-01), regenerate (SAFE-07) and to-confirm-not-cooked (SAFE-03).
   // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
+  // B9-32: scenarios/b9-32.mjs (order 332): plan-grid (PC-11, PC-06, A11Y-08, A11Y-09) and plan-couldnt (PC-07); rules/P38-unique-names.mjs (A11Y-08).
   // B9-34: scenarios/b9-34.mjs (order 340): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
@@ -119,6 +120,7 @@ const ADDED = {
     'plan-after-swap', 'regenerate', 'to-confirm-not-cooked',
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
     'recipe-editor-guard', 'recipe-new-empty-save',
+    'plan-grid', 'plan-couldnt',
     'shop-ticked', 'shop-focus-after-tick',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
@@ -270,7 +272,7 @@ describe('a package adds its own files and edits no shared one', () => {
   // Review of B9-03: the mistakes a later package can make with its own files all fail on load, naming the file.
   it('a reserved rule with the wrong mode, a second probe for a metrics key, a viewport that does not exist, a setup without widths, and a stray non-.mjs file all throw on load', () => {
     const cases: [string, string, RegExp][] = [
-      ['page-layout/rules/P38-demo.mjs', demoRule('P38'), /P38 is planned as by the route mode/],
+      ['page-layout/rules/P42-demo.mjs', demoRule('P42'), /P42 is planned as by the route mode/],
       ['page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'cutMeta', source: '[]' }\n", /metrics key "cutMeta"/],
       ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', start: '/shop', setup: 's', widths: ['568x320'] }], setups: { s: async () => {} } }\n", /no viewport "568x320"/],
       ['page-layout/scenarios/zz-demo.mjs', "export default { scenarios: [{ name: 'zz-demo', route: '/shop', setup: 's' }], setups: { s: async () => {} } }\n", /setup but no widths/],

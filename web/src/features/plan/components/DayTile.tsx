@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Tile } from '../../../ui'
 import type { DayGroup } from '../lib/days'
 import type { MealTileProps } from './MealTile'
@@ -7,6 +7,10 @@ import '../plan.css'
 
 export interface DayTileProps extends Omit<MealTileProps, 'slot'> {
   day: DayGroup
+  /** B9-32 (PC-11): the tracks (of 12) the day spans in the week grid (an inline grid-column). */
+  span?: number
+  /** B9-32: the day has the whole row: its Meal Slots lie side by side (data-row). */
+  wholeRow?: boolean
 }
 
 /**
@@ -14,7 +18,7 @@ export interface DayTileProps extends Omit<MealTileProps, 'slot'> {
  * one title-3 line ("Thu 12 · Today"), then the Meal Slots. Today carries data-today (the accent ring, not a bigger tile);
  * the divider between slots shows only with 3 or more (data-dividers).
  */
-export function DayTile({ day, ...handlers }: DayTileProps): ReactNode {
+export function DayTile({ day, span, wholeRow, ...handlers }: DayTileProps): ReactNode {
   return (
     <Tile
       as="article"
@@ -22,6 +26,8 @@ export function DayTile({ day, ...handlers }: DayTileProps): ReactNode {
       className="plan-day"
       data-today={day.isToday ? 'true' : undefined}
       data-dividers={day.slots.length >= 3 ? 'true' : undefined}
+      data-row={wholeRow ? 'true' : undefined}
+      style={span || wholeRow ? ({ gridColumn: span ? `span ${span}` : undefined, '--plan-slots': wholeRow ? day.slots.length : undefined } as CSSProperties) : undefined}
     >
       <h2 className="plan-day__title">{day.heading}</h2>
       {day.slots.map((slot) => (

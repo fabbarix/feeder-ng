@@ -22,9 +22,9 @@ describe('dayChip: at most one chip per Planned Meal on a day tile', () => {
     expect(dayChip(meal({ why: [{ code: 'best_available' }, favourite('Ben')] }), ctx)).toMatchObject({ label: "Ben's favourite" })
   })
 
-  it('Cooked is a success state chip, Not cooked a danger state chip', () => {
+  it('Cooked is a success state chip, Not cooked a neutral state chip (DS-06: a record, not a problem)', () => {
     expect(dayChip(meal({ state: 'cooked', pinned: true, why: [favourite('Anna')] }), ctx)).toMatchObject({ kind: 'state', status: 'success', label: 'Cooked' })
-    expect(dayChip(meal({ state: 'skipped' }), ctx)).toMatchObject({ kind: 'state', status: 'danger', label: 'Not cooked' })
+    expect(dayChip(meal({ state: 'skipped' }), ctx)).toMatchObject({ kind: 'state', status: 'neutral', label: 'Not cooked' })
   })
 
   it('a Pinned planned meal shows Pinned before its why chip', () => {

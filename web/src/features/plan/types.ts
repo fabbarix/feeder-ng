@@ -71,6 +71,10 @@ export interface PlannedMeal {
   warning?: MealWarning | null
   /** B9-11 / B9-26 (SAFE-03): how a Cooked or Not cooked meal was marked and whether it can still be undone; absent while planned and from an older server. */
   resolution?: MealResolution
+  /** B9-12 (PC-14): "HH:MM" a Pinned or Bought fresh meal would start before the Earliest start (or outside the cooking times, A2); slot views only. */
+  earlyStart?: string
+  /** B9-58 (A2): a planned meal that must be started on an earlier day than the meal: where cooking starts (household zone); slot views only. */
+  startsAt?: { date: string; time: string }
 }
 
 /** `meal.resolution` of GET /api/plan (B9-11): present on a Cooked or Not cooked meal. */
@@ -95,6 +99,8 @@ export interface Eliminations {
   coolDown: number
   varietyRule: number
   advanceStep: number
+  /** B9-12 / B9-58: Recipes whose start would be outside the cooking times. */
+  tooEarly?: number
 }
 
 export interface Unfilled {
@@ -213,6 +219,9 @@ export interface PlanSlot {
   notServed?: boolean
   /** B5-F1: Guests eating on this date (0 to 20); `portions` already includes them. */
   guests?: number
+  /** B9-24: Members who are away at this slot (member ids), and whether everyone is: no start chips are shown then. */
+  away?: number[]
+  everyoneAway?: boolean
 }
 
 /** One entry of the flat to-confirm and couldn't-plan lists: a slot for one Course, with that Course's own meal or reason. */

@@ -23,7 +23,7 @@ const dryRun = {
 
 const tile = async (name: string) => ((await screen.findByRole('heading', { name: name === 'Today' ? /· Today$/ : name === 'Tomorrow' ? /· Tomorrow$/ : name })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
-  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
+  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(`^${recipe}$`) }))
   return screen.findByRole('dialog', { name: recipe })
 }
 
@@ -45,7 +45,7 @@ describe('PlanScreen: Bought', () => {
   it('Swap notes what stays in Stock', async () => {
     mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-09/2/1/alternatives': { alternatives: [] } })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Today')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Today')).getByRole('button', { name: /^Swap / }))
     expect(await screen.findByText('You bought chicken thighs, cream for this; it stays in Stock.')).toBeInTheDocument()
   })
 })
