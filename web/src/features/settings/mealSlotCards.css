@@ -353,55 +353,6 @@ button.ms-day[data-state='free']:hover {
   gap: var(--space-3);
 }
 
-.ms-dates__list {
-  display: grid;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ms-date {
-  display: grid;
-  grid-template-columns: minmax(0, 96px) minmax(0, 1fr);
-  gap: var(--space-3);
-  align-items: start;
-}
-
-.ms-date__day {
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-label-weight);
-  color: var(--color-muted);
-}
-
-.ms-date__what {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-half);
-  min-inline-size: 0;
-}
-
-.ms-date__slot {
-  font-weight: var(--text-body-strong-weight);
-}
-
-.ms-date__part {
-  font-size: var(--text-meta-size);
-  line-height: var(--text-meta-line);
-  font-weight: var(--text-meta-weight);
-  color: var(--color-muted);
-}
-
-.ms-date__part[data-kind='notServed'] {
-  padding: var(--space-half) var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--status-danger-bg);
-  color: var(--status-danger-fg);
-  font-weight: var(--text-label-weight);
-}
-
 .ms-dates__note {
   margin: 0;
   font-size: var(--text-meta-size);

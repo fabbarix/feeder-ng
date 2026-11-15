@@ -19,7 +19,6 @@ web/src/features/plan/components/TodayTiles.tsx                         # B9-44:
 web/src/features/plan/components/TonightHero.tsx                        # B9-39: Tonight hero list
 web/src/features/recipes/components/CourseLossDialog.tsx                # B9-37: Courses a Recipe loses
 web/src/features/settings/components/CourseRemoveDialog.tsx             # B9-42: what goes with a Course
-web/src/features/settings/components/DatesThatDiffer.tsx                # B9-42: dates that differ
 web/src/features/settings/components/MealSlotCard.tsx                   # B9-42: usual Courses (a list of Chips, not bullets)
 web/src/features/shop/components/CelebrationTile.tsx                    # B9-43: Shop celebration facts
 web/src/features/stock/components/SpoiledTile.tsx                       # B9-29: spoiled Lots (rows with actions: ListRow)
