@@ -50,7 +50,12 @@ export function boardHero(slots: SlotLike[], now: Date, today: string): BoardHer
 
 /** One part of the eyebrow as the hero draws it: its text with the leading "· " after the first, and whether it is the start part. */
 export interface EyebrowPart {
+  /** the part as read, "· Dinner" */
   text: string
+  /** "· " before every part but the first, else '' */
+  sep: string
+  /** the part's own words, "Dinner" */
+  label: string
   /** "start 13:00" or "start now" */
   start: boolean
   /** "start now": the meal must start now */
@@ -61,6 +66,7 @@ export interface EyebrowPart {
 export function eyebrowParts(eyebrow: string[]): EyebrowPart[] {
   return eyebrow.map((part, i) => {
     const start = isStartPart(part)
-    return { text: i === 0 ? part : `· ${part}`, start, now: start && !/\d/.test(part) }
+    const sep = i === 0 ? '' : '· '
+    return { text: `${sep}${part}`, sep, label: part, start, now: start && !/\d/.test(part) }
   })
 }

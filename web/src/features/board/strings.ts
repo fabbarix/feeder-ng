@@ -21,8 +21,8 @@ export const boardStrings = {
   useSoonNone: 'Nothing to use up',
   timers: 'Timers',
   timersNone: 'No timers running',
-  /** Shown under the first 2 timers when more run (BoardTimersTile). */
-  timersMore: (n: number) => `+${n} more`,
+  /** Under a list that shows fewer rows than it has (the first 2 timers, or the rows that fit a wall tile). */
+  more: (n: number) => `+${n} more`,
   tomorrow: 'Tomorrow',
   notPlanned: 'Not planned',
   tomorrowNone: 'Nothing planned tomorrow',

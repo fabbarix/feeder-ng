@@ -42,11 +42,27 @@
   overflow: hidden;
 }
 
-/* A crashed tile keeps its cell (the grid does not jump); its Try again is a board control. */
+/* A crashed tile keeps its cell (the grid does not jump) and says so at board scale: the icon and the words, then Try again under
+   them, a board control. */
 .board-cell > .tile-boundary > .tile-error {
   box-sizing: border-box;
   block-size: 100%;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: center;
+  gap: calc(0.75 * var(--board-unit));
+  padding: calc(var(--board-unit)) calc(1.25 * var(--board-unit));
   border-radius: var(--radius-board);
+}
+
+.board-cell .tile-error__text {
+  font-size: var(--text-board-meta);
+  line-height: 1.2;
+}
+
+.board-cell .tile-error .button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin: 0 0 var(--board-inset) var(--board-inset);
 }
 
 .board-screen .tile-error .button,
@@ -59,6 +75,17 @@
 
 .board-cell p {
   margin: 0;
+}
+
+/* The load error's words at board scale (read from across the kitchen). */
+.board-screen .error-state__message {
+  font-size: var(--text-board-meta);
+  line-height: 1.2;
+}
+
+/* A tile's parts keep their height: a list that does not fit shows fewer rows (useFitRows), it is never squeezed under the next part. */
+.board-cell > .tile-boundary > .tile > * {
+  flex-shrink: 0;
 }
 
 .board-next,
@@ -97,7 +124,8 @@
 
 .board-clock__time {
   margin: 0;
-  font-size: 22cqi; /* phone: the half-width cell is about 160 px at 375; the wall grid sizes it below */
+  font-size: 22cqi; /* the fallback; phone: "00:00" (3em) fills the content box of the half-width cell. The wall grid sizes it below. */
+  font-size: calc((100cqi - 2.5 * var(--board-unit)) / 3.1);
   line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -169,33 +197,6 @@
   }
 }
 
-/* SHORT-03: a phone held sideways (600 px wide, under 560 px high). The board keeps four columns, but rows take their content height,
-   tiles stop clipping, and the board scrolls; Cook follows the slot line so it is on screen at first view. */
-@media (min-width: 37.5em) and (max-height: 34.9375em) {
-  .board-screen {
-    padding: max(var(--space-4), var(--safe-top)) max(var(--space-4), var(--safe-right)) max(var(--space-4), var(--safe-bottom)) max(var(--space-4), var(--safe-left));
-  }
-
-  .board-screen .board-grid {
-    height: auto;
-    grid-template-rows: none;
-    grid-auto-rows: minmax(8rem, auto);
-  }
-
-  .board-cell {
-    container-type: inline-size;
-  }
-
-  .board-cell > .tile-boundary > .tile {
-    overflow: visible;
-  }
-
-  .board-screen .board-tonight .board-tonight__cook {
-    margin-block-start: var(--space-4);
-    min-height: 64px;
-  }
-}
-
 /* TB-04 (R-B at board scale): the way out, a round 56 px control in the clock tile's top corner. It sits 5 px inside the tile's padding
    (R-C: tiles clip, so its ring is never cut), dims after 10 s without input and never hides. */
 .board-close {
@@ -263,7 +264,7 @@
 }
 
 /* "start now": the meal must start now, underlined as on Today's hero. */
-.board-eyebrow__start[data-now='true'] {
+.board-eyebrow__start[data-now='true'] .board-eyebrow__text {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
@@ -336,7 +337,11 @@
 .board-tonight__course[data-main='true'] {
   font-size: var(--text-board-hero);
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.08;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 /* The hero is a hero tile: a Cooked row is the hero's own text colour at 70 % (TB-05: no redefined --color-muted and no opacity
@@ -389,7 +394,7 @@
   flex: none;
   min-height: var(--board-control);
   margin: 0 var(--board-inset) var(--board-inset) 0;
-  padding-inline: calc(1.25 * var(--board-unit));
+  padding-inline: var(--board-unit);
   font-size: var(--text-board-control);
   line-height: 1.2;
 }
@@ -414,10 +419,10 @@
 .board-screen .board-use-soon .chip,
 .board-screen .board-next .chip {
   block-size: var(--board-chip);
-  padding: 0 calc(var(--board-unit));
+  padding: 0 calc(0.625 * var(--board-unit));
   font-size: var(--text-board-control);
   line-height: 1.2;
-  gap: calc(0.4 * var(--board-unit));
+  gap: calc(0.25 * var(--board-unit));
   max-inline-size: 100%;
 }
 
@@ -484,16 +489,27 @@
   max-inline-size: 100%;
 }
 
+/* "+2 more" at the end of the chip row, centred on the chips. */
+.board-chips__more {
+  align-self: center;
+  font-size: var(--text-board-meta);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .board-streak__days {
-  margin: auto 0 0;
   font-size: var(--text-board-metric);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
+/* The streak sits at the foot of its tile (the mock), under its heading (beats .board-cell p). */
+.board-streak .board-streak__days {
+  margin-top: auto;
+}
+
 .board-timers .board-list {
-  overflow: hidden;
   gap: calc(0.25 * var(--board-unit));
 }
 
@@ -526,7 +542,8 @@
   min-width: 0;
 }
 
-.board-timers__more {
+.board-timers__more,
+.board-more {
   margin: 0;
   font-size: var(--text-board-meta);
   line-height: 1.2;
@@ -536,4 +553,31 @@
   font-size: var(--text-board-body);
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
+}
+
+/* SHORT-03 (last, so it wins over the wall rules above): a phone held sideways (600 px wide, under 560 px high). The board keeps four columns, but rows take their content height,
+   tiles stop clipping, and the board scrolls; Cook follows the slot line so it is on screen at first view. */
+@media (min-width: 37.5em) and (max-height: 34.9375em) {
+  .board-screen {
+    padding: max(var(--space-4), var(--safe-top)) max(var(--space-4), var(--safe-right)) max(var(--space-4), var(--safe-bottom)) max(var(--space-4), var(--safe-left));
+  }
+
+  .board-screen .board-grid {
+    height: auto;
+    grid-template-rows: none;
+    grid-auto-rows: minmax(8rem, auto);
+  }
+
+  .board-cell {
+    container-type: inline-size;
+  }
+
+  .board-cell > .tile-boundary > .tile {
+    overflow: visible;
+  }
+
+  .board-screen .board-tonight .board-tonight__cook {
+    margin-block-start: var(--space-4);
+    min-height: 64px;
+  }
 }
