@@ -155,7 +155,7 @@ export const importStrings = {
     similarTo: (name: string) => `Similar to ${name}`,
     baseUnit: (unit: string) => `Base unit ${unit}`,
     chooseBaseUnit: 'Choose its base unit',
-    unitQuestion: (base: string, unit: string) => `How many ${base} is 1 ${unit}?`,
+    unitQuestion: (base: string, unit: string) => `How many ${base === 'piece' ? 'pieces' : base} is 1 ${unit}?`,
     unitField: (unit: string, ingredient: string) => `1 ${unit} of ${ingredient} is`,
     addsPicture: (name: string) => `Adds a Picture to ${name}`,
     create: 'Create',

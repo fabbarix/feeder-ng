@@ -116,7 +116,7 @@ function UnitQuestion({ prompt, onAnswer }: { prompt: UnitPrompt; onAnswer: (toB
   const toBase = parseToBase(value === null ? '' : String(value))
   return (
     <span className="import-row__unit">
-      <NumberField size="xs" hideStepper label={t.unitField(prompt.unit, displayName(prompt.ingredient))} unit={prompt.base} value={value} onChange={setValue} />
+      <NumberField size="sm" hideStepper label={t.unitField(prompt.unit, displayName(prompt.ingredient))} unit={prompt.base} value={value} onChange={setValue} />
       <Button variant="secondary" disabled={toBase === null} onClick={() => toBase !== null && onAnswer(toBase)}>
         {s.saveConversion}
       </Button>
