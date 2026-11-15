@@ -1,6 +1,12 @@
 /* ConfirmDialog (B9-18, SAFE R1, R-E): a title, a lead, rows and a note, never a wall of paragraphs. Tokens only.
    Lead: the first body paragraph, body size at weight 600. Groups: a small uppercase label over DetailList rows. Note: one
    muted meta line. Details: a 32 px summary row with its own chevron over the same rows, closed by default. */
+/* The parts of a confirm stand a gap apart, as the SAFE mocks draw them. */
+.dialog__body:has(> .confirm-dialog__lead, > .confirm-dialog__group, > .confirm-dialog__note, > .confirm-dialog__details) {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .confirm-dialog__lead {
   margin: 0;
   /* a multi-line lead keeps its line breaks, as .confirm-dialog__body does (Dialog.css) */

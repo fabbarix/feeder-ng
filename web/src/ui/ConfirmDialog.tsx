@@ -3,6 +3,7 @@ import { Button } from './Button'
 import { DetailList, DetailRow } from './DetailList'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
+import type { IconName } from './icons'
 import { Overline } from './Overline'
 import { overlayStrings } from './overlayStrings'
 import './ConfirmDialog.css'
@@ -42,6 +43,8 @@ export interface ConfirmOptions {
    * loses nothing ("Mark as Cooked?"); a danger confirm ignores it.
    */
   focus?: 'cancel' | 'confirm'
+  /** The status icon over the title. Default: none, or `delete` in the danger tone ("Leave without saving?" passes `warning`). */
+  icon?: IconName
 }
 
 export interface ConfirmDialogProps extends ConfirmOptions {
@@ -77,6 +80,7 @@ export function ConfirmDialog({
   details,
   note,
   focus = 'cancel',
+  icon,
   onConfirm,
   onCancel,
   onAlternate,
@@ -90,7 +94,7 @@ export function ConfirmDialog({
       onClose={onCancel}
       title={title}
       tone={tone}
-      icon={danger ? 'delete' : undefined}
+      icon={icon ?? (danger ? 'delete' : undefined)}
       dismissOnBackdrop={!danger}
       onCancel={onCancel}
       cancelLabel={cancelLabel}

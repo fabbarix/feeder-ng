@@ -38,6 +38,7 @@ export function leaveDialog(what: string, isNew = false): ConfirmOptions {
     body: isNew ? leaveGuardStrings.leadNew(what) : leaveGuardStrings.lead(what),
     note: isNew ? leaveGuardStrings.noteNew : leaveGuardStrings.note,
     tone: 'danger',
+    icon: 'warning',
     cancelLabel: leaveGuardStrings.keep,
     confirmLabel: leaveGuardStrings.discard,
   }

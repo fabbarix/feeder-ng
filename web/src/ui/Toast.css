@@ -100,6 +100,16 @@ html:has(.sticky-action-bar) .toast-region {
   min-block-size: var(--space-8);
 }
 
+/* A one-line toast with an action: the row is as tall as the 40 px pill, and Dismiss steps down 4 px, so the headline, the pill
+   and Dismiss share one centre line, also when the actions wrap under the headline. */
+.toast[data-layout='line']:has(.toast__actions) .toast__title {
+  min-block-size: var(--space-10);
+}
+
+.toast[data-layout='line']:has(.toast__actions) .toast__dismiss {
+  margin-block-start: var(--space-1);
+}
+
 .toast__title-text {
   min-inline-size: 0;
 }
