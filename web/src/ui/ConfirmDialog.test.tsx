@@ -26,10 +26,14 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
-  it('a default confirm focuses the confirm button and the backdrop cancels', () => {
+  // B9-18 (SAFE R1): the safe button has focus on open in every confirm; focus="confirm" is the opt-in for a question that loses nothing.
+  it('a default confirm focuses Cancel (the safe button) and the backdrop cancels; focus="confirm" focuses the confirm button', () => {
     const onCancel = vi.fn()
-    render(<ConfirmDialog {...base} confirmLabel="Save" onConfirm={() => {}} onCancel={onCancel} />)
+    const { unmount } = render(<ConfirmDialog {...base} confirmLabel="Save" focus="confirm" onConfirm={() => {}} onCancel={() => {}} />)
     expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus()
+    unmount()
+    render(<ConfirmDialog {...base} confirmLabel="Save" onConfirm={() => {}} onCancel={onCancel} />)
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
     fireEvent.click(screen.getByRole('dialog'))
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
