@@ -1,7 +1,7 @@
 // beta.7 (SR6, docs/design/shop-scan-proposals.md 13): the Scan screen in shop mode. A headless Chrome has no camera, so the
 // no-camera block shows and the guard types the seeded codes by hand. The Scanned list with its rows and the "Read the receipt" footer
 // row; a row active with its strip; the Price keypad (a non-modal half sheet on a phone, docked from 768 px); the new-Product sheet.
-import { byText, evaluate, ids, press, scanSession, scannedList, until } from '../helpers.mjs'
+import { SCANNED_UL, byText, evaluate, ids, press, scanSession, scannedList, until } from '../helpers.mjs'
 
 /**
  * B9-35 (SSP-12): a toast that arrives while the Price keypad is open, shown through the app's own toast API (the ToastProvider's context value,
@@ -34,12 +34,12 @@ export default {
     },
     async scanRowActive() {
       await scannedList()
-      await press(`document.querySelector('ul[aria-label="Scanned list"] > .list-row .list-row__target')`, 'the first Scanned row')
+      await press(`(${SCANNED_UL})?.querySelector(':scope > .list-row .list-row__target')`, 'the first Scanned row')
       await until(`!!document.querySelector('.scanned-row__strip')`, 'the active row strip')
     },
     async scanPriceKeypad() {
       await scannedList()
-      await press(`document.querySelector('ul[aria-label="Scanned list"] > .list-row .list-row__target')`, 'the first Scanned row')
+      await press(`(${SCANNED_UL})?.querySelector(':scope > .list-row .list-row__target')`, 'the first Scanned row')
       await until(`!!document.querySelector('.scanned-row__strip')`, 'the active row strip')
       await press(byText('.scanned-row__strip button', 'Price'), 'Price on the active row')
       await until(`document.querySelector('.scan-screen')?.dataset.priceEntry === 'open' && !!document.querySelector('dialog.sheet[open]')`, 'the Price keypad')
