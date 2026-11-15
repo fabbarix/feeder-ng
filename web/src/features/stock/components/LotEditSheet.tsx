@@ -1,5 +1,5 @@
-import { useState, type FormEvent, type ReactElement } from 'react'
-import { BottomSheet, Button, DateField, FormActions, Stack, Switch, TextField } from '../../../ui'
+import { useId, useState, type FormEvent, type ReactElement } from 'react'
+import { BottomSheet, DateField, Stack, Switch, TextField } from '../../../ui'
 import { capitalise } from '../lib/display'
 import { isSupply } from '../lib/supplies'
 import { changeGoesOff, changePurchased, checkLotForm, initialForm, toggleNoGoOff, type LotForm, type LotFormErrors } from '../lib/lotEdit'
@@ -17,19 +17,28 @@ export interface LotEditSheetProps {
 
 /**
  * BottomSheet "Edit <Name>" with the fields Quantity (suffix = Base Unit), Bought on (DateField, max today), Good until
- * (DateField, min Bought on) and, when the Lot's Shelf Life is null, a Switch "No go-off date"; Save in the footer.
+ * (DateField, min Bought on) and, when the Lot's Shelf Life is null, a Switch "No go-off date"; Cancel and Save in the sheet's
+ * footer (VC2: no Close), Save submitting the body's form.
  * State and rules are lib/lotEdit.ts (initialForm, changePurchased, changeGoesOff, toggleNoGoOff, checkLotForm); errors
  * show on the fields. Storage Place is not here: it changes with Move to.
  */
 export function LotEditSheet({ lot, today, onClose, onSubmit }: LotEditSheetProps): ReactElement | null {
+  const formId = useId()
   return (
-    <BottomSheet open={lot !== null} onClose={onClose} title={lot ? strings.editTitle(capitalise(lot.ingredientName)) : ''}>
-      {lot ? <LotEditForm key={lot.id} lot={lot} today={today} onClose={onClose} onSubmit={onSubmit} /> : null}
+    <BottomSheet
+      open={lot !== null}
+      onClose={onClose}
+      onCancel={onClose}
+      cancelLabel={strings.cancel}
+      submit={{ label: strings.save, form: formId }}
+      title={lot ? strings.editTitle(capitalise(lot.ingredientName)) : ''}
+    >
+      {lot ? <LotEditForm key={lot.id} id={formId} lot={lot} today={today} onClose={onClose} onSubmit={onSubmit} /> : null}
     </BottomSheet>
   )
 }
 
-type FormProps = Pick<LotEditSheetProps, 'today' | 'onClose' | 'onSubmit'> & { lot: StockLot }
+type FormProps = Pick<LotEditSheetProps, 'today' | 'onClose' | 'onSubmit'> & { lot: StockLot; id: string }
 
 const errorText = (errors: LotFormErrors) => ({
   quantity: errors.quantity ? strings.errors[errors.quantity] : undefined,
@@ -37,7 +46,7 @@ const errorText = (errors: LotFormErrors) => ({
   goesOff: errors.goesOff === 'beforePurchased' ? strings.editErrors.beforePurchased : errors.goesOff ? strings.editErrors.invalidDate : undefined,
 })
 
-function LotEditForm({ lot, today, onClose, onSubmit }: FormProps) {
+function LotEditForm({ id, lot, today, onClose, onSubmit }: FormProps) {
   const [form, setForm] = useState<LotForm>(() => initialForm(lot))
   const [errors, setErrors] = useState<LotFormErrors>({})
   const shelfLife = lot.shelfLifeDays
@@ -60,7 +69,7 @@ function LotEditForm({ lot, today, onClose, onSubmit }: FormProps) {
   }
 
   return (
-    <form onSubmit={save}>
+    <form id={id} onSubmit={save}>
       <Stack>
         <TextField
           label={strings.quantity}
@@ -108,7 +117,6 @@ function LotEditForm({ lot, today, onClose, onSubmit }: FormProps) {
             }}
           />
         ) : null}
-        <FormActions secondary={<Button variant="secondary" onClick={onClose}>{strings.cancel}</Button>} primary={<Button type="submit">{strings.save}</Button>} />
       </Stack>
     </form>
   )

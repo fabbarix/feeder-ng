@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, Chip, Cluster, CROP_ASPECTS, EmptyState, FormActions, ImagePicker, Muted, PageHeader, SectionTitle, Stack, TextField, Tile } from '../../../ui'
+import { BentoGrid, Button, Chip, Cluster, CROP_ASPECTS, EmptyState, FormActions, ImagePicker, Muted, PageHeader, SectionTitle, Stack, TextField, Tile } from '../../../ui'
 import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSystem'
 import { displayName } from '../../ingredients/lib/names'
 import { PriceEditor } from '../components/PriceEditor'
@@ -172,7 +172,7 @@ export function ProductScreen() {
         </Tile>
       </BentoGrid>
 
-      <BottomSheet open={pricing} onClose={() => setPricing(false)} title={strings.addPrice}>
+      {pricing ? (
         <PriceEditor
           shops={p.shops}
           latestByShop={p.latestByShop}
@@ -184,7 +184,7 @@ export function ProductScreen() {
           }}
           onCancel={() => setPricing(false)}
         />
-      </BottomSheet>
+      ) : null}
     </Stack>
   )
 }

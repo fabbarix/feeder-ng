@@ -127,20 +127,18 @@ export function ShopScreen() {
         </Tile>
       </BentoGrid>
 
-      <BottomSheet open={editor !== null} onClose={() => setEditor(null)} title={editor?.rule ? strings.editRule : strings.addRule}>
-        {editor ? (
-          <WeightRuleEditor
-            initial={editor.rule}
-            currency={currency}
-            onCancel={() => setEditor(null)}
-            onSave={async (body) => {
-              if (editor.rule) await shop.updateRule(editor.rule.id, body)
-              else await shop.addRule(body)
-              setEditor(null)
-            }}
-          />
-        ) : null}
-      </BottomSheet>
+      {editor ? (
+        <WeightRuleEditor
+          initial={editor.rule}
+          currency={currency}
+          onCancel={() => setEditor(null)}
+          onSave={async (body) => {
+            if (editor.rule) await shop.updateRule(editor.rule.id, body)
+            else await shop.addRule(body)
+            setEditor(null)
+          }}
+        />
+      ) : null}
       <AddShopBarcodeSheet
         open={adding}
         rules={shop.rules}

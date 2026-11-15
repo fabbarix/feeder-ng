@@ -5,9 +5,9 @@
 //     title: string                 "Edit photo 2"
 //     src: string; width: number; height: number     the picture, in its own (un-turned) orientation: ImageEditor's props
 //     minSide?: number              smallest crop side in picture pixels, default 160 (the read's minimum), passed to ImageEditor
-//     busy?: boolean                the edit is being applied: Use this, Cancel, Reset, the turns and the crop are disabled, Escape and Close do nothing
+//     busy?: boolean                the edit is being applied: Use this, Cancel, Reset, the turns and the crop are disabled, Escape does nothing
 //     onUse(edit: ImageEdit): void     Use this (primary): the draft, whatever it is (an untouched draft is the caller's no-op)
-//     onCancel(): void              Cancel, Escape, the sheet's Close: the draft is dropped
+//     onCancel(): void              Cancel or Escape (the sheet has no Close: Cancel is in its footer): the draft is dropped
 //   />
 //   The draft is the sheet's own (initialEdit(size, 'free')); it starts again, whole picture, every time the sheet opens.
 //   Focus: on open, the crop box; on close the dialog returns focus to what opened it (BottomSheet's behaviour).
@@ -98,10 +98,12 @@ describe('PhotoEditSheet', () => {
     expect(onUse).not.toHaveBeenCalled()
   })
 
-  it("the sheet's own Close cancels", async () => {
-    const { onCancel } = view()
-    await userEvent.click(within(dialog()).getByRole('button', { name: 'Close' }))
-    expect(onCancel).toHaveBeenCalledOnce()
+  // B9-14 (VC2): Cancel and Use this are the sheet's footer, so the sheet has no Close; Use this is last.
+  it('Cancel and Use this are the footer, Use this last, and there is no Close', () => {
+    view()
+    const footer = dialog().querySelector('.sheet__footer') as HTMLElement
+    expect([...footer.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Cancel', 'Use this'])
+    expect(within(dialog()).queryByRole('button', { name: 'Close' })).toBeNull()
   })
 
   it.each([

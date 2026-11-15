@@ -17,6 +17,8 @@ export interface SheetSubmit {
   /** The id of the `<form>` in the body. */
   form: string
   disabled?: boolean
+  /** The save is in flight: the Button shows its spinner and is disabled (additive to the pinned API). */
+  loading?: boolean
   tone?: 'danger'
 }
 
@@ -161,7 +163,7 @@ function SheetSurface({
               ) : null}
               {footer}
               {submit ? (
-                <Button type="submit" form={submit.form} variant={submit.tone === 'danger' ? 'danger' : 'primary'} disabled={submit.disabled} className="sheet__submit">
+                <Button type="submit" form={submit.form} variant={submit.tone === 'danger' ? 'danger' : 'primary'} disabled={submit.disabled} loading={submit.loading} className="sheet__submit">
                   {submit.label}
                 </Button>
               ) : null}

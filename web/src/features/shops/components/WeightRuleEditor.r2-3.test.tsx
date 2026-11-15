@@ -55,9 +55,15 @@ describe('WeightRuleEditor validation and actions (F-08, F-04)', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('puts Save rule and Cancel in FormActions', () => {
+  // B9-14 (VC2): the editor is the rule sheet; Cancel and Save rule are its footer and it has no Close.
+  it('puts Cancel and Save rule in the sheet footer, Save the primary submit of the form, and shows no Close', () => {
     setup()
-    expect(screen.getByRole('button', { name: strings.saveRule }).closest('.form-actions__primary')).not.toBeNull()
-    expect(screen.getByRole('button', { name: strings.cancel }).closest('.form-actions__tertiary')).not.toBeNull()
+    const save = screen.getByRole('button', { name: strings.saveRule })
+    const footer = save.closest('.sheet__footer') as HTMLElement
+    expect(footer).not.toBeNull()
+    expect(save).toHaveAttribute('data-variant', 'primary')
+    expect(document.getElementById(save.getAttribute('form')!)?.tagName).toBe('FORM')
+    expect([...footer.querySelectorAll('button')].map((b) => b.textContent)).toEqual([strings.cancel, strings.saveRule])
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
   })
 })
