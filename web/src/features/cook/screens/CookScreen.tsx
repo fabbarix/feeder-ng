@@ -32,19 +32,12 @@ import { useDocumentTitle } from '../../../ui/lib/useDocumentTitle'
 import '../cook.css'
 
 /**
- * Cook Mode. Routes: /cook/meal/:date/:slotId and /cook/recipe/:id (?batches=, default 1).
- * Composes (render + wire only) useCookSession, useTimers() (every household timer), useTimerAlarm,
- * useWakeLock(createWakeLock()), useVoiceCommands(createBrowserSpeech()) with useVoicePreference, useCoachMark, useCookTimerPanel
- * (strip, rail, sheets), and: CookTopRow (Exit, Voice), AdvanceStepsTile (the tile on Step 1, one info line after, the chip in short
- * landscape), StepTile (tap zones at every width, decision SHORT 3), CookTimers and CookNavTiles. The document title is
- * "Cook Mode · <Recipe> · Feeder" (A11Y-01).
- * Exit goes to exitPathFor(source). Voice commands: next/back call the session, repeat bumps repeat, startTimer calls
- * startStepTimer, pauseTimer pauses the first running timer. Mark as Cooked opens T11's MarkCookedSheet through
- * useMarkCooked(markCookedKey) from features/plan. useStepGate holds Next (tile, tap zone and voice) while the next
- * Step waits for a Step whose timer is still counting down; cancelling that timer frees it. A Planned Meal is offered
- * Mark as Cooked only once it is due (mayResolve); before that its last Step offers Back to Plan (PC-12). A Recipe cook's
- * "Back to Recipe" forgets the resume Step. After a successful Mark as Cooked, CookedConfirmation replaces the Step and leaves with
- * "Back to Today" (no timed redirect). A not_cookable meal shows an EmptyState. Wake Lock is held while the screen is mounted.
+ * Cook Mode. Routes: /cook/meal/:date/:slotId (the slot's timeline, TimelineCookScreen) and /cook/recipe/:id (?batches=, default 1).
+ * A Recipe cook composes (render + wire only) useCookReady (B9-45, PC-05: the Get ready tile before Step 1, then the Ingredients
+ * sheet or the rail list), useCookSession (held while on Get ready), useTimers, useTimerAlarm, useWakeLock, useVoiceCommands,
+ * useCoachMark, useCookTimerPanel, and: CookTopRow (Exit, Ingredients, Voice), AdvanceStepsTile, StepTile, CookTimers and
+ * CookNavTiles. Exit goes back to where Cook Mode was opened from (location.state.from, lib/origin), else the Recipe; the last
+ * Step's "Back to Recipe" forgets the resume Step. The document title is "Cook Mode · <Recipe> · Feeder" (A11Y-01).
  */
 /**
  * Cook Mode. A Planned Meal route (/cook/meal/:date/:slotId[/:courseId]) opens the slot's cooking timeline (CRS F); a

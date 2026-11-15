@@ -460,13 +460,9 @@
   line-height: var(--text-title-1-line);
 }
 
+/* The heading takes focus so a screen reader starts there; it is not a control, so it draws no ring. */
 .cook-confirmation__title:focus {
   outline: none;
-}
-
-.cook-confirmation__title:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--focus-ring-offset);
 }
 
 .cook-confirmation__recipe {
@@ -521,7 +517,7 @@
 }
 
 .cook-confirmation__actions > .button {
-  flex: 1 1 12rem;
+  flex: 1 1 9rem;
 }
 
 /* B9-45 (PC-05): Get ready, the Ingredients before the first Step (and the same rows in the sheet and the rail). A row is our own
@@ -591,8 +587,12 @@
   white-space: nowrap;
 }
 
+.get-ready__list > .list-row > .list-row__control {
+  justify-items: start;
+}
+
 .get-ready__check .checkbox__control {
-  justify-content: center;
+  justify-content: flex-start;
   min-inline-size: 44px;
 }
 
@@ -607,6 +607,10 @@
 
 .cook-rail__ingredients {
   align-content: start;
+  padding: var(--space-4);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface);
+  box-shadow: var(--elev-1);
 }
 
 /* Tablet and up (§2.7): the Step tile fills the height, the timers sit 2-up beneath it, the nav last. */
