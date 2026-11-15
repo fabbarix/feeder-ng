@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
-import { Button, Checkbox, EmptyState, FormActions, Icon, ListGroup, ListRow, RecipeThumb, SearchField, StickyActionBar, Tile } from '../../../ui'
+import { Button, Checkbox, DetailList, DetailRow, EmptyState, FormActions, Icon, ListGroup, ListRow, RecipeThumb, SearchField, StickyActionBar, Tile } from '../../../ui'
 import { alsoExportLabel } from '../lib/exportAlso'
 import { EXPORT_SEARCH_FROM, searchRecipes, selectionState } from '../lib/exportSelection'
 import { importStrings as s } from '../strings'
@@ -71,11 +71,11 @@ export function ExportPicker({ recipes, selected, onToggle, onSelectAll, onClear
         </ListGroup>
         {shown.length === 0 ? <p className="export-picker__none">{t.noMatch}</p> : null}
         {also.length > 0 ? (
-          <ul className="export-picker__also" aria-label={s.baseRecipes.alsoExports}>
+          <DetailList className="export-picker__also" aria-label={s.baseRecipes.alsoExports}>
             {also.map((b) => (
-              <li key={b.id}>{alsoExportLabel(b.name)}</li>
+              <DetailRow key={b.id} label={alsoExportLabel(b.name)} />
             ))}
-          </ul>
+          </DetailList>
         ) : null}
       </Tile>
       <StickyActionBar label={s.exportActions}>

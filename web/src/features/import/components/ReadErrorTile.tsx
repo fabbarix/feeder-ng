@@ -1,6 +1,6 @@
 import type { ReactNode, Ref } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Tile } from '../../../ui'
+import { Button, DetailList, DetailRow, Tile } from '../../../ui'
 import { readErrorCopy, type ReadErrorInput } from '../lib/readErrors'
 import { readStrings as t } from '../strings'
 
@@ -22,13 +22,11 @@ export function ReadErrorTile({ error, isAdmin, onRetry, focusRef }: ReadErrorTi
         <p>{copy.message}</p>
         {copy.hint ? <p className="read-error__hint">{copy.hint}</p> : null}
         {copy.details.length > 0 ? (
-          <ul className="read-error__details">
+          <DetailList tone="warn" className="read-error__details">
             {copy.details.map((d) => (
-              <li key={d}>
-                <code>{d}</code>
-              </li>
+              <DetailRow key={d} label={<code>{d}</code>} />
             ))}
-          </ul>
+          </DetailList>
         ) : null}
         {copy.action === 'retry' && copy.retryable ? (
           <Button variant="secondary" icon="refresh" onClick={onRetry}>

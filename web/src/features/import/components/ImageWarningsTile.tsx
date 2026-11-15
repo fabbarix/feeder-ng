@@ -1,22 +1,23 @@
 import type { ReactNode } from 'react'
-import { Tile } from '../../../ui'
+import { DetailList, DetailRow, Tile } from '../../../ui'
 import { importStrings as s } from '../strings'
 import type { Warning } from '../types'
 
-/** Titled importStrings.warningsTitle with importStrings.warningsHelp; one item per warning with its JSON path in <code> and the message. Renders nothing for an empty list. */
+/**
+ * Titled importStrings.warningsTitle with importStrings.warningsHelp; one R-E row per warning (B9-55): the JSON path in <code> as the key, the
+ * message as the detail, as ValidationErrorsTile. Renders nothing for an empty list.
+ */
 export function ImageWarningsTile({ warnings }: { warnings: Warning[] }): ReactNode {
   if (warnings.length === 0) return null
   return (
     <Tile as="section">
       <h2>{s.warningsTitle}</h2>
       <p>{s.warningsHelp}</p>
-      <ul className="import-list">
+      <DetailList>
         {warnings.map((w, i) => (
-          <li key={`${w.path}-${i}`}>
-            <code>{w.path}</code> {w.message}
-          </li>
+          <DetailRow key={`${w.path}-${i}`} label={<code>{w.path}</code>} detail={w.message} />
         ))}
-      </ul>
+      </DetailList>
     </Tile>
   )
 }

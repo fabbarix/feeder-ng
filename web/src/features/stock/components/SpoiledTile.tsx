@@ -1,9 +1,8 @@
 import { useEffect, useId, useRef, type ReactElement } from 'react'
-import { Button, ListRow, Tile, TileHeader, TileHeaderLink } from '../../../ui'
+import { Button, Tile, TileHeader, TileHeaderLink } from '../../../ui'
 import { useShowMore } from '../../../ui/lib/useShowMore'
-import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import { describeGoOff } from '../lib/view'
-import { capitalise } from '../lib/display'
+import type { UnitSystem } from '../../../lib/units'
+import { SpoiledLotList } from './SpoiledLotList'
 import type { StockLot } from '../types'
 import { stockStrings as strings } from '../strings'
 import '../stock.css'
@@ -72,49 +71,20 @@ export function SpoiledTile({
         countLabel={strings.spoiledCount(lots.length)}
         action={<TileHeaderLink to='/pantry?status=spoiled' label={strings.pantryLink} context={strings.spoiledHeading} />}
       />
-      <ul className='spoiled-tile__list'>
-        {more.visible.map((lot) => {
-          const actions = (
-            <>
-              <Button
-                variant='danger-secondary'
-                icon='throwOut'
-                size='sm'
-                aria-label={strings.throwOutLabel(lot.ingredientName)}
-                onClick={() => {
-                  act(lot)
-                  onThrowOut(lot.id)
-                }}
-              >
-                {strings.throwOut}
-              </Button>
-              <Button
-                variant='secondary'
-                icon='tick'
-                size='sm'
-                aria-label={strings.keepLabel(lot.ingredientName)}
-                ref={(el: HTMLButtonElement | null) => {
-                  if (el) keepButtons.current.set(lot.id, el)
-                  else keepButtons.current.delete(lot.id)
-                }}
-                onClick={() => {
-                  act(lot)
-                  onKeep(lot.id)
-                }}
-              >
-                {strings.keep}
-              </Button>
-            </>
-          )
-          const title = capitalise(lot.ingredientName)
-          const meta = `${describeGoOff(lot, today).label} · ${formatQuantity(lot.quantity, lot.baseUnit, system)}`
-          return (
-            <ListRow key={lot.id} title={title} meta={meta}>
-              {actions}
-            </ListRow>
-          )
-        })}
-      </ul>
+      <SpoiledLotList
+        lots={more.visible}
+        today={today}
+        system={system}
+        keepButtons={keepButtons.current}
+        onThrowOut={(lot) => {
+          act(lot)
+          onThrowOut(lot.id)
+        }}
+        onKeep={(lot) => {
+          act(lot)
+          onKeep(lot.id)
+        }}
+      />
       {more.capped ? (
         <Button
           variant='secondary'

@@ -7,6 +7,8 @@ const FILES = [
   // B9-32 (PC-07): the compact tile has no list of its own; the meals by day are in the "Show which meals" sheet.
   'features/plan/components/CouldntMealsSheet.tsx',
   'features/plan/components/CouldntPlanExclusionTile.tsx',
+  // B9-55: the Exclusion tile's lists moved to their own file (check-ui allow-bullets is empty).
+  'features/plan/components/CouldntPlanExclusionLists.tsx',
   'features/plan/components/CouldntPlanExclusionSummary.tsx',
   'features/plan/screens/CouldntPlanExclusionsScreen.tsx',
 ]

@@ -14,8 +14,11 @@ describe('ImageWarningsTile', () => {
     const { container } = render(<ImageWarningsTile warnings={[]} />)
     expect(container).toBeEmptyDOMElement()
   })
-  it('the list is a styled .import-list, with no browser bullets', () => {
+  // B9-55 (R-E, allow-bullets empty): each warning is a DetailList row (the path as key, the message as detail), as ValidationErrorsTile.
+  it('each warning is an R-E row, not a bullet: the path as its key, the message as its detail', () => {
     const { container } = render(<ImageWarningsTile warnings={[{ path: '$.a', code: 'image_failed', message: 'x' }]} />)
-    expect(container.querySelector('ul')).toHaveClass('import-list')
+    expect(container.querySelector('ul')).toHaveClass('detail-list')
+    expect(container.querySelector('.detail-row__label code')).toHaveTextContent('$.a')
+    expect(container.querySelector('.detail-row__detail')).toHaveTextContent('x')
   })
 })

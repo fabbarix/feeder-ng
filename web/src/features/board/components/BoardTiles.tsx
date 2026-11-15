@@ -1,24 +1,12 @@
 import { Fragment, useId, type ReactNode } from 'react'
 import type { TimerItem } from '../../cook/hooks/useTimers'
-import { Button, Chip, Tile, TimerTile } from '../../../ui'
+import { Button, Chip, Tile } from '../../../ui'
 import { useFitRows } from '../hooks/useFitRows'
 import { eyebrowParts, type BoardHero } from '../lib/hero'
-import {
-  advanceDoneName,
-  clockText,
-  dateText,
-  dueText,
-  hasPlanned,
-  leftoverLine,
-  nextAdvanceMeal,
-  notServedLine,
-  plannedNames,
-  tomorrowLine,
-  useSoonChip,
-  type LeftoverRow,
-} from '../lib/tiles'
+import { advanceDoneName, clockText, dateText, dueText, nextAdvanceMeal, notServedLine, tomorrowLine, type LeftoverRow } from '../lib/tiles'
 import { boardStrings } from '../strings'
 import type { NextAdvance, SlotLike, StockTotalLike } from '../types'
+import { LeftoverList, TimerList, TomorrowList, TonightCourses, UseSoonChips } from './BoardLists'
 
 // The kitchen board's tiles, composed from the shared Bento primitives (Tile, Chip, TimerTile, Button). Each renders its data and
 // wires events only; all choosing and wording lives in lib/. Placement on the grid is BoardScreen's job (lib/layout.ts). Every tile
@@ -88,13 +76,7 @@ export function BoardHeroTile({ hero, notServed = [], onCook }: BoardHeroTilePro
       {hero ? (
         <>
           {rows.length > 1 ? (
-            <ul aria-label={boardStrings.courses} className="board-tonight__courses">
-              {rows.map((row) => (
-                <li key={row.courseId} data-main={row.main ? 'true' : undefined} data-state={row.state} className="board-tonight__course">
-                  {row.recipeName}
-                </li>
-              ))}
-            </ul>
+            <TonightCourses rows={rows} />
           ) : rows[0] ? (
             <p className="board-tonight__recipe">{rows[0].recipeName}</p>
           ) : null}
@@ -174,17 +156,7 @@ export function BoardLeftoversTile({ rows, today }: { rows: LeftoverRow[]; today
       {rows.length === 0 ? (
         <p className="board-empty">{boardStrings.leftoversNone}</p>
       ) : (
-        <ul className="board-list" ref={fit.ref}>
-          {rows.slice(0, fit.shown).map((r) => {
-            const line = leftoverLine(r, today)
-            return (
-              <li key={r.id}>
-                <span className="board-list__title">{line.title}</span>
-                <span className="board-list__meta">{line.meta}</span>
-              </li>
-            )
-          })}
-        </ul>
+        <LeftoverList listRef={fit.ref} rows={rows.slice(0, fit.shown)} today={today} />
       )}
       {hidden > 0 ? <p className="board-more">{boardStrings.more(hidden)}</p> : null}
     </Tile>
@@ -202,19 +174,7 @@ export function UseSoonTile({ rows, today }: { rows: StockTotalLike[]; today: st
       {rows.length === 0 ? (
         <p className="board-empty">{boardStrings.useSoonNone}</p>
       ) : (
-        <ul className="board-chips" ref={fit.ref}>
-          {rows.slice(0, fit.shown).map((r) => {
-            const chip = useSoonChip(r, today)
-            return (
-              <li key={r.ingredientId}>
-                <Chip kind="status" status="spoil" label={chip.name}>
-                  {chip.label}
-                </Chip>
-              </li>
-            )
-          })}
-          {hidden > 0 ? <li className="board-chips__more">{boardStrings.more(hidden)}</li> : null}
-        </ul>
+        <UseSoonChips listRef={fit.ref} rows={rows.slice(0, fit.shown)} today={today} hidden={hidden} />
       )}
     </Tile>
   )
@@ -240,13 +200,7 @@ export function BoardTimersTile({ items }: { items: TimerItem[] }): ReactNode {
         <p className="board-empty">{boardStrings.timersNone}</p>
       ) : (
         <>
-          <ul className="board-list" ref={fit.ref}>
-            {shown.map(({ timer, seconds }) => (
-              <li key={timer.id}>
-                <TimerTile label={timer.label} seconds={seconds} running={timer.state === 'running'} />
-              </li>
-            ))}
-          </ul>
+          <TimerList listRef={fit.ref} items={shown} />
           {hidden > 0 ? <p className="board-timers__more">{boardStrings.more(hidden)}</p> : null}
         </>
       )}
@@ -254,30 +208,7 @@ export function BoardTimersTile({ items }: { items: TimerItem[] }): ReactNode {
   )
 }
 
-/** One Tomorrow line: the Meal Slot in bold, then its Recipes, "Not served", or a neutral "Not planned" chip (R13, read-only). */
-function TomorrowLine({ slot }: { slot: SlotLike }): ReactNode {
-  if (slot.notServed === true) {
-    return (
-      <>
-        <strong>{slot.name}</strong> · {boardStrings.notServed}
-      </>
-    )
-  }
-  if (hasPlanned(slot)) {
-    return (
-      <>
-        <strong>{`${slot.name}:`}</strong> {plannedNames(slot).join(' + ')}
-      </>
-    )
-  }
-  return (
-    <>
-      <strong>{slot.name}</strong> <Chip kind="tag">{boardStrings.notPlanned}</Chip>
-    </>
-  )
-}
-
-/** Heading "Tomorrow", one line per Meal Slot ("Dinner: X + Y", spec 7.5), each ending in an ellipsis with the full text in `title`. */
+/** Heading "Tomorrow", one line per Meal Slot/** Heading "Tomorrow", one line per Meal Slot ("Dinner: X + Y", spec 7.5), each ending in an ellipsis with the full text in `title`. */
 export function TomorrowTile({ slots }: { slots: SlotLike[] }): ReactNode {
   const id = useId()
   const fit = useFitRows<HTMLUListElement>(slots.length, slots.map(tomorrowLine).join('|'))
@@ -288,13 +219,7 @@ export function TomorrowTile({ slots }: { slots: SlotLike[] }): ReactNode {
       {slots.length === 0 ? (
         <p className="board-empty">{boardStrings.tomorrowNone}</p>
       ) : (
-        <ul className="board-list board-list--lines" ref={fit.ref}>
-          {slots.slice(0, fit.shown).map((s) => (
-            <li key={`${s.date}/${s.mealSlotId}`} title={tomorrowLine(s)}>
-              <TomorrowLine slot={s} />
-            </li>
-          ))}
-        </ul>
+        <TomorrowList listRef={fit.ref} slots={slots.slice(0, fit.shown)} />
       )}
       {hidden > 0 ? <p className="board-more">{boardStrings.more(hidden)}</p> : null}
     </Tile>
