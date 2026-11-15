@@ -272,7 +272,8 @@ function monthShort(date: string, locale: string): string {
   }
 }
 
-function dateLabel(date: string, locale: string): string {
+/** "Sat 14 Nov": a date as the Meal Slots page words it (the Change a date title, the Dates that differ rows). */
+export function dateLabel(date: string, locale = 'en'): string {
   const day = Number(date.slice(8, 10))
   const weekday = weekdayOfDate(date)
   const short = weekday === null ? '' : weekdayShortName(weekday, locale)

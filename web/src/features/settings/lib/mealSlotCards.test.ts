@@ -1,7 +1,7 @@
 // MS redesign: the pure model of the Meal Slots cards (grouping, usual values with the tie rule, differences, the 7-day strip, scaling).
 import { describe, expect, it } from 'vitest'
 import type { MealSlot, Member, SlotCourse } from '../types'
-import { attendanceText, buildMealSlotCards, courseEatersText, datePartText, datesThatDiffer, daysLabel, differenceParts, pickUsual } from './mealSlotCards'
+import { dateLabel, attendanceText, buildMealSlotCards, courseEatersText, datePartText, datesThatDiffer, daysLabel, differenceParts, pickUsual } from './mealSlotCards'
 
 const member = (id: number, name: string): Member => ({ id, name, colour: '#336699', avatar: '', portionFactor: 1, userId: null, email: null })
 const mia = member(1, 'Mia')
@@ -351,5 +351,15 @@ describe('buildMealSlotCards: which strip days show their time (SET-08)', () => 
   it('a tie for the usual time still marks the minority day as the one with a time', () => {
     const c = card(build(sample()), 'Breakfast')
     expect(runs(c).map((w) => [w.weekday, w.timeDiffers])).toEqual([[6, false], [7, true]])
+  })
+})
+
+describe('dateLabel (A11Y-07: "Breakfast on Sat 14 Nov", not an ISO date)', () => {
+  it('words a date as weekday, day and month', () => {
+    expect(dateLabel('2026-11-14', 'en')).toBe('Sat 14 Nov')
+    expect(dateLabel('2026-11-09', 'en')).toBe('Mon 9 Nov')
+  })
+  it('does not zero-pad the day', () => {
+    expect(dateLabel('2026-12-01', 'en')).toBe('Tue 1 Dec')
   })
 })

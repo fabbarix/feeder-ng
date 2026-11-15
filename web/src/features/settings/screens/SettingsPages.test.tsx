@@ -218,7 +218,7 @@ describe('MealSlotsPage', () => {
     })
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: 'Change a date for Dinner' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Dinner on 2026-11-12' })
+    const dialog = await screen.findByRole('dialog', { name: 'Dinner on Thu 12 Nov' })
     await userEvent.click(await within(dialog).findByRole('checkbox', { name: 'Sam' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save for this date' }))
     await waitFor(() => expect(api.callsTo('PUT', url)).toHaveLength(1))
@@ -231,8 +231,9 @@ describe('MealSlotsPage', () => {
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: /^Dinner on Thursday, 19:00$/ }))
     expect(await screen.findByRole('dialog', { name: 'Edit Meal Slot' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Change a date' }))
-    expect(await screen.findByRole('dialog', { name: 'Dinner on 2026-11-12' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change a date' }))
+    expect(await screen.findByRole('dialog', { name: 'Dinner on Thu 12 Nov' })).toBeInTheDocument()
   })
 
   it('edits an existing slot through one batch call that cannot move it to another weekday', async () => {

@@ -5,7 +5,7 @@ import { dateProblem } from '../lib/attendanceDate'
 import { dateCourseChanges, dateCourseDrafts, hasDateOverride, resetDateCourse, sameAttendance, withDateEater, type DateCourseDraft } from '../lib/dateCourses'
 import { settingsStrings } from '../strings'
 import type { AttendanceEntry, DateAttendance, DateCourseChange, MealSlot, Member } from '../types'
-import { AttendanceEditor } from './AttendanceEditor'
+import { AttendanceEditor, type AttendanceEditorProps } from './AttendanceEditor'
 import { DateCoursesSection } from './DateCoursesSection'
 import '../settings.css'
 
@@ -30,6 +30,8 @@ export interface DateAttendancePanelProps {
   dateReadOnly?: boolean
   onReset: () => void | Promise<void>
   onClose: () => void
+  /** Passed to the Attendance rows (B9-46's "Eats here anyway" for a Member who is away). Stub: not forwarded yet (B9-42). */
+  memberExtra?: AttendanceEditorProps['memberExtra']
 }
 
 const text = settingsStrings.attendance

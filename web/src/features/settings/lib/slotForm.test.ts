@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { members } from '../components/fixtures'
 import { dinnerCard, lunchCard } from '../components/mealSlotCardFixtures'
-import { createSlotsSequentially, slotDraft, slotFormDirty, slotFormFromCard, slotFormFromCell, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from './slotForm'
+import { createSlotsSequentially, slotDraft, slotFormDirty, slotFormFromCard, slotFormFromCell, slotProblemField, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from './slotForm'
 
 describe('slotForm', () => {
   it('starts blank on Monday', () => {
@@ -118,5 +118,16 @@ describe('slotFormDirty', () => {
   })
   it('a name with only edge spaces added is not a change', () => {
     expect(slotFormDirty(start, { draft: { ...start.draft, name: ' Dinner ' }, weekdays: start.weekdays })).toBe(false)
+  })
+})
+
+describe('slotProblemField', () => {
+  it('names the field of the first problem: the name, then the time', () => {
+    expect(slotProblemField({ ...slotDraft(), name: ' ' })).toBe('name')
+    expect(slotProblemField({ ...slotDraft(), name: 'Dinner' })).toBe('time')
+    expect(slotProblemField({ ...slotDraft(), name: 'Dinner', time: '25:00' })).toBe('time')
+  })
+  it('is null when slotProblem is null', () => {
+    expect(slotProblemField({ ...slotDraft(), name: 'Dinner', time: '19:30' })).toBeNull()
   })
 })

@@ -121,16 +121,19 @@ describe('MealSlotEditor', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Marco' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save Meal Slot' }))
     expect(onApply).toHaveBeenCalledWith({ match: 'Dinner', weekdays: [2], set: { attendance: [tuesdayDinner.attendance[0], tuesdayDinner.attendance[2]] } })
-    await userEvent.click(screen.getByRole('button', { name: 'Remove Meal Slot' }))
+    // SHORT-02: Remove sits in the sheet's ⋮ menu (danger tone), never as a button of the footer.
+    await userEvent.click(screen.getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove Meal Slot' }))
     expect(onDelete).toHaveBeenCalled()
   })
 
   it('offers "Change a date" only when editing, for the one-date Attendance', async () => {
     const onChangeDate = vi.fn()
     const { rerender } = render(<MealSlotEditor open members={members} onSave={() => {}} onClose={() => {}} onChangeDate={onChangeDate} />)
-    expect(screen.queryByRole('button', { name: 'Change a date' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^More for/ })).toBeNull()
     rerender(<MealSlotEditor open members={members} slot={tuesdayDinner} onSave={() => {}} onClose={() => {}} onChangeDate={onChangeDate} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Change a date' }))
+    await userEvent.click(screen.getByRole('button', { name: 'More for Dinner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change a date' }))
     expect(onChangeDate).toHaveBeenCalled()
   })
 

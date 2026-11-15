@@ -102,3 +102,8 @@ export function slotFormFromCell(_slot: MealSlot): SlotFormStart {
 export function slotFormDirty(_start: { draft: MealSlotInput; weekdays: number[] }, _now: { draft: MealSlotInput; weekdays: number[] }): boolean {
   throw new Error('not implemented')
 }
+
+/** B9-16 `focusFirstInvalid`: which field the first problem belongs to, so the sheet can mark it `aria-invalid` and focus it. Null when the draft is fine. */
+export function slotProblemField(_draft: MealSlotInput): 'name' | 'time' | null {
+  throw new Error('not implemented')
+}

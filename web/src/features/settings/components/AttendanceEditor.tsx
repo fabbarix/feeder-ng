@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Checkbox, Muted, Stepper } from '../../../ui'
 import { MemberAvatar } from './MemberAvatar'
 import { effectiveFactor, formatPortionsNeeded, MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP, portionsNeeded, withFactor } from '../lib/portions'
@@ -9,6 +10,8 @@ export interface AttendanceEditorProps {
   members: Member[]
   value: AttendanceEntry[]
   onChange: (next: AttendanceEntry[]) => void
+  /** B9-46 plugs the Away "Eats here anyway" control in here: rendered in the Member's row, under the name. Stub: not rendered yet (B9-42). */
+  memberExtra?: (member: Member, entry: AttendanceEntry | undefined) => ReactNode
 }
 
 const text = settingsStrings.attendance
