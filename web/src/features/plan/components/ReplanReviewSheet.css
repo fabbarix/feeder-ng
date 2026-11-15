@@ -30,6 +30,20 @@
   gap: var(--space-1);
 }
 
+/* "was Lentil soup" with its ArrowsClockwise glyph, info-toned at 600 like the changed row on the Plan (the mock's .pc-was). */
+.replan-review__was {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  vertical-align: bottom;
+  color: var(--color-info-fg);
+  font-weight: 600;
+}
+
+.replan-review__was svg {
+  flex: none;
+}
+
 /* Each changed meal keeps the info-tone bar of its row on the Plan (PC-01). */
 .replan-review .detail-row {
   padding-inline-start: var(--space-3);
