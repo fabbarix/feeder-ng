@@ -114,3 +114,37 @@ describe("w2a's drop-in (rulings: P41 on Scan until B9-41; P36 on Your preferenc
     expect(rules.countFindings(all, line('/scan#scan-scanned-list', 'P1', 375)).fail).toBe(1)
   })
 })
+
+describe("w4d's drop-in (ruling: P38 warns on five routes B9-32 does not own; /plan and / keep failing on it)", () => {
+  const dir = resolve(cwd, '../scripts/check-page-layout.modes.d')
+  const own = readFileSync(resolve(dir, '41-b9-32-p38-routes-warn'), 'utf8')
+  const base = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
+  const all = `${base}\n${readdirSync(dir)
+    .filter((n) => !n.startsWith('.'))
+    .sort()
+    .map((n) => readFileSync(resolve(dir, n), 'utf8'))
+    .join('\n')}`
+  it('is exactly the five P38 lines with their owners, and no whole route', () => {
+    expect(rules.parseModes(own).errors).toEqual([])
+    expect(rules.parseModes(own).ruleWarn).toEqual([
+      { rule: 'P38', pattern: '/recipes/:id/edit', until: 'B9-37' },
+      { rule: 'P38', pattern: '/shop', until: 'B9-43' },
+      { rule: 'P38', pattern: '/scan', until: 'B9-41' },
+      { rule: 'P38', pattern: '/scan/receipt/review', until: 'B9-50' },
+      { rule: 'P38', pattern: '/products/:id', until: 'B9-55' },
+    ])
+    expect(own).not.toMatch(/^\s*(warn_routes|fail_routes|default|width)\b/m)
+  })
+  it('warns P38 on those routes and their scenarios, and nothing else there', () => {
+    for (const route of ['/recipes/:id/edit', '/recipes/:id/edit#recipe-editor-guard', '/shop', '/shop#shop-hints', '/scan#scan-price-keypad', '/scan/receipt/review#receipt-review', '/products/:id']) {
+      expect(rules.ruleWarnFor(all, 'P38', route), route).not.toBeNull()
+      expect(rules.ruleWarnFor(all, 'P1', route), route).toBeNull()
+    }
+    expect(rules.countFindings(all, line('/shop', 'P13')).fail).toBe(1)
+  })
+  it('keeps P38 failing on the Plan', () => {
+    expect(rules.ruleWarnFor(all, 'P38', '/plan')).toBeNull()
+    expect(rules.ruleWarnFor(all, 'P38', '/plan#plan-grid')).toBeNull()
+    expect(rules.countFindings(all, line('/plan', 'P38')).fail).toBe(1)
+  })
+})
