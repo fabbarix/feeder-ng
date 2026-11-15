@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Tile } from '../../../ui'
 import type { DayGroup } from '../lib/days'
 import type { MealTileProps } from './MealTile'
@@ -27,7 +27,7 @@ export function DayTile({ day, span, wholeRow, ...handlers }: DayTileProps): Rea
       data-today={day.isToday ? 'true' : undefined}
       data-dividers={day.slots.length >= 3 ? 'true' : undefined}
       data-row={wholeRow ? 'true' : undefined}
-      style={span ? { gridColumn: `span ${span}` } : undefined}
+      style={span || wholeRow ? ({ gridColumn: span ? `span ${span}` : undefined, '--plan-slots': wholeRow ? day.slots.length : undefined } as CSSProperties) : undefined}
     >
       <h2 className="plan-day__title">{day.heading}</h2>
       {day.slots.map((slot) => (

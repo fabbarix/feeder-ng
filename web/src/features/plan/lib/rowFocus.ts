@@ -20,3 +20,14 @@ export function focusPlanRow(key: SlotKey): boolean {
   target.focus()
   return true
 }
+
+/**
+ * Whether an action pressed in a toast should hand focus to a row: focus was in the toast (the toast's own context says so),
+ * or the press left it in the toast that is going or on the page itself. Focus that is on another control is left alone.
+ */
+export function focusIsInToastOrLost(focusWasInToast: boolean): boolean {
+  if (focusWasInToast) return true
+  if (typeof document === 'undefined') return false
+  const active = document.activeElement
+  return active === null || active === document.body || Boolean(active.closest('.toast'))
+}

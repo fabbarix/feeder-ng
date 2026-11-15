@@ -332,3 +332,13 @@ function dayMonthOf(date: string): string {
   const [, m, d] = date.split('-').map(Number)
   return s.dayMonth(weekdayName(date, 'short'), d, MONTHS[(m ?? 1) - 1]!)
 }
+
+/** B9-32 (PC-07): how many cells could not be planned because no Recipe is marked with the Course (the Mark sheet's context). */
+export function unmarkedCount(cells: PlanEntry[], courseId: number): number {
+  return cells.filter((c) => c.courseId === courseId && c.meal === null && c.unfilled && causeOf(c) === 'no_course_recipes').length
+}
+
+/** The name of a Course as the plan's cells give it; '' when no cell names it. */
+export function courseNameIn(cells: PlanEntry[], courseId: number): string {
+  return cells.find((c) => c.courseId === courseId && c.courseName)?.courseName ?? ''
+}

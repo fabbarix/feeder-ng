@@ -23,7 +23,7 @@ const dryRun = {
 
 const tile = async (name: string) => ((await screen.findByRole('heading', { name: name === 'Today' ? /· Today$/ : name === 'Tomorrow' ? /· Tomorrow$/ : name })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
-  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
+  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(`^${recipe}$`) }))
   return screen.findByRole('dialog', { name: recipe })
 }
 

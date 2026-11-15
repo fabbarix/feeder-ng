@@ -158,6 +158,11 @@ export const gridStrings = {
   markedPlanned: (n: number) => (n === 1 ? '1 meal planned' : `${n} meals planned`),
   markedNonePlanned: 'No new meals planned yet',
   unmarkedToast: (n: number, course: string) => (n === 1 ? `1 Recipe is no longer marked as ${course}` : `${n} Recipes are no longer marked as ${course}`),
+  // B9-32 (PC-07, PLAN-19): Leftovers to use on the Plan, below 1024 px (lib/planLeftovers).
+  leftoverCount: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
+  firstUseBy: (weekday: string) => `first Use by ${weekday}`,
+  showLeftovers: (n: number) => (n === 1 ? 'Show 1 Leftover' : `Show ${n} Leftovers`),
+  show: 'Show',
   /** B9-32 (PC-07): the compact tile's header button; it opens the sheet of the affected meals. */
   couldntShowMeals: 'Show which meals',
   couldntHideList: 'Hide the list',

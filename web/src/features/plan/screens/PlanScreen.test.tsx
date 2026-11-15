@@ -34,7 +34,7 @@ const phone = () =>
 const headingOf = (day: string): string | RegExp => ({ Today: /· Today$/, Tomorrow: /· Tomorrow$/, Wednesday: 'Wed 11' })[day] ?? day
 const tile = async (name: string) => ((await screen.findByRole('heading', { name: headingOf(name) })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
-  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
+  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(`^${recipe}$`) }))
   return screen.findByRole('dialog', { name: recipe })
 }
 
@@ -264,7 +264,7 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
       'PUT /api/plan/2026-11-11/4/1': meal({ recipeId: 32, pinned: true }),
     })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Choose a Recipe for / }))
     const dialog = await screen.findByRole('dialog', { name: 'Choose a Recipe' })
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Risotto' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-11/4/1')[0]?.body).toEqual({ recipeId: 32 }))

@@ -10,16 +10,18 @@ export interface CouldntPlanNoticeProps {
   onFix: (group: NoticeGroup) => void
   /** B9-32 (PC-07): opens the sheet of the affected meals; "Show which meals" is left out without it (Today). */
   onShowMeals?: () => void
+  /** The grid tracks the tile takes; Today passes `full`. Default one track (the Plan's two-up grid). */
+  span?: 1 | 2 | 'full'
 }
 
 /**
  * B9-32 (PC-07): Couldn't plan as ONE compact info tile, a section named "Couldn't plan": the overline and "Show which
  * meals" in its header, then one row per cause. The long explanation lives in the sheets.
  */
-export function CouldntPlanNotice({ groups, onFix, onShowMeals }: CouldntPlanNoticeProps): ReactNode {
+export function CouldntPlanNotice({ groups, onFix, onShowMeals, span }: CouldntPlanNoticeProps): ReactNode {
   if (groups.length === 0) return null
   return (
-    <Tile as="section" variant="status" status="info" aria-label={s.couldntPlanTitle} className="plan-couldnt">
+    <Tile as="section" variant="status" status="info" span={span} aria-label={s.couldntPlanTitle} className="plan-couldnt">
       <div className="couldnt-head">
         <p className="tile__overline">
           <Icon name="info" size={16} />

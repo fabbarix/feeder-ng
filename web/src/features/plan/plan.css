@@ -21,18 +21,166 @@
   font-size: var(--text-title-3-size);
   line-height: var(--text-title-3-line);
 }
-/* R13: Couldn't plan. The notice's tiles are items of the grid it sits in (the Plan's notice grid, or Today's). */
-.plan-couldnt-notice {
-  display: contents;
+/* B9-32 (PC-07): Couldn't plan is one compact info tile: the overline and "Show which meals" on one header row, then one row
+   per cause (icon | count and cause | fix). Below 22 rem of tile width the fix drops under the text. */
+.plan-couldnt {
+  container-type: inline-size;
+  gap: var(--space-2);
 }
-.plan-couldnt__summary {
-  margin: 0 0 var(--space-1);
-  font-weight: 600;
+.couldnt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
 }
-.plan-couldnt .plan__list {
+.couldnt-head > .tile__overline {
+  margin: 0;
+  min-width: 0;
+}
+.couldnt-head > .button {
+  flex: none;
+}
+.couldnt-cause {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-2);
+}
+.couldnt-cause + .couldnt-cause {
+  border-top: 1px solid color-mix(in srgb, var(--color-info-fg) 25%, transparent);
+}
+.couldnt-cause__icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-info-fg);
+}
+.couldnt-cause[data-tone='warn'] .couldnt-cause__icon {
+  color: var(--status-warn-fg);
+}
+.couldnt-cause__text {
+  min-width: 0;
+}
+.couldnt-cause__title,
+.couldnt-cause__meta {
+  margin: 0;
+}
+.couldnt-cause__title {
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: 700;
+}
+.couldnt-cause__meta {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+.couldnt-cause > .button {
+  white-space: nowrap;
+}
+@container (max-width: 22rem) {
+  .couldnt-cause {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+  .couldnt-cause > .button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+/* The tiles before the week (Couldn't plan, Leftovers to use) share one grid: a lone one takes the whole row. */
+.plan-top > .bento-grid:empty {
+  display: none;
+}
+.plan-top > .bento-grid > .tile:only-child {
+  grid-column: 1 / -1;
+}
+/* The sheet "Show which meals": one section per cause, the affected meals as lists by day. */
+.couldnt-meals {
+  display: grid;
+  gap: var(--space-6);
+}
+.couldnt-meals__cause {
+  display: grid;
+  gap: var(--space-2);
+}
+.couldnt-meals__title {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  line-height: var(--text-title-3-line);
+  font-weight: var(--text-title-3-weight);
+}
+.couldnt-meals__summary,
+.couldnt-meals__hint,
+.couldnt-meals__day-title {
+  margin: 0;
+}
+.couldnt-meals__summary {
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: 700;
+}
+.couldnt-meals__hint {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  color: var(--color-muted);
+}
+.couldnt-meals__day {
+  display: grid;
+  gap: var(--space-1);
+}
+.couldnt-meals__day-title {
+  font-size: var(--text-label-size);
+  line-height: var(--text-label-line);
+  font-weight: var(--text-label-weight);
+  color: var(--color-muted);
+}
+.couldnt-meals__list {
+  margin: 0;
+  padding: 0;
   list-style: none;
-  padding-left: 0;
-  margin-top: var(--space-2);
+}
+.couldnt-meals__list > .list-row + .list-row {
+  border-top: 1px solid var(--color-line);
+}
+/* Mark Recipes as <Course>: the context line, the lede, the search and the Recipes as checkbox rows. */
+.mark-recipes {
+  display: grid;
+  gap: var(--space-3);
+}
+.mark-recipes__context,
+.mark-recipes__lede,
+.mark-recipes__empty {
+  margin: 0;
+}
+.mark-recipes__context {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.mark-recipes__lede,
+.mark-recipes__empty {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+.mark-recipes__empty {
+  color: var(--color-muted);
+}
+.mark-recipes__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mark-recipes__list > .list-row + .list-row {
+  border-top: 1px solid var(--color-line);
+}
+.mark-recipes__row .list-row__control {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--target-min);
+  block-size: var(--target-min);
+  flex: none;
 }
 .plan__stack {
   display: grid;
@@ -53,7 +201,15 @@
   list-style: none;
 }
 
-/* The week: BentoGrid min="day" sizes the tracks. A day is one track, the same width as every other; today is the ring. */
+/* B9-32 (PC-11 option B, decision PC 2): the week grid. The Plan measures .plan-grid (usePlanGrid) for 1 to 4 columns on twelve
+   tracks; each day's span is inline (12 / columns, and 12 / r for the r days of an incomplete last row). Today is the ring. */
+.plan-grid {
+  container-type: inline-size;
+  min-width: 0;
+}
+.plan-grid > .bento-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
 .plan-day {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -72,6 +228,27 @@
 }
 .plan-day[data-today='true'] .plan-day__title {
   color: var(--color-accent-text);
+}
+/* A day that has the whole row lays its Meal Slots side by side: one column per Meal Slot under the one title, a 1 px line
+   between them. */
+.plan-day[data-row='true'] {
+  display: grid;
+  grid-template-columns: repeat(var(--plan-slots, 3), minmax(0, 1fr));
+  column-gap: var(--space-6);
+  row-gap: var(--space-3);
+}
+.plan-day[data-row='true'] .plan-day__title {
+  grid-column: 1 / -1;
+}
+.plan-day[data-row='true'] .plan-meal {
+  align-self: start;
+}
+.plan-day[data-row='true'] .plan-meal + .plan-meal {
+  border-top: 0;
+  padding-block-start: 0;
+  border-inline-start: 1px solid var(--color-line);
+  padding-inline-start: var(--space-4);
+  margin-inline-start: calc(-1 * var(--space-3));
 }
 
 /* A Meal Slot on a day: its header, then its Course rows. */
@@ -121,11 +298,10 @@
   font-variant-numeric: tabular-nums;
   color: var(--color-muted);
 }
+/* A11Y-09: Cook and ⋮ are an IconSet, which owns the 8 px gap. */
 .plan-slot-head__actions {
   display: inline-flex;
   flex: none;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 /* The Course rows of a slot: a ListRow each, separated by the 1 px line. */
@@ -159,11 +335,17 @@
 .plan-meal__courses > .list-row .list-row__trailing {
   align-self: flex-start;
 }
-/* An empty Course is a dashed row. */
+/* PC-07: an empty Course is a dashed row: "Not planned" muted, the Course in the meta, the cause as its one chip. */
 .plan-meal .list-row[data-unfilled] {
   border: 1px dashed var(--color-outline);
   border-radius: var(--radius-control);
   padding-inline: var(--space-3);
+}
+.plan-meal .list-row[data-unfilled] .list-row__title {
+  color: var(--color-muted);
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: 700;
 }
 /* Cooked and Not cooked: a quieter tone, not a fade (WCAG AA). */
 .plan-meal .list-row[data-state='cooked'] .list-row__title {
@@ -173,9 +355,9 @@
   color: var(--color-muted);
 }
 
-/* The chips of a row: one line, the ones that do not fit are clipped (the sheet shows all). */
-/* Round 3: the line is as wide as the row's text, so a lone chip has the room of the row. A chip takes its natural width and
-   shrinks only when the line is really full (P14 flags a cut label with room to spare). The "+N" chip never shrinks. */
+/* PC-06: the chips of a row, on their own line in the row's `below` slot (the whole row's width, under the title and the icon
+   set). usePlanCourseRow measures the line and shows only whole chips, then "+N"; a chip shrinks only on a cut line (a lone
+   chip wider than the row). The "+N" chip never shrinks. */
 .plan-row__chips {
   display: flex;
   flex-wrap: nowrap;
@@ -192,12 +374,33 @@
 .plan-row__chips .chip[data-kind='count'] {
   flex: none;
 }
-/* Swap and Pin: a group at the end of the row that never shrinks. */
-.plan-row__actions {
-  display: inline-flex;
+/* Only a cut line ends its lone chip in an ellipsis. */
+.plan-row__chips[data-cut='true'] .chip__label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The measuring copy of every chip: out of the layout, unseen, each chip at its natural width on one line. */
+.plan-row__measure {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+  inline-size: max-content;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: none;
+}
+.plan-row__measure .chip {
   flex: none;
-  align-items: center;
-  gap: var(--space-2);
+  max-inline-size: none;
+}
+/* The row's trailing actions (an IconSet) never shrink. */
+.plan-meal__courses > .list-row .list-row__trailing {
+  flex: none;
 }
 
 /* A Not served date: one compact row (NotServedRow). */
@@ -352,10 +555,34 @@
   padding-inline: var(--space-3);
 }
 /* DS-05: the title clamp and the one-line meta are ListRow's (system.md §3); this tile does not override them. */
-/* B5-LOW: the Plan's "Leftovers to use" section: its title above its rows. */
-.plan-leftovers-section {
+/* B9-32 (PC-07): below 1024 px the Plan's Leftovers tile is one summary row with Show. */
+.plan-leftovers__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.plan-leftovers__summary-text {
   display: grid;
-  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.plan-leftovers__summary-title {
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: 700;
+}
+.plan-leftovers__summary-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--status-leftover-fg);
+}
+.plan-leftovers__summary > .button {
+  flex: none;
 }
 
 /* R2-2 (L-07): the hero actions sit at the tile's end on a wide hero (44 rem of the hero's own width, DS-09); the button keeps
@@ -398,7 +625,7 @@
 
 .rule-warning-line {
   margin: 0;
-  color: var(--status-spoil-fg);
+  color: var(--status-warn-fg);
   font-size: var(--text-body-size);
   line-height: var(--text-body-line);
 }
