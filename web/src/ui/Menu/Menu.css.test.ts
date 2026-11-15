@@ -17,10 +17,13 @@ describe('Menu.css', () => {
     expect(d['box-shadow']).toBe('var(--elev-2)')
     expect(d['border-radius']).toMatch(/^var\(--radius-/)
   })
-  it('is 240 px wide at most the viewport minus the gutters', () => {
+  it('is at least 240 px wide, grows with a long item up to 360 px, and never past the viewport minus the gutters (B9-52)', () => {
     const d = declarations(css, '.menu')
-    expect(d['inline-size'] ?? d['width']).toBe('240px')
-    expect(d['max-inline-size'] ?? d['max-width']).toMatch(/100vw/)
+    expect(d['inline-size']).toBe('max-content')
+    expect(d['min-inline-size']).toMatch(/240px/)
+    expect(d['max-inline-size']).toMatch(/360px/)
+    expect(d['max-inline-size']).toMatch(/100vw/)
+    expect(declarations(css, '.menu__item > svg')['flex']).toBe('none')
   })
   it('items are 48 px touch rows with the token radius, and the danger tone uses the danger status colour', () => {
     expect(declarations(css, '.menu__item')['min-block-size'] ?? declarations(css, '.menu__item')['min-height']).toBe('48px')

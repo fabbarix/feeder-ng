@@ -4,8 +4,10 @@
   z-index: 20;
   display: flex;
   flex-direction: column;
-  inline-size: 240px;
-  max-inline-size: calc(100vw - 2 * var(--gutter));
+  /* 240 px, or wider for a long item (an email in "Remove …", B9-52) up to 360 px; a longer one wraps inside its item. */
+  inline-size: max-content;
+  min-inline-size: min(240px, calc(100vw - 2 * var(--gutter)));
+  max-inline-size: min(360px, calc(100vw - 2 * var(--gutter)));
   padding: var(--space-2);
   border-radius: var(--radius-tile-sm);
   background: var(--color-surface);
@@ -27,6 +29,14 @@
   text-align: start;
   text-decoration: none;
   cursor: pointer;
+}
+
+.menu__item > svg {
+  flex: none;
+}
+
+.menu__item > span {
+  min-inline-size: 0;
 }
 
 .menu__item:hover {
