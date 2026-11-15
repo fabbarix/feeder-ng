@@ -52,6 +52,11 @@ const stubSource = (state) => `(() => {
   }
 })()`
 
+// P25 scenarios emulate touch (pageLayoutRules.b9-14.test)
+const TOUCH = [
+  { method: 'Emulation.setTouchEmulationEnabled', params: { enabled: true, maxTouchPoints: 5 } },
+  { method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } },
+]
 const withStub = (state) => [{ method: 'Page.addScriptToEvaluateOnNewDocument', params: { source: stubSource(state) } }]
 
 const NEW = { settings: { timeZone: 'UTC', timeZoneConfigured: false, currency: 'USD', setupHidden: false }, members: [], slots: [], recipes: [], emptyPlan: true }
@@ -221,8 +226,8 @@ export default {
   order: 370,
   scenarios: [
     { name: 'first-run-zone', route: '/', start: '/', setup: 'firstRunZone', widths: [375, 390, 834], emulate: withStub(NEW), rules: TILE_RULES },
-    { name: 'first-run-member', route: '/', start: '/', setup: 'firstRunMember', widths: [375, 390, '667x375'], emulate: withStub(ZONE_DONE), rules: SHEET_RULES },
-    { name: 'first-run-slots', route: '/', start: '/', setup: 'firstRunSlots', widths: [375, 390, '667x375'], emulate: withStub(WITH_MEMBERS), rules: SHEET_RULES },
+    { name: 'first-run-member', route: '/', start: '/', setup: 'firstRunMember', widths: [375, 390, '667x375'], emulate: [...TOUCH, ...withStub(ZONE_DONE)], rules: SHEET_RULES },
+    { name: 'first-run-slots', route: '/', start: '/', setup: 'firstRunSlots', widths: [375, 390, '667x375'], emulate: [...TOUCH, ...withStub(WITH_MEMBERS)], rules: SHEET_RULES },
     { name: 'first-run-compact', route: '/', start: '/', setup: 'firstRunCompact', widths: [375, 390, 834], emulate: withStub(COMPACT), rules: TILE_RULES },
   ],
   setups: { firstRunZone, firstRunMember, firstRunSlots, firstRunCompact },
