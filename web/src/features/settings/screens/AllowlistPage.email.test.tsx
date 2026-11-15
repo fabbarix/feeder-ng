@@ -5,7 +5,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { admin, cook } from '../components/fixtures'
-import { findNotice, noticeWith } from '../../../test/notices'
+import { findNotice } from '../../../test/notices'
 import { ADMIN_ME, mockApi, renderWithProviders } from '../test-utils'
 import { AllowlistPage } from './AllowlistPage'
 
@@ -21,9 +21,8 @@ describe('AllowlistPage: add an address', () => {
     await userEvent.type(input, 'anna@example.test')
     await userEvent.click(screen.getByRole('button', { name: 'Add to allowlist' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/allowlist')).toHaveLength(1))
-    const alert = await findNotice('alert', 'That email already belongs to a Member, a User or the allowlist.')
+    await waitFor(() => expect(input).toHaveAccessibleDescription(expect.stringContaining('That email already belongs to a Member, a User or the allowlist.')))
     expect(input).toHaveAttribute('aria-invalid', 'true')
-    expect(input.getAttribute('aria-describedby')).toContain(alert.id)
     expect(input).toHaveValue('anna@example.test')
   })
 
@@ -33,9 +32,9 @@ describe('AllowlistPage: add an address', () => {
     const input = await screen.findByLabelText('Email to allow')
     await userEvent.type(input, 'anna@example.test')
     await userEvent.click(screen.getByRole('button', { name: 'Add to allowlist' }))
-    await findNotice('alert', 'That email already belongs')
+    await waitFor(() => expect(input).toHaveAccessibleDescription(expect.stringContaining('That email already belongs')))
     await userEvent.type(input, 'x')
-    expect(noticeWith('alert', 'That email already belongs')).toBeUndefined()
+    expect(screen.queryByText(/That email already belongs/)).toBeNull()
     expect(input).not.toHaveAttribute('aria-invalid')
   })
 

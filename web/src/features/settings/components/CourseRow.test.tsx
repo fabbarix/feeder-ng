@@ -114,9 +114,9 @@ describe('CourseRow: renaming', () => {
     expect(screen.getByRole('textbox', { name: 'Rename Side' })).toHaveFocus()
   })
 
-  it('shows the problem as an alert tied to the field, and Save is disabled while busy', () => {
+  it('shows the problem as the field error, tied to the field, and Save is disabled while busy', () => {
     setup({ renaming: { value: 'Main', error: 'There is already a Course with that name', busy: true } })
-    expect(screen.getByRole('alert')).toHaveTextContent('There is already a Course with that name')
+    expect(screen.getByRole('textbox', { name: 'Rename Side' })).toHaveAccessibleDescription(expect.stringContaining('There is already a Course with that name'))
     expect(screen.getByRole('textbox', { name: 'Rename Side' })).toBeInvalid()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })

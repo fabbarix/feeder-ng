@@ -137,7 +137,7 @@ describe('CoursesPage: Add Course', () => {
     await show()
     if (typed) await userEvent.type(screen.getByRole('textbox', { name: 'New Course' }), typed)
     await userEvent.click(screen.getByRole('button', { name: 'Add Course' }))
-    expect(noticeWith('alert', message)).toBeDefined()
+    expect(screen.getByRole('textbox', { name: 'New Course' })).toHaveAccessibleDescription(expect.stringContaining(message))
     expect(api.callsTo('POST', '/api/courses')).toHaveLength(0)
   })
 
@@ -216,7 +216,7 @@ describe('CoursesPage: Rename and Make main', () => {
     const field = screen.getByRole('textbox', { name: 'Rename Side' })
     await userEvent.clear(field)
     await userEvent.type(field, 'dessert{Enter}')
-    expect(noticeWith('alert', 'There is already a Course with that name')).toBeDefined()
+    expect(field).toHaveAccessibleDescription(expect.stringContaining('There is already a Course with that name'))
     expect(api.calls.some((c) => c.method === 'PATCH')).toBe(false)
     expect(field).toBeInTheDocument()
   })
