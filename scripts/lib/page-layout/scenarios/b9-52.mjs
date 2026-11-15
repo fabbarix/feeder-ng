@@ -110,7 +110,7 @@ export default {
       await until(`!!document.querySelector('main .access__list li.list-row, main .empty-state, main .muted') && !document.querySelector('[aria-busy="true"], .skeleton')`, 'the sign-in requests')
       const bad = await evaluate(`(() => {
         const lineStarts = ${LINE_STARTS}
-        const rows = [...document.querySelectorAll('main .access__list li.list-row')].filter((li) => li.querySelector('.list-row__actions'))
+        const rows = [...document.querySelectorAll('main .access__list li.list-row')].filter((li) => li.querySelector('button[aria-label^="Approve "]'))
         if (rows.length === 0) return ['no seeded sign-in requests']
         const out = []
         for (const li of rows) {
@@ -121,7 +121,8 @@ export default {
           for (const s of lineStarts(title).starts) if (!(s.char === '@' || s.before === '.' || s.before === ' ')) out.push(name + ' breaks mid-word before "' + s.char + '"')
           if (!li.querySelector('.avatar')) out.push(name + ' has no monogram')
           const row = li.getBoundingClientRect()
-          const buttons = [...li.querySelectorAll('.list-row__actions button')].map((b) => ({ b, r: b.getBoundingClientRect() })).sort((a, b) => a.r.left - b.r.left)
+          if (!li.querySelector('.list-row__actions')) out.push(name + ' has no actions slot')
+          const buttons = [...li.querySelectorAll('button[aria-label^="Approve "], button[aria-label^="Deny "]')].map((b) => ({ b, r: b.getBoundingClientRect() })).sort((a, b) => a.r.left - b.r.left)
           if (buttons.length !== 2) out.push(name + ' has ' + buttons.length + ' action buttons')
           for (const { b, r } of buttons) {
             if (r.height < ${MIN_TARGET} - 0.5) out.push(name + ': ' + b.textContent.trim() + ' is ' + Math.round(r.height) + ' px tall')
