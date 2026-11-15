@@ -1,8 +1,11 @@
 /* B9-18 Gallery stages: a framed box that contains its own toast region. The transform makes the stage the containing block of the
-   region's position: fixed, and the stage has no bottom bar or keyboard, so the region sits a gap above the stage's bottom edge. */
+   region's position: fixed, and the stage has no bottom bar, keyboard or sticky bar (the Gallery's StickyActionBar demo would lift
+   every region by the bar's room), so the region sits a gap above the stage's bottom edge. */
 .gallery__toast-stage {
   --nav-top: 0px;
   --keyboard-inset: 0px;
+  --page-gutter: 0px;
+  --sticky-bar-clearance: 0px;
   position: relative;
   transform: translateZ(0);
   inline-size: min(calc(420px + 2 * var(--space-4)), calc(100vw - 2 * var(--space-8)));
