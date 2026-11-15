@@ -4,6 +4,14 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.9.1] - 2026-11-15
+
+The 1.0.0-beta.9 release, published. The `v1.0.0-beta.9` tag produced no image and no chart: a build placeholder had been removed, so the release checks could not compile the server. Everything listed under 1.0.0-beta.9 below is in this release; upgrade straight from 1.0.0-beta.8 as described there.
+
+### Fixed
+
+- The server builds again before the web app is built, so the release checks pass and the image and chart are published.
+
 ## [1.0.0-beta.9] - 2026-11-15
 
 Undo nearly everywhere, a Plan that says what each change moved, Away for Members, overnight starts, Ticks that work offline, a Today and a Kitchen board rebuilt for every screen size, and a round of fixes to every screen.
