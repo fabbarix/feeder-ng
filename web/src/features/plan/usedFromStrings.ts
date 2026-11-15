@@ -2,6 +2,8 @@
 
 export const usedFromStrings = {
   title: 'Used from',
+  /** w4d review (A11Y-08): in Mark all Cooked each Course has its own row, so its name says which. */
+  titleFor: (course: string) => `Used from, ${course}`,
   summaryDefault: 'Soonest to go off first',
   summaryChosen: (n: number) => `Your choice for ${n} ${n === 1 ? 'Ingredient' : 'Ingredients'}`,
   lineTitle: (ingredient: string, need: string) => `${ingredient} · ${need}`,

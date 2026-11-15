@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useConfirm } from '../../ui/ConfirmDialog'
 import { leftoversApi } from './api'
 import { answerLabel, answerTitle } from './copy'
-import { plannedForNames, type PlannedForSlot } from './rows'
+import { mergeRows, plannedForNames, type PlannedForSlot } from './rows'
 import { replannedNotes } from './sheetModel'
 import { useLeftoverSheetContext, type LeftoverSheetContext } from './useLeftoverSheetContext'
 import { useLeftoverActions, useLeftovers } from './useLeftoverActions'
@@ -57,7 +57,9 @@ export function useLeftoverFlow(today: string): LeftoverFlow {
   const [detailsId, setDetailsId] = useState<number | null>(null)
   const recipeId = sheet?.leftover.recipeId ?? null
   const context = useLeftoverSheetContext(recipeId)
-  const details = detailsId === null ? null : (leftovers.find((l) => l.id === detailsId) ?? null)
+  // B9-44 (TB-11): a merged row (B9-45, PC-13) opens the details of the whole row (every member's portions, its ids), so its actions
+  // take from the soonest first, as the row's own actions do.
+  const details = detailsId === null ? null : (mergeRows(leftovers).find((m) => m.ids.length > 1 && m.ids.includes(detailsId)) ?? leftovers.find((l) => l.id === detailsId) ?? null)
   // The plan view as the screen holds it (read from the cache, no fetch and no observer of its own): which Planned Meals eat from
   // which Leftover. The Leftovers list refetches with the plan (both under ['plan']), so this is read again then.
   const client = useQueryClient()

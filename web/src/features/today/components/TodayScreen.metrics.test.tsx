@@ -45,7 +45,7 @@ describe('TodayScreen: the metric strip', () => {
     expect(within(strip).getByText('2 d')).toBeInTheDocument()
     expect(within(strip).getByText('16')).toBeInTheDocument()
     expect(strip.querySelector('[data-metric="leftovers"]')).toBeNull()
-    expect(screen.getByRole('heading', { name: 'Leftovers to use' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Leftovers' })).toBeInTheDocument()
     expect(container.querySelector('[data-metric="streak"]')).toHaveAttribute('data-status', 'success')
   })
 
@@ -56,12 +56,13 @@ describe('TodayScreen: the metric strip', () => {
     expect(screen.queryByRole('group', { name: 'At a glance' })).not.toBeInTheDocument()
   })
 
-  it('Leftovers alone do not open the strip: the Leftovers tile is the one place that says it, and it still opens the Plan', async () => {
+  // B9-44 (TB-11, changed on purpose): the tile is titled "Leftovers" and no longer opens the Plan (its header links to the Pantry).
+  it('Leftovers alone do not open the strip: the Leftovers tile is the one place that says it', async () => {
     h.leftovers = [leftover(1)]
     mockApi({ 'GET /api/today/advance-steps': { steps: [] }, 'GET /api/today/streak': { days: 0 } })
     renderWithProviders(routed, '/')
-    await screen.findByRole('heading', { name: 'Leftovers to use' })
+    await screen.findByRole('heading', { name: 'Leftovers' })
     expect(screen.queryByRole('group', { name: 'At a glance' })).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Leftovers to use' })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Leftovers to use' })).toBeNull()
   })
 })

@@ -1,6 +1,7 @@
 // Push handling for the service worker. Plain functions over a minimal `self`
 // type, so they are unit-tested without a worker. T13 owns the service worker
 // and only has to call registerPushHandlers(self) from its entry.
+import { isChromeless } from '../../../app/chromeless'
 
 export interface ParsedPush {
   type: string
@@ -64,8 +65,39 @@ export interface ClickEventLike {
   waitUntil(p: Promise<unknown>): void
 }
 export interface WindowClientLike {
+  /** The window's absolute URL. */
+  url?: string
   focus(): Promise<unknown>
+  /** B9-49 (TB-14): the app's useServiceWorkerNavigate listens for { type: 'navigate', url }. */
+  postMessage?(message: unknown): void
+  /** Never called (a full reload would lose what the window shows); kept in the type because real clients have it. */
   navigate?(url: string): Promise<unknown>
+}
+
+/** B9-49 (TB-14): the path and query a window shows ("/plan?x"), or null when it cannot be read. */
+function shownPath(win: WindowClientLike): string | null {
+  if (!win.url) return null
+  try {
+    const u = new URL(win.url)
+    return u.pathname + u.search
+  } catch {
+    return null
+  }
+}
+
+/**
+ * B9-49 (TB-14): which window opens a notification's target, and how. A window already showing the target (path and query) is only
+ * focused. Otherwise a window that is not chromeless (Cook Mode, the board, a receipt screen are never navigated away) is focused and
+ * told to navigate (no reload). Otherwise a new window opens.
+ */
+export function chooseWindow(windows: readonly WindowClientLike[], target: string): { win: WindowClientLike; message: boolean } | null {
+  const exact = windows.find((w) => shownPath(w) === target)
+  if (exact) return { win: exact, message: false }
+  const free = windows.find((w) => {
+    const path = shownPath(w)
+    return path !== null && !isChromeless(path) && typeof w.postMessage === 'function'
+  })
+  return free ? { win: free, message: true } : null
 }
 export interface SwScope {
   addEventListener(type: 'push', listener: (e: PushEventLike) => void): void
@@ -79,8 +111,8 @@ export interface SwScope {
 
 /**
  * Adds the 'push' listener (shows the notification) and the 'notificationclick'
- * listener (closes it, then focuses an open Feeder window and navigates it to the
- * target url, or opens a new window when none is open).
+ * listener (closes it, then opens the target in the window `chooseWindow` picks, or
+ * in a new window when none fits).
  */
 export function registerPushHandlers(scope: SwScope): void {
   scope.addEventListener('push', (e) => {
@@ -98,10 +130,10 @@ export function registerPushHandlers(scope: SwScope): void {
     e.waitUntil(
       (async () => {
         const windows = await scope.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        const win = windows[0]
-        if (win) {
-          await win.focus()
-          if (win.navigate) await win.navigate(target)
+        const chosen = chooseWindow(windows, target)
+        if (chosen) {
+          await chosen.win.focus()
+          if (chosen.message) chosen.win.postMessage?.({ type: 'navigate', url: target })
           return
         }
         await scope.clients.openWindow(target)

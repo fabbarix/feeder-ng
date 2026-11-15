@@ -22,6 +22,8 @@ type syncTick struct {
 			Name     string  `json:"name"`
 			Quantity float64 `json:"quantity"`
 			By       string  `json:"by"`
+			Mine     bool    `json:"mine"`
+			TickedAt string  `json:"tickedAt"`
 		} `json:"alsoTickedBy"`
 	} `json:"tick"`
 }

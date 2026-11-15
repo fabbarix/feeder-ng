@@ -7,7 +7,8 @@ const css = readFeatureCss('plan.css')
 describe('Bought styles are in plan.css', () => {
   it('holds .bought-line and the warn-toned .rule-warning-line', () => {
     expect(css).toMatch(/\.bought-line\s*\{/)
-    expect(css).toMatch(/\.rule-warning-line\s*\{[^}]*var\(--status-spoil-fg\)/)
+    // DS-06 (B9-32): the warn tone, never spoil.
+    expect(css).toMatch(/\.rule-warning-line\s*\{[^}]*var\(--status-warn-fg\)/)
   })
   it('no bought.css is left, and nothing imports it', () => {
     expect(readSource('features/plan/components/bought.css')).toBe('')

@@ -116,3 +116,11 @@ describe('UsedFromSection', () => {
     expect(document.querySelector('select')).toBeNull()
   })
 })
+
+describe('UsedFromSection in Mark all Cooked (w4d review, A11Y-08)', () => {
+  it('names its row and group for the Course, so the sections of several Courses never share a name', () => {
+    render(<UsedFromSection summary="Soonest to go off first" lines={[]} expanded={false} onToggleExpanded={() => {}} onToggle={() => {}} onAmount={() => {}} course="Main" />)
+    expect(screen.getByRole('button', { name: 'Used from, Main' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Used from, Main' })).toBeInTheDocument()
+  })
+})

@@ -16,7 +16,7 @@ import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import type { TickAddition } from '../types'
 import type { LineAction } from '../lib/rows'
 import type { ListEntry } from '../lib/lines'
-import { additionDetail } from '../lib/tickAmount'
+import { additionDetail, tickedSheetHeading, waitingStateText } from '../lib/tickAmount'
 import { canChangePrice } from '../lib/changePrice'
 import { shopStrings } from '../strings'
 
@@ -53,9 +53,12 @@ export function LineSheet({ entry, actions, onAction, onClose, system = 'metric'
   const isLine = entry.kind === 'line' && !entry.ticked
   const details = isLine ? entry.details : undefined
   const consequence = details && actions.includes('not-needed') ? details.consequence : ''
+  // B9-54 (RES 2): a Line ticked more than once says so in the title, and the subline what each Tick did
+  const heading = tickedSheetHeading(entry, system)
   return (
-    <BottomSheet open onClose={onClose} title={entry.title}>
+    <BottomSheet open onClose={onClose} title={heading.title}>
       <div className="shop-line-sheet">
+        {heading.subtitle ? <p className="shop-line-sheet__subline">{heading.subtitle}</p> : null}
         {entry.ticked ? (
           <TickedDetails entry={entry} actions={actions} system={system} timeZone={timeZone ?? null} onTakeBack={onTakeBack} />
         ) : details ? (
@@ -154,9 +157,11 @@ function TickedDetails({ entry, system, timeZone, onTakeBack }: TickedDetailsPro
   const rows = (tick?.additions ?? []).filter(added)
   const total = typeof tick?.added === 'number' ? tick.added : rows.reduce((n, a) => n + (a.quantity ?? 0), 0)
   const byScan = tick?.by === 'scan' && tick.additions.length <= 1
-  const state = byScan ? shopStrings.tickedByScan : total > 0 ? shopStrings.tickedState(q(total)) : shopStrings.tickedNotAdded
-  const tone = byScan ? 'neutral' : total > 0 ? 'success' : 'muted'
-  const icon: IconName = byScan ? 'scan' : total > 0 ? 'success' : 'notAdded'
+  // B9-54: while a Tick of it waits in the offline queue the state line says what will go to Stock when it syncs (muted, Clock)
+  const waiting = waitingStateText(tick, unit, system)
+  const state = waiting ?? (byScan ? shopStrings.tickedByScan : total > 0 ? shopStrings.tickedState(q(total)) : shopStrings.tickedNotAdded)
+  const tone = waiting ? 'muted' : byScan ? 'neutral' : total > 0 ? 'success' : 'muted'
+  const icon: IconName = waiting ? 'duration' : byScan ? 'scan' : total > 0 ? 'success' : 'notAdded'
 
   // A11Y (SSP-18): a taken-back addition leaves the list when the list refreshes; focus goes to the Take back now at its place (the next
   // addition's), else the last one's, else Change amount, else Untick.

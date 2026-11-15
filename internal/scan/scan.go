@@ -397,11 +397,14 @@ type Applied struct {
 	Total              *float64 `json:"total,omitempty"` // stock_take: the Ingredient's Stock after
 }
 
-// AlsoTickedBy is an earlier addition by another User to a Line a queued Tick synced onto (RES 2: ticked twice).
+// AlsoTickedBy is an earlier addition (another User's, or the same User's from another phone: mine) to a Line a queued Tick synced onto (RES 2: ticked twice).
 type AlsoTickedBy struct {
 	Name     string  `json:"name"`
 	Quantity float64 `json:"quantity"`
 	By       string  `json:"by"` // "hand" | "scan"
+	// B9-54 (RES 2): Mine = the same User's own earlier addition (another phone); TickedAt = RFC 3339 instant it was ticked.
+	Mine     bool   `json:"mine,omitempty"`
+	TickedAt string `json:"tickedAt,omitempty"`
 }
 
 // AppliedTick is what a shop_tick did: the Stock Lot it added (nil = none), the quantity, and who had ticked before it.

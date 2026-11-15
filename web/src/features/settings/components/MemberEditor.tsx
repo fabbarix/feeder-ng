@@ -7,6 +7,7 @@ import { availableUsers, canLinkMe, MEMBER_AVATARS, MEMBER_COLOURS, memberDraft,
 import { MAX_PORTION_FACTOR, MIN_PORTION_FACTOR, PORTION_STEP } from '../lib/portions'
 import { settingsStrings } from '../strings'
 import type { AllowedUser, Member, MemberInput } from '../types'
+import { MemberAwaySection } from './MemberAwaySection'
 import '../settings.css'
 
 export interface MemberEditorProps {
@@ -29,6 +30,12 @@ export interface MemberEditorProps {
   /** Remove Member (editing only). The page asks first (the impact confirm). */
   onDelete?: () => void | Promise<void>
   onClose: () => void
+  /**
+   * B9-53 (TB-06, step 2): the sheet over Today during first run. `caption` is the sheet's context line ("Set up · step 2 of 5 · 1 Member
+   * so far"); the header has the circular Close and the footer no Cancel, only "Save and add another" (secondary, keeps the sheet open on an
+   * empty form with Name focused; a refusal keeps what was typed) and "Save" (primary, through onSave).
+   */
+  firstRun?: { caption: string; onSaveAndAddAnother: (input: MemberInput, userId: number | null) => Promise<void> }
 }
 
 const text = settingsStrings.member
@@ -40,24 +47,50 @@ const NO_USER = ''
  * (bound to the form), with Remove Member as an outlined danger button when editing (its own row under a divider on a phone, the far
  * start from 600 px); no Close; a changed sheet asks "Discard changes?" before it goes.
  */
-export function MemberEditor({ open, member, users, members, currentUserId, saving, error, emailError, onEmailEdit, onSave, onDelete, onClose }: MemberEditorProps) {
+export function MemberEditor({ open, member, users, members, currentUserId, saving, error, emailError, onEmailEdit, onSave, onDelete, onClose, firstRun }: MemberEditorProps) {
   const formId = useId()
   const [dirty, setDirty] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
+  // B9-53: "Save and add another" submits the same form; this says which button did. A saved one starts a fresh form (`round`).
+  const another = useRef(false)
+  const [round, setRound] = useState(0)
   // A fresh sheet starts clean (the form below is keyed by the Member, so its own state starts again too).
   useEffect(() => {
     if (!open) setDirty(false)
   }, [open])
+  const save = (input: MemberInput, userId: number | null) => {
+    if (!firstRun || !another.current) return onSave(input, userId)
+    another.current = false
+    return firstRun.onSaveAndAddAnother(input, userId).then(
+      () => setRound((n) => n + 1),
+      () => {
+        // Refused: the sheet shows the page's error and keeps what was typed.
+      },
+    )
+  }
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      onCancel={onClose}
+      onCancel={firstRun ? undefined : onClose}
       confirmDismiss={dirty}
+      context={firstRun?.caption}
       title={member ? text.editTitle : text.addTitle}
-      submit={{ label: text.save, form: formId, loading: saving, disabled: photoBusy }}
+      submit={{ label: firstRun ? text.firstRunSave : text.save, form: formId, loading: saving, disabled: photoBusy }}
       footer={
-        member && onDelete ? (
+        firstRun ? (
+          <Button
+            variant="secondary"
+            type="submit"
+            form={formId}
+            disabled={saving || photoBusy}
+            onClick={() => {
+              another.current = true
+            }}
+          >
+            {text.saveAndAddAnother}
+          </Button>
+        ) : member && onDelete ? (
           <div className="member-sheet__remove">
             <Button variant="danger-secondary" disabled={saving} onClick={() => void onDelete()}>
               {text.remove}
@@ -67,7 +100,8 @@ export function MemberEditor({ open, member, users, members, currentUserId, savi
       }
     >
       <MemberForm
-        key={member?.id ?? 'new'}
+        key={`${member?.id ?? 'new'}-${round}`}
+        focusName={round > 0}
         id={formId}
         member={member}
         users={users}
@@ -76,10 +110,15 @@ export function MemberEditor({ open, member, users, members, currentUserId, savi
         error={error}
         emailError={emailError}
         onEmailEdit={onEmailEdit}
-        onSave={onSave}
+        onSave={save}
         onDirtyChange={setDirty}
+        onInvalid={() => {
+          another.current = false
+        }}
         onPhotoBusy={setPhotoBusy}
       />
+      {/* B9-46 (SET-16): the Member's Aways, after the fields; an existing Member only. */}
+      {member ? <MemberAwaySection member={member} /> : null}
     </BottomSheet>
   )
 }
@@ -88,10 +127,17 @@ type FormProps = Pick<MemberEditorProps, 'member' | 'users' | 'members' | 'curre
   id: string
   onDirtyChange: (dirty: boolean) => void
   onPhotoBusy: (busy: boolean) => void
+  /** B9-53: a form started again by "Save and add another" puts focus on Name. */
+  focusName?: boolean
+  /** The draft did not pass its checks: nothing is saved. */
+  onInvalid?: () => void
 }
 
-function MemberForm({ id, member, users, members, currentUserId, error, emailError, onEmailEdit, onSave, onDirtyChange, onPhotoBusy }: FormProps) {
+function MemberForm({ id, member, users, members, currentUserId, error, emailError, onEmailEdit, onSave, onDirtyChange, onPhotoBusy, focusName, onInvalid }: FormProps) {
   const formRef = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (focusName) formRef.current?.querySelector<HTMLInputElement>('input')?.focus()
+  }, [focusName])
   const [initial] = useState<MemberInput>(() => memberDraft(member))
   const [draft, setDraft] = useState<MemberInput>(initial)
   const [userId, setUserId] = useState<number | null>(member?.userId ?? null)
@@ -113,6 +159,7 @@ function MemberForm({ id, member, users, members, currentUserId, error, emailErr
     setErrors(found)
     setSubmitCount((n) => n + 1)
     if (!found.name && !found.portionFactor && !found.email) void onSave(memberFromDraft(draft), userId)
+    else onInvalid?.()
   }
 
   return (

@@ -7,11 +7,11 @@ import { ShortfallSheets } from './ShortfallSheets'
  * The Mark all Cooked sheet, the Stock shortfall notices and the Stock correction sheet of one AllCookedFlow (Plan and
  * Today; the same outcome as the single Course's CookFlowSheets).
  */
-export function AllCookedSheets({ flow }: { flow: AllCookedFlow }): ReactNode {
+export function AllCookedSheets({ flow, notice = true }: { flow: AllCookedFlow; /** B9-44: false when the screen shows the flows' ONE shortfall notice itself (Today). */ notice?: boolean }): ReactNode {
   const { controller, key, close } = flow
   return (
     <>
-      <ShortfallSheets groups={flow.shortfalls} correct={flow.correct} onDismiss={flow.dismissShortfalls} system={flow.system} placement="list" />
+      {notice ? <ShortfallSheets groups={flow.shortfalls} correct={flow.correct} onDismiss={flow.dismissShortfalls} system={flow.system} placement="list" /> : null}
       <MarkAllCookedSheet
         open={key !== null}
         onClose={close}

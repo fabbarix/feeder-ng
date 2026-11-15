@@ -52,7 +52,7 @@ describe('MealTile: the slot menu', () => {
   it('a one-Course tile has the menu with the per-date choices', async () => {
     const date = dateActions()
     setup(slot({ date: '2026-11-12' }), { dateActions: date })
-    await userEvent.click(screen.getByRole('button', { name: 'Dinner actions' }))
+    await userEvent.click(screen.getByRole('button', { name: /^More for .* Dinner$/ }))
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual(["Who's eating", 'Time on Thu', 'Not served'])
   })
 
@@ -60,12 +60,12 @@ describe('MealTile: the slot menu', () => {
     const a = planCourse({ courseId: 1, name: 'Main', meal: courseMeal(1, 'Main') })
     const b = planCourse({ courseId: 2, name: 'Side', main: false, meal: courseMeal(2, 'Side') })
     setup(courseSlot([a, b], { date: '2026-11-12' }), { dateActions: dateActions() })
-    await userEvent.click(screen.getByRole('button', { name: 'Dinner actions' }))
+    await userEvent.click(screen.getByRole('button', { name: /^More for .* Dinner$/ }))
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toContain("Who's eating")
   })
 
   it('without the per-date handlers the tile is as before', () => {
     setup(slot({ date: '2026-11-12' }))
-    expect(screen.queryByRole('button', { name: 'Dinner actions' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^More for .* Dinner$/ })).not.toBeInTheDocument()
   })
 })

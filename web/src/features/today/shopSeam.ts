@@ -1,6 +1,7 @@
 // DS-TODAY: the one place Today reads the Shop list (kept out of seams.ts, whose tests mock ../shop with ShoppingScreen only).
 // "Lines to get" = the Lines of the default Shopping List that are not ticked yet.
-import { useShoppingList } from '../shop'
+// w6a: by path, not the shop barrel (it re-exports ShoppingScreen, which then sat in the entry chunk)
+import { useShoppingList } from '../shop/hooks/useShoppingList'
 import { countLinesToGet } from './lib/metrics'
 
 export interface LinesToGet {

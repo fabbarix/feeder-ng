@@ -21,7 +21,8 @@ function setup(entry = entryOf(), over: Partial<React.ComponentProps<typeof Line
   const rerender = (next: typeof entry) => view.rerender(<LineSheet entry={next} actions={lineActions(next, 'ticked')} onAction={onAction} onClose={onClose} onTakeBack={onTakeBack} system="metric" timeZone="UTC" />)
   return { onAction, onTakeBack, onClose, rerender }
 }
-const dialog = () => screen.getByRole('dialog', { name: 'Garlic' })
+// B9-54: a Line ticked twice titles its sheet "Garlic was ticked twice", so the one dialog is found without its name
+const dialog = () => screen.getByRole('dialog')
 
 describe('LineSheet, ticked: the state line', () => {
   it('"Ticked · 500 g added to Stock" in the success tone, and under it "The Line needed 150 g."', () => {

@@ -26,7 +26,7 @@ describe('AppShell page container', () => {
     ['/plan', 'wide'],
     ['/shop', 'wide'],
     ['/recipes', 'wide'],
-    ['/', 'wide'],
+    ['/', 'default'], // B9-44 (TB-03, L-01): Today is the default width; its grid is by container (ADR 0026)
     ['/pantry', 'default'],
     ['/recipes/3/edit', 'default'],
     ['/scan', 'narrow'],

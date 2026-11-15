@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
 import { combineScreenStates } from '../../../lib/dataState'
 import { undoStrings, useConfirm, useToast, useUndoToast } from '../../../ui'
 import { resultMessage } from '../lib/multiDay'
 import { createSlotsSequentially, slotFormFromCard, slotFormFromCell } from '../lib/slotForm'
+import { addFromQuery } from '../lib/addFromQuery'
 import { slotAnchorId } from '../lib/slotAnchor'
 import type { RemovedRow } from '../lib/removedMealSlots'
 import { mergeImpacts, nameTakenRefusal, putBackRefusedHeadline, removalTarget, removedHeadline, removeGroups, removeLead, removeTitle, restoredHeadline, undoRemoveLabel } from '../lib/slotRemoval'
@@ -201,6 +203,18 @@ export function useMealSlotsPage() {
 
   const exceptions = useDateExceptions()
   const loaded = !slots.isPending && !members.isPending
+  // B9-53 (TB-06): "Set up by hand" from the first-run quick start arrives with ?add=1&weekdays=…: the Add editor opens on those weekdays
+  // once the page has loaded (an Admin only), and the query is cleared so Back or a reload does not open it again.
+  const [search, setSearch] = useSearchParams()
+  const addRequest = addFromQuery(search)
+  useEffect(() => {
+    if (!addRequest || !loaded || !isAdmin) return
+    savedWeekdays.current = []
+    setError(undefined)
+    setEditor({ defaultWeekdays: addRequest.weekdays })
+    setSearch({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per arrival with the query
+  }, [addRequest !== null, loaded, isAdmin])
   // B9-20 (RES-02): the cards need both answers; offline and never loaded is offlineUnknown, never an empty page.
   const state = combineScreenStates(slots.state, members.state)
   const cards = useMemo<MealSlotCard[]>(

@@ -4,6 +4,89 @@ All notable changes to the Feeder are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.0.0-beta.9] - 2026-11-15
+
+Undo nearly everywhere, a Plan that says what each change moved, Away for Members, overnight starts, Ticks that work offline, a Today and a Kitchen board rebuilt for every screen size, and a round of fixes to every screen.
+
+### Added
+
+- **Today**
+  - **Advance Steps** due in the next 24 hours have their own tile, each with its own button to mark it. A notification for an Advance Step opens Today on it, and a Leftover's notification opens its sheet.
+  - **First use is a checklist that leads:** five steps (time zone and currency, Members, Attendance, Recipes, the first plan), each step opening the sheet it needs, with a quick start for Meal Slots. It stays until the Household has five Recipes, can be put away with **Hide for now** and Undo, and comes back from Settings › Household.
+  - **The Scan session on Today:** while someone is shopping, Today shows the Lines still to get.
+- **Plan**
+  - **What changed.** A Swap, a Pin, Regenerate or any other change that replans says which other Planned Meals moved, with **Review** and **Undo**. A Bought Planned Meal does not move for another one's change.
+  - **Undo of Cooked and Not cooked**, until the end of the household day; **Mark all** is taken back as a whole.
+  - **Away.** Set a Member Away for several days (from a Meal Slot to a Meal Slot, or with no last day yet). The Plan shows who is away, plans fewer portions and offers Undo. Who's eating on a date can keep a Member who is away.
+  - **Latest start and overnight starts.** Beside Earliest start, Settings › Planning rules has **Latest start** (22:00 unless you turn it Off). The planner may now ask someone to start a long Recipe the evening before, and the Planned Meal shows an info chip such as "Start Tue 21:30"; the Start cooking notification comes at that time.
+  - **Mark Recipes for a Course** from Couldn't plan, without leaving the Plan, with Undo. **Choose a Recipe** also offers Recipes not marked for the Course, and marks the one you pick.
+- **Cook Mode**
+  - **Timers outside Cook Mode:** a running Timer shows as a pill on every screen, says when it finishes and opens where it was started. Cook Mode comes back at the last Step.
+  - **Get ready:** a Planned Meal's Ingredients for the planned portions, before you start.
+- **Shop**
+  - **Tick by hand with an amount:** a tick says what it adds to Stock, with **Undo** and **Change** in the toast, and a ticked row says what reached Stock. **Take back** on a Line's sheet takes back one addition. A Line can be ticked more than once, each with its own Stock Lot.
+  - **Ticks offline.** Ticked without a connection, a Line says "Waiting to sync" and is sent with the Scans when the phone is back online. A Line ticked on two phones says so ("Carrot was ticked twice"), and a Tick the server refused says why, with **Add to Stock**.
+  - **"Shopping List complete"** offers the next steps, among them **Put away** for the whole shop.
+  - **"Not available"** says what the Line is for and offers a substitute.
+- **Scan and receipts**
+  - **Scan without a camera:** type the barcode, and the tablet shows the camera and the list side by side.
+  - **Weighed barcodes** show the weight and the Price per kg; a weight-style code with no Weight Barcode Rule asks first, rather than becoming a Product.
+  - **Stock-take Undo** for +1 pack, −1 pack and Set total.
+  - **Receipt review:** a not-scanned line can be matched to an existing Product ("Use …"), matches come first, and **Accept all** says how many it accepts.
+- **Pantry**
+  - **By Storage Place,** with **Put away** to move many Stock Lots at once.
+  - **Undo of Throw out**, the same day, and **Keep** with the date you choose.
+- **Recipes**
+  - **The Recipe page** shows the description, Source and Attribution, the way into Cook Mode in reach at every size, and a Base recipe's Yield in g, ml or pieces.
+  - **The Recipe editor keeps your work:** a draft survives a reload or leaving the page, and removing a Step, a line or an Ingredient use has Undo.
+- **Settings**
+  - **Remove a Member or a Meal Slot with Undo** for 10 minutes. A removed Meal Slot keeps its Cooked history, shown under Settings › Meal Slots; removing it from some days of the week removes those days only.
+  - **Allowlist** rows say whether each User has signed in, with **Copy sign-in message** and Share.
+  - **Prices by Shop** on a Shop's page, and a Product page with its Price history and removable barcode chips; a typed barcode is checked.
+  - **Ingredient and Supply pages** have one Keeping tile, Rename in a sheet, and a Delete that says where the Ingredient is still used.
+- **Shell and offline**
+  - **Feeder opens offline,** with what was saved, and the offline banner says when it was saved, in household time, and what waits to sync. "Back online · 2 Scans synced" says when they went.
+  - **A new version is ready** asks you to Reload, rather than changing while you use it.
+  - **Your colour scheme before the first paint,** with a skeleton of the screen while it loads.
+- **Accessibility**
+  - A **skip link** to the page, a page title and focus on the heading at every page change, one focus ring that is not cut, names for repeated row actions, larger touch targets on phones and tablets, and a selected state that does not rely on colour alone.
+
+### Changed
+
+- **Today** is a Bento at every size, from 375 px to wall screens, with one tile header everywhere. The hero shows the next Meal Slot, not a past one, and agrees with the Kitchen board. Use soon and Leftovers open their sheets.
+- **Plan:** the week grid fills by day at every width, Couldn't plan is one compact tile, why chips are not cut, and the Planned Meal, Swap, Choose a Recipe and Who's eating sheets name the day, Meal Slot and Course.
+- **Cook Mode:** on a short screen the Step stays above Back and Next, the photo is capped, Timers sit in a strip or a rail, and Reheat has one primary button. After Cooked, one notice covers any Stock shortfall and Cook Mode returns to where you opened it.
+- **Shop and Scan:** the Price keypad stays clear of toasts; quantities in kg and l above 1000 g and 1000 ml; the Shop notice and statuses are not cut.
+- **Recipes:** a compact card on phones with New Recipe on the title row, a Recipe tile is a link, the editor is a faster flow (Lead time and Duration in min, h or d, a Tag chooser, a visible Optional), and Import starts with a choice of two paths.
+- **Settings:** Time zone and Currency are searchable; the Meal Slot cards, Tags rows, Sign-in requests and Members read well from 375 px; one field-error pattern everywhere, with focus on the first field to fix; Your preferences take effect at once.
+- **Kitchen board:** type sized for a wall screen, Tomorrow, a portrait layout, and a **Close**.
+- **Undo is one pattern:** an action happens at once and its toast offers Undo for 8 seconds (paused while you use it), in place of confirm dialogs.
+- **Performance:** each page loads on demand, assets are compressed, and the first screen comes faster.
+- **Copy:** one vocabulary on Today, the board and the Plan.
+
+### Fixed
+
+- **Removing a Meal Slot** dropped its Cooked history.
+- **Deleting a planned Recipe** said it would, then refused out of sight; the Recipe page now says why first.
+- **Cancel in the Recipe editor** could leave Feeder on a deep link.
+- **Keep** moved a go-off date one day at a time.
+- **Regenerate** started on Enter and gave no count.
+- **An unknown barcode** showed 14 digits nobody typed.
+- **The Add Shop Barcode sheet** scrolled sideways, and sheets lost their footer on short screens.
+- **Untimed Steps** read "No Steps".
+- **A crashed tile** took the whole page with it; **Try again** now works.
+
+### Known gaps
+
+- This release was not fully checked: at the user's request the page-layout guard, the shell guard, the browser tests and the screen captures were skipped for it. The checks in the release workflow (UI guards, typecheck, the web tests and build, Go vet and tests) pass.
+- The offline Shop (Ticks offline) was not reviewed before release.
+- The accessibility finish (forced colours, and every layout rule at fail) is not in this release; it comes in 1.0.0-beta.10.
+- Still open for 1.0.0-beta.10: the Price keypad on a short landscape phone; a Content-Security-Policy header; a lighter first load for Today; "Use …" in the Receipt's Add sheet sits just below the fold at 375 px; the "not sorted" count after a shop is approximate; the Unit Conversions tile layout on an Ingredient.
+
+### Upgrading
+
+No new settings. The database is migrated on start: ten migrations, 1570 to 1579, and Feeder first saves `feeder-pre-1570.db` in the `backups` folder of the data volume, as for earlier releases. After the upgrade, Earliest start is 06:30 and Latest start 22:00 for every Household, so the next replan may move a long Recipe; a Household that has planned before does not see the setup checklist again; and a User Feeder has no record of signing in reads "Not signed in yet" on the Allowlist until their next sign-in. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.9 --namespace feeder --reset-then-reuse-values`, or pull the new image and restart. See "Upgrading from 1.0.0-beta.8 to 1.0.0-beta.9" in `docs/dev/deploy.md`.
+
 ## [1.0.0-beta.8] - 2026-11-14
 
 Undo of a tick now takes back the Stock the tick added, a Receipt is read in the background, and a round of fixes to the Scan, Shop, Pantry and Recipes screens.

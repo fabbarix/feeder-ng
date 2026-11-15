@@ -4,6 +4,8 @@ import { readFeatureCss, readSource } from './test-css'
 
 const FILES = [
   'features/plan/components/CouldntPlanTile.tsx',
+  // B9-32 (PC-07): the compact tile has no list of its own; the meals by day are in the "Show which meals" sheet.
+  'features/plan/components/CouldntMealsSheet.tsx',
   'features/plan/components/CouldntPlanExclusionTile.tsx',
   'features/plan/components/CouldntPlanExclusionSummary.tsx',
   'features/plan/screens/CouldntPlanExclusionsScreen.tsx',
@@ -18,7 +20,7 @@ function ruleFor(cls: string): string {
 }
 
 describe('the lists of the Couldn\'t plan tiles and the Review Exclusions page have no bullets', () => {
-  it('the Exclusion tile writes its own lists (Who eats it, Exclusions, where this applies)', () => {
+  it('the Exclusion tile writes its own lists (Who eats it, where this applies) and the meals sheet its lists by day', () => {
     expect(listClasses.length).toBeGreaterThanOrEqual(3)
   })
 

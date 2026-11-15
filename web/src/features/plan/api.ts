@@ -1,8 +1,11 @@
 import { http } from '../../lib/http'
 import type { RegenerateDryRun } from './lib/bought'
 import type { PlanChange } from './lib/replan'
+
 import type {
   Alternative,
+  Away,
+  AwayPreview,
   CookedAllEntry,
   CookedAllResult,
   CookedResult,
@@ -23,6 +26,35 @@ import type {
   TagChoice,
   VarietyRule,
 } from './types'
+
+/** B9-46: a Member as the Away sheet's Who pills need them (GET /api/members; Settings' Member fits). */
+export interface AwayMember {
+  id: number
+  name: string
+  colour: string
+  avatar: string
+  photoUrl?: string
+}
+
+/** B9-24 (PC-08): the answer of an Away write: the Away, what the replan changed, and the Undo's token. */
+export type AwayAnswer = Away & { changes: PlanChange[]; undoToken?: string }
+
+/** B9-32: the answer of POST /api/courses/<id>/recipes. */
+export interface MarkRecipesResult {
+  marked: number
+  /** The Recipes this call newly marked (absent from an old server: then there is no Undo). */
+  markedIds?: number[]
+  changes: PlanChange[]
+  undoToken?: string
+}
+
+/** B9-32: the answer of POST /api/courses/<id>/recipes/unmark. */
+export interface UnmarkRecipesResult {
+  unmarked: number
+  unmarkedIds: number[]
+  changes: PlanChange[]
+  undoToken?: string
+}
 
 /** B9-11: what every replanning write adds to its answer: the cells it changed beyond its target and the token that undoes it (none when it issued none). */
 export interface ReplanFields {
@@ -66,6 +98,27 @@ export const planApi = {
   couldntExclusions: () => http.get<{ cells: ExclusionCell[] }>('/api/plan/couldnt-plan/exclusions'),
   leftovers: () => http.get<{ leftovers: Leftover[] }>('/api/plan/leftovers'),
   regenerate: () => http.post<RegenerateResult>('/api/plan/regenerate'),
+  /**
+   * B9-32 (PC-07): POST /api/courses/<id>/recipes `{ recipeIds }` marks Recipes with a Course and replans once. `marked` is how many
+   * Recipes gained it and `markedIds` which (the Undo unmarks exactly those). Any User. 422 `validation_failed` on `recipeIds`, 404.
+   */
+  markRecipes: (courseId: number, recipeIds: number[]) => http.post<MarkRecipesResult>(`/api/courses/${courseId}/recipes`, { recipeIds }),
+  /** B9-32 (ruling 2): the Undo of markRecipes: POST /api/courses/<id>/recipes/unmark `{ recipeIds }` takes the Course off them and replans. */
+  unmarkRecipes: (courseId: number, recipeIds: number[]) => http.post<UnmarkRecipesResult>(`/api/courses/${courseId}/recipes/unmark`, { recipeIds }),
+  /** B9-46: the Household's Members (the Away sheet's Who pills); the same read as Settings' (key ['household', 'members']). */
+  members: () => http.get<AwayMember[]>('/api/members'),
+  /** B9-24 (PC-08): a Member's running and coming Aways, soonest first. */
+  memberAways: (memberId: number) => http.get<Away[]>(`/api/members/${memberId}/away`),
+  /** B9-24: the dry run of a new Away (POST …?dryRun=1) or of a change to one (PATCH /api/away/{id}?dryRun=1). Nothing is written. */
+  awayPreview: (memberId: number, body: Record<string, unknown>, awayId?: number) =>
+    awayId === undefined ? http.post<AwayPreview>(`/api/members/${memberId}/away?dryRun=1`, body) : http.patch<AwayPreview>(`/api/away/${awayId}?dryRun=1`, body),
+  /** B9-24: 201 the Away with the replan's `changes` and `undoToken`; 422 `validation_failed` with `field` and `reason`. */
+  createAway: (memberId: number, body: Record<string, unknown>) => http.post<AwayAnswer>(`/api/members/${memberId}/away`, body),
+  updateAway: (awayId: number, body: Record<string, unknown>) => http.patch<AwayAnswer>(`/api/away/${awayId}`, body),
+  /** B9-24: ends a running Away after the Meal Slot that is on now; 409 `away_not_started` | `away_over`. */
+  endAway: (awayId: number) => http.post<AwayAnswer>(`/api/away/${awayId}/end`),
+  /** B9-24: removes an Away that has not started; 409 `away_started`. */
+  removeAway: (awayId: number) => http.delete<{ id: number; changes: PlanChange[]; undoToken?: string }>(`/api/away/${awayId}`),
   /** B9-11: POST /api/plan/restore { undoToken }: writes the plan back exactly, no replan. 409 `plan_changed`, 404 `not_found`. */
   restore: (undoToken: string) => http.post<{ changes: PlanChange[] }>('/api/plan/restore', { undoToken }),
   /** B9-11: POST .../{courseId}/reopen: Cooked or Not cooked taken back (every Course of the same Mark all). 409 `leftover_used`, `reopen_window_over`. */
@@ -74,8 +127,9 @@ export const planApi = {
   reopenAll: (slot: SlotDayKey) => http.post<ReopenResult>(`${slotDayPath(slot)}/all/reopen`),
   /** B5-BOW: what Regenerate would replace, with the Bought Planned Meals named (POST ?dryRun=1; writes nothing). */
   regenerateDryRun: () => http.post<RegenerateDryRun>('/api/plan/regenerate?dryRun=1'),
-  setMeal: (key: SlotKey, recipeId: number, batches?: number) =>
-    http.put<PlanWriteResult>(slotPath(key), batches === undefined ? { recipeId } : { recipeId, batches }),
+  /** B9-38: `markCourse` (a pick from "Other Recipes") marks the Recipe with the key's Course and sets it in the same write. */
+  setMeal: (key: SlotKey, recipeId: number, batches?: number, markCourse?: boolean) =>
+    http.put<PlanWriteResult>(slotPath(key), { recipeId, ...(batches === undefined ? {} : { batches }), ...(markCourse ? { markCourse: true } : {}) }),
   /** B5-LOW: pins a Leftover (not taken out of the Freezer) to the Planned Meal of a Course; `{ leftoverId }` instead of a Recipe. */
   pickLeftover: (key: SlotKey, leftoverId: number) => http.put<PlanWriteResult>(slotPath(key), { leftoverId }),
   confirm: (key: SlotKey) => http.post<PlanWriteResult>(`${slotPath(key)}/confirm`),

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { slot } from '../test-utils'
 import { RecipeChooserSheet } from './RecipeChooserSheet'
 
 const recipes = [
@@ -11,7 +12,7 @@ const recipes = [
 
 function setup(over: Partial<React.ComponentProps<typeof RecipeChooserSheet>> = {}) {
   const onPick = vi.fn()
-  render(<RecipeChooserSheet open onClose={() => {}} recipes={recipes} isLoading={false} onPick={onPick} {...over} />)
+  render(<RecipeChooserSheet open onClose={() => {}} recipes={recipes} isLoading={false} onPick={onPick} slot={slot()} courseId={1} {...over} />)
   return { onPick }
 }
 
@@ -32,7 +33,8 @@ describe('RecipeChooserSheet', () => {
   it('a search field narrows the list (no native search input styling)', async () => {
     setup()
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search Recipes' }), 'ra')
-    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ratatouille'])
+    // B9-38: the neutral monogram shows the initial, so the row's title is read on its own
+    expect(screen.getAllByRole('listitem').map((li) => li.querySelector('.list-row__title')?.textContent)).toEqual(['Ratatouille'])
   })
 
   it('says so with no Recipes, and while loading', () => {

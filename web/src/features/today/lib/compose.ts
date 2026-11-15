@@ -1,29 +1,34 @@
 import type { TileId, TodayData, TodayLayout } from '../types'
 
 /**
- * Decides what Today shows. While a scan session is active it is the Shopping List. Otherwise the tiles with
- * something to show, in the hierarchy of ui-fix-plan 5.1 and docs/design/system.md §8: nextMeal (the hero, first),
- * toConfirm, metrics (the strip: streak and Lines to get, shown when one has a value), advanceSteps, leftovers,
- * useSoon, spoiled ("Throw out or keep?"), couldntPlan. While the Household is being set up (`needsSetup`) the setup
- * checklist comes first and replaces couldntPlan. `empty` is true when no tile other than the metric strip would show.
+ * Decides what Today shows: the tiles with something to show, in DOM order (B9-44, TB-03): the Shopping tile while a Scan session is
+ * active on this phone (TB-12), the setup checklist while the Household is being set up (it replaces Couldn't plan), the hero, To confirm,
+ * then the aside's tiles (Advance Steps, the metric strip: the strip shows from a 1-day streak or a Line to get, TB 3), Couldn't plan,
+ * Throw out or keep?, Leftovers and Use soon. B9-53: the compact checklist (after the first plan) follows the hero instead. `aside` names the aside's tiles that are present; CSS places them (and moves the strip
+ * to the end below 60 rem). `empty` is true when no tile other than the metric strip would show.
  */
 export function composeToday(d: TodayData): TodayLayout {
-  if (d.scanSessionActive) return { mode: 'shopping' }
   const ids: TileId[] = []
+  if (d.scanSessionActive) ids.push('shopping')
   if (d.needsSetup) ids.push('setup')
   if (d.hasNextMeal) ids.push('nextMeal')
+  // B9-53 (TB-06): after the first plan the checklist is compact and follows the hero (one setup tile at a time: the full one wins).
+  const compactSetup = d.setupCompact === true && !d.needsSetup
+  if (compactSetup) ids.push('setup')
   if (d.toConfirm > 0) ids.push('toConfirm')
+  if (d.advanceSteps > 0) ids.push('advanceSteps')
   // DS-TODAY round 2: the Leftovers tile says its own count, so Leftovers alone does not open the strip.
   if (d.streakDays >= 1 || d.linesToGet > 0) ids.push('metrics')
-  if (d.advanceSteps > 0) ids.push('advanceSteps')
+  if (d.couldntPlan > 0 && !d.needsSetup) ids.push('couldntPlan')
+  if (d.spoiled > 0) ids.push('spoiled')
   if (d.leftovers > 0) ids.push('leftovers')
   if (d.useSoon > 0) ids.push('useSoon')
-  if (d.spoiled > 0) ids.push('spoiled')
-  if (d.couldntPlan > 0 && !d.needsSetup) ids.push('couldntPlan')
   return {
     mode: 'today',
     tiles: ids.map((id) => ({ id })),
+    aside: ids.filter((id) => id === 'advanceSteps' || id === 'metrics'),
     empty: !d.loadFailed && ids.every((id) => id === 'metrics'),
     failed: d.loadFailed === true,
+    ...(compactSetup ? { setupCompact: true } : {}),
   }
 }

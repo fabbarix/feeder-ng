@@ -1,7 +1,14 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { recordServerContact, resetServerContact } from '../lib/serverContact'
 import { useConnectivity } from './useConnectivity'
 
+// B9-49 (RES-07): `lastContact` replaces `savedAt`. It is the newest successful server answer (lib/serverContact, recorded by the HTTP
+// client), not the moment the connection dropped, and it is known while online too (the banner shows it only while offline).
+beforeEach(() => {
+  localStorage.clear()
+  resetServerContact()
+})
 afterEach(() => {
   vi.restoreAllMocks()
   vi.useRealTimers()
@@ -10,47 +17,64 @@ afterEach(() => {
 const setOnline = (value: boolean) => vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(value)
 
 describe('useConnectivity', () => {
-  it('is online with no savedAt when the browser is online', () => {
+  it('is online, with no contact yet, when the browser is online and nothing has answered', () => {
     setOnline(true)
     const { result } = renderHook(() => useConnectivity())
-    expect(result.current).toEqual({ offline: false, savedAt: null })
+    expect(result.current).toEqual({ offline: false, lastContact: null })
   })
 
-  it('starts offline (savedAt = mount time) when the browser is already offline', () => {
-    vi.useFakeTimers({ now: new Date(2026, 10, 10, 14, 2) })
-    setOnline(false)
-    const { result } = renderHook(() => useConnectivity())
-    expect(result.current.offline).toBe(true)
-    expect(result.current.savedAt).toEqual(new Date(2026, 10, 10, 14, 2))
-  })
-
-  it('goes offline on the window offline event, remembering when the connection dropped', () => {
-    vi.useFakeTimers({ now: new Date(2026, 10, 10, 9, 30) })
+  it('lastContact is the newest successful server answer, and follows new answers while mounted', () => {
     setOnline(true)
+    recordServerContact(new Date(2026, 10, 10, 9, 30))
     const { result } = renderHook(() => useConnectivity())
-    vi.setSystemTime(new Date(2026, 10, 10, 9, 45))
+    expect(result.current.lastContact).toEqual(new Date(2026, 10, 10, 9, 30))
+    act(() => recordServerContact(new Date(2026, 10, 10, 9, 40)))
+    expect(result.current.lastContact).toEqual(new Date(2026, 10, 10, 9, 40))
+  })
+
+  it('going offline does not replace it with the moment the connection dropped (the old savedAt)', () => {
+    vi.useFakeTimers({ now: new Date(2026, 10, 10, 9, 45) })
+    setOnline(true)
+    recordServerContact(new Date(2026, 10, 10, 9, 30))
+    const { result } = renderHook(() => useConnectivity())
     act(() => {
       setOnline(false)
       window.dispatchEvent(new Event('offline'))
     })
     expect(result.current.offline).toBe(true)
-    expect(result.current.savedAt).toEqual(new Date(2026, 10, 10, 9, 45))
+    expect(result.current.lastContact).toEqual(new Date(2026, 10, 10, 9, 30))
   })
 
-  it('comes back online on the online event and clears savedAt', () => {
+  it('starts offline with the contact kept on the device from the last session', () => {
+    recordServerContact(new Date(2026, 10, 9, 18, 5))
+    resetServerContact({ keepStored: true }) // a fresh start of the app
+    setOnline(false)
+    const { result } = renderHook(() => useConnectivity())
+    expect(result.current).toEqual({ offline: true, lastContact: new Date(2026, 10, 9, 18, 5) })
+  })
+
+  it('offline with nothing ever answered: lastContact is null (the banner then says only "Offline")', () => {
+    setOnline(false)
+    const { result } = renderHook(() => useConnectivity())
+    expect(result.current).toEqual({ offline: true, lastContact: null })
+  })
+
+  it('comes back online on the online event', () => {
     setOnline(false)
     const { result } = renderHook(() => useConnectivity())
     act(() => {
       setOnline(true)
       window.dispatchEvent(new Event('online'))
     })
-    expect(result.current).toEqual({ offline: false, savedAt: null })
+    expect(result.current.offline).toBe(false)
   })
 
-  it('removes its listeners on unmount', () => {
+  it('removes its listeners and its subscription on unmount', () => {
     setOnline(true)
     const remove = vi.spyOn(window, 'removeEventListener')
-    renderHook(() => useConnectivity()).unmount()
+    const { unmount } = renderHook(() => useConnectivity())
+    unmount()
     expect(remove.mock.calls.map((c) => c[0])).toEqual(expect.arrayContaining(['online', 'offline']))
+    expect(() => act(() => recordServerContact(new Date()))).not.toThrow()
   })
 })

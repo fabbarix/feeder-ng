@@ -1,7 +1,7 @@
 // B5-F1 (ADR 0014): the board says "Dinner · Not served" for tonight and tomorrow.
 import { describe, expect, it } from 'vitest'
 import type { SlotLike } from '../types'
-import { notServedLine, tomorrowLine, tomorrowSlots, tonightMeal, tonightNotServed } from './tiles'
+import { notServedLine, tomorrowLine, tomorrowSlots, tonightNotServed } from './tiles'
 
 const TODAY = '2026-11-09'
 const notServed = (over: Partial<SlotLike> = {}): SlotLike => ({
@@ -24,10 +24,6 @@ describe('tonightNotServed', () => {
     const lunch = notServed({ mealSlotId: 1, name: 'Lunch', at: '2026-11-09T12:30:00Z' })
     const tomorrow = notServed({ date: '2026-11-10', mealSlotId: 3 })
     expect(tonightNotServed([notServed(), served(), tomorrow, lunch], TODAY).map((s) => s.name)).toEqual(['Lunch', 'Dinner'])
-  })
-
-  it('a Not served slot is never Tonight\'s meal', () => {
-    expect(tonightMeal([notServed()], TODAY, '2026-11-09T17:00:00Z')).toBeNull()
   })
 })
 

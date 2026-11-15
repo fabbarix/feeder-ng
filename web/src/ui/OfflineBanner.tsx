@@ -1,27 +1,39 @@
 import { Icon } from './Icon'
 import { ActionSurface } from './lib/actionSurface'
 import { overlayStrings } from './overlayStrings'
-import { clockTime } from './lib/time24'
+import { savedMoment } from '../lib/savedMoment'
 import './OfflineBanner.css'
 
 export interface OfflineBannerProps {
   offline: boolean
-  /** When the saved data was last refreshed; shown as 24 h clock time. */
+  /** B9-49 (RES-07): the newest successful server answer; none ever known reads just "Offline". */
   savedAt?: Date | null
-  /** Scans waiting to sync; the line is hidden at 0. */
+  /** The Household's IANA zone the moment is named in; without one, the device clock. */
+  timeZone?: string | null
+  /** What "today" is measured against: a moment on an earlier day gets its weekday. Without it, the time alone. */
+  now?: Date
+  /** Scans waiting to sync. */
   pendingScans?: number
+  /** Ticks waiting to sync (RES-03). */
+  pendingTicks?: number
 }
 
 /** Polite live region under the top bar; renders nothing while online. */
-export function OfflineBanner({ offline, savedAt, pendingScans = 0 }: OfflineBannerProps) {
+export function OfflineBanner({ offline, savedAt, timeZone, now, pendingScans = 0, pendingTicks = 0 }: OfflineBannerProps) {
   if (!offline) return null
-  const saved = savedAt ? `${overlayStrings.showingSaved}${overlayStrings.savedAt(clockTime(savedAt))}` : overlayStrings.showingSaved
+  let text: string = overlayStrings.offline
+  if (savedAt) {
+    const moment = savedMoment(savedAt, now ?? savedAt, timeZone)
+    // "saved at 04:30" today, "saved Sat 18:05" on an earlier day
+    text += ` · ${overlayStrings.showingSaved}${/^\d/.test(moment) ? overlayStrings.savedAt(moment) : ` ${moment}`}`
+  }
+  const queue = overlayStrings.queueWaiting(pendingScans, pendingTicks)
   return (
     <div role="status" aria-live="polite" className="offline-banner">
       <ActionSurface>
         <Icon name="offline" size={16} />
-        <span>{`${overlayStrings.offline} · ${saved}`}</span>
-        {pendingScans > 0 ? <span className="offline-banner__queue">{overlayStrings.scansWaiting(pendingScans)}</span> : null}
+        <span>{text}</span>
+        {queue ? <span className="offline-banner__queue">{queue}</span> : null}
       </ActionSurface>
     </div>
   )

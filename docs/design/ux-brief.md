@@ -13,7 +13,7 @@ Inputs for the UI/UX proposals. Domain terms are defined in [GLOSSARY.md](../../
 - **Shape & motion:** soft, generous rounding (16–24 px cards, pill chips); springy but short motion (≤ 250 ms); `prefers-reduced-motion` respected.
 
 ## Structure
-- **Home = Today, context-aware:** next meal, Advance Steps due, Leftovers to use, Cooked to confirm. Switches to the Shopping List when a scan session is active.
+- **Home = Today, context-aware:** next meal, Advance Steps due, Leftovers to use, Cooked to confirm. While a Scan session is active on this phone, Today leads with a Shopping tile that returns to Scan.
 - **Phone navigation:** bottom bar with Today · Plan · Pantry · [Scan] · Shop · Recipes · Settings, seven equal buttons, where Scan is the accent button exactly in the centre and Settings is on the right. "Shop" here is a UI label for the shopping screen (Shopping List plus scanning), not the glossary **Shop**. The Kitchen board and Sign out sit behind the avatar (Sign-in requests at the end when it applies). On desktop this becomes a side rail, and the layout expands for weekly planning and recipe editing.
 - **Planner transparency:** "why" chips on every auto-planned meal ("uses Monday's chicken", "Anna's favourite", "leftover from Tue"); one tap to swap offers 3 alternatives, and swapping pins the meal.
 

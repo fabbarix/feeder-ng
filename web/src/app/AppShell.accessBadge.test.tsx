@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { ToastProvider } from '../ui'
 import { AppShell } from './AppShell'
 import { buildRoutes } from './features'
 
@@ -12,7 +13,12 @@ vi.mock('./ShellTimers', () => ({ ShellTimers: () => null }))
 function setup(extra: Record<string, unknown>) {
   const shellProps = { user: { displayName: 'Anna Rossi' }, onSignOut: () => {}, ...extra }
   const router = createMemoryRouter([{ path: '/', element: <AppShell {...shellProps} />, children: buildRoutes({}) }], { initialEntries: ['/'] })
-  render(<RouterProvider router={router} />)
+  // B9-49: the shell's status slot announces "Back online" through the app's toasts (the app always has a ToastProvider).
+  render(
+    <ToastProvider>
+      <RouterProvider router={router} />
+    </ToastProvider>,
+  )
 }
 
 describe('AppShell access badge', () => {

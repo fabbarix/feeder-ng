@@ -24,6 +24,8 @@
 
 .time-field[data-disabled] {
   color: var(--color-muted);
+  background: var(--field-disabled-bg);
+  border-color: var(--field-disabled-border);
 }
 
 .ui-field:has(.time-field[data-disabled]) .ui-field__label {

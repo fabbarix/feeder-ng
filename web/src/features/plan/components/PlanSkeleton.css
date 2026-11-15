@@ -29,3 +29,9 @@
 .plan-day-skeleton__meal > .skeleton[data-variant='meta'] + .skeleton[data-variant='row'] {
   margin-block-start: 0;
 }
+
+/* w4d review (CLS): each skeleton day sits in a cell of PlanGrid's twelve tracks (its span inline), as the day tile that replaces it. */
+.plan-day-skeleton__cell {
+  display: grid;
+  min-inline-size: 0;
+}

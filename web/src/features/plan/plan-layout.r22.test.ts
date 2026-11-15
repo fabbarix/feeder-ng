@@ -26,9 +26,9 @@ describe('plan.css R2-2', () => {
   })
 
   // DS-09 (B9-08): a component-fit threshold is a container query in rem on the component's own named container, not a viewport query.
-  it('L-07: from 44 rem of hero the hero actions sit at the end (right) of the tile, the button keeps its own width', () => {
+  it('L-07 (TB-03 moved it to 35 rem, B9-44): from 35 rem of hero the hero actions sit at the end (right) of the tile, the button keeps its own width', () => {
     expect(css).not.toMatch(/@media[^{]*820px/)
-    const r = inContainer(/^plan-hero\s*\(min-width:\s*44rem\)$/, '.plan-hero__actions').join('')
+    const r = inContainer(/^plan-hero\s*\(min-width:\s*35rem\)$/, '.plan-hero__actions').join('')
     expect(r).toMatch(/justify-content:\s*(flex-end|end)/)
   })
 

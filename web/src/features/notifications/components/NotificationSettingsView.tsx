@@ -14,6 +14,8 @@ export interface NotificationSettingsViewProps {
   onDisable: () => void
   onSetType: (deviceId: number, type: NotificationType, on: boolean) => void
   onRemove: (deviceId: number) => void
+  /** B9-49 (SET-14g): Safari on iPhone: the needs-install line names Share and Add to Home Screen. */
+  iosSafari?: boolean
 }
 
 const SUPPORT_MESSAGE: Partial<Record<PushSupport, string>> = {
@@ -31,7 +33,7 @@ const SUPPORT_MESSAGE: Partial<Record<PushSupport, string>> = {
  * devices" with a "Remove <label>" button each.
  */
 export function NotificationSettingsView(props: NotificationSettingsViewProps): ReactElement {
-  const message = SUPPORT_MESSAGE[props.support]
+  const message = props.support === 'needs-install' && props.iosSafari ? s.needsInstallIosSafari : SUPPORT_MESSAGE[props.support]
   if (message) {
     return (
       <Tile as="section" span="full" aria-label={s.title}>
@@ -45,7 +47,7 @@ export function NotificationSettingsView(props: NotificationSettingsViewProps): 
       {thisDevice ? (
         <ThisDevice device={thisDevice} busy={props.busy} onSetType={props.onSetType} onDisable={props.onDisable} />
       ) : (
-        <Button type="button" onClick={props.onEnable} disabled={props.busy}>
+        <Button type="button" block="phone" onClick={props.onEnable} disabled={props.busy}>
           {props.busy ? s.enabling : s.enable}
         </Button>
       )}

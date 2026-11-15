@@ -31,7 +31,7 @@ const fs = (await import(/* @vite-ignore */ nodeFs)) as {
   mkdtempSync: (p: string) => string
   cpSync: (a: string, b: string, o: { recursive: true }) => void
   writeFileSync: (p: string, s: string) => void
-  rmSync: (p: string, o: { recursive: true; force: true }) => void
+  rmSync: (p: string, o?: { recursive?: true; force?: true }) => void
 }
 const nodeVm = 'node:vm'
 const { Script } = (await import(/* @vite-ignore */ nodeVm)) as { Script: new (src: string) => unknown }
@@ -95,8 +95,8 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35; B9-40 P34.
-  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P34', 'P35', 'P36', 'P39', 'P40', 'P41', 'P43'],
+  // B9-13 added P24, P28, P40, P41; B9-14 P25, P33; B9-16 P36; B9-18 P43; B9-19 P31, P32, P35; B9-32 P38; B9-40 P34; B9-44 P42; B9-49 P37.
+  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P34', 'P35', 'P36', 'P37', 'P38', 'P39', 'P40', 'P41', 'P42', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning, and shop-barcode-sheet (the Add Shop Barcode sheet,
@@ -113,6 +113,9 @@ const ADDED = {
   // B9-31: scenarios/b9-31.mjs (order 330, after b9-19 by file name): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-36: scenarios/b9-36.mjs (order 330, after b9-31 by file name): preferences-preview (SAFE-08).
   // B9-52: scenarios/b9-52.mjs (order 330, after b9-36 by file name): allowlist-actions, allowlist-share and access-requests-rows (SET-03, SET-12).
+  // B9-32: scenarios/b9-32.mjs (order 332): plan-grid (PC-11, PC-06, A11Y-08, A11Y-09) and plan-couldnt (PC-07); rules/P38-unique-names.mjs (A11Y-08).
+  // B9-39: scenarios/b9-39.mjs (order 336): today-after-lunch (TB-01, TB-10, TB-15b: the hero at 14:44, the eyebrow, the ⋮ never over the name) and today-after-swap.
+  // B9-38: scenarios/b9-38.mjs (order 338): plan-sheet-actions, plan-sheet-mark-cooked, plan-sheet-swap, plan-sheet-choose, plan-sheet-choose-ring and plan-sheet-whos-eating (PC-09, PC-10, SHORT-02).
   // B9-25: scenarios/b9-25.mjs (order 340): timer-pill and timer-pill-editor (PC-04). No rule number: the setup measures the pill and throws on a finding.
   // B9-34: scenarios/b9-34.mjs (order 340, after b9-25 by file name): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
   // B9-35: scenarios/b9-35.mjs (order 340, after b9-34 by file name): scan-typed (no camera, P12 and P30), scan-camera-typed and scan-camera-landscape (a fake camera).
@@ -122,15 +125,22 @@ const ADDED = {
   // B9-27: scenarios/recipe-detail.mjs (order 340, after b9-51 by file name): the Cook tile in the first viewport, the side column's edges and the phone Cook bar (RX-04, SHORT-04);
   // the seed step page-layout-seed/recipe-detail.mjs gives the seeded Recipe its lede, Source, eight Tags and an untimed Step.
   // B9-41: scenarios/b9-41.mjs (order 341): scan-weighed (SSP-07, SSP-20: the weighed header, the keypad on per kg, the focused key's ring).
+  // B9-44: scenarios/b9-44.mjs (order 344): today-advance (TB-02), today-grid (TB-03, TB-09, TB-11, with the resize walk), today-shopping (TB-12), today-cls and plan-cls (RES-05).
+  // B9-46: scenarios/b9-46.mjs (order 346): plan-away, away-sheet, away-sheet-open, whos-eating-away and member-away (PC-08, SET-16).
   // B9-40: scenarios/b9-40.mjs (order 350): cook-step-landscape and cook-step-portrait (P34, SHORT-01) and cook-step-photo (PC-03; the setup measures and throws).
   // B9-43: scenarios/b9-43.mjs (order 350, after b9-40 by file name): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete and shop-complete-restore (SSP-04, 09, 13, 14).
+  // B9-47: scenarios/b9-47.mjs (order 350, after b9-43 by file name): the Kitchen board on real screens (TB-04, TB-07, TB-08, TB-15c/d, SHORT-03, A11Y-12, RES-09): board-wall, board-portrait, board-short, board-phone, board-close, board-error.
+  // B9-49: scenarios/b9-49.mjs (order 350, after b9-47 by file name): shell-skip-link (A11Y-10), shell-offline-banner (RES-07), nav-current-recipe,
+  // nav-current-recipe-edit and nav-current-ingredient (TB-13), toast-region-chromeless, boot-theme (RES-08). No rule number but P37 (titles): the setups measure and throw on a finding.
   // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
+  // B9-53: scenarios/b9-53.mjs (order 370): first-run-zone, first-run-member, first-run-slots and first-run-compact (TB-06; the empty Household is a fetch stub installed by `emulate`). No rule number: the setups measure and throw.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
+  // B9-50: scenarios/b9-50.mjs (order 500): receipt-review-add and receipt-add-sheet (SSP-08), receipt-photos-bar (SSP-19, A11Y-09).
+  // B9-54: scenarios/b9-54.mjs (order 540): shop-offline-tick and shop-offline-sheet (RES-03), the Shop ticked offline.
   // B9-55: scenarios/b9-55.mjs (order 550): cook-three-timers (the Cook Mode timer strip at 375), recipe-timer-pill (the floating pill over the hero chip line) and
   // receipt-add-sheet-again (the receipt Add... sheet once more after every other receipt scenario). The setups measure and throw.
-  // B9-50: scenarios/b9-50.mjs (order 500): receipt-review-add and receipt-add-sheet (SSP-08), receipt-photos-bar (SSP-19, A11Y-09).
   scenarios: [
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
@@ -143,6 +153,9 @@ const ADDED = {
     'recipe-editor-guard', 'recipe-new-empty-save',
     'preferences-preview',
     'allowlist-actions', 'allowlist-share', 'access-requests-rows',
+    'plan-grid', 'plan-couldnt',
+    'today-after-lunch', 'today-after-swap',
+    'plan-sheet-actions', 'plan-sheet-mark-cooked', 'plan-sheet-swap', 'plan-sheet-choose', 'plan-sheet-choose-ring', 'plan-sheet-whos-eating',
     'timer-pill', 'timer-pill-editor',
     'shop-ticked', 'shop-focus-after-tick',
     'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',
@@ -150,13 +163,19 @@ const ADDED = {
     'tags-rows', 'assistant-bar', 'toast-over-preferences-bar', 'planning-cooking-times',
     'recipe-detail-cook', 'recipe-detail-phone',
     'scan-weighed',
+    'today-advance', 'today-grid', 'today-shopping', 'today-cls', 'plan-cls',
+    'plan-away', 'away-sheet', 'away-sheet-open', 'whos-eating-away', 'member-away',
     'cook-step-landscape', 'cook-step-portrait', 'cook-step-photo',
     'shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete', 'shop-complete-restore',
+    'board-wall', 'board-portrait', 'board-short', 'board-phone', 'board-close', 'board-error',
+    'shell-skip-link', 'shell-offline-banner', 'nav-current-recipe', 'nav-current-recipe-edit', 'nav-current-ingredient', 'toast-region-chromeless', 'boot-theme',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',
+    'first-run-zone', 'first-run-member', 'first-run-slots', 'first-run-compact',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',
     'receipt-review-add', 'receipt-add-sheet', 'receipt-photos-bar',
+    'shop-offline-tick', 'shop-offline-sheet',
     'cook-three-timers', 'recipe-timer-pill', 'receipt-add-sheet-again',
   ],
 }
@@ -276,15 +295,17 @@ describe('a package adds its own files and edits no shared one', () => {
   const demoRule = (id: string) =>
     `export default { id: '${id}', title: 'demo rule of a package', always: true, evaluate: (m) => (m.demo ? [{ rule: '${id}', message: '${id} demo finding' }] : []) }\n`
 
+  // release: with B9-49's P37, every planned rule is added and none is reserved, so the demo stands in for P37 in a copy without its module.
   it('a rules/P37-*.mjs file activates the reserved P37: it runs, is always-fail and leaves RESERVED', () => {
     const s = scratchLib()
     try {
+      fs.rmSync(resolve(s.dir, 'page-layout/rules/P37-page-title.mjs'))
       put(s.dir, 'page-layout/rules/P37-demo.mjs', demoRule('P37'))
       const api = load(s.dir)
       expect(api.RULES.map((r) => r.id)).toContain('P37')
       expect(api.ALWAYS_FAIL).toContain('P37')
       expect(api.RESERVED.map((r) => r.id)).not.toContain('P37')
-      expect(api.RESERVED.map((r) => r.id)).toContain('P38')
+      expect(api.RESERVED.map((r) => r.id)).toEqual(['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P34', 'P35', 'P36', 'P37', 'P38', 'P39', 'P40', 'P41', 'P42', 'P43'].filter((id) => !ADDED.rules.includes(id)))
       expect(api.evaluateMetrics({ ...metrics, demo: true }, ctx).map((f) => f.rule)).toEqual(['P37'])
       expect(api.evaluateMetrics(metrics, ctx)).toEqual([])
     } finally {
@@ -295,6 +316,7 @@ describe('a package adds its own files and edits no shared one', () => {
     for (const [file, id, why] of [['P99-demo.mjs', 'P99', /P99/], ['P25-demo.mjs', 'P26', /P2[56]/], ['P37-other.mjs', 'P37', /P37/]] as const) {
       const s = scratchLib()
       try {
+        fs.rmSync(resolve(s.dir, 'page-layout/rules/P37-page-title.mjs'))
         put(s.dir, 'page-layout/rules/P37-demo.mjs', demoRule('P37'))
         put(s.dir, `page-layout/rules/${file}`, demoRule(id))
         expect(() => load(s.dir), file).toThrow(why)
@@ -333,8 +355,9 @@ describe('a package adds its own files and edits no shared one', () => {
     const s = scratchLib()
     try {
       put(s.dir, 'page-layout/probes/zz-demo.mjs', "export default { name: 'zz-demo', key: 'zzDemo', dark: true, source: '[]' }\n")
-      // the demo takes a reserved always-fail number no package has added yet (B9-18: P43 is taken now)
-      const id = facade.RESERVED.find((r) => r.mode === 'always')!.id
+      // the demo takes an always-fail number; every planned rule is added now (B9-49: P37), so it replaces P37's module in the copy
+      const id = facade.RESERVED.find((r) => r.mode === 'always')?.id ?? 'P37'
+      if (id === 'P37') fs.rmSync(resolve(s.dir, 'page-layout/rules/P37-page-title.mjs'))
       put(s.dir, `page-layout/rules/${id}-demo.mjs`, `export default { id: '${id}', title: 'demo', always: true, evaluate: () => [], evaluateDark: (dm) => (dm.zzDemo ?? []).map((x) => ({ rule: '${id}', message: '${id} ' + x + ' (dark scheme)' })) }\n`)
       const api = load(s.dir)
       expect(api.DARK_PROBES.map((p) => p.name)).toEqual(['buttons', 'action-boundary', 'zz-demo'])

@@ -37,6 +37,8 @@ export const shopStrings = {
     change: (line: string) => `change the amount of ${line}`,
     /** B9-34: Take back in the ticked Line's sheet */
     takeBack: (line: string) => `take back that amount of ${line}`,
+    /** B9-54: Add to Stock in a refused Tick's notice */
+    addToStock: (line: string) => `add ${line} to Stock`,
   },
   extraTick: (name: string) => `Tick ${name}`,
   unpriced: (n: number) => (n === 1 ? '1 Line has no Price yet' : `${n} Lines have no Price yet`),
@@ -109,6 +111,8 @@ export const shopStrings = {
   slotsToMark: (n: number) => (n === 1 ? ' Meal Slot to mark' : ' Meal Slots to mark'),
   leftOf: (total: number) => `of ${total} left`,
   tickedCount: (n: number) => `${n} ticked`,
+  // B9-54 (RES-03): Ticks still in the offline queue, after "ticked" in the metric strip
+  waitingCount: (n: number) => `${n} waiting`,
   untilToday: 'today',
   untilTomorrow: 'until tomorrow',
   untilDay: (label: string) => `until ${label}`,
@@ -170,6 +174,30 @@ export const shopStrings = {
   leavesShortOne: (slot: string, ingredient: string) => `Not needed leaves ${slot} short of ${ingredient}.`,
   getSomethingElse: 'Get something else…',
   substituted: (line: string, added: string) => `${line} is Not needed; ${added} added`,
+  // B9-54 (RES-03, decision RES 1): a Tick made offline waits in the queue with the Scans
+  waitingToSync: 'Waiting to sync',
+  waitingToStock: (amount: string) => `Waiting to sync · ${amount} to Stock`,
+  waitingGoesToStock: (amount: string) => `Waiting to sync · ${amount} goes to Stock when it syncs`,
+  tickWaiting: (name: string) => `Tick ${name}, waiting to sync`,
+  tickedOfflineWaiting: (time: string) => `Ticked offline at ${time} · waiting to sync`,
+  waitingNoTime: 'Ticked offline · waiting to sync',
+  changeWaitingHint: 'Changes the waiting Tick. Nothing is sent until the phone is back online.',
+  // a Tick refused on sync (the row goes back to open)
+  tickNotSynced: 'Tick not synced',
+  // the notices of a sync (lib/tickNotices)
+  tickedTwiceTitle: (name: string, n: number) => (n === 2 ? `${name} was ticked twice` : `${name} was ticked ${n} times`),
+  lotsAddedInAll: (n: number, amount: string) => (n === 2 ? `Both Stock Lots were added · ${amount} in all` : `All ${n} Stock Lots were added · ${amount} in all`),
+  eachTickOwnLot: (amount: string) => `Each Tick added its own Stock Lot · ${amount} in all`,
+  eachTickOwnLotNoAmount: 'Each Tick added its own Stock Lot',
+  tickedOfflineSynced: (ticked: string, synced: string) => `Ticked offline at ${ticked} · synced ${synced}`,
+  refusedTitle: (name: string) => `Couldn’t sync the Tick of ${name}.`,
+  refusedNotOnList: 'It is no longer on the Shopping List for this range. Its Stock Lot was not added.',
+  refusedOther: 'Its Stock Lot was not added.',
+  untickRefusedTitle: (name: string) => `Couldn’t sync taking ${name} off.`,
+  untickRefusedBody: 'Its tick is still there.',
+  takeMineBack: 'Take mine back',
+  addToStock: 'Add to Stock',
+  dismiss: 'Dismiss',
   // H7′: the Supplies group (the Restock reason's "x of y" is lib/amountOf amountOfText, b8-polish)
   supplies: 'Supplies',
 }

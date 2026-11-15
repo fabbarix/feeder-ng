@@ -59,6 +59,15 @@ Feature: Ticks made offline sync with the Scans (beta.9, RES-03)
     And the line "chicken thighs" has 2 additions
     And the line "chicken thighs" was ticked by hand
 
+  Scenario: A Line this User also ticked on another phone keeps both Stock Lots and names the User's own tick
+    Given I tick "chicken thighs" with 400 g as tick "online-1"
+    And the phone queues a tick of "chicken thighs" for 50 g covering 400 g as "tick-1"
+    When the phone syncs its queue
+    Then tick "tick-1" was applied
+    And tick "tick-1" names my own earlier tick of 400 g
+    And the shopping Stock has 2 Lots of "chicken thighs"
+    And the line "chicken thighs" has 2 additions
+
   Scenario: Take mine back removes only my Stock Lot
     Given I am signed in as "partner@example.test"
     And I tick "chicken thighs" with 400 g as tick "online-1"

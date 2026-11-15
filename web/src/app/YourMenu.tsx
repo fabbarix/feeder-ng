@@ -1,5 +1,5 @@
 // The avatar menu (docs/design/ui-fix-plan.md 4.5, 5.17): shortcuts and feature items, a divider, Sign out.
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AccessBadge } from '../features/access/components/AccessBadge'
 import { preferencePreview } from '../features/settings/lib/preferencePreview'
@@ -20,6 +20,8 @@ export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: 
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  // A11Y-12: the open menu is named by its button ("Your menu", with the request count when there are some).
+  const buttonId = useId()
 
   const close = useCallback(() => setOpen(false), [])
   // Focus on open, arrows, Home/End, Escape and Tab: the shared menu rules (ui/Menu).
@@ -34,6 +36,7 @@ export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: 
     <div className="your-menu-anchor">
       <button
         ref={buttonRef}
+        id={buttonId}
         type="button"
         className="your-menu-button"
         aria-label={
@@ -59,7 +62,7 @@ export function YourMenu({ user, items, pendingAccessRequests = 0, onSignOut }: 
               buttonRef.current?.focus()
             }}
           />
-          <div ref={menuRef} role="menu" className="your-menu" onKeyDown={onMenuKeyDown}>
+          <div ref={menuRef} role="menu" aria-labelledby={buttonId} className="your-menu" onKeyDown={onMenuKeyDown}>
             {items.map((item) => (
               <Link key={item.id} role="menuitem" className="your-menu__item" to={item.path} onClick={() => setOpen(false)}>
                 <Icon name={menuIconFor(item)} size={20} />

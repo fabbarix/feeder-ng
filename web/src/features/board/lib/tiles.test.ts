@@ -1,35 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { LeftoverLike, SlotLike, StockTotalLike } from '../types'
-import { clockText, dateText, dueText, leftoverRows, msUntil, startCookPath, tomorrowMeals, tonightMeal, useSoonRows } from './tiles'
+import { clockText, dateText, dueText, leftoverRows, msUntil, tomorrowMeals, useSoonRows } from './tiles'
 
 function slot(date: string, id: number, at: string, state: 'planned' | 'cooked' | 'skipped' | null = 'planned', recipe = `R${id}`): SlotLike {
   return { date, mealSlotId: id, name: id === 1 ? 'Lunch' : 'Dinner', time: at.slice(11, 16), at, courses: state ? [{ courseId: 1, name: 'Main', main: true, meal: { recipeId: id, recipeName: recipe, batches: 1, portions: 4, state } }] : [] }
 }
 
-const NOW = '2026-11-09T17:00:00Z'
-
-describe('tonightMeal', () => {
-  it('picks the next planned meal of today', () => {
-    const slots = [slot('2026-11-09', 1, '2026-11-09T12:00:00Z'), slot('2026-11-09', 2, '2026-11-09T19:00:00Z'), slot('2026-11-10', 2, '2026-11-10T19:00:00Z')]
-    expect(tonightMeal(slots, '2026-11-09', NOW)?.mealSlotId).toBe(2)
-  })
-
-  it('keeps a meal that started less than two hours ago', () => {
-    const slots = [slot('2026-11-09', 2, '2026-11-09T15:30:00Z')]
-    expect(tonightMeal(slots, '2026-11-09', NOW)?.mealSlotId).toBe(2)
-    expect(tonightMeal(slots, '2026-11-09', '2026-11-09T17:31:00Z')).toBeNull()
-  })
-
-  it('ignores cooked, skipped and empty slots and other days', () => {
-    const slots = [slot('2026-11-09', 2, '2026-11-09T19:00:00Z', 'cooked'), slot('2026-11-09', 3, '2026-11-09T20:00:00Z', 'skipped'), slot('2026-11-09', 4, '2026-11-09T21:00:00Z', null), slot('2026-11-10', 2, '2026-11-10T19:00:00Z')]
-    expect(tonightMeal(slots, '2026-11-09', NOW)).toBeNull()
-  })
-
-  it('breaks time ties by Meal Slot id', () => {
-    const slots = [slot('2026-11-09', 5, '2026-11-09T19:00:00Z'), slot('2026-11-09', 2, '2026-11-09T19:00:00Z')]
-    expect(tonightMeal(slots, '2026-11-09', NOW)?.mealSlotId).toBe(2)
-  })
-})
 
 describe('tomorrowMeals', () => {
   it('lists the planned meals of the next day in time order', () => {
@@ -136,21 +112,6 @@ describe('time text', () => {
       expect(dueText('2026-11-09T18:20:00Z', now, rome)).toBe('in 20 min')
       expect(dueText('2026-11-09T17:00:00Z', now, rome)).toBe('now')
     })
-  })
-})
-
-describe('startCookPath', () => {
-  it("goes to tonight's meal", () => {
-    const slots = [slot('2026-11-09', 2, '2026-11-09T19:00:00Z'), slot('2026-11-10', 2, '2026-11-10T19:00:00Z')]
-    expect(startCookPath(slots, '2026-11-09', NOW)).toBe('/cook/meal/2026-11-09/2')
-  })
-  it('falls back to the next planned meal on a later day', () => {
-    const slots = [slot('2026-11-09', 2, '2026-11-09T09:00:00Z', 'cooked'), slot('2026-11-11', 3, '2026-11-11T19:00:00Z'), slot('2026-11-10', 2, '2026-11-10T19:00:00Z')]
-    expect(startCookPath(slots, '2026-11-09', NOW)).toBe('/cook/meal/2026-11-10/2')
-  })
-  it('is null when nothing is planned', () => {
-    expect(startCookPath([], '2026-11-09', NOW)).toBeNull()
-    expect(startCookPath([slot('2026-11-09', 2, '2026-11-09T19:00:00Z', 'skipped')], '2026-11-09', NOW)).toBeNull()
   })
 })
 

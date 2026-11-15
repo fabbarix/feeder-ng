@@ -24,7 +24,7 @@ describe('SlotTimeDialog', () => {
 
   it('is titled for the slot and date, with the TimeField at the slot\'s time and "Usually 19:30" as helper', () => {
     setup(own)
-    const dialog = screen.getByRole('dialog', { name: 'Time for Thu Dinner' })
+    const dialog = screen.getByRole('dialog', { name: 'Time for Thu 12 Dinner' })
     expect(within(dialog).getByRole('group', { name: 'Time' })).toBeInTheDocument()
     expect(within(dialog).getByText('Usually 19:30')).toBeInTheDocument()
     expect(hour()).toHaveAttribute('aria-valuenow', '20')

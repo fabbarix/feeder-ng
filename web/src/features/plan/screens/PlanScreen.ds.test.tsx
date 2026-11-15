@@ -1,10 +1,12 @@
-// ds-plan (option B): the Plan screen is a BentoGrid min="day" of equal day tiles; no column measuring; Swap and Pin on the rows.
-import { screen, waitFor, within } from '@testing-library/react'
+// ds-plan, updated by B9-32 (PC-11, decision PC 2): the Plan screen is a measured 12-track grid (usePlanGrid) of day tiles; Swap and Pin on the rows.
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PlanScreen } from './PlanScreen'
+import { installResizeObserver } from '../test-utils.grid'
 import { courseMeal, courseSlot, favourite, meal, mockApi, planCourse, renderWithProviders, slot } from '../test-utils'
 import type { PlanView } from '../types'
+import { readFeatureCss } from '../test-css'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -19,16 +21,19 @@ const dinner = (date: string) =>
 const view: PlanView = { today: '2026-11-09', horizonDays: 3, updating: false, slots: ['2026-11-09', '2026-11-10', '2026-11-11'].map(dinner) }
 
 describe('PlanScreen (design system)', () => {
-  it('lays the days out by BentoGrid min="day": no data-columns, no ResizeObserver needed', async () => {
-    vi.stubGlobal('ResizeObserver', class { constructor() { throw new Error('the Plan no longer measures its container') } })
+  it('lays the days out in a measured container (.plan-grid): one column until measured, then the column count of its width', async () => {
+    const ro = installResizeObserver()
     mockApi({ 'GET /api/plan': view })
     renderWithProviders(<PlanScreen />)
     const grid = await screen.findByRole('group', { name: 'Plan' })
-    expect(grid).toHaveAttribute('data-min', 'day')
-    expect(grid).not.toHaveAttribute('data-columns')
+    expect(grid.parentElement).toHaveClass('plan-grid')
+    expect(grid.parentElement).toHaveAttribute('data-columns', '1')
+    act(() => ro.fire(1136, grid.parentElement!))
+    expect(grid.parentElement).toHaveAttribute('data-columns', '3')
+    for (const t of grid.querySelectorAll<HTMLElement>('article')) expect(t.style.gridColumn).toBe('span 4')
   })
 
-  it('every day tile is the same width: none spans 2, today carries only data-today', async () => {
+  it('no day tile is bigger because of today: it carries only data-today (a 3-day week fills its row, so every day spans 12 ÷ its row)', async () => {
     mockApi({ 'GET /api/plan': view })
     renderWithProviders(<PlanScreen />)
     const grid = await screen.findByRole('group', { name: 'Plan' })
@@ -55,24 +60,30 @@ describe('PlanScreen (design system)', () => {
     expect(rows).toHaveLength(2)
     expect(rows[0]!.querySelector('.list-row__meta')).toHaveTextContent('Main')
     expect(within(rows[1] as HTMLElement).getByText('Leftover from Sun')).toBeInTheDocument()
-    expect(within(rows[0] as HTMLElement).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Main of 2026-11-10', 'Swap', 'Pin'])
+    expect(within(rows[0] as HTMLElement).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Main of 2026-11-10', 'Swap Main of 2026-11-10, Tue 10 Dinner', 'Pin Main of 2026-11-10, Tue 10 Dinner'])
   })
 
   it('Pin on a row pins that Course (the confirm route), without opening its sheet', async () => {
     const api = mockApi({ 'GET /api/plan': view, 'POST /api/plan/2026-11-10/2/2/confirm': meal({ pinned: true }) })
     renderWithProviders(<PlanScreen />)
     const tile = (await screen.findByRole('heading', { name: 'Tue 10 · Tomorrow' })).closest('article') as HTMLElement
-    await userEvent.click(within(tile).getAllByRole('button', { name: 'Pin' })[1]!)
+    await userEvent.click(within(tile).getByRole('button', { name: 'Pin Side of 2026-11-10, Tue 10 Dinner' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/2/2/confirm')).toHaveLength(1))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  // B9-32 (PC-07): Couldn't plan is one compact tile (a region) in the min="wide" grid it shares with Leftovers to use; alone,
+  // it takes the whole row (plan.css :only-child).
   it("the Couldn't plan notice sits in a grid sized by min, as one full-width tile", async () => {
     const unplanned = slot({ date: '2026-11-12', mealSlotId: 3, name: 'Lunch', meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } })
     mockApi({ 'GET /api/plan': { ...view, slots: [...view.slots, unplanned] } })
     renderWithProviders(<PlanScreen />)
-    const notice = await screen.findByRole('group', { name: "Couldn't plan" })
-    expect(notice).not.toHaveAttribute('data-columns')
-    expect(notice.querySelector('[data-cause]')).toHaveAttribute('data-span', 'full')
+    const notice = await screen.findByRole('region', { name: "Couldn't plan" })
+    const grid = notice.parentElement!
+    expect(grid).toHaveClass('bento-grid')
+    expect(grid).toHaveAttribute('data-min', 'wide')
+    expect(grid).not.toHaveAttribute('data-columns')
+    expect(grid.parentElement).toHaveClass('plan-top')
+    expect(readFeatureCss('plan.css')).toMatch(/\.plan-top > \.bento-grid > \.tile:only-child\s*\{\s*grid-column:\s*1 \/ -1;/)
   })
 })

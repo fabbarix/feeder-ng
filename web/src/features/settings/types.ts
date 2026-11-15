@@ -14,6 +14,12 @@ export interface HouseholdSettings {
   plannerStyle: number
   location: HouseholdLocation | null
   currency: string
+  /** B9-12 (PC-14): the Earliest start, "HH:MM" or null for Off; the Planning rules page edits it, this form leaves it out. */
+  earliestStart?: string | null
+  /** B9-58 (A2): the Latest start, "HH:MM" or null for Off. */
+  latestStart?: string | null
+  /** B9-53 (TB-06, TB 6): the first-run checklist is hidden from Today ("Hide for now"); the Household page shows it again. */
+  setupHidden?: boolean
 }
 
 /** What the Admin sends: the settings without the server-owned flag. */
@@ -49,6 +55,19 @@ export interface AttendanceEntry {
   memberId: number
   /** null = use the Member's default Portion Factor. */
   portionFactorOverride: number | null
+  /** B9-24 / B9-46: on a date's Who's eating, "Eats here anyway" for a Member an Away covers there. */
+  despiteAway?: boolean
+}
+
+/** B9-24: a Member an Away covers at one Meal Slot on one date (Who's eating GET and PUT: `away`). */
+export interface DateAway {
+  memberId: number
+  memberName: string
+  awayId: number
+  from: string
+  fromMealSlotId: number | null
+  through: string | null
+  throughMealSlotId: number | null
 }
 
 /** CRS D2: one Course a Meal Slot serves, in the slot's order (`optOutMemberIds`: the usual opt-outs, spec 3.1). */
@@ -114,6 +133,8 @@ export interface DateAttendance {
   courses?: DateCourse[]
   /** B5-F1 (ADR 0014): Guests eating that date, 0 to 20 (absent in older fixtures = 0). `portionsNeeded` includes them. */
   guests?: number
+  /** B9-24 (PC-08): the Members an Away covers at this Meal Slot on this date, soonest Away first. `portionsNeeded` leaves them out unless they eat here anyway. */
+  away?: DateAway[]
 }
 
 /** B5-F1: the slice of GET /api/plan "Dates that differ" reads: a slot on a date with its effective and usual time, Not served and Guests. */

@@ -54,9 +54,10 @@ describe('today.css: the page and its grid', () => {
     expect(d['position'] ?? 'static').toBe('static')
   })
 
-  it('no fixed column count (ADR 0016): no data-columns rule, no 3-column dense grid, no hero span', () => {
+  // B9-44 (ADR 0026, changed on purpose): Today's columns come from its container (todayGrid.css.test.ts), so a repeat(3, …) inside
+  // @container today is allowed; there is still no data-columns rule, no dense flow and no hero span by row.
+  it('no fixed column count by attribute: no data-columns rule, no dense flow, no hero span', () => {
     expect(css).not.toMatch(/data-columns/)
-    expect(css).not.toMatch(/repeat\(\s*3\s*,/)
     expect(css).not.toMatch(/grid-auto-flow:\s*row dense/)
     expect(css).not.toMatch(/data-hero-span/)
     expect(css).not.toMatch(/grid-row:\s*span/)

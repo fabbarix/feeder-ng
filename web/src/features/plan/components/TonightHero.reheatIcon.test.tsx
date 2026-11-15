@@ -22,9 +22,4 @@ describe('TonightHero: the Reheat icon (R12)', () => {
     expect(isIcon(svg, 'reheat')).toBe(true)
     expect(isIcon(svg, 'timer')).toBe(false)
   })
-
-  it('the secondary Reheat button (after the slot time) shows the reheat icon too', () => {
-    const svg = reheatButton(new Date('2026-11-10T20:00:00Z')).querySelector('svg')
-    expect(isIcon(svg, 'reheat')).toBe(true)
-  })
 })

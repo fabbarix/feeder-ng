@@ -192,7 +192,9 @@ describe('useTickFlow: busy and failure', () => {
   })
 
   it('a failed tick rejects with the ApiError (the screen\'s failure toast), shows no Undo toast and clears pending', async () => {
-    actions.tick.mockRejectedValue(new ApiError(0, 'network', 'offline'))
+    // B9-54 (RES-03): a send that cannot reach the server (status 0 or 5xx) now falls into the offline queue (useTickFlow.offline.test);
+    // a refusal with an answer is still a failure
+    actions.tick.mockRejectedValue(new ApiError(422, 'validation_failed', 'no'))
     const { result } = setup()
     await expect(act(() => result.current.tick(garlic))).rejects.toBeInstanceOf(ApiError)
     expect(undoToast.show).not.toHaveBeenCalled()

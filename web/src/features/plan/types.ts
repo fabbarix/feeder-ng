@@ -72,6 +72,10 @@ export interface PlannedMeal {
   warning?: MealWarning | null
   /** B9-11 / B9-26 (SAFE-03): how a Cooked or Not cooked meal was marked and whether it can still be undone; absent while planned and from an older server. */
   resolution?: MealResolution
+  /** B9-12 (PC-14): "HH:MM" a Pinned or Bought fresh meal would start before the Earliest start (or outside the cooking times, A2); slot views only. */
+  earlyStart?: string
+  /** B9-58 (A2): a planned meal that must be started on an earlier day than the meal: where cooking starts (household zone); slot views only. */
+  startsAt?: { date: string; time: string }
 }
 
 /** `meal.resolution` of GET /api/plan (B9-11): present on a Cooked or Not cooked meal. */
@@ -96,6 +100,8 @@ export interface Eliminations {
   coolDown: number
   varietyRule: number
   advanceStep: number
+  /** B9-12 / B9-58: Recipes whose start would be outside the cooking times. */
+  tooEarly?: number
 }
 
 export interface Unfilled {
@@ -214,6 +220,9 @@ export interface PlanSlot {
   notServed?: boolean
   /** B5-F1: Guests eating on this date (0 to 20); `portions` already includes them. */
   guests?: number
+  /** B9-24: Members who are away at this slot (member ids), and whether everyone is: no start chips are shown then. */
+  away?: number[]
+  everyoneAway?: boolean
 }
 
 /** One entry of the flat to-confirm and couldn't-plan lists: a slot for one Course, with that Course's own meal or reason. */
@@ -230,6 +239,58 @@ export interface PlanView {
   /** True while the planner is catching up with a change; the screen shows a small "Updating" note. */
   updating: boolean
   slots: PlanSlot[]
+  /** B9-24 / B9-46: the Aways that touch the plan's days (running or coming; GET /api/plan). */
+  away?: Away[]
+}
+
+/** B9-24 (PC-08): a Member's Away as the API sends it. A null slot is the whole day; `through` null is "No last day yet". */
+export interface Away {
+  id: number
+  memberId: number
+  memberName: string
+  from: string
+  fromMealSlotId: number | null
+  through: string | null
+  throughMealSlotId: number | null
+  started: boolean
+}
+
+/** The dry run of an Away write (`?dryRun=1`): what the Away changes, by day, before it is saved. */
+export interface AwayPreviewSlot {
+  mealSlotId: number
+  mealSlotName: string
+  time: string
+  portionsBefore: number
+  portionsAfter: number
+  /** The portions differ. */
+  changes: boolean
+  /** A PATCH gives this Meal Slot back to the Member. */
+  back: boolean
+}
+export interface AwayPreview {
+  slotsWithout: number
+  mealsChanged: number
+  days: { date: string; slots: AwayPreviewSlot[] }[]
+  /** The first day past the plan from which the planner plans without the Member; null when the Away stays inside the plan. */
+  beyondHorizon: string | null
+}
+
+/** A Meal Slot of the Household as the Away sheet needs it (Settings' MealSlot fits). `weekday` is ISO, 1 Monday to 7 Sunday. */
+export interface AwaySlotRef {
+  id: number
+  weekday: number
+  name: string
+  time: string
+}
+
+/** The Away sheet's form. A null slot is the whole day; `noLastDay` hides Last day and Through. */
+export interface AwayDraft {
+  memberId: number | null
+  from: string
+  fromMealSlotId: number | null
+  through: string
+  throughMealSlotId: number | null
+  noLastDay: boolean
 }
 
 /** The key of one Planned Meal: its Meal Slot, its date and its Course (the real id, the main Course included). */
@@ -413,4 +474,6 @@ export interface SlotDateActions {
   onNotServed: (slot: SlotDayKey) => void
   onTime: (slot: SlotDayKey) => void
   onPlanAgain: (slot: SlotDayKey) => void
+  /** B9-46: "Someone is away…" in the slot's ⋮ opens the Away sheet from this Meal Slot. */
+  onAway?: (slot: SlotDayKey) => void
 }

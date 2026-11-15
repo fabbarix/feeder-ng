@@ -384,7 +384,8 @@ func (s *Service) shopTick(ctx context.Context, op scan.Op) (scan.Result, error)
 	}
 	tick := &scan.AppliedTick{LotID: res.LotID, Added: res.Added, AlsoTickedBy: []scan.AlsoTickedBy{}}
 	for _, a := range res.AlsoTickedBy {
-		tick.AlsoTickedBy = append(tick.AlsoTickedBy, scan.AlsoTickedBy{Name: a.Name, Quantity: a.Quantity, By: a.By})
+		tick.AlsoTickedBy = append(tick.AlsoTickedBy, scan.AlsoTickedBy{Name: a.Name, Quantity: a.Quantity, By: a.By,
+			Mine: a.Mine, TickedAt: rfc3339(a.TickedAt)})
 	}
 	return scan.Result{ClientUUID: op.ClientUUID, Status: status, Tick: tick}, nil
 }
@@ -1063,4 +1064,12 @@ func itoa(n int64) string {
 		b = append([]byte{'-'}, b...)
 	}
 	return string(b)
+}
+
+// rfc3339 is t in UTC as RFC 3339, or "" for the zero time.
+func rfc3339(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339)
 }

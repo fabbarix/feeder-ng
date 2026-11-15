@@ -4,11 +4,11 @@ import { MarkCookedSheet } from './MarkCookedSheet'
 import { ShortfallSheets } from './ShortfallSheets'
 
 /** The Mark as Cooked sheet, the Stock shortfall notices and the Stock correction sheet of one CookFlow (shared by Plan and Today). */
-export function CookFlowSheets({ flow }: { flow: CookFlow }): ReactNode {
+export function CookFlowSheets({ flow, notice = true }: { flow: CookFlow; /** B9-44: false when the screen shows the flows' ONE shortfall notice itself (Today). */ notice?: boolean }): ReactNode {
   const { cook, cookKey, close } = flow
   return (
     <>
-      <ShortfallSheets groups={flow.shortfalls} correct={flow.correct} onDismiss={flow.dismissShortfalls} system={flow.system} placement="list" />
+      {notice ? <ShortfallSheets groups={flow.shortfalls} correct={flow.correct} onDismiss={flow.dismissShortfalls} system={flow.system} placement="list" /> : null}
       <MarkCookedSheet
         open={cookKey !== null}
         onClose={close}

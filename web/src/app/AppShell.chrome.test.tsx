@@ -1,4 +1,5 @@
 // B9-19: the shell's markup for the R-F bar (DS-02), and the keyboard hook mounted once (SHORT-04, SHORT 2).
+import { bottomBarNav, sideRailNav } from '../test/shellNav'
 import { act, render, screen, within } from '@testing-library/react'
 import { createElement } from 'react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
@@ -28,7 +29,7 @@ function at(path: string) {
   )
   return render(<RouterProvider router={router} />)
 }
-const bar = () => screen.getByRole('navigation', { name: 'Bottom bar' })
+const bar = () => bottomBarNav()
 
 describe('bottom bar markup (DS-02 / R-F)', () => {
   it('every link wraps its icon in <span class="bottom-bar__icon" aria-hidden="true"> and keeps the label span beside it', () => {
@@ -66,7 +67,7 @@ describe('bottom bar markup (DS-02 / R-F)', () => {
 
   it('the 88 px side rail keeps its markup (the pill span behind the icon)', () => {
     at('/plan')
-    for (const link of within(screen.getByRole('navigation', { name: 'Side rail', hidden: true })).getAllByRole('link', { hidden: true })) {
+    for (const link of within(sideRailNav()).getAllByRole('link', { hidden: true })) {
       expect(link.querySelector('span.side-rail__pill')).not.toBeNull()
       expect(link.querySelector('.bottom-bar__icon')).toBeNull()
     }

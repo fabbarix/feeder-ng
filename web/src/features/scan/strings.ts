@@ -59,6 +59,9 @@ export const scanStrings = {
   },
   cameraStarting: 'Starting the camera',
   offline: 'Offline: Scans are kept and sent when you are back online',
+  // B9-54 (RES-03): Scan opened offline on a phone that never saved this Shop's barcodes
+  unavailableTitle: 'This Shop’s barcodes aren’t on this phone yet',
+  unavailableText: 'Scans need them once. They’ll load as soon as the connection is back.',
   queued: (n: number) => `${n} ${n === 1 ? 'Scan' : 'Scans'} waiting to sync`,
   merged: (name: string) => `Someone already added this barcode; yours was merged into ${name}`,
   /** PPX: a merged scan that gave its picture to a Product that had none */

@@ -1,91 +1,118 @@
-import type { ReactNode } from 'react'
+import { Fragment, useId, type ReactNode } from 'react'
 import type { TimerItem } from '../../cook/hooks/useTimers'
 import { Button, Chip, Tile, TimerTile } from '../../../ui'
-import { clockText, dateText, dueText, hasPlanned, notServedLine, shortWeekday, tomorrowLine, tonightRows, type LeftoverRow } from '../lib/tiles'
+import { useFitRows } from '../hooks/useFitRows'
+import { eyebrowParts, type BoardHero } from '../lib/hero'
+import {
+  advanceDoneName,
+  clockText,
+  dateText,
+  dueText,
+  hasPlanned,
+  leftoverLine,
+  nextAdvanceMeal,
+  notServedLine,
+  plannedNames,
+  tomorrowLine,
+  useSoonChip,
+  type LeftoverRow,
+} from '../lib/tiles'
 import { boardStrings } from '../strings'
 import type { NextAdvance, SlotLike, StockTotalLike } from '../types'
 
-// The kitchen board's tiles, composed from the shared Bento primitives (Tile,
-// Chip, TimerTile, Button). Each renders its data and wires events only; all
-// choosing and formatting lives in lib/tiles.ts. Placement on the 4 x 3 grid is
-// BoardScreen's job (lib/layout.ts); the span props here say the same shape.
-// Big type comes from board.css.
+// The kitchen board's tiles, composed from the shared Bento primitives (Tile, Chip, TimerTile, Button). Each renders its data and
+// wires events only; all choosing and wording lives in lib/. Placement on the grid is BoardScreen's job (lib/layout.ts). Every tile
+// with a heading is a section named by it (TB-07). The type is the board roles in board.css (TB-07).
+
+/** A tile heading with the id its section is named by. */
+function Heading({ id, children }: { id: string; children: ReactNode }): ReactNode {
+  return (
+    <h2 className="board-tile__heading" id={id}>
+      {children}
+    </h2>
+  )
+}
 
 export interface ClockTileProps {
   now: Date
   timeZone: string
+  /** B9-47 (TB-04): the Close control, drawn at the top end of the tile beside the date. */
+  close?: ReactNode
   /** @deprecated the coordinates hint moved to Settings (5.13); ignored here. */
   showFallbackHint?: boolean
 }
 
-/** The clock (clockText) in very large type and the date (dateText) under it. */
-export function ClockTile({ now, timeZone }: ClockTileProps): ReactNode {
+/** The date (dateText) at the top beside the Close control, and the clock (clockText) in very large type under them. */
+export function ClockTile({ now, timeZone, close }: ClockTileProps): ReactNode {
   return (
     <Tile as="section" className="board-clock">
+      <div className="board-clock__top">
+        <p className="board-clock__date">{dateText(now, timeZone)}</p>
+        {close}
+      </div>
       <p className="board-clock__time">{clockText(now, timeZone)}</p>
-      <p className="board-clock__date">{dateText(now, timeZone)}</p>
     </Tile>
   )
 }
 
-export interface TonightTileProps {
-  slot: SlotLike | null
-  /** Shows the big "Cook" button (76 px) with a Planned Meal; it starts Cook Mode. */
-  onCook?: () => void
-  /** B5-F1 (ADR 0014): the slots Not served tonight (lib/tiles tonightNotServed); with no Planned Meal the tile says "Dinner · Not served" for each instead of "Nothing planned tonight". */
+export interface BoardHeroTileProps {
+  hero: BoardHero | null
+  /** the slots Not served today (lib/tiles tonightNotServed): with no hero the tile says "Dinner · Not served" for each */
   notServed?: SlotLike[]
+  onCook?: () => void
 }
 
 /**
- * The hero (2 x 2): heading "Tonight", the Recipe name, "<Meal Slot> · <time>" and the big "Cook" button when there is
- * a meal and a handler; "Nothing planned tonight" when null. A slot with several Courses lists a row per Course with a
- * Planned Meal (the main Course's row is the larger one), under the slot line, with ONE Cook button for the slot.
+ * The hero (TB-07, TB-08, decision TB 7): Today's eyebrow with its day word ("Today · Dinner · start 13:00"), in parts that wrap only
+ * between them; the Recipe name of a one-Course slot, or a row per Course with a Planned Meal (the main one larger); the start line
+ * ("Start 13:00 · ready 19:00"); and ONE big Cook button for the slot. With no hero: "Dinner · Not served" per slot Not served today,
+ * else "Nothing planned".
  */
-export function TonightTile({ slot, onCook, notServed }: TonightTileProps): ReactNode {
-  const rows = slot ? tonightRows(slot) : []
-  if (slot && rows.length > 1) {
-    return (
-      <Tile as="section" variant="hero" span={2} rowSpan={2} className="board-tonight">
-        <h2 className="board-tile__heading">{boardStrings.tonight}</h2>
-        <p className="board-tonight__slot">{`${slot.name} · ${slot.time}`}</p>
-        <ul aria-label={boardStrings.tonightCourses} className="board-tonight__courses">
-          {rows.map((row) => (
-            <li key={row.courseId} data-main={row.main ? 'true' : undefined} data-state={row.state} className="board-tonight__course">
-              {row.recipeName}
-            </li>
-          ))}
-        </ul>
-        {onCook ? (
-          <Button variant="secondary" size="xl" icon="cook" className="board-tonight__cook" onClick={onCook}>
-            {boardStrings.cook}
-          </Button>
-        ) : null}
-      </Tile>
-    )
-  }
-  const recipe = rows[0]?.recipeName ?? null
-  const notServedNames = notServed ?? []
+export function BoardHeroTile({ hero, notServed = [], onCook }: BoardHeroTileProps): ReactNode {
+  const id = useId()
+  const parts = eyebrowParts(hero?.eyebrow ?? [boardStrings.today])
+  const rows = hero?.rows ?? []
   return (
-    <Tile as="section" variant="hero" span={2} rowSpan={2} className="board-tonight">
-      <h2 className="board-tile__heading">{boardStrings.tonight}</h2>
-      {slot && recipe !== null ? (
+    <Tile as="section" variant="hero" span={2} rowSpan={2} className="board-tonight" aria-labelledby={id}>
+      <p className="board-eyebrow" id={id}>
+        {parts.map((part, i) => (
+          <Fragment key={part.text}>
+            {i > 0 ? ' ' : null}
+            <span className={part.start ? 'board-eyebrow__part board-eyebrow__start' : 'board-eyebrow__part'} data-now={part.now ? 'true' : undefined}>
+              {part.sep}
+              <span className="board-eyebrow__text">{part.label}</span>
+            </span>
+          </Fragment>
+        ))}
+      </p>
+      {hero ? (
         <>
-          <p className="board-tonight__recipe">{recipe}</p>
-          <p className="board-tonight__slot">{`${slot.name} · ${slot.time}`}</p>
+          {rows.length > 1 ? (
+            <ul aria-label={boardStrings.courses} className="board-tonight__courses">
+              {rows.map((row) => (
+                <li key={row.courseId} data-main={row.main ? 'true' : undefined} data-state={row.state} className="board-tonight__course">
+                  {row.recipeName}
+                </li>
+              ))}
+            </ul>
+          ) : rows[0] ? (
+            <p className="board-tonight__recipe">{rows[0].recipeName}</p>
+          ) : null}
+          {hero.startLine ? <p className="board-tonight__slot">{hero.startLine}</p> : null}
           {onCook ? (
-            <Button variant="secondary" size="xl" icon="cook" className="board-tonight__cook" onClick={onCook}>
+            <Button variant="primary" size="xl" icon="cook" className="board-tonight__cook" aria-label={boardStrings.cookName(hero.slot.name)} onClick={onCook}>
               {boardStrings.cook}
             </Button>
           ) : null}
         </>
-      ) : notServedNames.length > 0 ? (
-        notServedNames.map((s) => (
+      ) : notServed.length > 0 ? (
+        notServed.map((s) => (
           <p key={s.mealSlotId} className="board-tonight__slot">
             {notServedLine(s)}
           </p>
         ))
       ) : (
-        <p>{boardStrings.tonightNone}</p>
+        <p className="board-tonight__slot">{boardStrings.heroNone}</p>
       )}
     </Tile>
   )
@@ -100,63 +127,93 @@ export interface NextAdvanceTileProps {
   onDone: (scope: string, step: number) => void
 }
 
-/** Heading "Next Advance Step", its text, the Recipe name, dueText; an "Overdue" spoil chip when overdue; a "Done" button. "Nothing to prepare ahead" when null. */
+/**
+ * Next Advance Step, always an info status tile (decision DS 3), overdue or not (TB-07): the Step text (2 lines), its meal
+ * ("Tue Dinner · <Recipe>"), and a foot row with the due state ("Start in 3 h", or the info "Overdue" chip) and Done, named
+ * "Done: <Step text>". "Nothing to prepare ahead" when there is none.
+ */
 export function NextAdvanceTile({ next, nowMs, timeZone, onDone }: NextAdvanceTileProps): ReactNode {
+  const id = useId()
   return (
-    <Tile as="section" variant={next?.overdue ? 'status' : 'surface'} status={next?.overdue ? 'spoil' : undefined} className="board-next">
-      <h2 className="board-tile__heading">{boardStrings.nextAdvance}</h2>
+    <Tile as="section" variant="status" status="info" className="board-next" aria-labelledby={id}>
+      <Heading id={id}>{boardStrings.nextAdvance}</Heading>
       {next ? (
         <>
           <p className="board-next__text">{next.text}</p>
-          <p className="board-next__recipe">{`${next.recipeName} · ${next.slotName}`}</p>
-          <p className="board-next__due">
-            {next.overdue ? <Chip kind="status" status="spoil">{boardStrings.overdue}</Chip> : boardStrings.due(dueText(next.dueAt, nowMs, timeZone))}
-          </p>
-          <Button variant="secondary" size="sm" onClick={() => onDone(next.scope, next.step)}>
-            {boardStrings.markDone}
-          </Button>
+          <p className="board-next__recipe">{nextAdvanceMeal(next)}</p>
+          <div className="board-next__foot">
+            <p className="board-next__due">
+              {next.overdue ? (
+                <Chip kind="status" status="info" overdue whole icon="advanceStep">
+                  {boardStrings.overdue}
+                </Chip>
+              ) : (
+                boardStrings.due(dueText(next.dueAt, nowMs, timeZone))
+              )}
+            </p>
+            <Button variant="secondary" size="lg" icon="tick" className="board-next__done" aria-label={advanceDoneName(next, [next])} onClick={() => onDone(next.scope, next.step)}>
+              {boardStrings.markDone}
+            </Button>
+          </div>
         </>
       ) : (
-        <p>{boardStrings.nextAdvanceNone}</p>
+        <p className="board-empty">{boardStrings.nextAdvanceNone}</p>
       )}
     </Tile>
   )
 }
 
-/** Heading "Leftovers", one row per Leftover ("Stew · 2 portions · use by Thu"); "No Leftovers" when empty. Status leftover. */
-export function BoardLeftoversTile({ rows }: { rows: LeftoverRow[] }): ReactNode {
+/** Heading "Leftovers", one row per Leftover: the name over "Use by Tue · 1.25 portions" (or "Use-by passed"); "No Leftovers" when empty. */
+export function BoardLeftoversTile({ rows, today }: { rows: LeftoverRow[]; today: string }): ReactNode {
+  const id = useId()
+  const fit = useFitRows<HTMLUListElement>(rows.length, rows.map((r) => `${r.id}:${r.recipeName}:${r.useBy}`).join('|'))
+  const hidden = rows.length - fit.shown
   return (
-    <Tile as="section" variant="status" status="leftover" className="board-leftovers">
-      <h2 className="board-tile__heading">{boardStrings.leftovers}</h2>
+    <Tile as="section" variant="status" status="leftover" className="board-leftovers" aria-labelledby={id}>
+      <Heading id={id}>{boardStrings.leftovers}</Heading>
       {rows.length === 0 ? (
-        <p>{boardStrings.leftoversNone}</p>
+        <p className="board-empty">{boardStrings.leftoversNone}</p>
       ) : (
-        <ul className="board-list">
-          {rows.map((r) => (
-            <li key={r.id}>{r.toAnswer ? `${r.recipeName}, ${boardStrings.useByPassed}` : `${r.recipeName} · ${boardStrings.portions(r.portions)} · use by ${shortWeekday(r.useBy)}`}</li>
-          ))}
+        <ul className="board-list" ref={fit.ref}>
+          {rows.slice(0, fit.shown).map((r) => {
+            const line = leftoverLine(r, today)
+            return (
+              <li key={r.id}>
+                <span className="board-list__title">{line.title}</span>
+                <span className="board-list__meta">{line.meta}</span>
+              </li>
+            )
+          })}
         </ul>
       )}
+      {hidden > 0 ? <p className="board-more">{boardStrings.more(hidden)}</p> : null}
     </Tile>
   )
 }
 
-/** Heading "Use soon" (2 columns), one spoil status Chip per Ingredient; "Nothing to use up" when empty. */
-export function UseSoonTile({ rows }: { rows: StockTotalLike[] }): ReactNode {
+/** Heading "Use soon" (2 columns), one spoil status Chip per Ingredient, "Flour · tomorrow"; "Nothing to use up" when empty. */
+export function UseSoonTile({ rows, today }: { rows: StockTotalLike[]; today: string }): ReactNode {
+  const id = useId()
+  const fit = useFitRows<HTMLUListElement>(rows.length, rows.map((r) => `${r.ingredientId}:${r.name}:${r.nextGoesOff}`).join('|'))
+  const hidden = rows.length - fit.shown
   return (
-    <Tile as="section" span={2} className="board-use-soon">
-      <h2 className="board-tile__heading">{boardStrings.useSoon}</h2>
+    <Tile as="section" span={2} className="board-use-soon" aria-labelledby={id}>
+      <Heading id={id}>{boardStrings.useSoon}</Heading>
       {rows.length === 0 ? (
-        <p>{boardStrings.useSoonNone}</p>
+        <p className="board-empty">{boardStrings.useSoonNone}</p>
       ) : (
-        <ul className="board-chips">
-          {rows.map((r) => (
-            <li key={r.ingredientId}>
-              <Chip kind="status" status="spoil">
-                {r.name}
-              </Chip>
-            </li>
-          ))}
+        <ul className="board-chips" ref={fit.ref}>
+          {rows.slice(0, fit.shown).map((r) => {
+            const chip = useSoonChip(r, today)
+            return (
+              <li key={r.ingredientId}>
+                <Chip kind="status" status="spoil" label={chip.name}>
+                  {chip.label}
+                </Chip>
+              </li>
+            )
+          })}
+          {hidden > 0 ? <li className="board-chips__more">{boardStrings.more(hidden)}</li> : null}
         </ul>
       )}
     </Tile>
@@ -167,66 +224,89 @@ export function UseSoonTile({ rows }: { rows: StockTotalLike[] }): ReactNode {
 export const BOARD_TIMER_CAP = 2
 
 /**
- * Heading "Timers", a TimerTile per timer (label, seconds, running = state running), at most BOARD_TIMER_CAP of them
- * (items are already soonest first), then "+n more" for the rest; "No timers running" when empty. Read-only: no handlers.
+ * Heading "Timers", a TimerTile per timer (label, seconds, running = state running), at most BOARD_TIMER_CAP of them and no more than
+ * the tile shows whole (items are already soonest first), then "+n more" for the rest; "No timers running" when empty. Read-only: no handlers.
  */
 export function BoardTimersTile({ items }: { items: TimerItem[] }): ReactNode {
-  const shown = items.slice(0, BOARD_TIMER_CAP)
+  const id = useId()
+  const capped = Math.min(items.length, BOARD_TIMER_CAP)
+  const fit = useFitRows<HTMLUListElement>(capped, items.map((i) => i.timer.id).join('|'))
+  const shown = items.slice(0, fit.shown)
   const hidden = items.length - shown.length
   return (
-    <Tile as="section" className="board-timers">
-      <h2 className="board-tile__heading">{boardStrings.timers}</h2>
+    <Tile as="section" className="board-timers" aria-labelledby={id}>
+      <Heading id={id}>{boardStrings.timers}</Heading>
       {items.length === 0 ? (
-        <p>{boardStrings.timersNone}</p>
+        <p className="board-empty">{boardStrings.timersNone}</p>
       ) : (
         <>
-          <ul className="board-list">
+          <ul className="board-list" ref={fit.ref}>
             {shown.map(({ timer, seconds }) => (
               <li key={timer.id}>
                 <TimerTile label={timer.label} seconds={seconds} running={timer.state === 'running'} />
               </li>
             ))}
           </ul>
-          {hidden > 0 ? <p className="board-timers__more">{boardStrings.timersMore(hidden)}</p> : null}
+          {hidden > 0 ? <p className="board-timers__more">{boardStrings.more(hidden)}</p> : null}
         </>
       )}
     </Tile>
   )
 }
 
-/** Heading "Tomorrow", one line per Planned Meal ("Dinner · Chicken stew"), and a neutral "Not planned" chip for a meal the planner could not plan (R13, read-only); "Nothing planned tomorrow" when empty. */
-export function TomorrowTile({ slots }: { slots: SlotLike[] }): ReactNode {
+/** One Tomorrow line: the Meal Slot in bold, then its Recipes, "Not served", or a neutral "Not planned" chip (R13, read-only). */
+function TomorrowLine({ slot }: { slot: SlotLike }): ReactNode {
+  if (slot.notServed === true) {
+    return (
+      <>
+        <strong>{slot.name}</strong> · {boardStrings.notServed}
+      </>
+    )
+  }
+  if (hasPlanned(slot)) {
+    return (
+      <>
+        <strong>{`${slot.name}:`}</strong> {plannedNames(slot).join(' + ')}
+      </>
+    )
+  }
   return (
-    <Tile as="section" className="board-tomorrow">
-      <h2 className="board-tile__heading">{boardStrings.tomorrow}</h2>
+    <>
+      <strong>{slot.name}</strong> <Chip kind="tag">{boardStrings.notPlanned}</Chip>
+    </>
+  )
+}
+
+/** Heading "Tomorrow", one line per Meal Slot ("Dinner: X + Y", spec 7.5), each ending in an ellipsis with the full text in `title`. */
+export function TomorrowTile({ slots }: { slots: SlotLike[] }): ReactNode {
+  const id = useId()
+  const fit = useFitRows<HTMLUListElement>(slots.length, slots.map(tomorrowLine).join('|'))
+  const hidden = slots.length - fit.shown
+  return (
+    <Tile as="section" className="board-tomorrow" aria-labelledby={id}>
+      <Heading id={id}>{boardStrings.tomorrow}</Heading>
       {slots.length === 0 ? (
-        <p>{boardStrings.tomorrowNone}</p>
+        <p className="board-empty">{boardStrings.tomorrowNone}</p>
       ) : (
-        <ul className="board-list">
-          {slots.map((s) => (
-            <li key={`${s.date}/${s.mealSlotId}`}>
-              {s.notServed === true ? (
-                notServedLine(s)
-              ) : hasPlanned(s) ? (
-                tomorrowLine(s)
-              ) : (
-                <>
-                  {s.name} <Chip kind="tag">{boardStrings.notPlanned}</Chip>
-                </>
-              )}
+        <ul className="board-list board-list--lines" ref={fit.ref}>
+          {slots.slice(0, fit.shown).map((s) => (
+            <li key={`${s.date}/${s.mealSlotId}`} title={tomorrowLine(s)}>
+              <TomorrowLine slot={s} />
             </li>
           ))}
         </ul>
       )}
+      {hidden > 0 ? <p className="board-more">{boardStrings.more(hidden)}</p> : null}
     </Tile>
   )
 }
 
-/** Heading "Zero-waste streak" and "<n> days" ("1 day") in big type. */
+/** Heading "Zero-waste streak" and "<n> days" ("1 day", "0 days": decision TB 3) in big type. */
 export function StreakTile({ days }: { days: number }): ReactNode {
+  const id = useId()
   return (
-    <Tile as="section" className="board-streak">
-      <h2 className="board-tile__heading">{boardStrings.streak}</h2>
+    <Tile as="section" className="board-streak" aria-labelledby={id}>
+      <Heading id={id}>{boardStrings.streak}</Heading>
       <p className="board-streak__days">{boardStrings.streakDays(days)}</p>
     </Tile>
   )

@@ -33,6 +33,11 @@ describe('AppUpdate', () => {
     expect(vi.mocked(useAppUpdate).mock.calls.at(-1)![0]).toEqual(expect.objectContaining({ pendingSyncCount: 5 }))
   })
 
+  it('B9-49: Ticks held for sync hold the prompt back too (pendingTicks is summed with pendingScans)', () => {
+    renderIt([() => ({ pendingScans: 1, pendingTicks: 2 }), () => ({ pendingTicks: 3 })] as never)
+    expect(vi.mocked(useAppUpdate).mock.calls.at(-1)![0]).toEqual(expect.objectContaining({ pendingSyncCount: 6 }))
+  })
+
   it('an access request is not a sync: it does not hold the prompt back', () => {
     renderIt([() => ({ pendingAccessRequests: 4 })])
     expect(vi.mocked(useAppUpdate).mock.calls.at(-1)![0]).toEqual(expect.objectContaining({ pendingSyncCount: 0 }))

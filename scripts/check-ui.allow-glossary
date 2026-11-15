@@ -62,3 +62,10 @@ web/src/features/stock/strings.ts food  # stockFilter kind label (Food | Supplie
 # "unit" is on Portion's Avoid list (a Portion is never "a unit"). RX-08's DurationField names its time-unit Select "<label> unit"
 # ("Lead time unit", "Duration unit"), as the chapter requires: there "unit" is min, h or d, never a Portion.
 web/src/ui/fields/strings.ts unit  # durationUnit: the accessible name of DurationField's min | h | d Select
+# B9-44 (TB-02): Done on an Advance Step ("Done: <Step text>", "Advance Step done", as on the board and in Cook Mode) and Done shopping
+# (TB-12, decision TB 5); "Next meal" names the hero tile in "Next meal couldn't be shown." (RES-09), the tile, not a Planned Meal.
+web/src/features/today/strings.ts done  # Advance Step state and Done shopping (TB-02, TB-12), not a Planned Meal
+web/src/features/today/strings.ts meal  # "Next meal", the hero tile's name in its crash notice (RES-09)
+
+# "hidden" meaning the first-run checklist is out of view on Today (TB-06 "Hide for now", setupHidden), not an Archived Recipe, Product or Course.
+web/src/features/today/strings.ts hidden  # B9-53 (TB-06): the toast "Setup checklist hidden" after Hide for now

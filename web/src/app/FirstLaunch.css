@@ -13,3 +13,11 @@
   line-height: var(--text-body-line);
   text-align: center;
 }
+
+/* B9-49: the slow line under the boot shell skeleton (app/BootShell), above the bottom bar outline. */
+.boot-shell .first-launch__slow {
+  position: fixed;
+  inset-inline: var(--gutter);
+  inset-block-end: calc(var(--nav-top) + var(--space-4));
+  color: var(--color-text);
+}

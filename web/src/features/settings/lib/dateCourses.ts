@@ -53,7 +53,7 @@ export function dateCourseChanges(served: readonly DateCourse[], drafts: readonl
   return out
 }
 
-const sig = (att: readonly AttendanceEntry[]) => att.map((a) => `${a.memberId}:${a.portionFactorOverride ?? ''}`).sort().join('|')
+const sig = (att: readonly AttendanceEntry[]) => att.map((a) => `${a.memberId}:${a.portionFactorOverride ?? ''}${a.despiteAway ? '!' : ''}`).sort().join('|')
 
 /** True when two Attendance lists name the same Members with the same overrides (order ignored). */
 export function sameAttendance(a: readonly AttendanceEntry[], b: readonly AttendanceEntry[]): boolean {

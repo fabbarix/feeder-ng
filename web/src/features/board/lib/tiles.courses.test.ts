@@ -1,6 +1,6 @@
 // CRS F (spec 7.5, 11): Courses on the kitchen board. A slot is cooked as one block; the tiles list its Courses.
 import { describe, expect, it } from 'vitest'
-import { boardSlots, hasPlanned, startCookPath, tomorrowLine, tomorrowSlots, tonightMeal, tonightRows } from './tiles'
+import { boardSlots, hasPlanned, tomorrowLine, tomorrowSlots, tonightRows } from './tiles'
 import type { CourseLike, SlotLike } from '../types'
 
 // A slot carries no meal of its own (crs-c3); a few cases give one anyway to prove it is ignored.
@@ -48,22 +48,12 @@ describe('hasPlanned', () => {
   })
 })
 
-describe('tonight and the Cook button follow the slot, not the main Course alone', () => {
+describe('tomorrow follows the slot, not the main Course alone (the hero\'s case is lib/hero.test.ts)', () => {
   const cookedMain = () => slotOf([course(1, 'Main', true, { meal: meal('Roast', 'cooked') }), course(2, 'Side', false, { meal: meal('beans') })])
-
-  it('a slot whose main Course is Cooked but whose Side is not is still tonight\'s', () => {
-    const s = cookedMain()
-    expect(tonightMeal([s], '2026-11-09', '2026-11-09T17:00:00Z')).toBe(s)
-  })
 
   it('and tomorrow\'s tile still lists it', () => {
     const s = { ...cookedMain(), date: '2026-11-10', at: '2026-11-10T19:00:00Z' }
     expect(tomorrowSlots([s], '2026-11-09')).toEqual([s])
-  })
-
-  it('the Cook button opens the slot\'s timeline: /cook/meal/<date>/<slot>, no Course', () => {
-    expect(startCookPath([slotOf(roastAndBeans())], '2026-11-09', '2026-11-09T17:00:00Z')).toBe('/cook/meal/2026-11-09/2')
-    expect(startCookPath([cookedMain()], '2026-11-09', '2026-11-09T17:00:00Z')).toBe('/cook/meal/2026-11-09/2')
   })
 })
 
@@ -96,8 +86,9 @@ describe('tonightRows', () => {
 })
 
 describe('tomorrowLine', () => {
-  it('one Course reads exactly as before: "Dinner · Chicken stew"', () => {
-    expect(tomorrowLine(slotOf([course(1, 'Main', true, { meal: meal('Chicken stew') })]))).toBe('Dinner · Chicken stew')
+  // B9-47 (TB-08): one format for every slot, "Dinner: Chicken stew" (it was "Dinner · Chicken stew" for one Course).
+  it('one Course reads "Dinner: Chicken stew", the same format as several', () => {
+    expect(tomorrowLine(slotOf([course(1, 'Main', true, { meal: meal('Chicken stew') })]))).toBe('Dinner: Chicken stew')
   })
 
   it('several Courses: "Dinner: Roast chicken + green beans", in the slot\'s order', () => {
@@ -106,7 +97,7 @@ describe('tomorrowLine', () => {
 
   it('a covered slot is its Whole meal alone; a Course that holds a Planned Meal beside it is added', () => {
     const covered = slotOf([course(1, 'Main', true, { meal: meal('Lasagne', 'planned', true) }), course(2, 'Side', false, { coveredBy: { courseId: 1, recipeId: 1, recipeName: 'Lasagne' } })])
-    expect(tomorrowLine(covered)).toBe('Dinner · Lasagne')
+    expect(tomorrowLine(covered)).toBe('Dinner: Lasagne')
     const kept = slotOf([course(1, 'Main', true, { meal: meal('Lasagne', 'planned', true) }), course(2, 'Side', false, { meal: meal('Salad') })])
     expect(tomorrowLine(kept)).toBe('Dinner: Lasagne + Salad')
   })

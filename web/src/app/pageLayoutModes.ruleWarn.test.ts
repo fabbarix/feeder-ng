@@ -114,3 +114,32 @@ describe("w2a's drop-in is gone (B9-19 removed P36 on Your preferences in w2c; B
     expect(rules.countFindings(all, out).fail).toBe(3)
   })
 })
+
+describe("w4d's drop-in (ruling: P38 warns on /products/:id until B9-55; w6a deleted the four routes clean since w4b and w5a; /plan and / keep failing on it)", () => {
+  const dir = resolve(cwd, '../scripts/check-page-layout.modes.d')
+  const own = readFileSync(resolve(dir, '41-b9-32-p38-routes-warn'), 'utf8')
+  const base = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
+  const all = `${base}\n${readdirSync(dir)
+    .filter((n) => !n.startsWith('.'))
+    .sort()
+    .map((n) => readFileSync(resolve(dir, n), 'utf8'))
+    .join('\n')}`
+  it('is exactly the one P38 line left with its owner, and no whole route', () => {
+    expect(rules.parseModes(own).errors).toEqual([])
+    expect(rules.parseModes(own).ruleWarn).toEqual([{ rule: 'P38', pattern: '/products/:id', until: 'B9-55' }])
+    expect(own).not.toMatch(/^\s*(warn_routes|fail_routes|default|width)\b/m)
+  })
+  it('warns P38 on /products/:id only; the four routes w6a cleared fail on it again', () => {
+    expect(rules.ruleWarnFor(all, 'P38', '/products/:id')).not.toBeNull()
+    expect(rules.ruleWarnFor(all, 'P1', '/products/:id')).toBeNull()
+    for (const route of ['/recipes/:id/edit', '/recipes/:id/edit#recipe-editor-guard', '/shop', '/shop#shop-hints', '/scan#scan-price-keypad', '/scan/receipt/review#receipt-review']) {
+      expect(rules.ruleWarnFor(all, 'P38', route), route).toBeNull()
+    }
+    expect(rules.countFindings(all, line('/shop', 'P13')).fail).toBe(1)
+  })
+  it('keeps P38 failing on the Plan', () => {
+    expect(rules.ruleWarnFor(all, 'P38', '/plan')).toBeNull()
+    expect(rules.ruleWarnFor(all, 'P38', '/plan#plan-grid')).toBeNull()
+    expect(rules.countFindings(all, line('/plan', 'P38')).fail).toBe(1)
+  })
+})

@@ -29,13 +29,7 @@ describe('To confirm: the row is the ActionGroup\'s container with a real action
     expect(declarations(css, '.to-confirm__text')['min-inline-size']).toBe('0')
   })
 
-  it('the count is a pill: round, padded, filled with the neutral container', () => {
-    const d = declarations(css, '.to-confirm__count')
-    expect(d['border-radius']).toMatch(/var\(--radius-/)
-    expect(d['padding-inline']).toMatch(/var\(--space-/)
-    expect(d['background']).toBe('var(--color-surface-2)')
-    expect(d['color']).toBe('var(--color-text)')
-  })
+  // B9-44 (TB-09, removed on purpose): .to-confirm__count is gone with the hand-built title row; the count is TileHeader's Chip.
 
   it('"+ Side" is emphasised against the muted name', () => {
     const d = declarations(css, '.to-confirm__meta strong')

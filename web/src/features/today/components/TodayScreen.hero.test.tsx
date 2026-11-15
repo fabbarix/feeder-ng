@@ -70,7 +70,9 @@ describe('TodayScreen: tonight is the hero', () => {
   })
 })
 
-describe('TodayScreen: after the slot time the hero asks whether it was cooked', () => {
+// B9-39 (TB-01): the hero no longer asks "cooked?" after the slot time. It moves on at the slot time and the meal that has gone is the first
+// row of To confirm, with Cooked and Adjust (they work right on Today, as before).
+describe('TodayScreen: a past meal is decided in To confirm, never on the hero', () => {
   const preview: CookPreview = {
     meal: meal(), fresh: true, batches: 1, yield: 4, portionsNeeded: 2, proposedLeftover: 2, maxLeftover: 4, leftoverUseBy: '2026-11-13', needs: [],
   }
@@ -79,31 +81,40 @@ describe('TodayScreen: after the slot time the hero asks whether it was cooked',
     leftover: { id: 3, recipeId: 7, recipeName: 'Chicken & leek pie', portions: 2, cookedOn: '2026-11-10', useBy: '2026-11-13', fromDate: '2026-11-10', fromMealSlotId: 2 },
     plannedFor: [{ date: '2026-11-11', mealSlotId: 3, mealSlotName: 'Lunch', recipeName: 'Chicken & leek pie' }],
   }
+  const served = () => [slot({ date: '2026-11-10', mealSlotId: 2, name: 'Lunch', time: '13:00', at: '2026-11-10T13:00:00Z', courseId: 1, courseName: 'Main', meal: meal({ recipeName: 'Chicken & leek pie' }) })]
 
-  // DS-TODAY round 2 (changed on purpose): the hero's primary after the slot time is "Cooked" (was "Yes, Cooked").
-  it('Cooked is one tap: Cooked with the planned Leftover, then a friendly confirmation', async () => {
+  it('the hero shows no "cooked?" ask and no Cooked or Adjust button of its own, whatever the clock says', async () => {
     h.now = new Date('2026-11-10T20:00:00Z')
+    mockApi(base)
+    renderWithProviders(routed, '/')
+    const hero = (await screen.findByRole('heading', { name: 'Chicken & leek pie' })).closest('[data-variant="hero"]') as HTMLElement
+    expect(hero.querySelector('.plan-hero__ask')).toBeNull()
+    expect(within(hero).queryByRole('button', { name: /^(Cooked|Adjust)/ })).toBeNull()
+  })
+
+  it('Cooked on the To confirm row is one tap: Cooked with the planned Leftover, then a friendly confirmation', async () => {
+    h.toConfirm = served()
     const api = mockApi({ ...base, 'GET /api/plan/2026-11-10/2/1/cook': preview, 'POST /api/plan/2026-11-10/2/1/cooked': cooked })
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Cooked' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Cooked / }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2 }))
     // B9-26: the rich Cooked toast (headline, the meal, where the Leftover went, Undo).
     const toast = await findToast('Cooked, nice one!')
     expect(toast.querySelector('.toast__body')).toHaveTextContent('2 portions planned for Wed Lunch.')
   })
 
-  it('Adjust opens the Mark as Cooked sheet on Today itself', async () => {
-    h.now = new Date('2026-11-10T20:00:00Z')
+  it('Adjust on the To confirm row opens the Mark as Cooked sheet on Today itself', async () => {
+    h.toConfirm = served()
     mockApi({ ...base, 'GET /api/plan/2026-11-10/2/1/cook': preview })
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Adjust' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Adjust / }))
     expect(await screen.findByRole('dialog', { name: 'Mark as Cooked' })).toBeInTheDocument()
     expect(screen.queryByText('Plan screen')).not.toBeInTheDocument()
   })
 })
 
 describe('TodayScreen: To confirm and Leftovers', () => {
-  // DS-TODAY (changed on purpose): the To confirm row's primary is "Cooked" (the hero's, after the slot time, stays "Yes, Cooked").
+  // DS-TODAY (changed on purpose): the To confirm row's primary is "Cooked", named by its Recipe, day and Meal Slot (B9-39, A11Y-08).
   it('To confirm rows offer Cooked and Adjust right on Today', async () => {
     h.toConfirm = [slot({ date: '2026-11-09', courseId: 1, courseName: 'Main', meal: meal({ date: '2026-11-09', recipeName: 'Stew' }) })]
     const api = mockApi({
@@ -113,15 +124,9 @@ describe('TodayScreen: To confirm and Leftovers', () => {
     })
     renderWithProviders(routed, '/')
     const tile = (await screen.findByRole('heading', { name: 'To confirm' })).closest('section') as HTMLElement
-    await userEvent.click(within(tile).getByRole('button', { name: 'Cooked' }))
+    await userEvent.click(within(tile).getByRole('button', { name: /^Cooked / }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')).toHaveLength(1))
   })
 
-  it('the Leftovers tile opens the Plan', async () => {
-    h.leftovers = [{ id: 1, recipeId: 1, recipeName: 'Soup', portions: 2, cookedOn: '2026-11-09', useBy: '2026-11-12', fromDate: '2026-11-09', fromMealSlotId: 2 }]
-    mockApi(base)
-    renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Leftovers to use' }))
-    expect(await screen.findByText('Plan screen')).toBeInTheDocument()
-  })
+  // B9-44 (TB-11, removed on purpose): the Leftovers tile no longer opens the Plan; its header links to the Pantry (LeftoversTile.tb11.test.tsx).
 })

@@ -26,15 +26,15 @@ function setup(over: Partial<React.ComponentProps<typeof SwapSheet>> = {}) {
 }
 
 describe('SwapSheet (rows are the buttons)', () => {
-  it('is titled "Swap for…" without a subtitle', () => {
+  it('is titled "Swap <Recipe>" under the context line, without a subtitle (B9-38)', () => {
     setup()
-    expect(screen.getByRole('dialog', { name: 'Swap for…' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Fri 13 · Dinner · Main Swap Chicken curry' })).toBeInTheDocument()
     expect(screen.queryByText('The best alternatives under the same scoring')).not.toBeInTheDocument()
   })
 
-  it('shows three alternatives as list rows, each with a thumb and its reason as meta', () => {
+  it('shows three alternatives as list rows, each with a thumb and its reason as a chip (B9-38)', () => {
     setup()
-    const list = screen.getByRole('list', { name: 'Alternatives' })
+    const list = screen.getByRole('list', { name: 'Instead' })
     expect(list.querySelectorAll('li')).toHaveLength(3)
     expect(screen.queryByText('Fourth')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Stew' })).toBeInTheDocument()
@@ -46,7 +46,7 @@ describe('SwapSheet (rows are the buttons)', () => {
 
   it('names the Leftover an alternative would leave, with the glossary word and a singular unit', () => {
     setup()
-    expect(screen.getByText(/\+2 portion Leftover/)).toBeInTheDocument()
+    expect(screen.getByText('+2 Leftover')).toBeInTheDocument()
   })
 
   it('tapping a row picks that Recipe (swap and pin in one tap)', async () => {

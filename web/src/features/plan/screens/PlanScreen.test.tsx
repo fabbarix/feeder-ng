@@ -34,8 +34,8 @@ const phone = () =>
 const headingOf = (day: string): string | RegExp => ({ Today: /· Today$/, Tomorrow: /· Tomorrow$/, Wednesday: 'Wed 11' })[day] ?? day
 const tile = async (name: string) => ((await screen.findByRole('heading', { name: headingOf(name) })).closest('article') as HTMLElement)
 const openSheet = async (day: string, recipe: string) => {
-  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
-  return screen.findByRole('dialog', { name: recipe })
+  await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(`^${recipe}$`) }))
+  return screen.findByRole('dialog', { name: new RegExp(` ${recipe}$`) }) // B9-38: the context line is part of the name
 }
 
 /** B9-45 (PC-02): the ONE shortfall notice (an info status tile with DetailList rows), not one danger alert per warning. */
@@ -45,6 +45,13 @@ const findShortfallNotice = () =>
     if (!el) throw new Error('no shortfall notice')
     return el
   })
+
+/** B9-38: Swap, Pin, Unpin, Choose a Recipe and Not cooked are items of the Planned Meal sheet's footer ⋮ "More for <day> <slot>". */
+const moreItem = async (sheet: HTMLElement, item: string) => {
+  await userEvent.click(within(sheet).getByRole('button', { name: /^More for / }))
+  await userEvent.click(await screen.findByRole('menuitem', { name: item }))
+}
+
 
 describe('PlanScreen load failure', () => {
   afterEach(() => {
@@ -108,7 +115,7 @@ describe('PlanScreen layout (5.2)', () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(<PlanScreen />)
     const sheet = await openSheet('Today', 'Chicken')
-    expect(within(sheet).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: /^More for / })).toBeInTheDocument() // Swap is under ⋮ (B9-38)
     expect(within(sheet).getByRole('button', { name: 'Cook' })).toBeInTheDocument()
   })
 
@@ -167,7 +174,8 @@ describe('PlanScreen: the Planned Meal sheet', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     const tomorrow = await openSheet('Tomorrow', 'Stew')
     expect(within(tomorrow).queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
-    expect(within(tomorrow).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    expect(within(tomorrow).queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
+    // B9-38 (PC 4): a future meal has Cook (primary) and Swap (outlined, plainly named: the sheet's context line names the day)
     expect(within(tomorrow).getByRole('button', { name: 'Swap' })).toBeInTheDocument()
   })
 
@@ -175,7 +183,7 @@ describe('PlanScreen: the Planned Meal sheet', () => {
     const api = mockApi({ 'GET /api/plan': view(), 'POST /api/plan/2026-11-10/3/1/confirm': meal({ pinned: true }) })
     renderWithProviders(<PlanScreen />)
     const sheet = await openSheet('Tomorrow', 'Stew')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Pin' }))
+    await moreItem(sheet, 'Pin')
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/3/1/confirm')).toHaveLength(1))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
@@ -186,7 +194,7 @@ describe('PlanScreen: the Planned Meal sheet', () => {
     const api = mockApi({ 'GET /api/plan': pinned, 'POST /api/plan/2026-11-10/3/1/unpin': meal() })
     renderWithProviders(<PlanScreen />)
     const sheet = await openSheet('Tomorrow', 'Stew')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Unpin' }))
+    await moreItem(sheet, 'Unpin')
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-10/3/1/unpin')).toHaveLength(1))
   })
 })
@@ -202,7 +210,7 @@ describe('PlanScreen: B2 Cook Mode from a Planned Meal', () => {
   it("the Cook icon on today's tile opens Cook Mode for that slot", async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(routed, '/plan')
-    await userEvent.click(within(await tile('Today')).getByRole('button', { name: 'Cook' }))
+    await userEvent.click(within(await tile('Today')).getByRole('button', { name: /^Cook / }))
     expect(await screen.findByText('Cook Mode screen')).toBeInTheDocument()
   })
 
@@ -217,7 +225,7 @@ describe('PlanScreen: B2 Cook Mode from a Planned Meal', () => {
   it("tomorrow's tile has no Cook icon", async () => {
     mockApi({ 'GET /api/plan': view() })
     renderWithProviders(routed, '/plan')
-    expect(within(await tile('Tomorrow')).queryByRole('button', { name: 'Cook' })).not.toBeInTheDocument()
+    expect(within(await tile('Tomorrow')).queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
   })
 })
 
@@ -233,10 +241,10 @@ describe('PlanScreen: Swap', () => {
   it('the icon button opens three alternative rows and tapping one sets it on the slot', async () => {
     const api = mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives, 'PUT /api/plan/2026-11-10/3/1': meal({ recipeId: 21, pinned: true }) })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Swap for…' })
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
+    const dialog = await screen.findByRole('dialog', { name: / Swap Stew$/ })
     expect(await within(dialog).findByRole('button', { name: 'Pizza' })).toBeInTheDocument()
-    expect(within(dialog).getByRole('list', { name: 'Alternatives' }).querySelectorAll('li')).toHaveLength(3)
+    expect(within(dialog).getByRole('list', { name: 'Instead' }).querySelectorAll('li')).toHaveLength(3)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Pizza' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-10/3/1')[0]?.body).toEqual({ recipeId: 21 }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -250,7 +258,7 @@ describe('PlanScreen: Swap', () => {
       'PUT /api/plan/2026-11-10/3/1': { ...meal({ recipeId: 21, pinned: true }), changes: [], undoToken: 'tok-1' },
     })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
     await userEvent.click(await screen.findByRole('button', { name: 'Pizza' }))
     const toast = await findNotice('status', 'Swapped')
     expect(within(toast).getByRole('button', { name: 'Undo the Swap' })).toBeInTheDocument()
@@ -259,7 +267,7 @@ describe('PlanScreen: Swap', () => {
   it('"Keep it" closes the sheet and changes nothing', async () => {
     const api = mockApi({ 'GET /api/plan': view(), 'GET /api/plan/2026-11-10/3/1/alternatives': alternatives })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: 'Swap' }))
+    await userEvent.click(within(await tile('Tomorrow')).getByRole('button', { name: /^Swap / }))
     await userEvent.click(await screen.findByRole('button', { name: 'Keep it' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(api.calls.some((c) => c.method !== 'GET')).toBe(false)
@@ -274,8 +282,8 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
       'PUT /api/plan/2026-11-11/4/1': meal({ recipeId: 32, pinned: true }),
     })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Choose a Recipe' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Choose a Recipe' })
+    await userEvent.click(await screen.findByRole('button', { name: /^Choose a Recipe for / }))
+    const dialog = await screen.findByRole('dialog', { name: / Choose a Recipe$/ }) // B9-38: under the context line
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Risotto' }))
     await waitFor(() => expect(api.callsTo('PUT', '/api/plan/2026-11-11/4/1')[0]?.body).toEqual({ recipeId: 32 }))
   })
@@ -335,7 +343,8 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     const planned = await openSheet('Today', 'Chicken')
     await userEvent.click(within(planned).getByRole('button', { name: 'Mark as Cooked' }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
-    await userEvent.click(await within(sheet).findByRole('button', { name: 'Not cooked' }))
+    await userEvent.click(await within(sheet).findByRole('button', { name: /^More for / }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Not cooked' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/not-cooked')).toHaveLength(1))
   })
 })

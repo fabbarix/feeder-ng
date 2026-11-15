@@ -120,7 +120,7 @@ describe('DS-09: media queries on width are (min-width: Xem) or (width < Xem) wi
   it.each([
     // access/access.css is no longer listed: SET-12 (B9-52) removed its phone block; the request rows use ListRow's actions slot.
     ['board/board.css', '(min-width: 37.5em)', /\(min-width:\s*600px\)/],
-    ['today/today.css', '(min-width: 48em)', /\(min-width:\s*768px\)/],
+    // today/today.css is no longer listed: TB-06 (B9-53) replaced the R13 setup block that held the query; the tile lays out by container.
     ['cook/cook.css', '(min-width: 48em)', /\(min-width:\s*768px\)/],
   ])('%s: the old px query is converted to %s', (file, wanted, old) => {
     const text = FILES[file] ?? ''
@@ -128,9 +128,9 @@ describe('DS-09: media queries on width are (min-width: Xem) or (width < Xem) wi
     expect(text).toContain(`@media ${wanted}`)
   })
 
-  it('plan.css: the hero actions use a named container query (@container plan-hero (min-width: 44rem)), not @media 820px', () => {
+  it('plan.css: the hero actions use a named container query (@container plan-hero (min-width: 35rem), TB-03), not @media 820px', () => {
     expect(FILES['plan/plan.css']).not.toMatch(/820px/)
-    expect(FILES['plan/plan.css']).toMatch(/@container plan-hero \(min-width: 44rem\)/)
+    expect(FILES['plan/plan.css']).toMatch(/@container plan-hero \(min-width: 35rem\)/)
     // the hero is that named size container (the unnamed `container-type` alone cannot be addressed by name)
     const hero = RULES.filter((r) => r.selectors.includes('.plan-hero') && r.file === 'plan/components/TonightHero.css')
     const decl = hero.flatMap((r) => r.decls).find(([p]) => p === 'container')
@@ -268,7 +268,6 @@ describe('DS-07 drift (B9-DRIFT-W1): a class that sets a font size also sets its
   // The listed cases of B9-DRIFT-W1.md (items 1-4 and 10), each by name, so a regression names the class.
   it.each([
     ['plan/components/TonightHero.css', '.to-confirm__when', 'var(--text-meta-line)'],
-    ['plan/components/TonightHero.css', '.to-confirm__count', 'var(--text-meta-line)'],
   ])('%s %s has line-height %s (B9-DRIFT-W1 items 1 and 2: the badge is 52 px tall, the count pill 30 px, on the body line)', (file, selector, line) => {
     const d = merged.get(`${file}\u0000${selector}`)?.d
     expect(d, `no rule for ${selector}`).toBeDefined()

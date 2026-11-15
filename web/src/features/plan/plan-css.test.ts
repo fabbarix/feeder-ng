@@ -31,11 +31,15 @@ describe('plan.css', () => {
 
   it('the divider between meals is a 1 px line and only on a tile flagged data-dividers (3 or more meals)', () => {
     const rules = css.split('}').filter((r) => /\.plan-meal\s*\+\s*\.plan-meal/.test(r))
-    expect(rules.length).toBeGreaterThan(0)
-    for (const r of rules) {
+    // B9-32 (PC-11): a day with the whole row lays its slots side by side, with a 1 px line between them (data-row).
+    const stacked = rules.filter((r) => !/\[data-row/.test(r))
+    expect(stacked.length).toBeGreaterThan(0)
+    for (const r of stacked) {
       expect(r).toMatch(/\[data-dividers/)
       expect(r).toMatch(/border-top:\s*1px solid/)
     }
+    const side = rules.filter((r) => /\[data-row/.test(r))
+    for (const r of side) expect(r).toMatch(/border-inline-start:\s*1px solid/)
   })
 
   it('does not restyle chips: they keep their own background in narrow tiles', () => {

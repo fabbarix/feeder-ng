@@ -1,6 +1,7 @@
 // B9-59 (RES-04, route splitting): the routes load their screens on demand. Every lazy route in the real table resolves to
 // a screen; Today and the shell stay in the entry; while a chunk loads the page shows its own loading state inside the
 // shell; a chunk that fails shows the page's error state, and Try again really imports again.
+import { bottomBarNav, queryBottomBar } from '../test/shellNav'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { isValidElement, type ComponentType } from 'react'
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router-dom'
@@ -147,7 +148,7 @@ describe('lazyScreen', () => {
     const main = screen.getByRole('main')
     expect(within(main).getByRole('heading', { level: 1, name: 'Plan' })).toBeInTheDocument()
     expect(main.querySelector('[aria-busy="true"]')).not.toBeNull()
-    expect(screen.getByRole('navigation', { name: 'Bottom bar' })).toBeInTheDocument()
+    expect(bottomBarNav()).toBeInTheDocument()
     expect(document.title).toMatch(/^Plan · Feeder/)
     await settle(() => d.resolve({ PlanScreen: () => <h1>The week</h1> }))
     expect(within(main).getByRole('heading', { name: 'The week' })).toBeInTheDocument()
@@ -173,7 +174,7 @@ describe('lazyScreen', () => {
     const main = screen.getByRole('main')
     expect(main.className).toContain('app-main--full')
     expect(main.querySelector('[aria-busy="true"]')).not.toBeNull()
-    expect(screen.queryByRole('navigation', { name: 'Bottom bar' })).toBeNull()
+    expect(queryBottomBar()).toBeNull()
   })
 
   it('a chunk that fails to load shows the error state with Try again, and Try again really imports again', async () => {
@@ -184,7 +185,7 @@ describe('lazyScreen', () => {
     const mods: Record<string, FeatureModule> = { shop: { routes: [{ path: '/shop', element: lazyScreen(importer, 'ShopScreen') }] } }
     await shellAt('/shop', buildRoutes(mods))
     expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Bottom bar' })).toBeInTheDocument() // the bars stay usable
+    expect(bottomBarNav()).toBeInTheDocument() // the bars stay usable
     expect(importer).toHaveBeenCalledTimes(1) // no import storm while the error shows
     await settle(() => fireEvent.click(screen.getByRole('button', { name: 'Try again' })))
     expect(screen.getByRole('heading', { name: 'Shopping List' })).toBeInTheDocument()
@@ -226,7 +227,7 @@ describe('lazyScreen', () => {
     }
     await shellAt('/plan', buildRoutes(mods))
     expect(screen.getByRole('heading', { name: 'The week' })).toBeInTheDocument()
-    await settle(() => fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom bar' })).getByRole('link', { name: 'Pantry' })))
+    await settle(() => fireEvent.click(within(bottomBarNav()).getByRole('link', { name: 'Pantry' })))
     expect(screen.queryByRole('heading', { name: 'The week' })).toBeNull()
     expect(within(screen.getByRole('main')).getByRole('heading', { level: 1, name: 'Pantry' })).toBeInTheDocument()
     expect(screen.getByRole('main').querySelector('[aria-busy="true"]')).not.toBeNull()
@@ -241,7 +242,7 @@ describe('lazyScreen', () => {
       plan: { routes: [{ path: '/plan', element: lazyScreen(() => d.promise, 'PlanScreen') }] },
     }
     await shellAt('/', buildRoutes(mods))
-    await settle(() => fireEvent.click(within(screen.getByRole('navigation', { name: 'Bottom bar' })).getByRole('link', { name: 'Plan' })))
+    await settle(() => fireEvent.click(within(bottomBarNav()).getByRole('link', { name: 'Plan' })))
     expect(within(screen.getByRole('main')).getByRole('heading', { level: 1, name: 'Plan' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Today page' })).toBeNull()
     await settle(() => d.resolve({ PlanScreen: () => <h1>The week</h1> }))

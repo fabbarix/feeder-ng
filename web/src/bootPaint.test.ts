@@ -42,8 +42,12 @@ describe('web/index.html boot paint', () => {
     expect(dark?.toLowerCase()).toContain(`content="${darkBg}"`)
   })
 
-  it('the inline style does not set text colour or fonts (the app owns those)', () => {
-    expect(inlineStyle).not.toMatch(/font-family|(^|[;{\s])color\s*:/)
+  // B9-49 (RES-08): the boot shell skeleton draws the User's own colours (--boot-*), and the brand word in the system font until the app's
+  // fonts arrive; nothing else about text is set here (the app owns it).
+  it('the inline styles set text colour only from the --boot-* variables, and no font family but the system one', () => {
+    const allStyles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n')
+    expect(allStyles).not.toMatch(/(^|[;{\s])color\s*:(?!\s*var\(--boot-)/)
+    expect(allStyles).not.toMatch(/font-family\s*:(?!\s*system-ui)/)
   })
 
   it('puts a centred Feeder mark inside #root for React to replace (spec 4.14)', () => {

@@ -3,12 +3,15 @@ import { http } from '../lib/http'
 import { SignedOut } from '../features/signin/components/SignedOut'
 import { forgetStoredPhotos } from '../features/import'
 import { ReceiptReadWatcher, resetBackgroundRead } from '../features/receipt'
+import { SyncQueueProvider } from '../features/scan/components/SyncQueueProvider'
 import { clearCachedMe } from './meCache'
 import type { ShellStatusHook } from './features'
 import { AppShell } from './AppShell'
 import type { NavItem } from './nav'
 import { FirstLaunchFailed, FirstLaunchWaiting } from './FirstLaunch'
 import { ME_QUERY_KEY, useMe, useRecoverMeOnline } from './useMe'
+import { useServiceWorkerNavigate } from './useServiceWorkerNavigate'
+import { useShellStatus } from './useShellStatus'
 
 export interface AppRootProps {
   navItems?: NavItem[]
@@ -23,15 +26,11 @@ export function AppRoot({ navItems, statusHooks = [], onNavIntent }: AppRootProp
   const me = useMe()
   useRecoverMeOnline(me)
   const queryClient = useQueryClient()
-  // The statusHooks list comes from the eager glob, so it is fixed for the app's life: calling the hooks in a loop
-  // keeps their order stable from render to render. They run before the early returns below, so every render calls them.
-  let pendingScans = 0
-  let pendingAccessRequests = 0
-  for (const useStatus of statusHooks) {
-    const status = useStatus()
-    pendingScans += status.pendingScans ?? 0
-    pendingAccessRequests += status.pendingAccessRequests ?? 0
-  }
+  // The statusHooks list comes from the eager glob, so it is fixed for the app's life: useShellStatus calls them in a loop in a
+  // stable order. They run before the early returns below, so every render calls them.
+  const { pendingScans, pendingTicks, pendingAccessRequests } = useShellStatus(statusHooks)
+  // TB-14: a notification click the service worker hands to this window moves the router (no reload).
+  useServiceWorkerNavigate()
 
   // B9-20: a remembered User opens the shell at once, and a failing /api/me never replaces it (data wins over the error).
   if (me.data === undefined) {
@@ -52,17 +51,19 @@ export function AppRoot({ navItems, statusHooks = [], onNavIntent }: AppRootProp
     queryClient.setQueryData(ME_QUERY_KEY, null)
   }
   // The receipt read goes on in the background while a User is signed in; the watcher (one, above both shell frames) says when it ends.
+  // B9-54 (RES-03): the one offline queue of Scans and Ticks, for every screen of a signed-in User (it syncs wherever the User is).
   return (
-    <>
+    <SyncQueueProvider>
       <ReceiptReadWatcher />
       <AppShell
         user={{ displayName: me.data.displayName }}
         onSignOut={signOut}
         navItems={navItems}
         pendingScans={pendingScans}
+        pendingTicks={pendingTicks}
         pendingAccessRequests={pendingAccessRequests}
         onNavIntent={onNavIntent}
       />
-    </>
+    </SyncQueueProvider>
   )
 }

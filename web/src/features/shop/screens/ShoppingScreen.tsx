@@ -29,6 +29,10 @@ import { useCompleteTile } from '../hooks/useCompleteTile'
 import { useSubstitute } from '../hooks/useSubstitute'
 import { useLineSheet } from '../hooks/useLineSheet'
 import { useTickFlow } from '../hooks/useTickFlow'
+import { useTickSync } from '../hooks/useTickSync'
+import { useSharedSyncQueue } from '../../scan/components/SyncQueueProvider'
+import { TickSyncNotices } from '../components/TickSyncNotices'
+import type { TickNotice, TickNoticeAction } from '../lib/tickNotices'
 import { useShopChoice } from '../hooks/useShopChoice'
 import { useShopHere } from '../hooks/useShopHere'
 import { AddShopSheet } from '../../shops/components/AddShopSheet'
@@ -50,18 +54,23 @@ export function ShoppingScreen() {
   const toast = useToast()
   const here = useShopHere({ shopId: choice.shopId, setShopId: choice.setShopId, onAddHere: () => setSheet({ kind: 'addShop', name: '' }) })
   const ingredients = useIngredientChoices()
-  const data = list.data
+  const me = useMe().data
+  // B9-34: times of ticks are the Household's; while its zone is unknown no time is shown (never the device's).
+  const timeZone = me?.householdTimeZone ?? null
+  // B9-54 (RES-03): the list with the Ticks waiting in the offline queue applied, the sync notices and the refused rows
+  // (one queue for the screen: the shell's, or a private one when the screen is rendered alone)
+  const queue = useSharedSyncQueue()
+  const tickSync = useTickSync({ list: list.data, system, who: me?.displayName ?? '', timeZone, shopId: choice.shopId, queue })
+  const data = tickSync.list
   const shopName = choice.shops.find((s) => s.id === choice.shopId)?.name ?? null
   // b8-shop, B9-15: the Shop chip shows "Any" when its own row has no room for "Any Shop" (the chip Select fits it); the list keeps "Any Shop".
   const shopOptions = useMemo(() => shopPickerChoices(choice.shops, shopStrings.anyShop, shopStrings.anyShopShort), [choice.shops])
-  // B9-34: times of ticks are the Household's; while its zone is unknown no time is shown (never the device's).
-  const timeZone = useMe().data?.householdTimeZone ?? null
   // B9-34 (SSP-01): one tap ticks; the toast offers Change and Undo; the ticked sheet's Take back, Change amount and Untick.
   // A11Y-07: after an Undo the restored row's tick takes the focus back
   const [restoreFocusKey, setRestoreFocusKey] = useState<string | null>(null)
   const onUndone = useCallback((entry: ListEntry) => setRestoreFocusKey(entry.key), [])
   const onFocusRestored = useCallback(() => setRestoreFocusKey(null), [])
-  const flow = useTickFlow({ to: data?.to, shopId: choice.shopId, system, onUndone })
+  const flow = useTickFlow({ to: data?.to, shopId: choice.shopId, system, onUndone, queue })
   // B9-43 (SSP-09): "Shopping List complete" with Put away and Read the receipt
   const complete = useCompleteTile({ list: data, shopId: choice.shopId, shopName })
   // B9-43 (SSP-13): Change the Price of the Line's Product, at the picked Shop (or the priced fallback's under Any Shop)
@@ -88,6 +97,13 @@ export function ShoppingScreen() {
   const onChangeAmount = (entry: ListEntry) => {
     const target = changeTargetOf(entry)
     if (target) flow.openChange(target)
+  }
+
+  // B9-54: a sync notice's button; a failure is the toast that names it, and the notice stays
+  const onNoticeAction = (notice: TickNotice, action: TickNoticeAction) => {
+    if (action === 'dismiss') return void tickSync.act(notice, action)
+    const name = tickSync.nameOf(notice.op)
+    run(action === 'addToStock' ? shopStrings.failed.addToStock(name) : shopStrings.failed.takeBack(name), () => tickSync.act(notice, action))
   }
 
   const onDelete = (entry: ListEntry) => run(shopStrings.failed.delete(entry.title), () => actions.deleteExtra(entry.extraId as number))
@@ -204,6 +220,9 @@ export function ShoppingScreen() {
           restoreFocusKey={restoreFocusKey}
           onFocusRestored={onFocusRestored}
           complete={complete}
+          waiting={tickSync.waiting}
+          failedKeys={tickSync.failed}
+          notices={<TickSyncNotices notices={tickSync.notices} onAction={onNoticeAction} />}
         />
       ) : null}
       <LineSheet

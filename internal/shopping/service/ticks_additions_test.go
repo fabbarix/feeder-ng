@@ -163,7 +163,7 @@ func TestASecondUsersTickAddsItsOwnLotAndNamesTheFirst(t *testing.T) {
 	if len(first.AlsoTickedBy) != 0 {
 		t.Errorf("first AlsoTickedBy = %+v, want none", first.AlsoTickedBy)
 	}
-	if len(second.AlsoTickedBy) != 1 || second.AlsoTickedBy[0] != (service.AlsoTicked{Name: "Ana", Quantity: 400, By: "hand"}) {
+	if len(second.AlsoTickedBy) != 1 || second.AlsoTickedBy[0].Name != "Ana" || second.AlsoTickedBy[0].Quantity != 400 || second.AlsoTickedBy[0].By != "hand" || second.AlsoTickedBy[0].Mine {
 		t.Errorf("second AlsoTickedBy = %+v, want Ana's 400 by hand", second.AlsoTickedBy)
 	}
 	l, v := milkLine(t, e)

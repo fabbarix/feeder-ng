@@ -48,7 +48,7 @@ export const undoStrings = {
   // ---- the What changed sheet (lib/replan reviewModel, ReplanReviewSheet)
   reviewTitle: 'What changed',
   /** The edit as the sheet's context line names it: "After your Swap". */
-  editName: { swap: 'Swap', choose: 'Recipe choice', pin: 'Pin', unpin: 'Unpin', regenerate: 'Regenerate' },
+  editName: { swap: 'Swap', choose: 'Recipe choice', pin: 'Pin', unpin: 'Unpin', regenerate: 'Regenerate', away: 'Away' },
   contextOwn: (edit: string, n: number) => `After your ${edit} · ${n} other ${plural(n, 'meal', 'meals')}`,
   contextOther: (name: string, n: number) => `After ${name}'s change · ${n} other ${plural(n, 'meal', 'meals')}`,
   ledeOwn: (edit: string, label: string | null, n: number) =>

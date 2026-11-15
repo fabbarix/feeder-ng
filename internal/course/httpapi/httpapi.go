@@ -39,6 +39,9 @@ func mount(r *app.Router, d app.Deps) {
 	r.Admin("DELETE /api/courses/{id}", a.remove)
 	r.Admin("POST /api/courses/{id}/archive", a.archive)
 	r.Admin("POST /api/courses/{id}/unarchive", a.unarchive)
+	// Any User may mark Recipes with a Course from the Plan, as they may edit a Recipe (B9-32, PC-07).
+	r.User("POST /api/courses/{id}/recipes", a.markRecipes)
+	r.User("POST /api/courses/{id}/recipes/unmark", a.unmarkRecipes)
 }
 
 // changed publishes a household change so open screens and the plan refresh.

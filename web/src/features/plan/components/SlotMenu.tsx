@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Menu, type MenuEntry } from '../../../ui'
+import { actionName } from '../lib/actionNames'
 import { slotMenu } from '../lib/courses'
 import { choiceLabel } from '../lib/slotDate'
 import { planStrings as s } from '../strings'
@@ -20,6 +21,11 @@ export interface SlotMenuProps {
   dateActions?: SlotDateActions
   /** ds-plan round 2: the trigger is compact (32 px) in a day tile's header; the Today hero keeps the default size. */
   size?: 'md' | 'compact'
+  /**
+   * B9-32 (A11Y-08): the day label ("Sun 15") the trigger names with the slot: "More for Sun 15 Breakfast". Without it the trigger keeps
+   * "<Slot> actions" (Today's hero until B9-39 passes one).
+   */
+  dayLabel?: string
   /** DS-TODAY round 3: Not cooked is the first item (the hero after the slot time). Default: after Mark all Cooked. */
   notCookedFirst?: boolean
 }
@@ -28,7 +34,7 @@ export interface SlotMenuProps {
  * The slot block's menu: the shared Menu labelled "<Slot> actions", with "Mark all Cooked", "Not cooked: whole slot",
  * "Add <Course>" per lib/courses slotMenu and, with `dateActions`, the per-date choices. Renders nothing when slotMenu is null.
  */
-export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions, size, notCookedFirst = false }: SlotMenuProps): ReactNode {
+export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddCourse, dateActions, size, dayLabel, notCookedFirst = false }: SlotMenuProps): ReactNode {
   const model = slotMenu(slot, today, dateActions !== undefined)
   if (!model) return null
   const slotKey: SlotDayKey = { date: slot.date, mealSlotId: slot.mealSlotId }
@@ -42,6 +48,9 @@ export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddC
   for (const add of model.add) items.push({ id: `add-${add.key.courseId}`, label: add.label, onSelect: () => onAddCourse(add.key) })
   if (dateActions && model.whosEating) {
     items.push({ id: 'whos-eating', label: choiceLabel(s.slotDate.whosEating, offline), disabled: offline, onSelect: () => dateActions.onWhosEating(slotKey) })
+    // B9-46 (PC-08): the Away sheet from this Meal Slot, where the screen offers it.
+    const onAway = dateActions.onAway
+    if (onAway) items.push({ id: 'away', label: choiceLabel(s.away.menuItem, offline), disabled: offline, onSelect: () => onAway(slotKey) })
   }
   if (dateActions && model.time) {
     items.push({ id: 'time', label: choiceLabel(model.time, offline), disabled: offline, onSelect: () => dateActions.onTime(slotKey) })
@@ -49,5 +58,5 @@ export function SlotMenu({ slot, today, onMarkAllCooked, onNotCookedSlot, onAddC
   if (dateActions && model.notServed) {
     items.push({ id: 'not-served', label: choiceLabel(s.slotDate.notServed, offline), disabled: offline, onSelect: () => dateActions.onNotServed(slotKey) })
   }
-  return <Menu label={s.slotActions(slot.name)} size={size} items={items} />
+  return <Menu label={dayLabel ? actionName('more', { day: dayLabel, slot: slot.name }) : s.slotActions(slot.name)} size={size} items={items} />
 }

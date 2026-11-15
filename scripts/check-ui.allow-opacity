@@ -1,0 +1,3 @@
+# Rule opacity-muting: selectors whose partial opacity is a designed state, not muted text. Format: <selector>   # reason
+# (required: an entry without a reason is ignored). An entry matches only that exact selector list, as the CSS writes it.
+.board-close[data-idle='true']   # B9-47 (USER decision TB 4): the Kitchen board's Close stays visible and dims to 0.45 after 10 s idle; it is a control's resting state, not muted text, and comes back to full on any touch or key

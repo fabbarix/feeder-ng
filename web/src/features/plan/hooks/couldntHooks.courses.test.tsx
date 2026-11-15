@@ -52,7 +52,7 @@ describe('useCauseExpansion knows the new cause', () => {
 })
 
 describe('useCouldntFix with Courses', () => {
-  function setup(onChoose?: (key: { date: string; mealSlotId: number; courseId?: number }) => void) {
+  function setup(onChoose?: (key: { date: string; mealSlotId: number; courseId?: number }) => void, onMark?: (course: { id: number; name: string }) => void) {
     let where = ''
     function Probe() {
       const l = useLocation()
@@ -65,7 +65,7 @@ describe('useCouldntFix with Courses', () => {
         {children}
       </MemoryRouter>
     )
-    const hook = renderHook(() => useCouldntFix(onChoose), { wrapper })
+    const hook = renderHook(() => useCouldntFix(onChoose, onMark), { wrapper })
     return { fix: hook.result, where: () => where }
   }
   const groupOf = (cells: ReturnType<typeof unplannedOf>, all = cells) => renderHook(() => useCouldntPlanNotice(cells, all)).result.current.groups[0]!
@@ -93,5 +93,15 @@ describe('useCouldntFix with Courses', () => {
     const g = groupOf(unplannedOf(courseCells(slots)), courseCells(slots))
     act(() => t.fix.current(g))
     expect(t.where()).toBe('/recipes?notCourse=2')
+  })
+
+  it('B9-32: when the screen can mark Recipes itself (the Plan), the fix calls onMark with the Course instead of leaving for /recipes', () => {
+    const onMark = vi.fn()
+    const t = setup(undefined, onMark)
+    const slots = [dinner('2026-11-10', [planned(1, 'Main'), empty(2, 'Side', NO_COURSE_RECIPES)])]
+    const g = groupOf(unplannedOf(courseCells(slots)), courseCells(slots))
+    act(() => t.fix.current(g))
+    expect(onMark).toHaveBeenCalledWith({ id: 2, name: 'Side' })
+    expect(t.where()).not.toBe('/recipes?notCourse=2')
   })
 })

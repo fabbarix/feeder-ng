@@ -207,3 +207,18 @@ func TestAScanThatTicksALineRecordsItsUUIDAndUserForTheAddition(t *testing.T) {
 		t.Errorf("AfterLotInput = %+v, want the scan's client UUID and the User from the context", in)
 	}
 }
+
+// B9-54 (RES 2): the answer carries `mine` and the time each earlier addition was ticked (RFC 3339, UTC).
+func TestAShopTickAnswerCarriesMineAndTheTimeOfEachEarlierAddition(t *testing.T) {
+	e := newEnv(t)
+	at := time.Date(2026, 11, 9, 9, 15, 0, 0, time.UTC)
+	e.list.tickAlso = []shopservice.AlsoTicked{{Name: "Sam", Quantity: 50, By: "hand", Mine: true, TickedAt: at}, {Name: "Ana", Quantity: 700, By: "scan", TickedAt: at.Add(time.Minute)}}
+	res := applyTick(t, e, asUser(12), tickOp("tick-1", passataIng, 50, 150))
+	if res.Tick == nil || len(res.Tick.AlsoTickedBy) != 2 {
+		t.Fatalf("Tick = %+v, want two earlier additions", res.Tick)
+	}
+	a, b := res.Tick.AlsoTickedBy[0], res.Tick.AlsoTickedBy[1]
+	if !a.Mine || a.TickedAt != "2026-11-09T09:15:00Z" || b.Mine || b.TickedAt != "2026-11-09T09:16:00Z" {
+		t.Errorf("alsoTickedBy = %+v, want Mine and RFC 3339 times carried through", res.Tick.AlsoTickedBy)
+	}
+}

@@ -23,6 +23,8 @@ export function HouseholdPage() {
               saving={household.saving}
               suggestedTimeZone={page.suggestedTimeZone}
               onSave={page.save}
+              onShowSetup={page.showSetup}
+              showingSetup={household.saving}
             />
           ) : (
             <p role="status">{settingsStrings.loading}</p>

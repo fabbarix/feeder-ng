@@ -25,6 +25,8 @@ export interface MealTileProps {
   onAddCourse?: (key: SlotKey) => void
   /** The per-date choices (slot menu entries, Plan <Slot> again on a Not served slot). */
   dateActions?: SlotDateActions
+  /** B9-46 (PC-08): "Ben away" or "Everyone is away" in the slot header (DayTile reads it from the plan's Aways). */
+  awayLabel?: { text: string; everyone: boolean }
 }
 
 const noop = () => {}
@@ -33,13 +35,13 @@ const noop = () => {}
  * A Meal Slot on a day tile (ds-plan): the slot header (name, time, Cook and ⋮), then a list of Course rows (PlanCourseRow).
  * One structure for one Course and for several. A Not served date is one compact row (NotServedRow).
  */
-export function MealTile({ slot, today, onOpen, onSwap, onPin = noop, onUnpin = noop, onChoose, onCook, onMarkAllCooked = noop, onNotCookedSlot = noop, onAddCourse = noop, dateActions }: MealTileProps): ReactNode {
+export function MealTile({ slot, today, onOpen, onSwap, onPin = noop, onUnpin = noop, onChoose, onCook, onMarkAllCooked = noop, onNotCookedSlot = noop, onAddCourse = noop, dateActions, awayLabel }: MealTileProps): ReactNode {
   if (dateActions && slot.notServed) return <NotServedRow slot={slot} offline={dateActions.offline} onPlanAgain={dateActions.onPlanAgain} />
   const rows = slotRows(slot)
   if (rows.length === 0) return null
   return (
     <div className="plan-meal">
-      <SlotHeader slot={slot} today={today} onCook={onCook} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} dateActions={dateActions} />
+      <SlotHeader slot={slot} today={today} onCook={onCook} onMarkAllCooked={onMarkAllCooked} onNotCookedSlot={onNotCookedSlot} onAddCourse={onAddCourse} dateActions={dateActions} awayLabel={awayLabel} />
       <ul aria-label={`${slot.name} Courses`} className="plan-meal__courses">
         {rows.map((row) => (
           <PlanCourseRow key={row.course.courseId} row={row} slot={slot} today={today} onOpen={onOpen} onSwap={onSwap} onPin={onPin} onUnpin={onUnpin} onChoose={onChoose} />
