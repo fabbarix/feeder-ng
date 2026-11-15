@@ -104,3 +104,45 @@ describe('the Select filter line', () => {
     expect(screen.getByRole('button', { name: '+3 more filters' })).toHaveAttribute('aria-expanded', 'false')
   })
 })
+
+// jsdom does not implement `inert`, so the hidden measuring copy of the chip line would take Tab stops a browser skips.
+const tab = async () => {
+  do await userEvent.tab()
+  while (document.activeElement?.closest('[inert]'))
+}
+
+describe('the open list by keyboard (Tab)', () => {
+  it('Tab moves from the search through the filter chips, "+N" and sort to the list, and the list stays open', async () => {
+    fit.visible = 2
+    await open({ searchable: true })
+    expect(screen.getByRole('searchbox')).toHaveFocus()
+    await tab()
+    expect(screen.getByRole('button', { name: 'Pasta' })).toHaveFocus()
+    await tab()
+    await tab()
+    expect(screen.getByRole('button', { name: '+3 more filters' })).toHaveFocus()
+    await tab()
+    expect(screen.getByRole('button', { name: /^Sort/ })).toHaveFocus()
+    await tab()
+    expect(screen.getByRole('listbox', { name: 'Recipe' })).toHaveFocus()
+  })
+  it('Escape from a filter chip closes the list and returns focus to the trigger', async () => {
+    await open({ searchable: true })
+    await tab()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Recipe' })).toHaveFocus()
+  })
+  it('a popover closes once focus leaves it', async () => {
+    render(
+      <>
+        <Select label="Recipe" options={options} filters={filters} sorts={sorts} value={null} onChange={() => {}} searchable />
+        <button type="button">after</button>
+      </>,
+    )
+    await userEvent.click(screen.getByRole('combobox', { name: 'Recipe' }))
+    screen.getByRole('button', { name: 'after' }).focus()
+    await screen.findByRole('button', { name: 'after' })
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
+})
