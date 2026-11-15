@@ -93,7 +93,8 @@ export function BoardScreen(): ReactNode {
   const idle = useIdle()
   const board = useBoard()
   const scheme = useBoardScheme(board.data, board.refetch)
-  useBoardPalette(scheme.dark)
+  // Before the board has loaded (or when it could not be) its scheme is not known: the User's own scheme stays.
+  useBoardPalette(board.data ? scheme.dark : null)
   const plan = usePlan()
   const settings = useHouseholdSettings()
   const markDone = useAdvanceDone()
