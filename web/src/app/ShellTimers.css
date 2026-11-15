@@ -1,7 +1,7 @@
 /* The shell's timers (PC-04; mocks/pc-04-timer-pill.html and pc-04-timer-done.html). Tokens only.
    The pill (ui/TimerPill, placed here): on phones and tablets fixed at the inline end, 16 px in, 16 px above the bottom bar (--nav-top,
    which is the bottom inset alone where no bar floats: landscape, the keyboard up) and the keyboard; lifted over a sticky action bar
-   the way the toast region is, so it never covers the bar or Save. From 64em it sits in the top bar, before Your menu. The shell
+   the way the toast region is, so it never covers the bar or Save. From 64em it sits in the top bar, centred. The shell
    keeps 16 px of room around it, so the pill's ring (inside its own fill, ui/focusLayer.css) is never clipped.
    The pill's room (--timer-pill-clearance) is published on the root while it shows: ui/Toast.css lifts the toast region by it, and
    a page without a sticky bar gets it as extra end room, so its last row can scroll out from under the pill.
@@ -56,8 +56,9 @@ html:has(.sticky-action-bar) .shell-timer {
   }
 }
 
-/* From 64em: in the top bar (64 px below the top inset), before Your menu (its 40 px button at the gutter), 6 px above and below
-   the pill. No drop shadow: it sits on the bar. Toasts no longer need to make room for it. */
+/* From 64em: in the top bar (64 px below the top inset), centred in it as the mock's 1440 render draws it (main-session call,
+   w4a), 6 px above and below the pill; at 1024 its 24rem cap keeps it clear of the brand and Your menu. No drop shadow: it sits
+   on the bar. Toasts no longer need to make room for it. */
 @media (min-width: 64em) {
   :root:has(.shell-timer) {
     --timer-pill-clearance: 0px;
@@ -66,7 +67,9 @@ html:has(.sticky-action-bar) .shell-timer {
   .shell-timer {
     inset-block-start: calc(var(--safe-top) + var(--space-1) + var(--space-half));
     inset-block-end: auto;
-    inset-inline-end: calc(max(var(--gutter), var(--safe-right)) + var(--space-10) + var(--space-4));
+    inset-inline: 0;
+    inline-size: fit-content;
+    margin-inline: auto;
   }
 
   html:has(.sticky-action-bar) .shell-timer {
