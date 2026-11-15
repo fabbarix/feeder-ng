@@ -1,3 +1,4 @@
+import { bottomBarNav } from '../test/shellNav'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
@@ -49,7 +50,7 @@ describe('PageErrorBoundary inside the shell (B12)', () => {
 
   it('keeps the navigation working and recovers when the User navigates away', async () => {
     mount()
-    const bar = screen.getByRole('navigation', { name: 'Bottom bar' })
+    const bar = bottomBarNav()
     await userEvent.click(within(bar).getByRole('link', { name: 'Shop' }))
     expect(screen.getByRole('heading', { name: 'Shop page' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Something went wrong' })).toBeNull()

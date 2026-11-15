@@ -1,5 +1,6 @@
 // B9-59 (RES-04): a nav link of the bottom bar or the side rail asks for its route's code on pointerdown and on focus.
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { bottomBarNav, sideRailNav } from '../test/shellNav'
+import { fireEvent, render, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AppShell } from './AppShell'
@@ -17,10 +18,10 @@ function setup(onNavIntent?: (path: string) => void) {
 }
 
 describe('AppShell nav intent', () => {
-  it.each(['Bottom bar', 'Side rail'])('%s: pointerdown and focus on a link name its path', (nav) => {
+  it.each([['bottom bar', bottomBarNav], ['side rail', sideRailNav]] as const)('%s: pointerdown and focus on a link name its path', (_name, nav) => {
     const onNavIntent = vi.fn()
     setup(onNavIntent)
-    const bar = screen.getByRole('navigation', { name: nav })
+    const bar = nav()
     fireEvent.pointerDown(within(bar).getByRole('link', { name: 'Plan' }))
     expect(onNavIntent).toHaveBeenLastCalledWith('/plan')
     fireEvent.focus(within(bar).getByRole('link', { name: 'Scan' }))
@@ -29,6 +30,6 @@ describe('AppShell nav intent', () => {
 
   it('without a handler the links work as before', () => {
     setup()
-    expect(() => fireEvent.pointerDown(within(screen.getByRole('navigation', { name: 'Bottom bar' })).getByRole('link', { name: 'Plan' }))).not.toThrow()
+    expect(() => fireEvent.pointerDown(within(bottomBarNav()).getByRole('link', { name: 'Plan' }))).not.toThrow()
   })
 })

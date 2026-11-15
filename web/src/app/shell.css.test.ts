@@ -348,12 +348,17 @@ describe('bottom bar with seven equal slots: Today, Plan, Pantry | Scan | Shop, 
     expect(Math.abs(l.scanCentre - l.barCentre)).toBeLessThanOrEqual(0.5)
   })
   // B9-19 review: the longest end label, "Settings" (43.2 px), and its neighbour "Recipes" (40.5 px), as Chrome sets them in the
-  // nav type. A label's bottom sits 7.5 px above the bar's inner bottom; the inner outline's rounded end (radius 24 - 1 border) is
-  // 6 px further in at that height. The shell guard (rule 15) measures the real labels at 376, 390 and 820.
+  // nav type. int1 measured the real geometry (the user's w2c bar: labels 6 px under the 40 px squircle, centred in the link): a label's
+  // bottom sits 3.5 px above the bar's inner bottom, so the lower corner of "Settings" is 3.8 px from the 23 px inner curve at 376 px
+  // (the earlier model said 7.5 px and 9.5 px of room, which the guard did not find). B9-49 gives the labelled band a smaller end radius
+  // (--radius-nav-compact, shell.b9-49.css.test.ts) and restores the 8 px: the model below uses the radius the band declares.
   it.each([376, 390, 430])('at %i px the end label keeps 8 px from the rounded end and 4 px from its neighbour (labels show from 376 px)', (vw) => {
     const l = layout(vw)
-    const ri = 23
-    const dy = ri - 7.5
+    const root = declarations(readStylesCss().replace(/\/\*[\s\S]*?\*\//g, ''), ':root')
+    const band = /(?:^|[}\s])\.bottom-bar\s*\{[^}]*border-radius:\s*var\((--[a-z-]+)\)/.exec(media('min-width: 23.5em) and (width < 37.5em'))?.[1]
+    const radius = Number.parseFloat(root[band ?? '--radius-nav'] ?? 'NaN')
+    const ri = radius - 1 // 1 px border
+    const dy = ri - 3.5
     const curveIn = ri - Math.sqrt(ri * ri - dy * dy)
     const endRoom = l.pad + (l.slot - 43.2) / 2 - curveIn
     const neighbour = l.slot + l.gap - (43.2 + 40.5) / 2
