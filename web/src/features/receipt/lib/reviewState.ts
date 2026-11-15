@@ -55,6 +55,12 @@ export function setAdd(state: ReviewState, id: string, draft: AddDraft): ReviewS
   return { adds: { ...state.adds, [id]: draft }, checked: { ...state.checked, [id]: isAddComplete(draft) } }
 }
 
+/** B9-50 (SSP-08) stub: the rows that need no choice (every kind but an Add and Not on the receipt): the N of "Accept all N". */
+export function acceptableCount(proposals: Proposal[]): number {
+  void proposals
+  return 0
+}
+
 /** A row that Accept all checks: never an Add (its form comes first) and never Not on the receipt (removing Stock is not a default). */
 const acceptable = (p: Proposal) => p.kind !== 'add' && p.kind !== 'missing'
 
@@ -84,7 +90,7 @@ export function applyCount(state: ReviewState, proposals: Proposal[]): number {
   return proposals.filter((p) => isChecked(state, p)).length
 }
 
-function ingredientOf(ingredient: AddIngredient | null): ApplyAdd['ingredient'] {
+function ingredientOf(ingredient: AddIngredient | null): { id: number } | { name: string; baseUnit: string; kind: string } {
   // An Add is sent only when complete, so the ingredient is set here.
   if (ingredient === null) return { name: '', baseUnit: 'g', kind: 'food' }
   if ('id' in ingredient) return { id: ingredient.id }

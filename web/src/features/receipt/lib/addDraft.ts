@@ -46,3 +46,9 @@ export function initialFromAdd(proposal: Proposal, draft: AddDraft | undefined, 
   }
   return out
 }
+
+/** B9-50 (SSP-08) stub: the draft of a line that is already a Product: it names the Product and nothing else. */
+export function draftFromProduct(productId: number): AddDraft {
+  void productId
+  return { ingredient: null, productName: '', packSize: 0 }
+}
