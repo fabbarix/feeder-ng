@@ -11,12 +11,17 @@
   --field-size-xs-stepper: 136px;
   --field-size-xs-stepper-unit: 168px; /* holds 3ch + a unit like "days" between the buttons */
   --field-size-sm-stepper: 192px;
-  /* A11Y-05 option B: the RULED shape of the Search field and the Segmented track (a stronger fill and a 2 px bottom rule);
-     the framed fields keep the 1.5 px outline all round. */
-  --field-fill-strong: var(--color-surface-3);
   --field-rule-width: 2px;
-  --field-rule-color: var(--color-outline);
   --field-radius-ruled: var(--radius-control) var(--radius-control) var(--space-1) var(--space-1);
+}
+
+/* A11Y-05 option B: the RULED shape of the Search field and the Segmented track (a stronger fill and a 2 px bottom rule); the
+   framed fields keep the 1.5 px outline all round. The colours are declared again on every [data-scheme] element, so a subtree
+   in the other scheme (the Gallery's dark half) resolves them from its own palette, not from :root's. */
+:root,
+[data-scheme] {
+  --field-fill-strong: var(--color-surface-3);
+  --field-rule-color: var(--color-outline);
 }
 
 .ui-field {
