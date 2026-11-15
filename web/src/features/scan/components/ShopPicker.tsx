@@ -52,7 +52,7 @@ export function ShopPicker({ shops, lastShopId, onPick, onStockTake, nearby, onA
   const showFind = nearby !== undefined && nearby.anyLocated && !here
   return (
     <section className="shop-picker">
-      <PageHeader title={scanStrings.pickShop} subtitle={scanStrings.pickShopHint} />
+      <PageHeader title={scanStrings.pickShop} subtitle={scanStrings.pickShopHint} documentTitle={scanStrings.title} />
       {shops.length === 0 ? <EmptyState icon="shops" title={scanStrings.noShops} description={scanStrings.noShopsHint} /> : null}
       <ListGroup label={scanStrings.shopsList}>
         {ordered.map((shop) => {
