@@ -31,8 +31,9 @@ describe('ReadErrorTile', () => {
     const focus = declarations(css, '.read-error:focus')
     expect(focus.outline).toMatch(/3px solid var\(--color-accent\)/)
   })
-  it('is a danger status tile announced as an alert, with the message', () => {
+  it('is a warn status tile (a failed read loses nothing: DS-06) announced as an alert, with the message', () => {
     const { container } = setup({ code: 'assistant_busy' })
+    expect(container.querySelector('.tile')).toHaveAttribute('data-status', 'warn')
     expect(screen.getByRole('alert')).toHaveTextContent('Anthropic is busy. Try again in a minute.')
     expect(container.querySelector('.tile')).toContainElement(screen.getByRole('alert'))
   })

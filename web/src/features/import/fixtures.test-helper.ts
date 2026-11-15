@@ -1,7 +1,7 @@
 // Plan builders shared by the tests of this feature.
 import { vi } from 'vitest'
 import type { UseImportReview } from './hooks/useImportReview'
-import type { CourseMatch, IngredientMatch, Plan, RecipeStatus, ReviewPhoto, UnitPrompt } from './types'
+import type { CourseMatch, IngredientMatch, Plan, RecipePreview, RecipeStatus, ReviewPhoto, UnitPrompt } from './types'
 
 export function match(over: Partial<IngredientMatch> & { key: string }): IngredientMatch {
   return {
@@ -19,12 +19,33 @@ export function prompt(over: Partial<UnitPrompt> = {}): UnitPrompt {
   return { key: 'spinach', ingredient: 'spinach', unit: 'handful', base: 'g', usedBy: ['$.recipes[0].ingredients[1]'], answered: false, ...over }
 }
 
+/** B9-28: a RecipePreview of a plannable Recipe: 4 portions, 2 Ingredient lines and 2 Steps, the main Course. */
+export function preview(over: Partial<RecipePreview> = {}): RecipePreview {
+  return {
+    yield: 4,
+    readyMeal: false,
+    baseRecipe: false,
+    courses: ['Main'],
+    tags: [],
+    lines: [
+      { quantity: 800, unit: 'g', ingredient: 'chicken thighs', note: 'boneless, skinless', optional: false },
+      { quantity: 250, unit: 'g', ingredient: 'greek yogurt', optional: false },
+    ],
+    steps: [
+      { text: 'Marinate the chicken.', kind: 'advance', durationMinutes: 10, leadTimeMinutes: 240 },
+      { text: 'Roast until golden.', kind: 'passive', durationMinutes: 25, leadTimeMinutes: 0 },
+    ],
+    hasImage: false,
+    ...over,
+  }
+}
+
 export function recipe(over: Partial<RecipeStatus> = {}): RecipeStatus {
-  return { index: 0, name: 'Chicken tikka traybake', status: 'new', resolved: true, ...over }
+  return { index: 0, name: 'Chicken tikka traybake', status: 'new', resolved: true, preview: preview(), ...over }
 }
 
 export function plan(over: Partial<Plan> = {}): Plan {
-  return { ingredients: [], unitPrompts: [], recipes: [], courses: [], baseRecipeLines: [], takeOvers: [], problems: [], warnings: [], ready: true, ...over }
+  return { ingredients: [], unitPrompts: [], recipes: [recipe()], courses: [], baseRecipeLines: [], takeOvers: [], problems: [], warnings: [], ready: true, ...over }
 }
 
 /** The Recipe Assistant part of a UseImportReview mock: a review that came from a file (no photos). */

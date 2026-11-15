@@ -138,11 +138,12 @@ describe('ImportScreen, the answers', () => {
 })
 
 describe('ImportScreen, Confirm waits for an answer', () => {
-  it('an unanswered tile disables Confirm even when the plan says ready, and says which', () => {
+  it('an unanswered tile keeps the Import button enabled but never imports (B9-28: it moves to the question), and the bar counts it', async () => {
     view()
-    expect(screen.getByRole('button', { name: 'Confirm import' })).toBeDisabled()
-    expect(screen.getByText('1 thing left to answer')).toBeInTheDocument()
-    expect(screen.getByText('Confirm needs an answer to "500 ml béchamel"')).toBeInTheDocument()
+    expect(screen.getByText('1 question left')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^Import \d+ Recipes?$/ }))
+    expect(h.review.confirm).not.toHaveBeenCalled()
+    expect(screen.getByText('Answer the 1 question first')).toBeInTheDocument()
   })
 
   it('an exact match is preselected but the User still confirms: Confirm is enabled once every tile has its answer', async () => {
@@ -151,7 +152,7 @@ describe('ImportScreen, Confirm waits for an answer', () => {
     })
     view()
     expect(screen.getByRole('radio', { name: /Use Base recipe Béchamel/ })).toBeChecked()
-    const confirm = screen.getByRole('button', { name: 'Confirm import' })
+    const confirm = screen.getByRole('button', { name: /^Import \d+ Recipes?$/ })
     expect(confirm).toBeEnabled()
     await userEvent.click(confirm)
     expect(h.review.confirm).toHaveBeenCalledOnce()
@@ -334,9 +335,11 @@ describe('ImportScreen, Problems and asks outside the tiles', () => {
     expect(h.review.chooseTakeOver).toHaveBeenCalledWith('$.recipes[1]', false)
   })
 
-  it('an unanswered ask of a file Recipe blocks Confirm', () => {
+  it('an unanswered ask of a file Recipe is a question: the bar counts it and Import does not confirm', async () => {
     h.review = state({ plan: open({ baseRecipeLines: [], takeOvers: [takeOver({ path: '$.recipes[1]', name: 'Roux' })] }) })
     view()
-    expect(screen.getByRole('button', { name: 'Confirm import' })).toBeDisabled()
+    expect(screen.getByText('1 question left')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^Import \d+ Recipes?$/ }))
+    expect(h.review.confirm).not.toHaveBeenCalled()
   })
 })
