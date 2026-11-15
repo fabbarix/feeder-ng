@@ -220,6 +220,12 @@
   row-gap: 0;
 }
 
+/* batch w5a: a long pack ("1 × Washing-up liquid 750 ml") wraps inside its own part too, so no part is wider than the line */
+.list-row[data-meta-wrap='true'] .scanned-row__meta > :first-child {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
 .scanned-row__tick {
   color: var(--status-success-fg);
 }

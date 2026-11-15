@@ -42,6 +42,9 @@ export function ToGetList({ rows, pendingKeys, onTick, celebration }: ToGetListP
             meta={<CoverMeta size={entry.packLine} cover={busy ? { ...cover, done: true } : cover} byHand={byHand} />}
             value={value.value}
             subValue={value.subValue}
+            // batch w5a (P23): a row with a pack ("3 × Passata 700 g · 0 of 1.53 kg") wraps its second line, the tick and its "x of y"
+            // together, rather than be cut beside the value and its Price (390 and 834)
+            data-meta-wrap={entry.packLine ? 'true' : undefined}
           />
         )
       })}

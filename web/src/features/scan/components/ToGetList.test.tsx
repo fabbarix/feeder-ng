@@ -70,6 +70,13 @@ describe('ToGetList: tick by hand', () => {
     expect(row).toHaveTextContent('2 × Mutti 700 g')
   })
 
+  it('a row with a pack may wrap its second line (data-meta-wrap), so "2 × Mutti 700 g · 0 of 1.4 kg" is never cut (P23, batch w5a); a row without a pack keeps one line', () => {
+    const { list } = setup()
+    const [withPack, withoutPack] = within(list).getAllByRole('listitem')
+    expect(withPack).toHaveAttribute('data-meta-wrap', 'true')
+    expect(withoutPack).not.toHaveAttribute('data-meta-wrap')
+  })
+
   it('the second line has exactly one tick, hollow, and "x of y"', () => {
     const { list } = setup()
     const meta = within(list).getAllByRole('listitem')[0]!.querySelector('.list-row__meta')!
