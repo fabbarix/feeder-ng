@@ -200,8 +200,9 @@ describe('avatar menu (5.17)', () => {
     expect(trigger['height']).toBe('40px')
     expect(trigger['border-radius']).toBe('var(--radius-control)') // 14 px (DS-11)
   })
-  it('Sign out is danger tertiary text; the divider is a hairline', () => {
-    expect(d(".your-menu__item[data-tone='danger']")['color']).toBe('var(--status-danger-fg)')
+  // B9-55 (DS-06): Sign out is a neutral item (it loses nothing), so no danger rule is left.
+  it('Sign out is neutral text (no danger rule); the divider is a hairline', () => {
+    expect(() => d(".your-menu__item[data-tone='danger']")).toThrow(/no CSS rule/)
     expect(d('.your-menu__divider')['background']).toBe('var(--color-line)')
   })
   it('the scrim covers the viewport, below the menu', () => {

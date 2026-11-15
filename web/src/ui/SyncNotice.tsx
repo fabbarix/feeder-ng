@@ -1,5 +1,5 @@
 // RES-03: the notice for what did not sync ("Couldn't sync the Tick of Carrot.") or synced twice ("Carrot was ticked twice").
-// A tile in the danger or info tone: a 24 px icon, a body-strong headline, an optional muted subline, optional R-E rows (a DetailList) and
+// A tile in the warn or info tone (DS-06: a refused sync needs a decision, it is not a loss): a 24 px icon, a body-strong headline, an optional muted subline, optional R-E rows (a DetailList) and
 // secondary small Buttons (R-A). It renders and wires events only; the copy comes from the caller.
 import type { ReactNode } from 'react'
 import { Button } from './Button'
@@ -24,7 +24,7 @@ export interface SyncNoticeAction {
 }
 
 export interface SyncNoticeProps {
-  tone: 'danger' | 'info'
+  tone: 'warn' | 'info'
   /** The headline, body-strong. */
   title: ReactNode
   /** The muted subline. */
@@ -36,14 +36,14 @@ export interface SyncNoticeProps {
 }
 
 /**
- * A refused sync is an alert (danger, a loss); a Line ticked twice is a status (info): it can arrive while nobody is looking, so it
+ * A refused sync is an alert (warn: it asks for a decision, B9-55 / DS-06); a Line ticked twice is a status (info): it can arrive while nobody is looking, so it
  * is announced politely and focus stays where it was.
  */
 export function SyncNotice({ tone, title, subtitle, rows, actions }: SyncNoticeProps) {
   return (
-    <div className="sync-notice" data-tone={tone} role={tone === 'danger' ? 'alert' : 'status'}>
+    <div className="sync-notice" data-tone={tone} role={tone === 'warn' ? 'alert' : 'status'}>
       <span className="sync-notice__icon">
-        <Icon name={tone === 'danger' ? 'spoiled' : 'info'} size={24} />
+        <Icon name={tone === 'warn' ? 'warning' : 'info'} size={24} />
       </span>
       <div className="sync-notice__body">
         <p className="sync-notice__title">{title}</p>

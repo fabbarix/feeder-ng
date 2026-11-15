@@ -811,10 +811,6 @@ html[data-keyboard='open'] .bottom-bar {
   background: var(--color-soft);
 }
 
-.your-menu__item[data-tone='danger'] {
-  color: var(--status-danger-fg);
-}
-
 .your-menu__divider {
   height: 1px;
   margin-block: var(--space-2);

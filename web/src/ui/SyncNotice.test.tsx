@@ -1,5 +1,5 @@
 // B9-13, RES-03: SyncNotice, the notice for what did not sync ("Couldn't sync the Tick of Carrot.") or synced twice
-// ("Carrot was ticked twice"). A tile in the danger or info tone: a 24 px icon, a body-strong headline, an optional muted subline,
+// ("Carrot was ticked twice"). A tile in the warn or info tone (B9-55, DS-06: was danger): a 24 px icon, a body-strong headline, an optional muted subline,
 // optional R-E rows (key, amount at the end, time muted under the key) and secondary small Buttons (R-A outline on --color-surface).
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -7,13 +7,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { SyncNotice, SyncNoticeStack, stackNotices } from './SyncNotice'
 import { declarations, readUiCss } from './test-utils'
 
-describe('SyncNotice: a danger notice says one fact', () => {
+describe('SyncNotice: a warn notice says one fact', () => {
   const view = () => {
     const onAdd = vi.fn()
     const onDismiss = vi.fn()
     const r = render(
       <SyncNotice
-        tone="danger"
+        tone="warn"
         title="Couldn’t sync the Tick of Carrot."
         subtitle="It is no longer on the Shopping List for this range. Its Stock Lot was not added."
         actions={[
@@ -24,11 +24,11 @@ describe('SyncNotice: a danger notice says one fact', () => {
     )
     return { ...r, onAdd, onDismiss }
   }
-  it('is a danger-tone alert: a decorative 24 px icon, the headline, the muted subline', () => {
+  it('is a warn-tone alert: a decorative 24 px icon, the headline, the muted subline', () => {
     const { container } = view()
     const n = screen.getByRole('alert')
     expect(n).toHaveClass('sync-notice')
-    expect(n).toHaveAttribute('data-tone', 'danger')
+    expect(n).toHaveAttribute('data-tone', 'warn')
     expect(within(n).getByText('Couldn’t sync the Tick of Carrot.')).toHaveClass('sync-notice__title')
     expect(within(n).getByText(/Its Stock Lot was not added/)).toHaveClass('sync-notice__subline')
     const icon = container.querySelector('.sync-notice__icon svg')!
@@ -61,7 +61,7 @@ describe('SyncNotice: a danger notice says one fact', () => {
     expect(n.querySelector('.sync-notice__title')!.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
   it('no subline and no actions are fine: just the icon and the headline', () => {
-    const { container } = render(<SyncNotice tone="danger" title="Couldn’t sync a Scan: Rice organic pack" />)
+    const { container } = render(<SyncNotice tone="warn" title="Couldn’t sync a Scan: Rice organic pack" />)
     expect(container.querySelector('.sync-notice__subline')).toBeNull()
     expect(container.querySelector('.sync-notice__actions')).toBeNull()
   })
@@ -137,7 +137,7 @@ describe('stackNotices: newest first, at most 3, then "and N more"', () => {
 })
 
 describe('SyncNoticeStack', () => {
-  const notices = ['one', 'two', 'three', 'four', 'five'].map((id) => ({ id, tone: 'danger' as const, title: `Couldn’t sync ${id}` }))
+  const notices = ['one', 'two', 'three', 'four', 'five'].map((id) => ({ id, tone: 'warn' as const, title: `Couldn’t sync ${id}` }))
   it('shows the newest three, newest first, and says "and 2 more"', () => {
     render(<SyncNoticeStack notices={notices} />)
     const titles = document.querySelectorAll('.sync-notice__title')
@@ -166,10 +166,11 @@ describe('SyncNotice.css', () => {
     expect(d['border-radius']).toBe('var(--radius-tile-sm)')
     expect(d.padding).toBe('var(--space-4)')
   })
-  it('danger is the danger status pair; info is the info pair (contrast 9.58 / 7.37 light)', () => {
-    const danger = declarations(css, ".sync-notice[data-tone='danger']")
-    expect(danger.background).toBe('var(--status-danger-bg)')
-    expect(danger.color).toBe('var(--status-danger-fg)')
+  it('warn is the warn status pair with its 1 px rule, as the warn Tile (B9-55, DS-06); info is the info pair', () => {
+    const warn = declarations(css, ".sync-notice[data-tone='warn']")
+    expect(warn.background).toBe('var(--status-warn-bg)')
+    expect(warn.color).toBe('var(--status-warn-fg)')
+    expect(warn.border).toBe('1px solid var(--status-warn-fg)')
     const info = declarations(css, ".sync-notice[data-tone='info']")
     expect(info.background).toBe('var(--color-info-bg)')
     expect(info.color).toBe('var(--color-info-fg)')

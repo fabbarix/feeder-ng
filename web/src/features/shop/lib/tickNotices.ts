@@ -17,7 +17,7 @@ export interface TickNotice {
   /** the client id of the Tick the notice is about: a result seen twice (a retry's `duplicate`) is one notice */
   id: string
   kind: 'twice' | 'refused' | 'untickRefused'
-  tone: 'info' | 'danger'
+  tone: 'info' | 'warn'
   title: string
   subtitle?: string
   rows?: TickNoticeRow[]
@@ -61,7 +61,7 @@ export function tickNotices(input: TickNoticeInput): TickNotice[] {
 function untickNotice(r: ScanResult, op: Op, input: TickNoticeInput): TickNotice | null {
   if (r.status !== 'rejected') return null
   const title = shopStrings.untickRefusedTitle(input.titleOf(op))
-  return { id: op.clientUuid, kind: 'untickRefused', tone: 'danger', title, subtitle: shopStrings.untickRefusedBody, actions: [DISMISS], op }
+  return { id: op.clientUuid, kind: 'untickRefused', tone: 'warn', title, subtitle: shopStrings.untickRefusedBody, actions: [DISMISS], op }
 }
 
 function tickNotice(r: ScanResult, op: Op, input: TickNoticeInput): TickNotice | null {
@@ -69,7 +69,7 @@ function tickNotice(r: ScanResult, op: Op, input: TickNoticeInput): TickNotice |
   if (r.status === 'rejected') {
     const subtitle = r.error?.code === 'not_on_list' ? shopStrings.refusedNotOnList : shopStrings.refusedOther
     const actions = (op.quantity ?? 0) > 0 ? [{ id: 'addToStock' as const, label: shopStrings.addToStock }, DISMISS] : [DISMISS]
-    return { id: op.clientUuid, kind: 'refused', tone: 'danger', title: shopStrings.refusedTitle(name), subtitle, actions, op }
+    return { id: op.clientUuid, kind: 'refused', tone: 'warn', title: shopStrings.refusedTitle(name), subtitle, actions, op }
   }
   // a tick of the "more since your tick" row is a second purchase on purpose: the User's own earlier additions are not news
   const before = (r.tick?.alsoTickedBy ?? []).filter((a) => !(op.more && a.mine))
