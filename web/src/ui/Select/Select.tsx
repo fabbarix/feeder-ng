@@ -8,8 +8,9 @@ import type { FieldSizeProps } from '../fields/Field'
 import { FieldFrame, useFieldIds } from '../fields/FieldFrame'
 import { buildList, type SelectFilter, type SelectSort } from './buildList'
 import { SelectPanel } from './SelectPanel'
-import { typeAheadMatch, typeAheadStep, nextEnabledIndex, firstEnabledIndex, type SelectOption, type TypeAheadBuffer } from './lib'
+import { typeAheadMatch, typeAheadStep, nextEnabledIndex, firstEnabledIndex, optionsPerPage, pageIndex, type SelectOption, type TypeAheadBuffer } from './lib'
 import { selectStrings } from './strings'
+import { useChipFit } from './useChipFit'
 import './Select.css'
 
 export type { SelectFilter, SelectSort } from './buildList'
@@ -41,6 +42,11 @@ interface SelectBaseProps<V extends string | number> extends SelectFieldProps {
   appearance?: 'chip'
   /** Chip only: an icon before the value, instead of the selected option's own leading visual. */
   icon?: IconName
+  /**
+   * DS-03 (decision DS 6): a chip with an `icon` whose value does not fit shows only its icon and chevron. Its value stays in the DOM,
+   * visually hidden, and the name and title become "<label>: <value>". Ignored without an `icon` or outside `appearance="chip"`.
+   */
+  iconOnly?: boolean
   /** BR-D: exact matches of the search (or of what is typed) come first; among them `preferred` options lead. */
   exactFirst?: boolean
 }
@@ -127,6 +133,7 @@ function SelectCore<V extends string | number>({
   onClear,
   appearance,
   icon,
+  iconOnly,
 }: CoreProps<V>) {
   const ids = useFieldIds()
   const baseId = useId()
@@ -143,7 +150,10 @@ function SelectCore<V extends string | number>({
   const [typedText, setTypedText] = useState('')
   const [activeFilters, setActiveFilters] = useState<string[]>([])
   const [sortIndex, setSortIndex] = useState(0)
+  const [toolsExpanded, setToolsExpanded] = useState(false)
   const [active, setActive] = useState(-1)
+  // SET-06: a pointer that moves the active option does not scroll the list; keys do.
+  const activeByPointer = useRef(false)
   const typed = useRef<TypeAheadBuffer>({ text: '', at: 0 })
   const keyHandledAt = useRef(0)
   const anchor = useRef<HTMLDivElement>(null)
@@ -180,6 +190,7 @@ function SelectCore<V extends string | number>({
     const fresh = build('', [], sortIndex)
     setQuery('')
     setActiveFilters([])
+    setToolsExpanded(false)
     const selectedAt = fresh.flat.findIndex((o) => isChosen(o, selected))
     setActive(selectedAt >= 0 ? selectedAt : fresh.firstEnabled)
     setOpen(true)
@@ -254,6 +265,13 @@ function SelectCore<V extends string | number>({
       case 'End':
         e.preventDefault()
         return setActive(lastEnabledIndex(current.nav))
+      case 'PageDown':
+      case 'PageUp': {
+        // A page of options at a time, as a listbox does; the active option is scrolled into view like any other move.
+        e.preventDefault()
+        const size = optionsPerPage(list.current)
+        return setActive((a) => pageIndex(current.nav, a, e.key === 'PageDown' ? 1 : -1, size))
+      }
       case 'Enter':
         e.preventDefault()
         return pickIndex(active)
@@ -265,7 +283,10 @@ function SelectCore<V extends string | number>({
         e.preventDefault()
         return close(true)
       case 'Tab':
-        return close(false)
+        // From the trigger, Tab leaves the list closed. From the search or the list it moves on inside the panel (the filter chips, "+N",
+        // the sort button, the list), as any Tab does; a popover closes once focus leaves it (below), and a sheet keeps focus inside.
+        if (e.currentTarget === trigger.current) close(false)
+        return
       default:
         if (!showSearch && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
           e.preventDefault()
@@ -273,6 +294,17 @@ function SelectCore<V extends string | number>({
         }
     }
   }
+
+  // SET-06: the active option is always scrolled into view (arrows, Home/End, type-ahead, a new query), at the nearest edge.
+  useEffect(() => {
+    if (!open || active < 0) return
+    if (activeByPointer.current) {
+      activeByPointer.current = false
+      return
+    }
+    document.getElementById(optionId(active))?.scrollIntoView?.({ block: 'nearest' })
+    // optionId depends only on baseId, so the open state and the active index drive the scroll.
+  }, [open, active])
 
   // Focus: the search field when there is one (popover); the sheet focuses its search or list itself.
   useEffect(() => {
@@ -289,22 +321,40 @@ function SelectCore<V extends string | number>({
     return () => document.removeEventListener('mousedown', onDown)
   })
 
+  // Focus that leaves the trigger and the popover (Tab past the last control, or a click elsewhere) closes the popover.
+  useEffect(() => {
+    if (!open || phone) return
+    const onFocusIn = (e: FocusEvent) => {
+      if (!anchor.current?.contains(e.target as Node)) close(false)
+    }
+    document.addEventListener('focusin', onFocusIn)
+    return () => document.removeEventListener('focusin', onFocusIn)
+  })
+
   useFloatingPopover(open && !phone, trigger, popover, 'flex')
 
   const selectedOption = options.find((o) => selected.includes(o.value))
+  const chip = appearance === 'chip' && !multi
+  // B9-15: a chip shows its option's shortLabel only when its own row has no room for the full value (useChipFit, no window query).
+  const fullValue = selectedOption?.triggerLabel ?? selectedOption?.label
+  const canShorten = chip && Boolean(selectedOption?.shortLabel)
+  const showsFull = useChipFit(anchor, canShorten)
+  const shortened = canShorten && !showsFull
   // b8-shop: a chip that shows a shorter value than its label keeps the full label as its title (the name stays the label).
-  const chipTitle = appearance === 'chip' && !multi && selectedOption?.triggerLabel && selectedOption.triggerLabel !== selectedOption.label ? selectedOption.label : undefined
+  const chipTitle = shortened ? selectedOption?.label : chip && selectedOption?.triggerLabel && selectedOption.triggerLabel !== selectedOption.label ? selectedOption.label : undefined
   const triggerText = multi
     ? options
         .filter((o) => selected.includes(o.value))
         .map((o) => o.label)
         .join(', ')
-    : (selectedOption?.triggerLabel ?? selectedOption?.label ?? clearLabel ?? '')
+    : ((shortened ? selectedOption?.shortLabel : fullValue) ?? clearLabel ?? '')
+  const iconOnlyOn = Boolean(iconOnly && icon && chip)
+  const iconOnlyName = iconOnlyOn ? selectStrings.iconOnlyName(label, triggerText) : undefined
   const activeId = open && active >= 0 ? optionId(active) : undefined
   const panel = (
     <SelectPanel<V>
       listboxId={listboxId}
-      labelId={ids.labelId}
+      label={label}
       multi={multi}
       showSearch={showSearch}
       searchLabel={selectStrings.searchFor(entity)}
@@ -313,12 +363,15 @@ function SelectCore<V extends string | number>({
       searchRef={search}
       listRef={list}
       onKey={onKey}
+      onEscape={() => close(true)}
       filters={filters}
       activeFilters={activeFilters}
       onToggleFilter={toggleFilter}
       sorts={sorts}
       sortIndex={sortIndex}
       onCycleSort={cycleSort}
+      toolsExpanded={toolsExpanded}
+      onToggleTools={() => setToolsExpanded((x) => !x)}
       list={current}
       createDisabledReason={createDisabledReason}
       selected={selected}
@@ -327,7 +380,11 @@ function SelectCore<V extends string | number>({
       activeId={activeId}
       emptyText={current.flat.length === 0 && current.createText === null ? (query.trim() ? selectStrings.noMatch(entity, query.trim()) : selectStrings.noneToChoose(entity)) : null}
       onPick={pickIndex}
-      onHover={setActive}
+      onHover={(i) => {
+        if (i === active) return
+        activeByPointer.current = true
+        setActive(i)
+      }}
     />
   )
 
@@ -343,14 +400,16 @@ function SelectCore<V extends string | number>({
           aria-expanded={open}
           aria-controls={open ? listboxId : undefined}
           aria-activedescendant={activeId}
-          aria-labelledby={ids.labelId}
+          aria-labelledby={iconOnlyOn ? undefined : ids.labelId}
+          aria-label={iconOnlyName}
           aria-describedby={helper || error ? [helper ? ids.helperId : '', error ? ids.errorId : ''].filter(Boolean).join(' ') : undefined}
           aria-invalid={error ? true : undefined}
           aria-required={required || undefined}
           disabled={disabled}
           data-appearance={appearance}
+          data-icon-only={iconOnlyOn ? 'true' : undefined}
           data-placeholder={triggerText === '' ? '' : undefined}
-          title={chipTitle}
+          title={iconOnlyName ?? chipTitle}
           onClick={(e) => {
             // A click that follows a key the keydown handler already acted on (Space fires click on keyup) is ignored.
             if (e.detail === 0 && Date.now() - keyHandledAt.current < KEY_CLICK_WINDOW_MS) return
@@ -360,15 +419,21 @@ function SelectCore<V extends string | number>({
           onKeyDown={onKey}
         >
           {!multi && icon ? (
-            <span className="select__leading">
+            <span className="select__leading" aria-hidden="true">
               <Icon name={icon} size={20} />
             </span>
           ) : !multi && selectedOption?.leading ? (
-            <span className="select__leading">{selectedOption.leading}</span>
+            <span className="select__leading" aria-hidden="true">{selectedOption.leading}</span>
           ) : null}
-          <span className="select__value">{triggerText === '' ? (placeholder ?? '') : triggerText}</span>
+          <span className={iconOnlyOn ? 'select__value visually-hidden' : 'select__value'}>{triggerText === '' ? (placeholder ?? '') : triggerText}</span>
           <Icon name="expand" size={20} />
         </button>
+        {/* B9-15: the full value at its natural width, hidden, beside the trigger (so the trigger's text stays its value): useChipFit reads it. */}
+        {canShorten ? (
+          <span className="select__measure" aria-hidden="true">
+            {fullValue}
+          </span>
+        ) : null}
         {open && !phone ? (
           <div ref={popover} popover={floatingPopoverAttr()} className="select__popover">
             {panel}

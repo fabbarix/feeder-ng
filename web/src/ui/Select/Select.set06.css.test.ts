@@ -1,0 +1,75 @@
+// B9-15 (SET-06, docs/design/ui-review-3/settings.md): the stylesheet of the one-line chip strip, the two-line option and the ring room.
+// jsdom lays nothing out, so the rules are pinned here and the guard's planning-recipe-select scenario checks them in a browser.
+import { describe, expect, it } from 'vitest'
+import { declarations, readUiCss, ruleBlocks } from '../test-utils'
+
+const css = readUiCss('Select/Select.css')
+const blocks = ruleBlocks(css)
+const bodyOf = (pred: (selector: string) => boolean) => blocks.filter((b) => b.selectors.some(pred)).map((b) => b.body).join('\n')
+
+describe('Select.css: the chip strip', () => {
+  it('is one line that clips its overflow, padded 5 px and pulled back 5 px so rings are not cut', () => {
+    const t = declarations(css, '.select__tools')
+    expect(t['flex-wrap']).toBe('nowrap')
+    expect(t['overflow']).toBe('hidden')
+    // B9-15 developer: written with the ring tokens (3 px + 2 px), as the main session ruled for the panel; check-ui raw-spacing fails a raw 5px.
+    expect(t['padding']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
+    expect(t['margin']).toBe('calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)))')
+  })
+  it('wraps once "+N" has expanded it', () => {
+    expect(declarations(css, ".select__tools[data-expanded='true']")['flex-wrap']).toBe('wrap')
+  })
+  it('a chip never shrinks and is at most 12 rem wide', () => {
+    const c = declarations(css, '.select__tools > .chip')
+    expect(c['flex']).toBe('none')
+    expect(c['max-inline-size']).toBe('12rem')
+  })
+  it('the sort button never shrinks', () => {
+    expect(declarations(css, '.select__sort')['flex']).toBe('none')
+  })
+  it('a focused chip or sort button draws its ring inside itself on a soft fill (R-C+)', () => {
+    const body = bodyOf((s) => s.includes('.select__tools') && s.includes(':focus-visible'))
+    // B9-15 developer: the inner ring in the ring tokens (2 px, the ring colour), as focusLayer.css.test.ts requires of every ring.
+    expect(body).toMatch(/outline:\s*var\(--focus-ring-inner-width\) solid var\(--focus-ring-color\)/)
+    expect(body).toMatch(/outline-offset:\s*calc\(-1 \* var\(--focus-ring-inner-width\)\)/)
+    expect(body).toMatch(/background:\s*var\(--color-soft\)/)
+  })
+})
+
+describe('Select.css: options and the list', () => {
+  it('an option title wraps to at most two lines at word boundaries', () => {
+    const body = bodyOf((s) => s === '.select__label')
+    expect(body).toMatch(/white-space:\s*normal/)
+    expect(body).toMatch(/-webkit-line-clamp:\s*2/)
+    expect(body).not.toMatch(/white-space:\s*nowrap/)
+  })
+  it('the meta stays one line', () => {
+    expect(bodyOf((s) => s === '.select__meta')).toMatch(/white-space:\s*nowrap/)
+  })
+  it('the trigger value is still one line (only the options wrap)', () => {
+    expect(declarations(css, '.select__value')['white-space']).toBe('nowrap')
+  })
+  it('the list scrolls its active option clear of the edge: scroll-padding-block is a space step', () => {
+    expect(declarations(css, '.select__list')['scroll-padding-block']).toBe('var(--space-2)')
+  })
+  it('an option may grow past 56 px for two lines (min, not fixed, height)', () => {
+    const o = declarations(css, '.select__option')
+    expect(o['min-block-size']).toBe('56px')
+    expect(o['block-size']).toBeUndefined()
+  })
+})
+
+describe('Select.css: ring room', () => {
+  // Main session ruling (B9-15): the 5 px is written with the ring tokens, not a raw 5px.
+  it('the panel keeps 5 px around the search field so its 3 px ring at a 2 px offset shows in full', () => {
+    expect(declarations(css, '.select__panel')['padding']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
+  })
+})
+
+describe('Select.css: the placeholder (SAFE)', () => {
+  it('an empty Select shows its placeholder in the muted colour, at body weight', () => {
+    const p = declarations(css, ".select__trigger[data-placeholder] .select__value")
+    expect(p['color']).toBe('var(--color-muted)')
+    expect(p['font-weight']).toBe('var(--text-body-weight)')
+  })
+})

@@ -21,7 +21,8 @@ describe('RecipeSelect', () => {
     const onChange = vi.fn()
     render(<RecipeSelect label="Recipe" recipes={recipes} value={null} onChange={onChange} />)
     await open('Recipe')
-    expect(optionNames()).toEqual(['Beef stew120 min', 'Chickpea curry35 min', 'Zucchini bake40 min'])
+    // B9-15 (SET-06): 120 minutes reads "2 h" (it read "120 min").
+    expect(optionNames()).toEqual(['Beef stew2 h', 'Chickpea curry35 min', 'Zucchini bake40 min'])
     await userEvent.click(screen.getByRole('option', { name: /Beef stew/ }))
     expect(onChange).toHaveBeenCalledWith(2)
   })

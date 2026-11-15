@@ -15,7 +15,7 @@ export interface LineRowProps {
   onUntick?: (entry: ListEntry) => void
   /** the row was tapped: open its sheet with the group it is in */
   onOpen: (entry: ListEntry, group: RowGroup) => void
-  /** b8-polish: the narrow layout shows the short Restock reason; the screen decides (useNarrowChips) */
+  /** b8-polish: the narrow layout shows the short Restock reason; the screen decides (useCompactRows) */
   compact?: boolean
 }
 

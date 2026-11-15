@@ -48,6 +48,7 @@ import { OverlayGalleryGroups } from './GalleryOverlays'
 import { RowsGalleryGroup } from './GalleryRows'
 import { ControlsGalleryGroup } from './GalleryControls'
 import { ToastUndoGalleryGroup } from './GalleryToasts'
+import { SelectGallery } from './Select/SelectGallery'
 import './focusLayer.css'
 import './Gallery.css'
 
@@ -990,6 +991,7 @@ function Scheme({ scheme }: { scheme: 'light' | 'dark' }) {
       <TagDotGroup />
       <TagColourPickerGroup />
       <TagSelectGroup />
+      <SelectGallery />
       <OverlayGalleryGroups />
       <ControlsGalleryGroup />
       <ToastUndoGalleryGroup />
