@@ -2,7 +2,7 @@
 // attribute), Remove Member sits in the footer as an outlined danger button (the destructive slot: its own row under a divider below 600 px, the far start from 600 px; B9-14 FormActions), there is no Close (R-B), a dirty sheet asks "Discard
 // changes?", and a missing Name is explained under Name with focus on it. Remove Member itself only calls `onDelete`: the page asks first
 // (screens/MembersPage.remove.test.tsx).
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { anna, marco, sam } from './fixtures'
@@ -39,8 +39,13 @@ describe('the footer', () => {
   })
 
   it('Enter in Name saves, as the footer button does', async () => {
+    // user-event only submits on Enter through a submit button inside the <form>; it ignores one bound with the `form` attribute, which
+    // real browsers honour (checked in Chrome by the batch reviewer). So: Save Member is the form's submit button, and a submit saves.
     const { onSave } = open({ member: undefined })
-    await userEvent.type(screen.getByLabelText('Name'), 'Nonna{Enter}')
+    await userEvent.type(screen.getByLabelText('Name'), 'Nonna')
+    const form = dialog().querySelector('form') as HTMLFormElement
+    expect(Array.from(form.elements)).toContain(save())
+    fireEvent.submit(form)
     expect(onSave).toHaveBeenCalledTimes(1)
   })
 
