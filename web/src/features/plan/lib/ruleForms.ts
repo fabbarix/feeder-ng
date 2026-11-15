@@ -59,9 +59,10 @@ export function varietyRuleName(rule: Pick<VarietyRule, 'tag'>, tags: readonly T
 
 /** What puts a removed Slot Rule back: POST /api/slot-rules with the same Meal Slot, Course, and Recipe or Tag. */
 export function slotRuleBodyOf(rule: SlotRule): { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string } {
-  return {
-    mealSlotId: rule.mealSlotId,
-    ...(rule.courseId !== undefined ? { courseId: rule.courseId } : {}),
-    ...(rule.recipeId !== undefined ? { recipeId: rule.recipeId } : { tag: rule.tag ?? '' }),
-  }
+  const body: { mealSlotId: number; courseId?: number; recipeId?: number; tag?: string } = { mealSlotId: rule.mealSlotId }
+  // The rule goes back exactly as it was: its Course when it named one (never a made-up main Course).
+  if (rule.courseId !== undefined) body.courseId = rule.courseId
+  if (rule.recipeId !== undefined) body.recipeId = rule.recipeId
+  else body.tag = rule.tag ?? ''
+  return body
 }
