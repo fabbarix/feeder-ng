@@ -84,11 +84,18 @@
   pointer-events: none;
 }
 
-/* DS-01: the lift is scoped to the row's own trailing slot, so it never reaches the rows of a sheet mounted inside it. */
-.list-row > .list-row__trailing :is(button, a, input, select, [role='button']) {
+/* DS-01: the lift is the row's own trailing controls, never those of a sheet mounted inside the slot (a Menu's sheet before it is
+   portalled). The descendant combinator alone still reached them, at (0,3,0) over the target's (0,2,0): 0x0 targets. */
+.list-row > .list-row__trailing :is(button, a, input, select, [role='button']):not(dialog *) {
   position: relative;
   z-index: 1;
   pointer-events: auto;
+}
+
+/* DS-01: a dialog mounted inside a row does not inherit the row's click-through or the trailing slot's end alignment. */
+.list-row dialog {
+  pointer-events: auto;
+  text-align: start;
 }
 
 /* A row with an ActionGroup may wrap: below 35 rem the group takes its own line (system.md 5.4); wide, it stays at the end. */

@@ -53,11 +53,18 @@ describe('DS-01: the target keeps its box inside any row', () => {
   it('the interactive lift is scoped to the row’s own trailing slot: `.list-row > .list-row__trailing :is(...)`, never a bare `.list-row__trailing button`', () => {
     const src = strip(css)
     expect(src).not.toMatch(/(^|[\s,}])\.list-row__trailing\s+(button|a|input|select|\[role)/m)
-    const m = src.match(/\.list-row\s*>\s*\.list-row__trailing\s*:is\(([^)]*)\)\s*\{([^}]*)\}/)
+    const m = src.match(/\.list-row\s*>\s*\.list-row__trailing\s*:is\(([^)]*)\)(?::not\(dialog \*\))?\s*\{([^}]*)\}/)
     expect(m, 'a `.list-row > .list-row__trailing :is(…)` rule').not.toBeNull()
     for (const el of ['button', 'a', 'input', 'select', "[role='button']"]) expect(m![1]!.replace(/"/g, "'")).toContain(el)
     expect(m![2]).toMatch(/pointer-events\s*:\s*auto/)
     expect(m![2]).toMatch(/z-index\s*:\s*1\b/)
+  })
+  // Reviewer (B9-13): the descendant combinator still reached the buttons of a sheet mounted in the slot, at (0,3,0) over the
+  // target's (0,2,0), so the sheet's targets were 0x0 in Chrome. The lift leaves a dialog's controls alone, and a dialog in a row
+  // takes back pointer events and start alignment.
+  it('the lift never reaches a dialog mounted in the slot, and such a dialog is clickable and start-aligned', () => {
+    expect(strip(css)).toMatch(/\.list-row\s*>\s*\.list-row__trailing\s*:is\([^)]*\):not\(dialog \*\)\s*\{/)
+    expect(rule('.list-row dialog')).toMatchObject({ 'pointer-events': 'auto', 'text-align': 'start' })
   })
   it('the inset focus ring has the thumb radius (B9-07), unchanged', () => {
     expect(rule('.list-row__target:focus-visible')['border-radius']).toBe('var(--radius-thumb)')
