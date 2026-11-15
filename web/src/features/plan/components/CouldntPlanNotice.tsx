@@ -1,25 +1,41 @@
 import type { ReactNode } from 'react'
-import { useCauseExpansion } from '../hooks/useCauseExpansion'
+import { Button, Icon, Tile } from '../../../ui'
 import type { NoticeGroup } from '../hooks/useCouldntPlanNotice'
-import { CouldntPlanTile } from './CouldntPlanTile'
+import { planStrings as s } from '../strings'
+import { CouldntCauseRow } from './CouldntPlanTile'
 import '../plan.css'
 
 export interface CouldntPlanNoticeProps {
   groups: NoticeGroup[]
   onFix: (group: NoticeGroup) => void
-  /** Columns each tile takes: 2 (default, two causes side by side on 4 columns) or the full row. */
-  span?: 2 | 'full'
+  /** B9-32 (PC-07): opens the sheet of the affected meals; "Show which meals" is left out without it (Today). */
+  onShowMeals?: () => void
+  /** The grid tracks the tile takes; Today passes `full`. Default one track (the Plan's two-up grid). */
+  span?: 1 | 2 | 'full'
 }
 
-/** Couldn't plan: one tile per cause. Its wrapper is `display: contents`, so the tiles are items of the grid it sits in. */
-export function CouldntPlanNotice({ groups, onFix, span = 2 }: CouldntPlanNoticeProps): ReactNode {
-  const expansion = useCauseExpansion()
+/**
+ * B9-32 (PC-07): Couldn't plan as ONE compact info tile, a section named "Couldn't plan": the overline and "Show which
+ * meals" in its header, then one row per cause. The long explanation lives in the sheets.
+ */
+export function CouldntPlanNotice({ groups, onFix, onShowMeals, span }: CouldntPlanNoticeProps): ReactNode {
   if (groups.length === 0) return null
   return (
-    <div className="plan-couldnt-notice">
+    <Tile as="section" variant="status" status="info" span={span} aria-label={s.couldntPlanTitle} className="plan-couldnt">
+      <div className="couldnt-head">
+        <p className="tile__overline">
+          <Icon name="info" size={16} />
+          {s.couldntPlanTitle}
+        </p>
+        {onShowMeals ? (
+          <Button variant="secondary" size="sm" onClick={onShowMeals}>
+            {s.couldntShowMeals}
+          </Button>
+        ) : null}
+      </div>
       {groups.map((group) => (
-        <CouldntPlanTile key={group.cause} group={group} expanded={expansion.isOpen(group.cause)} onToggle={() => expansion.toggle(group.cause)} onFix={() => onFix(group)} span={span} />
+        <CouldntCauseRow key={group.cause} group={group} onFix={() => onFix(group)} />
       ))}
-    </div>
+    </Tile>
   )
 }

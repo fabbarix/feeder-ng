@@ -3,7 +3,7 @@
 // features' hooks, so Today's own components and hooks stay decoupled.
 import { useQueryClient } from '@tanstack/react-query'
 import type { UnitSystem } from '../../lib/units'
-import { heroSelection, useCouldntPlan, useLeftovers, usePlan, useToConfirm } from '../plan'
+import { heroNextChange, heroSelection, justServed, useCouldntPlan, useHeroClock, useLeftovers, usePlan, useToConfirm, withJustServed } from '../plan'
 import { notServedToday } from '../plan/lib/slotDate'
 import type { HeroAction, HeroDay } from '../plan'
 import type { Leftover, PlanEntry, PlanSlot } from '../plan/types'
@@ -29,6 +29,8 @@ export interface TodayPlanCounts {
   leftovers: number
   loading: boolean
   failed?: boolean
+  /** B9-39: offline, the plan never loaded (Today shows its LoadState). */
+  offlineUnknown?: boolean
   retry?: () => void
 }
 
@@ -41,13 +43,16 @@ export interface TodayStock {
 
 /** Everything the Today tiles display, read from the owning features. */
 export interface TodayTileData {
-  /** The clock the hero judges 'upcoming' or 'awaiting' by. */
+  /** The clock the hero is judged by (B9-39: useHeroClock, so the hero moves on at the slot time without a reload). */
   now: Date
   nextSlot: PlanSlot | null
   /** N3: which day the hero meal is on and what it offers (absent = today, Cook). */
   nextDay?: HeroDay
   nextAction?: HeroAction
+  /** B9-39 (TB-01): the just-served rows first (today's slots whose time has come), then the server's. */
   toConfirm: PlanEntry[]
+  /** B9-39 (TB-01): today's slots whose time has come that still have a Course to cook (the first part of `toConfirm`). */
+  justServed: PlanEntry[]
   couldntPlan: PlanEntry[]
   /** R13: the whole plan, so "every dinner" is measured against it. */
   planSlots?: PlanSlot[]
@@ -63,29 +68,35 @@ export interface TodayTileData {
   keep: (lotId: number) => Promise<void>
   planLoading: boolean
   stockLoading: boolean
-  /** The plan or stock behind the tiles could not be loaded and nothing is held (offline, server error). */
+  /** The plan or stock behind the tiles could not be loaded and nothing is held, online (a server error). */
   loadFailed?: boolean
+  /** B9-39 (RES-02): offline and the plan was never loaded on this phone: Today shows its LoadState, never an error. */
+  offlineUnknown?: boolean
   retry?: () => void
 }
 
 /** T11 and T10 data for the Today tiles. */
 export function useTodayTileData(): TodayTileData {
-  const now = new Date()
   const plan = usePlan()
+  const now = useHeroClock((at) => heroNextChange(plan.slots, at, plan.today))
   const toConfirm = useToConfirm()
   const couldntPlan = useCouldntPlan()
   const leftovers = useLeftovers()
   const spoiled = useSpoiledLots()
   const totals = useStockTotals()
   const client = useQueryClient()
-  const failed = plan.failed || toConfirm.failed || couldntPlan.failed || leftovers.failed || spoiled.status === 'error' || spoiled.status === 'offline' || totals.status === 'error' || totals.status === 'offline'
+  // Offline with nothing held is not a failure (a Try again could not work): the plan's offlineUnknown is the LoadState, and Stock
+  // that was never loaded simply shows no tile.
+  const failed = plan.failed || toConfirm.failed || couldntPlan.failed || leftovers.failed || spoiled.status === 'error' || totals.status === 'error'
   const hero = heroSelection(plan.slots, now, plan.today)
+  const served = justServed(plan.slots, now, plan.today)
   return {
     now,
     nextSlot: hero?.slot ?? null,
     nextDay: hero?.day,
     nextAction: hero?.action,
-    toConfirm: toConfirm.slots,
+    toConfirm: withJustServed(served, toConfirm.slots),
+    justServed: served,
     couldntPlan: couldntPlan.slots,
     planSlots: plan.slots,
     notServedToday: notServedToday(plan.slots, plan.today),
@@ -101,6 +112,7 @@ export function useTodayTileData(): TodayTileData {
     planLoading: plan.isLoading || toConfirm.isLoading || couldntPlan.isLoading || leftovers.isLoading,
     stockLoading: spoiled.isLoading || totals.isLoading,
     loadFailed: failed,
+    offlineUnknown: plan.state === 'offlineUnknown',
     // Everything Today reads: the plan (view, to-confirm, couldn't-plan, leftovers), Stock (spoiled, totals) and
     // Today's own queries (the streak, advance steps).
     retry: () => {
@@ -120,6 +132,7 @@ export function useTodayPlan(): TodayPlanCounts {
     leftovers: d.leftovers.length,
     loading: d.planLoading,
     failed: d.loadFailed === true,
+    offlineUnknown: d.offlineUnknown === true,
     retry: d.retry,
   }
 }

@@ -16,7 +16,7 @@ function setup(alternatives: Alternative[]) {
   render(<SwapSheet open onClose={() => {}} slot={s} alternatives={alternatives} isLoading={false} onPick={onPick} />)
   return { onPick }
 }
-const rowNames = () => within(screen.getByRole('list', { name: 'Alternatives' })).getAllByRole('listitem').map((li) => li.textContent ?? '')
+const rowNames = () => within(screen.getByRole('list', { name: 'Instead' })).getAllByRole('listitem').map((li) => li.textContent ?? '')
 
 describe('SwapSheet with Courses', () => {
   it('a Whole meal for the main Course says "Whole meal: no Side"', () => {

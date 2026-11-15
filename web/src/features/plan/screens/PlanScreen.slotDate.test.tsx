@@ -24,7 +24,7 @@ const info = { date: TODAY, notServed: false, time: null, usualTime: '19:30', gu
 const nothingGoes = { removes: { plannedMeals: [] } }
 const goes = { removes: { plannedMeals: [{ courseId: 1, courseName: 'Main', recipeName: 'Roast chicken', pinned: true, bought: [] }] } }
 const openMenu = async (entry: string | RegExp) => {
-  await userEvent.click(await screen.findByRole('button', { name: 'Dinner actions' }))
+  await userEvent.click(await screen.findByRole('button', { name: /^More for .* Dinner$/ }))
   await userEvent.click(screen.getByRole('menuitem', { name: entry }))
 }
 
@@ -80,7 +80,7 @@ describe('PlanScreen: Time today', () => {
     })
     renderWithProviders(<PlanScreen />)
     await openMenu('Time today')
-    const dialog = await screen.findByRole('dialog', { name: 'Time for Tue Dinner' })
+    const dialog = await screen.findByRole('dialog', { name: 'Time for Tue 10 Dinner' })
     within(dialog).getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('{ArrowUp}')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
@@ -101,7 +101,7 @@ describe('PlanScreen: Who\'s eating', () => {
     [`GET /api/meal-slots/4/attendance?date=${TODAY}`]: att,
     ...extra,
   })
-  const SHEET = "Who's eating Dinner on 2026-11-10"
+  const SHEET = "Tue 10 Nov · Dinner Who's eating"
 
   it('opens the Date Attendance sheet from the slot menu, with the date read-only', async () => {
     mockApi(routes())
@@ -164,7 +164,7 @@ describe('PlanScreen: offline', () => {
     vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false)
     mockApi({ 'GET /api/plan': view([planned()]) })
     renderWithProviders(<PlanScreen />)
-    await userEvent.click(await screen.findByRole('button', { name: 'Dinner actions' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^More for .* Dinner$/ }))
     for (const label of ["Who's eating", 'Time today', 'Not served']) {
       expect(screen.getByRole('menuitem', { name: `${label} · Needs a connection` })).toHaveAttribute('aria-disabled', 'true')
     }

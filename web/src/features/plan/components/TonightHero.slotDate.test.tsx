@@ -44,8 +44,8 @@ describe('TonightHero: the per-date menu', () => {
 
   it('the hero overline and start use the date\'s time', () => {
     setup(slot({ date: '2026-11-10', time: '20:15', usualTime: '19:30', at: '2026-11-10T20:15:00Z', meal: meal({ startBy: '19:55' }) }))
-    // DS-TODAY (changed on purpose): the eyebrow carries the start-by of the date's time: "Today · Dinner · start 19:55".
-    expect(document.querySelector('.plan-hero .tile__overline')!.textContent).toBe('Today · Dinner · start 19:55')
+    // B9-39 (changed on purpose): the eyebrow carries the start-by of the date's time, and no "Today" word on Today.
+    expect([...document.querySelectorAll('.plan-hero .tile__overline .plan-hero__eyebrow-part')].map((p) => p.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['Dinner', '· start 19:55'])
     expect(screen.getByText('start 19:55')).toBeInTheDocument()
   })
 })

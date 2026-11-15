@@ -19,15 +19,18 @@ export interface UsedFromSectionProps {
   onAmount: (ingredientId: number, lotId: number, amount: number | null) => void
   /** Cross-Course conflicts (Mark all Cooked), one per over-picked Lot, shown outside the Lot rows. */
   conflicts?: UsedFromConflictView[]
+  /** Mark all Cooked: the Course this section is for, so each row's name differs ("Used from, Main"). */
+  course?: string
 }
 
 /** The collapsed "Used from" row of a Cooked sheet and its panel. Renders view models; no logic. */
-export function UsedFromSection({ summary, lines, expanded, onToggleExpanded, onToggle, onAmount, conflicts = [] }: UsedFromSectionProps): ReactNode {
+export function UsedFromSection({ summary, lines, expanded, onToggleExpanded, onToggle, onAmount, conflicts = [], course }: UsedFromSectionProps): ReactNode {
   return (
     <div className="used-from">
-      <ListGroup label={usedFromStrings.title}>
+      <ListGroup label={course ? usedFromStrings.titleFor(course) : usedFromStrings.title}>
         <ListRow
           title={usedFromStrings.title}
+          aria-label={course ? usedFromStrings.titleFor(course) : undefined}
           meta={summary}
           onToggle={onToggleExpanded}
           expanded={expanded}

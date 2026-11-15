@@ -146,6 +146,8 @@ export const settingsSlotsStrings = {
     guestsHelper: 'Each Guest eats one standard portion of every Course.',
     portionsPreview: (n: string) => (n === '1' ? '1 portion of each Course' : `${n} portions of each Course`),
     emptiedNote: 'Nobody is eating, so this date is Not served.',
-    whosEatingTitle: (slot: string, day: string) => `Who's eating ${slot} on ${day}`,
+    /** B9-38 (SHORT-02, PC-10): the title from Plan and Today, under the context line "Thu 12 Nov · Dinner". */
+    whosEatingTitle: "Who's eating",
+    whosEatingContext: (day: string, slot: string) => `${day} · ${slot}`,
   },
 }

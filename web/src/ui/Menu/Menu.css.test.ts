@@ -45,3 +45,13 @@ describe('Menu.css', () => {
     expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/)
   })
 })
+
+describe('a disabled item reads as unavailable (B9-38 review)', () => {
+  it('the popover item mutes its text and glyph; the sheet row mutes its title (weight 500), its glyph and its tinted square', () => {
+    expect(declarations(css, ".menu__item[aria-disabled='true']")['color']).toBe('var(--color-muted)')
+    expect(css).toMatch(/\.menu__item\[aria-disabled='true'\] > svg,\s*\.list-row\[data-disabled='true'\] \.list-row__lead\s*\{\s*color:\s*var\(--color-muted\)/)
+    expect(declarations(css, ".list-row[data-disabled='true'] .list-row__title")['color']).toBe('var(--color-muted)')
+    expect(declarations(css, ".list-row[data-disabled='true'] .list-row__title")['font-weight']).toBe('500')
+    expect(declarations(css, ".list-row[data-disabled='true'] .list-row__lead")['background']).toBe('var(--color-surface-2)')
+  })
+})

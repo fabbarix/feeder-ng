@@ -4,7 +4,9 @@ import { LeftoverItems } from '../../../ui/LeftoverActions/LeftoverItems'
 import type { LeftoverActionKind, LeftoverAnswer } from '../../../lib/leftovers/types'
 import type { Leftover as LeftoverFull } from '../../../lib/leftovers/types'
 import type { LeftoverFlow } from '../../../lib/leftovers/useLeftoverFlow'
-import { toConfirmMeta, toConfirmRows, type ToConfirmRow } from '../lib/toConfirm'
+import { toConfirmRows, type ToConfirmRow } from '../lib/toConfirm'
+import { toConfirmRowKey, toConfirmRowView, type ToConfirmRowView } from '../lib/toConfirmView'
+import { useRowFocusAfterRemoval } from '../hooks/useRowFocusAfterRemoval'
 import { asLeftover, leftoverRows } from '../lib/leftovers'
 import { tileRows } from '../../../lib/leftovers/rows'
 import { planStrings as s } from '../strings'
@@ -26,32 +28,35 @@ export interface ToConfirmTileProps {
   onMarkAllCooked?: (slot: SlotDayKey) => void
   /** Several Courses: "Not cooked" in the ⋮, the whole Meal Slot. */
   onNotCookedSlot?: (slot: SlotDayKey) => void
+  /** B9-39 (TB-01): the household date; a row of today (it has just joined at its slot time) reads "Today" in the info tone, with its time. */
+  today?: string
 }
 
 const noop = (): void => {}
 
+type RowHandlers = Required<Omit<ToConfirmTileProps, 'slots' | 'today'>>
+
 /** One row of To confirm: day and slot, the Main Recipe with its "+ Side" line, and the one decision (ActionGroup). */
-function ToConfirmRowItem({ row, handlers }: { row: ToConfirmRow; handlers: Required<Omit<ToConfirmTileProps, 'slots'>> }): ReactNode {
-  const label = `${row.dayLabel} ${row.slotName}`
-  const meta = toConfirmMeta(row)
+function ToConfirmRowItem({ row, view, handlers }: { row: ToConfirmRow; view: ToConfirmRowView; handlers: RowHandlers }): ReactNode {
   const single = row.single
   const group =
     single !== undefined
       ? {
-          primary: { label: s.cooked, onClick: () => handlers.onYesCooked(single) },
-          secondary: { label: s.adjust, onClick: () => handlers.onAdjust(single) },
+          primary: { label: view.primaryLabel, 'aria-label': view.primaryName, onClick: () => handlers.onYesCooked(single) },
+          secondary: { label: s.adjust, 'aria-label': view.secondaryName, onClick: () => handlers.onAdjust(single) },
           more: [{ id: 'not-cooked', label: s.notCooked, onSelect: () => handlers.onNotCooked(single) }],
         }
       : {
-          primary: { label: s.allCookedShort, onClick: () => handlers.onAllCooked(row.slot) },
-          secondary: { label: s.adjust, onClick: () => handlers.onMarkAllCooked(row.slot) },
+          primary: { label: view.primaryLabel, 'aria-label': view.primaryName, onClick: () => handlers.onAllCooked(row.slot) },
+          secondary: { label: s.adjust, 'aria-label': view.secondaryName, onClick: () => handlers.onMarkAllCooked(row.slot) },
           more: [{ id: 'not-cooked', label: s.notCooked, onSelect: () => handlers.onNotCookedSlot(row.slot) }],
         }
+  const meta = view.meta
   return (
     // The row is the ActionGroup's container (action-group-host): the group is its direct child (DS-A round 2).
-    <li className="to-confirm__row action-group-host">
+    <li className="to-confirm__row action-group-host" data-fresh={view.fresh ? 'true' : undefined} data-row-focus-key={toConfirmRowKey(row)}>
       <p className="to-confirm__when">
-        <span>{row.dayLabel}</span>
+        <span>{view.dayLabel}</span>
         <span>{row.slotName}</span>
       </p>
       <div className="to-confirm__text">
@@ -64,18 +69,20 @@ function ToConfirmRowItem({ row, handlers }: { row: ToConfirmRow; handlers: Requ
           </p>
         ) : null}
       </div>
-      <ActionGroup label={label} primary={group.primary} secondary={group.secondary} more={group.more} />
+      <ActionGroup label={view.groupLabel} primary={group.primary} secondary={group.secondary} more={group.more} />
     </li>
   )
 }
 
 /**
- * Today: Planned Meals still unconfirmed two hours after their slot time (docs/design/system.md §9). One row per Meal
- * Slot: "Cooked" (or "All Cooked" for several Courses) is the primary, "Adjust" the secondary, "Not cooked" the ⋮.
- * Renders nothing when there are none.
+ * Today: Planned Meals still unconfirmed (docs/design/system.md §9): the slots of today whose time has come first (TB-01), then the
+ * server's (two hours after their slot time). One row per Meal Slot: "Cooked" (or "All Cooked" for several Courses) is the primary,
+ * "Adjust" the secondary, "Not cooked" the ⋮; each named by its Recipe, day and Meal Slot (A11Y-08). When a row goes while it held
+ * focus, focus moves to the next row. Renders nothing when there are none.
  */
-export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onAllCooked = noop, onMarkAllCooked = noop, onNotCookedSlot = noop }: ToConfirmTileProps): ReactNode {
+export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onAllCooked = noop, onMarkAllCooked = noop, onNotCookedSlot = noop, today }: ToConfirmTileProps): ReactNode {
   const rows = toConfirmRows(slots)
+  const focus = useRowFocusAfterRemoval(rows.map(toConfirmRowKey))
   if (rows.length === 0) return null
   const handlers = { onYesCooked, onAdjust, onNotCooked, onAllCooked, onMarkAllCooked, onNotCookedSlot }
   return (
@@ -89,9 +96,9 @@ export function ToConfirmTile({ slots, onYesCooked, onAdjust, onNotCooked, onAll
           {rows.length}
         </span>
       </div>
-      <ul className="to-confirm__list">
+      <ul className="to-confirm__list" onFocus={focus.onFocus}>
         {rows.map((row) => (
-          <ToConfirmRowItem key={`${row.slot.date}/${row.slot.mealSlotId}`} row={row} handlers={handlers} />
+          <ToConfirmRowItem key={toConfirmRowKey(row)} row={row} view={toConfirmRowView(row, slots, today)} handlers={handlers} />
         ))}
       </ul>
     </Tile>

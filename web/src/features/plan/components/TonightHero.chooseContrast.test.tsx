@@ -22,7 +22,7 @@ function heroAction() {
       <TonightHero slot={slot} now={new Date('2026-11-10T17:00:00Z')} today="2026-11-10" onCook={noop} onYesCooked={noop} onAdjust={noop} rowHandlers={{ onOpen: noop, onChoose: noop }} />
     </MemoryRouter>,
   )
-  return within(screen.getByRole('listitem', { name: 'Starter' })).getByRole('button', { name: 'Choose a Recipe' })
+  return within(screen.getByRole('listitem', { name: 'Starter' })).getByRole('button', { name: /^Choose a Recipe for / })
 }
 
 /** Declarations of `selector` (exact, whitespace-normalised) in Button.css; '' when missing. */

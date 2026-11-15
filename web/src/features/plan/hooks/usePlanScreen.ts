@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { useConnectivity } from '../../../app/useConnectivity'
 import { useMe } from '../../../app/useMe'
@@ -9,7 +10,7 @@ import { regenerateConfirmCopy, regenerateImpact } from '../lib/regenerate'
 import type { SlotDayKey, SlotKey } from '../types'
 import { useAllCookedFlow } from './useAllCookedFlow'
 import { useAlternatives } from './useAlternatives'
-import { useCookFlow } from './useCookFlow'
+import { useCookFlow, useNotCooked } from './useCookFlow'
 import { usePlan } from './usePlan'
 import { useMarkSlotRoute } from './useMarkSlotRoute'
 import { useSlotDate } from './useSlotDate'
@@ -20,10 +21,21 @@ import { useResolvedUndo } from './useResolvedUndo'
 import { useRecipeChoices } from './useRecipeChoices'
 import { usePickLeftover } from './usePickLeftover'
 import { useLeftoverFlow } from '../../../lib/leftovers/useLeftoverFlow'
+import { leftoversApi } from '../../../lib/leftovers/api'
+import { leftoverKeys } from '../../../lib/leftovers/queryKeys'
+import type { Leftover, LeftoverActionKind } from '../../../lib/leftovers/types'
+import { mealLeftover } from '../lib/chooseMark'
+import { chooserRecipes, sheetCourse } from '../lib/choose'
 
 /** Everything the Plan screen needs: the plan, its actions and which sheet is open for which slot (one at a time). */
 export function usePlanScreen() {
   const plan = usePlan()
+  // w4d review (CLS): the tiles above the week (Couldn't plan, Leftovers to use) wait until both the plan and the Leftovers are in,
+  // so they and the week appear together where the skeleton was, never pushing it down while it shows. The same query as the
+  // Leftover flow's (deduplicated by React Query); only a first read in flight holds it, and only once the plan is in online (failed or offline, nothing waits).
+  const leftoversRead = useQuery({ queryKey: leftoverKeys.list, queryFn: leftoversApi.list })
+  const leftoversFirstRead = leftoversRead.isPending && leftoversRead.fetchStatus === 'fetching'
+  const topReady = plan.state !== 'loading' && !((plan.state === 'ready' || plan.state === 'empty') && leftoversFirstRead)
   const actions = usePlanActions()
   const flow = useCookFlow()
   // B9-26 (PC-01): another User's edit is announced on the Plan; `review` is the What changed sheet and the marked rows.
@@ -38,7 +50,16 @@ export function usePlanScreen() {
   const [regeneratePreviewing, setRegeneratePreviewing] = useState(false)
   const previewingRef = useRef(false)
   const alternatives = useAlternatives(swapKey)
-  const choices = useRecipeChoices(chooseKey !== null, chooseKey?.courseId)
+  // B9-38 (PC-10): Choose a Recipe for a Course other than the main one also lists the Recipes not marked with it ("Other
+  // Recipes"); the main one keeps the server's `?course=` list alone.
+  const chooseSlot = chooseKey ? (plan.slots.find((x) => x.date === chooseKey.date && x.mealSlotId === chooseKey.mealSlotId) ?? null) : null
+  const chooseMain = chooseSlot ? (sheetCourse(chooseSlot, chooseKey?.courseId)?.main ?? true) : true
+  const marked = useRecipeChoices(chooseKey !== null, chooseKey?.courseId)
+  const every = useRecipeChoices(chooseKey !== null && !chooseMain)
+  const choices = chooseMain || !chooseKey
+    ? marked
+    : { recipes: chooserRecipes(marked.recipes, every.recipes, chooseKey.courseId), isLoading: marked.isLoading || every.isLoading }
+  const notCooked = useNotCooked()
   const allCooked = useAllCookedFlow()
   const confirm = useConfirm()
   const slotDate = useSlotDate(plan.slots)
@@ -70,6 +91,21 @@ export function usePlanScreen() {
     alternatives,
     choices,
     plannedSlot: slotAt(plannedKey),
+    /** B9-38 (PC-09): the Leftover the open sheet's Cooked meal made (its block: Had it, Freeze it, ⋮), and its actions. */
+    plannedLeftover: mealLeftover(leftoverFlow.leftovers, plannedKey),
+    leftoverAction: (kind: LeftoverActionKind, leftover: Leftover) => {
+      setPlannedKey(null)
+      leftoverFlow.openSheet(kind, leftover)
+    },
+    /** B9-38 (PC-09): Not cooked from the sheet's ⋮ acts at once, with Undo (SAFE-03). */
+    notCookedFromSheet: (key: SlotKey) => {
+      setPlannedKey(null)
+      void notCooked(key)
+    },
+    /** B9-38 (PC-10): the Course Swap and Choose a Recipe are for (their context line, search label and groups). */
+    swapCourseId: swapKey?.courseId,
+    chooseSlot,
+    chooseCourseId: chooseKey?.courseId,
     /** The Course of the open Planned Meal sheet (undefined: the main Course). */
     plannedCourseId: plannedKey?.courseId,
     swapSlot,
@@ -127,6 +163,13 @@ export function usePlanScreen() {
       setChooseKey(null)
       await actions.setMeal(key, recipeId, 'choose')
     },
+    /** B9-38: a Recipe of "Other Recipes": marked with the Course and set there in one write. */
+    pickOtherRecipe: async (recipeId: number) => {
+      if (!chooseKey) return
+      const key = chooseKey
+      setChooseKey(null)
+      await actions.setMeal(key, recipeId, 'choose', { markCourse: true })
+    },
     /** B5-LOW: "From the freezer": pins the frozen Leftover (by id) to the Course chosen. */
     pickLeftover: async (leftoverId: number) => {
       const found = leftoverFlow.leftovers.find((l) => l.id === leftoverId)
@@ -137,5 +180,7 @@ export function usePlanScreen() {
     },
     /** B5-LOW: the Leftovers, the Leftover sheets and the Leftover details of the Plan. */
     leftovers: leftoverFlow,
+    /** The plan and the Leftovers are in: the tiles above the week and the week itself show (until then, the skeleton alone). */
+    topReady,
   }
 }

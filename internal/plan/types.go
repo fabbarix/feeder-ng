@@ -167,6 +167,9 @@ const (
 	// ReasonSlotDateChanged: a Meal Slot on one date was marked Not served or served again, its time changed, or its
 	// Guests changed (ADR 0014; household event {"changed":"slotDates"}).
 	ReasonSlotDateChanged Reason = "slot_date_changed"
+	// ReasonCourseRecipes: Recipes were marked with a Course, or that mark was undone, from the Plan (B9-32,
+	// POST /api/courses/{id}/recipes and …/recipes/unmark).
+	ReasonCourseRecipes Reason = "course_recipes"
 )
 
 // Errors.

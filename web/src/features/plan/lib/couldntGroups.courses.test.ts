@@ -30,8 +30,9 @@ describe('causeOf: the new cause, and the two that are gone', () => {
 })
 
 describe('the causes that are gone have no copy left', () => {
-  const keys = ['advance_step', 'excluded', 'no_course_recipes', 'no_fit', 'no_recipes', 'nobody_attending', 'slot_rule']
-  it.each(['couldntCauseText', 'couldntHint', 'couldntShort', 'couldntFix'] as const)('%s has exactly the seven causes', (name) => {
+  // B9-32 (PC-14, A2): too_early is the eighth cause (eliminated.tooEarly); the removed ones stay gone.
+  const keys = ['advance_step', 'excluded', 'no_course_recipes', 'no_fit', 'no_recipes', 'nobody_attending', 'slot_rule', 'too_early']
+  it.each(['couldntCauseText', 'couldntHint', 'couldntShort', 'couldntFix'] as const)('%s has exactly the eight causes', (name) => {
     expect(Object.keys(planStrings[name]).sort()).toEqual(keys)
   })
   it('no Cool-down or Variety Rule sentence is left for the single-line reason either', () => {
@@ -245,8 +246,8 @@ describe('No Recipes for this Course', () => {
     expect(g!.adminOnly).toBe(false)
   })
 
-  it('the fix is "Mark Recipes as Dessert": the Recipes list filtered to Recipes not marked with it', () => {
-    expect(g!.fix).toEqual({ kind: 'link', label: 'Mark Recipes as Dessert', to: '/recipes?notCourse=3' })
+  it('the fix is "Mark Recipes as Dessert": a mark action for that Course; the Plan opens its sheet (B9-32, PC-07), other screens go to /recipes?notCourse=', () => {
+    expect(g!.fix).toEqual({ kind: 'mark', label: 'Mark Recipes as Dessert', courseId: 3, courseName: 'Dessert' })
   })
 
   it('explains itself once, in one sentence', () => {
@@ -260,13 +261,13 @@ describe('No Recipes for this Course', () => {
     ]
     const [m] = groupByCause(unplannedOf(courseCells(slots)), courseCells(slots))
     expect(m!.headline).toBe("Couldn't plan 2 Courses. Some Courses have no Recipes marked for them.")
-    expect(m!.fix).toEqual({ kind: 'link', label: 'Mark Recipes as Dessert', to: '/recipes?notCourse=3' })
+    expect(m!.fix).toEqual({ kind: 'mark', label: 'Mark Recipes as Dessert', courseId: 3, courseName: 'Dessert' })
   })
 
-  it('cells of several Courses get the general sentence and a link naming the first cell Course (/recipes?notCourse=2)', () => {
+  it('cells of several Courses get the general sentence and a mark action naming the first cell Course (Side, id 2)', () => {
     const [o] = groupByCause([flat('2026-11-10', 2, 'Side', NO_COURSE_RECIPES), flat('2026-11-10', 3, 'Dessert', NO_COURSE_RECIPES)])
     expect(o!.headline).toBe("Couldn't plan 2 Courses. Some Courses have no Recipes marked for them.")
-    expect(o!.fix).toEqual({ kind: 'link', label: 'Mark Recipes as Side', to: '/recipes?notCourse=2' })
+    expect(o!.fix).toEqual({ kind: 'mark', label: 'Mark Recipes as Side', courseId: 2, courseName: 'Side' })
   })
 
   it('a Household with one Course per slot: Meal Slots, with the Course named in the sentence', () => {

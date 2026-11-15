@@ -16,9 +16,10 @@ describe('heroSelection: Reheat (R12)', () => {
     expect(sel?.action).toBe('reheat')
   })
 
-  it('offers reheat after the slot time too (the hero then also asks Yes, Cooked)', () => {
+  // B9-39 (TB-01, decision TB 2): at the slot time the hero moves on; the served meal heads To confirm (was: it stayed, offering reheat).
+  it('after the slot time the served meal is no longer the hero (it heads To confirm)', () => {
     const late = new Date('2026-11-10T20:30:00Z')
-    expect(heroSelection([served('2026-11-10')], late, today)?.action).toBe('reheat')
+    expect(heroSelection([served('2026-11-10')], late, today)).toBeNull()
   })
 
   it('tomorrow\'s Leftover meal stays chip only (it cannot be eaten yet)', () => {

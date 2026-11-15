@@ -70,14 +70,14 @@ describe('plan.css: the Today hero', () => {
     expect(d['min-inline-size'] ?? '0').toBe('0')
   })
 
-  it('on the accent hero a why chip is on-accent at 18 % (neutral, no accent-soft fill)', () => {
-    const d = declarations(css, ".plan-hero .chip[data-kind='why']")
-    expect(d['background']).toBe('color-mix(in srgb, var(--color-on-accent) 18%, transparent)')
-    expect(d['color']).toBe('var(--color-on-accent)')
+  // B9-39 (TB-01): the hero's why chip takes ui/Tile.css's currentColor tint; this file's dead on-accent rule is gone (TonightHero.tb01.css.test).
+  it('on the accent hero a why chip has no colour rule of its own here (the tint is ui/Tile.css\'s)', () => {
+    expect(css).not.toMatch(/\.plan-hero \.chip\[data-kind='why'\]\s*\{[^}]*(background|color)\s*:/)
   })
 
-  it('the eyebrow is not a paragraph of its own any more (.plan-hero__start is gone)', () => {
-    expect(css).not.toContain('.plan-hero__start')
+  // B9-39 (TB-01): the start-by is a part of the eyebrow, never a paragraph of its own; it is styled only in its "start now" state.
+  it('the eyebrow is not a paragraph of its own any more (.plan-hero__start is styled only as [data-now])', () => {
+    for (const m of css.matchAll(/\.plan-hero__start[^{,]*/g)) expect(m[0]).toContain("[data-now='true']")
   })
 
   // TB-05 (B9-08): the dark hero rule lives in ui/Tile.css keyed on data-scheme; the four data-theme blocks are gone from here.

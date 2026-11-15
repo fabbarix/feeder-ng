@@ -65,7 +65,9 @@ describe('CookScreen: Mark as Cooked', () => {
     renderMeal()
     await userEvent.click(await screen.findByRole('button', { name: 'Mark as Cooked' }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
-    await userEvent.click(await within(sheet).findByRole('button', { name: 'Not cooked' }))
+    // B9-38 (SHORT-02): Not cooked is an item of the Mark as Cooked footer's ⋮
+    await userEvent.click(await within(sheet).findByRole('button', { name: /^More for / }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Not cooked' }))
     expect(await screen.findByText('Home page')).toBeInTheDocument()
     expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/not-cooked')).toHaveLength(1)
   })

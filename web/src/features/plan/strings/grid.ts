@@ -32,7 +32,6 @@ export const gridStrings = {
   servedFromLeftoverUnknown: 'Leftover',
   batches: (n: number) => (n === 1 ? '1 Batch' : `${n} Batches`),
   portionsNeeded: (n: number) => (n === 1 ? '1 portion' : `${n} portions`),
-  extraPortions: (n: number) => `+${n} portion Leftover`,
   // Regenerate (lib/regenerate)
   regenerating: 'Regenerating…',
   regenerateConfirmTitle: 'Regenerate the plan?',
@@ -73,6 +72,7 @@ export const gridStrings = {
     slot_rule: 'Nothing that matches its Slot Rule is available.',
     excluded: 'Every Recipe is excluded for someone who eats it.',
     advance_step: 'Every Recipe needs an Advance Step that is already too late.',
+    too_early: 'Every Recipe would start outside your cooking times.',
     no_fit: 'No Recipe fits.',
   },
   couldntHint: {
@@ -82,6 +82,7 @@ export const gridStrings = {
     slot_rule: 'A Slot Rule asks for a Recipe or Tag that cannot be used here. Loosen the rule, or choose a Recipe yourself.',
     excluded: 'Someone who eats there cannot have any of your Recipes. Exclusions are set on each Recipe and its Ingredients.',
     advance_step: 'Each Recipe needs preparing ahead and the time has gone. Choose a quicker Recipe for these Meal Slots.',
+    too_early: 'Cooking any of your Recipes would have to start outside your cooking times (Earliest start and Latest start in Planning rules). Choose a quicker Recipe for these Meal Slots.',
     no_fit: 'The planner found nothing that suits these Meal Slots. Choose a Recipe yourself.',
   },
   couldntShort: {
@@ -91,7 +92,21 @@ export const gridStrings = {
     slot_rule: "Its Slot Rule can't be met.",
     excluded: 'Every Recipe is excluded.',
     advance_step: 'Too late for an Advance Step.',
+    too_early: 'Starts outside your cooking times.',
     no_fit: 'No Recipe fits.',
+  },
+  /** B9-32 (PC-07): the one chip of an unfilled Course row (lib/couldntGroups.ts shortCause). */
+  causeChip: {
+    /** "No Dessert Recipes": no_course_recipes with the Course named. */
+    course: (course: string) => `No ${course} Recipes`,
+    nobody_attending: 'Nobody attending',
+    no_recipes: 'No Recipes',
+    no_course_recipes: 'No Recipes for this Course',
+    slot_rule: 'Slot Rule unmet',
+    excluded: 'Excluded',
+    advance_step: 'Too late for its Advance Step',
+    too_early: 'Outside your cooking times',
+    no_fit: 'No Recipe fits',
   },
   couldntFix: {
     nobody_attending: 'Choose who attends',
@@ -101,6 +116,7 @@ export const gridStrings = {
     slot_rule: 'Review Slot Rules',
     excluded: 'Review Exclusions',
     advance_step: 'Choose a Recipe',
+    too_early: 'Choose a Recipe',
     no_fit: 'Choose a Recipe',
   },
   /** CRS G2: the Review Exclusions page (lib/couldntExclusions.ts, the Tiles, the screen). */
@@ -128,6 +144,32 @@ export const gridStrings = {
     thisCourse: 'this Course',
   },
   couldntShowAll: (n: number) => `Show all ${n}`,
+  /** B9-32 (PC-07): Mark Recipes as <Course> on the Plan (components/MarkCourseRecipesSheet, lib/markRecipes). */
+  markSheet: {
+    context: (n: number, noun: string) => `Couldn't plan ${n} ${noun}`,
+    lede: (course: string) => `The planner fills ${course} only from Recipes marked with it. Tick the ones you would serve as ${course}.`,
+    search: 'Search Recipes',
+    /** The primary counts without the Course (it is in the sheet's title), so it stays one line beside Cancel at 375. */
+    primary: (n: number) => (n === 0 ? 'Mark Recipes' : n === 1 ? 'Mark 1 Recipe' : `Mark ${n} Recipes`),
+    noCourse: 'No Course yet',
+    allMarked: (course: string) => `Every Recipe is already marked as ${course}.`,
+    noMatch: 'No Recipe has that name.',
+    loading: 'Loading the Recipes…',
+    loadFailed: 'The Recipes could not be loaded.',
+    marked: (n: number, course: string) => (n === 1 ? `1 Recipe marked as ${course}` : `${n} Recipes marked as ${course}`),
+    planned: (n: number) => (n === 1 ? '1 meal planned' : `${n} meals planned`),
+    nonePlanned: 'No new meals planned yet',
+    unmarked: (n: number, course: string) => (n === 1 ? `1 Recipe is no longer marked as ${course}` : `${n} Recipes are no longer marked as ${course}`),
+  },
+  /** B9-32 (PC-07, PLAN-19): Leftovers to use on the Plan, below 1024 px (lib/planLeftovers). */
+  leftoverSummary: {
+    count: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
+    firstUseBy: (weekday: string) => `first Use by ${weekday}`,
+    showLabel: (n: number) => (n === 1 ? 'Show 1 Leftover' : `Show ${n} Leftovers`),
+    show: 'Show',
+  },
+  /** B9-32 (PC-07): the compact tile's header button; it opens the sheet of the affected meals. */
+  couldntShowMeals: 'Show which meals',
   couldntHideList: 'Hide the list',
   couldntSlotRuleOne: 'Nothing that matches its Slot Rule is available.',
   couldntSlotRuleMany: 'Nothing that matches their Slot Rules is available.',
@@ -163,5 +205,22 @@ export const gridStrings = {
   allCookedShort: 'All Cooked',
   notCookedSlot: 'Not cooked: whole slot',
   slotActions: (slot: string) => `${slot} actions`,
+  /** B9-32 (A11Y-09): the IconSet of a hero Course row. */
+  courseActions: (course: string) => `${course} actions`,
+  /** B9-32 (A11Y-08): row action names (lib/actionNames.ts); `when` is "Sun 15 Breakfast". */
+  actionNames: {
+    swap: (recipe: string, when: string) => `Swap ${recipe}, ${when}`,
+    pin: (recipe: string, when: string) => `Pin ${recipe}, ${when}`,
+    choose: (course: string, when: string) => `Choose a Recipe for ${course}, ${when}`,
+    cook: (when: string) => `Cook ${when}`,
+    more: (when: string) => `More for ${when}`,
+  },
+  /** B9-32 (A2, PC-14): the start chips (lib/rowChips.ts). */
+  startChip: {
+    time: (time: string) => `Start ${time}`,
+    day: (weekday: string, time: string) => `Start ${weekday} ${time}`,
+    earlierTitle: (weekday: string, time: string) => `Start cooking on ${weekday} at ${time}`,
+    outsideTitle: 'Cooking would start outside your cooking times',
+  },
   courseLeftoverLabel: (course: string) => `${course} Leftover portions`,
 } as const

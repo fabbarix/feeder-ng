@@ -2,12 +2,14 @@ package httpapi
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	cookservice "github.com/fabbarix/feeder-ng/internal/cook/service"
+	coursestore "github.com/fabbarix/feeder-ng/internal/course/store"
 	"github.com/fabbarix/feeder-ng/internal/httpx"
 	"github.com/fabbarix/feeder-ng/internal/plan"
 	"github.com/fabbarix/feeder-ng/internal/plan/runner"
@@ -235,6 +237,8 @@ func (a *api) setMeal(w http.ResponseWriter, r *http.Request) {
 		RecipeID   int64    `json:"recipeId"`
 		Batches    *float64 `json:"batches"`
 		LeftoverID int64    `json:"leftoverId"` // "From the freezer": a Leftover instead of a Recipe (B5-LO)
+		// B9-38: "Other Recipes" in Choose a Recipe: mark the Recipe with the Course and set it, in one write.
+		MarkCourse bool `json:"markCourse"`
 	}
 	if err := httpx.DecodeJSON(r, &body); err != nil {
 		httpx.WriteAPIError(w, err)
@@ -254,12 +258,29 @@ func (a *api) setMeal(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, runner.ErrUnknownRecipe)
 		return
 	}
+	if body.MarkCourse {
+		res, err := a.run.SetCourseMealMarking(ctx, k, body.RecipeID, body.Batches, markCourse)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		// The plan event came from the write; these refresh the Courses (counts) and the Recipes screens, as Mark Recipes does.
+		a.events.Publish("household", map[string]string{"changed": "courses"})
+		a.events.Publish("recipes", map[string]string{"changed": "courses"})
+		a.putMeal(w, r, res, o)
+		return
+	}
 	res, err := a.run.SetCourseMeal(ctx, k, body.RecipeID, body.Batches)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	a.putMeal(w, r, res, o)
+}
+
+// markCourse marks one Recipe with a Course inside the plan write's transaction, with the courses module's own code (B9-32).
+func markCourse(ctx context.Context, tx *sql.Tx, courseID, recipeID int64) error {
+	return coursestore.MarkRecipesTx(ctx, tx, courseID, []int64{recipeID})
 }
 
 // putMeal answers a set meal (by Recipe or by Leftover): the meal, the Courses a Whole meal covered, and the other cells

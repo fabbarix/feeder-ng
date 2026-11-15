@@ -68,9 +68,9 @@ describe('DateAttendancePanel: Guests', () => {
 })
 
 describe('DateAttendancePanel: a date that is not editable (opened from Plan or Today)', () => {
-  it('shows the date in the title and has no date picker', () => {
+  it('names the date in the context line (B9-38: "Thu 12 Nov · Dinner") and has no date picker', () => {
     setup({ dateReadOnly: true })
-    expect(screen.getByRole('dialog', { name: "Who's eating Dinner on 2026-11-12" })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: "Thu 12 Nov · Dinner Who's eating" })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Date/ })).not.toBeInTheDocument()
   })
 

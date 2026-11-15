@@ -69,4 +69,4 @@ const source = `
   return out
 })()`
 
-export default { name: 'focus-rings', key: 'focusRings', order: 180, scenarios: ['focus-ring-room-today', 'focus-ring-room-fields', 'focus-ring-room-sheet', 'recipe-editor-ring-room'], source }
+export default { name: 'focus-rings', key: 'focusRings', order: 180, scenarios: ['focus-ring-room-today', 'focus-ring-room-fields', 'focus-ring-room-sheet', 'recipe-editor-ring-room', 'plan-sheet-choose-ring'], source }

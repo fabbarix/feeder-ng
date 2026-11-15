@@ -124,10 +124,12 @@ describe('heroMeal (the Today hero)', () => {
     expect(heroMeal(slots, new Date('2026-11-10T17:00:00Z'))?.date).toBe('2026-11-10')
   })
 
-  it('stays the hero for two hours after the slot time (awaiting confirmation)', () => {
+  // B9-39 (TB-01): HERO_GRACE_MS is removed; the hero moves on at the slot time and the past meal is To confirm's.
+  it('moves on at the slot time, with no grace period', () => {
     const slots = [planned('2026-11-10', 2, '19:00'), planned('2026-11-11', 2, '19:00')]
-    expect(heroMeal(slots, new Date('2026-11-10T20:30:00Z'))?.date).toBe('2026-11-10')
-    expect(heroMeal(slots, new Date('2026-11-10T21:00:00Z'))?.date).toBe('2026-11-11')
+    expect(heroMeal(slots, new Date('2026-11-10T18:59:59Z'))?.date).toBe('2026-11-10')
+    expect(heroMeal(slots, new Date('2026-11-10T19:00:00Z'))?.date).toBe('2026-11-11')
+    expect(heroMeal(slots, new Date('2026-11-10T20:30:00Z'))?.date).toBe('2026-11-11')
   })
 
   it('skips Cooked, not cooked and empty slots', () => {

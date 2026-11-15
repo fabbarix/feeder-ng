@@ -44,10 +44,10 @@ describe('PlanScreen: Couldn\'t plan per Course', () => {
   it('one notice at the top per cause, naming the Course', async () => {
     mockApi({ 'GET /api/plan': sideExcluded })
     renderPlan()
-    const notice = await screen.findByRole('group', { name: "Couldn't plan" })
-    expect(within(notice).getAllByRole('region')).toHaveLength(1)
-    expect(within(notice).getByRole('heading', { name: "Couldn't plan 2 Sides. Every Recipe is excluded for someone who eats it." })).toBeInTheDocument()
-    expect(within(notice).getByText('Side at Tuesday and Wednesday dinners')).toBeInTheDocument()
+    const notice = await screen.findByRole('region', { name: "Couldn't plan" })
+    expect(within(notice).getAllByRole('group')).toHaveLength(1)
+    const row = within(notice).getByRole('group', { name: '2 Sides' })
+    expect(row).toHaveTextContent('Every Recipe is excluded for someone who eats it.')
   })
 
   it('the Side row of each affected day says Not planned with the cause; the Main row and the other day do not', async () => {
@@ -55,8 +55,8 @@ describe('PlanScreen: Couldn\'t plan per Course', () => {
     renderPlan()
     const today = await tileOf('Today')
     const side = courseRow(today, 'Side')
-    expect(within(side).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'spoil')
-    expect(within(side).getByText('Every Recipe is excluded.')).toBeInTheDocument()
+    expect(side.querySelector('.list-row__title')).toHaveTextContent('Not planned')
+    expect(within(side).getByText('Excluded').closest('.chip')).toHaveAttribute('data-status', 'warn')
     expect(within(courseRow(today, 'Main')).queryByText('Not planned')).not.toBeInTheDocument()
     expect(within(await tileOf('Thursday')).queryByText('Not planned')).not.toBeInTheDocument()
   })
@@ -68,11 +68,11 @@ describe('PlanScreen: Couldn\'t plan per Course', () => {
     expect(await screen.findByText('at /plan/couldnt-plan/excluded')).toBeInTheDocument()
   })
 
-  it('a line of "Show all" goes to its cell on that page', async () => {
+  it('a line of "Show which meals" goes to its cell on that page', async () => {
     mockApi({ 'GET /api/plan': sideExcluded })
     renderPlan()
-    await userEvent.click(await screen.findByRole('button', { name: 'Show all 2' }))
-    await userEvent.click(screen.getByRole('link', { name: 'Wed 11 Nov · Dinner · Side' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Show which meals' }))
+    await userEvent.click(within(await screen.findByRole('dialog', { name: "Couldn't plan" })).getByRole('link', { name: 'Wed 11 Nov · Dinner · Side' }))
     expect(await screen.findByText('at /plan/couldnt-plan/excluded')).toBeInTheDocument()
   })
 })
@@ -83,11 +83,12 @@ describe('PlanScreen: No Recipes for this Course', () => {
     dinner('2026-11-11', [planned(1, 'Main'), empty(3, 'Dessert', NO_COURSE_RECIPES)]),
   ])
 
-  it('is an info tile whose fix opens the Recipes list of the Recipes not marked as Dessert', async () => {
-    mockApi({ 'GET /api/plan': noDessert })
+  it('is an info row whose fix opens the sheet "Mark Recipes as Dessert" ON the Plan (B9-32, FLOW-18): the route does not change', async () => {
+    mockApi({ 'GET /api/plan': noDessert, 'GET /api/recipes?notCourse=3': [] })
     const { container } = renderPlan()
     await userEvent.click(await screen.findByRole('button', { name: 'Mark Recipes as Dessert' }))
-    expect(await screen.findByText('at /recipes?notCourse=3')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Mark Recipes as Dessert' })).toBeInTheDocument()
+    expect(screen.queryByText(/^at \//)).not.toBeInTheDocument()
     expect(container.querySelector('[data-status="danger"]')).toBeNull()
   })
 
@@ -95,8 +96,8 @@ describe('PlanScreen: No Recipes for this Course', () => {
     mockApi({ 'GET /api/plan': noDessert })
     renderPlan()
     const row = courseRow(await tileOf('Today'), 'Dessert')
-    expect(within(row).getByText('Not planned').closest('.chip')).toHaveAttribute('data-status', 'info')
-    expect(within(row).getByText('No Recipes for this Course.')).toBeInTheDocument()
+    expect(within(row).getByText('No Dessert Recipes').closest('.chip')).toHaveAttribute('data-status', 'info')
+    expect(row.querySelector('.list-row__title')).toHaveTextContent('Not planned')
   })
 })
 
@@ -112,7 +113,7 @@ describe('PlanScreen: optional and not-served Courses never show a cause', () =>
     mockApi({ 'GET /api/plan': quiet })
     renderPlan()
     await tileOf('Today')
-    expect(screen.queryByRole('group', { name: "Couldn't plan" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: "Couldn't plan" })).not.toBeInTheDocument()
     expect(screen.queryByText('Not planned')).not.toBeInTheDocument()
   })
 })
@@ -125,7 +126,7 @@ describe('PlanScreen: Choose a Recipe for the Course', () => {
       'GET /api/recipes?course=2': [],
     })
     renderPlan()
-    const notice = await screen.findByRole('group', { name: "Couldn't plan" })
+    const notice = await screen.findByRole('region', { name: "Couldn't plan" })
     await userEvent.click(within(notice).getByRole('button', { name: 'Choose a Recipe' }))
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(api.callsTo('GET', '/api/recipes?course=2').length).toBeGreaterThan(0)
@@ -136,8 +137,7 @@ describe('PlanScreen: Nobody attends with Courses', () => {
   it('counts the Meal Slot once, not once per Course', async () => {
     mockApi({ 'GET /api/plan': view([dinner('2026-11-10', [empty(1, 'Main', NOBODY), empty(2, 'Side', NOBODY)]), dinner('2026-11-11', [empty(1, 'Main', NOBODY), empty(2, 'Side', NOBODY)])]) })
     renderPlan()
-    const notice = await screen.findByRole('group', { name: "Couldn't plan" })
-    expect(within(notice).getByRole('heading', { name: "Couldn't plan 2 Meal Slots. Nobody is set to attend." })).toBeInTheDocument()
-    expect(within(notice).getByText('Every dinner this week')).toBeInTheDocument()
+    const notice = await screen.findByRole('region', { name: "Couldn't plan" })
+    expect(within(notice).getByRole('group', { name: '2 Meal Slots' })).toHaveTextContent('Nobody is set to attend.')
   })
 })

@@ -84,7 +84,7 @@ describe.each([
     const api = routes()
     renderWithProviders(routed, '/')
     // DS-TODAY (changed on purpose): the To confirm row's "Adjust" opens the Mark all Cooked sheet (the "Mark all Cooked" button is gone).
-    await userEvent.click(await screen.findByRole('button', { name: 'Adjust' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Adjust / }))
     return api
   }],
 ])('Today: Mark all Cooked from %s', (_name, open) => {

@@ -6,6 +6,7 @@ import { LeftoverSheets } from '../../../ui/LeftoverActions/LeftoverSheets'
 import {
   AllCookedSheets,
   CookFlowSheets,
+  CouldntMealsSheet,
   CouldntPlanNotice,
   LeftoversTile,
   NotServedRow,
@@ -20,6 +21,8 @@ import {
   useCookFlow,
   useCouldntFix,
   useCouldntPlanNotice,
+  useMovedToConfirm,
+  usePlanFixSheets,
   toConfirmCourses,
   useNotCooked,
   useScreenLeftovers,
@@ -65,11 +68,17 @@ export function TodayScreen(): ReactElement {
   const flow = useCookFlow()
   const notCooked = useNotCooked()
   const isAdmin = useMe().data?.isAdmin !== false
-  const notice = useCouldntPlanNotice(data.couldntPlan, courseCells(data.planSlots ?? []), isAdmin)
+  const cells = courseCells(data.planSlots ?? [])
+  const notice = useCouldntPlanNotice(data.couldntPlan, cells, isAdmin)
   const fixCouldnt = useCouldntFix()
+  // B9-39 (B9-32 question 2): "Show which meals" opens the Couldn't plan sheet over Today (Today is never left).
+  const fixSheets = usePlanFixSheets(cells)
+  // B9-39 (TB-01): a slot whose time has come joins To confirm; the polite live region says so, and focus stays where it is.
+  const announce = useMovedToConfirm(data.justServed ?? [], !data.planLoading)
   const setup = useSetupChecklist()
   // B9-45 (PC-02): Cook Mode returns to Today
   const cookMeal = (key: SlotDayKey) => navigate(cookLinkFor(key, '/').to, { state: cookLinkFor(key, '/').state })
+  const openRecipe = (recipeId: number) => navigate(`/recipes/${recipeId}`)
   const reheatMeal = (key: SlotKey) => navigate(cookReheatPath(key))
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
   const hero = data.nextSlot
@@ -94,8 +103,10 @@ export function TodayScreen(): ReactElement {
         onReheat={reheatMeal}
         onAdjust={flow.open}
         busy={flow.quickBusy !== null}
+        onOpenRecipe={openRecipe}
         rowHandlers={{
-          onOpen: sheets.planned.open,
+          // TB-10: a why chip also says `{ section: 'why', reason }`; the Planned Meal sheet (B9-38) does not scroll to it yet.
+          onOpen: (k) => sheets.planned.open(k),
           onSwap: sheets.swap.open,
           onPin: (k) => void sheets.actions.pin(k),
           onUnpin: (k) => void sheets.actions.unpin(k),
@@ -125,6 +136,7 @@ export function TodayScreen(): ReactElement {
     toConfirm: (
       <ToConfirmTile
         slots={data.toConfirm}
+        today={data.planToday}
         onYesCooked={yesCooked}
         onAdjust={flow.open}
         onNotCooked={(key) => void notCooked(key)}
@@ -133,7 +145,7 @@ export function TodayScreen(): ReactElement {
         onNotCookedSlot={(slot) => void sheets.actions.notCookedSlot(slot)}
       />
     ),
-    couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} span="full" />,
+    couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} onShowMeals={fixSheets.openMeals} span="full" />,
     setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} isAdmin={isAdmin} />,
     leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} onOpen={openPlan} flow={leftovers.flow} tone={leftovers.tile.tone} />,
     useSoon: <UseSoonTile items={data.useSoon} />,
@@ -148,6 +160,8 @@ export function TodayScreen(): ReactElement {
         loading={loading}
         dateLabel={todayHeading(data.planToday || localDate(data.now))}
         onRetry={retry}
+        offlineUnknown={data.offlineUnknown === true}
+        announce={announce}
         tiles={tiles}
         shopping={<ShoppingListSeam />}
         onOpenPlan={openPlan}
@@ -194,17 +208,30 @@ export function TodayScreen(): ReactElement {
         isLoading={sheets.swap.isLoading}
         onPick={(id) => void sheets.swap.pick(id)}
         bought={sheets.swap.bought}
+        courseId={sheets.swap.courseId}
       />
       <RecipeChooserSheet
         open={sheets.choose.key !== null}
         onClose={sheets.choose.close}
-        recipes={sheets.choose.recipes}
-        isLoading={sheets.choose.isLoading}
+        recipes={sheets.choose.sheetRecipes}
+        isLoading={sheets.choose.sheetLoading}
         onPick={(id) => void sheets.choose.pick(id)}
         frozenLeftovers={leftovers.chooserLeftovers}
         onPickLeftover={(id) => void leftovers.pickLeftover(id)}
+        slot={sheets.choose.slot}
+        courseId={sheets.choose.courseId}
+        onPickOther={(id) => void sheets.choose.pickOther(id)}
       />
       <ReplanReviewSheet controller={sheets.review} />
+      <CouldntMealsSheet
+        open={fixSheets.mealsOpen}
+        onClose={fixSheets.closeMeals}
+        groups={notice.groups}
+        onChoose={(k) => {
+          fixSheets.closeMeals()
+          sheets.choose.open(k)
+        }}
+      />
       <LeftoverSheets flow={leftovers.flow} />
       <AllCookedSheets flow={sheets.allCooked} />
       <SlotDateSheets controller={slotDate} />
