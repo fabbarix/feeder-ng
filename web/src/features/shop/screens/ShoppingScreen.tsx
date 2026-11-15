@@ -14,7 +14,6 @@ import { ShopSelect } from '../../../ui/Select/ShopSelect'
 import { SkeletonGroup, SkeletonList } from '../../../ui/Skeleton'
 import { useToast } from '../../../ui/Toast'
 import { PriceSheet } from '../../../ui/PriceSheet'
-import { CelebrationTile } from '../components/CelebrationTile'
 import { ExtraSheet } from '../components/ExtraSheet'
 import { LineSheet } from '../components/LineSheet'
 import { RangePicker } from '../components/RangePicker'
@@ -190,7 +189,6 @@ export function ShoppingScreen() {
       ) : null}
       {list.state === 'offlineUnknown' ? <LoadState title={shopStrings.offlineUnknownTitle} text={shopStrings.offlineUnknownText} /> : null}
       {list.state === 'failed' ? <ErrorState message={shopStrings.loadFailed} onRetry={list.retry} /> : null}
-      {complete ? <CelebrationTile {...complete} /> : null}
       {list.status === 'offline' ? <p className="shop-screen__stale">{shopStrings.offlineList}</p> : null}
       {data ? (
         <ShoppingBody
@@ -205,6 +203,7 @@ export function ShoppingScreen() {
           pendingKeys={flow.pendingKeys}
           restoreFocusKey={restoreFocusKey}
           onFocusRestored={onFocusRestored}
+          complete={complete}
         />
       ) : null}
       <LineSheet
