@@ -175,10 +175,13 @@ function patternMatches(pattern, route) {
  *   warn_routes=PATTERN ...              these routes warn, and win over fail_routes
  *   width<=N = warn [until B9-NN]        B9-03, the warn bridge: every finding at a profile viewport N px wide or less is a warning,
  *                                        always-fail rules included; scenario findings ("<route>#<name>") are not affected
+ *   Pnn@PATTERN = warn [until B9-NN]     B9-13, a per-rule warn: findings of the by-mode rule Pnn on routes matching PATTERN (and
+ *                                        their scenarios) are warnings; every other rule keeps the route's mode. An always-fail rule
+ *                                        cannot be waived this way (an error)
  * Anything else is an error ({ line, text, why }): a mistyped key must never be dropped in silence.
  */
 export function parseModes(modesText) {
-  const out = { dflt: 'warn', failRoutes: [], warnRoutes: [], widthWarn: [], errors: [] }
+  const out = { dflt: 'warn', failRoutes: [], warnRoutes: [], widthWarn: [], ruleWarn: [], errors: [] }
   String(modesText)
     .split('\n')
     .forEach((raw, i) => {
@@ -192,6 +195,13 @@ export function parseModes(modesText) {
         out.widthWarn.push({ max: Number(m[1]), until: m[2] ?? null })
         return
       }
+      if (/^P\d+\s*@/.test(line)) {
+        const m = /^(P\d+)\s*@\s*(\/\S*)\s*=\s*warn(?:\s+until\s+(\S+))?$/.exec(line)
+        if (!m) return err('a per-rule line reads "Pnn@/route = warn" or "Pnn@/route = warn until B9-NN"')
+        if (ALWAYS_FAIL.includes(m[1])) return err(`${m[1]} is an always-fail rule; only a by-mode rule can warn on a route`)
+        out.ruleWarn.push({ rule: m[1], pattern: m[2], until: m[3] ?? null })
+        return
+      }
       const eq = line.indexOf('=')
       if (eq < 0) return err('not a key=value line')
       const key = line.slice(0, eq).trim()
@@ -201,7 +211,7 @@ export function parseModes(modesText) {
         out.dflt = value
       } else if (key === 'fail_routes') out.failRoutes.push(...value.split(/\s+/).filter(Boolean))
       else if (key === 'warn_routes') out.warnRoutes.push(...value.split(/\s+/).filter(Boolean))
-      else err(`unknown key "${key}" (default, fail_routes, warn_routes or width<=N)`)
+      else err(`unknown key "${key}" (default, fail_routes, warn_routes, width<=N or Pnn@/route)`)
     })
   return out
 }
@@ -225,28 +235,60 @@ export function widthBridgeFor(modesText, width, label) {
 }
 
 /**
+ * B9-13: the `Pnn@PATTERN = warn` line that makes a finding of `rule` on `label` (the finding line's route token, a scenario's
+ * "<route>#<name>" included) a warning, or null. Only by-mode rules can have one (parseModes refuses an always-fail rule).
+ */
+export function ruleWarnFor(modesText, rule, label) {
+  return parseModes(modesText).ruleWarn.find((w) => w.rule === rule && patternMatches(w.pattern, label)) ?? null
+}
+
+/** The finding lines of the guard's output: { width, label, rule }. */
+function findingLines(output) {
+  const out = []
+  for (const line of String(output).split('\n')) {
+    const m = /^\s+- (\d+)px (\S+): (P\d+) /.exec(line)
+    if (m) out.push({ width: Number(m[1]), label: m[2], rule: m[3] })
+  }
+  return out
+}
+
+/**
  * The guard's output read against the modes: { fail, bridged: [{ max, until, n }] }. A finding line fails when its rule is in
- * ALWAYS_FAIL or its route is in fail mode, unless a width<=N line covers it (then it is counted in `bridged`).
+ * ALWAYS_FAIL or its route is in fail mode, unless a width<=N line covers it (then it is counted in `bridged`) or (B9-13) a
+ * Pnn@PATTERN line covers its rule on that route (counted by `countRuleWarned`).
  */
 export function countFindings(modesText, output) {
   let fail = 0
   const bridged = new Map()
-  for (const line of String(output).split('\n')) {
-    const m = /^\s+- (\d+)px (\S+): (P\d+) /.exec(line)
-    if (!m) continue
-    const b = widthBridgeFor(modesText, Number(m[1]), m[2])
+  for (const f of findingLines(output)) {
+    const b = widthBridgeFor(modesText, f.width, f.label)
     if (b) {
       const k = `${b.max}\t${b.until ?? ''}`
       bridged.set(k, (bridged.get(k) ?? 0) + 1)
       continue
     }
-    if (ALWAYS_FAIL.includes(m[3]) || modeFor(modesText, m[2]) === 'fail') fail++
+    if (!ALWAYS_FAIL.includes(f.rule) && ruleWarnFor(modesText, f.rule, f.label)) continue
+    if (ALWAYS_FAIL.includes(f.rule) || modeFor(modesText, f.label) === 'fail') fail++
   }
   for (const b of parseModes(modesText).widthWarn) {
     const k = `${b.max}\t${b.until ?? ''}`
     if (!bridged.has(k)) bridged.set(k, 0)
   }
   return { fail, bridged: [...bridged].map(([k, n]) => ({ max: Number(k.split('\t')[0]), until: k.split('\t')[1] || null, n })) }
+}
+
+/**
+ * B9-13: how many findings each Pnn@PATTERN line turned into warnings: [{ rule, pattern, until, n }], one per line, in file order
+ * (n is 0 for a line with no finding). A finding the width bridge already covers is counted there, not here.
+ */
+export function countRuleWarned(modesText, output) {
+  const lines = parseModes(modesText).ruleWarn.map((w) => ({ ...w, n: 0 }))
+  for (const f of findingLines(output)) {
+    if (widthBridgeFor(modesText, f.width, f.label)) continue
+    const w = lines.find((l) => l.rule === f.rule && patternMatches(l.pattern, f.label))
+    if (w) w.n++
+  }
+  return lines
 }
 
 const ID_KEYS = { recipes: 'recipeId', ingredients: 'ingredientId', products: 'productId', shops: 'shopId', supplies: 'supplyId' }
