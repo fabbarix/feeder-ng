@@ -52,6 +52,20 @@ describe('useTimerActions', () => {
     expect(calls).toEqual(['cancel', 'start'])
   })
 
+  it('Add 1 minute on a paused timer starts it again a minute longer and pauses it again: it never runs behind the cook\'s back', async () => {
+    const { result, source, calls } = setup([{ timer: timer({ state: 'paused' }), seconds: 90 }])
+    await act(() => result.current.addMinute(5))
+    expect(source.start).toHaveBeenCalledWith({ scope: 'recipe:7', step: 0, label: 'Step 1: Pre-heat the oven', durationSeconds: 150 })
+    expect(source.pause).toHaveBeenCalledWith(99)
+    expect(calls).toEqual(['cancel', 'start', 'pause'])
+  })
+
+  it('Add 1 minute on a running timer does not pause it', async () => {
+    const { result, source } = setup([{ timer: timer({}), seconds: 90 }])
+    await act(() => result.current.addMinute(5))
+    expect(source.pause).not.toHaveBeenCalled()
+  })
+
   it('Add 1 minute on a free timer sends only its label and time', async () => {
     const { result, source } = setup([{ timer: timer({ id: 8, scope: null, step: null, label: 'Eggs' }), seconds: 90 }])
     await act(() => result.current.addMinute(8))

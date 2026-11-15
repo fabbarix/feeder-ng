@@ -31,6 +31,19 @@ export function useTimerActions(timers: TimerActionsSource): TimerActions {
   latest.current = timers
   const find = useCallback((id: number) => latest.current.items.find((i) => i.timer.id === id) ?? null, [])
 
+  // Starts `item`'s timer again with `seconds` and keeps it paused when it was paused: Add 1 minute and Undo never set a paused timer
+  // running behind the cook's back. A failed re-pause leaves it running (the start is what matters) and is not an error of the action.
+  const startAgain = useCallback(async (item: TimerItem, seconds: number) => {
+    const started = await latest.current.start(restartInput(item.timer, seconds))
+    if (item.timer.state === 'paused' && started && typeof started.id === 'number') {
+      try {
+        await latest.current.pause(started.id)
+      } catch {
+        // running is the safe side: the cook sees it counting down
+      }
+    }
+  }, [])
+
   const failed = useCallback(() => {
     toast.show({ status: 'error', title: s.timerActionFailed })
   }, [toast])
@@ -69,19 +82,19 @@ export function useTimerActions(timers: TimerActionsSource): TimerActions {
         return
       }
       try {
-        await latest.current.start(restartInput(item.timer, left + 60))
+        await startAgain(item, left + 60)
         return
       } catch {
         // the timer is cancelled on the server: start it again with the time it had, so the cook never loses it silently
       }
       try {
-        await latest.current.start(restartInput(item.timer, left))
+        await startAgain(item, left)
         toast.show({ status: 'warning', title: s.addMinuteFailed, subline: s.addMinuteKept(name, formatTimer(left)) })
       } catch {
         toast.show({ status: 'warning', title: s.timerLost(name), subline: s.timerLostDetail(formatTimer(left)), sticky: true })
       }
     },
-    [failed, find, toast],
+    [failed, find, startAgain, toast],
   )
 
   const cancel = useCallback(
@@ -98,10 +111,10 @@ export function useTimerActions(timers: TimerActionsSource): TimerActions {
       undo.show({
         headline: s.timerCancelled,
         subline: parseTimerLabel(item.timer.label).title,
-        undo: () => latest.current.start(restartInput(item.timer, left)),
+        undo: () => startAgain(item, left),
       })
     },
-    [failed, find, undo],
+    [failed, find, startAgain, undo],
   )
 
   const dismiss = useCallback(
