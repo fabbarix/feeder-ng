@@ -163,8 +163,14 @@
 .plan-hero .tile__overline > svg {
   margin-inline-end: calc(var(--tile-overline-gap) - 0.4em);
 }
+/* A part never breaks inside. One that is longer than the whole line (a 50-character Meal Slot name at 375 px) ends in an ellipsis
+   within the eyebrow's column, beside the slot icon, so it never runs under the ⋮ or out of the hero; the full name is still read. */
 .plan-hero__eyebrow-part {
   white-space: nowrap;
+  min-inline-size: 0;
+  max-inline-size: calc(100% - 1rem - var(--tile-overline-gap));
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* TB-01: from the start time until the slot time the start part reads "start now", underlined. */
 .plan-hero__start[data-now='true'] {
