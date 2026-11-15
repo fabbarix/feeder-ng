@@ -51,16 +51,16 @@ describe('tickedMeta: what a ticked row says about the tick (SSP-01)', () => {
     expect(meta(makeTick({ by: 'scan', added: null, additions: [makeAddition({ by: 'scan', quantity: null })] }))?.text).toBe('Scanned')
   })
 
-  it('a Line with two additions (RES 2): "Added twice · Sam 50 g, you 50 g", compact "Added twice · 100 g"; the viewer is "you"', () => {
+  it('a Line with two additions (RES 2): "Added twice · Sam 50 g, you 50 g", compact "Twice · 100 g" (B9-43); the viewer is "you"', () => {
     const tick = makeTick({ additions: [makeAddition({ who: 'Sam', mine: false, quantity: 50, clientUuid: 's-1' }), makeAddition({ quantity: 50, clientUuid: 'u-2' })] })
-    expect(meta(tick)).toEqual({ text: 'Added twice · Sam 50 g, you 50 g', compact: 'Added twice · 100 g', tone: 'success', icon: 'stock' })
+    expect(meta(tick)).toEqual({ text: 'Added twice · Sam 50 g, you 50 g', compact: 'Twice · 100 g', tone: 'success', icon: 'stock' })
   })
 
   it('three additions read "Added 3 times · …" (the same form; the count in digits)', () => {
     const adds = ['Ann', 'Sam', 'You'].map((who, i) => makeAddition({ who, mine: who === 'You', quantity: 40, clientUuid: `u-${i}` }))
     const m = meta(makeTick({ additions: adds }))!
     expect(m.text).toBe('Added 3 times · Ann 40 g, Sam 40 g, you 40 g')
-    expect(m.compact).toBe('Added 3 times · 120 g')
+    expect(m.compact).toBe('3 times · 120 g')
   })
 
   it('the amount is written as the rest of the app writes it: the display system and the Base Unit', () => {

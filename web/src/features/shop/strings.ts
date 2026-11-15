@@ -124,6 +124,9 @@ export const shopStrings = {
   scanned: 'Scanned',
   scannedAmount: (amount: string) => `Scanned · ${amount}`,
   addedTimes: (n: number) => (n === 2 ? 'Added twice' : `Added ${n} times`),
+  // B9-43: the compact form of a ticked row's meta drops "Added" ("Twice · 15 pieces"): the long form was cut at 375 px on a row whose value
+  // is a count of pieces with a Price under it (P23, shop-complete)
+  addedTimesCompact: (n: number) => (n === 2 ? 'Twice' : `${n} times`),
   tickYou: 'you',
   // SSP-02 (decision SSP 3): need that grew after the tick
   moreSince: 'More since your tick',
