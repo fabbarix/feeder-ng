@@ -163,7 +163,7 @@ export default defineConfig({
     // fail: they read navigator, localStorage), the dom tests without isolation (132 files fail: module mocks leak), happy-dom
     // for the dom tests (70 files fail).
     projects: [
-      { extends: true, test: { name: 'logic', include: LOGIC_TESTS, isolate: false, pool: 'threads', unstubGlobals: true } },
+      { extends: true, test: { name: 'logic', include: LOGIC_TESTS, isolate: false, pool: 'threads', unstubGlobals: true, unstubEnvs: true, setupFiles: ['./src/test/logic-isolation.ts'] } },
       { extends: true, test: { name: 'dom', include: ['src/**/*.test.{ts,tsx}'], exclude: [...configDefaults.exclude, ...LOGIC_TESTS], pool: 'threads' } },
     ],
   },
