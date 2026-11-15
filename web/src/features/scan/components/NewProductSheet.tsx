@@ -10,12 +10,30 @@ import type { NewProductInitial } from '../lib/newProductSelect'
 import type { IngredientChoice, UnknownFormValues, UnknownMode } from '../lib/unknownForm'
 import type { SearchResult } from '../../ingredients/types'
 import type { UnitSystem } from '../../../lib/units'
+import type { BaseUnit } from '../types'
 import { newProductStrings } from '../newProductStrings'
 import { NewProductForm } from './NewProductForm'
 import './NewProductSheet.css'
 
 export type { PictureHandlers } from '../lib/newProductPicture'
 export type { NewProductInitial } from '../lib/newProductSelect'
+
+/** B9-50 (SSP-08): the line of a receipt, as the sheet's "On the receipt" block says it (the receipt feature words it). */
+export interface ReceiptLineInfo {
+  /** the line as printed ("KITCHEN ROLL 4 PACK") */
+  text: string
+  /** its price at the row's end ("$3.49"); absent when the line has none */
+  priceText?: string
+  /** the muted detail under it ("×1 at $3.49", "450 g at $2.25") */
+  detail: string
+  /** how many Scans the line makes (the note says "1 Scan at $3.49") */
+  scans: number
+}
+
+/** B9-50 (SSP-08): a name match of the receipt line: an existing Product, or an open Line. At most three, Products first. */
+export type ReceiptMatch =
+  | { kind: 'product'; productId: number; name: string; ingredientId: number; baseUnit: BaseUnit; packSize: number }
+  | { kind: 'line'; ingredientId: number; name: string; baseUnit: BaseUnit; quantity: number }
 
 /** The sheet of an unknown barcode. ScanScreen passes what it has: the barcode, the live Lines, the offline Products, the unit system. */
 export interface NewProductSheetProps {
@@ -72,6 +90,12 @@ export interface NewProductSheetProps {
    * gets "Set up the rule" (onSetUp), a User "Ask the Admin to set one up.", and the scope starts on This Shop only.
    */
   weightCodeHint?: { admin: boolean; onSetUp: () => void }
+  /** B9-50 (SSP-08, no-barcode mode only): the receipt line, shown on top as "On the receipt" and as the sheet's description. */
+  receiptLine?: ReceiptLineInfo
+  /** B9-50 (SSP-08, no-barcode mode only): "Is it one of these?": the name matches of the line. Absent or empty: "Which Line is it?" as before. */
+  matches?: ReceiptMatch[]
+  /** B9-50 (SSP-08): the Product the receipt line already is was chosen ("Use Kitchen roll 4 pack", or the near-duplicate guard's "Use it"). */
+  onUseProduct?: (productId: number) => void
 }
 
 export function NewProductSheet(props: NewProductSheetProps) {
