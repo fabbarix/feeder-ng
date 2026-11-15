@@ -79,21 +79,21 @@ const UPDATE: ToastContent[] = [
 ]
 
 function LeaveDemo() {
-  const { confirm } = useConfirm()
+  const dialogs = useConfirm()
   return (
-    <Button variant="secondary" onClick={() => void confirm(leaveDialog('Pasta al pomodoro'))}>
+    <Button variant="secondary" onClick={() => void dialogs.confirm(leaveDialog('Pasta al pomodoro'))}>
       Leave without saving?
     </Button>
   )
 }
 
 function RemoveMemberDemo() {
-  const { confirm } = useConfirm()
+  const dialogs = useConfirm()
   return (
     <Button
       variant="secondary"
       onClick={() =>
-        void confirm({
+        void dialogs.confirm({
           title: 'Remove Sam?',
           body: 'Sam no longer counts towards portions.',
           groups: [
@@ -119,12 +119,12 @@ function RemoveMemberDemo() {
 }
 
 function RegenerateDemo() {
-  const { confirm } = useConfirm()
+  const dialogs = useConfirm()
   return (
     <Button
       variant="secondary"
       onClick={() =>
-        void confirm({
+        void dialogs.confirm({
           title: 'Regenerate the plan?',
           body: '26 unpinned Planned Meals will change.',
           note: 'Pinned and Cooked ones stay. You can undo it straight after.',
