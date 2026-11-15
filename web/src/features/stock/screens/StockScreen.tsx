@@ -30,7 +30,7 @@ import { PantryOverflowMenu } from '../components/PantryOverflowMenu'
 import { PantryPlaceGroups } from '../components/PantryPlaceGroups'
 import { KeepDateSheet } from '../components/KeepDateSheet'
 import { PutAwaySheet } from '../components/PutAwaySheet'
-import { useLotParam } from '../hooks/useLotParam'
+import { useLotParam, usePutAwayParam } from '../hooks/useLotParam'
 import { usePutAway } from '../hooks/usePutAway'
 import { useSpoiledFlow } from '../hooks/useSpoiledFlow'
 import { useOpenIngredients } from '../hooks/useOpenIngredients'
@@ -97,6 +97,8 @@ export function StockScreen(): ReactElement | null {
   const lotCalls = useMemo(() => ({ throwOut: actions.throwOut, undoThrowOut: actions.undoThrowOut }), [actions.throwOut, actions.undoThrowOut])
   // TB-11: /pantry?lot=<id> opens that Lot.
   useLotParam(pantry.lots.data, useCallback((lot: StockLot) => setOpenLot(lot), []))
+  // B9-43 (SSP-09): /pantry?putAway=1 (the Shop's complete tile) opens the Put away sheet over the Not sorted Lots.
+  const putAwayParam = usePutAwayParam(pantry.lots.data, setPuttingAway)
   // B9-20 (RES-02): the Storage Place view lists the Lots, so it waits for them as well as for the totals.
   const listState = mode === 'places' ? combineScreenStates(totals.state, pantry.lots.state) : totals.state
   // B9-20 (RES-02): the filter header shows while the list loads too (the skeleton then sits where the list will be, so
@@ -338,7 +340,10 @@ export function StockScreen(): ReactElement | null {
 
       <PutAwaySheet
         open={puttingAway !== null}
-        onClose={() => setPuttingAway(null)}
+        onClose={() => {
+          setPuttingAway(null)
+          putAwayParam.clear()
+        }}
         lots={puttingAway ?? []}
         places={pantry.places}
         today={today}
