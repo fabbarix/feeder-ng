@@ -7,7 +7,8 @@
 // w3c integration: P23 always fails, so the routes whose owners have not cleaned their metas yet keep the old reach (the Shop's info
 // hints only) until that package lands and deletes its entry here: /settings and /settings/planning (B9-51), /scan (B9-41).
 // int1: B9-34 has landed and /shop is clean at every width (1180 included), so /shop gets the full reach.
-const PENDING_ROUTES = ['/settings', '/settings/planning', '/scan']
+// w5a: B9-41 has landed (To get rows with a pack take their compact meta), so /scan gets the full reach.
+const PENDING_ROUTES = ['/settings', '/settings/planning']
 const cutMetaProbe = `
 (() => {
   const main = document.querySelector('main')
