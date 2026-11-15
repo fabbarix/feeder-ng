@@ -58,7 +58,8 @@ describe('the timer strip (PC-03: one sticky line of pills with room for rings)'
     expect(strip.display).toBe('flex')
     expect(strip['overflow-x']).toBe('auto')
     expect(strip['scrollbar-width']).toBe('none')
-    expect(strip.padding).toBe('5px')
+    // 5 px in the token form (3 px ring + 2 px offset): check-ui raw-spacing fails a literal 5px in features/cook.
+    expect(strip.padding).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
   })
   it('spans both nav columns', () => {
     expect(css('.cook-nav .cook-strip')['grid-column']).toBe('1 / -1')
@@ -160,7 +161,7 @@ describe('short landscape (SHORT-01: Back and Next are side columns; the Step fi
     expect(step['overflow-y']).toBe('auto')
     expect(step['align-content']).toBe('safe center')
     expect(step['min-block-size']).toBe('0')
-    expect(step['padding-block']).toBe('5px')
+    expect(step['padding-block']).toBe('calc(var(--focus-ring-width) + var(--focus-ring-offset))')
   })
   it('Back is the left column and Next the right one, both from the first row under the top row to the bottom, the arrow above the label', () => {
     const tile = css('.cook-nav__tile', SHORT)
