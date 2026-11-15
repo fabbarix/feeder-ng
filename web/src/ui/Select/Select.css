@@ -271,7 +271,7 @@
   white-space: normal;
 }
 
-/* The meta stays one line ("30 min", "Europe/Rome · UTC+1 · 21:14"). */
+/* The meta stays one line ("30 min", "UTC+1 · 21:14 · Europe/Rome"): a cut falls at its end. */
 .select__meta {
   overflow: hidden;
   text-overflow: ellipsis;

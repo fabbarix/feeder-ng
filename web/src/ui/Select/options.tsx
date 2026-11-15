@@ -188,7 +188,8 @@ export interface TimeZoneOptionsInput {
 }
 
 /**
- * SET-07: one option per zone. Value = the IANA name; label = the city; meta "Europe/Rome · UTC+1 · 21:14"; the trigger reads
+ * SET-07: one option per zone. Value = the IANA name; label = the city; meta "UTC+1 · 21:14 · Europe/Rome" (the offset and the
+ * clock first, so a cut on a narrow list falls on the IANA name); the trigger reads
  * "Rome · Europe/Rome"; leading = a neutral globe. Groups: "This device", then the regions in order of first appearance, then "Other"
  * (names without a region, such as UTC). A zone is listed once. Search reads the label and the meta: the city, the IANA name, the offset.
  */
@@ -200,7 +201,7 @@ export function timeZoneOptions({ zones, now = new Date(), deviceZone, include }
     return {
       value: iana,
       label: z.city,
-      meta: [iana, z.offset, z.time].filter(Boolean).join(' · '),
+      meta: [z.offset, z.time, iana].filter(Boolean).join(' · '),
       triggerLabel: z.city === iana ? iana : `${z.city} · ${iana}`,
       group,
       leading: <Icon name="globe" size={20} />,
