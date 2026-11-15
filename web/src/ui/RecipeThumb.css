@@ -62,3 +62,9 @@
   line-height: var(--text-title-1-line);
   font-weight: var(--text-title-1-weight);
 }
+
+/* B9-38 (PC-16 8): the neutral monogram of Swap and Choose a Recipe: the initial alone, muted on surface-2. */
+.recipe-thumb[data-tone='neutral'] {
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+}

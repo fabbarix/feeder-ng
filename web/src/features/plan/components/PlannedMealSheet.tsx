@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
-import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
+import { useRef, type ReactNode } from 'react'
+import { Avatar, BottomSheet, Button, Chip, FormActions, Icon, ListRow, Menu, type MenuEntry } from '../../../ui'
+import { actionLabel } from '../../../lib/leftovers/rows'
 import { fromLeftoverLabel } from '../../../lib/leftovers/copy'
 import type { Leftover, LeftoverActionKind } from '../../../lib/leftovers/types'
 import { guestsNote } from '../lib/slotDate'
@@ -10,9 +11,15 @@ import { warningContextOf } from '../lib/bought'
 import { courseKey, courseOf, slotCourses } from '../lib/courses'
 import { relaxedLine } from '../lib/relaxed'
 import { weekdayName } from '../lib/phrase'
-import { mayCook, mayResolve } from '../lib/resolve'
-import { resolvedActionLabel, resolvedActions, resolvedHint, resolvedSummary } from '../lib/resolved'
+import { formatPortions } from '../lib/cook'
+import { slotContext } from '../lib/days'
+import { resolvedActionLabel, resolvedHint, resolvedSummary } from '../lib/resolved'
+import { sheetActions, type SheetAction, type SheetActionId } from '../lib/rowActions'
+import { leftoverBlock, leftoverBlockActions, sheetFacts, startNote } from '../lib/sheetFacts'
+import { useFocusOnReplanned } from '../hooks/useFocusOnReplanned'
+import type { IconName } from '../../../ui/icons'
 import { planStrings as s } from '../strings'
+import { undoStrings as u } from '../strings/undo'
 import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
 import { BoughtLine } from './BoughtLine'
 import { PlanChipView } from './PlanChipView'
@@ -61,6 +68,33 @@ export interface PlannedMealSheetProps {
   onLeftoverAction?: (kind: LeftoverActionKind, leftover: Leftover) => void
 }
 
+const ACTION_LABEL: Record<SheetActionId, string> = {
+  cook: s.cook,
+  reheat: s.reheat,
+  markCooked: s.markCooked,
+  notCooked: s.notCooked,
+  swap: s.swap,
+  pin: s.pin,
+  unpin: s.unpin,
+  choose: s.choose,
+  undoCooked: u.undoCooked,
+  cookedAfterAll: u.cookedAfterAll,
+  undoNotCooked: u.undoNotCooked,
+}
+const ACTION_ICON: Record<SheetActionId, IconName> = {
+  cook: 'cook',
+  reheat: 'reheat',
+  markCooked: 'markCooked',
+  notCooked: 'notCooked',
+  swap: 'swap',
+  pin: 'pin',
+  unpin: 'unpin',
+  choose: 'chooseRecipe',
+  undoCooked: 'undo',
+  cookedAfterAll: 'markCooked',
+  undoNotCooked: 'undo',
+}
+
 /**
  * The Planned Meal sheet (ui-fix-plan 2.4, 5.2): title = Recipe name; meta line "Dinner · 19:00" and the facts
  * "1 Batch · 3.5 portions"; Attendance avatars when the slot has them; up to 3 chips plus a "+N" count chip
@@ -88,6 +122,9 @@ export function PlannedMealSheet({
   onUndoCooked,
   onUndoNotCooked,
   onCookedAfterAll,
+  onNotCooked,
+  leftover,
+  onLeftoverAction,
 }: PlannedMealSheetProps): ReactNode {
   const course = slot ? courseOf(slot, courseId) : undefined
   const meal = course?.meal ?? null
@@ -102,63 +139,78 @@ export function PlannedMealSheet({
   const guests = slot?.guests ?? 0
   const guestsText = guestsNote(attendance?.length ?? 0, guests)
 
-  const actions =
-    key && slot && planned
-      ? [
-          mayCook(slot.date, today) ? (
-            <Button key="cook" variant="primary" icon="cook" onClick={() => onCook(slotKey!)}>
-              {s.cook}
-            </Button>
-          ) : null,
-          mayResolve(slot.date, today) ? (
-            <Button key="mark" variant="secondary" icon="markCooked" onClick={() => onMarkCooked(key)}>
-              {s.markCooked}
-            </Button>
-          ) : null,
-          <Button key="swap" variant="secondary" icon="swap" onClick={() => onSwap(key)}>
-            {s.swap}
-          </Button>,
-          meal?.pinned ? (
-            <Button key="unpin" variant="secondary" icon="unpin" onClick={() => onUnpin(key)}>
-              {s.unpin}
-            </Button>
-          ) : (
-            <Button key="pin" variant="secondary" icon="pin" onClick={() => onPin(key)}>
-              {s.pin}
-            </Button>
-          ),
-          <Button key="choose" variant="secondary" icon="chooseRecipe" onClick={() => onChoose(key)}>
-            {s.choose}
-          </Button>,
-        ].filter((a) => a !== null)
-      : []
-  // B9-26 (SAFE-03): a Cooked or Not cooked meal says how it was marked and offers its Undo (none offline, none once it cannot be undone).
-  const resolution = !planned ? meal?.resolution : undefined
-  const handlers = { undoCooked: onUndoCooked, undoNotCooked: onUndoNotCooked, cookedAfterAll: onCookedAfterAll }
-  const undoActions =
-    key && slot && resolution && !offline
-      ? resolvedActions(resolution).map((a) => (
-          <Button key={a.id} variant={a.primary ? 'primary' : 'secondary'} icon={a.primary ? 'markCooked' : 'undo'} onClick={() => handlers[a.id]?.(key)}>
-            {resolvedActionLabel(a, slot, key.courseId)}
-          </Button>
-        ))
-      : []
-  if (undoActions.length > 0) actions.push(...undoActions)
-  // Opening the sheet of a resolved meal focuses its title, never Undo Cooked (Enter must not undo it).
+  // The sheet opens on its title in every state (Enter must not Cook or undo); after an Undo the restored meal's Cook takes focus.
   const { bodyRef, titleRef } = useSheetTitleFocus<HTMLDivElement>()
+  const cookRef = useRef<HTMLButtonElement>(null)
+  useFocusOnReplanned(planned, cookRef)
+  // B9-38 (PC-09, SHORT-02): one FormActions row: the ⋮ "More for Tue Dinner", the outlined secondary, the primary (lib/rowActions sheetActions).
+  const set = meal && slot ? sheetActions(meal, { date: slot.date, today, offline }) : { primary: null, secondary: null, more: [] }
+  const resolution = !planned ? meal?.resolution : undefined
+  const run: Record<SheetActionId, () => void> = {
+    cook: () => slotKey && onCook(slotKey),
+    reheat: () => slotKey && onCook(slotKey),
+    markCooked: () => key && onMarkCooked(key),
+    notCooked: () => key && onNotCooked?.(key),
+    swap: () => key && onSwap(key),
+    pin: () => key && onPin(key),
+    unpin: () => key && onUnpin(key),
+    choose: () => key && onChoose(key),
+    undoCooked: () => key && onUndoCooked?.(key),
+    cookedAfterAll: () => key && onCookedAfterAll?.(key),
+    undoNotCooked: () => key && onUndoNotCooked?.(key),
+  }
+  const labelOf = (a: SheetAction) =>
+    a.id === 'undoCooked' || a.id === 'cookedAfterAll' || a.id === 'undoNotCooked'
+      ? slot && key
+        ? resolvedActionLabel({ id: a.id, label: ACTION_LABEL[a.id] }, slot, key.courseId)
+        : ACTION_LABEL[a.id]
+      : ACTION_LABEL[a.id]
+  const button = (a: SheetAction, primary: boolean) => (
+    <Button
+      key={a.id}
+      ref={a.id === 'cook' || a.id === 'reheat' ? cookRef : undefined}
+      variant={primary ? 'primary' : 'secondary'}
+      icon={ACTION_ICON[a.id]}
+      data-one-line=""
+      onClick={run[a.id]}
+    >
+      {labelOf(a)}
+    </Button>
+  )
+  const moreItems: MenuEntry[] = set.more.map((a) => ({
+    id: a.id,
+    label: a.disabled && a.note ? s.sheet.disabledItem(ACTION_LABEL[a.id], a.note) : ACTION_LABEL[a.id],
+    icon: ACTION_ICON[a.id],
+    disabled: a.disabled,
+    onSelect: a.disabled ? undefined : run[a.id],
+  }))
+  const moreLabel = slot ? s.sheet.moreFor(weekdayName(slot.date, 'short'), slot.name, several ? course?.name : undefined) : ''
+  const lone = set.primary ?? set.secondary
+  const footer = lone ? (
+    <FormActions
+      primary={button(lone, set.primary !== null)}
+      secondary={set.primary && set.secondary ? button(set.secondary, false) : undefined}
+      more={moreItems}
+      moreLabel={moreLabel}
+    />
+  ) : undefined
+  const context = slot ? slotContext({ date: slot.date, slotName: slot.name, time: slot.time, courseName: several ? course?.name : undefined }) : undefined
+  const note = meal ? startNote(meal) : null
+  const block = resolution && leftover ? leftoverBlock(leftover, today) : null
+  const blockActions = resolution && leftover ? leftoverBlockActions(leftover, today) : null
 
   return (
     <BottomSheet
       open={open && slot !== null}
       onClose={onClose}
       title={meal?.recipeName ?? slot?.name ?? ''}
-      footer={actions.length > 0 ? <div className="plan-sheet__actions">{actions}</div> : undefined}
-      initialFocusRef={resolution ? titleRef : undefined}
+      context={context}
+      footer={footer}
+      initialFocusRef={titleRef}
     >
       {slot && meal ? (
         <div ref={bodyRef} className="plan-sheet">
-          <p className="plan-sheet__meta">{several && course ? `${weekdayName(slot.date, 'short')} ${slot.name} · ${course.name}` : `${slot.name} · ${slot.time}`}</p>
-          <p className="plan-sheet__facts">{meal.servedFromLeftover ? s.portionsNeeded(meal.portions) : s.plannedFacts(s.batches(meal.batches), s.portionsNeeded(meal.portions))}</p>
+          {resolution ? null : <p className="plan-sheet__facts">{sheetFacts(meal)}</p>}
           {meal.servedFromLeftover?.leftoverId != null && onOpenLeftover ? (
             <Button variant="secondary" size="sm" onClick={() => onOpenLeftover(meal.servedFromLeftover!.leftoverId!)}>
               {fromLeftoverLabel(meal.servedFromLeftover.date, meal.servedFromLeftover.recipeName)}
@@ -179,12 +231,42 @@ export function PlannedMealSheet({
             ))}
             {overflow > 0 ? <Chip kind="count">{`+${overflow}`}</Chip> : null}
           </div>
-          {resolution ? (
-            <>
-              <p className="plan-sheet__resolved">{resolvedSummary(resolution, { today, timeZone })}</p>
-              <p className="plan-sheet__undo-hint">{resolvedHint(resolution, { today })}</p>
-            </>
+          {resolution ? <p className="plan-sheet__resolved">{resolvedSummary(resolution, { today, timeZone })}</p> : null}
+          {note ? <p className="plan-sheet__start-note">{note}</p> : null}
+          {block && leftover && blockActions ? (
+            <div className="plan-sheet__leftover" role="group" aria-label={s.sheet.leftoverOf(leftover.recipeName)}>
+              <p className="plan-sheet__leftover-title">
+                <Icon name="leftover" />
+                {block.title}
+              </p>
+              <p className="plan-sheet__leftover-detail">{block.detail}</p>
+              {blockActions.buttons.length + blockActions.more.length > 0 ? (
+                <div className="plan-sheet__leftover-actions">
+                  {blockActions.buttons.map((k) => (
+                    <Button key={k} variant="secondary" icon={k === 'freeze' ? 'freezer' : undefined} onClick={() => onLeftoverAction?.(k, leftover)}>
+                      {actionLabel(k)}
+                    </Button>
+                  ))}
+                  {blockActions.more.length > 0 ? (
+                    <Menu
+                      label={s.sheet.leftoverMore}
+                      items={blockActions.more.map((k) => ({ id: k, label: actionLabel(k), tone: k === 'threw-out' ? 'danger' : undefined, onSelect: () => onLeftoverAction?.(k, leftover) }))}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           ) : null}
+          <ul className="plan-sheet__links" aria-label={s.sheet.openRecipe}>
+            <ListRow
+              title={s.sheet.openRecipe}
+              icon="recipes"
+              href={`/recipes/${meal.recipeId}`}
+              meta={resolution ? s.sheet.openRecipePlain : s.sheet.openRecipeFor(formatPortions(meal.portions))}
+              chevron
+            />
+          </ul>
+          {resolution ? <p className="plan-sheet__undo-hint">{resolvedHint(resolution, { today })}</p> : null}
           <BoughtLine bought={meal.bought} />
           <RuleWarningLine warning={meal.warning} context={warningContextOf(slot, meal, course?.name)} />
           {line ? (

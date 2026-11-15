@@ -129,7 +129,8 @@ export interface TimeDialogCopy {
 export function timeDialogCopy(slot: PlanSlot): TimeDialogCopy {
   const usual = slot.usualTime ?? slot.time
   return {
-    title: s.slotDate.timeTitle(slotDayName(slot)),
+    // B9-38 (PC-10): "Time for Thu 12 Dinner", the day of the month added here only.
+    title: s.slotDate.timeTitle(`${weekdayName(slot.date, 'short')} ${Number(slot.date.slice(8, 10))} ${slot.name}`),
     label: s.slotDate.timeLabel,
     helper: s.slotDate.timeHelper(usual),
     back: hasOwnTime(slot) ? s.slotDate.timeBack(usual) : null,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BottomSheet, Button, DateField, FormActions, Muted, StepperField } from '../../../ui'
 import { clampGuests, emptiesDate, MAX_GUESTS, MIN_GUESTS, portionsPreview, portionsPreviewText } from '../lib/dateAttendance'
-import { dateProblem } from '../lib/attendanceDate'
+import { dateProblem, whosEatingContext } from '../lib/attendanceDate'
 import { documentLocale } from '../lib/locale'
 import { dateLabel } from '../lib/mealSlotCards'
 import { dateCourseChanges, dateCourseDrafts, hasDateOverride, resetDateCourse, sameAttendance, withDateEater, type DateCourseDraft } from '../lib/dateCourses'
@@ -102,22 +102,25 @@ function DateSheet({ slot, date, attendance, members, saving, dateReadOnly = fal
   }
 
   const usualOptOuts = (courseId: number) => slot.courses?.find((c) => c.id === courseId)?.optOutMemberIds ?? []
-  const title = dateReadOnly ? text.whosEatingTitle(slot.name, date) : text.dateTitle(slot.name, dateLabel(date, locale))
+  // B9-38 (PC-10): from Plan and Today the title is "Who's eating" under the context line "Thu 12 Nov · Dinner"; Settings keeps its own.
+  const title = dateReadOnly ? text.whosEatingTitle : text.dateTitle(slot.name, dateLabel(date, locale))
+  const context = dateReadOnly ? whosEatingContext(date, slot.name) : undefined
 
   return (
     <BottomSheet
       open
       onClose={onClose}
       title={title}
+      context={context}
       footer={
         <FormActions
           secondary={
-            <Button variant="secondary" aria-label={text.resetDate} disabled={!hasDateOverride(attendance) || saving} onClick={() => void onReset()}>
+            <Button variant="secondary" data-one-line="" aria-label={text.resetDate} disabled={!hasDateOverride(attendance) || saving} onClick={() => void onReset()}>
               {text.resetDateShort}
             </Button>
           }
           primary={
-            <Button aria-label={text.saveDate} disabled={problem !== null} loading={saving} onClick={() => void save()}>
+            <Button data-one-line="" aria-label={text.saveDate} disabled={problem !== null} loading={saving} onClick={() => void save()}>
               {text.saveDateShort}
             </Button>
           }

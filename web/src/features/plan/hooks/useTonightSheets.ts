@@ -12,8 +12,11 @@ import { usePlanLiveUpdates } from './usePlanLiveUpdates'
 import { useReplanReview } from './useReplanReview'
 import { useResolvedUndo } from './useResolvedUndo'
 
-const noop = () => {}
 import { useRecipeChoices } from './useRecipeChoices'
+import { chooserRecipes, sheetCourse } from '../lib/choose'
+
+const noop = () => {}
+const matchesSlot = (slot: PlanSlot | null, key: SlotKey | null) => (slot && key && key.date === slot.date && key.mealSlotId === slot.mealSlotId ? slot : null)
 
 /**
  * The sheets of the Tonight slot on Today, one at a time per kind; `slot` is the hero slot the keys must match. B9-26 (PC-01): its
@@ -34,6 +37,11 @@ export function useTonightSheets(slot: PlanSlot | null, openMarkCooked: (key: Sl
   const [chooseKey, setChooseKey] = useState<SlotKey | null>(null)
   const alternatives = useAlternatives(swapKey)
   const choices = useRecipeChoices(chooseKey !== null, chooseKey?.courseId)
+  // B9-38 (PC-10, additive for B9-39): what Choose a Recipe needs to name its Course and list "Other Recipes" for a Course other
+  // than the main one. `choose.recipes` stays the server's marked list; `choose.sheet` is the whole set for RecipeChooserSheet.
+  const chooseSlot = matchesSlot(slot, chooseKey)
+  const chooseMain = chooseSlot ? (sheetCourse(chooseSlot, chooseKey?.courseId)?.main ?? true) : true
+  const every = useRecipeChoices(chooseKey !== null && !chooseMain)
   const allCooked = useAllCookedFlow()
   const navigate = useNavigate()
   const matches = (key: SlotKey | null) => (slot && key && key.date === slot.date && key.mealSlotId === slot.mealSlotId ? slot : null)
@@ -65,6 +73,8 @@ export function useTonightSheets(slot: PlanSlot | null, openMarkCooked: (key: Sl
       key: swapKey,
       slot: swapSlot,
       bought: swapBought,
+      /** B9-38: the Course being swapped (the sheet's context line and its "Now" row). */
+      courseId: swapKey?.courseId,
       open: setSwapKey,
       close: () => setSwapKey(null),
       alternatives: alternatives.alternatives,
@@ -85,6 +95,18 @@ export function useTonightSheets(slot: PlanSlot | null, openMarkCooked: (key: Sl
         const key = chooseKey
         setChooseKey(null)
         if (key) await actions.setMeal(key, recipeId, 'choose')
+      },
+      /** B9-38: the slot and Course of the sheet (its context line, search label and groups). */
+      slot: chooseSlot,
+      courseId: chooseKey?.courseId,
+      /** B9-38: the Recipes for RecipeChooserSheet: the marked list, plus "Other Recipes" for a Course other than the main one. */
+      sheetRecipes: chooseMain || !chooseKey ? choices.recipes : chooserRecipes(choices.recipes, every.recipes, chooseKey.courseId),
+      sheetLoading: choices.isLoading || (!chooseMain && every.isLoading),
+      /** B9-38: a Recipe of "Other Recipes": marked with the Course and set there in one write. */
+      pickOther: async (recipeId: number) => {
+        const key = chooseKey
+        setChooseKey(null)
+        if (key) await actions.setMeal(key, recipeId, 'choose', { markCourse: true })
       },
     },
     allCooked,

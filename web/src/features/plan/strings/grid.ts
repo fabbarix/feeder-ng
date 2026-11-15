@@ -32,7 +32,6 @@ export const gridStrings = {
   servedFromLeftoverUnknown: 'Leftover',
   batches: (n: number) => (n === 1 ? '1 Batch' : `${n} Batches`),
   portionsNeeded: (n: number) => (n === 1 ? '1 portion' : `${n} portions`),
-  extraPortions: (n: number) => `+${n} portion Leftover`,
   // Regenerate (lib/regenerate)
   regenerating: 'Regenerating…',
   regenerateConfirmTitle: 'Regenerate the plan?',
@@ -150,7 +149,8 @@ export const gridStrings = {
     context: (n: number, noun: string) => `Couldn't plan ${n} ${noun}`,
     lede: (course: string) => `The planner fills ${course} only from Recipes marked with it. Tick the ones you would serve as ${course}.`,
     search: 'Search Recipes',
-    primary: (n: number, course: string) => (n === 0 ? `Mark Recipes as ${course}` : n === 1 ? `Mark 1 Recipe as ${course}` : `Mark ${n} Recipes as ${course}`),
+    // B9-38 (P30 at 390): the Course is in the title, so the primary names only the count.
+    primary: (n: number) => (n === 0 ? 'Mark Recipes' : n === 1 ? 'Mark 1 Recipe' : `Mark ${n} Recipes`),
     noCourse: 'No Course yet',
     allMarked: (course: string) => `Every Recipe is already marked as ${course}.`,
     noMatch: 'No Recipe has that name.',

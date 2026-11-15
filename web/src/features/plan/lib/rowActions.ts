@@ -1,5 +1,8 @@
 // ds-plan: which icon actions a Course row and a Meal Slot header offer. Plain TypeScript, no React.
 import { mayCook } from './resolve'
+import { resolvedActions } from './resolved'
+import { weekdayName } from './phrase'
+import { planStrings as s } from '../strings'
 import { plannedMeals, slotMenu } from './courses'
 import type { PlannedMeal, PlanSlot } from '../types'
 
@@ -47,6 +50,24 @@ export interface SheetActionSet {
 }
 
 /** What the Planned Meal sheet's footer offers for a meal on `date` (household dates). Never more than a primary and a secondary button. */
-export function sheetActions(_meal: PlannedMeal, _ctx: { date: string; today: string; offline?: boolean }): SheetActionSet {
-  throw new Error('sheetActions: not implemented (B9-38)')
+export function sheetActions(meal: PlannedMeal, ctx: { date: string; today: string; offline?: boolean }): SheetActionSet {
+  const none: SheetActionSet = { primary: null, secondary: null, more: [] }
+  if (meal.state !== 'planned') {
+    const r = meal.resolution
+    if (ctx.offline || !r) return none
+    const [first, second] = resolvedActions(r)
+    if (!first) return none
+    if (first.primary) return { primary: { id: first.id }, secondary: second ? { id: second.id } : null, more: [] }
+    return { primary: null, secondary: { id: first.id }, more: [] }
+  }
+  const pin: SheetAction = { id: meal.pinned ? 'unpin' : 'pin' }
+  const cook: SheetAction = { id: meal.servedFromLeftover ? 'reheat' : 'cook' }
+  if (ctx.date > ctx.today) {
+    const from = `${weekdayName(ctx.date, 'short')} ${Number(ctx.date.split('-')[2])}`
+    return { primary: cook, secondary: { id: 'swap' }, more: [{ id: 'markCooked', disabled: true, note: s.sheet.markCookedFrom(from) }, pin, { id: 'choose' }] }
+  }
+  if (ctx.date < ctx.today) {
+    return { primary: { id: 'markCooked' }, secondary: { id: 'swap' }, more: [pin, { id: 'choose' }, { id: 'notCooked' }] }
+  }
+  return { primary: cook, secondary: { id: 'markCooked' }, more: [{ id: 'swap' }, pin, { id: 'choose' }, { id: 'notCooked' }] }
 }
