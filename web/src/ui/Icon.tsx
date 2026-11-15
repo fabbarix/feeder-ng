@@ -1,6 +1,6 @@
 import { icons, type IconName } from './icons'
 
-export type IconSize = 14 | 16 | 20 | 22 | 24 | 28 | 64
+export type IconSize = 14 | 16 | 20 | 22 | 24 | 28 | 64 | 96
 export type IconWeight = 'regular' | 'bold' | 'fill' | 'duotone'
 
 export interface IconProps {

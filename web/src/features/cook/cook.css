@@ -444,26 +444,229 @@
 
 
 
+/* B9-45 (PC-02): the Cooked moment. A centred column of at most 40 rem: a 96 px success check that pops in (it simply appears with
+   reduced motion), "Cooked, nice one!" in title-1, the Recipe and meal muted, the Leftover tile, the ONE shortfall notice, then the
+   footer: Undo Cooked and the way back, whole buttons that wrap, at the bottom of the screen on a phone. */
+.cook-screen[data-layout='confirmation'] {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+}
+
 .cook-confirmation {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  gap: var(--space-4);
+  inline-size: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+.cook-confirmation__hero {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-6) var(--space-2);
+  text-align: center;
+}
+
+.cook-confirmation__mark {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+  box-shadow: 0 0 0 var(--space-2) color-mix(in srgb, var(--status-success-bg) 50%, transparent);
+  animation: cook-confirmation-pop var(--dur-3) var(--ease-spring) both;
+}
+
+@keyframes cook-confirmation-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cook-confirmation__mark {
+    animation: none;
+  }
+}
+
+.cook-confirmation__title {
+  margin: 0;
+  font-size: var(--text-title-1-size);
+  font-weight: var(--text-title-1-weight);
+  line-height: var(--text-title-1-line);
+}
+
+/* The heading takes focus so a screen reader starts there; it is not a control, so it draws no ring. */
+.cook-confirmation__title:focus {
+  outline: none;
+}
+
+.cook-confirmation__recipe {
+  margin: 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  color: var(--color-muted);
+}
+
+.cook-confirmation__outcome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--status-leftover-fg);
+}
+
+.cook-confirmation__outcome > svg {
+  flex: none;
+}
+
+.cook-confirmation__outcome-text {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.cook-confirmation__outcome-title {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  color: var(--color-text);
+}
+
+.cook-confirmation__outcome-meta {
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  line-height: var(--text-meta-line);
+}
+
+/* The footer: secondary Undo Cooked then the primary way back, side by side when they fit, else stacked whole. On a phone it sits at
+   the bottom (and stays in view while the notice is long). */
+.cook-confirmation__actions {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-start: auto;
+  padding-block: var(--space-3) calc(env(safe-area-inset-bottom, 0px) + var(--space-3));
+  background: var(--color-bg);
+}
+
+.cook-confirmation__actions > .button {
+  flex: 1 1 9rem;
+}
+
+/* From tablet the column is centred and the footer follows the tiles. */
+@media (min-width: 48em) {
+  .cook-confirmation__actions {
+    position: static;
+    margin-block-start: 0;
+  }
+}
+
+/* B9-45 (PC-05): Get ready, the Ingredients before the first Step (and the same rows in the sheet and the rail). A row is our own
+   checkbox, the name, the Storage Place muted under it and the amount at the end; a ticked row is muted, its name struck through. */
+.get-ready {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.get-ready__head {
+  display: grid;
+  gap: var(--space-half);
+}
+
+.get-ready__title {
+  margin: 0;
+  font-size: var(--text-title-3-size);
+  font-weight: var(--text-title-3-weight);
+  line-height: var(--text-title-3-line);
+}
+
+.get-ready__meta {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  font-weight: var(--text-meta-weight);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+
+.get-ready__sections {
   display: grid;
   gap: var(--space-3);
 }
 
-.cook-confirmation__title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
+.get-ready__section {
+  display: grid;
 }
 
-.cook-confirmation__recipe,
-.cook-confirmation__outcome {
+.get-ready__course {
   margin: 0;
+  padding-block: var(--space-2) var(--space-1);
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
+  color: var(--color-muted);
 }
 
-.cook-confirmation__actions {
-  display: flex;
-  justify-content: flex-end;
+.get-ready__list {
+  container-type: inline-size;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.get-ready__list > .list-row {
+  min-block-size: 52px;
+  padding-inline: 0;
+}
+
+/* The checkbox's name ("Chicken, 1.2 kg") is read, not shown: the row's title already shows it. */
+.get-ready__check .checkbox__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.get-ready__list > .list-row > .list-row__control {
+  justify-items: start;
+}
+
+.get-ready__check .checkbox__control {
+  justify-content: flex-start;
+  min-inline-size: 44px;
+}
+
+.get-ready__list > .list-row[data-ticked="true"] .list-row__title,
+.get-ready__list > .list-row[data-ticked="true"] .list-row__value {
+  color: var(--color-muted);
+}
+
+.get-ready__list > .list-row[data-ticked="true"] .list-row__title {
+  text-decoration: line-through;
+}
+
+.cook-rail__ingredients {
+  align-content: start;
+  padding: var(--space-4);
+  border-radius: var(--radius-tile-sm);
+  background: var(--color-surface);
+  box-shadow: var(--elev-1);
 }
 
 /* Tablet and up (§2.7): the Step tile fills the height, the timers sit 2-up beneath it, the nav last. */

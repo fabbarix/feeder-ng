@@ -137,21 +137,6 @@
   }
 }
 
-/* Plan's shortfall warning, as this feature's Tile (variant status, spoil). */
-.shortfall-notice__text {
-  margin: 0;
-  font-size: var(--text-body-strong-size);
-  font-weight: var(--text-body-strong-weight);
-  line-height: var(--text-body-strong-line);
-  overflow-wrap: anywhere;
-}
-
-.shortfall-notice__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
 /* Pantry: the Storage Place groups, one ListGroup each, spaced like the page's sections. */
 .pantry-groups {
   display: grid;

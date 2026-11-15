@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button, EmptyState, Stepper, Tile, useToast } from '../../../ui'
 import { useDocumentTitle } from '../../../ui/lib/useDocumentTitle'
 import { formatTimer } from '../../../lib/format'
@@ -7,6 +7,7 @@ import { useCookFlow } from '../../plan'
 import { usePlannedMeal } from '../hooks/usePlannedMeal'
 import { useReheat } from '../hooks/useReheat'
 import { REHEAT_MAX_SECONDS, REHEAT_MIN_SECONDS, REHEAT_STEP_SECONDS } from '../lib/reheat'
+import { originOf, returnTarget } from '../lib/origin'
 import { cookStrings } from '../strings'
 import type { PlannedMeal, SlotKey } from '../../plan/types'
 import '../cook.css'
@@ -27,7 +28,9 @@ export function ReheatScreen(): ReactNode {
   // After Mark as Cooked the plan refetches and the meal turns Cooked before we leave: hold the last body meanwhile.
   const [leaving, setLeaving] = useState(false)
   const lastMeal = useRef<PlannedMeal | null>(null)
-  const home = () => navigate('/')
+  // B9-45 (PC-02): back to where Reheat was opened from (location.state.from), else Today.
+  const origin = returnTarget(originOf(useLocation().state))
+  const home = () => navigate(origin.path)
   const markCooked = async () => {
     setLeaving(true)
     if (await flow.quickCook(key)) home()

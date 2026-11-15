@@ -15,8 +15,16 @@ const noSkeleton = `!document.querySelector('[aria-busy="true"], .skeleton')`
 // photo) when it exists, else the first seed Recipe.
 async function openCook() {
   const id = helpers.ids.cookRecipeId ?? helpers.ids.recipeId ?? 1
-  // always the first Step at load: a resume Step left by an earlier scenario (the photo one) is forgotten
-  await evaluate(`localStorage.removeItem('feeder.cook.resume.recipe:${id}'); location.assign('/cook/recipe/${id}')`)
+  // B9-45 (PC-05): Cook Mode opens on Get ready unless the cook is under way; a stored first Step skips it, so the Step is measured.
+  // That first Step is the Recipe's first CookStep index (the rich Recipe's Advance Steps come first, so it is not 0); a resume Step
+  // an earlier scenario left (the photo one) is replaced by it.
+  await evaluate(`(async () => {
+    const view = await (await fetch('/api/cook/recipes/${id}?batches=1', { credentials: 'same-origin' })).json()
+    const first = (view.steps || [])[0]
+    localStorage.setItem('feeder.cook.resume.recipe:${id}', String(first ? first.index : 0))
+    return true
+  })()`)
+  await evaluate(`location.assign('/cook/recipe/${id}')`)
   await until(`!!document.querySelector('.cook-step__text') && ${noSkeleton}`, 'the Cook Mode Step text', 15000)
   return id
 }

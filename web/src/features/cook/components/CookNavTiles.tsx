@@ -21,6 +21,8 @@ export interface CookNavTilesProps {
   onLeave?: () => void
   /** B9-40: the label of onLeave, default "Back to Plan" (the origin's name when the cook did not come from the Plan). */
   leaveLabel?: string
+  /** B9-45 (PC-05): the label of Next, "Start cooking" on Get ready (default "Next"). */
+  nextLabel?: string
   /** B9-40 (PC-03): the timer strip, first in the sticky nav (it spans both columns). */
   children?: ReactNode
 }
@@ -32,7 +34,7 @@ export interface CookNavTilesProps {
  * (PC-12). A last Step with nothing to offer has no forward button: never a disabled Next without a reason. The line under the tiles
  * is a live status with an icon (the timer for a held Next, the Plan's calendar for a future meal).
  */
-export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, onDone, heldText, markLabel, futureLine, onLeave, leaveLabel, children }: CookNavTilesProps): ReactNode {
+export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, onDone, heldText, markLabel, futureLine, onLeave, leaveLabel, nextLabel, children }: CookNavTilesProps): ReactNode {
   const lineId = useId()
   const held = !isLast && heldText ? heldText : ''
   const future = isLast && futureLine ? futureLine : ''
@@ -41,7 +43,7 @@ export function CookNavTiles({ isFirst, isLast, onBack, onNext, onMarkCooked, on
   if (!isLast) {
     forward = (
       <Button size="lg" icon="next" className="cook-nav__tile" data-arrow="end" onClick={onNext} disabled={Boolean(held)} aria-describedby={held ? lineId : undefined}>
-        {cookStrings.next}
+        {nextLabel ?? cookStrings.next}
       </Button>
     )
   } else if (future) {

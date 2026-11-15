@@ -23,6 +23,9 @@ export const cookStrings = {
   otherTimersRegion: 'Other timers',
   timerFinished: (label: string) => `${label} is ready`,
   markedAsCooked: 'Marked as Cooked',
+  /** B9-45 (PC-02): the Cooked moment. */
+  cookedCheer: 'Cooked, nice one!',
+  undoCooked: 'Undo Cooked',
   backToToday: 'Back to Today',
   voice: 'Voice commands',
   voiceUnsupported: 'Voice commands are not available in this browser',
@@ -61,6 +64,9 @@ export const cookStrings = {
   coveredHeading: 'Already in Stock',
   // B9-40 (PC-03, PC-12, PC-15, PC-16, SHORT-01, A11Y-01)
   ingredients: 'Ingredients',
+  /** B9-45 (PC-05): the Get ready tile and its way into the Steps. */
+  getReady: 'Get ready',
+  startCooking: 'Start cooking',
   /** A11Y-01: the document title while Cook Mode loads, and with its h1 ("Cook Mode · Roast chicken"); the shell adds " · Feeder". */
   documentTitle: 'Cook Mode',
   enlargePhoto: 'Enlarge the photo',

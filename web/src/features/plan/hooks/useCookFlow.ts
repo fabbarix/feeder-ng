@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { useToast } from '../../../ui'
 import { planApi } from '../api'
+import { shortfallGroupFor } from '../lib/cook'
 import { cookedToast, notCookedToast } from '../lib/resolved'
 import { planStrings } from '../strings'
 import type { CookedResult, SlotKey, StockWarning } from '../types'
@@ -9,7 +10,10 @@ import { invalidatePlan } from './planCache'
 import { cachedSlots } from './replanState'
 import { useReopen } from './useReopen'
 import { useMarkCooked, type MarkCookedController } from './useMarkCooked'
-import { useStockSheet, type StockSheetController } from './useStockSheet'
+import { useShortfalls } from './useShortfalls'
+import type { StockCorrectionController } from '../../stock/hooks/useStockCorrection'
+import type { ShortfallGroup } from '../../stock/lib/shortfall'
+import type { UnitSystem } from '../../../lib/units'
 
 export interface CookFlow {
   /** Slot whose Mark as Cooked sheet is open, or null. */
@@ -18,9 +22,8 @@ export interface CookFlow {
   open: (key: SlotKey) => void
   close: () => void
   cook: MarkCookedController
-  stock: StockSheetController
-  /** Sheet "Mark as Cooked": confirms with the edited Leftover and closes on success; the Cooked toast offers Undo (SAFE-03). */
-  confirm: () => Promise<void>
+  /** Sheet "Mark as Cooked": confirms with the edited Leftover and closes on success; the Cooked toast offers Undo (SAFE-03). Resolves the result (null on failure). */
+  confirm: () => Promise<CookedResult | null>
   /** Sheet "Not cooked"; the toast offers Undo. */
   skip: () => Promise<void>
   /**
@@ -31,39 +34,48 @@ export interface CookFlow {
   quickCook: (key: SlotKey) => Promise<boolean>
   /** Key being saved by quickCook, or null. */
   quickBusy: SlotKey | null
-  /** Stock shortfall warnings still to show, from either path. */
+  /** Stock shortfall warnings still to show (every group's, one per Ingredient). */
   warnings: StockWarning[]
+  /** Takes one Ingredient out of every group (a group left empty goes). */
   dismissWarning: (ingredientId: number) => void
+  /** B9-45 (PC-02): one group per Cooked meal still to show in the ONE notice (id "date/slot/course"), newest last. */
+  shortfalls: ShortfallGroup[]
+  /** B9-45 (PC-02): the notice's Dismiss: clears every group and warning. */
+  dismissShortfalls: () => void
+  /** B9-45 (PC-02): the ONE Correct Stock sheet of the groups; a save settles the whole notice. */
+  correct: StockCorrectionController
+  /** The User's unit system for the notice and the sheet (read only while there is a shortfall). */
+  system?: UnitSystem
 }
 
-/** Mark as Cooked orchestration shared by the Plan and Today: sheet flow (useMarkCooked + useStockSheet) and the one-tap path. */
-export function useCookFlow(): CookFlow {
+/**
+ * Mark as Cooked orchestration shared by the Plan, Today and Cook Mode: sheet flow (useMarkCooked) and the one-tap path, the ONE
+ * shortfall notice's groups and its ONE Correct Stock sheet (useShortfalls). `toast: false` (Cook Mode, whose confirmation page has
+ * its own Undo) shows no Cooked toast.
+ */
+export function useCookFlow(options: { toast?: boolean } = {}): CookFlow {
+  const withToast = options.toast !== false
   const client = useQueryClient()
   const toast = useToast()
   const [cookKey, setCookKey] = useState<SlotKey | null>(null)
   const [quickBusy, setQuickBusy] = useState<SlotKey | null>(null)
-  const [quick, setQuick] = useState<StockWarning[]>([])
   const cook = useMarkCooked(cookKey)
   const reopen = useReopen()
+  const notice = useShortfalls()
+  const { add, remove } = notice
 
-  const dismissWarning = useCallback(
-    (ingredientId: number) => {
-      setQuick((ws) => ws.filter((w) => w.ingredientId !== ingredientId))
-      cook.dismissWarning(ingredientId)
-    },
-    [cook],
-  )
-  const stock = useStockSheet((id) => dismissWarning(id))
-
-  /** The Cooked toast with Undo; a successful Undo also takes its shortfall notice away (PC-02's notice, SAFE-03). */
-  const offerCookedUndo = useCallback(
+  /** The meal's group in the ONE notice, and (unless Cook Mode) the Cooked toast whose Undo also takes that group away (SAFE-03). */
+  const afterCooked = useCallback(
     (key: SlotKey, result: CookedResult, recipeName: string) => {
-      const ids = result.warnings.map((w) => w.ingredientId)
-      reopen.offerUndo(cookedToast({ slots: cachedSlots(client), key, recipeName: result.meal.recipeName || recipeName, result }), key, () =>
-        ids.forEach((id) => dismissWarning(id)),
-      )
+      const name = recipeName || result.meal.recipeName
+      const group = shortfallGroupFor(cachedSlots(client), key, name, result.warnings)
+      add(group)
+      if (!withToast) return
+      reopen.offerUndo(cookedToast({ slots: cachedSlots(client), key, recipeName: name, result }), key, () => {
+        if (group) remove(group.id)
+      })
     },
-    [client, reopen, dismissWarning],
+    [client, reopen, add, remove, withToast],
   )
 
   const quickCook = useCallback(
@@ -72,8 +84,7 @@ export function useCookFlow(): CookFlow {
       try {
         const preview = await planApi.cookPreview(key)
         const result = await planApi.cooked(key, preview.fresh ? preview.proposedLeftover : undefined)
-        setQuick(result.warnings)
-        offerCookedUndo(key, result, preview.meal.recipeName)
+        afterCooked(key, result, preview.meal.recipeName)
         await invalidatePlan(client)
         return true
       } catch {
@@ -83,23 +94,21 @@ export function useCookFlow(): CookFlow {
         setQuickBusy(null)
       }
     },
-    [client, toast, offerCookedUndo],
+    [client, toast, afterCooked],
   )
-
-  const warnings = [...cook.warnings, ...quick.filter((w) => !cook.warnings.some((c) => c.ingredientId === w.ingredientId))]
 
   return {
     cookKey,
     open: setCookKey,
     close: () => setCookKey(null),
     cook,
-    stock,
     confirm: async () => {
       const key = cookKey
       const result = await cook.confirm()
-      if (!result || !key) return
+      if (!result || !key) return null
       setCookKey(null)
-      offerCookedUndo(key, result, cook.preview?.meal.recipeName ?? '')
+      afterCooked(key, result, cook.preview?.meal.recipeName ?? '')
+      return result
     },
     skip: async () => {
       const key = cookKey
@@ -109,8 +118,12 @@ export function useCookFlow(): CookFlow {
     },
     quickCook,
     quickBusy,
-    warnings,
-    dismissWarning,
+    warnings: notice.warnings,
+    dismissWarning: notice.dismissWarning,
+    shortfalls: notice.groups,
+    dismissShortfalls: notice.dismiss,
+    correct: notice.correct,
+    system: notice.system,
   }
 }
 

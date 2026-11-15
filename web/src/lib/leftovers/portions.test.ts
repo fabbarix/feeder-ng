@@ -13,17 +13,22 @@ describe('portion defaults', () => {
   it('Threw it out defaults to all that is left', () => {
     expect(throwOutDefault(2.5)).toBe(2.5)
   })
-  it('the stepper goes 0.5 to what is left in 0.5 steps', () => {
-    expect(portionBounds(3)).toEqual({ min: 0.5, max: 3, step: 0.5 })
+  it('the stepper goes 0.25 to what is left in 0.25 steps (PC-13)', () => {
+    expect(portionBounds(3)).toEqual({ min: 0.25, max: 3, step: 0.25 })
   })
   it('Freeze it defaults to the portions no Planned Meal is planned to use', () => {
     expect(freezeDefaultPortions(5, 2)).toBe(3)
     expect(freezeDefaultPortions(5, 0)).toBe(5)
   })
-  it('Freeze it rounds the spare portions down to a 0.5 step so the stepper default is reachable', () => {
-    expect(freezeDefaultPortions(5.25, 2)).toBe(3)
-    expect(freezeDefaultPortions(4.75, 2)).toBe(2.5)
-    expect(freezeDefaultPortions(3, 0.25)).toBe(2.5)
+  it('Freeze it keeps every spare quarter portion (PC-13: a 1.25 Leftover never strands 0.25)', () => {
+    expect(freezeDefaultPortions(5.25, 2)).toBe(3.25)
+    expect(freezeDefaultPortions(4.75, 2)).toBe(2.75)
+    expect(freezeDefaultPortions(3, 0.25)).toBe(2.75)
+    expect(freezeDefaultPortions(1.25, 0)).toBe(1.25)
+    expect(freezeDefaultPortions(2.5, 1.25)).toBe(1.25)
+  })
+  it('Freeze it rounds a spare amount that is not a quarter down to the quarter', () => {
+    expect(freezeDefaultPortions(2.6, 1.3)).toBe(1.25)
   })
   it('Freeze it defaults to all of them when every portion is planned', () => {
     expect(freezeDefaultPortions(2, 2)).toBe(2)
