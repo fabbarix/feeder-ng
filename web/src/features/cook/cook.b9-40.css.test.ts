@@ -234,3 +234,9 @@ describe('Reheat tile (PC-15: the same column at every width, 40 rem at most)', 
     expect(blocks.some((b) => b.selector === '.reheat-actions' && b.decls.some(([p, v]) => p === 'flex-wrap' && v === 'wrap'))).toBe(false)
   })
 })
+
+describe('Get ready in short landscape (B9-45 review)', () => {
+  it('takes the Step\'s place in the middle columns and scrolls inside itself', () => {
+    expect(css('.get-ready', SHORT)).toMatchObject({ 'grid-row': '2', 'grid-column': '2 / 5', 'overflow-y': 'auto', 'min-block-size': '0' })
+  })
+})
