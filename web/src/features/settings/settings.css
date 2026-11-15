@@ -37,6 +37,7 @@
   color: var(--color-muted);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
 }
 /* An info notice ("Not saved yet", the changed time zone): the info status pair, a 16 px icon and one line of meta text in a bordered box. */
 .settings__notice {
@@ -46,13 +47,13 @@
   margin: 0;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-info-fg);
-  border-radius: var(--radius-button, 12px);
+  border-radius: var(--radius-control);
   background: var(--color-info-bg);
   color: var(--color-info-fg);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
-  /* A sentence of running text: weight 500, never bold (standing ruling). */
-  font-weight: 500;
+  /* A sentence of running text: the meta weight (500), never bold (standing ruling). */
+  font-weight: var(--text-meta-weight);
 }
 .settings__notice > svg {
   flex: none;
