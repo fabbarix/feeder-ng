@@ -204,10 +204,10 @@ describe('PC-07: an unfilled Course row', () => {
     expect(setupDessert(c).li.querySelector('.plan-row__chips .chip')).toHaveTextContent('Slot Rule unmet')
   })
 
-  it('a trailing 44 px "Choose a Recipe for Dessert, Tue 17 Breakfast" button with the MagnifyingGlass; it is the only button and there is no Swap or Pin', async () => {
+  it('a trailing 44 px "Choose a Recipe for Dessert, Tue 17 Dinner" button with the MagnifyingGlass; it is the only button and there is no Swap or Pin', async () => {
     const { li, h } = setupDessert(unfilled('no_course_recipes'))
     const buttons = within(li as HTMLElement).getAllByRole('button')
-    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Choose a Recipe for Dessert, Tue 17 Breakfast'])
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Choose a Recipe for Dessert, Tue 17 Dinner'])
     expect(buttons[0]!.closest('.list-row__trailing')).not.toBeNull()
     await userEvent.click(buttons[0]!)
     expect(h.onChoose).toHaveBeenCalledWith(key)

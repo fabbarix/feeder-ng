@@ -160,7 +160,7 @@ describe('PlanScreen: the Planned Meal sheet', () => {
     const tomorrow = await openSheet('Tomorrow', 'Stew')
     expect(within(tomorrow).queryByRole('button', { name: 'Mark as Cooked' })).not.toBeInTheDocument()
     expect(within(tomorrow).queryByRole('button', { name: /^Cook / })).not.toBeInTheDocument()
-    expect(within(tomorrow).getByRole('button', { name: /^Swap / })).toBeInTheDocument()
+    expect(within(tomorrow).getByRole('button', { name: /^Swap( |$)/ })).toBeInTheDocument()
   })
 
   it('Pin posts to the confirm route (the word is Pin, the route is old)', async () => {

@@ -73,7 +73,7 @@ describe('TonightHero: the Course row', () => {
     const row = screen.getByRole('listitem', { name: 'Side' })
     const body = row.querySelector('.plan-course__body')!
     expect(row.querySelector('.plan-course__caption')).toHaveTextContent('Side')
-    expect(within(row).getByRole('button', { name: /^Two-colour cauliflower$/ })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /^Two-colour cauliflower with peppers$/ })).toBeInTheDocument()
     expect(within(row).getByText('Leftover from Mon')).toBeInTheDocument()
     const actions = body.lastElementChild as HTMLElement
     expect(actions).toHaveClass('plan-course__actions')
@@ -131,7 +131,7 @@ describe('TonightHero: the Course row structure (round 2)', () => {
 
   it('the Recipe name is not given an ellipsis class or a max-width in markup (full name, wrapping)', () => {
     setup()
-    const name = screen.getByRole('button', { name: /^Two-colour cauliflower$/ })
+    const name = screen.getByRole('button', { name: /^Two-colour cauliflower with peppers$/ })
     expect(name.getAttribute('style') ?? '').not.toMatch(/max-|overflow|ellipsis/)
   })
 
