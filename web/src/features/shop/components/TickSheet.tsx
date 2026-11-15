@@ -1,10 +1,6 @@
-import { useState } from 'react'
-import { baseUnitLabel } from '../../../lib/units'
-import { BottomSheet } from '../../../ui/BottomSheet'
-import { Button } from '../../../ui/Button'
-import { FormActions } from '../../../ui/FormActions'
-import { NumberField } from '../../../ui/fields/NumberField'
-import { shopStrings } from '../strings'
+// B9-34 (SSP-01): the Change sheet "Garlic: how much?". TEST-AUTHOR STUB: the developer writes it (the old "How much?" prefill form is gone:
+// one tap ticks now). Props pinned by TickSheet.test.tsx.
+import type { UnitSystem } from '../../../lib/units'
 import type { BaseUnit } from '../types'
 
 export interface TickSheetProps {
@@ -12,45 +8,19 @@ export interface TickSheetProps {
   onClose: () => void
   name: string
   baseUnit: BaseUnit
-  /** the Line's remaining quantity in Base Units, prefilled (0 for free text) */
-  defaultQuantity: number
-  /** quantity in Base Units: 0 only ticks, > 0 adds a Stock Lot */
+  system: UnitSystem
+  /** Base Units the viewer's tick added; 0 = none (the "Added when you ticked it" row is left out) */
+  added: number
+  /** ISO instant of that tick */
+  tickedAt: string
+  /** the Household's IANA zone */
+  timeZone: string
+  /** the pack (label as tickChoices words it) and what the Line needed; null = not offered */
+  choices: { pack: { label: string; amount: number } | null; need: { amount: number } | null }
+  /** Base Units for this tick: > 0 sets the amount, 0 is "Tick without adding" */
   onSubmit: (quantity: number) => void
 }
 
-/** "How much?" before a tick by hand: a NumberField prefilled with the remaining quantity, then add to Stock or tick only. */
-export function TickSheet({ open, onClose, name, baseUnit, defaultQuantity, onSubmit }: TickSheetProps) {
-  const [value, setValue] = useState<number | null>(defaultQuantity)
-  const [error, setError] = useState<string | null>(null)
-
-  const submit = () => {
-    if (value === null) {
-      setError(shopStrings.enterAmount)
-      return
-    }
-    setError(null)
-    onSubmit(value)
-  }
-
-  return (
-    <BottomSheet open={open} onClose={onClose} title={shopStrings.tickTitle(name)}>
-      <form
-        className="shop-sheet-form"
-        onSubmit={(e) => {
-          e.preventDefault()
-          submit()
-        }}
-      >
-        <NumberField label={shopStrings.howMuch} value={value} onChange={setValue} min={0} unit={baseUnitLabel(baseUnit, 'metric', value ?? undefined)} error={error ?? undefined} />
-        <FormActions
-          primary={<Button type="submit">{shopStrings.tickSave}</Button>}
-          secondary={
-            <Button variant="secondary" onClick={() => onSubmit(0)}>
-              {shopStrings.tickOnly}
-            </Button>
-          }
-        />
-      </form>
-    </BottomSheet>
-  )
+export function TickSheet(_props: TickSheetProps) {
+  return null
 }

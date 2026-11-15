@@ -9,6 +9,9 @@ export interface LineSheetHandlers {
   onNeededAfterAll: (entry: ListEntry) => void
   onMarkIt: (entry: ListEntry) => void
   onDelete: (entry: ListEntry) => void
+  /** B9-34 (SSP-18): the ticked sheet's Change amount and Untick */
+  onChangeAmount?: (entry: ListEntry) => void
+  onUntick?: (entry: ListEntry) => void
 }
 
 export interface LineSheetController {
@@ -40,6 +43,12 @@ export function useLineSheet(handlers: LineSheetHandlers): LineSheetController {
         return
       case 'delete':
         handlers.onDelete(entry)
+        return
+      case 'change-amount':
+        handlers.onChangeAmount?.(entry)
+        return
+      case 'untick':
+        handlers.onUntick?.(entry)
         return
     }
   }

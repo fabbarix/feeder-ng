@@ -1,5 +1,5 @@
 import { http as defaultHttp, type HttpClient } from '../../lib/http'
-import type { ExtraInput, ListQuery, NotNeededInput, ShoppingExtra, ShoppingList, TickInput, TickResult } from './types'
+import type { ChangeTickInput, ChangeTickResult, ExtraInput, ListQuery, NotNeededInput, ShoppingExtra, ShoppingList, TickInput, TickResult } from './types'
 
 export interface ShopApi {
   list(query?: ListQuery): Promise<ShoppingList>
@@ -9,6 +9,10 @@ export interface ShopApi {
   untickExtra(id: number): Promise<void>
   tick(input: TickInput): Promise<TickResult>
   untick(ingredientId: number, to: string): Promise<void>
+  /** B9-23 (SSP-01): PATCH /api/shopping/ticks. 0 is Take back (the tick stays); the old quantity again is Undo of Take back. */
+  changeTick(input: ChangeTickInput): Promise<ChangeTickResult>
+  /** B9-23: PATCH /api/shopping/extras/{id}/tick {quantity}. */
+  changeExtraTick(id: number, quantity: number): Promise<ChangeTickResult>
   /** B5-SH: POST /api/shopping/not-needed; answers the list. */
   notNeeded(input: NotNeededInput): Promise<ShoppingList>
   /** B5-SH: DELETE /api/shopping/not-needed/{ingredientId}?to=&shop=; answers the list. */
@@ -31,6 +35,8 @@ export function createShopApi(client: HttpClient): ShopApi {
     untickExtra: (id) => client.delete<void>(`/api/shopping/extras/${id}/tick`),
     tick: (input) => client.post<TickResult>('/api/shopping/ticks', input),
     untick: (ingredientId, to) => client.delete<void>(`/api/shopping/ticks?ingredientId=${ingredientId}&to=${to}`),
+    changeTick: () => Promise.reject(new Error('not implemented (B9-34)')),
+    changeExtraTick: () => Promise.reject(new Error('not implemented (B9-34)')),
     notNeeded: (input) => client.post<ShoppingList>('/api/shopping/not-needed', input),
     neededAfterAll: (ingredientId, to, shopId) =>
       client.delete<ShoppingList>(`/api/shopping/not-needed/${ingredientId}?to=${to}${shopId != null ? `&shop=${shopId}` : ''}`),

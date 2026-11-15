@@ -5,12 +5,16 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { newClientUuid } from '../../scan/lib/queue'
 import { shopApi } from '../api'
-import type { ExtraInput, NotNeededInput, TickResult } from '../types'
+import type { ChangeTickInput, ChangeTickResult, ExtraInput, NotNeededInput, TickResult } from '../types'
 import { liveRefreshFor } from '../lib/liveRefresh'
 
 export interface ShoppingActions {
-  tick(input: { ingredientId: number; to: string; quantity: number; shopId?: number | null }): Promise<TickResult>
+  tick(input: { ingredientId: number; to: string; quantity: number; shopId?: number | null; clientUuid?: string }): Promise<TickResult>
   untick(ingredientId: number, to: string): Promise<void>
+  /** B9-34 (SSP-01): change the amount of one hand addition; 0 takes it back and keeps the tick. Refreshes the list and Stock. */
+  changeTick(input: ChangeTickInput): Promise<ChangeTickResult>
+  /** B9-34: the same for an Ingredient extra. */
+  changeExtraTick(id: number, quantity: number): Promise<ChangeTickResult>
   addExtra(input: ExtraInput): Promise<void>
   deleteExtra(id: number): Promise<void>
   tickExtra(id: number, quantity: number, shopId?: number | null, clientUuid?: string): Promise<TickResult>
@@ -39,6 +43,12 @@ export function useShoppingActions(): ShoppingActions {
         await refreshList()
         if (result.created) await refreshStock()
         return result
+      },
+      async changeTick() {
+        throw new Error('not implemented (B9-34)')
+      },
+      async changeExtraTick() {
+        throw new Error('not implemented (B9-34)')
       },
       async untick(ingredientId, to) {
         await shopApi.untick(ingredientId, to)

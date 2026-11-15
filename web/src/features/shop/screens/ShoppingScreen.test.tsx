@@ -19,6 +19,8 @@ vi.mock('../../../ui/Toast', () => ({ useToast: () => ({ show: vi.fn() }) }))
 vi.mock('../../ingredients/hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../stock/hooks/useIngredientChoices', () => ({ useIngredientChoices: () => ({ choices: [{ id: 3, name: 'milk', baseUnit: 'ml' }], isLoading: false }) }))
 
+// B9-34: the ticked Line's sheet shows times in the Household zone, read from /api/me (app/useMe)
+vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { householdTimeZone: 'UTC' } }) }))
 import { ShoppingScreen } from './ShoppingScreen'
 
 type Status = 'loading' | 'error' | 'offline' | 'empty' | 'ready'
@@ -125,27 +127,25 @@ describe('ShoppingScreen', () => {
     expect(screen.queryByText('Estimated cost')).toBeNull()
   })
 
-  it('asks how much before ticking a Line, then adds the Stock Lot', async () => {
+  it('one tap ticks a Line with its default amount and opens no sheet (B9-34, SSP 2; the amount is lib/tickAmount\'s)', async () => {
     show(makeList())
     await userEvent.click(screen.getByRole('button', { name: 'Tick Passata' }))
-    const sheet = screen.getByRole('dialog', { name: 'Tick Passata' })
-    expect(within(sheet).getByRole('spinbutton', { name: 'How much?' })).toHaveValue('1400')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Tick and add to Stock' }))
-    expect(actions.tick).toHaveBeenCalledWith({ ingredientId: 2, to: '2026-11-15', quantity: 1400, shopId: 1 })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(actions.tick).toHaveBeenCalledWith({ ingredientId: 2, to: '2026-11-15', quantity: 1400, shopId: 1, clientUuid: expect.any(String) })
   })
 
   it('ticks a free-text extra at once', async () => {
     show(makeList({ lines: [], extras: [makeExtra()], progress: { ticked: 0, total: 1 } }))
     await userEvent.click(screen.getByRole('button', { name: 'Tick toilet paper' }))
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(actions.tickExtra).toHaveBeenCalledWith(1, 0, 1)
+    expect(actions.tickExtra).toHaveBeenCalledWith(1, 0, 1, expect.any(String))
   })
 
-  it('asks how much for an Ingredient extra', async () => {
+  it('ticks an Ingredient extra at once with its quantity', async () => {
     show(makeList({ lines: [], extras: [makeExtra({ id: 2, text: null, ingredientId: 3, name: 'milk', baseUnit: 'ml', quantity: 2000 })], progress: { ticked: 0, total: 1 } }))
     await userEvent.click(screen.getByRole('button', { name: 'Tick Milk' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Tick and add to Stock' }))
-    expect(actions.tickExtra).toHaveBeenCalledWith(2, 2000, 1)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(actions.tickExtra).toHaveBeenCalledWith(2, 2000, 1, expect.any(String))
   })
 
   it('QA: ticks are visible - a ticked Line sits in the Ticked group with a check mark', async () => {

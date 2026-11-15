@@ -2,6 +2,8 @@
 // "not marked Cooked yet" sentence) and its rare actions. The tick stays on the row. Render only.
 import { BottomSheet } from '../../../ui/BottomSheet'
 import { Button } from '../../../ui/Button'
+import type { UnitSystem } from '../../../lib/units'
+import type { TickAddition } from '../types'
 import type { LineAction } from '../lib/rows'
 import type { ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
@@ -11,9 +13,14 @@ export interface LineSheetProps {
   actions: LineAction[]
   onAction: (action: LineAction) => void
   onClose: () => void
+  /** B9-34 ticked mode (SSP-18): the display system and the Household's IANA zone, for the amounts and times of the additions */
+  system?: UnitSystem
+  timeZone?: string
+  /** B9-34: Take back one addition of this ticked entry (hand additions only; anyone's) */
+  onTakeBack?: (entry: ListEntry, addition: TickAddition) => void
 }
 
-const labels: Record<Exclude<LineAction, 'delete'>, string> = {
+const labels: Record<Exclude<LineAction, 'delete' | 'change-amount' | 'untick'>, string> = {
   'mark-it': shopStrings.markIt,
   'not-needed': shopStrings.notNeeded,
   'needed-after-all': shopStrings.neededAfterAll,
@@ -43,7 +50,7 @@ export function LineSheet({ entry, actions, onAction, onClose }: LineSheetProps)
                 </Button>
               ) : (
                 <Button key={action} variant="secondary" onClick={() => onAction(action)}>
-                  {labels[action]}
+                  {labels[action as keyof typeof labels]}
                 </Button>
               ),
             )}

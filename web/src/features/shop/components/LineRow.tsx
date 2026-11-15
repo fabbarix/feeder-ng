@@ -17,6 +17,8 @@ export interface LineRowProps {
   onOpen: (entry: ListEntry, group: RowGroup) => void
   /** b8-polish: the narrow layout shows the short Restock reason; the screen decides (useCompactRows) */
   compact?: boolean
+  /** B9-34: this row's tick is in flight (aria-busy and aria-disabled; it stays focusable) */
+  pending?: boolean
 }
 
 export function LineRow({ entry, group, onTick, onUntick, onOpen, compact }: LineRowProps) {

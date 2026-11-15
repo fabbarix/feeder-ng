@@ -2,7 +2,8 @@
 import { formatMinor } from '../../products/lib/money'
 import { displayName } from '../../ingredients/lib/names'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
-import type { BaseUnit, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
+import type { TickedMeta } from './tickAmount'
+import type { BaseUnit, LineTick, PastPlannedMeal, ShoppingExtra, ShoppingLine, ShoppingList } from '../types'
 import { shopStrings } from '../strings'
 import { slotsLabel } from './rows'
 import { restockText } from './supplies'
@@ -47,6 +48,21 @@ export interface ListEntry {
    * The key is left out with no hint.
    */
   markIt?: { date: string; mealSlotId: number }
+  /**
+   * B9-34 (SSP-01, SSP-02): the amount one tap ticks with, in Base Units (lib/tickAmount defaultTickAmount): the suggested pack
+   * (count x size, the priced fallback included), else what the entry still needs; 0 for free text. A More entry is its `more`.
+   */
+  defaultAmount?: number
+  /** B9-34: what the Line needed in total (the server's `need`); for the Change sheet's "What the Line needed". 0 for an extra. */
+  need?: number
+  /** B9-34: the suggested pack as the Change sheet's chip says it ("1 × Garlic organic pack", 500 g each pack); null without one. */
+  packChoice?: { count: number; name: string; size: number } | null
+  /** B9-34: the tick of a ticked entry, as the list sent it (the Line sheet's additions); null while open. */
+  tick?: LineTick | null
+  /** B9-34 (SSP-01): what a ticked entry's meta line says (lib/tickAmount tickedMeta); null while open or without a tick. */
+  tickMeta?: TickedMeta | null
+  /** B9-34 (SSP-02): true on the open entry "more:<ingredientId>" that carries a ticked Line's growth. */
+  moreSince?: boolean
 }
 
 /** "1.4 kg · 2 × Mutti 700 g" (quantity via formatQuantity, then packs); just "1.4 kg" with no pack suggestion. */

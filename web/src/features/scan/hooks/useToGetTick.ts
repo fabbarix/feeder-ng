@@ -2,6 +2,8 @@
 // quantity and a fresh client id), a toast with Undo, and a failure (offline included) that changes nothing and can be tried
 // again. A row in flight is pending and ignores further taps.
 import { useCallback, useRef, useState } from 'react'
+import type { UnitSystem } from '../../../lib/units'
+import type { TickFlow } from '../../shop/hooks/useTickFlow'
 import { useShoppingActions } from '../../shop/hooks/useShoppingActions'
 import type { ListEntry } from '../../shop/lib/lines'
 import { useToast } from '../../../ui/Toast'
@@ -12,9 +14,11 @@ export interface ToGetTick {
   tick(entry: ListEntry): Promise<void>
   /** the keys ("line:<ingredientId>") of the rows whose tick is in flight */
   pendingKeys: ReadonlySet<string>
+  /** B9-34: the shared tick flow (optional only so the ScanController test doubles of other packages still compile; the real hook always returns it) (its `changing` / `change` / `closeChange` drive the Change sheet the screen mounts) */
+  flow?: Pick<TickFlow, 'changing' | 'change' | 'closeChange'>
 }
 
-export function useToGetTick({ to, shopId }: { to: string | undefined; shopId: number | null }): ToGetTick {
+export function useToGetTick({ to, shopId }: { to: string | undefined; shopId: number | null; system?: UnitSystem }): ToGetTick {
   const actions = useShoppingActions()
   const toast = useToast()
   const [pendingKeys, setPendingKeys] = useState<ReadonlySet<string>>(() => new Set())
@@ -48,5 +52,5 @@ export function useToGetTick({ to, shopId }: { to: string | undefined; shopId: n
     [actions, toast, to, shopId],
   )
 
-  return { tick, pendingKeys }
+  return { tick, pendingKeys, flow: { changing: null, change: async () => {}, closeChange: () => {} } }
 }

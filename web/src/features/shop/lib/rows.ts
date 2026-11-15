@@ -8,7 +8,7 @@ import type { ListEntry } from './lines'
 export type RowGroup = 'open' | 'ticked' | 'not-needed'
 
 /** The actions of a row's sheet. The row itself only opens the sheet; the tick stays on the row. */
-export type LineAction = 'mark-it' | 'not-needed' | 'needed-after-all' | 'delete'
+export type LineAction = 'mark-it' | 'not-needed' | 'needed-after-all' | 'delete' | 'change-amount' | 'untick'
 
 export interface RowMeta {
   text: string
