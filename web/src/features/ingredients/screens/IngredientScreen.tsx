@@ -154,6 +154,7 @@ function IngredientPage({ id, kind, ing, ingredient, breadcrumbs }: IngredientPa
             <ImagePicker
               hideLabel
               label={strings.pictureLabel}
+              noun="Picture"
               value={ingredient.image ?? ''}
               onChange={(imageId) => void page.attempt(() => ing.setImage(imageId))}
               aspect={CROP_ASPECTS.landscape}

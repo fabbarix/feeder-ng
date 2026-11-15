@@ -15,7 +15,7 @@ function setup(lot: StockLot, over: Partial<PantryLotRowProps> = {}) {
   )
   const row = screen.getByRole('listitem')
   // B9-29 (SSP-05): the quantity is in the value column, the meta is the status (or the Restock reason) alone.
-  return { row, meta: row.querySelector('.list-row__meta') as HTMLElement, value: row.querySelector('.list-row__value') as HTMLElement, compact: row.querySelector('.list-row__meta-compact') }
+  return { row, meta: row.querySelector('.list-row__meta') as HTMLElement, value: row.querySelector('.list-row__value [aria-hidden="true"]') as HTMLElement /* B9-55: the shown text of <Quantity> */, compact: row.querySelector('.list-row__meta-compact') }
 }
 
 describe('PantryLotRow for a Supply', () => {

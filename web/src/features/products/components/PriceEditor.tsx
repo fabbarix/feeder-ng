@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { BottomSheet, Button, DateField, FieldRow, ShopSelect, Stack, TextField } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
 import { usePriceForm } from '../hooks/usePriceForm'
+import { formatPriceDate, priceValues } from '../lib/priceRows'
 import { strings } from '../strings'
 import type { Price, PriceBody, Shop } from '../types'
 
@@ -66,7 +67,12 @@ export function PriceEditor({ shops, latestByShop, currency, today, initialShopI
           <FormError>{form.serverError}</FormError>
           {price && onDelete ? (
             <div>
-              <Button variant="danger-secondary" icon="delete" onClick={onDelete}>
+              <Button
+                variant="danger-secondary"
+                icon="delete"
+                aria-label={strings.deletePriceName(shopName ?? strings.unknownShop, formatPriceDate(price.date, today), priceValues(price, currency).value)}
+                onClick={onDelete}
+              >
                 {strings.deletePrice}
               </Button>
             </div>

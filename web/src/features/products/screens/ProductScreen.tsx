@@ -160,6 +160,8 @@ function ProductPage({ product, p, breadcrumbs }: { product: ProductDetail; p: R
             monogram={product.name}
             hideLabel
             label={strings.pictureLabel}
+            noun="Picture"
+            context={product.name}
             value={product.image ?? ''}
             onChange={(image) => void attempt(() => p.setImage(image))}
             aspect={CROP_ASPECTS.landscape}

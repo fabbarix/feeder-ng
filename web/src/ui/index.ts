@@ -212,5 +212,8 @@ export type { ImageOrigin } from './ImagePicker/types'
 export { cameraStrategy } from './ImagePicker/lib/cameraStrategy'
 export type { CameraPolicy } from './ImagePicker/lib/cameraStrategy'
 export { cameraEnvironment } from './ImagePicker/lib/deps'
+// Spoken quantities (B9-22, B9-55).
+export { Quantity } from './Quantity'
+export type { QuantityProps } from './Quantity'
 // A11Y-04 (B9-55): the forced-colours layer of the primitives, imported LAST so it follows every component stylesheet.
 import './forcedColors.css'

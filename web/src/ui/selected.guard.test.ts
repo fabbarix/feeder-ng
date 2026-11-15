@@ -3,11 +3,12 @@
 // without --selected-ring in the same rule. The ring carries the state, never the fill alone.
 // Exempt, with the reason: ListRow (the selected row is a row, not a control), Switch (on/off, its thumb carries it), DateField
 // (a calendar day: an accent fill with on-accent text), Chip.css (B9-17 adds the selected state of the Chip with its own cue) and
-// Sortable (the drag handle's pressed state, B9-13's file). A `transparent` or `none` background paints nothing, so it is not judged.
+// Sortable (the drag handle's pressed state, B9-13's file), and forcedColors.css (B9-55, A11Y-04: in forced colours the chosen state IS
+// the Highlight fill, a system colour; no ring token exists there). A `transparent` or `none` background paints nothing, so it is not judged.
 import { describe, expect, it } from 'vitest'
 import { cssFiles, parseCss, readSrc } from './lib/cssWalk.test-helper'
 
-const EXEMPT = ['ui/ListRow.css', 'ui/fields/Switch.css', 'ui/fields/DateField.css', 'ui/Chip.css', 'ui/Sortable/Sortable.css']
+const EXEMPT = ['ui/ListRow.css', 'ui/fields/Switch.css', 'ui/fields/DateField.css', 'ui/Chip.css', 'ui/Sortable/Sortable.css', 'ui/forcedColors.css']
 const SELECTED = /\[(aria-checked|aria-pressed)='true'\]|\[data-selected(=['"]?true['"]?)?\]/
 
 describe('selected and pressed states carry a ring', () => {

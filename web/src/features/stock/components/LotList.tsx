@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
-import { Chip, IconButton, ListGroup, ListRow } from '../../../ui'
-import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import { Chip, IconButton, ListGroup, ListRow, Quantity } from '../../../ui'
+import { spokenQuantity, type UnitSystem } from '../../../lib/units'
 import { formatLotDate } from '../lib/display'
 import { describeGoOff } from '../lib/view'
 import type { StockLot } from '../types'
@@ -29,7 +29,8 @@ export function LotList({ lots, today, system = 'metric', onThrowOut }: LotListP
         return (
           <ListRow
             key={lot.id}
-            title={formatQuantity(lot.quantity, lot.baseUnit, system)}
+            title={<Quantity amount={lot.quantity} base={lot.baseUnit} system={system} />}
+            aria-label={spokenQuantity(lot.quantity, lot.baseUnit, system)}
             meta={`${strings.boughtOn(formatLotDate(lot.purchased))} · ${strings.source[lot.source]}`}
             trailing={
               <span className="lot-list__actions">

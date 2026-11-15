@@ -126,7 +126,8 @@ describe('Prices as rows (SET-04)', () => {
     const api = setup(base, { 'DELETE /api/prices/10': { status: 204 }, 'PUT /api/products/5/prices': price({ id: 20 }) })
     await userEvent.click(await screen.findByRole('button', { name: 'Big Mart, $1.59, 14 Nov' }))
     const sheet = await screen.findByRole('dialog', { name: /Big Mart/ })
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Delete Price' }))
+    // B9-55 (P38): the name also holds the Shop, date and amount
+    await userEvent.click(within(sheet).getByRole('button', { name: /^Delete Price: / }))
     await waitFor(() => expect(api.callsTo('DELETE', '/api/prices/10')).toHaveLength(1))
     expect(screen.queryByRole('dialog', { name: /Delete/ })).toBeNull()
     const toast = await findToast('Price at Big Mart removed')

@@ -50,6 +50,37 @@ export function formatQuantity(amount: number, base: BaseUnit, system: UnitSyste
     : withSign(amount, imperialVolume)
 }
 
+/** The spoken words of each unit formatQuantity writes, singular and plural (B9-22, B9-55). */
+const SPOKEN_UNITS: Record<string, [string, string]> = {
+  g: ['gram', 'grams'],
+  kg: ['kilogram', 'kilograms'],
+  ml: ['milliliter', 'milliliters'],
+  l: ['liter', 'liters'],
+  oz: ['ounce', 'ounces'],
+  'fl oz': ['fluid ounce', 'fluid ounces'],
+  lb: ['pound', 'pounds'],
+  tsp: ['teaspoon', 'teaspoons'],
+  tbsp: ['tablespoon', 'tablespoons'],
+  cup: ['cup', 'cups'],
+  cups: ['cup', 'cups'],
+  piece: ['piece', 'pieces'],
+  pieces: ['piece', 'pieces'],
+}
+
+/**
+ * formatQuantity with every unit spoken in full, as Intl unit formatting reads it: "12 kilograms", "1.5 liters", "1 pound 2 ounces",
+ * "1 piece". For a screen reader, beside the abbreviated text a sighted person reads (ui/Quantity).
+ */
+export function spokenQuantity(amount: number, base: BaseUnit, system: UnitSystem): string {
+  const text = formatQuantity(amount, base, system)
+  return text.replace(/(-?[\d,]+(?:\.\d+)?) (fl oz|kg|ml|lb|oz|tsp|tbsp|cups?|pieces?|g|l)\b/g, (_all, n: string, unit: string) => {
+    const words = SPOKEN_UNITS[unit]
+    if (!words) return `${n} ${unit}`
+    const one = Number(n.replace(/,/g, '')) === 1 || Number(n.replace(/,/g, '')) === -1
+    return `${n} ${one ? words[0] : words[1]}`
+  })
+}
+
 /** The label of a Base Unit in the system: g/oz, ml/fl oz, piece/piece. With a count, piece is "pieces" unless it is 1. */
 export function baseUnitLabel(base: BaseUnit, system: UnitSystem, count?: number): string {
   if (base === 'piece') return count === undefined || count === 1 ? 'piece' : 'pieces'

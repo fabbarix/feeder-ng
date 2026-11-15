@@ -571,12 +571,6 @@
   border-radius: var(--radius-tile-sm);
 }
 
-/* R-A: "Choose a file" is an outlined button like every action of the tile. */
-.recipe-file-tile .file-drop__button {
-  box-shadow: inset 0 0 0 1px var(--color-outline);
-  color: var(--color-text);
-}
-
 /* A touch screen has no drag and drop: the zone is just the button. */
 @media (pointer: coarse) {
   .recipe-file-tile .file-drop {

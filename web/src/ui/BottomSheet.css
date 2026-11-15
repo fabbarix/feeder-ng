@@ -89,15 +89,18 @@
   padding-block-start: 0;
 }
 
+/* B9-55: the context wraps to at most two lines (a long Recipe name no longer hides the count after it), then ends in an ellipsis. */
 .sheet__context {
+  display: -webkit-box;
   margin: 0;
   overflow: hidden;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
   font-weight: 600;
   line-height: var(--text-meta-line);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .sheet__body {

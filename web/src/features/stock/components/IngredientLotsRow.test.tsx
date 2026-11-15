@@ -69,7 +69,7 @@ describe('IngredientLotsRow', () => {
 
   it('tapping a Lot opens it (the Lot sheet), and does not toggle the row', async () => {
     const { onOpenLot, onToggle } = setup({ expanded: true })
-    await userEvent.click(within(screen.getByRole('list', { name: 'Chicken thighs Stock Lots' })).getByRole('button', { name: '500 g' }))
+    await userEvent.click(within(screen.getByRole('list', { name: 'Chicken thighs Stock Lots' })).getByRole('button', { name: '500 grams' }))
     expect(onOpenLot).toHaveBeenCalledWith(sooner)
     expect(onToggle).not.toHaveBeenCalled()
   })

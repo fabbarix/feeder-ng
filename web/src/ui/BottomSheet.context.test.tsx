@@ -39,15 +39,16 @@ describe('context (PC-10)', () => {
     expect(screen.getByText('Tue 17 · Dinner')).toHaveClass('dialog__context')
     expect(screen.getByRole('dialog')).toHaveAccessibleName('Tue 17 · Dinner Time for Tue 17 Dinner')
   })
-  it('the line is muted meta text on one line with an ellipsis (BottomSheet.css, Dialog.css)', () => {
+  // B9-55 (follow-up): the context wraps to at most two lines, so a long Recipe name does not hide the count (was one cut line).
+  it('the line is muted meta text on at most two lines, then an ellipsis (BottomSheet.css, Dialog.css)', () => {
     for (const [file, sel] of [['BottomSheet.css', '.sheet__context'], ['Dialog.css', '.dialog__context']] as const) {
       const d = declarations(readUiCss(file), sel)
       expect(d['color'], file).toBe('var(--color-muted)')
       expect(d['font-size'], file).toBe('var(--text-meta-size)')
       expect(d['line-height'], file).toBe('var(--text-meta-line)')
       expect(d['font-weight'], file).toBe('600')
-      expect(d['white-space'], file).toBe('nowrap')
-      expect(d['text-overflow'], file).toBe('ellipsis')
+      expect(d['white-space'], file).toBeUndefined()
+      expect(d['-webkit-line-clamp'], file).toBe('2')
       expect(d['overflow'], file).toBe('hidden')
     }
   })

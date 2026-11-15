@@ -1,9 +1,9 @@
 // B9-29 (SSP-10, mock ssp-10-put-away.html): Put away the Not sorted Stock Lots, many at once, into one Storage Place.
 // Render and wiring only: the rules are lib/putAway, the request is usePutAway (the screen passes it as onMove).
 import { useEffect, useId, useRef, useState, type ReactElement } from 'react'
-import { BottomSheet, Button, Checkbox, Icon, ListGroup, ListRow, Select, Thumb } from '../../../ui'
+import { BottomSheet, Button, Checkbox, Icon, ListGroup, ListRow, Quantity, Select, Thumb } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
-import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import type { UnitSystem } from '../../../lib/units'
 import { errorText } from '../../products/lib/productForm'
 import { capitalise } from '../lib/display'
 import { KIND_ICON } from '../lib/kinds'
@@ -156,7 +156,7 @@ export function PutAwaySheet({ open, onClose, lots, places, today, system = 'met
                   metaCompact={supply?.compact || undefined}
                   metaStatus={goOff?.tone === 'spoil' ? 'spoil' : supply?.below ? 'info' : undefined}
                   metaIcon={goOff?.tone === 'spoil' ? (lot.spoiled ? 'spoiled' : 'useSoon') : undefined}
-                  value={formatQuantity(lot.quantity, lot.baseUnit, system)}
+                  value={<Quantity amount={lot.quantity} base={lot.baseUnit} system={system} />}
                 />
               )
             })}

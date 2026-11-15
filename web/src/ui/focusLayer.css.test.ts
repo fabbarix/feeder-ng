@@ -120,7 +120,7 @@ describe('field frames ring while their text entry has focus, not on :focus-with
 })
 
 describe('nested controls ring inside themselves (R-C+)', () => {
-  const nested = uiApp.filter((b) => /\[data-focus-scope\]/.test(b.selector) && /:focus-visible/.test(b.selector) && !/:has\(:focus-visible\)$/.test(q(b.selector)))
+  const nested = uiApp.filter((b) => !inForced(b) && /\[data-focus-scope\]/.test(b.selector) && /:focus-visible/.test(b.selector) && !/:has\(:focus-visible\)$/.test(q(b.selector)))
 
   it('Scenario: Focusing the Increase button of a stepper field shows one ring, inside the button: a 2 px outline at a -2 px offset on a soft fill', () => {
     expect(nested.length).toBeGreaterThan(0)

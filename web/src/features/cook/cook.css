@@ -273,11 +273,37 @@
 /* PC-03: the timer strip, one line of TimerPills at the top of the sticky nav. It scrolls sideways and keeps 5 px of room for the
    focus ring of its first and last control (R-C). */
 .cook-strip {
+  --cook-strip-fade: 0px;
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
   scrollbar-width: none;
   padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+  /* B9-55 (int2 finding 1): when the strip scrolls sideways its end edge fades, so a pill cut there reads as "more this way", not as
+     a broken pill. The fade is as wide as --cook-strip-fade: 0 while the strip fits or is scrolled to its end (the scroll timeline
+     below), so a strip that fits is never faded. The mask uses only the alpha of the gradient. */
+  mask-image: linear-gradient(to right, var(--color-text) calc(100% - var(--cook-strip-fade)), transparent);
+}
+
+@supports (animation-timeline: scroll()) {
+  .cook-strip {
+    animation: cook-strip-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+@keyframes cook-strip-fade {
+  from {
+    --cook-strip-fade: var(--space-8);
+  }
+
+  95% {
+    --cook-strip-fade: var(--space-8);
+  }
+
+  to {
+    --cook-strip-fade: 0px;
+  }
 }
 
 .cook-nav .cook-strip {
@@ -993,10 +1019,12 @@
     grid-column: 2 / 5;
   }
 
-  /* whole pills only, sharing the width (two from 48 em, one below: lib/timers visiblePillCount) */
+  /* whole pills only, sharing the width (two from 48 em, one below: lib/timers visiblePillCount): nothing to fade */
   .cook-strip {
+    --cook-strip-fade: 0px;
     overflow: visible;
     padding: 0;
+    animation: none;
   }
 
   .cook-strip > .timer-pill {

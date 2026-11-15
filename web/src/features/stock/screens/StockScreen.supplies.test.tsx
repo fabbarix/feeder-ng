@@ -94,7 +94,7 @@ describe('the Pantry by default (D6): Supplies beside food', () => {
   it('a Supply with no Restock level shows its quantity alone', async () => {
     setup('/pantry', { ingredients: [makeSupplyJson({ id: 40, name: 'toilet paper', restockLevel: null }), makeSupplyJson({ id: 41, name: 'dish soap', baseUnit: 'ml', restockLevel: null })] })
     await groupNamed(/^Utility cupboard/)
-    expect(rowOf(/Toilet paper/).querySelector('.list-row__value')).toHaveTextContent(/^4 pieces$/)
+    expect(rowOf(/Toilet paper/).querySelector('.list-row__value [aria-hidden="true"]')).toHaveTextContent(/^4 pieces$/) // B9-55: the shown text of <Quantity>
     expect(rowOf(/Toilet paper/).querySelector('.list-row__meta')).toBeNull()
   })
 })

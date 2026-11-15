@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
-import { ListGroup, ListRow, Thumb } from '../../../ui'
-import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import { ListGroup, ListRow, Quantity, Thumb } from '../../../ui'
+import { spokenQuantity, type UnitSystem } from '../../../lib/units'
 import { deductionOrder, lotMeta } from '../lib/ingredientLots'
 import { rowMeta, rowMetaCompact } from '../lib/filter'
 import { capitalise } from '../lib/display'
@@ -41,7 +41,7 @@ export function IngredientLotsRow({ item, lots, places, today, system = 'metric'
       meta={supply ? supplyRowMeta(item, restock, system) : rowMeta(item, today)}
       metaCompact={(supply ? (restockMeta ? restockMeta.compact || restockMeta.long : '') : rowMetaCompact(item, today)) || undefined}
       metaStatus={restockMeta?.below ? 'info' : undefined}
-      trailing={formatQuantity(item.total, item.baseUnit, system)}
+      trailing={<Quantity amount={item.total} base={item.baseUnit} system={system} />}
       leading={<Thumb name={name} imageUrl={item.imageUrl} size={40} />}
       chevron
       expanded={expanded}
@@ -55,7 +55,8 @@ export function IngredientLotsRow({ item, lots, places, today, system = 'metric'
             return (
               <ListRow
                 key={lot.id}
-                title={formatQuantity(lot.quantity, lot.baseUnit, system)}
+                title={<Quantity amount={lot.quantity} base={lot.baseUnit} system={system} />}
+                aria-label={spokenQuantity(lot.quantity, lot.baseUnit, system)}
                 meta={meta}
                 metaStatus={!supply && describeGoOff(lot, today).tone === 'spoil' ? 'spoil' : undefined}
                 chevron

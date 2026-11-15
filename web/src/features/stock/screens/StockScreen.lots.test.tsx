@@ -87,7 +87,7 @@ describe('Pantry By Ingredient: Lots inline', () => {
   it('tapping a Lot opens the Lot sheet with Edit, Delete and Move… (the Move to form shows when it is pressed)', async () => {
     setup()
     await userEvent.click(await thighs())
-    await userEvent.click(within(screen.getByRole('list', { name: 'Chicken thighs Stock Lots' })).getByRole('button', { name: '800 g' }))
+    await userEvent.click(within(screen.getByRole('list', { name: 'Chicken thighs Stock Lots' })).getByRole('button', { name: '800 grams' }))
     const sheet = await screen.findByRole('dialog', { name: 'Chicken thighs' })
     expect(within(sheet).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
     expect(within(sheet).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
@@ -106,7 +106,7 @@ async function openLot(quantity: string) {
 describe('Pantry: Edit a Lot', () => {
   it('Edit opens the edit sheet in place of the Lot sheet; Save patches only what changed', async () => {
     const api = setup()
-    const sheet = await openLot('800 g')
+    const sheet = await openLot('800 grams')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Edit' }))
     const edit = await screen.findByRole('dialog', { name: 'Edit Chicken thighs' })
     expect(screen.queryByRole('dialog', { name: 'Chicken thighs' })).toBeNull()
@@ -122,7 +122,7 @@ describe('Pantry: Edit a Lot', () => {
 
   it('a refused edit shows the error toast and leaves the screen usable', async () => {
     const api = setup({ 'PATCH /api/stock/lots/21': { status: 422, json: { error: { code: 'validation_failed', message: 'quantity must be more than zero' } } } })
-    const sheet = await openLot('800 g')
+    const sheet = await openLot('800 grams')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Edit' }))
     const edit = await screen.findByRole('dialog', { name: 'Edit Chicken thighs' })
     const input = within(edit).getByLabelText('Quantity')
@@ -138,7 +138,7 @@ describe('Pantry: Delete a Lot', () => {
   it('asks in our own dialog, then deletes and says so', async () => {
     const api = setup()
     const confirm = vi.spyOn(window, 'confirm')
-    const sheet = await openLot('800 g')
+    const sheet = await openLot('800 grams')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Delete' }))
     const dialog = await screen.findByRole('dialog', { name: 'Delete this Stock Lot?' })
     expect(api.callsTo('DELETE', '/api/stock/lots/21')).toHaveLength(0)
@@ -150,7 +150,7 @@ describe('Pantry: Delete a Lot', () => {
 
   it('Cancel deletes nothing', async () => {
     const api = setup()
-    const sheet = await openLot('800 g')
+    const sheet = await openLot('800 grams')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Delete' }))
     const dialog = await screen.findByRole('dialog', { name: 'Delete this Stock Lot?' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))

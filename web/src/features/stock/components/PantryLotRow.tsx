@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
-import { ListRow, Thumb } from '../../../ui'
-import { formatQuantity, type UnitSystem } from '../../../lib/units'
+import { ListRow, Quantity, Thumb } from '../../../ui'
+import type { UnitSystem } from '../../../lib/units'
 import { capitalise } from '../lib/display'
 import { isSupply, supplyRestockMeta, type Restock } from '../lib/supplies'
 import { describeGoOff } from '../lib/view'
@@ -27,7 +27,7 @@ export interface PantryLotRowProps {
  * sheet, so it has no chevron.
  */
 export function PantryLotRow({ lot, today, system = 'metric', placeName, restock = null, onOpen }: PantryLotRowProps): ReactElement {
-  const value = formatQuantity(lot.quantity, lot.baseUnit, system)
+  const value = <Quantity amount={lot.quantity} base={lot.baseUnit} system={system} />
   const leading = <Thumb name={lot.ingredientName} imageUrl={lot.ingredientImageUrl} size={40} />
   if (isSupply(lot)) {
     const reason = supplyRestockMeta(restock, lot.baseUnit, system)
