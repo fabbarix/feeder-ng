@@ -1,6 +1,7 @@
 import type { WeightRule } from '../scan/lib/barcode'
 import { http } from '../../lib/http'
-import type { Shop, ShopBarcode, ShopLocation, ShopRule } from './types'
+import type { ShopPriceWire } from './lib/shopPrices'
+import type { Shop, ShopBarcode, ShopImpact, ShopLocation, ShopRule } from './types'
 
 export type RuleBody = Omit<WeightRule, 'id'>
 
@@ -12,6 +13,10 @@ export const shopsApi = {
   setLocation: (id: number, location: ShopLocation) => http.put<Shop>(`/api/shops/${id}/location`, location),
   rename: (id: number, name: string) => http.patch<Shop>(`/api/shops/${id}`, { name }),
   remove: (id: number) => http.delete<void>(`/api/shops/${id}`),
+  /** SET-02: the latest Price of each (non-archived) Product at the Shop, by Product name. */
+  prices: (id: number) => http.get<ShopPriceWire[]>(`/api/shops/${id}/prices`),
+  /** SAFE-02 (Admin): what Delete Shop takes with it. */
+  impact: (id: number) => http.get<ShopImpact>(`/api/shops/${id}/impact`),
   rules: (shopId: number) => http.get<ShopRule[]>(`/api/shops/${shopId}/weight-rules`),
   createRule: (shopId: number, body: RuleBody) => http.post<ShopRule>(`/api/shops/${shopId}/weight-rules`, body),
   updateRule: (id: number, body: RuleBody) => http.put<ShopRule>(`/api/weight-rules/${id}`, body),

@@ -60,3 +60,8 @@ export function ruleSummary(rule: ShopRule, currency: string): string {
       : strings.ruleWeight(rule.valueUnit ?? 'g', rule.decimalPlaces)
   return `prefix ${rule.prefix} · ${strings.rulePositions(span(rule.item), span(rule.value))} · ${what}`
 }
+
+/** The body that adds a Shop Barcode again (the Undo of a removal). */
+export function shopBarcodeBodyOf(b: { productId: number; code?: string; ruleId?: number; itemCode?: string }): ReturnType<typeof toShopBarcodeBody> {
+  return b.ruleId !== undefined ? { productId: b.productId, ruleId: b.ruleId, itemCode: b.itemCode ?? '' } : { productId: b.productId, code: b.code ?? '' }
+}

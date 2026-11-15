@@ -6,3 +6,10 @@ export type { Product, Shop, ShopBarcode, ShopLocation } from '../products/types
 export interface ShopRule extends WeightRule {
   shopId: number
 }
+
+/** SAFE-02: what Delete Shop takes with it (GET /api/shops/{id}/impact). */
+export interface ShopImpact {
+  shopBarcodes: number
+  weightBarcodeRules: number
+  prices: number
+}

@@ -8,7 +8,8 @@ export interface ShopBarcodeListProps {
   barcodes: ShopBarcode[]
   rules: ShopRule[]
   products: Product[]
-  onDelete: (id: number) => void
+  /** Removes it at once (the screen offers Undo). */
+  onDelete: (barcode: ShopBarcode, label: string) => void
 }
 
 /** "PRIVATE-77 → Mutti passata" and "Weighed · prefix 21 · item 00123 → Ham", with a delete IconButton. */
@@ -23,7 +24,7 @@ export function ShopBarcodeList({ barcodes, rules, products, onDelete }: ShopBar
           <ListRow
             key={b.id}
             title={`${label} → ${product}`}
-            trailing={<IconButton icon="delete" label={strings.deleteShopBarcode(label)} onClick={() => onDelete(b.id)} />}
+            trailing={<IconButton icon="delete" label={strings.deleteShopBarcode(label)} onClick={() => onDelete(b, label)} />}
           />
         )
       })}

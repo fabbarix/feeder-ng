@@ -27,4 +27,12 @@ export const selectStrings = {
   commonCurrencies: 'Common',
   allCurrencies: 'All currencies',
   readyMeal: 'Ready Meal',
+  /** B9-30 (SET-01): ProductSelect. */
+  product: 'Product',
+  productEntity: 'Product',
+  supply: 'Supply',
+  soldAt: (shop: string) => `Sold at ${shop}`,
+  otherProducts: 'Other Products',
+  food: 'Food',
+  supplies: 'Supplies',
 }
