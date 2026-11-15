@@ -51,7 +51,7 @@ describe('confirmDeviceSettings: "Looks right"', () => {
     const { result } = renderHook(() => useSetupActions(), { wrapper: wrap })
     await act(() => result.current.confirmDeviceSettings({ timeZone: 'Europe/Rome', currency: 'EUR' }))
     const toast = await findToast('Time zone and currency saved.')
-    expect(toast.querySelector('svg')).toBeNull()
+    expect(toast.querySelector('.toast__title svg')).toBeNull() // the round Dismiss has its own close icon; no success icon on the title
     expect(toast.textContent).not.toMatch(/Undo/)
   })
 
@@ -82,7 +82,7 @@ describe('setHidden: "Hide for now"', () => {
     render(<Probe />, { wrapper: wrap })
     await userEvent.click(screen.getByRole('button', { name: 'Hide now' }))
     const toast = await findToast('Setup checklist hidden')
-    expect(toast.querySelector('svg')).toBeNull()
+    expect(toast.querySelector('.toast__title svg')).toBeNull() // the round Dismiss has its own close icon; no success icon on the title
     await userEvent.click(toast.querySelector('button')!)
     await waitFor(() => expect(api.callsTo('PUT', '/api/household/settings')).toHaveLength(2))
     expect(api.callsTo('PUT', '/api/household/settings')[1]!.body).toMatchObject({ setupHidden: false })

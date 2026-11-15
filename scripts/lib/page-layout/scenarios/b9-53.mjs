@@ -166,7 +166,7 @@ async function firstRunMember() {
   await until(READY, 'the setup tile')
   const here = await evaluate(`location.pathname`)
   await press(`[...${TILE}.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Add a Member')`, 'the Add a Member button')
-  await until(`!!document.querySelector('dialog[open]')`, 'the Member sheet')
+  await until(`(() => { const d = document.querySelector('dialog[open]'); return !!d && d.getAnimations({ subtree: true }).every((a) => a.playState !== 'running') })()`, 'the Member sheet to finish opening') // as b9-14: CHECK_SHEET measures the footer after the rise
   if ((await evaluate(`location.pathname`)) !== here) throw new Error('setup: not inspected: Add a Member left Today')
   if (!(await evaluate(`/Set up · step 2 of 5 · no Members yet/.test(document.querySelector('dialog[open]').textContent)`))) throw new Error('setup: not inspected: the sheet has no caption "Set up · step 2 of 5 · no Members yet"')
   fail('the Member sheet', await evaluate(CHECK_SHEET(['Save and add another', 'Save'])))
@@ -175,7 +175,7 @@ async function firstRunMember() {
 async function firstRunSlots() {
   await until(READY, 'the setup tile')
   await press(`[...${TILE}.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Set up Meal Slots')`, 'the Set up Meal Slots button')
-  await until(`!!document.querySelector('dialog[open]')`, 'the Meal Slot quick start')
+  await until(`(() => { const d = document.querySelector('dialog[open]'); return !!d && d.getAnimations({ subtree: true }).every((a) => a.playState !== 'running') })()`, 'the Meal Slot quick start to finish opening')
   const bad = await evaluate(`(() => {
     const dlg = document.querySelector('dialog[open]'), bad = []
     if (!/When do you eat\\?/.test(dlg.textContent)) bad.push('the sheet is not "When do you eat?"')
@@ -213,7 +213,7 @@ async function firstRunCompact() {
   fail('the compact checklist', bad)
   await press(`[...${TILE}.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hide for now')`, 'the Hide for now button')
   await until(`!document.querySelector('[data-tile="setup"] section.tile') && [...document.querySelectorAll('.toast')].some((t) => /Setup checklist hidden/.test(t.textContent))`, 'the tile gone and the toast')
-  const undo = await evaluate(`(() => { const t = [...document.querySelectorAll('.toast')].find((t) => /Setup checklist hidden/.test(t.textContent)); return t && [...t.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Undo') && !t.querySelector('svg') })()`)
+  const undo = await evaluate(`(() => { const t = [...document.querySelectorAll('.toast')].find((t) => /Setup checklist hidden/.test(t.textContent)); return t && [...t.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Undo') && !t.querySelector('.toast__title svg') })()`) // the round Dismiss has its close icon; no success icon on the title
   if (!undo) throw new Error('setup: not inspected: the toast has no Undo, or it has an icon')
   await press(`[...document.querySelectorAll('.toast button')].find((b) => b.textContent.trim() === 'Undo')`, 'the Undo button')
   await until(READY, 'the tile back after Undo')

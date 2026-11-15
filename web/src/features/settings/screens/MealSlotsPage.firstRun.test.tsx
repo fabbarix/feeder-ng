@@ -20,7 +20,7 @@ describe('MealSlotsPage: arriving from the first-run checklist', () => {
   it('opens the Add Meal Slot editor with all seven weekdays chosen', async () => {
     open('/settings/meal-slots?add=1&weekdays=1,2,3,4,5,6,7')
     const dialog = await screen.findByRole('dialog', { name: /Add Meal Slot/ })
-    const days = within(dialog).getAllByRole('checkbox', { checked: true })
+    const days = within(dialog).getAllByRole('button', { pressed: true }) // the WeekdayPicker chips are aria-pressed buttons
     expect(days.length).toBeGreaterThanOrEqual(7)
   })
 

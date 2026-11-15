@@ -140,8 +140,8 @@ describe('Scenario: a new household opens Today', () => {
     expect(await screen.findByRole('heading', { name: 'Set up your Household' })).toBeInTheDocument()
     expect(screen.queryByText(/couldn't be planned/)).not.toBeInTheDocument()
     expect(screen.queryByText('Nothing on the menu. The kitchen is yours.')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Add Members' }))
-    expect(await screen.findByText('Members page')).toBeInTheDocument()
+    // TB-06 (B9-53): no step links to a list page; its steps open their sheets over Today (SetupChecklistTile and TodayScreen.firstRun tests)
+    expect(screen.queryByRole('link', { name: /Members/ })).toBeNull()
   })
 
   it('hides Couldn\'t plan while a setup step is missing, whatever the planner says', async () => {

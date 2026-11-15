@@ -120,7 +120,7 @@ describe('DS-09: media queries on width are (min-width: Xem) or (width < Xem) wi
   it.each([
     // access/access.css is no longer listed: SET-12 (B9-52) removed its phone block; the request rows use ListRow's actions slot.
     ['board/board.css', '(min-width: 37.5em)', /\(min-width:\s*600px\)/],
-    ['today/today.css', '(min-width: 48em)', /\(min-width:\s*768px\)/],
+    // today/today.css is no longer listed: TB-06 (B9-53) replaced the R13 setup block that held the query; the tile lays out by container.
     ['cook/cook.css', '(min-width: 48em)', /\(min-width:\s*768px\)/],
   ])('%s: the old px query is converted to %s', (file, wanted, old) => {
     const text = FILES[file] ?? ''

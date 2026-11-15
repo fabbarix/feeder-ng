@@ -34,7 +34,8 @@ function setup(f: SetupFacts = FRESH, over: { isAdmin?: boolean; busy?: boolean 
   return { ...view, a, rerender }
 }
 const tile = () => screen.getByRole('region', { name: 'Set up your Household' })
-const step = (n: number) => within(within(tile()).getByRole('list', { name: 'Setup steps' })).getAllByRole('listitem')[n - 1]!
+// the steps are the ol's own li (step 1 holds a ul of detected settings, whose li are not steps)
+const step = (n: number) => within(tile()).getByRole('list', { name: 'Setup steps' }).querySelectorAll<HTMLElement>(':scope > li')[n - 1]!
 const names = () => within(tile()).queryAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent!.trim())
 
 describe('SetupChecklistTile: the tile', () => {
@@ -79,7 +80,7 @@ describe('SetupChecklistTile: the steps are rows with a state, never bullet sent
     setup()
     const list = within(tile()).getByRole('list', { name: 'Setup steps' })
     expect(list.tagName).toBe('OL')
-    const items = within(list).getAllByRole('listitem')
+    const items = Array.from(list.querySelectorAll<HTMLElement>(':scope > li')) // its own li: step 1 holds the Detected settings ul
     expect(items).toHaveLength(5)
     const labels = ['Check time zone and currency', 'Add your Members', 'Set up Meal Slots', 'Add Recipes', 'Get your first plan']
     items.forEach((li, i) => {
