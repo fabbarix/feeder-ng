@@ -33,12 +33,20 @@ export const scanStrings = {
   torchOff: 'Torch off',
   cameraDenied: 'The camera is blocked. Allow it in the browser settings to scan.',
   cameraUnsupported: 'This browser cannot open the camera (it needs HTTPS).',
-  cameraNoCamera: 'No camera was found on this device.',
-  cameraInUse: 'The camera is busy in another app. Close it there and try again.',
-  retryCamera: 'Try the camera again',
-  enterBarcode: 'Type the barcode instead',
+  /** SSP-06: the camera bar's messages, short enough for one line at 375 px. */
+  noCameraBar: 'No camera on this device',
+  cameraBarDenied: 'Feeder may not use the camera',
+  cameraBarInUse: 'The camera is busy',
+  cameraBarError: 'The camera did not start',
+  tryAgain: 'Try again',
+  /** SSP-06: the IconButton beside Mute that opens the typed entry while the camera works */
+  typeBarcode: 'Type a barcode',
+  /** SSP-12: why Type a barcode is off while the Price keypad is open */
+  closePriceFirst: 'Close the Price first',
   manualBarcodeLabel: 'Barcode',
-  manualBarcodeHint: 'The digits under the bars',
+  manualBarcodeHint: 'The digits under the bars. Press Use for each one.',
+  /** the typed entry's submit: the visible word, and its accessible name */
+  use: 'Use',
   useBarcode: 'Use this barcode',
   closeManual: 'Back to the camera',
   manualBarcodeError: {
@@ -141,6 +149,7 @@ export const scanStrings = {
   nothingToGetHint: 'Every Line on the Shopping List is ticked.',
   nothingScanned: 'Nothing scanned yet',
   nothingScannedHint: 'Point the camera at a barcode. Lines to get are under To get.',
+  nothingScannedHintNoCamera: 'Type the digits under the bars. Lines to get are under To get.',
   addPrice: 'Add price',
   /** SR4 review: the active row's strip (its accessible name is priceOf(product) + "…", and removeProduct(product)) */
   priceAction: 'Price',

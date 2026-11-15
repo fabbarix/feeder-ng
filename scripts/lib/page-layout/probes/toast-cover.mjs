@@ -18,4 +18,4 @@ const source = `
   return { toasts, targets }
 })()`
 
-export default { name: 'toast-cover', key: 'toastCover', order: 330, source, scenarios: ['toast-pricing', 'toast-over-bar'] }
+export default { name: 'toast-cover', key: 'toastCover', order: 330, source, scenarios: ['toast-pricing', 'toast-over-bar', 'scan-price-keypad'] }
