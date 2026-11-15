@@ -18,8 +18,12 @@ async function openCook() {
   return id
 }
 
+// The seed's Recipes open on an Active Step: the timer is the first Passive Step's (the server refuses a Step timer on an Active one).
 const START_TIMER = (id) => `(async () => {
-  const r = await fetch('/api/cook/timers', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope: 'recipe:${id}', step: 0, label: 'Step 1: Pre-heat the oven', durationSeconds: 900 }) })
+  const view = await (await fetch('/api/cook/recipes/${id}?batches=1', { credentials: 'same-origin' })).json()
+  const step = (view.steps || []).find((s) => s.kind === 'passive')
+  const body = step ? { scope: 'recipe:${id}', step: step.index } : { label: 'Pre-heat the oven', durationSeconds: 900 }
+  const r = await fetch('/api/cook/timers', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   return r.ok
 })()`
 const CANCEL_TIMERS = `(async () => {
