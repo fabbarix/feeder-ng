@@ -132,8 +132,14 @@ export const settingsSlotsStrings = {
     dateTitle: (slot: string, date: string) => `${slot} on ${date}`,
     date: 'Date',
     thisDateOnly: 'These changes affect only this date.',
+    /** The footer's accessible names; the visible labels are the short ones (the title already names the date). */
     saveDate: 'Save for this date',
     resetDate: 'Reset to usual Attendance',
+    /** User ruling (B9-42 follow-up): short visible labels, so the footer is one row at every size, 375 px included. */
+    saveDateShort: 'Save',
+    resetDateShort: 'Reset',
+    /** What Reset does, said once in the body. */
+    resetHelper: 'Reset goes back to the usual Attendance.',
     // B5-F1: Guests, the portions preview, the emptied date
     guests: 'Guests',
     guestsHelper: 'Each Guest eats one standard portion of every Course.',

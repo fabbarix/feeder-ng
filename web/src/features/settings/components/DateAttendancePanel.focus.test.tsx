@@ -80,9 +80,21 @@ describe('the footer (SHORT-02)', () => {
   })
   it('Reset comes before Save in the footer, and is disabled with no override on the date', () => {
     render(<DateAttendancePanel {...props({ attendance: usual })} />)
-    const buttons = [...document.querySelectorAll('.sheet__footer button')].map((b) => b.textContent)
+    const buttons = [...document.querySelectorAll('.sheet__footer button')].map((b) => b.getAttribute('aria-label') ?? b.textContent)
     expect(buttons.indexOf('Reset to usual Attendance')).toBeLessThan(buttons.indexOf('Save for this date'))
     expect(screen.getByRole('button', { name: 'Reset to usual Attendance' })).toBeDisabled()
+  })
+  // User ruling (B9-42 follow-up): short visible labels so the footer is one row at 375; the names keep the whole action, and the body
+  // says what Reset does.
+  it('shows the short labels "Reset" and "Save", each contained in its longer accessible name', () => {
+    render(<DateAttendancePanel {...props({ attendance: samOut })} />)
+    expect(screen.getByRole('button', { name: 'Reset to usual Attendance' })).toHaveTextContent(/^Reset$/)
+    expect(screen.getByRole('button', { name: 'Save for this date' })).toHaveTextContent(/^Save$/)
+  })
+  it('says once, in the body, what Reset does', () => {
+    render(<DateAttendancePanel {...props({ attendance: samOut })} />)
+    expect(document.querySelector('.sheet__body')).toHaveTextContent('Reset goes back to the usual Attendance.')
+    expect(screen.getAllByText(/Reset goes back to the usual Attendance\./)).toHaveLength(1)
   })
   it('keeps the one circular Close in the header, since the footer has no Cancel (R-B)', () => {
     render(<DateAttendancePanel {...props({ attendance: usual })} />)

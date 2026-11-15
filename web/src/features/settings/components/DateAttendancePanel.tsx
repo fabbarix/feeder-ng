@@ -60,7 +60,8 @@ const formFrom = (slot: MealSlot, attendance: DateAttendance | undefined): FormS
 
 /**
  * A BottomSheet "Dinner on Thu 12 Nov": a DateField "Date" (its calendar), AttendanceEditor, Guests and the Courses of the date; the
- * footer is [Reset to usual Attendance] [Save for this date] (Reset only for an override). A date that is not on the slot's weekday is
+ * footer is [Reset] [Save] on one row at every size (named "Reset to usual Attendance" and "Save for this date"; the body says what
+ * Reset does), Reset only for an override. A date that is not on the slot's weekday is
  * an alert and blocks saving. A11Y-07: the form is never remounted while the answer arrives, so focus stays where it is; a pristine
  * form follows the answer, an edited one keeps its edits, and another date starts from that date's answer.
  */
@@ -111,13 +112,13 @@ function DateSheet({ slot, date, attendance, members, saving, dateReadOnly = fal
       footer={
         <FormActions
           secondary={
-            <Button variant="secondary" disabled={!hasDateOverride(attendance) || saving} onClick={() => void onReset()}>
-              {text.resetDate}
+            <Button variant="secondary" aria-label={text.resetDate} disabled={!hasDateOverride(attendance) || saving} onClick={() => void onReset()}>
+              {text.resetDateShort}
             </Button>
           }
           primary={
-            <Button disabled={problem !== null} loading={saving} onClick={() => void save()}>
-              {text.saveDate}
+            <Button aria-label={text.saveDate} disabled={problem !== null} loading={saving} onClick={() => void save()}>
+              {text.saveDateShort}
             </Button>
           }
         />
@@ -130,7 +131,9 @@ function DateSheet({ slot, date, attendance, members, saving, dateReadOnly = fal
             {problem}
           </p>
         ) : null}
-        <Muted>{text.thisDateOnly}</Muted>
+        <Muted>
+          {text.thisDateOnly} {text.resetHelper}
+        </Muted>
         <AttendanceEditor members={members} value={draft} onChange={(next) => edit({ draft: next })} memberExtra={memberExtra} />
         <StepperField label={text.guests} helper={text.guestsHelper} value={guests} min={MIN_GUESTS} max={MAX_GUESTS} onChange={(n) => edit({ guests: clampGuests(n) })} />
         <Muted>{portionsPreviewText(portionsPreview(members, draft, guests))}</Muted>

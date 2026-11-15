@@ -9,7 +9,8 @@
 //   meal-slot-editor-short the same sheet at 667x375: the body keeps its floor (P33) and Save is reachable.
 //   meal-slot-remove-confirm  the ⋮ menu -> Remove Meal Slot -> the danger confirm opens: rows, Cancel focused, no Close. Nothing is removed.
 //   removed-meal-slots     the tile of the removed Snack (seed meal-slots.mjs): rows, "Put back" on its own line below 35 rem of list width.
-//   change-date            Change a date: the title is "<Slot> on Sat 14 Nov" (not ISO), focus is on the Date field, one Close, Reset is outlined.
+//   change-date            Change a date: the title is "<Slot> on Sat 14 Nov" (not ISO), focus is on the Date field, one Close, Reset is outlined,
+//                          and the footer is [Reset] [Save] on one row with no label wrapped (user ruling, B9-42 follow-up).
 import { evaluate, js, press, until } from '../helpers.mjs'
 
 const ready = `!!document.querySelector('main') && !document.querySelector('[aria-busy="true"], .skeleton') && !!document.querySelector('main .ms-card')`
@@ -180,7 +181,7 @@ export default {
         for (const r of rows) {
           const btn = [...r.querySelectorAll('button')].find((b) => /^Put back/.test(b.getAttribute('aria-label') ?? b.textContent))
           if (!btn) { out.push('a row without Put back'); continue }
-          if (btn.getBoundingClientRect().height < 40) out.push('Put back is under 40 px high')
+          if (btn.getBoundingClientRect().height < 35.5) out.push('Put back is under the 36 px of a small button (its ::after makes the 44 px target)')
           const title = r.querySelector('.list-row__title')
           if (title && r.clientWidth < 35 * 16 && btn.getBoundingClientRect().top < title.getBoundingClientRect().bottom - 1) out.push('Put back shares the title line in a row of ' + r.clientWidth + ' px (own line below 35 rem)')
         }
@@ -207,8 +208,20 @@ export default {
           if (!/^Date/.test(name)) out.push('focus is on ' + name + ', not the Date field')
         }
         if (d.querySelectorAll('[aria-label="Close"]').length !== 1) out.push('not exactly one Close')
-        const reset = [...d.querySelectorAll('button')].find((b) => /Reset to usual/.test(b.textContent))
+        const reset = [...d.querySelectorAll('button')].find((b) => /Reset to usual/.test(b.getAttribute('aria-label') ?? b.textContent))
         if (reset && reset.getAttribute('data-variant') !== 'secondary') out.push('Reset is not an outlined secondary button')
+        // User ruling: Reset and Save are one row at every size, and neither label wraps.
+        const foot = [...d.querySelectorAll('.sheet__footer button')].filter((b) => /^(Reset|Save)$/.test(b.textContent.trim()))
+        if (foot.length !== 2) out.push('the footer is not [Reset] [Save]: ' + foot.map((b) => b.textContent.trim()))
+        else {
+          const [r1, r2] = foot.map((b) => b.getBoundingClientRect())
+          if (Math.abs(r1.top - r2.top) > 1) out.push('Reset and Save are not on one row')
+          for (const b of foot) {
+            const label = b.querySelector('.button__label') ?? b
+            const lh = parseFloat(getComputedStyle(label).lineHeight) || 22
+            if (label.getBoundingClientRect().height > lh * 1.5) out.push(b.textContent.trim() + ' wraps')
+          }
+        }
         res(out)
       }, 600)))()`)
       if (bad.length) fail('Change a date is off', bad)

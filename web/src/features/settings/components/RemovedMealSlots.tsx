@@ -39,6 +39,7 @@ export function RemovedMealSlots({ groups, canRestore, busyKey = null, locale = 
               canRestore ? (
                 <Button
                   variant="secondary"
+                  size="sm"
                   aria-label={row.putBackLabel}
                   loading={busyKey === row.key}
                   disabled={busyKey !== null && busyKey !== row.key}

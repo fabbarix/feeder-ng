@@ -49,6 +49,7 @@ describe('RemovedMealSlots', () => {
     setup()
     const button = screen.getByRole('button', { name: 'Put back Snack · Mon to Fri' })
     expect(button).toHaveAttribute('data-variant', 'secondary')
+    expect(button).toHaveAttribute('data-size', 'sm') // the SET-15 mock's small button (main session, B9-42 follow-up)
     expect(button).toHaveTextContent('Put back')
     expect(screen.getByRole('button', { name: 'Put back Brunch · Sun' })).toBeInTheDocument()
   })
