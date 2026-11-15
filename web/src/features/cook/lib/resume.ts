@@ -124,8 +124,9 @@ export function timerOpenPlan(timer: Pick<CookTimer, 'scope' | 'step' | 'state'>
 }
 
 /**
- * B9-45 (PC-05): whether a resume Step is stored for `scope` or for any Course scope under it (`meal:<date>/<slot>` covers
- * `meal:<date>/<slot>/<course>`): a cook that is under way skips Get ready. Blocked storage reads as none.
+ * B9-45 (PC-05): whether a resume Step is stored for `scope`, or for a scope that starts with `scope` followed by "/" (a slot's
+ * prefix "meal:<date>/<slot>" covers each Course scope "meal:<date>/<slot>/<course>"): a cook that is under way skips Get ready.
+ * Blocked storage reads as none.
  */
 export function hasResumeUnder(scope: string, storage?: ResumeStorage): boolean {
   const s = pick(storage) as (ResumeStorage & { length?: number; key?: (i: number) => string | null }) | null

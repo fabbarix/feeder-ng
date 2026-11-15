@@ -152,7 +152,9 @@ export function slotDayLabel(slots: PlanSlot[], key: SlotDayKey): string {
 /** One Cooked meal's group of the ONE shortfall notice; null when nothing was short. `key.courseId` absent: a Mark all of the slot. */
 export function shortfallGroupFor(slots: PlanSlot[], key: SlotDayKey & { courseId?: number }, recipeName: string | null, warnings: StockWarning[]): ShortfallGroup | null {
   if (warnings.length === 0) return null
-  const id = key.courseId === undefined ? `${key.date}/${key.mealSlotId}` : `${key.date}/${key.mealSlotId}/${key.courseId}`
+  // A Mark all Cooked is one action over the slot, so its group is the slot's (this is a notice id, not a plan key or scope).
+  const course = key.courseId
+  const id = course === undefined ? `${key.date}/${key.mealSlotId}` : `${key.date}/${key.mealSlotId}/${course}`
   return { id, mealLabel: slotDayLabel(slots, key), recipeName: recipeName || null, warnings }
 }
 

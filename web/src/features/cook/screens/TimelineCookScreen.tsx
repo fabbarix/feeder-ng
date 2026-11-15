@@ -73,10 +73,12 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
   const location = useLocation()
   const client = useQueryClient()
   const plan = usePlan()
-  // B9-45 (PC-05): Get ready before the first item. Its sources need the timeline; until it is in, the stage is "loading".
+  // B9-45 (PC-05): Get ready before the first item. Its sources need the timeline and its portions the plan; until both are in,
+  // the stage is "loading" (so the list never reads a Recipe cook's Yield, and Mark as Cooked is known once the Steps show).
   const cached = client.getQueryData<TimelineView>(['cook', 'view', 'timeline', target.date, target.mealSlotId])
   const sources = useMemo(() => readySources(cached), [cached])
-  const ready = useCookReady(`meal:${target.date}/${target.mealSlotId}`, sources, plannedPortions(plan.slots, target, sources[0]?.courseId), cached !== undefined)
+  const slotId = `${target.date}/${target.mealSlotId}`
+  const ready = useCookReady(`slot:${slotId}`, sources, plannedPortions(plan.slots, target, sources[0]?.courseId), cached !== undefined && !plan.isLoading, `meal:${slotId}`)
   const tl = useCookTimeline(target, plan.today, { hold: ready.hold })
   const view = tl.view
   const slotKey: SlotDayKey = { date: target.date, mealSlotId: target.mealSlotId }

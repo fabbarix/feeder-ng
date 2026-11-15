@@ -13,6 +13,8 @@ import * as helpers from '../helpers.mjs'
 const noSkeleton = `!document.querySelector('[aria-busy="true"], .skeleton')`
 async function openCook() {
   const id = helpers.ids.recipeId ?? 1
+  // B9-45 (PC-05): Cook Mode opens on Get ready unless the cook is under way; a stored first Step skips it, so the Step is measured.
+  await evaluate(`localStorage.setItem('feeder.cook.resume.recipe:${id}', '0')`)
   await evaluate(`location.assign('/cook/recipe/${id}')`)
   await until(`!!document.querySelector('.cook-step__text') && ${noSkeleton}`, 'the Cook Mode Step text', 15000)
   return id

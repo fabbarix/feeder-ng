@@ -23,10 +23,13 @@ export interface CookReady {
   closeSheet: () => void
 }
 
-/** `scope` is the cook scope (`recipe:7`, `meal:<date>/<slot>`); `sources` are known once the view is in (empty until then). */
-export function useCookReady(scope: string, sources: GetReadySource[], portions: number | null, sourcesKnown: boolean): CookReady {
+/**
+ * `scope` keys the ticks (`recipe:7`, `slot:<date>/<slot>`); `resumeScope` is where a resume Step would be (`recipe:7`, or a slot's
+ * Course scopes under `meal:<date>/<slot>`); `sources` are known once the view is in (empty until then).
+ */
+export function useCookReady(scope: string, sources: GetReadySource[], portions: number | null, sourcesKnown: boolean, resumeScope: string = scope): CookReady {
   // Read once, when Cook Mode opens: the session saves its Step from then on.
-  const [resumed] = useState(() => hasResumeUnder(scope))
+  const [resumed] = useState(() => hasResumeUnder(resumeScope))
   const [started, setStarted] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const list = useGetReady(sources, portions)
