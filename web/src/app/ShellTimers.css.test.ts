@@ -80,6 +80,13 @@ describe('.shell-timer (the pill\'s place)', () => {
     expect(at(":root:has(.viewfinder-strip:not([data-size='bar'])) .shell-timer", ['@media (width < 64em) and (height < 31.25em)'])['display']).toBe('none')
   })
 
+  it('docked beside a Save bar in a short viewport (w4a): placed by the measured custom properties, flat, and toasts make no room', () => {
+    const d = at('.shell-timer[data-docked]')
+    expect(q(d['inset'] ?? '')).toBe('var(--timer-pill-dock-y) auto auto var(--timer-pill-dock-x)')
+    expect(q(at('.shell-timer[data-docked] .timer-pill')['box-shadow'] ?? '')).toBe('inset 0 0 0 1px var(--color-outline)')
+    expect(at(':root:has(.shell-timer[data-docked])')['--timer-pill-clearance']).toBe('0px')
+  })
+
   it('the width queries are table widths in em (the breakpoint guard): 64em, nothing in px', () => {
     for (const b of blocks) for (const a of b.atrules) expect(a, a).not.toMatch(/\d+px\)/)
   })

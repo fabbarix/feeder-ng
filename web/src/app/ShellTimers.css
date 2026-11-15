@@ -64,6 +64,27 @@ html:has(.sticky-action-bar) .shell-timer {
   }
 }
 
+/* A short viewport with a floating Save bar (w4a): the pill docks inside the bar's free start, level with it (useTimerPillDock measures
+   where), so it covers no page content. No drop shadow there: it sits on the bar. Toasts need no room for it. */
+:root:has(.shell-timer[data-docked]) {
+  --timer-pill-clearance: 0px;
+}
+
+.shell-timer[data-docked],
+html:has(.sticky-action-bar) .shell-timer[data-docked] {
+  inset: var(--timer-pill-dock-y) auto auto var(--timer-pill-dock-x);
+  z-index: 6;
+}
+
+.shell-timer[data-docked] .timer-pill,
+.shell-timer[data-docked] .timer-pill:has(:focus-visible) {
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+
+.shell-timer[data-docked][data-state='finished'] .timer-pill {
+  box-shadow: inset 0 0 0 2px var(--status-success-fg);
+}
+
 /* A short landscape phone (below 64em wide, under 500 px tall) on Scan with the camera on: the pill's corner is where the strip's
    Mute, torch and Type a barcode sit (SHORT-04: never covered). It steps aside there; the finish banner still shows. */
 @media (width < 64em) and (height < 31.25em) {

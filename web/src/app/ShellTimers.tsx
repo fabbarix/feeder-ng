@@ -2,11 +2,13 @@
 // frames: in the framed pages with the pill, on the receipt screens (chromeless, where a cook can be when a timer ends) without it
 // (their sticky Save bar is there). Being the same mounted component in both, moving between them keeps one poll and one alarm, and
 // a ringing timer keeps ringing. Cook Mode and the board show timers themselves: it is not mounted there.
+import { useRef, type CSSProperties } from 'react'
 import { bannerText, type ShellTimer } from '../features/cook/lib/householdTimers'
 import { TimerPill } from '../ui/TimerPill'
 import { useEscapeKey } from './hooks/useEscapeKey'
 import { useHouseholdTimers, type HouseholdTimers } from './hooks/useHouseholdTimers'
 import { useShellTimerOpen, type ShellTimerOpen } from './hooks/useShellTimerOpen'
+import { useTimerPillDock } from './hooks/useTimerPillDock'
 import { ShellTimerBanner } from './ShellTimerBanner'
 import { TimersSheet } from './TimersSheet'
 import './ShellTimers.css'
@@ -26,8 +28,11 @@ function Alert({ timers, open }: { timers: HouseholdTimers; open: ShellTimerOpen
 }
 
 function Pill({ head, more, nameSeconds, onOpen }: { head: ShellTimer; more: number; nameSeconds: number; onOpen: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const dock = useTimerPillDock(ref, true)
+  const style = dock ? ({ '--timer-pill-dock-x': `${dock.x}px`, '--timer-pill-dock-y': `${dock.y}px` } as CSSProperties) : undefined
   return (
-    <div className="shell-timer" data-state={head.state}>
+    <div ref={ref} className="shell-timer" data-state={head.state} data-docked={dock ? '' : undefined} style={style}>
       <TimerPill label={head.title} seconds={head.seconds} running={head.state !== 'paused'} nameSeconds={nameSeconds} more={more} onOpen={onOpen} />
     </div>
   )
