@@ -98,14 +98,14 @@ describe('PreferencesForm actions: Revert and Save', () => {
     expect(container.querySelector('.sticky-action-bar')).toBeNull()
   })
 
-  it('while dirty: the same group is the sticky bar, Revert (tertiary) then Save preferences (primary), side by side and enabled', async () => {
+  it('while dirty: the same group is the sticky bar, Revert (outline) then Save preferences (primary), side by side and enabled', async () => {
     render(<Harness />)
     await userEvent.click(screen.getByRole('radio', { name: 'Dark' }))
     const group = screen.getByRole('group', { name: 'Preferences actions' })
     expect(group.closest('.sticky-action-bar') ?? group).toHaveClass('sticky-action-bar')
     const buttons = within(group).getAllByRole('button')
     expect(buttons.map((b) => b.textContent)).toEqual(['Revert', 'Save preferences'])
-    expect(buttons[0]).toHaveAttribute('data-variant', 'tertiary')
+    expect(buttons[0]).toHaveAttribute('data-variant', 'secondary')
     expect(buttons[1]).toHaveAttribute('data-variant', 'primary')
     expect(buttons[0]).toBeEnabled()
     expect(buttons[1]).toBeEnabled()
