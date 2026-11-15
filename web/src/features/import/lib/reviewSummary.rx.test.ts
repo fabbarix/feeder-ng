@@ -185,12 +185,12 @@ describe('ingredientRowState and ingredientRowMeta (RX-12)', () => {
   it('new: New, with its Base unit', () => {
     const m = match({ key: 'saffron', status: 'new', definition: { name: 'saffron', baseUnit: 'g' } })
     expect(ingredientRowState(m)).toEqual({ text: 'New' })
-    expect(ingredientRowMeta(m)).toBe('Base unit g')
+    expect(ingredientRowMeta(m)).toBe('Base Unit g')
   })
   it('undefined: 1 question in the info tone, asking for its base unit', () => {
     const m = match({ key: 'x', status: 'undefined', resolved: false, effective: undefined })
     expect(ingredientRowState(m)).toEqual({ text: '1 question', tone: 'info' })
-    expect(ingredientRowMeta(m)).toBe('Choose its base unit')
+    expect(ingredientRowMeta(m)).toBe('Choose its Base Unit')
   })
   it('conflict: 1 question in the info tone, saying both base units', () => {
     const m = match({ key: 'x', status: 'conflict', resolved: false, effective: undefined, match: { id: 3, name: 'x', baseUnit: 'ml' }, conflict: { file: 'g', existing: 'ml' } })

@@ -50,7 +50,7 @@ describe('IngredientMatchRow', () => {
     it('reads New with its Base unit and has no answer controls', () => {
       show(match({ key: 'saffron', name: 'saffron', status: 'new', definition: { name: 'saffron', baseUnit: 'g' } }))
       expect(screen.getByText('New')).toBeInTheDocument()
-      expect(screen.getByText('Base unit g')).toBeInTheDocument()
+      expect(screen.getByText('Base Unit g')).toBeInTheDocument()
       expect(screen.queryByRole('button')).not.toBeInTheDocument()
     })
   })
@@ -61,7 +61,7 @@ describe('IngredientMatchRow', () => {
       show(m)
       const row = screen.getByRole('listitem')
       expect(within(row).getByText('1 question')).toBeInTheDocument()
-      expect(within(row).getByText('Choose its base unit')).toBeInTheDocument()
+      expect(within(row).getByText('Choose its Base Unit')).toBeInTheDocument()
       for (const u of ['g', 'ml', 'piece']) expect(within(row).getByRole('button', { name: u })).toHaveAttribute('aria-pressed', 'false')
     })
     it('answers with the chosen base unit', async () => {
