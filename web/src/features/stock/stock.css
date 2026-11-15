@@ -100,7 +100,8 @@
 }
 
 .spoiled-tile__list .list-row__title {
-  overflow-wrap: anywhere;
+  /* B9-29: a long name wraps at a word (system.md 3), never mid-word. */
+  overflow-wrap: normal;
   white-space: normal;
 }
 
@@ -154,7 +155,8 @@
 /* Pantry: the Storage Place groups, one ListGroup each, spaced like the page's sections. */
 .pantry-groups {
   display: grid;
-  gap: var(--space-4);
+  /* SSP-03: titled groups space themselves (ListGroup: section + section gets --section-gap). */
+  gap: 0;
 }
 
 /* The Lot sheet: its facts (quantity, good until, place, bought) and the "Move to" heading. */
@@ -184,4 +186,116 @@
     max-block-size: none;
     overflow: visible;
   }
+}
+
+/* B9-29 (SSP-05): the quantity is in the value column, so the meta line holds the status alone; the quantities line up. */
+.stock-screen .list-row__value {
+  min-inline-size: var(--row-value-min);
+}
+
+/* B9-29 (SAFE-11): the Lot sheet's way to the Ingredient's own sheet, a small secondary under the facts. */
+.lot-sheet__see {
+  display: flex;
+}
+
+/* B9-29 (SSP-10, mock ssp-10-put-away.html): Put away. The rows are in a bordered card (no shadow inside the sheet); a ticked row
+   wears the soft fill; the whole row ticks its box (the label stretches over the row), and the box keeps its own focus ring. */
+.put-away {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.put-away__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.put-away__status {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.put-away__status[data-empty] {
+  display: none;
+}
+
+.put-away .list-group {
+  box-shadow: none;
+  border: 1px solid var(--color-line);
+}
+
+.put-away .list-row[data-selected='true'] {
+  background: var(--color-soft);
+}
+
+.put-away .checkbox__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.put-away .list-row {
+  position: relative;
+}
+
+.put-away .checkbox__control::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.put-away__actions {
+  display: grid;
+  gap: var(--space-2);
+  inline-size: 100%;
+}
+
+.put-away__line {
+  margin: 0;
+}
+
+/* B9-29 (SSP-17, mock ssp-17-keep-date.html): "Flour: good until?". The choices are radio chips that wrap; the checked one wears the
+   selected container and its ring (A11Y-06), not colour alone: its label is also the primary's day. */
+.keep-sheet {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.keep-sheet__why {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+}
+
+.keep-sheet__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.keep-sheet__choices .choice-chip[aria-checked='true'] {
+  background: var(--selected-bg);
+  border-color: var(--selected-ring);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-ring);
+}
+
+.keep-sheet__choices .choice-chip__note {
+  color: var(--color-muted);
+  font-weight: var(--text-body-weight);
+}
+
+.keep-sheet__choices .choice-chip[aria-checked='true'] .choice-chip__note {
+  color: inherit;
 }
