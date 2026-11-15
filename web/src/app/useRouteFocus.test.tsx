@@ -2,12 +2,23 @@
 // <main id="main-content" tabIndex={-1}> when no h1 shows within 2 s. A search-param change never moves focus; the first render never does.
 // `useRouteFocus()` is the hook (called once in AppShell, both frames); `focusPageStart()` is the plain function the skip link uses.
 import { act, render } from '@testing-library/react'
+import { useEffect, useState } from 'react'
 import { MemoryRouter, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FOCUS_WAIT_MS, focusPageStart, useRouteFocus } from './useRouteFocus'
 
 let go: (to: string) => void = () => {}
 let setParams: (p: Record<string, string>) => void = () => {}
+
+/** A page whose h1 mounts 800 ms after the route does (a screen that shows a loading line first). */
+function LatePage() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 800)
+    return () => clearTimeout(t)
+  }, [])
+  return ready ? <h1 id="page-title" tabIndex={-1}>Late</h1> : <p>loading</p>
+}
 
 function Frame({ withTitle = true }: { withTitle?: boolean }) {
   useRouteFocus()
@@ -22,6 +33,7 @@ function Frame({ withTitle = true }: { withTitle?: boolean }) {
         <Routes>
           <Route path="/plan" element={withTitle ? <h1 id="page-title" tabIndex={-1}>Plan</h1> : <p>loading</p>} />
           <Route path="/shop" element={withTitle ? <h1 id="page-title" tabIndex={-1}>Shop</h1> : <p>loading</p>} />
+          <Route path="/late" element={<LatePage />} />
           <Route path="*" element={<p>other</p>} />
         </Routes>
       </main>
@@ -60,11 +72,18 @@ describe('useRouteFocus', () => {
   })
 
   it('waits for an h1 that mounts late (a loading page), up to 2 s', async () => {
-    mount('/other', false)
-    await act(async () => go('/plan'))
+    mount('/other')
+    await act(async () => go('/late'))
     expect(FOCUS_WAIT_MS).toBe(2000)
-    // /plan renders its h1 at once here; the point is the focus lands on it, not on <main>
+    // the page shows its loading line first: nothing takes focus yet, and focus is not parked on <main>
     await act(async () => void (await vi.advanceTimersByTimeAsync(10)))
+    expect(document.activeElement).toBe(document.body)
+    // the h1 mounts at 800 ms, well inside the 2 s wait: focus lands on it, not on <main>
+    await act(async () => void (await vi.advanceTimersByTimeAsync(800)))
+    expect(document.activeElement?.id).toBe('page-title')
+    expect(document.activeElement?.textContent).toBe('Late')
+    // and stays there once the wait has run out
+    await act(async () => void (await vi.advanceTimersByTimeAsync(2000)))
     expect(document.activeElement?.id).toBe('page-title')
   })
 
