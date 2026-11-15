@@ -30,6 +30,8 @@ const ADDED_TOAST_MS = 5000
 /** B9-35: what the flow asks the "Added" toast to say and do. */
 export interface AddedToast {
   headline: string
+  /** B9-41 (SAFE-09): the Undo button's accessible name; omitted = the default "Undo: <headline>" */
+  undoAriaLabel?: string
   undo: () => unknown
   durationMs: number
 }
@@ -79,7 +81,7 @@ export interface ScanFlowDeps {
 }
 
 export type FlowSheet =
-  | { kind: 'unknown'; mode: UnknownMode; target: UnknownTarget; priceText?: string }
+  | { kind: 'unknown'; mode: UnknownMode; target: UnknownTarget; priceText?: string; /** B9-41 (SSP-15) */ weightCodeHint?: boolean }
   | { kind: 'ask_weight'; plan: Extract<ScanPlan, { kind: 'ask_weight' }> }
   | { kind: 'stock_take'; product: OfflineProduct }
   /** R8: an Archived Product owns the barcode; offered before (or after a barcode_archived rejection of) a new Product */

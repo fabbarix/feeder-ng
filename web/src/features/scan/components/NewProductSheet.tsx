@@ -61,6 +61,16 @@ export interface NewProductSheetProps {
   noBarcode?: boolean
   /** what the form opens with (the receipt line's name and size, or the Add's saved choices) */
   initial?: NewProductInitial
+  /**
+   * B9-41 (SSP-07): a weighed code with a Weight Barcode Rule whose item code is new: the sheet's header line reads "312 g · weighed at
+   * Coop · item 012300" (instead of the barcode line) and the Lines in g come first. `grams` is the decoded weight.
+   */
+  weighed?: { grams: number; itemCode: string }
+  /**
+   * B9-41 (SSP-15): an unknown in-store code at a Shop with no Weight Barcode Rule: the sheet opens with an info tile saying so, the Admin
+   * gets "Set up the rule" (onSetUp), a User "Ask the Admin to set one up.", and the scope starts on This Shop only.
+   */
+  weightCodeHint?: { admin: boolean; onSetUp: () => void }
 }
 
 export function NewProductSheet(props: NewProductSheetProps) {
