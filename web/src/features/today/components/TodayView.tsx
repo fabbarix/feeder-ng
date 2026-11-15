@@ -107,7 +107,7 @@ export function TodayView({
         role="group"
         aria-label={s.gridLabel}
         data-halves-odd={!planLoading && halves.two.length % 2 === 1 ? 'true' : undefined}
-        data-halves-3={planLoading ? undefined : String(halves.three.length)}
+        data-halves-3-rest={planLoading ? undefined : String(halves.three.length % 3)}
       >
         {planLoading ? (
           <TodaySkeleton remembered={remembered ?? FIRST_LAUNCH} />

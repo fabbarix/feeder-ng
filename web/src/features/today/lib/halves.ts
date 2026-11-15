@@ -3,7 +3,7 @@
 import type { TileId } from '../types'
 
 /** The tiles that take one track; every other tile takes the whole row. */
-const HALF: readonly TileId[] = ['advanceSteps', 'leftovers', 'useSoon']
+const HALF: readonly TileId[] = ['advanceSteps', 'couldntPlan', 'spoiled', 'leftovers', 'useSoon']
 /** From 60 rem these sit in the aside, out of the rows of three. */
 const IN_ASIDE: readonly TileId[] = ['advanceSteps']
 
