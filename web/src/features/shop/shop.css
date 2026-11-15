@@ -743,7 +743,7 @@
 }
 
 .celebration-tile {
-  /* Completion (B9-43, SSP-09): the success status tile sits above every tile; its rows take the full width, its buttons wrap under them. */
+  /* Completion (B9-43, SSP-09): the success status tile sits under the metric strip; its rows take the full width, its buttons wrap under them. */
   display: grid;
   gap: var(--space-2);
 }
