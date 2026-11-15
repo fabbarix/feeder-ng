@@ -28,24 +28,26 @@ export interface ScannedRowProps {
   onIncrement: () => void
   onDecrement: () => void
   onRemove: () => void
+  /** batch w5a (P38): the row's name when two rows share a Product name (lib/scannedList scannedRowNames); default the Product's name */
+  name?: string
 }
 
-type StripProps = Pick<ScannedRowProps, 'row' | 'onPrice' | 'onIncrement' | 'onDecrement' | 'onRemove'>
+type StripProps = Pick<ScannedRowProps, 'row' | 'onPrice' | 'onIncrement' | 'onDecrement' | 'onRemove'> & { name: string }
 
 /** The active row's strip: the compact Stepper on the left (a weighed row has none), Price and Remove on the right. */
-function ActiveStrip({ row, onPrice, onIncrement, onDecrement, onRemove }: StripProps) {
+function ActiveStrip({ row, name, onPrice, onIncrement, onDecrement, onRemove }: StripProps) {
   return (
     <div className="scanned-row__strip">
       {row.weighed ? (
         <span />
       ) : (
-        <Stepper value={row.count} onChange={(next) => (next > row.count ? onIncrement() : onDecrement())} label={scanStrings.quantityOf(row.name)} size="xs" />
+        <Stepper value={row.count} onChange={(next) => (next > row.count ? onIncrement() : onDecrement())} label={scanStrings.quantityOf(name)} size="xs" />
       )}
       <span className="scanned-row__actions">
-        <Button variant="secondary" size="sm" aria-label={`${scanStrings.priceOf(row.name)}…`} onClick={onPrice}>
+        <Button variant="secondary" size="sm" aria-label={`${scanStrings.priceOf(name)}…`} onClick={onPrice}>
           {scanStrings.priceAction}
         </Button>
-        <Button variant="danger-secondary" size="sm" aria-label={scanStrings.removeProduct(row.name)} onClick={onRemove}>
+        <Button variant="danger-secondary" size="sm" aria-label={scanStrings.removeProduct(name)} onClick={onRemove}>
           {scanStrings.removeAction}
         </Button>
       </span>
@@ -53,12 +55,12 @@ function ActiveStrip({ row, onPrice, onIncrement, onDecrement, onRemove }: Strip
   )
 }
 
-export function ScannedRow({ row, currency, system, active, pricing, fresh, onActivate, onPrice, onIncrement, onDecrement, onRemove }: ScannedRowProps) {
+export function ScannedRow({ row, currency, system, active, pricing, fresh, onActivate, onPrice, onIncrement, onDecrement, onRemove, name = row.name }: ScannedRowProps) {
   const amounts = rowAmounts(row, (cents: number) => formatMinor(cents, currency))
   const meta = rowMeta(row, system)
   const props: ListRowProps = {
     title: rowTitle(row, system),
-    'aria-label': row.name,
+    'aria-label': name,
     onActivate,
     leading: <Thumb name={row.name} imageUrl={row.imageUrl} size={48} />,
     meta: <CoverMeta size={meta.size} cover={meta.cover} waiting={meta.waiting} />,
@@ -71,7 +73,7 @@ export function ScannedRow({ row, currency, system, active, pricing, fresh, onAc
         amounts.value
       ),
     subValue: amounts.sub,
-    footer: active ? <ActiveStrip row={row} onPrice={onPrice} onIncrement={onIncrement} onDecrement={onDecrement} onRemove={onRemove} /> : undefined,
+    footer: active ? <ActiveStrip row={row} name={name} onPrice={onPrice} onIncrement={onIncrement} onDecrement={onDecrement} onRemove={onRemove} /> : undefined,
     'data-active': active ? 'true' : undefined,
     'data-pricing': pricing ? 'true' : undefined,
     'data-fresh': fresh,

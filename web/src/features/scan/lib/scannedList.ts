@@ -309,6 +309,35 @@ function sizeText(row: ScannedRow, system: UnitSystem): string {
   return amount !== null && amount > 0 ? formatQuantity(amount, row.baseUnit, system) : ''
 }
 
+/**
+ * Batch w5a (P38: every button on a page has its own accessible name): what each Scanned row is called, by key. A row is called by its
+ * Product's name, except where two rows share it (two Products of one name): then "Passata, 700 g", and when that is shared too,
+ * "Passata, 700 g, 2 of 2". The row's Price, Remove and Quantity controls take the same name.
+ */
+export function scannedRowNames(rows: readonly ScannedRow[], system: UnitSystem): Map<string, string> {
+  const tally = (names: string[]) => names.reduce((m, n) => m.set(n, (m.get(n) ?? 0) + 1), new Map<string, number>())
+  const byName = tally(rows.map((r) => r.name))
+  const sized = rows.map((r) => {
+    if ((byName.get(r.name) ?? 0) < 2) return r.name
+    const size = sizeText(r, system)
+    return size ? `${r.name}, ${size}` : r.name
+  })
+  const bySized = tally(sized)
+  const seen = new Map<string, number>()
+  const names = new Map<string, string>()
+  rows.forEach((r, i) => {
+    const n = sized[i]!
+    const total = bySized.get(n) ?? 0
+    if (total < 2) names.set(r.key, n)
+    else {
+      const k = (seen.get(n) ?? 0) + 1
+      seen.set(n, k)
+      names.set(r.key, `${n}, ${k} of ${total}`)
+    }
+  })
+  return names
+}
+
 /** The second line of a row: its size, then the Line it covers (or "Waiting to sync"). Never "On the list" or "ticked". */
 export function rowMeta(row: ScannedRow, system: UnitSystem): RowMeta {
   const cover = row.cover && !row.waiting ? { text: coverText(row.cover.got, row.cover.of, row.baseUnit, system), done: row.cover.done } : null
