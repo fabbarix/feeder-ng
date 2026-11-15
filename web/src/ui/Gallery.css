@@ -85,7 +85,14 @@
   block-size: 240px;
 }
 
-/* Controls group (B9-16): a row of selected-state examples, and a field under 18 rem (the Segmented Check query). */
+/* Controls group (B9-16): a column that takes its cell (or tile), a row of selected-state examples, and a field under 18 rem
+   (the Segmented Check query). */
+.gallery__controls-stack {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
 .gallery__controls-row {
   display: flex;
   flex-wrap: wrap;

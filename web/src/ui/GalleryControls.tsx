@@ -55,7 +55,7 @@ function RuledPair({ name }: { name: string }) {
   const [kind, setKind] = useState<Kind>('prep')
   const [query, setQuery] = useState('')
   return (
-    <div className="gallery__stack">
+    <div className="gallery__controls-stack">
       <SearchField label={`Search (${name})`} value={query} onChange={setQuery} placeholder="Search Recipes" />
       <Segmented label={`Step kind (${name})`} options={[...KINDS]} value={kind} onChange={setKind} />
       <Segmented label={`Compact (${name})`} options={[...KINDS]} value={kind} onChange={setKind} compact />
@@ -100,7 +100,7 @@ function SurfacesGroup() {
       {SURFACES.map((s) => (
         <WideCell key={s.name} caption={`On a ${s.name}: ruled controls and selected states`}>
           <Tile variant={s.variant} status={s.status}>
-            <div className="gallery__stack">
+            <div className="gallery__controls-stack">
               <RuledPair name={s.name} />
               <SelectedSet name={s.name} />
             </div>
@@ -156,7 +156,7 @@ function GrowingTextArea() {
 function DurationDemo({ label, initial, units }: { label: string; initial: number | null; units?: ('min' | 'h' | 'd')[] }) {
   const [m, setM] = useState<number | null>(initial)
   return (
-    <div className="gallery__stack">
+    <div className="gallery__controls-stack">
       <DurationField label={label} value={m} onChange={setM} units={units} />
       <p className="gallery__caption">Stored: {m === null ? 'empty' : `${m} min (${formatMinutes(m)})`}</p>
     </div>
