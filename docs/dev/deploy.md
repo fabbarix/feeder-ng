@@ -30,6 +30,7 @@ Third-party licences: the image carries [THIRD_PARTY_NOTICES.md](../../THIRD_PAR
 | `1.0.0-beta.6.5` | tag `v1.0.0-beta.6.5` | prerelease: the fifth fix release of the sixth beta; never `latest`, `1.0` or `1` |
 | `1.0.0-beta.7` | tag `v1.0.0-beta.7` | prerelease: the seventh beta; never `latest`, `1.0` or `1` |
 | `1.0.0-beta.8` | tag `v1.0.0-beta.8` | prerelease: the eighth beta; never `latest`, `1.0` or `1` |
+| `1.0.0-beta.9` | tag `v1.0.0-beta.9` | prerelease: the ninth beta; never `latest`, `1.0` or `1` |
 | `1.0.0-dev` | tag `v1.0.0-dev` | earlier prerelease; never `latest` |
 | `1.0.0`, `1.0`, `1` | tag `v1.0.0` | exact version, latest patch of 1.0, latest 1.x (no `1` tag for 0.x) |
 | `latest` | a `v*` tag without a `-` prerelease suffix | latest stable release; does not exist until the first stable tag |
@@ -164,7 +165,7 @@ The image is distroless (no shell), so there is no `HEALTHCHECK`; let the proxy 
 The chart is public too, published as an OCI artifact; installing it needs no login:
 
 ```sh
-helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.8 \
+helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.9 \
   --namespace feeder --create-namespace \
   --set adminEmail=you@example.com \
   --set baseUrl=https://feeder.example.com \
@@ -172,7 +173,7 @@ helm install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.8 
   --set ingress.tls.enabled=true --set ingress.tls.secretName=feeder-tls
 ```
 
-The chart version equals the release (`v1.0.0-beta.8` publishes chart `1.0.0-beta.8` with `appVersion` `1.0.0-beta.8`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reset-then-reuse-values` (Helm 3.14 or newer). Plain `--reuse-values` reuses the old computed values, so a new chart's `secretKey` default (and any other new setting) is not applied; `--reset-then-reuse-values` re-applies the new defaults and then your overrides, or add `--set secretKey.generate=true`. Source and the values table: `deploy/helm/feeder/README.md`.
+The chart version equals the release (`v1.0.0-beta.9` publishes chart `1.0.0-beta.9` with `appVersion` `1.0.0-beta.9`), and the image tag defaults to `appVersion`. Upgrade with `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version X --namespace feeder --reset-then-reuse-values` (Helm 3.14 or newer). Plain `--reuse-values` reuses the old computed values, so a new chart's `secretKey` default (and any other new setting) is not applied; `--reset-then-reuse-values` re-applies the new defaults and then your overrides, or add `--set secretKey.generate=true`. Source and the values table: `deploy/helm/feeder/README.md`.
 
 - **One replica only.** The state is a SQLite file on a single volume, so the Deployment is fixed at one replica with the `Recreate` strategy (no overlap during upgrades) and must never be scaled.
 - **Storage.** A PVC mounted at `/data` (`persistence.size`, `persistence.storageClass`, or `persistence.existingClaim`). `/data` must be writable by uid/gid 65532. The pod sets `fsGroup: 65532`, which makes most dynamically provisioned volumes writable, but `fsGroup` is not enough on its own: an `existingClaim` whose volume ignores `fsGroup` (hostPath, NFS, some CSI drivers) must be chowned beforehand with `chown 65532:65532` on the volume's directory. The root filesystem is read-only; only `/data` and an `emptyDir` `/tmp` are writable.
@@ -181,7 +182,7 @@ The chart version equals the release (`v1.0.0-beta.8` publishes chart `1.0.0-bet
   ```sh
   kubectl -n feeder create secret generic feeder-google \
     --from-literal=client-id=... --from-literal=client-secret=...
-  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.8 --namespace feeder --reset-then-reuse-values \
+  helm upgrade --install feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.9 --namespace feeder --reset-then-reuse-values \
     --set google.existingSecret=feeder-google
   ```
 
@@ -410,3 +411,71 @@ chown 65532:65532 /srv/feeder/feeder.db
    | `feeder-pre-1400.db` | 1.0.0-beta.3 |
 
    For example, a database upgraded from 1.0.0-beta.6.5 straight to 1.0.0-beta.8 holds `feeder-pre-1550.db` and `feeder-pre-1560.db`, and both are the beta.6.5 database, so restore `feeder-pre-1550.db` and run the 1.0.0-beta.6.5 image.
+
+### Upgrading from 1.0.0-beta.8 to 1.0.0-beta.9
+
+This release adds Undo across Feeder, What changed on the Plan, Away for Members, overnight starts, Ticks that work offline, and rebuilt Today, Kitchen board and Settings screens. It starts from 1.0.0-beta.8; from 1.0.0-beta.7.x read [Upgrading from 1.0.0-beta.7.x to 1.0.0-beta.8](#upgrading-from-100-beta7x-to-100-beta8) first (both snapshots are taken in one start, see step 8).
+
+1. Take a backup first (Admin: `POST /api/admin/backups`, or copy `/data/backups` and `/data/images`). Migrations run at start and are forward-only.
+2. Upgrade. Kubernetes: `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.9 --namespace feeder --reset-then-reuse-values`. Docker or compose: pull the new image and restart. **There is no new configuration:** no new environment variable, Helm value or secret.
+3. Ten migrations run on the first start:
+
+   | Migration | What it changes |
+   |---|---|
+   | `1570` | Rebuilds `meal_slots` with `removed_at`, so a removed Meal Slot keeps its Cooked history; the unique (weekday, name) becomes a partial index over active Meal Slots only; adds `meal_slot_removals` (the To confirm rows a removal took, for Undo). The only table rebuild, run with foreign keys off and `foreign_key_check` before commit; row ids are kept. |
+   | `1571` | Adds `member_removals`: the snapshot that lets Remove Member be undone for 10 minutes. |
+   | `1572` | Adds `stock_waste.lot_json` and `scan_events.takes_json`, for Undo of Throw out and of a Stock-take. Waste and Stock-takes from before the upgrade cannot be undone (a +1 pack still can). |
+   | `1573` | Adds `cooked_takes`, for Undo of Cooked and Not cooked. A meal marked before the upgrade cannot be reopened. |
+   | `1574` | Adds `plan_state.revision` and `plan_snapshots` (the Undo store of a replanning change; the newest 20 are kept). |
+   | `1575` | Adds `household_settings.earliest_start` (`'06:30'` for the existing Household) and `setup_hidden`. A Household that already has a Planned Meal gets `setup_hidden = 1`, so the setup checklist does not come back after the upgrade; Settings › Household shows it again. |
+   | `1576` | Adds `shopping_tick_additions`: one row per Tick, each with its own Stock Lot. Every existing hand Tick (of a Line or an Ingredient extra) becomes one addition with the same Lot and amount, so it can still be taken back. |
+   | `1577` | Adds `member_away` and `attendance_override_attendees.despite_away`. |
+   | `1578` | Adds `household_settings.latest_start` (`'22:00'` for the existing Household; Off when its Earliest start is 22:00 or later). |
+   | `1579` | Adds `users.signed_in_at` and backfills it, see step 5. |
+
+4. **The pre-1570 snapshot.** If the database already has applied migrations, Feeder first takes a verified snapshot as `feeder-pre-1570.db` in `/data/backups` (on Docker, the `backups` folder of the data volume; on Kubernetes, the `backups` folder of the PVC), before migration 1570 runs, with `integrity_check`. If it cannot be written, Feeder stops with a log line naming `feeder-pre-1570.db` and nothing is migrated. A fresh install takes none. An existing `feeder-pre-1570.db` is never replaced. The file is not listed in Settings, is never pruned by the nightly clean-up and stays until you delete it.
+5. **Behaviour after the upgrade:**
+   - **Earliest start is 06:30 and Latest start 22:00** for every Household, so the next replan may move a long Recipe off an early Meal Slot, or plan it to start the evening before (an info chip such as "Start Tue 21:30"). Set either to Off in Settings › Planning rules for the old behaviour.
+   - **"Signed in" on the Allowlist** is backfilled by `1579` from the earliest record only a signed-in User can have made: a session, a push subscription, a Leftover answer, a Cooked or Not cooked mark, a Not needed or a Tick on the Shopping List, a Recipe Assistant or access event, or saved preferences (which carry no time: the User's creation time stands in). A User with none of these, for example one who signed in long ago, whose session has expired, and who has done none of the above, reads **"Not signed in yet"** until their next sign-in, which sets it.
+   - Meal Slots removed before the upgrade are gone; from now on a removal keeps the Cooked history.
+   - The first load after the upgrade reloads once on its own (the 1.0.0-beta.8 service worker); later versions show a "new version" toast with Reload.
+   - Static assets are served precompressed (brotli or gzip), so a reverse proxy must pass `Content-Encoding` through unchanged.
+   - Ticks made offline wait on the phone and sync with the Scans; a retry never adds a Tick twice.
+6. **API changes, for scripts against the API.** All additive: no field was removed or renamed, and no existing request is refused that was accepted before, except where noted.
+   - Replanning writes (`PUT /api/plan/{date}/{slotId}/{courseId}`, `…/confirm`, `…/unpin`, `POST /api/plan/regenerate`, Away writes, Mark Recipes) answer with `changes[]` and an optional `undoToken`; `POST /api/plan/restore {undoToken}` undoes one (409 `plan_changed` once anything else changed the plan). `PUT /api/plan/…` takes an optional `markCourse: true` to mark the Recipe for the Course in the same write. `POST …/reopen` and `…/all/reopen` take back Cooked and Not cooked.
+   - `GET /api/plan`: `meal.startsAt {date, time}` (an overnight start), `meal.earlyStart`, `resolution`, `away`, `everyoneAway`; the unfilled cause `too_early`.
+   - `POST /api/courses/{id}/recipes {recipeIds}` marks Recipes for a Course and `POST /api/courses/{id}/recipes/unmark` takes them back, each in one transaction and one replan.
+   - Meal Slots: `POST /api/meal-slots/remove {ids}` and `POST /api/meal-slots/restore {ids}` (Admin, all or nothing), `POST /api/meal-slots/batch`, `GET /api/meal-slots?removed=with-history`, `GET /api/meal-slots/{id}/impact`. `DELETE /api/meal-slots/{id}` now keeps the Meal Slot's history (a soft removal) and answers 204.
+   - Members: `DELETE /api/members/{id}` answers 204 and can be undone with `POST /api/members/{id}/restore` for 10 minutes; `GET /api/members/{id}/impact`; Away under `GET/POST /api/members/{id}/away`, `PATCH/DELETE /api/away/{id}`, `POST /api/away/{id}/end`.
+   - `GET/PUT /api/household/settings`: `earliestStart`, `latestStart` (`"HH:MM"` or `null` for Off), `setupHidden`.
+   - Shopping List: a Line's `tick` lists its `additions`; `POST /api/shopping/ticks` takes a `quantity` and a `clientUuid`, and `PATCH /api/shopping/ticks` changes or takes back one addition. `alsoTickedBy` entries gain `mine` (the same User on another phone) and `tickedAt` (RFC 3339, UTC); on the `POST /api/scan/sync` wire both are left out when false or empty. `POST /api/scan/sync` accepts `shop_tick` and `shop_untick` operations.
+   - Stock: `POST /api/stock/waste/{id}/undo`, `POST /api/stock/lots/{id}/keep` with an optional `goodUntil`, `POST /api/stock/lots/put-away`.
+   - `POST /api/scan/receipt/apply`: an entry of `adds[]` may carry `productId` to use an existing Product (422 `unknown_product` for an unknown or archived one).
+   - `GET /api/recipes/{id}`: `deletable` and `deleteBlockedBy` (`"planned"` or `"in_use"`); `GET /api/recipes`: `stepCount`. `GET /api/shops`: `priceCount`; `GET /api/shops/{id}/prices`.
+   - `/api/allowlist` entries carry `signedIn`. `GET /api/me` carries `householdTimeZone`. `GET /api/today/advance-steps` lists the Advance Steps due in the next 24 hours.
+   - A typed all-digit barcode must have 8, 12, 13 or 14 digits and a valid check digit (400 `invalid_barcode`).
+7. **No Content-Security-Policy header** is served yet (planned for 1.0.0-beta.10); the page carries one small inline script that paints the User's colour scheme before the app loads.
+8. **Rolling back.** Migrations cannot be undone, so going back to 1.0.0-beta.8 means restoring the snapshot and running the older image. A `helm rollback` on its own does not restore the database:
+
+```sh
+docker stop feeder                                          # Kubernetes: kubectl -n feeder scale deploy/feeder --replicas=0
+cp /srv/feeder/backups/feeder-pre-1570.db /srv/feeder/feeder.db
+rm -f /srv/feeder/feeder.db-wal /srv/feeder/feeder.db-shm   # stale write-ahead files
+chown 65532:65532 /srv/feeder/feeder.db
+# run the older image: ghcr.io/fabbarix/feeder-ng:1.0.0-beta.8
+```
+
+   On Kubernetes, do the same in a helper pod with the PVC mounted at `/data` while the deployment is scaled to zero, as in the 1.0.0-beta.8 notes above, then `helm upgrade feeder oci://ghcr.io/fabbarix/charts/feeder --version 1.0.0-beta.8 --namespace feeder --reset-then-reuse-values` or `helm rollback` to the revision that ran 1.0.0-beta.8. Restore the database first. Everything Feeder recorded after the upgrade is gone with the restore; images in `/data/images` stay. Do not start the new image on the restored file: it migrates it again.
+
+   When you skip releases, each snapshot goes back to the image just before it:
+
+   | Snapshot | Restore it to go back to |
+   |---|---|
+   | `feeder-pre-1570.db` | 1.0.0-beta.8 |
+   | `feeder-pre-1560.db` | 1.0.0-beta.7 |
+   | `feeder-pre-1550.db` | 1.0.0-beta.6.5 |
+   | `feeder-pre-1540.db` | 1.0.0-beta.5.1 |
+   | `feeder-pre-1500.db` | 1.0.0-beta.4.2 |
+   | `feeder-pre-1400.db` | 1.0.0-beta.3 |
+
+   For example, a database upgraded from 1.0.0-beta.7 straight to 1.0.0-beta.9 holds `feeder-pre-1560.db` and `feeder-pre-1570.db`, and both are the beta.7 database, so restore `feeder-pre-1560.db` and run the 1.0.0-beta.7 image.
