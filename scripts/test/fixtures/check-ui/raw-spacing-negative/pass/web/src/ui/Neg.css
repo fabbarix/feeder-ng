@@ -1,0 +1,4 @@
+.a { margin-inline: calc(-1 * var(--space-2)); }
+.b { margin: -1px; }
+.c::after { inset: -6px; }
+.d::before { margin-inline: -8px; }

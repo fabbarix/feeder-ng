@@ -1,0 +1,4 @@
+.a { margin-inline: -8px; }
+.b { margin-block-start: -0.5rem; }
+.c { padding-inline: calc(-1 * 8px); }
+.d { margin: 0 -12px; }
