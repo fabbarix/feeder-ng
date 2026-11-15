@@ -20,13 +20,15 @@ vi.mock('../../../lib/courses/useCourses', async () => {
 vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { id: 7, email: 'a@b.c', displayName: 'Anna', isAdmin: false, householdTimeZone: 'Europe/Rome' } }) }))
 vi.mock('../../../lib/drafts/draftStore', async (orig) => {
   const real = await orig<typeof import('../../../lib/drafts/draftStore')>()
-  const { drafts } = await import('./RecipeEditorScreen.safe.harness.test-helper')
-  return { ...real, openDraftStore: async () => drafts.store }
+  // Read lazily: the harness imports the screen, which imports this module, so the harness is not loaded yet when this runs.
+  return { ...real, openDraftStore: async () => (await import('./RecipeEditorScreen.safe.harness.test-helper')).drafts.store }
 })
 vi.mock('../../../ui', async (orig) => ({ ...(await orig<object>()), ImagePicker: (await import('../../../ui/ImagePicker/fake.test-helper')).FakeImagePicker }))
 
 const save = () => userEvent.click(screen.getByRole('button', { name: 'Save Recipe' }))
 const message = (el: HTMLElement) => document.getElementById(el.getAttribute('aria-describedby')!.split(' ').find((id) => document.getElementById(id)?.textContent?.includes('.')) ?? '')?.textContent
+// The ToastProvider's always-present live region (.toast-live, role alert, empty) is not a form alert.
+const formAlerts = () => screen.queryAllByRole('alert').filter((el) => !el.classList.contains('toast-live'))
 const ingredientsSection = () => screen.getByRole('region', { name: 'Ingredients' })
 
 beforeEach(() => {
@@ -60,7 +62,7 @@ describe('Saving an empty Recipe focuses Name and marks Ingredients', () => {
     await screen.findByRole('textbox', { name: 'Name' })
     await save()
     await waitFor(() => expect(nameField()).toHaveFocus())
-    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+    expect(formAlerts()).toHaveLength(0)
     expect(screen.queryByText('Check the fields marked above.')).toBeNull()
   })
 
@@ -130,7 +132,7 @@ describe('a line without an Ingredient', () => {
     const picker = await screen.findByRole('combobox', { name: 'Ingredient' })
     await waitFor(() => expect(picker).toHaveFocus())
     expect(picker).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+    expect(formAlerts()).toHaveLength(0)
   })
 })
 
@@ -141,10 +143,10 @@ describe('a save error that belongs to no field is a FormError', () => {
     await ready()
     await userEvent.type(nameField(), ' too')
     await save()
-    const alert = await screen.findByRole('alert')
+    const alert = await waitFor(() => formAlerts()[0]!)
     expect(alert).toHaveTextContent('The Recipe could not be saved.')
     expect(alert).toHaveClass('form-error')
-    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(formAlerts()).toHaveLength(1)
     expect(nameField()).toHaveValue('Roast tray too')
   })
 
@@ -154,10 +156,10 @@ describe('a save error that belongs to no field is a FormError', () => {
     await ready()
     await userEvent.type(nameField(), ' too')
     await save()
-    await screen.findByRole('alert')
+    await waitFor(() => expect(formAlerts()).toHaveLength(1))
     api()
     await save()
-    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+    await waitFor(() => expect(formAlerts()).toHaveLength(0))
   })
 })
 

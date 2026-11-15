@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { Route, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { courseChoices, flour, garlic } from '../fixtures.test-helper'
 import { emptyDraft, type RecipeDraft } from '../lib/draft'
@@ -25,17 +25,16 @@ vi.mock('../../../ui', async (orig) => ({
 }))
 
 import { RecipeEditorScreen } from './RecipeEditorScreen'
+import { EditorRouter, safeEditorFields } from './RecipeEditorScreen.safe.harness.test-helper'
 
 const Where = () => <p data-testid="where">{useLocation().pathname}</p>
 const view = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={['/recipes/new']}>
-        <Routes>
+      <EditorRouter initialEntries={['/recipes/new']}>
           <Route path="/recipes/new" element={<RecipeEditorScreen />} />
           <Route path="*" element={<Where />} />
-        </Routes>
-      </MemoryRouter>
+      </EditorRouter>
     </QueryClientProvider>,
   )
 
@@ -48,6 +47,7 @@ const draftOf = (over: Partial<RecipeDraft> = {}): RecipeDraft => ({
 })
 const setEditor = (over: Record<string, unknown> = {}, draft = draftOf()) => {
   h.editor = {
+    ...safeEditorFields(),
     draft, setDraft: vi.fn(), errors: {}, saving: false, isLoading: false, unitPrompt: null, courseLoss: null,
     save: vi.fn().mockResolvedValue({ id: 11 }), answerUnitPrompt: vi.fn(), dismissUnitPrompt: vi.fn(),
     addLine: vi.fn(), updateLine: vi.fn(), pickIngredient: vi.fn(), removeLine: vi.fn(), moveLine: vi.fn(), setSteps: vi.fn(), renameOffer: null,

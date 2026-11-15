@@ -3,7 +3,9 @@
 // (createMemoryRouter): useLeaveGuard needs one, so the older editor tests that mount a MemoryRouter must move to it (see the hand-back).
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
-import { Link, Outlet, RouterProvider, createMemoryRouter } from 'react-router-dom'
+import { useState, type ReactNode } from 'react'
+import { Link, Outlet, Route, RouterProvider, createMemoryRouter, createRoutesFromElements } from 'react-router-dom'
+import { vi } from 'vitest'
 import { useHasUnsavedChanges } from '../../../app/unsavedChanges'
 import { mockApi, newQueryClient } from '../../../lib/baseRecipes/test-utils'
 import { createMemoryDraftStore } from '../../../lib/drafts/draftStore'
@@ -81,3 +83,31 @@ export const leaveDialog = () => screen.queryByRole('dialog', { name: 'Leave wit
 export const discardDialog = () => screen.queryByRole('dialog', { name: 'Discard your changes?' })
 
 export { courseChoices }
+
+/**
+ * B9-31: the data router the older editor tests mount (useLeaveGuard needs one), with the Toast and Confirm hosts the screen now uses.
+ * Its children are the <Route> elements the test used inside <Routes>. `providers={false}` when the test wraps its own hosts.
+ */
+export function EditorRouter({ initialEntries = ['/'], providers = true, children }: { initialEntries?: string[]; providers?: boolean; children: ReactNode }) {
+  const [router] = useState(() => createMemoryRouter(createRoutesFromElements(<Route element={<Outlet />}>{children}</Route>), { initialEntries }))
+  const tree = <RouterProvider router={router} />
+  return providers ? (
+    <ToastProvider>
+      <ConfirmProvider>{tree}</ConfirmProvider>
+    </ToastProvider>
+  ) : (
+    tree
+  )
+}
+
+/** The useRecipeEditor fields B9-31 added, for the tests that mock the hook: a clean, ready editor. */
+export const safeEditorFields = () => ({
+  dirty: false,
+  ready: true,
+  storedUpdatedAt: null,
+  storedName: null,
+  restoreDraft: vi.fn(),
+  resetDraft: vi.fn(),
+  removeStep: vi.fn(() => null),
+  removeUse: vi.fn(() => null),
+})

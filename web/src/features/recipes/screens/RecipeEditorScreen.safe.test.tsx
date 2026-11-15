@@ -25,8 +25,8 @@ vi.mock('../../../lib/courses/useCourses', async () => {
 vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { id: 7, email: 'a@b.c', displayName: 'Anna', isAdmin: false, householdTimeZone: 'Europe/Rome' } }) }))
 vi.mock('../../../lib/drafts/draftStore', async (orig) => {
   const real = await orig<typeof import('../../../lib/drafts/draftStore')>()
-  const { drafts } = await import('./RecipeEditorScreen.safe.harness.test-helper')
-  return { ...real, openDraftStore: async () => drafts.store }
+  // Read lazily: the harness imports the screen, which imports this module, so the harness is not loaded yet when this runs.
+  return { ...real, openDraftStore: async () => (await import('./RecipeEditorScreen.safe.harness.test-helper')).drafts.store }
 })
 vi.mock('../../../ui', async (orig) => ({ ...(await orig<object>()), ImagePicker: (await import('../../../ui/ImagePicker/fake.test-helper')).FakeImagePicker }))
 
@@ -279,7 +279,7 @@ describe('Saving never asks', () => {
     await ready()
     await typeName()
     await userEvent.click(screen.getByRole('button', { name: 'Save Recipe' }))
-    await screen.findByRole('alert')
+    await waitFor(() => expect(document.querySelector('.form-error')).toHaveTextContent('The Recipe could not be saved.'))
     expect(router.state.location.pathname).toBe('/recipes/3/edit')
     expect(unsaved()).toBe('true')
   })

@@ -21,8 +21,8 @@ vi.mock('../../../lib/courses/useCourses', async () => {
 vi.mock('../../../app/useMe', () => ({ useMe: () => ({ data: { id: 7, email: 'a@b.c', displayName: 'Anna', isAdmin: false, householdTimeZone: 'Europe/Rome' } }) }))
 vi.mock('../../../lib/drafts/draftStore', async (orig) => {
   const real = await orig<typeof import('../../../lib/drafts/draftStore')>()
-  const { drafts } = await import('./RecipeEditorScreen.safe.harness.test-helper')
-  return { ...real, openDraftStore: async () => drafts.store }
+  // Read lazily: the harness imports the screen, which imports this module, so the harness is not loaded yet when this runs.
+  return { ...real, openDraftStore: async () => (await import('./RecipeEditorScreen.safe.harness.test-helper')).drafts.store }
 })
 vi.mock('../../../ui', async (orig) => ({ ...(await orig<object>()), ImagePicker: (await import('../../../ui/ImagePicker/fake.test-helper')).FakeImagePicker }))
 
@@ -134,7 +134,7 @@ describe('removing an ingredient line', () => {
     await waitFor(() => expect(toast()).toHaveTextContent('Garlic line removed'))
     await userEvent.click(undoButton('Undo: put Garlic line back'))
     expect(screen.getByRole('button', { name: 'Remove ingredient garlic' })).toBeInTheDocument()
-    expect(screen.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue('3')
+    expect(screen.getByRole('textbox', { name: 'Quantity' })).toHaveValue('3') // the line's Quantity is a text field (fractions stay typeable)
     expect(unsaved()).toBe('false')
   })
 

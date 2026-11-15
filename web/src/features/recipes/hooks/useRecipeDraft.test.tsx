@@ -66,7 +66,7 @@ interface Props {
 function setup(initial: Props = {}) {
   const restore = vi.fn()
   const reset = vi.fn()
-  const imageExists = vi.fn(async () => true)
+  const imageExists = vi.fn(async (_id: string) => true)
   const hook = renderHook(
     (p: Props) =>
       useRecipeDraft({
