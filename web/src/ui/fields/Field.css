@@ -247,6 +247,11 @@ legend.ui-field__label {
   font-variant-numeric: tabular-nums;
 }
 
+/* FormError: the form's own error belongs to no field, so no field track limits it. */
+.form-error {
+  max-inline-size: none;
+}
+
 /* The error icon sits on the first line of a two-line error. */
 .ui-field__error > svg {
   flex: none;

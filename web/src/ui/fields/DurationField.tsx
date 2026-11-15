@@ -95,7 +95,7 @@ export function DurationField({ label, helper, error, disabled, required, name, 
   const inputId = `${ids.labelId}-input`
   const invalid = error ? true : undefined
   return (
-    <FieldFrame ids={ids} label={label} helper={helper} error={error} className="duration-field">
+    <FieldFrame ids={ids} label={label} helper={helper} error={error}>
       <div role="group" aria-labelledby={ids.labelId} aria-invalid={invalid} className="duration-field__controls">
         <span className="ui-field__control duration-field__number">
           <input

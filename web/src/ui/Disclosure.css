@@ -1,4 +1,9 @@
 /* RX-02: a section Tile whose heading is the toggle. The tile pads the button, so its focus ring is the outer ring. */
+/* A hash that names the section (and opens it) scrolls it clear of the app bar. */
+.disclosure {
+  scroll-margin-block-start: var(--space-14);
+}
+
 .disclosure__heading {
   margin: 0;
 }
