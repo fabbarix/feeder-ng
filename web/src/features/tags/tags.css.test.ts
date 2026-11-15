@@ -17,11 +17,11 @@ describe('tags.css: a long Tag fits its row', () => {
   it('the Tags screen scopes its rules with .tags-screen on its ListPage', () => {
     expect(screen).toMatch(/<ListPage className="tags-screen"/)
   })
-  it('the title takes at most two lines', () => {
+  it('the title takes at most two lines, wrapping at a word, never mid-word (system.md 3)', () => {
     const b = body('.tags-screen .list-row__title')
     expect(b).toMatch(/-webkit-line-clamp:\s*2/)
     expect(b).toMatch(/overflow:\s*hidden/)
-    expect(b).toMatch(/overflow-wrap:\s*(anywhere|break-word)/)
+    expect(css).not.toMatch(/overflow-wrap:\s*(anywhere|break-word)|word-wrap:\s*(anywhere|break-word)|word-break:\s*break-(all|word)|hyphens:\s*auto/)
   })
   it('the count never shrinks, so "12 Recipes" is never cut', () => {
     expect(body('.tags-screen .list-row__value')).toMatch(/flex-shrink:\s*0|flex:\s*none|flex:\s*0 0 auto|white-space:\s*nowrap/)
