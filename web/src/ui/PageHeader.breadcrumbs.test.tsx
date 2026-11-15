@@ -33,7 +33,10 @@ describe('PageHeader breadcrumbs', () => {
     const css = readUiCss('PageHeader.css')
     expect(declarations(css, '.page-header')['flex-direction']).toBe('column')
     expect(declarations(css, '.page-header__row')['display']).toBe('flex')
-    expect(declarations(css, '.page-header__row')['align-items']).toBe('center')
+    // B9-19 review: the items start at the row's top and the text is padded to centre the h1 on a 40 px action row, so the h1
+    // sits at the same height with or without a subtitle (a centred row put it 4 px higher on pages with a subtitle).
+    expect(declarations(css, '.page-header__row')['align-items']).toBe('flex-start')
+    expect(declarations(css, '.page-header__text')['padding-block-start']).toBe('calc((var(--space-10) - var(--text-title-1-line)) / 2)')
   })
 
   it('renders no crumbs row without breadcrumbs, or with an empty list', () => {
