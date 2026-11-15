@@ -16,7 +16,7 @@ export interface MarkableRecipe {
 export interface MarkRow {
   id: number
   name: string
-  /** "Main · 30 min", "No Course yet · 50 min", "Side, Main · 45 min". */
+  /** "Main · 30 min", "No Course yet · 50 min", "Side, Main · 45 min"; "Main" alone for a Recipe with no cooking time. */
   meta: string
   checked: boolean
 }
@@ -40,7 +40,9 @@ export function markRows(recipes: readonly MarkableRecipe[], names: ReadonlyMap<
     .map((r) => {
       const courses = courseNamesOf(r, names)
       const what = courses.length > 0 ? courses.join(', ') : s.markSheet.noCourse
-      return { id: r.id, name: r.name, meta: `${what} · ${formatMinutes(r.totalMinutes)}`, checked: ticked.has(r.id) }
+      // A Ready Meal (no cooking time) says no "0 min".
+      const meta = r.totalMinutes > 0 ? `${what} · ${formatMinutes(r.totalMinutes)}` : what
+      return { id: r.id, name: r.name, meta, checked: ticked.has(r.id) }
     })
 }
 
