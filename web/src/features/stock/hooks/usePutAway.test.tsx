@@ -17,7 +17,9 @@ function setup() {
   return { ...renderHook(() => usePutAway(), { wrapper: Wrapper }), spy }
 }
 
-beforeEach(() => api.putAway.mockReset().mockResolvedValue({ lots: [{ id: 5 }], skipped: [6] }))
+beforeEach(() => {
+  api.putAway.mockReset().mockResolvedValue({ lots: [{ id: 5 }], skipped: [6] })
+})
 
 describe('usePutAway', () => {
   it('sends every move in one request, resolves with the answer and refreshes Stock', async () => {
