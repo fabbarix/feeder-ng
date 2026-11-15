@@ -58,9 +58,9 @@ describe('TickSyncNotices', () => {
     const onAction = vi.fn()
     const n = twice('c-1')
     const { container } = render(<TickSyncNotices notices={[n]} onAction={onAction} />)
-    await userEvent.click(within(stack(container)).getByRole('button', { name: 'Take mine back' }))
+    await userEvent.click(within(stack(container)).getByRole('button', { name: /^Take mine back/ }))
     expect(onAction).toHaveBeenCalledWith(n, 'takeMineBack')
-    await userEvent.click(within(stack(container)).getByRole('button', { name: 'Dismiss' }))
+    await userEvent.click(within(stack(container)).getByRole('button', { name: /^Dismiss/ }))
     expect(onAction).toHaveBeenLastCalledWith(n, 'dismiss')
   })
 
@@ -69,6 +69,18 @@ describe('TickSyncNotices', () => {
     const titles = [...stack(container).querySelectorAll('.sync-notice')].map((n) => n.getAttribute('data-tone'))
     expect(titles).toHaveLength(3)
     expect(stack(container)).toHaveTextContent('and 2 more')
+  })
+
+  it('P38: every button has its own accessible name, which contains its visible label (two notices both say Dismiss)', () => {
+    const { container } = render(<TickSyncNotices notices={[twice('c-1'), refused('c-2')]} onAction={() => {}} />)
+    const names = within(stack(container)).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent ?? '')
+    expect(new Set(names).size).toBe(names.length)
+    expect(names).toEqual([
+      'Take mine back: Carrot was ticked twice',
+      'Dismiss: Carrot was ticked twice',
+      'Add to Stock: Couldn’t sync the Tick of Carrot.',
+      'Dismiss: Couldn’t sync the Tick of Carrot.',
+    ])
   })
 
   it('renders nothing for no notices', () => {

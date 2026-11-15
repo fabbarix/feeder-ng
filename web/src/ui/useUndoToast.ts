@@ -6,7 +6,7 @@
 // announced politely, as every non-error toast is.
 import { useCallback, useMemo } from 'react'
 import { ApiError } from '../lib/http'
-import { useToast, type ToastAction, type ToastActionContext, type ToastHandle } from './Toast'
+import { useToast, type ToastAction, type ToastActionContext, type ToastHandle, type ToastStatus } from './Toast'
 
 export interface UndoToastInput {
   /** Past tense, naming the thing: "Sam removed". */
@@ -26,6 +26,8 @@ export interface UndoToastInput {
   actions?: ToastAction[]
   /** Default 8000 (SAFE 5); Scan passes 5000. */
   durationMs?: number
+  /** B9-54 (RES-03): the toast's status, for the one Undo toast that carries an icon: 'pending' (Clock, "waiting to sync"). Default none (no icon, R-D+). */
+  status?: ToastStatus
 }
 
 export interface UndoToastApi {

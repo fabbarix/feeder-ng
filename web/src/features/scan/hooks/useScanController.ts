@@ -42,7 +42,7 @@ export interface ScanControllerOptions {
 
 export interface ScanController {
   /** loading the offline data; error when it is neither online nor cached */
-  status: 'loading' | 'ready' | 'error'
+  status: 'loading' | 'ready' | 'error' | 'unavailable'
   error: string | null
   camera: {
     status: CameraStatus

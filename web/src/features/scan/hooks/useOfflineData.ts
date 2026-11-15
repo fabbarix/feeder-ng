@@ -10,7 +10,8 @@ import type { OfflineData } from '../types'
 
 export interface OfflineDataState {
   offline: OfflineData | null
-  status: 'loading' | 'ready' | 'error'
+  /** B9-54 (RES-03): 'unavailable' = the phone is offline and this Shop's data was never saved on it ('error' stays for a failure with a server answer) */
+  status: 'loading' | 'ready' | 'error' | 'unavailable'
   error: string | null
 }
 

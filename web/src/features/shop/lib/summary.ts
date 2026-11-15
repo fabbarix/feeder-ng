@@ -36,7 +36,7 @@ function untilText(today: string, to: string): string {
   return shopStrings.untilDay(`${weekdayOf(to)} ${Number(to.slice(8))}`)
 }
 
-export function shopSummary(list: ShoppingList, shopName: string | null): ShopSummary {
+export function shopSummary(list: ShoppingList, shopName: string | null, _opts: { waiting?: number } = {}): ShopSummary {
   const { ticked, total } = list.progress
   return {
     left: total - ticked,

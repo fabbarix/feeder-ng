@@ -123,6 +123,7 @@ const ADDED = {
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
   // B9-50: scenarios/b9-50.mjs (order 500): receipt-review-add and receipt-add-sheet (SSP-08), receipt-photos-bar (SSP-19, A11Y-09).
+  // B9-54: scenarios/b9-54.mjs (order 540): shop-offline-tick and shop-offline-sheet (RES-03), the Shop ticked offline.
   scenarios: [
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
@@ -144,6 +145,7 @@ const ADDED = {
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',
     'receipt-review-add', 'receipt-add-sheet', 'receipt-photos-bar',
+    'shop-offline-tick', 'shop-offline-sheet',
   ],
 }
 

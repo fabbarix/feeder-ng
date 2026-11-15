@@ -19,6 +19,8 @@ export interface SyncNoticeRow {
 export interface SyncNoticeAction {
   label: string
   onClick: () => void
+  /** B9-54 (P38): the accessible name when two notices would otherwise both have a "Dismiss"; it contains the visible label ("Dismiss: Carrot was ticked twice"). */
+  ariaLabel?: string
 }
 
 export interface SyncNoticeProps {
