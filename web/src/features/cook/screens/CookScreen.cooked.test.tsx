@@ -357,7 +357,8 @@ describe('Mark all Cooked', () => {
   it('one Undo for the whole Mark all: "Undo Cooked for all 2 Courses" reopens through the first Course once', async () => {
     const api = await markAll()
     await userEvent.click(screen.getByRole('button', { name: 'Undo Cooked for all 2 Courses' }))
-    expect(await screen.findByRole('article', { name: 'Step 1 of 4' })).toBeInTheDocument()
+    // Undo returns to the last Step (choice 6), as the single-Course Undo does
+    expect(await screen.findByRole('article', { name: 'Step 4 of 4' })).toBeInTheDocument()
     expect(api.callsTo('POST', `${slotBase}/1/reopen`)).toHaveLength(1)
     expect(api.callsTo('POST', `${slotBase}/all/reopen`)).toHaveLength(0)
     expect(document.querySelector('.shortfall-notice')).toBeNull()
