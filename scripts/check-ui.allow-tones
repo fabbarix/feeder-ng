@@ -1,0 +1,5 @@
+# check-ui rule 20 (status-tone, B9-17, DS-06, VC9) allowlist: files whose spoil or danger tone really is food going off or a loss.
+# Format: <exact path>   # <reason>. An entry without a reason is ignored. A file that only needs warn, info or neutral never goes here:
+# its package converts it. Feature files are added by the package that converts their folder (for example features/today UseSoonTile,
+# food, with B9-44).
+web/src/ui/Gallery.tsx   # the primitives Gallery shows every tone as a specimen, spoil and danger included
