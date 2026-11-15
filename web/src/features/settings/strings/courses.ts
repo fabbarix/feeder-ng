@@ -9,7 +9,6 @@ export const coursesStrings = {
   loading: 'Loading Courses',
   loadFailed: 'Could not load the Courses.',
   listLabel: 'Courses',
-  mainChip: 'Main',
   actionsLabel: (name: string) => `Actions for ${name}`,
   rename: 'Rename',
   renameLabel: (name: string) => `Rename ${name}`,
