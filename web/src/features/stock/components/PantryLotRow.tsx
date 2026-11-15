@@ -1,9 +1,8 @@
 import type { ReactElement } from 'react'
 import { ListRow, Thumb } from '../../../ui'
-import { restockReason } from '../../../lib/restock'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { capitalise } from '../lib/display'
-import { isBelowRestock, isSupply, type Restock } from '../lib/supplies'
+import { isSupply, supplyRestockMeta, type Restock } from '../lib/supplies'
 import { describeGoOff } from '../lib/view'
 import type { StockLot } from '../types'
 
@@ -31,14 +30,14 @@ export function PantryLotRow({ lot, today, system = 'metric', placeName, restock
   const value = formatQuantity(lot.quantity, lot.baseUnit, system)
   const leading = <Thumb name={lot.ingredientName} imageUrl={lot.ingredientImageUrl} size={40} />
   if (isSupply(lot)) {
-    const reason = restock ? restockReason(restock.stock, restock.level, lot.baseUnit, system, { stockInReason: false }) : null
+    const reason = supplyRestockMeta(restock, lot.baseUnit, system)
     return (
       <ListRow
         title={capitalise(lot.ingredientName)}
         value={value}
         meta={withPlace(reason?.long, placeName)}
         metaCompact={placeName ? reason?.compact || reason?.long || undefined : reason?.compact || undefined}
-        metaStatus={reason && isBelowRestock(restock) ? 'info' : undefined}
+        metaStatus={reason?.below ? 'info' : undefined}
         leading={leading}
         haspopup="dialog"
         onActivate={() => onOpen(lot)}

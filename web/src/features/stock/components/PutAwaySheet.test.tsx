@@ -18,7 +18,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { pickOption } from '../../settings/test-utils'
-import { makeLot } from '../testData'
+import { makeLot, makeSupplyLot } from '../testData'
 import type { StoragePlace } from '../types'
 import { PutAwaySheet } from './PutAwaySheet'
 
@@ -137,5 +137,11 @@ describe('PutAwaySheet', () => {
   it('uses no native select or checkbox', () => {
     setup()
     expect(sheet().querySelector('select, option, input[type="checkbox"]:not([class])')).toBeNull()
+  })
+  it('a Supply row carries its Restock meta, as on the Pantry row', () => {
+    const supply = makeSupplyLot({ id: 41, ingredientName: 'dish soap', quantity: 2, baseUnit: 'piece', storagePlaceId: null })
+    setup({ lots: [supply], restockFor: () => ({ level: 6, stock: 4 }) })
+    const row = within(sheet()).getByRole('checkbox', { name: 'Dish soap' }).closest('.list-row')
+    expect(row).toHaveTextContent('Below 6 · 4 in Stock')
   })
 })

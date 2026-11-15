@@ -8,7 +8,7 @@ import { errorText } from '../../products/lib/productForm'
 import { capitalise } from '../lib/display'
 import { KIND_ICON } from '../lib/kinds'
 import { afterMove, defaultPutAwayPlace, movedStatus, moveLabel, putAwayMoves, putAwayTitle, toggleLot, type PutAwayMove, type PutAwayResult } from '../lib/putAway'
-import { isSupply } from '../lib/supplies'
+import { isSupply, supplyRestockMeta, type Restock } from '../lib/supplies'
 import { describeGoOff } from '../lib/view'
 import { stockStrings as strings } from '../strings'
 import type { StockLot, StoragePlace } from '../types'
@@ -25,9 +25,11 @@ export interface PutAwaySheetProps {
   onMove: (moves: PutAwayMove[]) => Promise<PutAwayResult>
   /** Called once, after the sheet closed itself, when the last Lot has left the list. */
   onAllPutAway?: () => void
+  /** A Supply's Restock level and Stock, for its row's meta (as on the Pantry row). */
+  restockFor?: (ingredientId: number) => Restock | null
 }
 
-export function PutAwaySheet({ open, onClose, lots, places, today, system = 'metric', onMove, onAllPutAway }: PutAwaySheetProps): ReactElement {
+export function PutAwaySheet({ open, onClose, lots, places, today, system = 'metric', onMove, onAllPutAway, restockFor }: PutAwaySheetProps): ReactElement {
   const [list, setList] = useState<StockLot[]>(lots)
   const [wasOpen, setWasOpen] = useState(open)
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set())
@@ -127,6 +129,7 @@ export function PutAwaySheet({ open, onClose, lots, places, today, system = 'met
               const ticked = selected.has(lot.id)
               const name = capitalise(lot.ingredientName)
               const goOff = isSupply(lot) ? null : describeGoOff(lot, today)
+              const supply = isSupply(lot) ? supplyRestockMeta(restockFor?.(lot.ingredientId) ?? null, lot.baseUnit, system) : null
               return (
                 <ListRow
                   key={lot.id}
@@ -144,8 +147,9 @@ export function PutAwaySheet({ open, onClose, lots, places, today, system = 'met
                     />
                   }
                   leading={<Thumb name={lot.ingredientName} imageUrl={lot.ingredientImageUrl} size={40} />}
-                  meta={goOff ? goOff.label : undefined}
-                  metaStatus={goOff?.tone === 'spoil' ? 'spoil' : undefined}
+                  meta={goOff ? goOff.label : supply?.long}
+                  metaCompact={supply?.compact || undefined}
+                  metaStatus={goOff?.tone === 'spoil' ? 'spoil' : supply?.below ? 'info' : undefined}
                   metaIcon={goOff?.tone === 'spoil' ? (lot.spoiled ? 'spoiled' : 'useSoon') : undefined}
                   value={formatQuantity(lot.quantity, lot.baseUnit, system)}
                 />

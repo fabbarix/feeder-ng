@@ -345,6 +345,7 @@ export function StockScreen(): ReactElement | null {
         system={system}
         onMove={putAway.putAway}
         onAllPutAway={() => toast.show(strings.putAway.allDone, { status: 'success' })}
+        restockFor={restockFor}
       />
 
       <KeepDateSheet open={flow.changing !== null} lot={flow.changing} today={today} onClose={flow.closeChange} onKeep={flow.keepUntil} />
