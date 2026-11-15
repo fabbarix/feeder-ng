@@ -5,6 +5,7 @@ import { useLeftovers, usePlan } from '../../plan'
 import { useStockTotals } from '../../stock/hooks/useStock'
 import { useHouseholdSettings } from '../../settings/hooks/useHouseholdSettings'
 import { EmptyState, useBreakpoint } from '../../../ui'
+import { useDocumentTitle } from '../../../ui/lib/useDocumentTitle'
 import { ClockTile, NextAdvanceTile, BoardLeftoversTile, UseSoonTile, BoardTimersTile, TomorrowTile, StreakTile, TonightTile } from '../components/BoardTiles'
 import { useAdvanceDone, useBoard, useBoardScheme, useNow } from '../hooks/useBoard'
 import { useBoardPalette } from '../hooks/useBoardPalette'
@@ -40,6 +41,7 @@ function Cell({ id, layout, children }: { id: BoardCell['id']; layout: BoardCell
  * The Cook button navigates to lib/tiles.startCookPath.
  */
 export function BoardScreen(): ReactNode {
+  useDocumentTitle([boardStrings.documentTitle])
   const board = useBoard()
   const scheme = useBoardScheme(board.data, board.refetch)
   useBoardPalette(scheme.dark)

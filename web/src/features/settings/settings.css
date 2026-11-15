@@ -1,8 +1,8 @@
 /* Settings screens: layout only; colours come from the theme tokens. */
 .settings {
   display: grid;
+  /* B9-19: no top padding of its own, so the PageHeader sits at the same height as on every other page. */
   gap: var(--space-4);
-  padding-top: var(--space-4);
 }
 .settings__group {
   display: grid;
