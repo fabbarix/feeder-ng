@@ -97,6 +97,9 @@ export const strings = {
   deleteShopBarcode: (label: string) => `Delete Shop Barcode ${label}`,
   weighedBarcode: (prefix: string | undefined, item: string) => (prefix === undefined ? `Weighed · item ${item}` : `Weighed · prefix ${prefix} · item ${item}`),
   unknownProduct: 'Unknown Product',
+  /** The Shop page's Shop Barcode rows (R-E): the Product, the code at the row's end, and what the code is. */
+  shopOwnLabel: "The Shop's own label",
+  weighedRule: (prefix: string | undefined) => (prefix === undefined ? 'Weight Barcode Rule' : `Weight Barcode Rule ${prefix}`),
   pricesTitle: 'Prices known here',
   pricesKnownTitle: 'Prices known here',
   pricesCount: (n: number) => (n === 1 ? '1 Product' : `${n} Products`),
