@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Button } from './Button'
 import { DetailList, DetailRow } from './DetailList'
 import { Dialog } from './Dialog'
@@ -132,9 +132,9 @@ export function ConfirmDialog({
   )
 }
 
-function ConfirmRows({ rows }: { rows: ConfirmRow[] }) {
+function ConfirmRows({ rows, labelledBy }: { rows: ConfirmRow[]; labelledBy?: string }) {
   return (
-    <DetailList className="confirm-dialog__rows">
+    <DetailList className="confirm-dialog__rows" aria-labelledby={labelledBy}>
       {rows.map((row, i) => (
         <DetailRow key={`${i}-${row.key}`} label={row.key} state={row.state} detail={row.detail} />
       ))}
@@ -145,17 +145,10 @@ function ConfirmRows({ rows }: { rows: ConfirmRow[] }) {
 /** A labelled group: the label names its list for a screen reader ("Goes with Sam, list, 3 items"). */
 function ConfirmGroupView({ group }: { group: ConfirmGroup }) {
   const id = useId()
-  const ref = useRef<HTMLDivElement>(null)
-  // DetailList takes no aria props (B9-01's primitive), so the group names its own list once it is in the DOM.
-  useLayoutEffect(() => {
-    ref.current?.querySelector(':scope > .detail-list')?.setAttribute('aria-labelledby', id)
-  }, [id])
   return (
-    <div ref={ref} className="confirm-dialog__group">
-      <Overline id={id}>
-        {group.label}
-      </Overline>
-      <ConfirmRows rows={group.rows} />
+    <div className="confirm-dialog__group">
+      <Overline id={id}>{group.label}</Overline>
+      <ConfirmRows rows={group.rows} labelledBy={id} />
     </div>
   )
 }
