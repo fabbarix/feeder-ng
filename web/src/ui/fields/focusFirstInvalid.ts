@@ -41,7 +41,7 @@ export function focusFirstInvalid(root: ParentNode | null | undefined): HTMLElem
     const target = focusTargetOf(candidate)
     if (!target) continue
     openDisclosuresAround(target)
-    target.scrollIntoView({ block: 'center' })
+    target.scrollIntoView?.({ block: 'center' })
     target.focus({ preventScroll: true })
     return target
   }
