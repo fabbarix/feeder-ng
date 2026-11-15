@@ -17,6 +17,11 @@ describe('Toast.css: the sticky-bar lift has the bar\'s own lift as one more ter
     expect(bottom).toMatch(/^calc\(/)
     expect(bottom).toMatch(/var\(--sticky-bar-clearance\)\s*\+\s*var\(--sticky-bar-lift,\s*0px\)/)
   })
+  it('every other lift (B9-25\'s --timer-pill-clearance) is one more term with a 0px fallback, in both region rules, so the terms sum', () => {
+    const regions = ruleBlocks(css).filter((r) => r.selectors.some((s) => s.includes('.toast-region')) && /bottom:/.test(r.body))
+    expect(regions.length).toBeGreaterThanOrEqual(2)
+    for (const r of regions) expect(/bottom:\s*([^;]+)/.exec(r.body)?.[1] ?? '').toMatch(/^calc\(.*\+\s*var\(--timer-pill-clearance,\s*0px\)\s*\+/)
+  })
 })
 
 describe('barLift (px above the floating spot)', () => {
