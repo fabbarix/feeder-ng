@@ -41,9 +41,18 @@ fixture() { # name brotli-bytes
   printf '<!doctype html><html><head><script type="module" crossorigin src="/assets/index-Ab12Cd.js"></script><link rel="stylesheet" href="/assets/index-Ab12Cd.css"></head><body><div id="root"></div></body></html>' >"$d/index.html"
   printf 'console.log(1)' >"$d/assets/index-Ab12Cd.js"
   printf 'body{}' >"$d/assets/index-Ab12Cd.css"
-  # another chunk that is NOT the entry and is huge: it must not count
-  head -c 900000 /dev/zero >"$d/assets/other-9f9f9f.js.br"
+  # another chunk that is NOT the entry and is bigger than a small entry: it never counts toward the entry's budget
+  # (B9-59: it has its own, 250 KB, and this one is within it)
+  printf 'export{}' >"$d/assets/other-9f9f9f.js"
+  head -c 150000 /dev/zero >"$d/assets/other-9f9f9f.js.br"
   [ -n "${2:-}" ] && head -c "$2" /dev/zero >"$d/assets/index-Ab12Cd.js.br"
+  echo "$d"
+}
+# B9-59: a route chunk of the given brotli size beside an entry within its budget
+route_fixture() { # name brotli-bytes
+  local d; d="$(fixture "$1" 300000)"
+  printf 'export{}' >"$d/assets/PlanScreen-77aa77.js"
+  head -c "$2" /dev/zero >"$d/assets/PlanScreen-77aa77.js.br"
   echo "$d"
 }
 run_budget() { BUNDLE_DIST="$1" bash "$B" 2>&1; }
@@ -59,6 +68,28 @@ grep -qi 'warn' <<<"$out" && ok || bad "budget: 380000 bytes (over 350 KB) must 
 out="$(run_budget "$(fixture over 420000)")"; rc=$?
 [ "$rc" -ne 0 ] && ok || bad "budget: 420000 bytes (over 400 KB) must fail"
 grep -qiE 'fail|over|budget' <<<"$out" && ok || bad "budget: the failure names the budget (got: $out)"
+
+# B9-59: the route chunks' own budget (warn over 200 KB, fail over 250 KB) and the five largest chunks
+out="$(run_budget "$(route_fixture rok 190000)")"; rc=$?
+[ "$rc" -eq 0 ] && ok || bad "budget: a 190000-byte route chunk must pass (exit $rc: $out)"
+grep -qi 'warn' <<<"$out" && bad "budget: no warning for a route chunk under 200 KB (got: $out)" || ok
+out="$(run_budget "$(route_fixture rwarn 220000)")"; rc=$?
+[ "$rc" -eq 0 ] && ok || bad "budget: a 220000-byte route chunk passes with a warning (exit $rc: $out)"
+grep -qiE 'warn.*PlanScreen-77aa77' <<<"$out" && ok || bad "budget: a route chunk over 200 KB must print WARN with its name (got: $out)"
+out="$(run_budget "$(route_fixture rover 260000)")"; rc=$?
+[ "$rc" -ne 0 ] && ok || bad "budget: a 260000-byte route chunk (over 250 KB) must fail"
+grep -qiE 'fail.*PlanScreen-77aa77.*250' <<<"$out" && ok || bad "budget: the failure names the chunk and the 250 KB budget (got: $out)"
+out="$(run_budget "$(route_fixture rlist 120000)")"; rc=$?
+grep -qi 'five largest' <<<"$out" && ok || bad "budget: prints the five largest chunks (got: $out)"
+listed="$(sed -n '/five largest/,$p' <<<"$out" | tail -n +2)"
+[ "$(grep -c 'KB' <<<"$listed")" -eq 3 ] && ok || bad "budget: lists every chunk when there are fewer than five (got: $listed)"
+head -1 <<<"$listed" | grep -q 'index-Ab12Cd.js (entry)' && ok || bad "budget: the list is largest first and marks the entry (got: $listed)"
+out="$(run_budget "$(route_fixture rover2 260000)")"
+grep -qi 'five largest' <<<"$out" && ok || bad "budget: the five largest are printed when a chunk fails too (got: $out)"
+d6="$(fixture six 300000)"
+for i in 1 2 3 4 5 6; do printf 'export{}' >"$d6/assets/r$i-aa.js"; head -c $((i * 1000)) /dev/zero >"$d6/assets/r$i-aa.js.br"; done
+listed="$(run_budget "$d6" | sed -n '/five largest/,$p' | tail -n +2)"
+[ "$(grep -c 'KB' <<<"$listed")" -eq 5 ] && ok || bad "budget: lists five chunks, no more (got: $listed)"
 
 out="$(run_budget "$(fixture nobr)")"; rc=$?
 [ "$rc" -ne 0 ] && ok || bad "budget: a build with no .br sibling for the entry chunk must fail (the compression step did not run)"
@@ -104,6 +135,16 @@ if (cd "$WEB" && pnpm exec vite build --outDir "$SCRATCH/dist" --emptyOutDir >"$
   for f in "$entry" "$css"; do
     grep -qF "\"$f\"" "$D/sw.js" && ok || bad "build: sw.js does not precache $f"
   done
+  # B9-59: the routes load on demand, so there are route chunks, and the worker precaches every one of them (and every
+  # stylesheet): after one visit, a route never opened before still opens offline
+  nchunks=$(find "$D/assets" -maxdepth 1 -name '*.js' | wc -l)
+  [ "$nchunks" -ge 10 ] && ok || bad "build: expected the routes split into chunks (10 or more JS files), got $nchunks"
+  missing=""
+  for f in "$D"/assets/*.js "$D"/assets/*.css; do
+    rel="${f#"$D"/}"
+    grep -qF "\"$rel\"" "$D/sw.js" || missing="$missing $rel"
+  done
+  [ -z "$missing" ] && ok || bad "build: sw.js does not precache:$missing"
   # a sibling exists only for a text file over 1 KB (a png, ico or woff2 is already compressed)
   badsib=""
   while IFS= read -r sib; do

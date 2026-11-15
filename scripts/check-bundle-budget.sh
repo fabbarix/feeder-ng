@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # B9-21 (RES-04): the entry chunk's brotli size budget. The entry is the module script index.html names; its .br sibling
 # (written by the build's precompress step) is what a phone downloads. Over 350 KB warns, over 400 KB fails.
+# B9-59 (RES-04, route splitting): every other chunk under assets/ (a route's code, loaded on demand, or a library one route
+# uses) has its own budget: over 200 KB brotli warns, over 250 KB fails. A chunk under 1 KB has no .br sibling and counts
+# with its raw size. The five largest chunks are printed, so a growing one is seen before it fails.
 # BUNDLE_DIST: the built frontend (default web/dist).
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST="${BUNDLE_DIST:-$ROOT/web/dist}"
 WARN_BYTES=350000
 FAIL_BYTES=400000
+CHUNK_WARN_BYTES=200000
+CHUNK_FAIL_BYTES=250000
+
+kb() { echo $(( ($1 + 500) / 1000 )); }
 
 if [ ! -f "$DIST/index.html" ]; then
   echo "bundle budget: FAIL: no built frontend at $DIST (run pnpm -C web build)" >&2
@@ -21,14 +28,49 @@ if [ ! -f "$DIST/$entry.br" ]; then
   echo "bundle budget: FAIL: $entry has no .br sibling (the precompress step did not run)" >&2
   exit 1
 fi
+
+rc=0
 size=$(wc -c <"$DIST/$entry.br" | tr -d ' ')
-kb=$(( (size + 500) / 1000 ))
 if [ "$size" -gt "$FAIL_BYTES" ]; then
-  echo "bundle budget: FAIL: $entry is ${kb} KB brotli, over the 400 KB budget" >&2
-  exit 1
+  echo "bundle budget: FAIL: $entry is $(kb "$size") KB brotli, over the 400 KB budget" >&2
+  rc=1
+elif [ "$size" -gt "$WARN_BYTES" ]; then
+  echo "bundle budget: WARN: $entry is $(kb "$size") KB brotli, over 350 KB (the budget is 400 KB)"
+else
+  echo "bundle budget: ok: $entry is $(kb "$size") KB brotli, within 350 KB (the budget is 400 KB)"
 fi
-if [ "$size" -gt "$WARN_BYTES" ]; then
-  echo "bundle budget: WARN: $entry is ${kb} KB brotli, over 350 KB (the budget is 400 KB)"
-  exit 0
+
+# Every JS chunk with its brotli size (raw when it has no .br sibling), largest first.
+sizes="$(
+  for js in "$DIST"/assets/*.js; do
+    [ -f "$js" ] || continue
+    if [ -f "$js.br" ]; then n=$(wc -c <"$js.br" | tr -d ' '); else n=$(wc -c <"$js" | tr -d ' '); fi
+    printf '%s %s\n' "$n" "${js#"$DIST"/}"
+  done | sort -rn
+)"
+
+over=0; warned=0; others=0
+while read -r n name; do
+  [ -n "${name:-}" ] || continue
+  [ "$name" = "$entry" ] && continue
+  others=$((others + 1))
+  if [ "$n" -gt "$CHUNK_FAIL_BYTES" ]; then
+    echo "bundle budget: FAIL: chunk $name is $(kb "$n") KB brotli, over the 250 KB route-chunk budget" >&2
+    over=$((over + 1))
+  elif [ "$n" -gt "$CHUNK_WARN_BYTES" ]; then
+    echo "bundle budget: WARN: chunk $name is $(kb "$n") KB brotli, over 200 KB (the route-chunk budget is 250 KB)"
+    warned=$((warned + 1))
+  fi
+done <<<"$sizes"
+[ "$over" -gt 0 ] && rc=1
+if [ "$over" -eq 0 ] && [ "$warned" -eq 0 ]; then
+  echo "bundle budget: ok: every other chunk ($others) is within 200 KB brotli (the route-chunk budget is 250 KB)"
 fi
-echo "bundle budget: ok: $entry is ${kb} KB brotli, within 350 KB (the budget is 400 KB)"
+
+echo "bundle budget: the five largest chunks (brotli):"
+head -5 <<<"$sizes" | while read -r n name; do
+  mark=""
+  [ "$name" = "$entry" ] && mark=" (entry)"
+  printf '  %6s KB  %s%s\n' "$(kb "$n")" "$name" "$mark"
+done
+exit "$rc"
