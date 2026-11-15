@@ -204,7 +204,7 @@ describe('SetupChecklistTile: the other steps', () => {
     await userEvent.click(ways[0]!)
     await userEvent.click(ways[1]!)
     await userEvent.click(ways[2]!)
-    expect([a.newRecipe, a.readRecipe, a.importRecipes].map((f) => f.mock.calls.length)).toEqual([1, 1, 1])
+    expect([a.newRecipe, a.readRecipe, a.importRecipes].map((f) => vi.mocked(f).mock.calls.length)).toEqual([1, 1, 1])
   })
 
   it('step 4 before any Recipe has no "see your first plan" line (there is no plan to see yet)', () => {
