@@ -28,8 +28,10 @@ export interface CookTimerPanel {
 }
 
 export function useCookTimerPanel(timers: TimerActionsSource, holdingIds: number[]): CookTimerPanel {
-  const rail = useBreakpoint('desktop')
+  const desktop = useBreakpoint('desktop')
   const { short, maxPills } = useShortLandscape()
+  // a short landscape viewport keeps the side-column layout at every width: the strip, never the rail
+  const rail = desktop && !short
   const actions = useTimerActions(timers)
   const [openId, setOpenId] = useState<number | null>(null)
   const [allOpen, setAllOpen] = useState(false)

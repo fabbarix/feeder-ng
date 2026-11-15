@@ -130,48 +130,50 @@ function SessionCookScreen(): ReactNode {
   const timerProps = { panel, scope: session.scope, items: timers.items, holdingIds }
   return (
     <div className="cook-screen" data-layout={panel.short ? 'short' : panel.rail ? 'rail' : 'strip'}>
-      <CookTopRow speechSupported={speech.supported} voiceOn={voiceOn} onVoiceChange={setVoiceOn} onExit={leaveCook} />
-      <header className="cook-screen__header">
-        <h1 className="cook-screen__title">{view.recipeName}</h1>
-        {view.batches > 1 ? <p className="cook-screen__batches">{cookStrings.batches(view.batches)}</p> : null}
-      </header>
-      <AdvanceStepsTile
-        summary={session.advance}
-        compact={panel.short}
-        collapsed={session.nav.index > 0}
-        onMarkDone={(stepIndex) => void session.markAdvanceDone(stepIndex)}
-      />
-      {session.step ? (
-        <StepTile
-          key={`${session.step.index}-${session.repeatCount}`}
-          step={session.step}
-          formatUse={formatUse}
-          tapZones
-          coachMark={coachOn}
-          onCoachDismiss={dismissCoach}
+      <div className="cook-main">
+        <CookTopRow speechSupported={speech.supported} voiceOn={voiceOn} onVoiceChange={setVoiceOn} onExit={leaveCook} />
+        <header className="cook-screen__header">
+          <h1 className="cook-screen__title">{view.recipeName}</h1>
+          {view.batches > 1 ? <p className="cook-screen__batches">{cookStrings.batches(view.batches)}</p> : null}
+        </header>
+        <AdvanceStepsTile
+          summary={session.advance}
+          compact={panel.short}
+          collapsed={session.nav.index > 0}
+          onMarkDone={(stepIndex) => void session.markAdvanceDone(stepIndex)}
+        />
+        {session.step ? (
+          <StepTile
+            key={`${session.step.index}-${session.repeatCount}`}
+            step={session.step}
+            formatUse={formatUse}
+            tapZones
+            coachMark={coachOn}
+            onCoachDismiss={dismissCoach}
+            onBack={session.back}
+            onNext={gate.next}
+            ready={session.ready}
+          >
+            <BaseCoveredLines lines={session.covered} />
+          </StepTile>
+        ) : (
+          <p className="cook-screen__empty">{cookStrings.noSteps}</p>
+        )}
+        <CookNavTiles
+          isFirst={session.isFirst}
+          isLast={session.isLast}
           onBack={session.back}
           onNext={gate.next}
-          ready={session.ready}
+          heldText={gate.heldText}
+          futureLine={future}
+          onLeave={future ? () => navigate('/plan') : undefined}
+          onMarkCooked={view.meal && mayResolve(view.meal.date, view.today) ? () => setSheetOpen(true) : undefined}
+          onDone={view.meal ? undefined : doneWithRecipe}
         >
-          <BaseCoveredLines lines={session.covered} />
-        </StepTile>
-      ) : (
-        <p className="cook-screen__empty">{cookStrings.noSteps}</p>
-      )}
+          <CookTimers {...timerProps} placement="strip" />
+        </CookNavTiles>
+      </div>
       <CookTimers {...timerProps} placement="rail" />
-      <CookNavTiles
-        isFirst={session.isFirst}
-        isLast={session.isLast}
-        onBack={session.back}
-        onNext={gate.next}
-        heldText={gate.heldText}
-        futureLine={future}
-        onLeave={future ? () => navigate('/plan') : undefined}
-        onMarkCooked={view.meal && mayResolve(view.meal.date, view.today) ? () => setSheetOpen(true) : undefined}
-        onDone={view.meal ? undefined : doneWithRecipe}
-      >
-        <CookTimers {...timerProps} placement="strip" />
-      </CookNavTiles>
       <CookTimerSheets {...timerProps} />
       {view.meal ? (
         <MarkCookedSheet

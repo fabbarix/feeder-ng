@@ -68,7 +68,7 @@ function ReheatBody({ meal, slotKey: key, lines, busy, onMarkCooked, onLeave: ho
   const { timer, finished } = reheat
 
   return (
-    <div className="cook-screen reheat-screen">
+    <div className="cook-screen">
       <div className="cook-top">
         <Button variant="secondary" size="md" icon="exit" onClick={home}>
           {cookStrings.exit}

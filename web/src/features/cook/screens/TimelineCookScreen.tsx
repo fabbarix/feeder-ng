@@ -162,51 +162,53 @@ export function TimelineCookScreen({ target }: { target: CookTimelineTarget }): 
 
   return (
     <div className="cook-screen" data-layout={panel.short ? 'short' : panel.rail ? 'rail' : 'strip'}>
-      <CookTopRow speechSupported={speech.supported} voiceOn={voiceOn} onVoiceChange={setVoiceOn} onExit={finish} />
-      <header className="cook-screen__header">
-        <h1 className="cook-screen__title">{titleText}</h1>
-        {several ? <CourseMenu entries={tl.courseMenu} onCooked={(c) => setMarkCourse(c)} onNotCooked={(c) => void skipCourse(c)} /> : null}
-      </header>
-      <CourseFilterChips chips={tl.chips} selected={tl.filter} onSelect={tl.setFilter} />
-      <TimelineAdvanceTile
-        groups={tl.filter === 'all' || panel.short ? tl.advance : []}
-        compact={panel.short}
-        collapsed={tl.nav.index > 0}
-        onMarkDone={(scope, step) => void tl.markAdvanceDone(scope, step)}
-      />
-      {tl.step ? (
-        <StepTile
-          key={`${tl.item?.courseId}-${tl.step.index}-${tl.step.number}`}
-          step={tl.step}
-          formatUse={formatUse}
-          tapZones
-          coachMark={coachOn}
-          onCoachDismiss={dismissCoach}
+      <div className="cook-main">
+        <CookTopRow speechSupported={speech.supported} voiceOn={voiceOn} onVoiceChange={setVoiceOn} onExit={finish} />
+        <header className="cook-screen__header">
+          <h1 className="cook-screen__title">{titleText}</h1>
+          {several ? <CourseMenu entries={tl.courseMenu} onCooked={(c) => setMarkCourse(c)} onNotCooked={(c) => void skipCourse(c)} /> : null}
+          <CourseFilterChips chips={tl.chips} selected={tl.filter} onSelect={tl.setFilter} />
+        </header>
+        <TimelineAdvanceTile
+          groups={tl.filter === 'all' || panel.short ? tl.advance : []}
+          compact={panel.short}
+          collapsed={tl.nav.index > 0}
+          onMarkDone={(scope, step) => void tl.markAdvanceDone(scope, step)}
+        />
+        {tl.step ? (
+          <StepTile
+            key={`${tl.item?.courseId}-${tl.step.index}-${tl.step.number}`}
+            step={tl.step}
+            formatUse={formatUse}
+            tapZones
+            coachMark={coachOn}
+            onCoachDismiss={dismissCoach}
+            onBack={tl.back}
+            onNext={tl.gate.next}
+            caption={several ? tl.caption : null}
+            clock={several ? tl.clock : null}
+            ready={tl.ready}
+          >
+            <BaseCoveredLines lines={tl.covered} />
+          </StepTile>
+        ) : (
+          <p className="cook-screen__empty">{cookStrings.noSteps}</p>
+        )}
+        <CookNavTiles
+          isFirst={tl.isFirst}
+          isLast={isLast}
           onBack={tl.back}
           onNext={tl.gate.next}
-          caption={several ? tl.caption : null}
-          clock={several ? tl.clock : null}
-          ready={tl.ready}
+          heldText={tl.gate.heldText}
+          futureLine={future}
+          onLeave={future ? () => navigate('/plan') : undefined}
+          onMarkCooked={onMarkCooked}
+          markLabel={allModeOn ? cookStrings.markAllCooked : undefined}
         >
-          <BaseCoveredLines lines={tl.covered} />
-        </StepTile>
-      ) : (
-        <p className="cook-screen__empty">{cookStrings.noSteps}</p>
-      )}
+          <CookTimers {...timerProps} placement="strip" />
+        </CookNavTiles>
+      </div>
       <CookTimers {...timerProps} placement="rail" />
-      <CookNavTiles
-        isFirst={tl.isFirst}
-        isLast={isLast}
-        onBack={tl.back}
-        onNext={tl.gate.next}
-        heldText={tl.gate.heldText}
-        futureLine={future}
-        onLeave={future ? () => navigate('/plan') : undefined}
-        onMarkCooked={onMarkCooked}
-        markLabel={allModeOn ? cookStrings.markAllCooked : undefined}
-      >
-        <CookTimers {...timerProps} placement="strip" />
-      </CookNavTiles>
       <CookTimerSheets {...timerProps} />
       <MarkCookedSheet
         open={markCourse !== null}

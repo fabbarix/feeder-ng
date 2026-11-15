@@ -76,7 +76,7 @@ export const cookStrings = {
   timerLost: (name: string) => `${name} stopped`,
   timerLostDetail: (time: string) => `It could not be started again. Start it again with ${time} left.`,
   restart: 'Restart',
-  timerDone: 'Finished',
+  timerDone: 'Ready',
   reheatTime: 'Reheat time',
   leftoverFrom: (from: string) => `Leftover from ${from}`,
 } as const
