@@ -1,7 +1,8 @@
-import { QueryClientContext } from '@tanstack/react-query'
+import { QueryClientContext, type QueryClient } from '@tanstack/react-query'
 import { Component, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { isRouteErrorResponse, useLocation, useNavigate, useRouteError } from 'react-router-dom'
-import { Button, Cluster, EmptyState } from '../ui'
+import { Button, ErrorState } from '../ui'
+import { useDocumentTitle } from '../ui/lib/useDocumentTitle'
 import { overlayStrings } from '../ui/overlayStrings'
 import { NotFound } from './NotFound'
 import { routeQueryKeys } from './routeQueryKeys'
@@ -33,11 +34,10 @@ function ErrorPage({ onReset }: { onReset: () => void }) {
   const client = useContext(QueryClientContext)
   const box = useRef<HTMLDivElement>(null)
 
+  // A11Y-01: the document says the page failed; the heading (the page's h1 while it shows) takes focus.
+  useDocumentTitle([shellStrings.errorTitle])
   useEffect(() => {
-    const heading = box.current?.querySelector<HTMLElement>('h2')
-    if (!heading) return
-    heading.setAttribute('tabindex', '-1')
-    heading.focus()
+    box.current?.querySelector<HTMLElement>('.error-state__title')?.focus({ preventScroll: true })
   }, [])
 
   const tryAgain = () => {
@@ -54,12 +54,14 @@ function ErrorPage({ onReset }: { onReset: () => void }) {
 
   return (
     <div ref={box}>
-      <EmptyState
-        icon="error"
+      {/* TB-15c: the shared ErrorState (danger tone, role="alert", the warning icon), not an accent EmptyState. */}
+      <ErrorState
         title={shellStrings.errorTitle}
-        description={shellStrings.errorText}
-        action={
-          <Cluster>
+        headingLevel={1}
+        headingId="page-title"
+        message={shellStrings.errorText}
+        actions={
+          <>
             <Button variant="primary" onClick={tryAgain}>
               {overlayStrings.tryAgain}
             </Button>
@@ -72,7 +74,7 @@ function ErrorPage({ onReset }: { onReset: () => void }) {
                 {shellStrings.goToToday}
               </Button>
             )}
-          </Cluster>
+          </>
         }
       />
     </div>
@@ -81,6 +83,8 @@ function ErrorPage({ onReset }: { onReset: () => void }) {
 
 /** React error boundary around the shell's Outlet: the bars stay usable while the page is broken. */
 export class PageErrorBoundary extends Component<PageErrorBoundaryProps, BoundaryState> {
+  static contextType = QueryClientContext
+  declare context: QueryClient | undefined
   state: BoundaryState = { failed: false }
 
   static getDerivedStateFromError(): BoundaryState {
@@ -94,6 +98,9 @@ export class PageErrorBoundary extends Component<PageErrorBoundaryProps, Boundar
   componentDidUpdate(previous: PageErrorBoundaryProps) {
     if (this.state.failed && previous.resetKey !== this.props.resetKey) {
       retryFailedChunks() // B9-59: a new visit is a new attempt at a route chunk that failed to load
+      // B9-49 (RES-09): leaving a crashed page drops its route's cached queries, so coming back fetches them again rather than
+      // rendering the bad data that crashed it (never the signed-in User: routeQueryKeys leaves ['me'] out).
+      for (const queryKey of routeQueryKeys(previous.resetKey)) void this.context?.resetQueries({ queryKey })
       this.setState({ failed: false })
     }
   }
