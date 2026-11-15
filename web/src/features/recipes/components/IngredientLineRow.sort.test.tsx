@@ -61,7 +61,7 @@ describe('IngredientLineRow: drag handle', () => {
     expect(row().querySelector('.line-row__handle')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Actions for garlic' }))
     expect(screen.queryByRole('menuitem', { name: /^Move ingredient/ })).toBeNull()
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Optional' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Add note' })).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
     expect(screen.getByRole('button', { name: 'Remove ingredient garlic' })).toBeInTheDocument()
   })
