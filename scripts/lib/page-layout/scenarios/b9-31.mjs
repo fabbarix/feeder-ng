@@ -60,7 +60,8 @@ export default {
           invalid: e.getAttribute('aria-invalid') === 'true',
           described: !!e.getAttribute('aria-describedby') && !!document.getElementById(e.getAttribute('aria-describedby').split(' ')[0]),
           clear: r.top >= Math.min(top, 0) && r.bottom <= barTop + 1 && r.top >= 0,
-          alerts: document.querySelectorAll('[role="alert"]').length,
+          // the toast host's live region (.toast-live) is always there and empty: not an alert of the form
+          alerts: [...document.querySelectorAll('[role="alert"]')].filter((a) => !a.classList.contains('toast-live') && (a.textContent ?? '').trim() !== '').length,
           summary: /Check the fields marked above/.test(document.body.textContent ?? ''),
         }
       })()`)

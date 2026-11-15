@@ -226,7 +226,7 @@ export function RecipeEditorScreen(): ReactNode {
   // SAFE-10: a removal acts at once and offers Undo; focus moves to what took the removed row's place.
   const lineName = (key: string) => {
     const line = draft.lines.find((l) => l.key === key)
-    return (line?.ingredientName || (line?.ingredientId == null ? '' : byId.get(line.ingredientId)?.name) || '').trim()
+    return (line?.ingredientName || (line?.ingredientId === null || line?.ingredientId === undefined ? '' : byId.get(line.ingredientId)?.name) || '').trim()
   }
   const removeLine = (key: string) => {
     const index = draft.lines.findIndex((l) => l.key === key)

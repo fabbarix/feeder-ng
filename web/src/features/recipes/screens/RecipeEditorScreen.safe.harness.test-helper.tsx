@@ -5,7 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { useState, type ReactNode } from 'react'
 import { Link, Outlet, Route, RouterProvider, createMemoryRouter, createRoutesFromElements } from 'react-router-dom'
-import { vi } from 'vitest'
+import { expect, vi } from 'vitest'
 import { useHasUnsavedChanges } from '../../../app/unsavedChanges'
 import { mockApi, newQueryClient } from '../../../lib/baseRecipes/test-utils'
 import { createMemoryDraftStore } from '../../../lib/drafts/draftStore'
@@ -76,7 +76,8 @@ export function mount(path = '/recipes/3/edit', entries: string[] = [path]) {
 }
 
 /** Waits until the editor shows the stored Recipe (Name filled) or, for a new Recipe, its form. */
-export const ready = (name = 'Roast tray') => waitFor(() => expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue(name))
+// (No jest-dom matcher here: tsconfig.build.json type-checks *.test-helper files without the jest-dom types.)
+export const ready = (name = 'Roast tray') => waitFor(() => expect((screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value).toBe(name))
 export const nameField = () => screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement
 export const unsaved = () => screen.getByTestId('unsaved').textContent
 export const leaveDialog = () => screen.queryByRole('dialog', { name: 'Leave without saving?' })

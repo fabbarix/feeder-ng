@@ -209,7 +209,6 @@ export function useRecipeEditor(
     if (serverError && valueAt(draft, serverError.key) === serverError.at) out[serverError.key] = serverError.reason
     return out
     // clientErrorsOf reads only `courses`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checking, serverError, draft, courses])
 
   const liveOffer = renameOfferOf(existing.data, draft, ingredients)

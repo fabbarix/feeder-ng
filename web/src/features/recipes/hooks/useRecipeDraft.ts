@@ -186,7 +186,6 @@ export function useRecipeDraft({ recipeId, ready, draft, dirty, storedUpdatedAt,
       read.current = false
     }
     // storedUpdatedAt is read once, with the record, when the editor is ready
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, key])
 
   // The writer: debounced writes and the pagehide flush, once the record was read and no question is open.
@@ -209,7 +208,6 @@ export function useRecipeDraft({ recipeId, ready, draft, dirty, storedUpdatedAt,
       made?.dispose()
       if (writer.current === made) writer.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, key, storedUpdatedAt])
 
   const pending = useRef({ draft, dirty })
