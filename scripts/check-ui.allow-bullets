@@ -4,8 +4,6 @@
 # each file moves its list to DetailList (or confirms it is not a key/state/detail list) and removes its line here.
 # Format: <exact path>   # <owner>: <what the list is>. An entry without a reason is ignored. New files never go here.
 web/src/features/board/components/BoardTiles.tsx                        # B9-47: board tile lists
-web/src/features/cook/components/AdvanceStepsTile.tsx                   # B9-40: Advance Steps rows
-web/src/features/cook/components/TimelineAdvanceTile.tsx                # B9-40: Advance Steps timeline
 web/src/features/import/components/ExportPicker.tsx                     # B9-28: export choices
 web/src/features/import/components/ImageWarningsTile.tsx                # B9-28: image warnings
 web/src/features/import/components/ReadErrorTile.tsx                    # B9-28: read errors

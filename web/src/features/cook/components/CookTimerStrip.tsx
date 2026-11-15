@@ -1,85 +1,63 @@
 import type { ReactNode } from 'react'
+import { TimerPill } from '../../../ui/TimerPill'
 import type { TimerItem } from '../hooks/useTimers'
-import { partitionByScope, timerActions, timerPlace } from '../lib/timers'
-import { TimerTile } from '../../../ui'
+import { cookTimerOrder, splitPills, timerNames } from '../lib/timers'
 import { cookStrings } from '../strings'
 
 export interface CookTimerStripProps {
-  /** The scope Cook Mode is open for: its timers come first under "Timers"; the rest under "Other timers". */
+  /** The scope Cook Mode is open for: its timers come after the ones that hold Next, before the others. */
   scope: string
   items: TimerItem[]
   onPause: (id: number) => void
   onResume: (id: number) => void
-  onCancel: (id: number) => void
+  /** Kept for callers; a pill has no Cancel (stopping a timer is in its sheet, components/CookTimerSheet). */
+  onCancel?: (id: number) => void
   /**
-   * The timeline shows EVERY timer of the slot's Courses under "Timers" whichever Course chip is chosen. When given, a
-   * timer is "here" when `belongs(timer.scope)` is true (the screen builds it with sameScope over the slot's Courses);
-   * `scope` then only words the place hint of the other timers.
+   * The timeline counts EVERY timer of the slot's Courses as here whichever Course chip is chosen: a timer is here when
+   * `belongs(timer.scope)` is true (the screen builds it with sameScope over the slot's Courses).
    */
   belongs?: (timerScope: string | null) => boolean
+  /** B9-40 (PC-03): the ids of the timers that hold Next: they come first and carry the accent boundary. */
+  holdingIds?: number[]
+  /** B9-40 (SHORT-01): short landscape shows only this many whole pills; the last one carries "+N". */
+  maxPills?: number
+  /** B9-40 (PC-03): a tap on a pill opens that timer's sheet. */
+  onOpenTimer?: (id: number) => void
+  /** B9-40 (SHORT-01): the "+N" button opens every timer. */
+  onShowAll?: () => void
 }
 
 /**
- * The household's timers as shared `TimerTile`s (role timer, named by the label), two to a row: this scope's under
- * "Timers", the others under "Other timers" with where they belong. Each tile carries its own controls: pause or
- * resume (lib/timers timerActions); a running or paused timer has "Cancel <label>" (stops it), a finished one
- * "Dismiss <label>" (clears it). Both end the timer through onCancel. Renders nothing when there are no timers.
+ * Cook Mode's timers below 64 em (PC-03): one region "Timers" of `TimerPill`s in a line, sticky inside `.cook-nav`. Order: the
+ * timers that hold Next (the accent boundary), this scope's, then the others (lib/timers cookTimerOrder). A pill's one control is
+ * Pause or Resume; a tap opens the timer's sheet. With `maxPills` only whole pills show and the last carries "+N" (SHORT-01).
+ * Renders nothing when there are no timers.
  */
-export function CookTimerStrip({ scope, items, onPause, onResume, onCancel, belongs }: CookTimerStripProps): ReactNode {
+export function CookTimerStrip({ scope, items, onPause, onResume, belongs, holdingIds = [], maxPills, onOpenTimer, onShowAll }: CookTimerStripProps): ReactNode {
   if (items.length === 0) return null
-  const { here, elsewhere } = belongs
-    ? { here: items.filter((i) => belongs(i.timer.scope)), elsewhere: items.filter((i) => !belongs(i.timer.scope)) }
-    : partitionByScope(items, scope)
-  const handlers = { onPause, onResume, onCancel }
+  const names = timerNames(items.map((i) => i.timer))
+  const { shown, more } = splitPills(cookTimerOrder(items, scope, holdingIds, belongs), maxPills)
   return (
-    <>
-      {here.length > 0 ? <TimerGroup label={cookStrings.timersRegion} items={here} scope={scope} {...handlers} /> : null}
-      {elsewhere.length > 0 ? (
-        <TimerGroup label={cookStrings.otherTimersRegion} items={elsewhere} scope={scope} {...handlers} showPlace />
-      ) : null}
-    </>
-  )
-}
-
-interface TimerGroupProps extends Omit<CookTimerStripProps, 'items'> {
-  label: string
-  items: TimerItem[]
-  showPlace?: boolean
-}
-
-/** One region of timers: a list of tiles, each with its controls. */
-function TimerGroup({ label, items, scope, showPlace, onPause, onResume, onCancel }: TimerGroupProps): ReactNode {
-  return (
-    <section className="cook-timers" aria-label={label}>
-      <h2 className="cook-timers__heading">{label}</h2>
-      <ul className="cook-timers__list">
-        {items.map((item) => {
-          const { label: name, id, state } = item.timer
-          const actions = timerActions(state)
-          const place = showPlace ? timerPlace(item.timer.scope, scope, item.timer.recipeName) : ''
-          const onToggle = actions.includes('pause')
-            ? () => onPause(id)
-            : actions.includes('resume')
-              ? () => onResume(id)
-              : undefined
-          const onCancelTimer = actions.includes('cancel') ? () => onCancel(id) : undefined
-          const onDismissTimer = actions.includes('dismiss') ? () => onCancel(id) : undefined
-          return (
-            <li key={id} className="cook-timers__item">
-              <TimerTile
-                label={name}
-                seconds={item.seconds}
-                running={state === 'running'}
-                onToggle={onToggle}
-                onCancel={onCancelTimer}
-                onDismiss={onDismissTimer}
-              />
-              {place ? <span className="cook-timers__place">{place}</span> : null}
-              {state === 'finished' ? <p role="status">{cookStrings.timerFinished(name)}</p> : null}
-            </li>
-          )
-        })}
-      </ul>
+    <section className="cook-strip" aria-label={cookStrings.timersRegion}>
+      {shown.map((item, i) => {
+        const { id, state, label } = item.timer
+        const finished = state === 'finished' || item.seconds <= 0
+        const last = i === shown.length - 1
+        return (
+          <TimerPill
+            key={id}
+            label={names.get(id) ?? label}
+            opensOptions
+            seconds={finished ? 0 : item.seconds}
+            running={state === 'running'}
+            gate={holdingIds.includes(id)}
+            more={last ? more : 0}
+            onShowAll={last && more > 0 ? onShowAll : undefined}
+            onOpen={() => onOpenTimer?.(id)}
+            onToggle={finished ? undefined : state === 'running' ? () => onPause(id) : () => onResume(id)}
+          />
+        )
+      })}
     </section>
   )
 }

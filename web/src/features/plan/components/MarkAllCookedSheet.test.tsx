@@ -30,9 +30,10 @@ describe('MarkAllCookedSheet', () => {
     expect(screen.getByRole('spinbutton', { name: 'Main Leftover portions' })).toHaveAttribute('aria-valuenow', '2')
     expect(screen.getByRole('spinbutton', { name: 'Side Leftover portions' })).toHaveAttribute('aria-valuenow', '1')
     await userEvent.click(screen.getByRole('button', { name: 'Increase Main Leftover portions' }))
-    expect(h.onLeftoverChange).toHaveBeenCalledWith(1, 2.5)
+    // B9-45 (PC-13): quarter portions
+    expect(h.onLeftoverChange).toHaveBeenCalledWith(1, 2.25)
     await userEvent.click(screen.getByRole('button', { name: 'Decrease Side Leftover portions' }))
-    expect(h.onLeftoverChange).toHaveBeenCalledWith(2, 0.5)
+    expect(h.onLeftoverChange).toHaveBeenCalledWith(2, 0.75)
   })
 
   it('a Leftover Course has no field and says nothing is taken from Stock', () => {

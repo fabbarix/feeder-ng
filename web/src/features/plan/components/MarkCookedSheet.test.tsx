@@ -45,12 +45,12 @@ describe('MarkCookedSheet', () => {
     expect(h.onLeftoverChange).toHaveBeenCalledWith(0)
   })
 
-  it('the ± control moves the Leftover in half portions', async () => {
+  it('the ± control moves the Leftover in quarter portions (B9-45, PC-13)', async () => {
     const h = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Increase Leftover portions' }))
-    expect(h.onLeftoverChange).toHaveBeenCalledWith(2.5)
+    expect(h.onLeftoverChange).toHaveBeenCalledWith(2.25)
     await userEvent.click(screen.getByRole('button', { name: 'Decrease Leftover portions' }))
-    expect(h.onLeftoverChange).toHaveBeenCalledWith(1.5)
+    expect(h.onLeftoverChange).toHaveBeenCalledWith(1.75)
   })
 
   it('cannot go below none or above Batches x Yield', () => {

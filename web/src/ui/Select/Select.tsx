@@ -54,6 +54,10 @@ interface SelectBaseProps<V extends string | number> extends SelectFieldProps {
   iconOnly?: boolean
   /** BR-D: exact matches of the search (or of what is typed) come first; among them `preferred` options lead. */
   exactFirst?: boolean
+  /** B9-45 (PC-13): the list opens as the Select mounts (a "Change" button that shows the choice). */
+  defaultOpen?: boolean
+  /** B9-45 (PC-13): told when the list opens (true) and closes (false), picked or not. */
+  onOpenChange?: (open: boolean) => void
 }
 
 export interface SelectProps<V extends string | number = string> extends SelectBaseProps<V> {
@@ -140,6 +144,8 @@ function SelectCore<V extends string | number>({
   icon,
   iconOnly,
   ariaLabel,
+  defaultOpen = false,
+  onOpenChange,
 }: CoreProps<V>) {
   const ids = useFieldIds()
   const baseId = useId()
@@ -189,6 +195,7 @@ function SelectCore<V extends string | number>({
     setOpen(false)
     setTypedText('')
     if (restoreFocus) trigger.current?.focus()
+    onOpenChange?.(false)
   }
 
   const openList = () => {
@@ -200,7 +207,16 @@ function SelectCore<V extends string | number>({
     const selectedAt = fresh.flat.findIndex((o) => isChosen(o, selected))
     setActive(selectedAt >= 0 ? selectedAt : fresh.firstEnabled)
     setOpen(true)
+    onOpenChange?.(true)
   }
+
+  // B9-45: `defaultOpen` opens the list once, as the Select mounts.
+  const openedOnMount = useRef(false)
+  useEffect(() => {
+    if (!defaultOpen || openedOnMount.current) return
+    openedOnMount.current = true
+    openList()
+  }, [])
 
   const pickIndex = (index: number) => {
     const option = current.nav[index]

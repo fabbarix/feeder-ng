@@ -190,4 +190,16 @@ export const stockStrings = {
   thrownOutBack: (amount: string, name: string) => `${amount} ${name} is back`,
   /** B9-29 (SSP-03): a Storage Place group that holds only frozen Leftovers counts them. */
   leftoverCount: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
+  /** B9-45 (PC-02): the one Stock-shortfall notice and the one Correct Stock sheet. */
+  shortfall: {
+    correct: 'Correct Stock',
+    dismiss: 'Dismiss',
+    foot: 'Stock stays where it is. Correct it if some was left.',
+    stays: 'Stock stays where it is',
+    sheetTitle: 'Correct Stock',
+    lede: 'How much of each is left now, after cooking? Leave 0 if it is all gone.',
+    leftNow: (name: string) => `${name} left now`,
+    save: 'Save',
+    saveError: 'Stock could not be corrected. Try again.',
+  },
 }

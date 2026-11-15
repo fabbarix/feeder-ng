@@ -22,6 +22,13 @@ export interface TimerPillProps {
   onOpen: () => void
   /** Cook Mode's strip: a round Pause / Resume beside the open button. The shell's pill has none. */
   onToggle?: () => void
+  /**
+   * B9-40 (SHORT-01): with `more`, the "+N" is a button "N more timers. Show all timers" beside the open button (before Pause) that
+   * calls this (Cook Mode's landscape strip). The open button's name then leaves the count out. Without it the badge is aria-hidden.
+   */
+  onShowAll?: () => void
+  /** B9-40: Cook Mode's pill, whose open button shows the timer's options (its sheet): the name ends "Show options", not "Open Cook Mode". */
+  opensOptions?: boolean
 }
 
 type PillState = 'running' | 'paused' | 'finished'
@@ -31,11 +38,20 @@ type PillState = 'running' | 'paused' | 'finished'
  * scope with its own boundary and 4 px of fill around its controls, so a focused control rings inside itself (R-C+). It positions
  * nothing: the shell and Cook Mode place it.
  */
-export function TimerPill({ label, seconds, running = true, nameSeconds, more = 0, gate, onOpen, onToggle }: TimerPillProps) {
+export function TimerPill({ label, seconds, running = true, nameSeconds, more = 0, gate, onOpen, onToggle, onShowAll, opensOptions = false }: TimerPillProps) {
   const state: PillState = seconds <= 0 ? 'finished' : running ? 'running' : 'paused'
   const others = Math.max(0, Math.trunc(more))
   const icon: IconName = state === 'finished' ? 'bellRinging' : state === 'paused' ? 'pause' : 'timer'
-  const name = state === 'finished' ? s.openFinished(label, others) : s.open(label, formatTimer(nameSeconds ?? seconds), others)
+  const moreButton = others > 0 && onShowAll !== undefined
+  const named = moreButton ? 0 : others
+  const time = formatTimer(nameSeconds ?? seconds)
+  const name = opensOptions
+    ? state === 'finished'
+      ? s.openOptionsFinished(label, named)
+      : s.openOptions(label, time, named)
+    : state === 'finished'
+      ? s.openFinished(label, named)
+      : s.open(label, time, named)
 
   return (
     <div className="timer-pill" role="timer" aria-label={label} data-focus-scope="" data-state={state} data-gate={gate ? '' : undefined}>
@@ -43,12 +59,17 @@ export function TimerPill({ label, seconds, running = true, nameSeconds, more = 
         <Icon name={icon} size={20} />
         <span className="timer-pill__label">{label}</span>
         <span className="timer-pill__time">{state === 'finished' ? s.finished : formatTimer(seconds)}</span>
-        {others > 0 ? (
+        {others > 0 && !moreButton ? (
           <span className="timer-pill__more" aria-hidden="true">
             +{others}
           </span>
         ) : null}
       </button>
+      {moreButton ? (
+        <button type="button" className="timer-pill__more timer-pill__more--button" aria-label={s.showAll(others)} aria-haspopup="dialog" onClick={onShowAll}>
+          +{others}
+        </button>
+      ) : null}
       {onToggle ? (
         <IconButton
           className="timer-pill__toggle"

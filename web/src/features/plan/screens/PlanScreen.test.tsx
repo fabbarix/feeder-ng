@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PlanScreen } from './PlanScreen'
 import { meal, mockApi, renderWithProviders, slot } from '../test-utils'
 import type { CookedResult, CookPreview, PlanView } from '../types'
-import { noticeWith, findNotice } from '../../../test/notices'
+import { findNotice } from '../../../test/notices'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -37,6 +37,14 @@ const openSheet = async (day: string, recipe: string) => {
   await userEvent.click(within(await tile(day)).getByRole('button', { name: new RegExp(recipe) }))
   return screen.findByRole('dialog', { name: recipe })
 }
+
+/** B9-45 (PC-02): the ONE shortfall notice (an info status tile with DetailList rows), not one danger alert per warning. */
+const findShortfallNotice = () =>
+  waitFor(() => {
+    const el = document.querySelector<HTMLElement>('.shortfall-notice')
+    if (!el) throw new Error('no shortfall notice')
+    return el
+  })
 
 describe('PlanScreen load failure', () => {
   afterEach(() => {
@@ -289,16 +297,17 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Increase Leftover portions' }))
     await userEvent.click(within(sheet).getByRole('button', { name: 'Mark as Cooked' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2.5 }))
+    await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/2/1/cooked')[0]?.body).toEqual({ leftoverPortions: 2.25 }))
 
-    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
+    const notice = await findShortfallNotice()
+    expect(notice).toHaveTextContent('Stock was short for chicken thighs')
+    expect(notice).toHaveTextContent('100 g short')
     await userEvent.click(within(notice).getByRole('button', { name: 'Correct Stock' }))
-    const correct = await screen.findByRole('dialog', { name: 'How much chicken thighs do you have?' })
-    const input = within(correct).getByRole('spinbutton', { name: 'Total in Stock' })
-    await userEvent.clear(input)
-    await userEvent.type(input, '250')
-    await userEvent.click(within(correct).getByRole('button', { name: 'Set total' }))
-    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 250 }))
+    const correct = await screen.findByRole('dialog', { name: /Correct Stock/ })
+    await userEvent.click(within(within(correct).getByRole('group', { name: 'chicken thighs left now' })).getByRole('button', { name: /^Increase/ }))
+    await userEvent.click(within(correct).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(api.callsTo('PUT', '/api/stock/ingredients/11/total')[0]?.body).toEqual({ total: 10 }))
+    await waitFor(() => expect(document.querySelector('.shortfall-notice')).toBeNull())
   })
 
   it('dismissing the shortfall leaves Stock alone', async () => {
@@ -312,10 +321,8 @@ describe('PlanScreen: choose a Recipe and Mark as Cooked', () => {
     await userEvent.click(within(planned).getByRole('button', { name: 'Mark as Cooked' }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark as Cooked' })
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Mark as Cooked' }))
-    // B9-26: the Cooked toast has its own Dismiss now; press the one inside the shortfall notice.
-    const notice = await findNotice('alert', 'Stock shows only 300 g chicken thighs')
-    await userEvent.click(within(notice).getByRole('button', { name: 'Dismiss' }))
-    await waitFor(() => expect(noticeWith('alert', 'Stock shows only 300 g chicken thighs')).toBeUndefined())
+    await userEvent.click(within(await findShortfallNotice()).getByRole('button', { name: 'Dismiss' }))
+    await waitFor(() => expect(document.querySelector('.shortfall-notice')).toBeNull())
     expect(api.calls.some((c) => c.path.startsWith('/api/stock'))).toBe(false)
   })
 

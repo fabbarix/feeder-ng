@@ -141,9 +141,21 @@ describe('DS-09: media queries on width are (min-width: Xem) or (width < Xem) wi
 describe('DS-09: the useMediaQuery callers use useBreakpoint', () => {
   const callers: [string, string][] = [
     ['features/board/screens/BoardScreen.tsx', "useBreakpoint('tablet')"],
-    ['features/cook/screens/CookScreen.tsx', "useBreakpoint('md')"],
-    ['features/cook/screens/TimelineCookScreen.tsx', "useBreakpoint('md')"],
+    // B9-40 (decision SHORT 3): the tap zones are on at every width, so the Cook screens no longer read a breakpoint;
+    // the strip / rail switch lives in this hook (the short-landscape one is below).
+    ['features/cook/hooks/useCookTimerPanel.ts', "useBreakpoint('desktop')"],
   ]
+  it('features/cook/hooks/useShortLandscape.ts takes its width edge from useBreakpoint and the breakpoint table; only the height is a raw query', () => {
+    const src = readSource('features/cook/hooks/useShortLandscape.ts')
+    expect(src).toContain("useBreakpoint('md')")
+    expect(src).not.toMatch(/\((min|max)-width:\s*\d+px\)/)
+    expect(src).toMatch(/SHORT_LANDSCAPE_QUERY = '\(max-height: \d+px\) and \(min-width: 37\.5em\)'/)
+  })
+  it.each(['features/cook/screens/CookScreen.tsx', 'features/cook/screens/TimelineCookScreen.tsx'])('%s has no useMediaQuery and no px media query', (file) => {
+    const src = readSource(file)
+    expect(src).not.toMatch(/useMediaQuery\(/)
+    expect(src).not.toMatch(/\((min|max)-width:\s*\d+px\)/)
+  })
   it.each(callers)('%s calls %s and no px media query', (file, call) => {
     const src = readSource(file)
     expect(src).toContain(call)
