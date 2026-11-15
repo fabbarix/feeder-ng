@@ -15,8 +15,8 @@ export function defaultTickAmount(line: { quantity: number; more?: number; ticke
 }
 
 export type TickMetaTone = 'success' | 'muted'
-/** rotateRight is Phosphor ArrowClockwise, the chapter's glyph for "Added twice" (SSP-18), already in the icon set. */
-export type TickMetaIcon = 'stock' | 'notAdded' | 'scan' | 'rotateRight'
+/** duration is Phosphor Clock (B9-54: a Tick waiting to sync). rotateRight is Phosphor ArrowClockwise, the chapter's glyph for "Added twice" (SSP-18), already in the icon set. */
+export type TickMetaIcon = 'stock' | 'notAdded' | 'scan' | 'rotateRight' | 'duration'
 
 /** What a ticked row's one meta line says. `compact` is the shorter form for a narrow text column; '' when there is none. */
 export interface TickedMeta {
@@ -34,6 +34,17 @@ function totalAdded(tick: LineTick): number {
 export function tickedMeta(tick: LineTick | null | undefined, baseUnit: BaseUnit, system: UnitSystem): TickedMeta | null {
   if (!tick) return null
   const q = (n: number) => formatQuantity(n, baseUnit, system)
+  // B9-54 (RES-03): a Tick waiting in the offline queue wins; it names only what this phone's waiting Ticks will add
+  const waiting = tick.additions.filter((a) => a.syncedAt === null)
+  if (waiting.length > 0) {
+    const toAdd = waiting.reduce((n, a) => n + (a.quantity ?? 0), 0)
+    return {
+      text: toAdd > 0 ? shopStrings.waitingToStock(q(toAdd)) : shopStrings.waitingToSync,
+      compact: shopStrings.waitingToSync,
+      tone: 'muted',
+      icon: 'duration',
+    }
+  }
   const total = totalAdded(tick)
   if (tick.additions.length >= 2) {
     const who = tick.additions.map((a) => {
@@ -80,13 +91,15 @@ export interface ChangeTarget {
   /** ISO instant */
   tickedAt: string
   clientUuid: string | null
+  /** B9-54: the Tick is still in the offline queue (Save rewrites the queued amount; nothing is sent) */
+  waiting?: boolean
 }
 
 export function changeTargetOf(entry: ListEntry): ChangeTarget | null {
   const mine = (entry.tick?.additions ?? []).filter((a) => a.mine && a.by === 'hand')
   const last = mine[mine.length - 1]
   if (!last) return null
-  return { entry, added: last.quantity ?? 0, tickedAt: last.tickedAt, clientUuid: last.clientUuid }
+  return { entry, added: last.quantity ?? 0, tickedAt: last.tickedAt, clientUuid: last.clientUuid, ...(last.syncedAt === null ? { waiting: true } : {}) }
 }
 
 /** "10:12": an instant's clock time in a zone, 24 hours. '' for an unreadable instant. */
@@ -104,10 +117,37 @@ export function clockTime(iso: string, timeZone: string): string {
  * unknown (never the device's zone).
  */
 export function additionDetail(addition: TickAddition, timeZone: string | null | undefined): string {
+  // B9-54: a Tick still in the offline queue says so, with the phone's time of the tap
+  if (addition.syncedAt === null) {
+    const at = timeZone ? clockTime(addition.tickedAt, timeZone) : ''
+    return at ? shopStrings.tickedOfflineWaiting(at) : shopStrings.waitingNoTime
+  }
   if (!timeZone) return ''
   const time = clockTime(addition.tickedAt, timeZone)
   if (!time) return ''
   return addition.by === 'scan' ? shopStrings.scannedAt(time) : shopStrings.tickedAt(time)
+}
+
+/**
+ * B9-54 (RES 2): the ticked sheet's heading. A Line ticked more than once says so in its title ("Garlic was ticked twice") with the subline
+ * "Each Tick added its own Stock Lot · 100 g in all"; otherwise the title is the Line's name and there is no subline.
+ */
+export function tickedSheetHeading(entry: ListEntry, system: UnitSystem): { title: string; subtitle: string | null } {
+  const additions = entry.ticked ? (entry.tick?.additions ?? []) : []
+  if (additions.length < 2) return { title: entry.title, subtitle: null }
+  const total = additions.reduce((n, a) => n + (a.quantity ?? 0), 0)
+  return {
+    title: shopStrings.tickedTwiceTitle(entry.title, additions.length),
+    subtitle: total > 0 ? shopStrings.eachTickOwnLot(formatQuantity(total, entry.baseUnit ?? 'piece', system)) : shopStrings.eachTickOwnLotNoAmount,
+  }
+}
+
+/** B9-54: the ticked sheet's state line while a Tick of this entry waits in the offline queue ("Waiting to sync · 50 g goes to Stock when it syncs"); null when none waits. */
+export function waitingStateText(tick: LineTick | null | undefined, baseUnit: BaseUnit, system: UnitSystem): string | null {
+  const waiting = (tick?.additions ?? []).filter((a) => a.syncedAt === null)
+  if (waiting.length === 0) return null
+  const toAdd = waiting.reduce((n, a) => n + (a.quantity ?? 0), 0)
+  return toAdd > 0 ? shopStrings.waitingGoesToStock(formatQuantity(toAdd, baseUnit, system)) : shopStrings.waitingToSync
 }
 
 export type TickPlan =

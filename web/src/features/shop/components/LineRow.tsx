@@ -5,7 +5,7 @@
 import { ListRow } from '../../../ui/ListRow'
 import { Icon } from '../../../ui/Icon'
 import { Thumb } from '../../../ui/Thumb'
-import { metaWidth, rowMeta, rowValue, type RowGroup } from '../lib/rows'
+import { metaWidth, rowMeta, rowValue, type RowGroup, type RowMeta } from '../lib/rows'
 import type { ListEntry } from '../lib/lines'
 import { shopStrings } from '../strings'
 
@@ -24,9 +24,11 @@ export interface LineRowProps {
   name?: string
 }
 
-export function LineRow({ entry, group, onTick, onUntick, onOpen, pending, name = entry.title }: LineRowProps) {
+export function LineRow({ entry, group, onTick, onUntick, onOpen, pending, sync: syncProp, name = entry.title }: LineRowProps) {
   const ticked = group === 'ticked'
-  const meta = rowMeta(entry)
+  // B9-54: a waiting Tick is the entry's own state; a refused one is the screen's (the row is open again)
+  const sync = ticked ? (entry.sync ?? syncProp) : syncProp === 'failed' ? 'failed' : undefined
+  const meta: RowMeta = sync === 'failed' ? { text: shopStrings.tickNotSynced } : rowMeta(entry)
   const { value, subValue } = rowValue(entry)
   // round 2: the label is stable ("Tick X") and the state is aria-pressed; the ticked mark is a plain check in a CSS circle.
   // A pending tick is aria-disabled, never disabled: it keeps the focus (A11Y-07) and a second press does nothing.
@@ -35,7 +37,7 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, pending, name 
       <button
         type="button"
         className="line-row__tick"
-        aria-label={shopStrings.tickTitle(name)}
+        aria-label={sync === 'pending' ? shopStrings.tickWaiting(name) : shopStrings.tickTitle(name)}
         aria-pressed={ticked}
         aria-busy={pending ? true : undefined}
         aria-disabled={pending ? true : undefined}
@@ -56,13 +58,14 @@ export function LineRow({ entry, group, onTick, onUntick, onOpen, pending, name 
       haspopup="dialog"
       data-state={group}
       data-focus-key={entry.key}
-      data-meta-wide={metaWidth(meta)}
+      data-meta-wide={sync === 'failed' ? undefined : metaWidth(meta)}
       leading={<Thumb name={entry.title} imageUrl={entry.imageUrl} size={40} />}
       control={control}
       meta={meta.text || undefined}
       metaCompact={meta.compact}
       metaStatus={meta.status}
       metaIcon={meta.icon}
+      sync={sync}
       value={value}
       subValue={subValue}
     />

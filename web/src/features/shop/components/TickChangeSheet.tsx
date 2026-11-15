@@ -61,6 +61,7 @@ function ChangeSheet({ target, flow, system, timeZone, onFailed }: ChangeSheetPr
       choices={tickChoices(entry, system)}
       onSubmit={(q) => void submit(q)}
       busy={busy}
+      waiting={target.waiting === true}
     />
   )
 }

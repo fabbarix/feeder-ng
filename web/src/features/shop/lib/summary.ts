@@ -36,8 +36,10 @@ function untilText(today: string, to: string): string {
   return shopStrings.untilDay(`${weekdayOf(to)} ${Number(to.slice(8))}`)
 }
 
-export function shopSummary(list: ShoppingList, shopName: string | null, _opts: { waiting?: number } = {}): ShopSummary {
+/** B9-54: `waiting` = Ticks still in the offline queue (the list already has them applied): "2 ticked · 1 waiting · until Sun 15". */
+export function shopSummary(list: ShoppingList, shopName: string | null, opts: { waiting?: number } = {}): ShopSummary {
   const { ticked, total } = list.progress
+  const waiting = opts.waiting ?? 0
   return {
     left: total - ticked,
     ticked,
@@ -45,7 +47,7 @@ export function shopSummary(list: ShoppingList, shopName: string | null, _opts: 
     percent: total > 0 ? Math.min(100, Math.max(0, (ticked / total) * 100)) : 0,
     complete: list.complete,
     leftOf: shopStrings.leftOf(total),
-    meta: `${shopStrings.tickedCount(ticked)} · ${untilText(list.today, list.to)}`,
+    meta: [shopStrings.tickedCount(ticked), ...(waiting > 0 ? [shopStrings.waitingCount(waiting)] : []), untilText(list.today, list.to)].join(' · '),
     estimated:
       list.estimatedCostCents > 0
         ? {

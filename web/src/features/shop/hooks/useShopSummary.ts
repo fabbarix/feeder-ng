@@ -9,6 +9,7 @@ export interface ShopSummaryView {
   notice: UnconfirmedNotice | null
 }
 
-export function useShopSummary(list: ShoppingList, shopName: string | null): ShopSummaryView {
-  return useMemo(() => ({ summary: shopSummary(list, shopName), notice: unconfirmedNotice(list) }), [list, shopName])
+/** B9-54: `waiting` = Ticks still in the offline queue ("· 1 waiting"); 0 or omitted when none. */
+export function useShopSummary(list: ShoppingList, shopName: string | null, waiting = 0): ShopSummaryView {
+  return useMemo(() => ({ summary: shopSummary(list, shopName, { waiting }), notice: unconfirmedNotice(list) }), [list, shopName, waiting])
 }

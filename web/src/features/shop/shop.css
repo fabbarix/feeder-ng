@@ -544,8 +544,9 @@
   font-weight: var(--text-label-weight);
 }
 
+.shop-line-sheet__subline,
 .shop-line-sheet__consequence {
-  /* what Not needed leaves short: muted meta text, wrapping, never cut */
+  /* B9-54 (RES 2): "Each Tick added its own Stock Lot · 100 g in all" under the title of a Line ticked twice. B9-43: what Not needed leaves short: muted meta text, wrapping, never cut */
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
@@ -678,6 +679,28 @@
 
 .tick-sheet__other {
   display: grid;
+}
+
+/* B9-54 (RES-03, mocks/res-03-shop-offline.html "Change while waiting"): the waiting Tick's line, muted with Clock 16, then the hint */
+.tick-sheet__waiting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+
+.tick-sheet__waiting svg {
+  flex: none;
+}
+
+.tick-sheet__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
 }
 
 /* Batch w3e: the amounts read as the mock's choice chips, not full-width cards: a compact RadioCards (same radiogroup and roving

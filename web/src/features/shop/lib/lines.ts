@@ -122,6 +122,7 @@ export function lineEntry(line: ShoppingLine, currency: string, system: UnitSyst
     tickMeta: line.ticked ? tickedMeta(line.tick, line.baseUnit, system) : null,
     details: lineDetails(line, currency, system),
     moreSince: false,
+    ...(line.ticked && isWaiting(line.tick) ? { sync: 'pending' as const } : {}),
   }
 }
 
@@ -162,7 +163,13 @@ export function extraEntry(extra: ShoppingExtra, system: UnitSystem): ListEntry 
     tick: extra.tick ?? null,
     tickMeta: extra.ticked ? tickedMeta(extra.tick, extra.baseUnit ?? 'piece', system) : null,
     moreSince: false,
+    ...(extra.ticked && isWaiting(extra.tick) ? { sync: 'pending' as const } : {}),
   }
+}
+
+/** B9-54: one of the tick's additions only exists on this phone (waiting in the offline queue). */
+function isWaiting(tick: LineTick | null | undefined): boolean {
+  return (tick?.additions ?? []).some((a) => a.syncedAt === null)
 }
 
 /**

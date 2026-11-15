@@ -44,6 +44,12 @@ export interface ShoppingBodyProps {
   onFocusRestored?: () => void
   /** B9-43 (SSP-09): the complete tile's props (hooks/useCompleteTile); null while the list is not complete */
   complete?: CelebrationTileProps | null
+  /** B9-54 (RES-03): Ticks still waiting in the offline queue (the metric strip's "· 1 waiting") */
+  waiting?: number
+  /** B9-54: the keys of the open rows whose Tick was refused on sync ("Tick not synced") */
+  failedKeys?: ReadonlySet<string>
+  /** B9-54: the sync notices, above the metric strip */
+  notices?: ReactNode
 }
 
 function useRestoreFocus(key: string | null | undefined, list: ShoppingList, done: (() => void) | undefined) {
@@ -73,9 +79,9 @@ function KeptGroup({ children }: { children: ReactNode }) {
   )
 }
 
-export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenLine, onScan, onMarkIt, pendingKeys, restoreFocusKey, onFocusRestored, complete }: ShoppingBodyProps) {
+export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenLine, onScan, onMarkIt, pendingKeys, restoreFocusKey, onFocusRestored, complete, waiting, failedKeys, notices }: ShoppingBodyProps) {
   useRestoreFocus(restoreFocusKey, list, onFocusRestored)
-  const { summary, notice } = useShopSummary(list, shopName)
+  const { summary, notice } = useShopSummary(list, shopName, waiting)
   const suppliesTitleId = useId()
   const { open, ticked } = listEntries(list, system)
   const { food, supplies } = splitSupplies(open)
@@ -86,6 +92,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
   const empty = open.length === 0 && ticked.length === 0
   return (
     <>
+      {notices}
       <ShopMetrics summary={summary} onScan={onScan} />
       {complete ? <CelebrationTile {...complete} /> : null}
       {notice ? <UnconfirmedNotice notice={notice} onMarkIt={onMarkIt} /> : null}
@@ -99,7 +106,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
             <div className="shop-lines">
               <ListGroup label={shopStrings.toGet}>
                 {food.map((entry) => (
-                  <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} name={names.get(entry.key)} />
+                  <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} sync={failedKeys?.has(entry.key) ? 'failed' : undefined} name={names.get(entry.key)} />
                 ))}
               </ListGroup>
             </div>
@@ -115,7 +122,7 @@ export function ShoppingBody({ list, system, shopName, onTick, onUntick, onOpenL
             <div className="shop-lines">
               <ListGroup label={shopStrings.supplies}>
                 {supplies.map((entry) => (
-                  <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} name={names.get(entry.key)} />
+                  <LineRow key={entry.key} entry={entry} group="open" onTick={onTick} onUntick={onUntick} onOpen={onOpenLine} pending={pendingKeys?.has(entry.key)} sync={failedKeys?.has(entry.key) ? 'failed' : undefined} name={names.get(entry.key)} />
                 ))}
               </ListGroup>
             </div>
