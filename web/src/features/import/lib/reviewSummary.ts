@@ -290,7 +290,9 @@ export function orphanPrompts(plan: Plan): UnitPrompt[] {
 /** An Ingredient line as a row: name, quantity as state, note or Optional as detail. */
 export function previewLineRow(l: PreviewLine): { key: string; state: string; detail?: string } {
   const detail = [l.recipe ? t.baseRecipe : '', l.note ?? '', l.optional ? t.optional : ''].filter(Boolean).join(' · ')
-  return { key: displayName(l.ingredient), state: [num(l.quantity), l.unit].filter(Boolean).join(' '), detail: detail || undefined }
+  // "2 pieces", never "2 piece" (lib/units: piece is plural unless the amount is 1); the file's other units stay as written.
+  const unit = l.unit === 'piece' && l.quantity !== 1 ? 'pieces' : l.unit
+  return { key: displayName(l.ingredient), state: [num(l.quantity), unit].filter(Boolean).join(' '), detail: detail || undefined }
 }
 
 /** A Step as a row: the time as state ("4 h before", "25 min", '' untimed) and the kind as detail. */

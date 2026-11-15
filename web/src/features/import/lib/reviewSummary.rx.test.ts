@@ -233,3 +233,12 @@ describe('orderIngredientRows and exactMatches (RX-12)', () => {
     expect(exactMatches(q)).toEqual([])
   })
 })
+
+describe('previewLineRow (w2c review)', () => {
+  it('says "2 pieces", "1 piece", and keeps the file\'s other units as written', async () => {
+    const { previewLineRow } = await import('./reviewSummary')
+    expect(previewLineRow({ quantity: 2, unit: 'piece', ingredient: 'onion', optional: false }).state).toBe('2 pieces')
+    expect(previewLineRow({ quantity: 1, unit: 'piece', ingredient: 'lemon', optional: false }).state).toBe('1 piece')
+    expect(previewLineRow({ quantity: 2, unit: 'tbsp', ingredient: 'garam masala', optional: false }).state).toBe('2 tbsp')
+  })
+})
