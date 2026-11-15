@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../lib/http'
 import { actionFailed, failureToast } from '../../../lib/errorCopy'
@@ -37,6 +37,11 @@ export function useMembersPage() {
   const [editor, setEditor] = useState<{ item?: Member } | null>(null)
   const [error, setError] = useState<string>()
   const [emailError, setEmailError] = useState<string>()
+  // After a removal: the h1 takes focus once the sheet has gone (its unmount gives focus back to its opener first).
+  const [titleFocus, setTitleFocus] = useState(0)
+  useEffect(() => {
+    if (titleFocus > 0) focusPageTitle()
+  }, [titleFocus])
   const refuse = (err: unknown) => {
     const forEmail = err instanceof ApiError && (err.code === 'email_taken' || (err.code === 'validation_failed' && /\bemail\b/i.test(err.message)))
     setError(forEmail ? undefined : errorMessage(err))
@@ -81,7 +86,7 @@ export function useMembersPage() {
     }
     clear()
     setEditor(null)
-    focusPageTitle()
+    setTitleFocus((n) => n + 1)
     const words = memberRemovedToast(editing.name)
     undoToast.show({
       headline: words.headline,

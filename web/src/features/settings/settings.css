@@ -56,7 +56,8 @@
 }
 .settings__notice > svg {
   flex: none;
-  margin-block-start: calc((var(--text-meta-line) - 16px) / 2);
+  /* 16 px on an 18 px first line: centred on it. */
+  margin-block-start: 1px;
 }
 .settings__field-with-notice {
   display: grid;
@@ -300,4 +301,35 @@
   line-height: var(--text-body-line);
   font-weight: var(--text-body-weight);
   color: var(--color-muted);
+}
+
+/* B9-36 (SAFE-02, SHORT-02): the Member sheet's footer. BottomSheet puts its slots in the order Cancel, Remove Member, Save Member. On a
+   phone Cancel and Save Member share the first row and Remove Member takes its own row under a divider, one thumb away from the commit
+   (as FormActions' destructive row); from 600 px it is one row with Remove Member at the far start and Cancel and Save Member at the end. */
+.sheet__footer[data-cancel]:has(> .member-sheet__remove) {
+  flex-wrap: wrap;
+}
+.sheet__footer[data-cancel] > .member-sheet__remove {
+  order: 1;
+  display: flex;
+  flex: 1 1 100%;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-line);
+}
+.member-sheet__remove > .button {
+  flex: 1 1 auto;
+}
+@media (min-width: 37.5em) {
+  .sheet__footer[data-cancel]:has(> .member-sheet__remove) {
+    flex-wrap: nowrap;
+  }
+  .sheet__footer[data-cancel]:has(> .member-sheet__remove) > * {
+    flex: 0 0 auto;
+  }
+  .sheet__footer[data-cancel] > .member-sheet__remove {
+    order: -1;
+    margin-inline-end: auto;
+    padding-block-start: 0;
+    border-block-start: 0;
+  }
 }
