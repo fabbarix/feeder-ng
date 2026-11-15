@@ -36,18 +36,18 @@ function setup(s: PlanSlot = dinner(), over: Partial<TonightHeroProps> = {}) {
 }
 
 describe('TonightHero: the eyebrow', () => {
-  it('is one line "Tomorrow · Dinner · start 19:09" in the tile overline, each part its own span', () => {
+  it('is "Tomorrow · Dinner · start 19:09" in the tile overline, each part its own element led by its "·" (B9-39, TB-15b)', () => {
     const { container } = setup()
     const eyebrow = container.querySelector('.plan-hero .tile__overline')!
-    expect(eyebrow.textContent).toBe('Tomorrow · Dinner · start 19:09')
+    expect([...eyebrow.querySelectorAll('.plan-hero__eyebrow-part')].map((p) => p.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['Tomorrow', '· Dinner', '· start 19:09'])
     expect(within(eyebrow as HTMLElement).getByText('start 19:09')).toBeInTheDocument()
-    expect(container.querySelector('.plan-hero__start')).toBeNull() // no second line for the start-by
+    expect(container.querySelector('.plan-hero__start')!.closest('.tile__overline')).not.toBeNull() // no second line for the start-by
   })
 
   it('a one-Course hero has the same eyebrow (today, before the slot time)', () => {
     const one = courseSlot([planCourse({ courseId: 1, meal: meal({ startBy: '18:45', cookMinutes: 45 }) })], { name: 'Dinner', time: '19:30', at: '2026-11-10T19:30:00Z' })
     const { container } = setup(one, { day: 'today', action: 'cook' })
-    expect(container.querySelector('.plan-hero .tile__overline')!.textContent).toBe('Today · Dinner · start 18:45')
+    expect([...container.querySelectorAll('.plan-hero .tile__overline .plan-hero__eyebrow-part')].map((p) => p.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['Dinner', '· start 18:45'])
   })
 
   it('the title is the Main Recipe, a level-2 heading', () => {

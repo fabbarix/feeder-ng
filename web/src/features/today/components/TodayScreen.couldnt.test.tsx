@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createElement } from 'react'
 import { Route, Routes } from 'react-router-dom'
@@ -104,13 +104,29 @@ describe('Scenario: nobody is set to attend nine meals', () => {
     expect(await screen.findByText('Meal Slots page')).toBeInTheDocument()
   })
 
-  it('has no "Show all 9" any more: Today shows the compact tile only', async () => {
+  // B9-39 (B9-32 question 2): Today's compact tile gets "Show which meals" too; it opens the same sheet, on Today (Today is never left).
+  it('has no "Show all 9" any more, and offers "Show which meals" (a secondary button)', async () => {
     h.couldnt = [...dinners, ...breakfasts]
     h.all = h.couldnt
     h.facts = established
     setup()
     await screen.findByRole('group', { name: '9 Meal Slots' })
-    expect(screen.queryByRole('button', { name: /Show all|Show which meals/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Show all/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show which meals' })).toHaveAttribute('data-variant', 'secondary')
+  })
+
+  it('"Show which meals" opens the Couldn\'t plan sheet over Today, with the meals by day, and Close returns to Today', async () => {
+    h.couldnt = [...dinners, ...breakfasts]
+    h.all = h.couldnt
+    h.facts = established
+    setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Show which meals' }))
+    const sheet = await screen.findByRole('dialog', { name: "Couldn't plan" })
+    expect(within(sheet).getAllByRole('list').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Plan screen')).not.toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: "Couldn't plan" })).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Show which meals' })).toHaveFocus()
   })
 })
 
