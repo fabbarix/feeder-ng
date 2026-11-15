@@ -1,7 +1,9 @@
 import { useId, useRef, type ReactNode, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 import type { IconName } from './icons'
 import { ActionSurface } from './lib/actionSurface'
+import { stopReactPropagation } from './lib/portalStop'
 import { INTERACTIVE_SELECTOR, useModalDialog } from './lib/useModalDialog'
 import { Button, PRIMARY_SCOPE_ATTR } from './Button'
 import { overlayStrings } from './overlayStrings'
@@ -35,7 +37,7 @@ export interface DialogProps {
   cancelLabel?: string
   /** Extra state for the Cancel button: `data-autofocus` (a danger confirm focuses Cancel), `disabled` (while busy). */
   cancelProps?: CancelButtonProps
-  /** B9-14 STUB: a muted meta line above the title; part of the dialog's accessible name. */
+  /** A muted meta line above the title ("Tue 17 · Dinner"); part of the dialog's accessible name. */
   context?: string
   /** Default true. Destructive confirms pass false. */
   dismissOnBackdrop?: boolean
@@ -43,7 +45,7 @@ export interface DialogProps {
   initialFocusRef?: RefObject<HTMLElement | null>
 }
 
-/** A modal `<dialog>` opened with showModal(). Mounted only while open. */
+/** A modal `<dialog>` opened with showModal(), portalled to document.body. Mounted only while open. */
 export function Dialog(props: DialogProps): ReactNode {
   return props.open ? <DialogSurface {...props} /> : null
 }
@@ -58,11 +60,13 @@ function DialogSurface({
   onCancel,
   cancelLabel = overlayStrings.cancel,
   cancelProps,
+  context,
   dismissOnBackdrop = true,
   initialFocusRef,
 }: Omit<DialogProps, 'open'>) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
+  const contextId = useId()
   const { onBackdropClick } = useModalDialog(ref, {
     onClose,
     dismissOnBackdrop,
@@ -76,13 +80,30 @@ function DialogSurface({
     },
   })
 
-  return (
-    <dialog ref={ref} className="dialog" aria-labelledby={titleId} data-tone={tone} {...{ [PRIMARY_SCOPE_ATTR]: '' }} onClick={onBackdropClick}>
+  return createPortal(
+    <dialog
+      ref={ref}
+      className="dialog"
+      aria-labelledby={context ? `${contextId} ${titleId}` : titleId}
+      data-tone={tone}
+      {...{ [PRIMARY_SCOPE_ATTR]: '' }}
+      onClick={(e) => {
+        onBackdropClick(e)
+        stopReactPropagation(e)
+      }}
+      onPointerDown={stopReactPropagation}
+      onKeyDown={stopReactPropagation}
+    >
       <div className="dialog__panel">
         {icon ? (
           <span className="dialog__icon" aria-hidden="true">
             <Icon name={icon} size={24} />
           </span>
+        ) : null}
+        {context ? (
+          <p id={contextId} className="dialog__context">
+            {context}
+          </p>
         ) : null}
         <h2 id={titleId} className="dialog__title" tabIndex={-1}>
           {title}
@@ -101,6 +122,7 @@ function DialogSurface({
           </div>
         ) : null}
       </div>
-    </dialog>
+    </dialog>,
+    document.body,
   )
 }
