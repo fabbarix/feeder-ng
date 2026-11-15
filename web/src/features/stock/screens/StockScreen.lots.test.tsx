@@ -84,13 +84,15 @@ describe('Pantry By Ingredient: Lots inline', () => {
     expect(screen.getByRole('list', { name: 'Chicken thighs Stock Lots' })).toBeVisible()
   })
 
-  it('tapping a Lot opens the Lot sheet with Edit, Delete and Move to', async () => {
+  it('tapping a Lot opens the Lot sheet with Edit, Delete and Move… (the Move to form shows when it is pressed)', async () => {
     setup()
     await userEvent.click(await thighs())
     await userEvent.click(within(screen.getByRole('list', { name: 'Chicken thighs Stock Lots' })).getByRole('button', { name: '800 g' }))
     const sheet = await screen.findByRole('dialog', { name: 'Chicken thighs' })
     expect(within(sheet).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
     expect(within(sheet).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(within(sheet).queryByRole('heading', { name: 'Move to' })).toBeNull()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Move…' }))
     expect(within(sheet).getByRole('heading', { name: 'Move to' })).toBeInTheDocument()
   })
 })

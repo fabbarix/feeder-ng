@@ -45,6 +45,9 @@ export function useSortFits(
     if (!el || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => fitRef.current())
     observer.observe(el)
+    // The hidden copy grows with text spacing or the text size without the row resizing: watch it too.
+    const copy = el.querySelector(':scope > .filter-bar__sort-measure')
+    if (copy) observer.observe(copy)
     return () => observer.disconnect()
   }, [row])
 

@@ -8,7 +8,7 @@ import { useDisplayUnitSystem } from '../../ingredients/hooks/useDisplayUnitSyst
 import { stockApi } from '../api'
 import { resolveStockStatus, type StockStatus } from '../lib/status'
 import { usedUpRequest } from '../lib/supplies'
-import type { AddLotInput, IngredientStock, LotPatch, StockLot, StockLotsResponse } from '../types'
+import type { AddLotInput, IngredientStock, LotPatch, StockLot, StockLotsResponse, WasteRecord } from '../types'
 
 export interface QueryState<T> {
   data: T | undefined
@@ -102,30 +102,40 @@ export function useAllLots(): LotsState & { state: ScreenState } {
   return { ...lotsState(query), state }
 }
 
-/** Spoiled lots plus the two answers to "Throw out or keep?". Both invalidate ['stock']; refetches on `stock` events. */
+/**
+ * Spoiled lots plus the two answers to "Throw out or keep?", and their Undo (B9-29). All refresh Stock, the zero-waste
+ * streak and the board; refetches on `stock` events.
+ */
 export function useSpoiledLots(): LotsState & {
-  throwOut(lotId: number): Promise<void>
-  keep(lotId: number): Promise<void>
+  /** Resolves with the waste record, so the toast's Undo knows which record to undo. */
+  throwOut(lotId: number): Promise<WasteRecord>
+  /** SSP-17: no date = good until today; a date = Change. Resolves with the kept Lot. */
+  keep(lotId: number, goodUntil?: string): Promise<StockLot>
+  /** SAFE-09: undoes a Throw out; rejects when the server refuses. */
+  undoThrowOut(wasteId: number): Promise<StockLot>
+  /** SSP-17: Undo of a Keep puts the old go-off date back (Keep has no inverse route; an edit allows a past date). */
+  undoKeep(lotId: number, goesOff: string | null): Promise<StockLot>
 } {
   useStockLiveUpdates()
   const client = useQueryClient()
   const query = useQuery({ queryKey: [...STOCK_KEY, 'spoiled'], queryFn: () => stockApi.spoiled() })
-  const throwOut = useMutation({
-    mutationFn: (lotId: number) => stockApi.throwOut(lotId),
-    onSuccess: () => refreshSpoiledOutcome(client),
-  })
+  const done = () => refreshSpoiledOutcome(client)
+  const throwOut = useMutation({ mutationFn: (lotId: number) => stockApi.throwOut(lotId), onSuccess: done })
   const keep = useMutation({
-    mutationFn: (lotId: number) => stockApi.keep(lotId),
-    onSuccess: () => refreshSpoiledOutcome(client),
+    mutationFn: ({ lotId, goodUntil }: { lotId: number; goodUntil?: string }) => stockApi.keep(lotId, goodUntil),
+    onSuccess: done,
+  })
+  const undoThrowOut = useMutation({ mutationFn: (wasteId: number) => stockApi.undoThrowOut(wasteId), onSuccess: done })
+  const undoKeep = useMutation({
+    mutationFn: ({ lotId, goesOff }: { lotId: number; goesOff: string | null }) => stockApi.updateLot(lotId, { goesOff }),
+    onSuccess: done,
   })
   return {
     ...lotsState(query),
-    throwOut: async (lotId) => {
-      await throwOut.mutateAsync(lotId)
-    },
-    keep: async (lotId) => {
-      await keep.mutateAsync(lotId)
-    },
+    throwOut: (lotId) => throwOut.mutateAsync(lotId),
+    keep: (lotId, goodUntil) => keep.mutateAsync({ lotId, goodUntil }),
+    undoThrowOut: (wasteId) => undoThrowOut.mutateAsync(wasteId),
+    undoKeep: (lotId, goesOff) => undoKeep.mutateAsync({ lotId, goesOff }),
   }
 }
 
@@ -158,7 +168,10 @@ function statusOf(query: { data: unknown; isLoading: boolean; error: Error | nul
 export function useStockActions(): {
   addLot(input: AddLotInput): Promise<void>
   setTotal(ingredientId: number, total: number): Promise<void>
-  throwOut(lotId: number): Promise<void>
+  /** Resolves with the waste record (B9-29: the toast's Undo). */
+  throwOut(lotId: number): Promise<WasteRecord>
+  /** SAFE-09: undoes a Throw out; refreshes Stock, the streak and the board. Rejects when the server refuses. */
+  undoThrowOut(wasteId: number): Promise<StockLot>
   /** Pantry: moves a Lot, or `quantity` of it, to a Storage Place. */
   moveLot(lotId: number, storagePlaceId: number, quantity?: number): Promise<void>
   /** Beta.5: corrects a Lot (quantity, Bought on, Good until). Invalidates ['stock'] and the zero-waste streak. */
@@ -184,6 +197,10 @@ export function useStockActions(): {
     mutationFn: (lotId: number) => stockApi.throwOut(lotId),
     onSuccess: () => refreshStock(client),
   })
+  const undoThrowOut = useMutation({
+    mutationFn: (wasteId: number) => stockApi.undoThrowOut(wasteId),
+    onSuccess: () => refreshSpoiledOutcome(client),
+  })
   const setTotal = useMutation({
     mutationFn: ({ ingredientId, total }: { ingredientId: number; total: number }) => stockApi.setTotal(ingredientId, total),
     onSuccess: () => refreshStock(client),
@@ -208,9 +225,8 @@ export function useStockActions(): {
     setTotal: async (ingredientId, total) => {
       await setTotal.mutateAsync({ ingredientId, total })
     },
-    throwOut: async (lotId) => {
-      await throwOut.mutateAsync(lotId)
-    },
+    throwOut: (lotId) => throwOut.mutateAsync(lotId),
+    undoThrowOut: (wasteId) => undoThrowOut.mutateAsync(wasteId),
     moveLot: async (lotId, placeId, quantity) => {
       await moveLot.mutateAsync({ lotId, placeId, quantity })
     },

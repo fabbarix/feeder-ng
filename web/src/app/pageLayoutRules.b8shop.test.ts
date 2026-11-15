@@ -65,7 +65,8 @@ describe('P23: the Shop hint is cut by its ellipsis', () => {
     // B9-03: the probe is a registry module (probes/cut-meta.mjs) under the key P23 reads; the driver's probe loop fills m.cutMeta.
     const probe = rules.PROBES.find((p) => p.name === 'cut-meta')
     expect(probe?.key).toBe('cutMeta')
-    expect(probe?.source).toMatch(/\.shop-lines \.list-row__meta\[data-status="info"\]/)
+    // B9-29 (SSP-05): the probe reads every visible row meta now, the Shop hint among them (pageLayoutRules.b9-29.test.ts).
+    expect(probe?.source).toMatch(/querySelectorAll\('\.list-row__meta-text'\)/)
     // b8-polish: the Supplies group's Restock reason is read again (docs/dev/design/b8-polish.md 2)
     expect(driver).not.toMatch(/closest\('\.shop-supplies'\)/)
   })

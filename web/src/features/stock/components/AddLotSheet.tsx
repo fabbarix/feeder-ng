@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { BottomSheet, Button, FormActions, DateField, IngredientSelect, Select, TextField } from '../../../ui'
 import { parseAmount } from '../lib/amount'
+import { deviceToday } from '../lib/days'
 import '../stock.css'
 import type { IngredientChoice, StoragePlace } from '../types'
 import { stockStrings as strings } from '../strings'
@@ -12,44 +13,56 @@ export interface AddLotSheetProps {
   onSubmit: (input: { ingredientId: number; quantity: number; purchased?: string; storagePlaceId?: number }) => void
   /** Pantry: offers a Storage Place; left on "Where it usually goes", the server picks the remembered one. */
   places?: StoragePlace[]
+  /** SAFE-11: the Ingredient to start with, when the sheet is opened from that Ingredient's page. An id not among the choices picks none. */
+  initialIngredientId?: number
+}
+
+interface AddLotErrors {
+  ingredient?: string
+  quantity?: string
 }
 
 /**
- * BottomSheet "Add a Stock Lot" with: `IngredientSelect` labelled "Ingredient" (searchable, no onCreate; the first
- * Ingredient is the default until picked), `TextField` labelled "Quantity" (inputMode decimal, `suffix` = the chosen
- * Ingredient's Base Unit, parseAmount 'positive', error shown inline via the field's `error`), `DateField` labelled
- * "Bought on" (optional; empty = omit `purchased`), and a primary Save in the sheet `footer`.
- * No native select/date input, no separate `role="alert"` paragraph: the field's own error line is the alert (FieldFrame
- * renders it with role="alert"), so there is one message.
+ * BottomSheet "Add a Stock Lot" (SAFE-11: it never assumes anything): `IngredientSelect` labelled "Ingredient" with the placeholder
+ * "Choose an Ingredient" (focused on open; preselected only through `initialIngredientId`), `TextField` "Quantity" (empty, with the
+ * chosen Ingredient's Base Unit as suffix once there is one), `DateField` "Bought on" (starts at today, so `purchased` is always sent),
+ * the Storage Place, and Save, never disabled: a missing field gets its own error line and the first one takes the focus.
  */
-export function AddLotSheet({ open, onClose, choices, onSubmit, places = [] }: AddLotSheetProps): ReactElement | null {
-  const [pickedId, setPickedId] = useState<number | null>(null)
+export function AddLotSheet({ open, onClose, choices, onSubmit, places = [], initialIngredientId }: AddLotSheetProps): ReactElement | null {
+  const [pickedId, setPickedId] = useState<number | null>(initialIngredientId ?? null)
   const [quantity, setQuantity] = useState('')
-  const [purchased, setPurchased] = useState('')
+  const [purchased, setPurchased] = useState(() => deviceToday())
   const [placeId, setPlaceId] = useState<number | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  // The first Ingredient is the default until the User picks one.
-  const chosen = choices.find((c) => c.id === pickedId) ?? choices[0]
-
-  // The sheet's state outlives each opening (the screen keeps it mounted), so start clean every time it closes.
+  const [errors, setErrors] = useState<AddLotErrors>({})
+  const [submits, setSubmits] = useState(0)
+  const fields = useRef<HTMLDivElement>(null)
+  // After a Save that leaves errors, the first invalid field takes the focus (SAFE-04). Not the shared useFocusFirstInvalid: its
+  // unguarded scrollIntoView throws where the page has none (jsdom), and the sheet's body scrolls the field into view itself.
   useEffect(() => {
-    if (open) return
-    setPickedId(null)
+    if (submits === 0) return
+    fields.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+  }, [submits])
+
+  const chosen = choices.find((c) => c.id === pickedId) ?? null
+
+  // The sheet's state outlives each opening (the screen keeps it mounted), so start clean every time it opens.
+  useEffect(() => {
+    if (!open) return
+    setPickedId(initialIngredientId ?? null)
     setQuantity('')
-    setPurchased('')
+    setPurchased(deviceToday())
     setPlaceId(null)
-    setError(null)
-  }, [open])
+    setErrors({})
+  }, [open, initialIngredientId])
 
   const submit = () => {
+    const next: AddLotErrors = {}
+    if (!chosen) next.ingredient = strings.addLot.needIngredient
     const amount = parseAmount(quantity, 'positive')
-    if (!amount.ok) {
-      setError(strings.errors[amount.error])
-      return
-    }
-    if (!chosen) return
-    setError(null)
+    if (!amount.ok) next.quantity = amount.error === 'empty' ? strings.addLot.needQuantity : strings.errors[amount.error]
+    setErrors(next)
+    setSubmits((n) => n + 1)
+    if (!chosen || !amount.ok) return
     onSubmit({
       ingredientId: chosen.id,
       quantity: amount.value,
@@ -59,19 +72,19 @@ export function AddLotSheet({ open, onClose, choices, onSubmit, places = [] }: A
   }
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={strings.addTitle}
-      footer={
-        <FormActions primary={<Button onClick={submit}>{strings.save}</Button>} />
-      }
-    >
-      <div className="stock-sheet__fields">
-        <IngredientSelect label={strings.ingredient} ingredients={choices} value={chosen?.id ?? null}
+    <BottomSheet open={open} onClose={onClose} title={strings.addTitle} footer={<FormActions primary={<Button onClick={submit}>{strings.save}</Button>} />}>
+      <div className="stock-sheet__fields" ref={fields}>
+        <IngredientSelect
+          label={strings.ingredient}
+          ingredients={choices}
+          value={chosen?.id ?? null}
+          placeholder={strings.addLot.chooseIngredient}
+          error={errors.ingredient}
           onChange={(id) => {
             // Stock offers only saved Ingredients (numeric ids); a string key never comes from here.
-            if (typeof id === 'number') setPickedId(id)
+            if (typeof id !== 'number') return
+            setPickedId(id)
+            setErrors((e) => ({ ...e, ingredient: undefined }))
           }}
         />
         <TextField
@@ -80,7 +93,7 @@ export function AddLotSheet({ open, onClose, choices, onSubmit, places = [] }: A
           value={quantity}
           onChange={(value) => {
             setQuantity(value)
-            setError(null)
+            setErrors((e) => ({ ...e, quantity: undefined }))
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -89,7 +102,7 @@ export function AddLotSheet({ open, onClose, choices, onSubmit, places = [] }: A
             }
           }}
           suffix={chosen?.baseUnit}
-          error={error ?? undefined}
+          error={errors.quantity}
         />
         <DateField label={strings.purchased} value={purchased} onChange={setPurchased} />
         {places.length > 0 ? (

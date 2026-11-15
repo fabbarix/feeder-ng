@@ -75,6 +75,16 @@ export function rowMeta(item: IngredientStock, today: string): string {
 }
 
 /** True when the meta line must be drawn in the spoil colour with HourglassMedium. */
+/**
+ * Pure. B9-29 (SSP-05): the short form of rowMeta, shown while the row's text column is under 12 rem: the status alone, capitalised
+ * ("Went off 3 days ago"), so a narrow row never cuts it; '' when the item is not due (rowMeta is then the count, which fits).
+ */
+export function rowMetaCompact(item: IngredientStock, today: string): string {
+  if (!isDue(item)) return ''
+  const phrase = goOffPhrase(item.nextGoesOff, today)
+  return phrase ? phrase.charAt(0).toUpperCase() + phrase.slice(1) : ''
+}
+
 export function isDue(item: IngredientStock): boolean {
   return item.useSoon || item.spoiledCount > 0
 }

@@ -49,6 +49,8 @@ vi.mock('../hooks/usePantry', () => ({
   }),
 }))
 // pantry-filter: the screen reads the Storage Places for its filters (usePantryFilters).
+// B9-29: the Put away request (the screen's one hook that is not mocked above needs a QueryClient).
+vi.mock('../hooks/usePutAway', () => ({ usePutAway: () => ({ putAway: vi.fn() }) }))
 vi.mock('../hooks/useStoragePlaces', () => ({ useStoragePlaces: () => ({ places: [] }) }))
 vi.mock('../hooks/useStockTakeEntry', () => ({ useStockTakeEntry: () => hooks.stockTake }))
 vi.mock('../hooks/useIngredientChoices', () => ({
@@ -276,8 +278,11 @@ describe('StockScreen actions', () => {
     view()
     await userEvent.click(screen.getByRole('button', { name: 'Add to Stock' }))
     const sheet = screen.getByRole('dialog', { name: 'Add a Stock Lot' })
+    // B9-29 (SAFE-11): no Ingredient is assumed, and Bought on starts at today.
+    await userEvent.click(within(sheet).getByRole('combobox', { name: 'Ingredient' }))
+    await userEvent.click(await screen.findByRole('option', { name: /chicken thighs/ }))
     await userEvent.type(within(sheet).getByLabelText('Quantity'), '400')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Save' }))
-    expect(hooks.addLot).toHaveBeenCalledWith({ ingredientId: 7, quantity: 400 })
+    expect(hooks.addLot).toHaveBeenCalledWith({ ingredientId: 7, quantity: 400, purchased: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) })
   })
 })

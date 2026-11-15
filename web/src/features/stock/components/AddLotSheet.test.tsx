@@ -36,9 +36,9 @@ describe('AddLotSheet', () => {
     expect(within(sheet).getByRole('combobox', { name: 'Ingredient' })).toBeInTheDocument()
   })
 
-  it('defaults to the first Ingredient and lists all of them when opened', async () => {
+  it('lists all the Ingredients when opened (and picks none for the person: SAFE-11)', async () => {
     setup()
-    expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('chicken thighs')
+    expect(screen.getByRole('combobox', { name: 'Ingredient' })).not.toHaveTextContent('chicken thighs')
     await userEvent.click(screen.getByRole('combobox', { name: 'Ingredient' }))
     expect(await screen.findByRole('option', { name: /chicken thighs/ })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /eggs/ })).toBeInTheDocument()
@@ -46,6 +46,7 @@ describe('AddLotSheet', () => {
 
   it('shows the chosen Ingredient\'s Base Unit beside Quantity', async () => {
     setup()
+    await pickIngredient('chicken')
     expect(screen.getByText('g', { selector: '.ui-field__suffix' })).toBeInTheDocument()
     await pickIngredient('eggs')
     expect(screen.getByText('piece', { selector: '.ui-field__suffix' })).toBeInTheDocument()
@@ -56,11 +57,13 @@ describe('AddLotSheet', () => {
     await pickIngredient('eggs')
     await userEvent.type(screen.getByLabelText('Quantity'), '6')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(onSubmit).toHaveBeenCalledWith({ ingredientId: 8, quantity: 6 })
+    // B9-29 (SAFE-11): Bought on starts at today, so a date is always sent.
+    expect(onSubmit).toHaveBeenCalledWith({ ingredientId: 8, quantity: 6, purchased: '2026-11-10' })
   })
 
   it('includes the purchase date picked in the DateField', async () => {
     const onSubmit = setup()
+    await pickIngredient('chicken')
     await userEvent.type(screen.getByLabelText('Quantity'), '800')
     await userEvent.click(screen.getByRole('button', { name: /Bought on/ }))
     await userEvent.click(await screen.findByRole('button', { name: /^7 November/ }))
@@ -68,20 +71,14 @@ describe('AddLotSheet', () => {
     expect(onSubmit).toHaveBeenCalledWith({ ingredientId: 7, quantity: 800, purchased: '2026-11-07' })
   })
 
-  it('omits purchased when no date is chosen', async () => {
-    const onSubmit = setup()
-    await userEvent.type(screen.getByLabelText('Quantity'), '3')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(onSubmit.mock.calls[0]![0]).not.toHaveProperty('purchased')
-  })
-
   it.each([
     ['0', 'The amount must be more than zero'],
     ['-3', 'The amount cannot be negative'],
-    ['', 'Enter an amount'],
+    ['', 'Enter how much.'],
     ['lots', 'Enter a number'],
   ])('rejects quantity %j with the field error', async (text, message) => {
     const onSubmit = setup()
+    await pickIngredient('chicken')
     if (text) await userEvent.type(screen.getByLabelText('Quantity'), text)
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByText(message)).toBeInTheDocument()

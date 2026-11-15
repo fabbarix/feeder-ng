@@ -78,6 +78,16 @@ describe('Pantry: frozen Leftovers', () => {
     expect(await within(unsorted).findByText('Stew')).toBeInTheDocument()
   })
 
+  // B9-29 (SSP-03): "A group of Leftovers only counts Leftovers ("2 Leftovers")".
+  it('a group that holds only Leftovers counts them in its heading', async () => {
+    setup()
+    const unsorted = await waitFor(() => group(/^Not sorted/))
+    expect(await within(unsorted).findByText('Stew')).toBeInTheDocument()
+    const notSorted = [...document.querySelectorAll('.list-group__title')].find((h) => h.querySelector('.list-group__name')?.textContent === 'Not sorted')!
+    expect(notSorted.querySelector('.list-group__count .visually-hidden')).toHaveTextContent('1 Leftover')
+    expect(notSorted.querySelector('.list-group__count .visually-hidden')).not.toHaveTextContent('Stock Lot')
+  })
+
   it('does not list a Leftover that is not frozen: it is not Stock', async () => {
     setup()
     await screen.findByText('Chilli')
