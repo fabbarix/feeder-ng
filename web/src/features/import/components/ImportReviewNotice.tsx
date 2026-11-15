@@ -40,7 +40,7 @@ export function ImportReviewNotice({ recipes, ingredients, questions, allSkipped
         </span>
       </p>
       {open && !allSkipped ? (
-        <Button variant="secondary" size="sm" onClick={onGoToFirst}>
+        <Button variant="secondary" size="sm" icon="moveDown" onClick={onGoToFirst}>
           {t.goToFirst}
         </Button>
       ) : null}

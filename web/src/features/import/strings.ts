@@ -112,7 +112,7 @@ export const importStrings = {
     dropHint: 'or drop it here',
     pasteInstead: 'Paste the JSON instead',
     jsonLabel: 'Recipe File JSON',
-    agentPrompt: 'No file yet? Copy the Agent Prompt, paste it into any AI assistant with your recipe, then import what it returns.',
+    agentPrompt: 'Using another AI assistant? Copy the Agent Prompt, paste it there with your recipe, then import the file it returns.',
   },
   reviewRows: {
     noticeCounts: (recipes: number, ingredients: number) => `${recipes} Recipe${recipes === 1 ? '' : 's'} and ${ingredients} Ingredient${ingredients === 1 ? '' : 's'}`,

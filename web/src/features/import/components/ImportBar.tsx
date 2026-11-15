@@ -42,7 +42,7 @@ export function ImportBar({ recipes, questions, busy, onNext, onImport }: Import
         </p>
         {questions > 0 ? (
           <Button variant="secondary" className="import-bar__next" onClick={onNext}>
-            <Icon name="next" size={20} />
+            <Icon name="moveDown" size={20} />
             <span className="import-bar__next-label">{t.nextQuestion}</span>
           </Button>
         ) : null}

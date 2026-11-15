@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
-import { DetailList, DetailRow } from '../../../ui'
+import { DetailList, DetailRow, Icon } from '../../../ui'
+import type { IconName } from '../../../ui/icons'
 import { previewFacts, previewLineRow, previewStepRow } from '../lib/reviewSummary'
 import { importStrings as s } from '../strings'
 import type { RecipePreview } from '../types'
 
 const t = s.reviewRows
+const kindIcon: Record<string, IconName> = { active: 'activeStep', passive: 'passiveStep', advance: 'advanceStep' }
 
 /**
  * B9-28 (RX-01, decision RX 3): what the file says about one Recipe, read-only. The Ingredients and the Steps are R-E rows (key, state at the
@@ -41,7 +43,12 @@ export function RecipePreviewPanel({ preview }: { preview: RecipePreview }): Rea
                     </span>
                   }
                   state={row.state}
-                  detail={row.detail}
+                  detail={
+                    <span className="recipe-preview__kind">
+                      {kindIcon[step.kind] ? <Icon name={kindIcon[step.kind]!} size={14} /> : null}
+                      {row.detail}
+                    </span>
+                  }
                 />
               )
             })}
