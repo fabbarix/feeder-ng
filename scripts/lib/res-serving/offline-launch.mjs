@@ -25,6 +25,9 @@ if (!base || !profile || !serverPid) {
 const chromeBin = arg('chrome', process.env.CHROME || 'google-chrome')
 const email = arg('email', 'admin@example.test')
 const ROUTES = ['/shop', '/', '/recipes/1']
+// B9-59 (RES-04): the routes load their code on demand. Routes never opened online must still open offline from the precache,
+// with their page drawn (an h1, nothing busy) and not the error state of a chunk that failed to load.
+const NEVER_VISITED = ['/settings/tags', '/plan']
 
 rmSync(profile, { recursive: true, force: true })
 mkdirSync(profile, { recursive: true })
@@ -200,6 +203,20 @@ try {
       if (!bare) fail(`offline ${route}: <main> exists but the app root is empty`)
     }
   }
+  // B9-59: a route never opened online (its chunk was only precached), by a full load and by an in-app navigation.
+  for (const route of NEVER_VISITED) {
+    const nav = await cdp('Page.navigate', { url: `${base}${route}` })
+    if (nav.errorText) {
+      fail(`offline ${route}: navigation error ${nav.errorText}`)
+      continue
+    }
+    const drawn = await waitFor(`!!document.querySelector('main h1') && !document.querySelector('[aria-busy="true"]')`, 15000, `offline ${route} to draw its page`)
+    if (drawn && (await evaluate(`document.body.innerText.includes('Something went wrong')`))) fail(`offline ${route}: the error state (its code did not load from the precache)`)
+  }
+  await evaluate(`(window.history.pushState({}, '', '/settings/household'), window.dispatchEvent(new PopStateEvent('popstate')), true)`)
+  if (await waitFor(`location.pathname === '/settings/household' && !!document.querySelector('main h1') && !document.querySelector('[aria-busy="true"]')`, 15000, 'an offline in-app navigation to /settings/household')) {
+    if (await evaluate(`document.body.innerText.includes('Something went wrong')`)) fail('offline in-app navigation to /settings/household: the error state (its chunk is not precached)')
+  }
   await cdp('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 })
 } catch (e) {
   fail(`probe error: ${e.message}`)
@@ -222,5 +239,5 @@ if (findings.length) {
   console.log(`offline-launch: FAILED (${findings.length} finding${findings.length === 1 ? '' : 's'})`)
   process.exit(1)
 }
-console.log(`offline-launch: OK (${ROUTES.join(', ')} open offline)`)
+console.log(`offline-launch: OK (${[...ROUTES, ...NEVER_VISITED, '/settings/household (in-app)'].join(', ')} open offline)`)
 process.exit(0)

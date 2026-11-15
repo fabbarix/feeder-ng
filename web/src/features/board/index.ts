@@ -1,6 +1,5 @@
-import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
-import { BoardScreen } from './screens/BoardScreen'
+import { lazyScreen } from '../../app/lazyScreen'
 
 // The board runs without the AppShell bar (see app/chromeless.ts).
-export const routes: RouteObject[] = [{ path: '/board', element: createElement(BoardScreen) }]
+export const routes: RouteObject[] = [{ path: '/board', element: lazyScreen(() => import('./screens/BoardScreen'), 'BoardScreen') }]

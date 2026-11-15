@@ -2,6 +2,7 @@
 import { isValidElement } from 'react'
 import { describe, expect, it } from 'vitest'
 import { collectFeatures, discoverFeatures } from '../../app/features'
+import { chunkOfElement } from '../../app/lazyScreen'
 import { routes } from './index'
 import { TagsScreen } from './screens/TagsScreen'
 
@@ -10,10 +11,11 @@ describe('features/tags', () => {
     expect(routes.map((r) => r.path)).toEqual(['/settings/tags'])
   })
 
-  it('renders the TagsScreen', () => {
+  it('renders the TagsScreen', async () => {
     const element = routes[0]?.element
     expect(isValidElement(element)).toBe(true)
-    expect(isValidElement(element) && element.type).toBe(TagsScreen)
+    // B9-59: the screen loads on demand; its chunk resolves to the TagsScreen.
+    expect(await chunkOfElement(element)?.load()).toBe(TagsScreen)
   })
 
   it('is discovered by the shell, once, with no duplicate of the Settings routes', () => {

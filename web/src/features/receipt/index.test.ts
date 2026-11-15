@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest'
 import { collectFeatures } from '../../app/features'
 import { isChromeless } from '../../app/chromeless'
+import { chunkOfElement } from '../../app/lazyScreen'
 import { explicitPageWidth } from '../../app/pageWidths'
 import * as feature from './index'
 import { ReadReceiptFooter } from './components/ReadReceiptFooter'
@@ -22,10 +23,11 @@ describe('routes', () => {
   it('registers the photos and the review routes', () => {
     expect(feature.routes.map((r) => r.path).sort()).toEqual(['/scan/receipt', '/scan/receipt/review'])
   })
-  it('the elements are the two screens', () => {
-    const el = (path: string) => (feature.routes.find((r) => r.path === path)?.element as { type: unknown } | undefined)?.type
-    expect(el('/scan/receipt')).toBe(ReceiptPhotosScreen)
-    expect(el('/scan/receipt/review')).toBe(ReceiptReviewRoute)
+  it('the elements are the two screens', async () => {
+    // B9-59: the screens load on demand; each route's chunk resolves to its screen.
+    const el = (path: string) => chunkOfElement(feature.routes.find((r) => r.path === path)?.element)?.load()
+    expect(await el('/scan/receipt')).toBe(ReceiptPhotosScreen)
+    expect(await el('/scan/receipt/review')).toBe(ReceiptReviewRoute)
   })
   it('does not clash with the Scan feature\'s /scan', () => {
     expect(() => collectFeatures({ '../features/receipt/index.ts': { routes: feature.routes }, '../features/scan/index.ts': { routes: [{ path: '/scan' }] } })).not.toThrow()

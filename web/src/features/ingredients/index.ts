@@ -1,18 +1,14 @@
-import { createElement } from 'react'
 import type { FeatureModule } from '../../app/features'
-import { IngredientScreen } from './screens/IngredientScreen'
-import { IngredientsScreen } from './screens/IngredientsScreen'
-import { SuppliesScreen } from './screens/SuppliesScreen'
-import { SupplyScreen } from './screens/SupplyScreen'
+import { lazyScreen } from '../../app/lazyScreen'
 
 // Reached from Settings > Catalogue (spec decision 43): no menu item and no bottom-bar item.
 // H5 (decision D5): the Supplies are the same Ingredients of kind "supply", with their own routes.
 const feature: FeatureModule = {
   routes: [
-    { path: '/ingredients', element: createElement(IngredientsScreen) },
-    { path: '/ingredients/:id', element: createElement(IngredientScreen) },
-    { path: '/supplies', element: createElement(SuppliesScreen) },
-    { path: '/supplies/:id', element: createElement(SupplyScreen) },
+    { path: '/ingredients', element: lazyScreen(() => import('./screens/IngredientsScreen'), 'IngredientsScreen') },
+    { path: '/ingredients/:id', element: lazyScreen(() => import('./screens/IngredientScreen'), 'IngredientScreen') },
+    { path: '/supplies', element: lazyScreen(() => import('./screens/SuppliesScreen'), 'SuppliesScreen') },
+    { path: '/supplies/:id', element: lazyScreen(() => import('./screens/SupplyScreen'), 'SupplyScreen') },
   ],
   navItems: [],
 }

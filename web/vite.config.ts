@@ -24,6 +24,23 @@ interface NodeZlib {
 }
 const nodeModule = <T,>(name: string): Promise<T> => import(/* @vite-ignore */ name) as Promise<T>
 
+// B9-59: which of the app's own modules import a stylesheet (read once per module at build time).
+const { readFileSync } = await nodeModule<{ readFileSync(file: string, encoding: 'utf8'): string }>('node:fs')
+const isAppScript = (id: string) => /[\\/]web[\\/]src[\\/].*\.tsx?$/.test(id)
+const stylesheetImporters = new Map<string, boolean>()
+function importsStylesheet(id: string): boolean {
+  let found = stylesheetImporters.get(id)
+  if (found === undefined) {
+    try {
+      found = /^\s*import\s+['"][^'"]+\.css['"]/m.test(readFileSync(id, 'utf8'))
+    } catch {
+      found = true // unreadable: keep it, as before
+    }
+    stylesheetImporters.set(id, found)
+  }
+  return found
+}
+
 function precompress(): Plugin {
   const COMPRESSIBLE = /\.(js|mjs|css|svg|webmanifest|html|json)$/
   const MIN_BYTES = 1024
@@ -98,7 +115,37 @@ export default defineConfig({
     precompress(),
   ],
   server: { proxy: { '/api': 'http://localhost:8080' } },
-  build: { outDir: 'dist', emptyOutDir: false },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: false,
+    // B9-59: one stylesheet for the whole app, loaded with the entry as before the routes were split: the cascade order
+    // stays what it was, whatever order the routes are visited in.
+    cssCodeSplit: false,
+    // B9-59 (RES-04, route splitting): the routes load on demand (app/lazyScreen.tsx), and these two keep what Today does not
+    // use out of the entry chunk.
+    rolldownOptions: {
+      treeshake: {
+        // The app's own modules that import no stylesheet have no side effects: one whose exports nothing uses (a
+        // feature's index.ts re-export, say) is left out. A module that imports a stylesheet keeps it, even when nothing
+        // uses its exports (its rules may style markup elsewhere), so the CSS is exactly what it was. A module that is
+        // used keeps all its statements. Packages keep their own say (package.json sideEffects).
+        moduleSideEffects: (id: string, external: boolean) => external || !isAppScript(id) || importsStylesheet(id),
+      },
+      // app/features.ts imports only `routes`, `navItems` and `useShellStatus` from each feature's index.ts (named globs, so
+      // the rest of what an index.ts exports is not pulled into the entry). A feature without navItems or useShellStatus
+      // gets undefined for it. tsc still rejects a missing export anywhere in the source, so this hides no real one.
+      shimMissingExports: true,
+      output: {
+        // Everything Today's first paint imports statically goes into one chunk beside the entry, rather than a hundred
+        // small shared chunks: one request on a slow line, and it compresses better as one.
+        codeSplitting: { groups: [{ name: 'app', tags: ['$initial'] }] },
+      },
+      onLog(level, log, handler) {
+        if (log.code === 'SHIMMED_EXPORT' && /features[\\/][^\\/]+[\\/]index\.ts/.test(log.message) && /"(navItems|useShellStatus)"/.test(log.message)) return
+        handler(level, log)
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

@@ -1,0 +1,10 @@
+/* B9-59 (RES-04): the minimal frame of a chromeless route (Cook Mode, the Kitchen board, the receipt screens) while its
+   code loads: a title block and a few lines on the page background, inside the full-screen main. Tokens only. */
+.route-loading--chromeless {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  inline-size: 100%;
+  max-inline-size: 40rem;
+  margin-inline: auto;
+}

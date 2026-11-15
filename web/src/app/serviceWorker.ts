@@ -62,6 +62,15 @@ export function onAppUpdateReady(listener: (controls: UpdateControls) => void): 
   }
 }
 
+/**
+ * B9-59: the server runs a newer version than this page (a route chunk of the old build is gone): the same "new version,
+ * Reload" prompt, whose Reload reloads the page into the new version. Nothing else is touched: a worker that waits still
+ * announces itself as usual.
+ */
+export function announceNewVersion(reload: () => void = () => globalThis.location.reload()): void {
+  announce({ checkForUpdate: async () => {}, applyUpdate: reload })
+}
+
 function isContainer(value: unknown): value is ContainerLike {
   return typeof value === 'object' && value !== null && typeof (value as ContainerLike).register === 'function'
 }

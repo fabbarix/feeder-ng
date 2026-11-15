@@ -14,10 +14,12 @@ export interface AppRootProps {
   navItems?: NavItem[]
   /** The features' useShellStatus hooks (collectFeatures().statusHooks). */
   statusHooks?: ShellStatusHook[]
+  /** B9-59: prefetches a route's code when its nav link is pressed or focused. */
+  onNavIntent?: (path: string) => void
 }
 
 /** Gatekeeper: shows the shell for a signed-in User, and a signed-out page otherwise. */
-export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
+export function AppRoot({ navItems, statusHooks = [], onNavIntent }: AppRootProps) {
   const me = useMe()
   useRecoverMeOnline(me)
   const queryClient = useQueryClient()
@@ -59,6 +61,7 @@ export function AppRoot({ navItems, statusHooks = [] }: AppRootProps) {
         navItems={navItems}
         pendingScans={pendingScans}
         pendingAccessRequests={pendingAccessRequests}
+        onNavIntent={onNavIntent}
       />
     </>
   )

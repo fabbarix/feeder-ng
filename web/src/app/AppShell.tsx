@@ -24,6 +24,8 @@ export interface AppShellProps {
   pendingScans?: number
   /** Access Requests waiting for an answer: a badge on the avatar button and an item in its menu. */
   pendingAccessRequests?: number
+  /** B9-59: a nav link was pressed or focused; the app prefetches that route's code (app/prefetch.ts). */
+  onNavIntent?: (path: string) => void
 }
 
 /** PC-04: the shell's timers, keyed so React keeps the one mounted ShellTimers when the cook moves between a framed page and a
@@ -31,7 +33,7 @@ export interface AppShellProps {
 const SHELL_TIMERS_KEY = 'shell-timers'
 
 /** The app frame: navigation on the phone bottom bar or the desktop side rail, the avatar menu, and the routed page. */
-export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0 }: AppShellProps) {
+export function AppShell({ user, onSignOut, navItems = [], pendingScans, pendingAccessRequests = 0, onNavIntent }: AppShellProps) {
   const { pathname } = useLocation()
   const pageWidth = pageWidthFor(pathname)
   // Mounted before the chromeless return so both frames get it: the receipt screens carry a sticky Save bar there too.
@@ -81,6 +83,8 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
               to={item.path}
               aria-current={isActive ? 'page' : undefined}
               className="side-rail__link"
+              onPointerDown={onNavIntent ? () => onNavIntent(item.path) : undefined}
+              onFocus={onNavIntent ? () => onNavIntent(item.path) : undefined}
               data-accent={item.accent ? 'true' : undefined}
             >
               <span className="side-rail__pill">
@@ -109,6 +113,8 @@ export function AppShell({ user, onSignOut, navItems = [], pendingScans, pending
               to={item.path}
               aria-current={isActive ? 'page' : undefined}
               className="bottom-bar__link"
+              onPointerDown={onNavIntent ? () => onNavIntent(item.path) : undefined}
+              onFocus={onNavIntent ? () => onNavIntent(item.path) : undefined}
               data-accent={item.accent ? 'true' : undefined}
             >
               <span className="bottom-bar__icon" aria-hidden="true">

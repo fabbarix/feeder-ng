@@ -1,22 +1,15 @@
-import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
 import { recipeAssistantSettingsRoute } from '../recipe-assistant'
-import { AllowlistPage } from './screens/AllowlistPage'
-import { HouseholdPage } from './screens/HouseholdPage'
-import { CoursesPage } from './screens/CoursesPage'
-import { MealSlotsPage } from './screens/MealSlotsPage'
-import { MembersPage } from './screens/MembersPage'
-import { PreferencesPage } from './screens/PreferencesPage'
-import { SettingsIndexPage } from './screens/SettingsIndexPage'
+import { lazyScreen } from '../../app/lazyScreen'
 
 export const routes: RouteObject[] = [
-  { path: '/settings', element: createElement(SettingsIndexPage) },
-  { path: '/settings/household', element: createElement(HouseholdPage) },
-  { path: '/settings/members', element: createElement(MembersPage) },
-  { path: '/settings/meal-slots', element: createElement(MealSlotsPage) },
-  { path: '/settings/courses', element: createElement(CoursesPage) },
-  { path: '/settings/allowlist', element: createElement(AllowlistPage) },
-  { path: '/settings/preferences', element: createElement(PreferencesPage) },
+  { path: '/settings', element: lazyScreen(() => import('./screens/SettingsIndexPage'), 'SettingsIndexPage') },
+  { path: '/settings/household', element: lazyScreen(() => import('./screens/HouseholdPage'), 'HouseholdPage') },
+  { path: '/settings/members', element: lazyScreen(() => import('./screens/MembersPage'), 'MembersPage') },
+  { path: '/settings/meal-slots', element: lazyScreen(() => import('./screens/MealSlotsPage'), 'MealSlotsPage') },
+  { path: '/settings/courses', element: lazyScreen(() => import('./screens/CoursesPage'), 'CoursesPage') },
+  { path: '/settings/allowlist', element: lazyScreen(() => import('./screens/AllowlistPage'), 'AllowlistPage') },
+  { path: '/settings/preferences', element: lazyScreen(() => import('./screens/PreferencesPage'), 'PreferencesPage') },
   recipeAssistantSettingsRoute,
 ]
 

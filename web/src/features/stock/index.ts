@@ -1,14 +1,12 @@
-import { createElement } from 'react'
 import type { RouteObject } from 'react-router-dom'
-import { StockScreen } from './screens/StockScreen'
-import { StoragePlacesScreen } from './screens/StoragePlacesScreen'
+import { lazyScreen } from '../../app/lazyScreen'
 
 // "Pantry" is a fixed primary destination (the shell's PRIMARY_NAV, route /pantry). The shell owns the old /stock address
 // and redirects it, so this feature adds routes only: /pantry is the page, and /settings/storage-places manages the
 // Storage Places.
 export const routes: RouteObject[] = [
-  { path: '/pantry', element: createElement(StockScreen) },
-  { path: '/settings/storage-places', element: createElement(StoragePlacesScreen) },
+  { path: '/pantry', element: lazyScreen(() => import('./screens/StockScreen'), 'StockScreen') },
+  { path: '/settings/storage-places', element: lazyScreen(() => import('./screens/StoragePlacesScreen'), 'StoragePlacesScreen') },
 ]
 
 // For the Today screen (a later team).
