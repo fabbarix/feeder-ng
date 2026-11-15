@@ -16,7 +16,7 @@ import type { HouseholdTimers } from './hooks/useHouseholdTimers'
 const state = vi.hoisted(() => ({ value: null as unknown }))
 vi.mock('./hooks/useHouseholdTimers', () => ({ useHouseholdTimers: () => state.value }))
 
-import { ShellTimerAlert, ShellTimers } from './ShellTimers'
+import { ShellTimers } from './ShellTimers'
 
 const tm = (over: Partial<ShellTimer> = {}): ShellTimer => ({
   id: 1, scope: 'recipe:12', step: 2, recipeName: 'Roast chicken with rice and a sauce', title: 'Roast the chicken', stepNumber: 3, seconds: 1122, state: 'running', ...over,
@@ -431,13 +431,13 @@ describe('the banner\'s icon (ruling 7)', () => {
   })
 })
 
-// Main-session ruling 1 (B9-25): on the receipt screens (chromeless: no pill) the finish banner still shows. AppShell mounts
-// ShellTimerAlert there instead of ShellTimers (AppShell.timers.test.tsx), so there is one poll and one alarm.
-describe('ShellTimerAlert: the receipt screens\' finish banner (ruling 1)', () => {
+// Main-session ruling 1 (B9-25): on the receipt screens (chromeless: no pill) the finish banner still shows. AppShell mounts the
+// same keyed ShellTimers there with pill={false} (AppShell.timers.test.tsx), so there is one poll and one alarm across both frames.
+describe('ShellTimers pill={false}: the receipt screens\' finish banner (ruling 1)', () => {
   const mountAlert = (path = '/scan/receipt') =>
     render(
       <MemoryRouter initialEntries={[path]}>
-        <ShellTimerAlert />
+        <ShellTimers pill={false} />
         <Where />
       </MemoryRouter>,
     )

@@ -1,6 +1,7 @@
-// The shell's timers (PC-04). ShellTimers (the framed pages): the timer pill, the finish banner and the Timers sheet. ShellTimerAlert
-// (the receipt screens, chromeless, where a cook can be when a timer ends): the banner and the sheet, no pill. AppShell mounts one
-// of them at a time, so there is one poll and one alarm; Cook Mode and the board show timers themselves and mount neither.
+// The shell's timers (PC-04): the timer pill, the finish banner and the Timers sheet. AppShell mounts one ShellTimers, keyed, in both
+// frames: in the framed pages with the pill, on the receipt screens (chromeless, where a cook can be when a timer ends) without it
+// (their sticky Save bar is there). Being the same mounted component in both, moving between them keeps one poll and one alarm, and
+// a ringing timer keeps ringing. Cook Mode and the board show timers themselves: it is not mounted there.
 import { bannerText, type ShellTimer } from '../features/cook/lib/householdTimers'
 import { TimerPill } from '../ui/TimerPill'
 import { useEscapeKey } from './hooks/useEscapeKey'
@@ -32,21 +33,14 @@ function Pill({ head, more, nameSeconds, onOpen }: { head: ShellTimer; more: num
   )
 }
 
-/** The framed pages' timers: the pill whenever a timer exists, the banner when one has finished, and the Timers sheet. */
-export function ShellTimers() {
+/** The pill whenever a timer exists (unless `pill` is false: the receipt screens), the banner when one has finished, and the Timers sheet. */
+export function ShellTimers({ pill = true }: { pill?: boolean }) {
   const timers = useHouseholdTimers()
   const open = useShellTimerOpen()
   return (
     <>
-      {timers.head ? <Pill head={timers.head} more={timers.more} nameSeconds={timers.nameSeconds} onOpen={() => open.openFor(timers.all)} /> : null}
+      {pill && timers.head ? <Pill head={timers.head} more={timers.more} nameSeconds={timers.nameSeconds} onOpen={() => open.openFor(timers.all)} /> : null}
       <Alert timers={timers} open={open} />
     </>
   )
-}
-
-/** The receipt screens' timers: only the finish banner (and the Timers sheet it may open). */
-export function ShellTimerAlert() {
-  const timers = useHouseholdTimers()
-  const open = useShellTimerOpen()
-  return <Alert timers={timers} open={open} />
 }

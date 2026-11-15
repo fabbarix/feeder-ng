@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { AppShell } from './AppShell'
 
 // B9-25 (PC-04): the shell's timer pill polls the household's timers through react-query; the shell tests have no QueryClient (AppShell.timers.test.tsx covers it).
-vi.mock('./ShellTimers', () => ({ ShellTimers: () => null, ShellTimerAlert: () => null }))
+vi.mock('./ShellTimers', () => ({ ShellTimers: () => null }))
 
 vi.mock('./ShellStatus', () => ({ ShellStatus: () => null }))
 
