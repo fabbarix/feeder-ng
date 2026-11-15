@@ -92,6 +92,12 @@ describe('A11Y-01: the main landmark and the document title', () => {
     expect(document.title).toBe('Pantry · Feeder')
   })
 
+  it('two routes served by the same mounted PageHeader with the same title keep that page\'s own title, not the provisional one', async () => {
+    const router = mount('/recipes/1')
+    await router.navigate('/recipes/2')
+    await vi.waitFor(() => expect(document.title).toBe('Pasta al pomodoro · Recipes · Feeder'))
+  })
+
   it('a route that is not in the table is "Feeder"', async () => {
     const router = mount('/plan')
     await router.navigate('/loading')

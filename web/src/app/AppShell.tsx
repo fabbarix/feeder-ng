@@ -10,6 +10,7 @@ import { PageErrorBoundary } from './PageErrorBoundary'
 import type { NavItem } from './nav'
 import { MENU_NAV, PRIMARY_NAV, RAIL_NAV, sortByOrder } from './nav'
 import { isCurrentNav } from './navCurrent'
+import { reassertDocumentTitle } from '../ui/lib/useDocumentTitle'
 import { routeTitle } from './routeTitle'
 import { ShellStatus } from './ShellStatus'
 import { ShellTimers } from './ShellTimers'
@@ -47,6 +48,11 @@ function useProvisionalTitle(pathname: string): void {
   const router = useContext(UNSAFE_DataRouterContext)?.router
   useLayoutEffect(() => {
     if (!document.getElementById('page-title')) document.title = routeTitle(pathname)
+  }, [pathname])
+  // After the page's own effects (a parent's run last): a page still mounted from the last route, with the same title, never set its
+  // title again, so the provisional one set on the move would stay; give it back its own.
+  useEffect(() => {
+    reassertDocumentTitle()
   }, [pathname])
   useEffect(() => {
     if (!router) return
