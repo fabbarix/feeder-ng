@@ -55,6 +55,44 @@ func b9PlanGridSteps(sc *godog.ScenarioContext, w *World) {
 		}
 		return nil
 	})
+	sc.Step(`^I mark the Recipe "([^"]*)" and the Recipe "([^"]*)" as the Course "([^"]*)" from the Plan$`, func(a, b, course string) error {
+		ia, err := recipe(a)
+		if err != nil {
+			return err
+		}
+		ib, err := recipe(b)
+		if err != nil {
+			return err
+		}
+		return mark(course, []int64{ia, ib})
+	})
+	// Undo of Mark Recipes (main-session ruling 2): unmark the ids the last mark answer listed as newly marked.
+	sc.Step(`^I undo marking those Recipes as the Course "([^"]*)"$`, func(course string) error {
+		var out struct {
+			MarkedIDs []int64 `json:"markedIds"`
+		}
+		if w.Last == nil || json.Unmarshal(w.Last.Body, &out) != nil || len(out.MarkedIDs) == 0 {
+			return fmt.Errorf("the last answer lists no markedIds: %v", w.Last)
+		}
+		cid, err := one(`SELECT id FROM courses WHERE name = ?`, course)
+		if err != nil {
+			return err
+		}
+		w.Last = w.Ensure().LoginUser(w.TB).Post(fmt.Sprintf("/api/courses/%d/recipes/unmark", cid), map[string]any{"recipeIds": out.MarkedIDs})
+		return nil
+	})
+	sc.Step(`^the answer says (\d+) Recipes? (?:is|are) no longer marked$`, func(n int) error {
+		var out struct {
+			Unmarked int `json:"unmarked"`
+		}
+		if w.Last == nil || json.Unmarshal(w.Last.Body, &out) != nil {
+			return fmt.Errorf("the answer is not JSON: %v", w.Last)
+		}
+		if out.Unmarked != n {
+			return fmt.Errorf("unmarked = %d, want %d: %s", out.Unmarked, n, w.Last.Body)
+		}
+		return nil
+	})
 	marked := regexp.MustCompile(`^the Recipe "([^"]*)" is (not )?marked for the Course "([^"]*)"$`)
 	sc.Step(marked.String(), func(name, not, course string) error {
 		var n int

@@ -30,3 +30,14 @@ Feature: Marking Recipes with a Course from the Plan (B9-32, PC-07)
     When I mark the Recipe "Peas" and a Recipe that does not exist as the Course "Side" from the Plan
     Then the response status is 422
     And the Recipe "Peas" is not marked for the Course "Side"
+
+  Scenario: Undo unmarks only the Recipes the call marked
+    Given the C2 plan has "Roast chicken" in the Course "Main" on 2026-11-09 as planned
+    When I mark the Recipe "Peas" and the Recipe "Roast chicken" as the Course "Main" from the Plan
+    Then the answer says 0 Recipes were marked
+    When I mark the Recipe "Peas" as the Course "Side" from the Plan
+    And I undo marking those Recipes as the Course "Side"
+    Then the response status is 200
+    And the answer says 1 Recipe is no longer marked
+    And the Recipe "Peas" is not marked for the Course "Side"
+    And the Recipe "Peas" is marked for the Course "Main"
