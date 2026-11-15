@@ -55,7 +55,8 @@ export function PlanScreen(): ReactNode {
 
   // B9-20 (RES-02): one state model; offline with nothing loaded is a LoadState, never an error or an empty plan.
   let body: ReactNode
-  if (plan.state === 'loading') body = <PlanSkeleton label={planStrings.loading} />
+  // w4d review (CLS): the skeleton holds until the plan and the Leftovers are in (usePlanScreen topReady), so nothing pushes it down.
+  if (!s.topReady) body = <PlanSkeleton label={planStrings.loading} />
   else if (plan.state === 'offlineUnknown')
     body = <LoadState title={planStrings.offlineUnknownTitle} text={planStrings.offlineUnknownText} />
   else if (plan.state === 'failed') body = <ErrorState message={planStrings.loadError} onRetry={() => void plan.refetch()} />
@@ -114,12 +115,14 @@ export function PlanScreen(): ReactNode {
       ) : null}
       <CookFlowSheets flow={flow} />
       {/* PC-07: Couldn't plan and Leftovers to use share one grid, two-up from 1024 and stacked below. */}
-      <div className="plan-top">
-        <BentoGrid min="wide">
-          {showNotice ? <CouldntPlanNotice groups={notice.groups} onFix={fix} onShowMeals={fixSheets.openMeals} /> : null}
-          <PlanLeftovers flow={s.leftovers} />
-        </BentoGrid>
-      </div>
+      {s.topReady ? (
+        <div className="plan-top">
+          <BentoGrid min="wide">
+            {showNotice ? <CouldntPlanNotice groups={notice.groups} onFix={fix} onShowMeals={fixSheets.openMeals} /> : null}
+            <PlanLeftovers flow={s.leftovers} />
+          </BentoGrid>
+        </div>
+      ) : null}
       {/* B9-26 (PC-01): the rows the last edit changed read their "was ..." mark from here. */}
       <ReplanMarksContext.Provider value={s.review.marks}>{body}</ReplanMarksContext.Provider>
       {s.plannedCourseId !== undefined ? (

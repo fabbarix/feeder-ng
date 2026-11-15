@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { useConnectivity } from '../../../app/useConnectivity'
 import { useMe } from '../../../app/useMe'
@@ -20,6 +21,8 @@ import { useResolvedUndo } from './useResolvedUndo'
 import { useRecipeChoices } from './useRecipeChoices'
 import { usePickLeftover } from './usePickLeftover'
 import { useLeftoverFlow } from '../../../lib/leftovers/useLeftoverFlow'
+import { leftoversApi } from '../../../lib/leftovers/api'
+import { leftoverKeys } from '../../../lib/leftovers/queryKeys'
 import type { Leftover, LeftoverActionKind } from '../../../lib/leftovers/types'
 import { mealLeftover } from '../lib/chooseMark'
 import { chooserRecipes, sheetCourse } from '../lib/choose'
@@ -27,6 +30,11 @@ import { chooserRecipes, sheetCourse } from '../lib/choose'
 /** Everything the Plan screen needs: the plan, its actions and which sheet is open for which slot (one at a time). */
 export function usePlanScreen() {
   const plan = usePlan()
+  // w4d review (CLS): the tiles above the week (Couldn't plan, Leftovers to use) wait until both the plan and the Leftovers are in,
+  // so they and the week appear together where the skeleton was, never pushing it down while it shows. The same query as the
+  // Leftover flow's (deduplicated by React Query); only a first read in flight holds it (failed or offline, it does not).
+  const leftoversRead = useQuery({ queryKey: leftoverKeys.list, queryFn: leftoversApi.list })
+  const topReady = plan.state !== 'loading' && !(leftoversRead.isPending && leftoversRead.fetchStatus === 'fetching')
   const actions = usePlanActions()
   const flow = useCookFlow()
   // B9-26 (PC-01): another User's edit is announced on the Plan; `review` is the What changed sheet and the marked rows.
@@ -171,5 +179,7 @@ export function usePlanScreen() {
     },
     /** B5-LOW: the Leftovers, the Leftover sheets and the Leftover details of the Plan. */
     leftovers: leftoverFlow,
+    /** The plan and the Leftovers are in: the tiles above the week and the week itself show (until then, the skeleton alone). */
+    topReady,
   }
 }
