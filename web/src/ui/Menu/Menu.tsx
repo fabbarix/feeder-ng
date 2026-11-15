@@ -172,7 +172,9 @@ function Popover({
         ),
       )}
     </div>,
-    document.body,
+    // Inside an open modal dialog (a ⋮ in a sheet's footer) the popover is portalled into that dialog: everything outside a modal
+    // dialog is inert. Its fixed position still places it against the viewport.
+    triggerRef.current?.closest<HTMLElement>('dialog[open]') ?? document.body,
   )
 }
 
