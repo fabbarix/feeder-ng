@@ -402,6 +402,9 @@ type AlsoTickedBy struct {
 	Name     string  `json:"name"`
 	Quantity float64 `json:"quantity"`
 	By       string  `json:"by"` // "hand" | "scan"
+	// B9-54 (RES 2): Mine = the same User's own earlier addition (another phone); TickedAt = RFC 3339 instant it was ticked.
+	Mine     bool   `json:"mine"`
+	TickedAt string `json:"tickedAt"`
 }
 
 // AppliedTick is what a shop_tick did: the Stock Lot it added (nil = none), the quantity, and who had ticked before it.

@@ -352,6 +352,9 @@ type AlsoTicked struct {
 	Name     string
 	Quantity float64
 	By       string // "hand" | "scan"
+	// B9-54 (RES 2): Mine is true when the addition is the same User's (their other phone); TickedAt is the phone's time.
+	Mine     bool
+	TickedAt time.Time
 }
 
 // TickResult says which Stock Lot a tick added. Added is this tick's quantity. AlsoTickedBy lists the additions other

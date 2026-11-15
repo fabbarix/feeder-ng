@@ -214,6 +214,8 @@ type alsoTickedJSON struct {
 	Name     string  `json:"name"`
 	Quantity float64 `json:"quantity"`
 	By       string  `json:"by"`
+	Mine     bool    `json:"mine"`
+	TickedAt string  `json:"tickedAt"`
 }
 
 func lineToJSON(l shopping.Line, me int64) lineJSON {
