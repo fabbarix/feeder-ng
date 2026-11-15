@@ -49,9 +49,11 @@ export function SelectTools<V extends string | number>({ filters, activeFilters,
   return (
     <div ref={line} className="select__tools" data-expanded={expanded ? 'true' : undefined}>
       {shown.map(chip)}
+      {/* "+N" has no tooltip: its name ("+3 more filters") says it, and a title repeating the name is read a second time as its
+          description. */}
       {hidden > 0 ? (
         <span className="filter-chips__more">
-          <Chip kind="filter" aria-expanded={expanded} label={expanded ? undefined : selectStrings.moreFilters(hidden)} title={expanded ? selectStrings.fewerFilters : selectStrings.moreFilters(hidden)} onClick={onToggleExpanded}>
+          <Chip kind="filter" aria-expanded={expanded} label={expanded ? undefined : selectStrings.moreFilters(hidden)} title={expanded ? selectStrings.fewerFilters : ''} onClick={onToggleExpanded}>
             {expanded ? selectStrings.fewerFilters : `+${hidden}`}
           </Chip>
         </span>
