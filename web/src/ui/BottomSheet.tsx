@@ -165,7 +165,7 @@ function SheetSurface({
               ) : null}
               {footer}
               {submit ? (
-                <Button type="submit" form={submit.form} variant={submit.tone === 'danger' ? 'danger' : 'primary'} disabled={submit.disabled} loading={submit.loading} className="sheet__submit">
+                <Button type="submit" form={submit.form} variant={submit.tone === 'danger' ? 'danger' : 'primary'} disabled={submit.disabled} loading={submit.loading}>
                   {submit.label}
                 </Button>
               ) : null}
