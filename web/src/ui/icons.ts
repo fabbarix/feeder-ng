@@ -13,6 +13,7 @@ import { ArrowRightIcon } from '@phosphor-icons/react/dist/csr/ArrowRight'
 import { ArrowUpIcon } from '@phosphor-icons/react/dist/csr/ArrowUp'
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowsClockwise'
 import { ArrowsLeftRightIcon } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight'
+import { ArrowsOutIcon } from '@phosphor-icons/react/dist/csr/ArrowsOut'
 import { BarcodeIcon } from '@phosphor-icons/react/dist/csr/Barcode'
 import { BasketIcon } from '@phosphor-icons/react/dist/csr/Basket'
 import { BackspaceIcon } from '@phosphor-icons/react/dist/csr/Backspace'
@@ -193,6 +194,7 @@ export const icons = {
   history: ClockCounterClockwiseIcon, // B9-18 SAFE-01: the DraftNotice (a reload draft brought back)
   camera: CameraIcon,
   photos: ImagesIcon, // photo-read: Choose photos
+  enlarge: ArrowsOutIcon, // B9-40 PC-03: Enlarge the Step photo
   clipboard: ClipboardTextIcon,
   link: LinkSimpleIcon,
   rotateRight: ArrowClockwiseIcon,

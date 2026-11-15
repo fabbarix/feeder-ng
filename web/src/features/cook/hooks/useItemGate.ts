@@ -12,9 +12,9 @@ import type { TimerItem } from './useTimers'
  */
 export function useItemGate(items: VisibleItem[], index: number, timerItems: TimerItem[], next: () => void): UseStepGate {
   const holding = holdingTimersFor(items[index + 1]?.item ?? null, timerItems)
-  if (holding.length === 0) return { canNext: true, heldText: null, next }
+  if (holding.length === 0) return { canNext: true, heldText: null, next, holdingIds: [] }
   const longest = Math.max(...holding.map((i) => i.seconds))
   const heldText =
     holding.length === 1 ? cookStrings.nextHeld(holding[0]!.timer.label, formatTimer(longest)) : cookStrings.nextHeldMany(holding.length, formatTimer(longest))
-  return { canNext: false, heldText, next: () => {} }
+  return { canNext: false, heldText, next: () => {}, holdingIds: holding.map((i) => i.timer.id) }
 }

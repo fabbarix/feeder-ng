@@ -8,6 +8,8 @@ export const timerPillStrings = {
   openFinished: (label: string, more: number) => `Timer finished: ${label}${others(more)}. Open Cook Mode`,
   /** shown in place of the time once the timer has run out */
   finished: 'finished',
+  /** B9-40: the "+N" button of Cook Mode's landscape strip: "1 more timer. Show all timers". */
+  showAll: (more: number) => `${more} more ${more === 1 ? 'timer' : 'timers'}. Show all timers`,
   pause: (label: string) => `Pause ${label}`,
   resume: (label: string) => `Resume ${label}`,
 }

@@ -14,7 +14,7 @@ describe('useItemGate', () => {
     // from item index 2 (Main step 1) the next item is Side step 1, which waits for Side step 0
     const { result } = renderHook(() => useItemGate(items(), 2, [timerItem({ scope: SIDE_SCOPE, step: 0 })], next))
     expect(result.current.canNext).toBe(false)
-    expect(result.current.heldText).toBe('Next waits for Green beans · Simmer the beans: 4:12 left. Cancel its timer to go on now.')
+    expect(result.current.heldText).toBe('Next waits for the beans: 4:12 left. Cancel that timer to go on now.')
     result.current.next()
     expect(next).not.toHaveBeenCalled()
   })

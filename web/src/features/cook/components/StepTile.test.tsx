@@ -74,7 +74,8 @@ describe('StepTile', () => {
 
   it('has an overline naming the kind and the timer of a Passive Step', () => {
     tile()
-    expect(screen.getByText('Passive · 45 min timer')).toBeInTheDocument()
+    // B9-40 (PC-03): the Step count leads the overline.
+    expect(screen.getByText('Step 2 of 3 · Passive · 45 min timer')).toBeInTheDocument()
   })
 
   it('tablet: shows two visible tap zones, Back on the left and Next on the right', () => {

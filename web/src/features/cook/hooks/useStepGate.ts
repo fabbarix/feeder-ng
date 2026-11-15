@@ -13,13 +13,15 @@ export interface UseStepGate {
   heldText: string | null
   /** session.next, or nothing while held */
   next: () => void
+  /** B9-40 (PC-03): the ids of the timers that hold Next (the strip puts them first, with the accent boundary). */
+  holdingIds: number[]
 }
 
 /** `steps` and `index` are the session's; `items` come from useTimers (they tick every second). */
 export function useStepGate(steps: CookStep[], index: number, items: TimerItem[], scope: string, next: () => void): UseStepGate {
   const holding = holdingTimers(steps[index + 1] ?? null, items, scope)
-  if (holding.length === 0) return { canNext: true, heldText: null, next }
+  if (holding.length === 0) return { canNext: true, heldText: null, next, holdingIds: [] }
   const longest = Math.max(...holding.map((i) => i.seconds))
   const heldText = holding.length === 1 ? cookStrings.nextHeld(holding[0]!.timer.label, formatTimer(longest)) : cookStrings.nextHeldMany(holding.length, formatTimer(longest))
-  return { canNext: false, heldText, next: () => {} }
+  return { canNext: false, heldText, next: () => {}, holdingIds: holding.map((i) => i.timer.id) }
 }
