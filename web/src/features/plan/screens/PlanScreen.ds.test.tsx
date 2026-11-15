@@ -6,6 +6,7 @@ import { PlanScreen } from './PlanScreen'
 import { installResizeObserver } from '../test-utils.grid'
 import { courseMeal, courseSlot, favourite, meal, mockApi, planCourse, renderWithProviders, slot } from '../test-utils'
 import type { PlanView } from '../types'
+import { readFeatureCss } from '../test-css'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -71,12 +72,18 @@ describe('PlanScreen (design system)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  // B9-32 (PC-07): Couldn't plan is one compact tile (a region) in the min="wide" grid it shares with Leftovers to use; alone,
+  // it takes the whole row (plan.css :only-child).
   it("the Couldn't plan notice sits in a grid sized by min, as one full-width tile", async () => {
     const unplanned = slot({ date: '2026-11-12', mealSlotId: 3, name: 'Lunch', meal: null, unfilled: { reason: 'no_attendance', slotRuleClaimed: false, eliminated: { considered: 0, exclusion: 0, coolDown: 0, varietyRule: 0, advanceStep: 0 } } })
     mockApi({ 'GET /api/plan': { ...view, slots: [...view.slots, unplanned] } })
     renderWithProviders(<PlanScreen />)
-    const notice = await screen.findByRole('group', { name: "Couldn't plan" })
-    expect(notice).not.toHaveAttribute('data-columns')
-    expect(notice.querySelector('[data-cause]')).toHaveAttribute('data-span', 'full')
+    const notice = await screen.findByRole('region', { name: "Couldn't plan" })
+    const grid = notice.parentElement!
+    expect(grid).toHaveClass('bento-grid')
+    expect(grid).toHaveAttribute('data-min', 'wide')
+    expect(grid).not.toHaveAttribute('data-columns')
+    expect(grid.parentElement).toHaveClass('plan-top')
+    expect(readFeatureCss('plan.css')).toMatch(/\.plan-top > \.bento-grid > \.tile:only-child\s*\{\s*grid-column:\s*1 \/ -1;/)
   })
 })

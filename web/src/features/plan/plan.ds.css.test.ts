@@ -76,8 +76,10 @@ describe('the Meal Slot header', () => {
     const actions = d('.plan-slot-head__actions')
     expect(actions['display']).toBe('inline-flex')
     expect(actions['flex']).toBe('none')
-    // B9-08 (A11Y-02, P39): 8 px between the icon buttons, so a focused button's ring (3 px at a 2 px offset) never meets the next.
-    expect(actions['gap']).toBe('var(--space-2)')
+    // B9-08 (A11Y-02, P39) then B9-32 (A11Y-09): the group is the shared IconSet, whose --icon-set-gap (8 px) keeps the rings
+    // apart; the header sets no gap of its own.
+    expect(actions['gap']).toBeUndefined()
+    expect(readSource('features/plan/components/SlotHeader.tsx')).toMatch(/<IconSet className="plan-slot-head__actions">/)
   })
 
   it('the slot NAME is never truncated: no ellipsis, no overflow hidden, no nowrap on the label or the name', () => {
@@ -112,10 +114,9 @@ describe('Course rows and their chips', () => {
     expect(d('.plan-row__chips .chip')['min-inline-size']).toBe('0')
   })
 
-  it('Swap and Pin are a non-shrinking icon group at the end of the row', () => {
-    const a = d('.plan-row__actions')
-    expect(a['display']).toBe('inline-flex')
-    expect(a['flex']).toBe('none')
+  it('Swap and Pin are a non-shrinking icon group at the end of the row (B9-32, A11Y-09: the shared IconSet)', () => {
+    expect(readSource('features/plan/components/PlanCourseRow.tsx')).toMatch(/<IconSet>/)
+    expect(d('.plan-meal__courses > .list-row .list-row__trailing')['flex']).toBe('none')
   })
 
   it('rows are separated by the 1 px line divider inside a tile, with no ad-hoc margins', () => {
@@ -137,7 +138,8 @@ describe('Course rows and their chips', () => {
   })
 
   it('the divider between Meal Slots shows only on a tile flagged data-dividers (3 or more slots), as a 1 px --color-line', () => {
-    const rules = ruleBlocks(css).filter((b) => b.selectors.some((s) => /\.plan-meal\s*\+\s*\.plan-meal/.test(s)))
+    // B9-32 (PC-11): a day with the whole row (data-row) puts its slots side by side; plan-css.test pins its line.
+    const rules = ruleBlocks(css).filter((b) => b.selectors.some((s) => /\.plan-meal\s*\+\s*\.plan-meal/.test(s)) && !b.selectors.some((s) => /\[data-row/.test(s)))
     expect(rules.length).toBeGreaterThan(0)
     for (const r of rules) {
       expect(r.selectors.join(',')).toMatch(/\[data-dividers/)
@@ -164,7 +166,7 @@ describe('colour roles: no accent-soft on the Plan, no raw colours', () => {
 })
 
 describe('spacing: tokens, not raw px / rem', () => {
-  it.each(['.plan-day', '.plan-meal', '.plan-slot-head', '.plan-row__chips', '.plan-row__actions', '.plan-meal__courses'])('%s uses no raw gap / margin / padding length', (sel) => {
+  it.each(['.plan-day', '.plan-meal', '.plan-slot-head', '.plan-row__chips', '.plan-meal__courses'])('%s uses no raw gap / margin / padding length', (sel) => {
     const r = d(sel)
     for (const prop of ['gap', 'margin', 'margin-block', 'padding', 'padding-block', 'padding-top']) {
       if (r[prop] !== undefined) expect(r[prop], `${sel} ${prop}`).toMatch(/^(0|var\(--[a-z0-9-]+\)( var\(--[a-z0-9-]+\))*)$/)
@@ -189,7 +191,8 @@ describe('source scans (the old week is gone)', () => {
   it('PlanScreen composes PlanGrid without a column count and the Couldn’t-plan grids use min=, not columns=', () => {
     const src = readSource('features/plan/screens/PlanScreen.tsx')
     expect(src).not.toMatch(/columns=/)
-    expect(src).toMatch(/<PlanGrid>/)
+    // B9-32 (PC-11): PlanGrid measures its own columns; the screen gives it only the number of days.
+    expect(src).toMatch(/<PlanGrid count=/)
     expect(readSource('features/plan/screens/CouldntPlanExclusionsScreen.tsx')).not.toMatch(/columns=/)
   })
 })
