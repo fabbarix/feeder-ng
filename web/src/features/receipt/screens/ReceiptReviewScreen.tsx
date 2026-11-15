@@ -26,6 +26,8 @@ export interface AddSheetRenderProps {
 
 export interface ReceiptReviewScreenProps {
   renderAdd?: (props: AddSheetRenderProps) => ReactNode
+  /** B9-50 (SSP-08): the Household's Products (OfflineProduct fits): a Not scanned row whose name matches one says "{Product} is a Product". */
+  products?: { id: number; name: string }[]
 }
 
 export function ReceiptReviewScreen({ renderAdd }: ReceiptReviewScreenProps = {}) {
