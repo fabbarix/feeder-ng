@@ -94,7 +94,8 @@ export default {
       const state = await evaluate(`(() => {
         const sheet = ${SHEET}
         const problems = []
-        const block = sheet.querySelector('[aria-label="On the receipt"]')
+        // the region is named by its visible overline (aria-labelledby) or an aria-label
+        const block = [...sheet.querySelectorAll('section, [role=region]')].find((el) => (el.getAttribute('aria-label') || document.getElementById(el.getAttribute('aria-labelledby') || '')?.textContent || '').trim() === 'On the receipt')
         if (!block || !/KITCHEN ROLL 4 PACK/.test(block.textContent)) problems.push('SSP-08: no "On the receipt" block with the printed line')
         const group = sheet.querySelector('[role=radiogroup][aria-label="Is it one of these?"], [role=radiogroup][aria-labelledby]')
         const radios = group ? [...group.querySelectorAll('[role=radio]')] : []
