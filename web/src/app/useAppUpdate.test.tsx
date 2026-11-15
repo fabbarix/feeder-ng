@@ -9,7 +9,7 @@ import { ToastProvider, type ToastContent } from '../ui/Toast'
 import type { UpdateControls } from './serviceWorker'
 import { useAppUpdate, type AppUpdateInputs } from './useAppUpdate'
 
-const show = vi.fn<(arg: string | ToastContent, options?: unknown) => void>()
+const show = vi.fn<(arg: string | ToastContent, options?: unknown) => unknown>()
 vi.mock('../ui/Toast', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../ui/Toast')>()
   return { ...actual, useToast: () => ({ show }) }
@@ -75,9 +75,10 @@ describe('the update toast', () => {
     expect(toast.subline).toBeUndefined()
     expect(toast.body).toBeUndefined()
     expect(toast.actions?.map((a) => a.label)).toEqual(['Reload', 'Later'])
-    // stays until acted on: an explicit duration wins over the 6 s default, and must fit setTimeout (2^31 - 1 ms)
-    expect(toast.durationMs).toBeGreaterThanOrEqual(60 * 60 * 1000)
-    expect(toast.durationMs).toBeLessThanOrEqual(2_147_483_647)
+    // stays until acted on: a sticky toast (B9-18), with no duration; Later only closes it, so no round Dismiss (RES-10)
+    expect(toast.sticky).toBe(true)
+    expect(toast.durationMs).toBeUndefined()
+    expect(toast.actions?.map((a) => a.role)).toEqual([undefined, 'dismiss'])
   })
 
   it('shows it once, however often the host re-renders or announces again', () => {

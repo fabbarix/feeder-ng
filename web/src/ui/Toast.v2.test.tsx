@@ -54,7 +54,9 @@ describe('Toast statuses', () => {
     expect(screen.queryByText('Brief')).toBeNull()
   })
 
-  it('stacks at most 2: a third toast drops the oldest', async () => {
+  // B9-18 (SAFE R1): one ordinary toast at a time. The old "stacks at most 2" is gone; sticky and Undo toasts are never pushed out
+  // (Toast.sticky.test.tsx).
+  it('shows one ordinary toast at a time: a newer one replaces the older', async () => {
     const user = setup()
     render(
       <ToastProvider>
@@ -67,7 +69,7 @@ describe('Toast statuses', () => {
     await user.click(screen.getByText('b'))
     await user.click(screen.getByText('c'))
     expect(screen.queryByText('one')).toBeNull()
-    expect(screen.getByText('two')).toBeInTheDocument()
+    expect(screen.queryByText('two')).toBeNull()
     expect(screen.getByText('three')).toBeInTheDocument()
   })
 

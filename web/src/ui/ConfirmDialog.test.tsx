@@ -26,10 +26,14 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
-  it('a default confirm focuses the confirm button and the backdrop cancels', () => {
+  // B9-18 (SAFE R1): the safe button has focus on open in every confirm; focus="confirm" is the opt-in for a question that loses nothing.
+  it('a default confirm focuses Cancel (the safe button) and the backdrop cancels; focus="confirm" focuses the confirm button', () => {
     const onCancel = vi.fn()
-    render(<ConfirmDialog {...base} confirmLabel="Save" onConfirm={() => {}} onCancel={onCancel} />)
+    const { unmount } = render(<ConfirmDialog {...base} confirmLabel="Save" focus="confirm" onConfirm={() => {}} onCancel={() => {}} />)
     expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus()
+    unmount()
+    render(<ConfirmDialog {...base} confirmLabel="Save" onConfirm={() => {}} onCancel={onCancel} />)
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
     fireEvent.click(screen.getByRole('dialog'))
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
@@ -131,15 +135,20 @@ describe('useConfirm', () => {
 })
 
 describe('ConfirmDialog: body line breaks', () => {
+  // B9-18 (SAFE R1): a one-paragraph body is the lead line (.confirm-dialog__lead, weight 600); later paragraphs keep .confirm-dialog__body.
   it('the body paragraph uses the shared class, not an inline style', () => {
     render(<ConfirmDialog {...base} body={'Replaces 3 meals.\nTue Dinner: Stew'} onConfirm={() => {}} onCancel={() => {}} />)
     const body = screen.getByText(/Replaces 3 meals\./)
-    expect(body).toHaveClass('confirm-dialog__body')
+    expect(body).toHaveClass('confirm-dialog__lead')
     expect(body).not.toHaveAttribute('style')
     expect(body).toHaveTextContent('Tue Dinner: Stew')
   })
 
   it('Dialog.css keeps line breaks for .confirm-dialog__body (white-space: pre-line)', () => {
     expect(declarations(readUiCss('Dialog.css'), '.confirm-dialog__body')['white-space']).toBe('pre-line')
+  })
+
+  it('ConfirmDialog.css keeps line breaks for the lead too (white-space: pre-line)', () => {
+    expect(declarations(readUiCss('ConfirmDialog.css'), '.confirm-dialog__lead')['white-space']).toBe('pre-line')
   })
 })

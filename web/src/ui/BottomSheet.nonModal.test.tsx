@@ -132,10 +132,12 @@ describe('BottomSheet.css: the non-modal and half variants', () => {
   })
 })
 
-describe('Toast.css: a toast clears an open half sheet on a phone', () => {
-  it('lifts the toast region above a non-modal half sheet, by the sheet\'s height', () => {
+// B9-18 (SSP-12): a toast is no longer lifted above the half sheet (into the priced row's band); the Price keypad holds toasts
+// while it is open (useToast().hold), and Toast.offsets.css.test.ts pins that the lift is gone.
+describe('Toast.css: a toast never sits over an open half sheet on a phone', () => {
+  it('has no half-sheet lift: toasts are held while the keypad is open instead', () => {
     const css = readUiCss('Toast.css')
-    expect(css).toMatch(/html:has\(\.sheet\[data-modal='false'\]\[data-size='half'\]\) \.toast-region \{\s*bottom: calc\(max\(50dvh, min\(480px, 85dvh\)\) \+ var\(--space-3\)\)/)
+    expect(css).not.toMatch(/data-size='half'/)
     expect(readUiCss('BottomSheet.css')).toContain('block-size: max(50dvh, min(480px, 85dvh))')
   })
 })

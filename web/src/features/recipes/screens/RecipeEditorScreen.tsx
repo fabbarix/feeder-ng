@@ -332,6 +332,7 @@ export function RecipeEditorScreen(): ReactNode {
               body={recipeStrings.readyMealIngredient.renameBody(editor.renameOffer.from, editor.renameOffer.to)}
               confirmLabel={recipeStrings.readyMealIngredient.renameConfirm}
               cancelLabel={recipeStrings.readyMealIngredient.renameKeep}
+              focus="confirm"
               onConfirm={() => void answerRename(true)}
               onCancel={() => void answerRename(false)}
             />

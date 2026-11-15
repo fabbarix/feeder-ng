@@ -1,0 +1,6 @@
+# B9-18 (plan section 9, rule 23): danger-sheet warns, and fails under web/src/ui and web/src/app, which are clean. The feature
+# folders that still build a danger Dialog outside ConfirmDialog (CourseRemoveDialog, CourseLossDialog, ScanScreen) add their folder
+# to fail_paths in their own rules.d file when their package converts them. fail_paths lines add up (scripts/check-ui.sh).
+danger-sheet=warn
+danger-sheet.fail_paths=web/src/ui
+danger-sheet.fail_paths=web/src/app

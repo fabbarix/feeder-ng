@@ -69,6 +69,7 @@ const TABLE: ReadonlyArray<readonly [string, string]> = [
   ['selected', 'Check'],
   ['copy', 'Copy'],
   ['undo', 'ArrowCounterClockwise'],
+  ['history', 'ClockCounterClockwise'], // B9-18 SAFE-01: DraftNotice
   ['import', 'DownloadSimple'],
   ['export', 'UploadSimple'],
   ['agentPrompt', 'Robot'],

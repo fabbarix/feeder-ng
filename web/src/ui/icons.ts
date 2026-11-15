@@ -35,6 +35,7 @@ import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check'
 import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle'
 import { CircleIcon } from '@phosphor-icons/react/dist/csr/Circle'
 import { ClockIcon } from '@phosphor-icons/react/dist/csr/Clock'
+import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ClockCounterClockwise'
 import { ClipboardTextIcon } from '@phosphor-icons/react/dist/csr/ClipboardText'
 import { CloudSlashIcon } from '@phosphor-icons/react/dist/csr/CloudSlash'
 import { CoffeeIcon } from '@phosphor-icons/react/dist/csr/Coffee'
@@ -185,6 +186,7 @@ export const icons = {
   selected: CheckIcon,
   copy: CopyIcon,
   undo: ArrowCounterClockwiseIcon,
+  history: ClockCounterClockwiseIcon, // B9-18 SAFE-01: the DraftNotice (a reload draft brought back)
   camera: CameraIcon,
   photos: ImagesIcon, // photo-read: Choose photos
   clipboard: ClipboardTextIcon,
