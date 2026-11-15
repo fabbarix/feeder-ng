@@ -35,4 +35,14 @@ describe('RequestAvatar', () => {
     rerender(<RequestAvatar name="Zia Rosa" picture="https://lh3.googleusercontent.com/a/zia2" />)
     expect(document.querySelector('img')).toHaveAttribute('src', 'https://lh3.googleusercontent.com/a/zia2')
   })
+
+  // SET-12: a person who is not a Member gets the neutral monogram
+  it('the monogram is neutral (data-tone="neutral"), also after a failed photo', () => {
+    const { unmount } = render(<RequestAvatar name="Zia Rosa" picture="" />)
+    expect(screen.getByRole('img', { name: 'Zia Rosa' })).toHaveAttribute('data-tone', 'neutral')
+    unmount()
+    render(<RequestAvatar name="Zia Rosa" picture={photo} />)
+    fireEvent.error(screen.getByRole('img', { name: 'Zia Rosa' }))
+    expect(screen.getByRole('img', { name: 'Zia Rosa' })).toHaveAttribute('data-tone', 'neutral')
+  })
 })

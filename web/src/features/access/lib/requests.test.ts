@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AccessRequest } from '../types'
-import { badgeText, daysLeft, initialOf, oldestFirst } from './requests'
+import { badgeText, daysLeft, initialOf, oldestFirst, requestWhen } from './requests'
 
 const req = (id: number, requestedAt: string): AccessRequest => ({
   id, email: `p${id}@example.test`, name: `P${id}`, picture: '', requestedAt, expiresAt: '2026-11-23T12:00:00Z',
@@ -48,5 +48,25 @@ describe('initialOf', () => {
     expect(initialOf('zia rosa', 'z@example.test')).toBe('Z')
     expect(initialOf('  ', 'rex@example.test')).toBe('R')
     expect(initialOf('', '')).toBe('?')
+  })
+})
+
+// SET-12: the state column of a request row. value "12 days left", subValue "asked 2 days ago"; `soon` is true with 2 days or fewer
+// left (the row then takes the warn tone). An expired request reads "0 days left" and is soon.
+describe('requestWhen', () => {
+  const r = (requestedAt: string, expiresAt: string): AccessRequest => ({ id: 1, email: 'a@example.test', name: 'A', picture: '', requestedAt, expiresAt })
+  const now = new Date('2026-11-10T12:00:00Z')
+  it('says the days left, how long ago it was asked, and that it is not soon', () => {
+    expect(requestWhen(r('2026-11-08T12:00:00Z', '2026-11-22T12:00:00Z'), now)).toEqual({ value: '12 days left', subValue: 'asked 2 days ago', soon: false })
+  })
+  it('reads "1 day left" in the singular, and "asked just now"', () => {
+    expect(requestWhen(r('2026-11-10T11:59:40Z', '2026-11-11T12:00:00Z'), now)).toEqual({ value: '1 day left', subValue: 'asked just now', soon: true })
+  })
+  it('is soon at 2 days left and not at 3', () => {
+    expect(requestWhen(r('2026-11-09T12:00:00Z', '2026-11-12T12:00:00Z'), now).soon).toBe(true)
+    expect(requestWhen(r('2026-11-09T12:00:00Z', '2026-11-12T12:00:01Z'), now).soon).toBe(false) // 3 days (rounded up)
+  })
+  it('is soon when it has already expired', () => {
+    expect(requestWhen(r('2026-10-01T12:00:00Z', '2026-11-01T12:00:00Z'), now)).toMatchObject({ value: '0 days left', soon: true })
   })
 })

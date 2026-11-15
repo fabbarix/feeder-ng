@@ -14,16 +14,18 @@ export interface CourseEatersProps {
   /** Members who opt out of this Course; an id that is not in `members` is ignored. */
   optOutMemberIds: readonly number[]
   disabled?: boolean
+  /** false: no "Dessert · without Sam" line under the pills (the Meal Slot editor says it in the Course row's meta). Default true. */
+  summary?: boolean
   /** A pill was pressed: `eats` is the new state of that Member. */
   onChange: (memberId: number, eats: boolean) => void
 }
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name
 
-export function CourseEaters({ courseName, groupLabel, labelId, members, optOutMemberIds, disabled, onChange }: CourseEatersProps) {
+export function CourseEaters({ courseName, groupLabel, labelId, members, optOutMemberIds, disabled, summary: showSummary = true, onChange }: CourseEatersProps) {
   const optOut = new Set(optOutMemberIds)
   const outNames = members.filter((m) => optOut.has(m.id)).map((m) => m.name)
-  const summary = eatersSummary(courseName, outNames)
+  const summary = showSummary ? eatersSummary(courseName, outNames) : null
   return (
     <div className="course-eaters">
       <div

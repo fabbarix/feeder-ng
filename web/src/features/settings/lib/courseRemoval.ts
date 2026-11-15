@@ -70,6 +70,9 @@ export interface MealLine {
   key: string
   text: string
   pinned: boolean
+  /** R-E row parts: the Recipe (the key) and "Dinner · Thu 12 Nov" (the muted detail). */
+  recipe: string
+  when: string
 }
 
 /** The Planned Meals that go, Pinned ones first (each group keeps the order given). */
@@ -79,6 +82,8 @@ export function plannedMealLines(meals: readonly ImpactMeal[], locale = 'en'): M
     key: `${m.date}-${m.mealSlotId}-${m.recipeId ?? m.recipeName}-${i}`,
     text: plannedMealText(m, locale),
     pinned: m.pinned,
+    recipe: m.recipeName,
+    when: `${m.mealSlotName} · ${shortDate(m.date, locale)}`,
   }))
 }
 

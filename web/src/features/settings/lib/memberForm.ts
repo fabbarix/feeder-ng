@@ -52,6 +52,22 @@ export function memberProblem(draft: MemberInput): string | null {
   return memberEmailProblem(draft.email ?? '')
 }
 
+/** B9-36 (SAFE-04): the draft's problems by field, each shown at its own field (never one alert for the form). */
+export interface MemberFieldErrors {
+  name?: string
+  portionFactor?: string
+  email?: string
+}
+
+export function memberFieldErrors(draft: MemberInput): MemberFieldErrors {
+  const out: MemberFieldErrors = {}
+  const first = memberProblem({ ...draft, email: '' })
+  if (first) out[draft.name.trim() === '' ? 'name' : 'portionFactor'] = first
+  const email = memberEmailProblem(draft.email ?? '')
+  if (email) out.email = email
+  return out
+}
+
 /** The request body: name, avatar and email trimmed; a blank email is sent as null (a PATCH replaces the Member, so null clears it). */
 export function memberFromDraft(draft: MemberInput): MemberInput {
   const { photo, ...rest } = draft

@@ -106,10 +106,13 @@ const ADDED = {
   // B9-14: scenarios/b9-14.mjs (order 310): the sheet scenarios of P25 and P33 and the sheet page of P39.
   // B9-16: scenarios/b9-16.mjs (order 310, after b9-14 by file name): P36's touch-targets-controls and the household-errors check.
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
+  // B9-42: scenarios/b9-42.mjs (order 320, after b9-18 by file name): the Meal Slots cards, editor, Remove confirm, Removed tile, Change a date.
   // B9-26: scenarios/b9-26.mjs (order 326): plan-after-swap (PC-01), regenerate (SAFE-07) and to-confirm-not-cooked (SAFE-03).
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
   // B9-29: scenarios/b9-29.mjs (order 330): pantry-put-away (SSP-10), meta-fit-pantry and meta-fit-supplies (SSP-05, P23 at 1120), text-spacing-pantry (DS-03, DS-10).
   // B9-31: scenarios/b9-31.mjs (order 330, after b9-19 by file name): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
+  // B9-36: scenarios/b9-36.mjs (order 330, after b9-31 by file name): preferences-preview (SAFE-08).
+  // B9-52: scenarios/b9-52.mjs (order 330, after b9-36 by file name): allowlist-actions, allowlist-share and access-requests-rows (SET-03, SET-12).
   // B9-25: scenarios/b9-25.mjs (order 340): timer-pill and timer-pill-editor (PC-04). No rule number: the setup measures the pill and throws on a finding.
   // B9-34: scenarios/b9-34.mjs (order 340, after b9-25 by file name): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
   // B9-35: scenarios/b9-35.mjs (order 340, after b9-34 by file name): scan-typed (no camera, P12 and P30), scan-camera-typed and scan-camera-landscape (a fake camera).
@@ -121,11 +124,14 @@ const ADDED = {
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
     'planning-recipe-select', 'shop-barcode-sheet', 'toast-pricing', 'toast-over-bar',
+    'meal-slots-cards', 'meal-slot-editor', 'meal-slot-editor-narrow', 'meal-slot-editor-short', 'meal-slot-remove-confirm', 'removed-meal-slots', 'change-date',
     'plan-after-swap', 'regenerate', 'to-confirm-not-cooked',
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
     'pantry-put-away', 'meta-fit-pantry', 'meta-fit-supplies', 'text-spacing-pantry',
     'shop-page', 'shop-delete-confirm', 'product-page', 'products-new-product',
     'recipe-editor-guard', 'recipe-new-empty-save',
+    'preferences-preview',
+    'allowlist-actions', 'allowlist-share', 'access-requests-rows',
     'timer-pill', 'timer-pill-editor',
     'shop-ticked', 'shop-focus-after-tick',
     'scan-typed', 'scan-camera-typed', 'scan-camera-landscape',

@@ -5,6 +5,8 @@ export const accessStrings = {
   title: 'Sign-in requests',
   menuItem: 'Sign-in requests',
   empty: 'Nobody is waiting to join.',
+  /** SET-12: the meta of a request whose Google profile has no name (the email is the title then). */
+  noName: 'No name from Google',
   approvalNote: 'Approving lets them sign in as a User. Any User can approve or deny.',
   approve: 'Approve',
   deny: 'Deny',
@@ -14,7 +16,9 @@ export const accessStrings = {
   confirmDenyBody: 'They can ask again after 24 hours.',
   approveSheet: {
     title: 'Approve sign-in request',
-    explain: (name: string, email: string) => `Approving lets ${name} (${email}) sign in as a User.`,
+    /** B9-52: "Approving lets <name> (<email>) sign in as a User." in its parts, so the name and the email wrap only where a person would. */
+    explainLead: 'Approving lets',
+    explainTail: 'sign in as a User.',
     memberLabel: 'Link to a Member (optional)',
     dontLink: "Don't link",
     noFreeMembers: 'Every Member already has a User.',

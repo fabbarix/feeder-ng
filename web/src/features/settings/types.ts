@@ -132,6 +132,8 @@ export interface AllowedUser {
   email: string
   displayName: string
   isAdmin: boolean
+  /** B9-52: a session was ever started for them; until then the Allowlist shows "Not signed in yet". */
+  signedIn: boolean
 }
 
 export type ColourMode = 'light' | 'dark' | 'system'

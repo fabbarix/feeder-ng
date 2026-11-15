@@ -56,7 +56,7 @@ describe('SlotCoursesField: structure', () => {
     render(<Harness initial={[main, dessert]} />)
     const pills = within(eaters('Dessert')).getAllByRole('button')
     expect(pills.map((b) => [b.getAttribute('aria-label') ?? b.textContent, b.getAttribute('aria-pressed')])).toEqual([['Anna', 'true'], ['Marco', 'true'], ['Sam', 'false']])
-    expect(screen.getByText('Dessert · without Sam')).toBeInTheDocument()
+    expect(within(rowOf('Dessert')).getByText('Sam does not eat it')).toBeInTheDocument()
     expect(within(rowOf('Main')).getAllByText('Who eats it').length).toBeGreaterThan(0)
   })
 
@@ -103,14 +103,14 @@ describe('SlotCoursesField: editing', () => {
     render(<Harness initial={[main, side]} />)
     await userEvent.click(within(eaters('Side')).getByRole('button', { name: 'Marco' }))
     expect(latest).toEqual([main, { ...side, optOutMemberIds: [2] }])
-    expect(screen.getByText('Side · without Marco')).toBeInTheDocument()
+    expect(within(rowOf('Side')).getByText('Marco does not eat it')).toBeInTheDocument()
     await userEvent.click(within(eaters('Side')).getByRole('button', { name: 'Marco' }))
     expect(latest).toEqual([main, side])
   })
 
   it('keeps the opt-outs of a Member who does not attend, though no pill shows', () => {
     render(<Harness initial={[{ ...main, optOutMemberIds: [3] }]} attendance={[{ memberId: 1, portionFactorOverride: null }]} />)
-    expect(screen.queryByText(/without Sam/)).toBeNull()
+    expect(screen.queryByText(/Sam does not eat it/)).toBeNull()
     expect(latest).toEqual([{ ...main, optOutMemberIds: [3] }])
   })
 
@@ -164,5 +164,47 @@ describe('SlotCoursesField: keyboard', () => {
     within(eaters('Main')).getByRole('button', { name: 'Anna' }).focus()
     await userEvent.keyboard(' ')
     expect(latest[0]!.optOutMemberIds).toEqual([1])
+  })
+})
+
+// SET-09: one anatomy for every chosen Course. [handle] [name / meta] [up down remove] over [Optional switch] [Who eats it pills].
+describe('SlotCoursesField: the row anatomy (SET-09)', () => {
+  it('the second line of a row reads "main Course" for the main Course, and who does not eat a Course in words', () => {
+    render(<Harness initial={[main, side, dessert]} />)
+    const meta = (name: string) => rowOf(name).querySelector('.course-picker__meta')?.textContent ?? null
+    expect(meta('Main')).toBe('main Course')
+    expect(meta('Side')).toBeNull()
+    expect(meta('Dessert')).toBe('Sam does not eat it')
+  })
+  it('a main Course nobody opts out of keeps just "main Course"; one with an opt-out joins both with a dot', () => {
+    render(<Harness initial={[{ ...main, optOutMemberIds: [2] }, side]} />)
+    expect(rowOf('Main').querySelector('.course-picker__meta')?.textContent).toBe('main Course \u00b7 Marco does not eat it')
+  })
+  it('says it once: the pills\' own "Course \u00b7 without Name" summary is not repeated under the pills', () => {
+    render(<Harness initial={[main, dessert]} />)
+    expect(screen.queryByText(/Dessert \u00b7 without/)).toBeNull()
+  })
+  it('the up, down and remove buttons sit together in one IconSet at the end of the row, in a fixed order, a disabled one keeping its place', () => {
+    render(<Harness initial={[main, side]} />)
+    const set = rowOf('Main').querySelector('.icon-set') as HTMLElement
+    expect(set).not.toBeNull()
+    expect(within(set).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Move Main up', 'Move Main down', 'Remove Main'])
+    expect(within(set).getByRole('button', { name: 'Move Main up' })).toBeDisabled()
+    const last = rowOf('Side').querySelector('.icon-set') as HTMLElement
+    expect(within(last).getByRole('button', { name: 'Move Side down' })).toBeDisabled()
+    expect(within(last).getAllByRole('button')).toHaveLength(3)
+  })
+  it('the row\'s own children are the text block, the extras (Optional, Who eats it) and the IconSet; the DOM order is handle, text, extras, actions', () => {
+    render(<Harness initial={[main]} />)
+    const row = rowOf('Main')
+    const order = [...row.children].map((c) => c.className.split(' ')[0])
+    expect(order.indexOf('course-picker__text')).toBeGreaterThan(order.indexOf('sortable-handle'))
+    expect(order.indexOf('course-picker__extras')).toBeGreaterThan(order.indexOf('course-picker__text'))
+    expect(order.indexOf('course-picker__actions')).toBeGreaterThan(order.indexOf('course-picker__extras'))
+  })
+  it('the Switch is named "Optional: <Course>" and the pills\' group "Who eats <Course>"', () => {
+    render(<Harness initial={[main, side]} />)
+    expect(within(rowOf('Side')).getByRole('switch', { name: 'Optional: Side' })).toBeInTheDocument()
+    expect(within(rowOf('Side')).getByRole('group', { name: 'Who eats Side' })).toBeInTheDocument()
   })
 })

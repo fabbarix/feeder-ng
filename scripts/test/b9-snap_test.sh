@@ -13,7 +13,7 @@ has() { grep -Eq -- "$2" "$1" && ok || bad "$3"; }
 
 has "$ROOT/internal/backup/backup.go" '^const PreSnapshot1570File = "feeder-pre-1570\.db"' 'backup.go must declare PreSnapshot1570File = "feeder-pre-1570.db"'
 has "$ROOT/internal/backup/backup.go" '^const PreSnapshot1560File = "feeder-pre-1560\.db"' 'backup.go must keep PreSnapshot1560File = "feeder-pre-1560.db"'
-has "$ROOT/internal/db/db.go" 'Pre1570Prefixes *= *\[\]string\{ *"1570_", *"1571_", *"1572_", *"1573_", *"1574_", *"1575_", *"1576_", *"1577_", *"1578_" *\}' 'db.go must declare Pre1570Prefixes listing 1570_ to 1578_'
+has "$ROOT/internal/db/db.go" 'Pre1570Prefixes *= *\[\]string\{ *"1570_", *"1571_", *"1572_", *"1573_", *"1574_", *"1575_", *"1576_", *"1577_", *"1578_", *"1579_" *\}' 'db.go must declare Pre1570Prefixes listing 1570_ to 1579_'
 has "$ROOT/internal/db/db.go" 'Pre1560Prefixes *= *\[\]string\{ *"1560_" *\}' 'db.go must keep Pre1560Prefixes = []string{"1560_"}'
 has "$ROOT/internal/db/db.go" 'func NeedsPre1570Snapshot' 'db.go must declare NeedsPre1570Snapshot'
 has "$ROOT/internal/db/db.go" 'NeedsSnapshotFor\(ctx, d, Migrations\(\), Pre1570Prefixes\)' 'NeedsPre1570Snapshot must be NeedsSnapshotFor over Migrations() and Pre1570Prefixes'

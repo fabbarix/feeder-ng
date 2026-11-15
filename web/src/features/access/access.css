@@ -1,27 +1,58 @@
 /* Access Requests: layout only; colours come from the theme tokens. */
-/* Phone: a request row is the avatar and the text on one line, the actions under the text (right-aligned); title and meta
-   wrap instead of truncating. The Recent activity rows wrap the same way. */
-@media (width < 37.5em) {
-  .access__list .list-row[data-height] {
+/* SET-12: a request row is an R-E row with ListRow's actions slot; the slot already puts Deny and Approve on their own line below
+   35 rem. Below 35 rem the state ("12 days left · asked 2 days ago") takes line 2, under the name, so the name keeps line 1. */
+@container (width < 35rem) {
+  .access__list .list-row[data-actions='true'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+  }
+  .access__list .list-row[data-actions='true'] > .list-row__leading {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .access__list .list-row[data-actions='true'] > .list-row__text {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .access__list .list-row[data-actions='true'] > .list-row__value {
+    display: flex;
     flex-wrap: wrap;
-    block-size: auto;
-    min-block-size: var(--row-min);
-    padding-block: var(--space-2);
+    align-items: baseline;
+    gap: 0 var(--space-1);
+    grid-column: 2;
+    grid-row: 2;
+    min-inline-size: 0;
+    text-align: start;
+    font-size: var(--text-meta-size);
+    line-height: var(--text-meta-line);
   }
-  .access__list .list-row__text {
-    flex: 1 1 10rem;
+  .access__list .list-row[data-actions='true'] > .list-row__value .list-row__sub-value::before {
+    content: '· ';
   }
-  .access__list .list-row__trailing {
-    flex: 1 1 100%;
-    justify-content: flex-end;
+  .access__list .list-row[data-actions='true'] > .list-row__actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin-block-start: var(--space-1);
   }
-  .access__list .list-row__title {
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-  .access__list .list-row__meta {
-    overflow-wrap: anywhere;
-  }
+}
+/* The state's warn tone at 2 days left or fewer (DS-06: warn, never the spoil or danger colours). */
+.access__list .list-row__value [data-tone='warn'] {
+  color: var(--status-warn-fg);
+}
+/* A long email meta takes the lines it needs (it wraps only at its <wbr> pieces), never an ellipsis. */
+.access__list .list-row__meta,
+.access__list .list-row__meta-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+/* EmailText and NameText: nothing breaks inside a piece (no mid-word or hyphen break); a line may end only at a <wbr> between
+   pieces, which the browser still honours inside nowrap. */
+.break-text {
+  white-space: nowrap;
 }
 .access {
   display: grid;
@@ -41,17 +72,13 @@
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
 }
+/* The Approve sheet's body line: its name and email wrap only where a person would (NameText, EmailText). */
 .access__wrap {
-  overflow-wrap: anywhere;
+  min-inline-size: 0;
 }
 .access__muted {
   margin: 0;
   color: var(--color-on-surface-variant);
-}
-.access__error {
-  margin: 0;
-  font-weight: 600;
-  color: var(--color-on-surface);
 }
 .access__actions {
   display: flex;
@@ -69,7 +96,6 @@
   border-radius: var(--radius-tile);
   background: var(--color-surface-container);
   color: var(--color-text);
-  overflow-wrap: anywhere;
 }
 .access__you-name {
   font-weight: 700;

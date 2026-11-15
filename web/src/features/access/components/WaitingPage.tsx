@@ -5,6 +5,7 @@ import { accessStrings } from '../strings'
 import type { WaitingKind, WaitingStatus } from '../types'
 import '../../signin/signin.css'
 import '../access.css'
+import { EmailText } from './BreakText'
 
 export interface WaitingPageProps {
   kind: WaitingKind
@@ -63,7 +64,7 @@ function Body({ kind, status }: WaitingPageProps) {
         <div className="access__you">
           <span className="access__you-label">{text.signedInAs}</span>
           {status.name ? <strong className="access__you-name">{status.name}</strong> : null}
-          <span>{status.email}</span>
+          <EmailText email={status.email} />
         </div>
       ) : null}
       <GoogleLink>{text.otherAccount}</GoogleLink>

@@ -17,8 +17,8 @@ export const householdSettings: HouseholdSettings = {
   quietHours: { start: '22:00', end: '07:00' }, plannerStyle: 0.5, location: { city: 'Turin' }, currency: 'USD',
 }
 
-export const admin: AllowedUser = { id: 1, email: 'admin@example.test', displayName: 'Admin', isAdmin: true }
-export const cook: AllowedUser = { id: 2, email: 'cook@example.test', displayName: 'Cook', isAdmin: false }
+export const admin: AllowedUser = { id: 1, email: 'admin@example.test', displayName: 'Admin', isAdmin: true, signedIn: true }
+export const cook: AllowedUser = { id: 2, email: 'cook@example.test', displayName: 'Cook', isAdmin: false, signedIn: true }
 
 /** R15: four more Members so a Meal Slot can overflow past four pills. */
 export const pia: Member = { id: 4, name: 'Pia', colour: '#f2cc8f', avatar: '', portionFactor: 0.75, userId: null, email: null }

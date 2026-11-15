@@ -142,3 +142,69 @@ func (a *api) restoreMember(w http.ResponseWriter, r *http.Request) {
 	a.changed("members")
 	httpx.WriteJSON(w, http.StatusOK, memberOut(m))
 }
+
+// slotIDsIn is the body of the batch Remove and Put back: {"ids":[…]}.
+type slotIDsIn struct {
+	IDs []int64 `json:"ids"`
+}
+
+// removeSlots removes several Meal Slots at once, all or nothing (B9-42): 204, one household event, which replans once.
+func (a *api) removeSlots(w http.ResponseWriter, r *http.Request) {
+	var in slotIDsIn
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		writeErr(w, err)
+		return
+	}
+	if err := a.st.RemoveSlots(r.Context(), in.IDs); err != nil {
+		writeBatchErr(w, err)
+		return
+	}
+	a.changed("mealSlots")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// restoreSlots puts several removed Meal Slots back at once, all or nothing (B9-42: one Undo for several days, one Put
+// back for a Removed Meal Slots row): 200 {"slots":[…]} in the order asked, one household event.
+func (a *api) restoreSlots(w http.ResponseWriter, r *http.Request) {
+	var in slotIDsIn
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		writeErr(w, err)
+		return
+	}
+	slots, err := a.st.RestoreSlots(r.Context(), in.IDs)
+	if err != nil {
+		writeBatchErr(w, err)
+		return
+	}
+	a.changed("mealSlots")
+	out := make([]any, 0, len(slots))
+	for _, s := range slots {
+		b, err := a.slotOut(r, s)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		out = append(out, b)
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"slots": out})
+}
+
+// writeBatchErr answers a refused batch call, naming what refused it: the slot (`id`) for 404 not_found and 409
+// meal_slot_removed, the days (`weekdays`, `ids`) for 409 meal_slot_name_taken. Anything else as writeErr.
+func writeBatchErr(w http.ResponseWriter, err error) {
+	var se *household.SlotIDError
+	var nt *household.SlotNameTakenError
+	switch {
+	case errors.As(err, &nt):
+		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
+			"code": "meal_slot_name_taken", "message": nt.Message(), "ids": nt.IDs, "weekdays": nt.Weekdays}})
+	case errors.As(err, &se) && errors.Is(err, household.ErrSlotRemoved):
+		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{
+			"code": "meal_slot_removed", "message": "That Meal Slot is already removed.", "id": se.ID}})
+	case errors.As(err, &se) && errors.Is(err, household.ErrNotFound):
+		httpx.WriteJSON(w, http.StatusNotFound, map[string]any{"error": map[string]any{
+			"code": "not_found", "message": "Not found", "id": se.ID}})
+	default:
+		writeErr(w, err)
+	}
+}

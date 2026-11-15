@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { members } from '../components/fixtures'
-import { createSlotsSequentially, slotDraft, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from './slotForm'
+import { dinnerCard, lunchCard } from '../components/mealSlotCardFixtures'
+import { createSlotsSequentially, slotDraft, slotFormDirty, slotFormFromCard, slotFormFromCell, slotProblemField, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from './slotForm'
 
 describe('slotForm', () => {
   it('starts blank on Monday', () => {
@@ -77,5 +78,56 @@ describe('Meal Slots for several weekdays (WP11)', () => {
     const result = await createSlotsSequentially(slotInputsForWeekdays(draft, [1, 2, 3]), create)
     expect(result).toEqual({ created: 1, failedWeekday: 2, error: boom })
     expect(create).toHaveBeenCalledTimes(2)
+  })
+})
+
+// SET-14h, decision SET 5: Edit from an "Every day" card starts with all days of that name; a strip cell starts with that day only.
+describe('slotFormFromCard / slotFormFromCell (SET-14h)', () => {
+  it('an every-day card starts with all seven days chosen, on the card\'s usual slot', () => {
+    expect(slotFormFromCard(dinnerCard)).toEqual({ slot: dinnerCard.editSlot, weekdays: [1, 2, 3, 4, 5, 6, 7] })
+  })
+  it('a card that runs on some days starts with exactly those days (all days of that name)', () => {
+    const weekdaysOnly = { ...dinnerCard, days: [1, 2, 3, 4, 5] }
+    expect(slotFormFromCard(weekdaysOnly).weekdays).toEqual([1, 2, 3, 4, 5])
+  })
+  it('a one-day card starts with its day', () => {
+    expect(slotFormFromCard(lunchCard)).toEqual({ slot: lunchCard.editSlot, weekdays: [7] })
+  })
+  it('the weekdays are a copy: changing them does not change the card', () => {
+    const start = slotFormFromCard(dinnerCard)
+    start.weekdays.pop()
+    expect(dinnerCard.days).toHaveLength(7)
+  })
+  it('a strip cell or a "Differs on" row starts with that day only, even when the name runs every day', () => {
+    const friday = dinnerCard.differences[1]!.slot
+    expect(slotFormFromCell(friday)).toEqual({ slot: friday, weekdays: [5] })
+  })
+})
+
+describe('slotFormDirty', () => {
+  const start = { draft: slotDraft(dinnerCard.editSlot), weekdays: [1, 2, 3] }
+  it('is false for an untouched form, and for the same days in another order', () => {
+    expect(slotFormDirty(start, { draft: { ...start.draft }, weekdays: [3, 1, 2] })).toBe(false)
+  })
+  it('is true after a changed name, time, Attendance, Course or weekday', () => {
+    expect(slotFormDirty(start, { draft: { ...start.draft, name: 'Supper' }, weekdays: start.weekdays })).toBe(true)
+    expect(slotFormDirty(start, { draft: { ...start.draft, time: '20:00' }, weekdays: start.weekdays })).toBe(true)
+    expect(slotFormDirty(start, { draft: { ...start.draft, attendance: [] }, weekdays: start.weekdays })).toBe(true)
+    expect(slotFormDirty(start, { draft: { ...start.draft, courses: [{ id: 9, optional: false, optOutMemberIds: [] }] }, weekdays: start.weekdays })).toBe(true)
+    expect(slotFormDirty(start, { draft: start.draft, weekdays: [1, 2] })).toBe(true)
+  })
+  it('a name with only edge spaces added is not a change', () => {
+    expect(slotFormDirty(start, { draft: { ...start.draft, name: ' Dinner ' }, weekdays: start.weekdays })).toBe(false)
+  })
+})
+
+describe('slotProblemField', () => {
+  it('names the field of the first problem: the name, then the time', () => {
+    expect(slotProblemField({ ...slotDraft(), name: ' ' })).toBe('name')
+    expect(slotProblemField({ ...slotDraft(), name: 'Dinner' })).toBe('time')
+    expect(slotProblemField({ ...slotDraft(), name: 'Dinner', time: '25:00' })).toBe('time')
+  })
+  it('is null when slotProblem is null', () => {
+    expect(slotProblemField({ ...slotDraft(), name: 'Dinner', time: '19:30' })).toBeNull()
   })
 })

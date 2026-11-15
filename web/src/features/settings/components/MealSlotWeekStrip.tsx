@@ -18,7 +18,11 @@ export interface MealSlotWeekStripProps {
 
 const text = settingsStrings.slot
 
-/** The seven days of a card, Monday first: a day the name runs shows its time (an Admin taps it to edit), a free day is a dashed "+" (an Admin adds). */
+/**
+ * The seven days of a card, in week order. SET-08: a day the name runs shows its weekday, and its time only when that differs from
+ * the card's usual time (the dot marks any difference); its accessible name always says the time. An Admin taps a day to edit it.
+ * A free day is a dashed "+" (an Admin adds).
+ */
 export function MealSlotWeekStrip({ name, cells, canEdit, addDisabled = false, locale = documentLocale(), onEdit, onAddOn }: MealSlotWeekStripProps) {
   return (
     <div className="ms-strip" role="group" aria-label={text.weekStripLabel(name)}>
@@ -44,7 +48,7 @@ export function MealSlotWeekStrip({ name, cells, canEdit, addDisabled = false, l
         const body = (
           <>
             <span className="ms-day__name">{short}</span>
-            <span className="ms-day__time">{cell.time}</span>
+            {cell.timeDiffers ? <span className="ms-day__time">{cell.time}</span> : null}
             {cell.differs ? (
               <span className="visually-hidden" id={diffId}>
                 {text.differsFromUsual}
@@ -56,6 +60,8 @@ export function MealSlotWeekStrip({ name, cells, canEdit, addDisabled = false, l
           return (
             <div key={cell.weekday} id={slotAnchorId(cell.slot.id)} tabIndex={-1} className="ms-day" data-state="runs" data-differs={cell.differs || undefined}>
               {body}
+              {/* The time a usual day does not print, for assistive technology (a button says it in its name). */}
+              {cell.timeDiffers ? null : <span className="visually-hidden">{cell.time}</span>}
             </div>
           )
         }

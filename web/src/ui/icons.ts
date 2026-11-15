@@ -97,6 +97,7 @@ import { RecycleIcon } from '@phosphor-icons/react/dist/csr/Recycle'
 import { RobotIcon } from '@phosphor-icons/react/dist/csr/Robot'
 import { ScalesIcon } from '@phosphor-icons/react/dist/csr/Scales'
 import { ShoppingBagOpenIcon } from '@phosphor-icons/react/dist/csr/ShoppingBagOpen'
+import { ShareNetworkIcon } from '@phosphor-icons/react/dist/csr/ShareNetwork'
 import { ShoppingCartIcon } from '@phosphor-icons/react/dist/csr/ShoppingCart'
 import { ShuffleIcon } from '@phosphor-icons/react/dist/csr/Shuffle'
 import { SignOutIcon } from '@phosphor-icons/react/dist/csr/SignOut'
@@ -274,6 +275,7 @@ export const icons = {
   // B9-34: a ticked Shop row that added nothing to Stock (SSP-01), and need that grew since a tick (SSP-02)
   notAdded: MinusCircleIcon,
   moreSince: ArrowBendDownRightIcon,
+  share: ShareNetworkIcon, // B9-52 SET-03: Share sign-in message (the device's share sheet)
 } as const
 
 export type IconName = keyof typeof icons

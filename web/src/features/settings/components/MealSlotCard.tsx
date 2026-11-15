@@ -17,6 +17,8 @@ export interface MealSlotCardProps {
   locale?: string
   /** Admin: "Edit <name>" (card.editSlot), a strip day or a "Differs on" row (that weekday's slot): opens the Meal Slot sheet. */
   onEdit: (slot: MealSlot) => void
+  /** SET-14h: the card's own "Edit <name>" hands over the whole card (the sheet starts with every day of the name). Without it, onEdit(card.editSlot). */
+  onEditCard?: (card: Card) => void
   /** "Nobody attending": an Admin gets the sheet, a plain User the one-date Attendance (the page decides). */
   onFix: (slot: MealSlot) => void
   /** "Change a date for <name>": the one-date Attendance of the card's next run. */
@@ -28,11 +30,11 @@ export interface MealSlotCardProps {
 const text = settingsStrings.slot
 
 /** One Bento tile per Meal Slot name: its usual time and Courses, Attendance only where it differs, the 7-day strip, "Differs on" and the footer. */
-export function MealSlotCard({ card, members, canEdit, addDisabled = false, locale = documentLocale(), onEdit, onFix, onChangeDate, onAddOn }: MealSlotCardProps) {
+export function MealSlotCard({ card, members, canEdit, addDisabled = false, locale = documentLocale(), onEdit, onEditCard, onFix, onChangeDate, onAddOn }: MealSlotCardProps) {
   const editDay = weekdayLongName(card.editSlot.weekday, locale)
   const attendance = card.usualAttendance
   return (
-    <Tile as="section" span={card.span === 'full' ? 'full' : 1} aria-label={card.name} className="ms-card">
+    <Tile as="section" span={1} aria-label={card.name} className="ms-card">
       <div className="ms-card__top">
         <span className="ms-card__badge">
           <Icon name={mealSlotIcon(card.name)} size={24} />
@@ -91,11 +93,11 @@ export function MealSlotCard({ card, members, canEdit, addDisabled = false, loca
       </div>
       <div className="ms-card__foot">
         {canEdit ? (
-          <Button variant="secondary" size="sm" icon="edit" onClick={() => onEdit(card.editSlot)}>
+          <Button variant="secondary" icon="edit" onClick={() => (onEditCard ? onEditCard(card) : onEdit(card.editSlot))}>
             {text.cardEdit(card.name)}
           </Button>
         ) : null}
-        <Button variant="secondary" size="sm" icon="plan" aria-label={text.cardChangeDate(card.name)} onClick={() => onChangeDate(card)}>
+        <Button variant="secondary" icon="plan" aria-label={text.cardChangeDate(card.name)} onClick={() => onChangeDate(card)}>
           {text.changeDateButton}
         </Button>
       </div>

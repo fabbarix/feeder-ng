@@ -167,6 +167,6 @@ describe('MealSlotsPage: plain User', () => {
     routes(USER_ME, { [`GET ${url}`]: { slotId: 12, date: '2026-11-09', isOverride: false, attendance: [], portionsNeeded: 0 } })
     renderWithProviders(<MealSlotsPage />)
     await userEvent.click(await screen.findByRole('button', { name: /^Nobody attending/ }))
-    expect(await screen.findByRole('dialog', { name: 'Lunch on 2026-11-09' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Lunch on Mon 9 Nov' })).toBeInTheDocument()
   })
 })

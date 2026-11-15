@@ -1,4 +1,5 @@
-/* WeekdayPicker (R15): seven toggle chips that fit a 390 px phone (7 x 44 px + 6 x 2 px gap = 320 px). Tokens only. */
+/* WeekdayPicker (R15): seven toggle chips on one row, 8 px apart so they never touch (VC6): about 41 px each in a 375 px sheet,
+   where a coarse pointer gets the 44 px target from each chip's ::after (A11Y-09), never by growing what you see. Tokens only. */
 .weekday-picker {
   display: grid;
   gap: var(--space-1);
@@ -15,7 +16,7 @@
 .weekday-picker__chips {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: var(--space-half);
+  gap: var(--space-2);
 }
 
 .weekday-picker__chip {
@@ -24,7 +25,8 @@
   place-items: center;
   min-block-size: 44px;
   min-inline-size: 0;
-  padding: 0;
+  /* The label sits a little low, clear of the ✓ badge in the top corner. */
+  padding: var(--space-2) 0 0;
   border: 1px solid var(--color-outline);
   border-radius: var(--radius-control);
   background: var(--color-surface);
@@ -38,8 +40,9 @@
 
 .weekday-picker__chip svg {
   position: absolute;
-  inset-block-start: var(--space-half);
-  inset-inline-end: var(--space-half);
+  /* VC6: the ✓ badge sits inside its chip, clear of the border and the corner. */
+  inset-block-start: var(--space-1);
+  inset-inline-end: var(--space-1);
   inline-size: 12px;
   block-size: 12px;
 }
@@ -59,6 +62,16 @@
 /* A11Y-02: on the accent fill of a pressed chip the ring is the on-accent colour, as on any accent container. */
 .weekday-picker__chip[aria-pressed='true'] {
   --focus-ring-color: var(--color-on-accent);
+}
+
+/* A11Y-09: on a coarse pointer each chip's target is at least 44 px wide, centred on it; the 8 px gap keeps the targets apart. */
+@media (pointer: coarse) {
+  .weekday-picker__chip::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline: min(0px, calc(50% - var(--target-min) / 2));
+  }
 }
 
 .weekday-picker__chip:disabled {
