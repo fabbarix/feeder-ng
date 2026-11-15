@@ -1,0 +1,32 @@
+/* B9-26 (PC-01): the What changed sheet. A lede, then each day's heading over its rows (R-E DetailRows on a surface panel). */
+.replan-review {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.replan-review__lede {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+
+.replan-review__day {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.replan-review__heading {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
+  color: var(--color-muted);
+}
+
+/* The detail line, then the first why chip on its own line under it when it does not fit beside it. */
+.replan-review__detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}

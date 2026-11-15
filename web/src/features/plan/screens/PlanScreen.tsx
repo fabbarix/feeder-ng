@@ -8,6 +8,7 @@ import { CouldntPlanNotice } from '../components/CouldntPlanNotice'
 import { DayTile } from '../components/DayTile'
 import { AllCookedSheets } from '../components/AllCookedSheets'
 import { PlannedMealSheet } from '../components/PlannedMealSheet'
+import { ReplanReviewSheet } from '../components/ReplanReviewSheet'
 import { PlanGrid } from '../components/PlanGrid'
 import { PlanLeftovers } from '../components/PlanLeftovers'
 import { LeftoverSheets } from '../../../ui/LeftoverActions/LeftoverSheets'
@@ -18,6 +19,7 @@ import { useCouldntFix } from '../hooks/useCouldntFix'
 import { useCouldntPlanNotice } from '../hooks/useCouldntPlanNotice'
 import { usePlanDays } from '../hooks/usePlanDays'
 import { usePlanScreen } from '../hooks/usePlanScreen'
+import { ReplanMarksContext } from '../hooks/useReplanReview'
 import { courseCells, unplannedOf } from '../lib/couldntGroups'
 import { cookPath } from '../lib/cook'
 import { planStrings } from '../strings'
@@ -76,7 +78,14 @@ export function PlanScreen(): ReactNode {
         title={planStrings.title}
         subtitle={plan.state === 'loading' ? '\u00a0' : range}
         actions={
-          <Button variant="secondary" size="sm" icon="regenerate" loading={actions.regenerating || s.regeneratePreviewing} onClick={() => void s.askRegenerate()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="regenerate"
+            loading={actions.regenerating || s.regeneratePreviewing}
+            disabled={s.offline}
+            onClick={() => void s.askRegenerate()}
+          >
             {planStrings.regenerate}
           </Button>
         }
@@ -94,7 +103,8 @@ export function PlanScreen(): ReactNode {
         </BentoGrid>
       )}
       <PlanLeftovers flow={s.leftovers} />
-      {body}
+      {/* B9-26 (PC-01): the rows the last edit changed read their "was ..." mark from here. */}
+      <ReplanMarksContext.Provider value={s.review.marks}>{body}</ReplanMarksContext.Provider>
       {s.plannedCourseId !== undefined ? (
         <PlannedMealSheet
           open={s.plannedOpen}
@@ -112,8 +122,14 @@ export function PlanScreen(): ReactNode {
           onUnpin={(k) => s.fromSheet(() => void actions.unpin(k))}
           onChoose={(k) => s.fromSheet(() => s.openChoose(k))}
           onOpenLeftover={(id) => s.fromSheet(() => s.leftovers.openDetails(id))}
+          timeZone={s.timeZone}
+          offline={s.offline}
+          onUndoCooked={s.resolvedUndo.onUndoCooked}
+          onUndoNotCooked={s.resolvedUndo.onUndoNotCooked}
+          onCookedAfterAll={s.resolvedUndo.onCookedAfterAll}
         />
       ) : null}
+      <ReplanReviewSheet controller={s.review} />
       <LeftoverSheets flow={s.leftovers} />
       <AllCookedSheets flow={s.allCooked} />
       <SlotDateSheets controller={s.slotDate} />

@@ -9,12 +9,14 @@ import { courseKey, courseOf, slotCourses } from '../lib/courses'
 import { relaxedLine } from '../lib/relaxed'
 import { weekdayName } from '../lib/phrase'
 import { mayCook, mayResolve } from '../lib/resolve'
+import { resolvedActionLabel, resolvedActions, resolvedHint, resolvedSummary } from '../lib/resolved'
 import { planStrings as s } from '../strings'
 import type { PlanSlot, SlotDayKey, SlotKey } from '../types'
 import { BoughtLine } from './BoughtLine'
 import { PlanChipView } from './PlanChipView'
 import { RuleWarningLine } from './RuleWarningLine'
 import '../plan.css'
+import './PlannedMealSheet.resolved.css'
 
 export interface PlannedMealSheetProps {
   open: boolean
@@ -42,8 +44,8 @@ export interface PlannedMealSheetProps {
   /** B5-LOW: the "From Mon's Chilli" link of a meal served from a Leftover opens that Leftover (its id). */
   onOpenLeftover?: (leftoverId: number) => void
   /**
-   * B9-26 (SAFE-03). TEST-AUTHOR STUB: declared, not drawn. The Household's IANA zone, for the time of day of "Marked Cooked today at 08:40"
-   * (left out when absent); the Undo actions of a Cooked or Not cooked meal (`meal.resolution`); `offline` hides them.
+   * B9-26 (SAFE-03). The Household's IANA zone, for the time of day of "Marked Cooked today at 08:40" (left out when absent); the
+   * Undo actions of a Cooked or Not cooked meal (`meal.resolution`) until the end of the household day; `offline` hides them.
    */
   timeZone?: string
   offline?: boolean
@@ -74,6 +76,11 @@ export function PlannedMealSheet({
   onAddRecipes = () => {},
   onReviewVarietyRules = () => {},
   onOpenLeftover,
+  timeZone,
+  offline = false,
+  onUndoCooked,
+  onUndoNotCooked,
+  onCookedAfterAll,
 }: PlannedMealSheetProps): ReactNode {
   const course = slot ? courseOf(slot, courseId) : undefined
   const meal = course?.meal ?? null
@@ -118,6 +125,18 @@ export function PlannedMealSheet({
           </Button>,
         ].filter((a) => a !== null)
       : []
+  // B9-26 (SAFE-03): a Cooked or Not cooked meal says how it was marked and offers its Undo (none offline, none once it cannot be undone).
+  const resolution = !planned ? meal?.resolution : undefined
+  const handlers = { undoCooked: onUndoCooked, undoNotCooked: onUndoNotCooked, cookedAfterAll: onCookedAfterAll }
+  const undoActions =
+    key && slot && resolution && !offline
+      ? resolvedActions(resolution).map((a) => (
+          <Button key={a.id} variant={a.primary ? 'primary' : 'secondary'} icon={a.primary ? 'markCooked' : 'undo'} onClick={() => handlers[a.id]?.(key)}>
+            {resolvedActionLabel(a, slot, key.courseId)}
+          </Button>
+        ))
+      : []
+  if (undoActions.length > 0) actions.push(...undoActions)
 
   return (
     <BottomSheet
@@ -150,6 +169,12 @@ export function PlannedMealSheet({
             ))}
             {overflow > 0 ? <Chip kind="count">{`+${overflow}`}</Chip> : null}
           </div>
+          {resolution ? (
+            <>
+              <p className="plan-sheet__resolved">{resolvedSummary(resolution, { today, timeZone })}</p>
+              <p className="plan-sheet__undo-hint">{resolvedHint(resolution, { today })}</p>
+            </>
+          ) : null}
           <BoughtLine bought={meal.bought} />
           <RuleWarningLine warning={meal.warning} context={warningContextOf(slot, meal, course?.name)} />
           {line ? (
