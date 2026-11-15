@@ -38,7 +38,8 @@ export function leaveDialog(what: string, isNew = false): ConfirmOptions {
     body: isNew ? leaveGuardStrings.leadNew(what) : leaveGuardStrings.lead(what),
     note: isNew ? leaveGuardStrings.noteNew : leaveGuardStrings.note,
     tone: 'danger',
-    icon: 'warning',
+    // the safe-01 mock draws the circled exclamation (WarningCircle, icon 'error'), not the trash of a delete
+    icon: 'error',
     cancelLabel: leaveGuardStrings.keep,
     confirmLabel: leaveGuardStrings.discard,
   }

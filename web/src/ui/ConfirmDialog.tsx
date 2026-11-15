@@ -43,7 +43,7 @@ export interface ConfirmOptions {
    * loses nothing ("Mark as Cooked?"); a danger confirm ignores it.
    */
   focus?: 'cancel' | 'confirm'
-  /** The status icon over the title. Default: none, or `delete` in the danger tone ("Leave without saving?" passes `warning`). */
+  /** The status icon over the title. Default: none, or `delete` in the danger tone ("Leave without saving?" passes `error`, the circled exclamation). */
   icon?: IconName
 }
 

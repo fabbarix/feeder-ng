@@ -260,3 +260,11 @@ describe('the page title takes focus even when it is a plain <h1>', () => {
     expect(screen.getByLabelText('Name')).not.toHaveFocus()
   })
 })
+
+// B9-18 review: the approved safe-01 mock draws the circled exclamation over the title (icon 'error'), not the trash of a delete.
+describe('the leave dialog icon', () => {
+  it('is the circled exclamation the safe-01 mock draws', async () => {
+    const { leaveDialog } = await import('./useLeaveGuard')
+    expect(leaveDialog('Pasta al pomodoro').icon).toBe('error')
+  })
+})
