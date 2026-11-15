@@ -1,10 +1,13 @@
-/* Toast (docs/design/ui-fix-plan.md 4.8, DS-12 R-D): inverse surface, radius --radius-button, max-width 420, stack of 2. Tokens only.
-   The region sits above the bottom bar: its top edge (--nav-top, zero from 1024, where the viewport edge is the bottom) plus a gap.
-   On a page with a sticky action bar it is lifted by the bar's room too (FU-1), so a toast never covers Save or Start Cook Mode. */
+/* Toast (docs/design/ui-fix-plan.md 4.8, DS-12 R-D): inverse surface, radius --radius-button, max-width 420. Tokens only.
+   SAFE R1 (B9-18): one toast per lane (ordinary, error, sticky, Undo), so at most one of each shows; an error sits on top.
+   The region sits above the bottom bar (--nav-top, zero from 1024, where the viewport edge is the bottom) and the on-screen
+   keyboard (--keyboard-inset, set by the shell), plus a gap. On a page with a sticky action bar it is lifted by the bar's room
+   too (FU-1), so a toast never covers Save or Start Cook Mode. SSP-12: while the Price keypad is open, toasts are held
+   (useToast().hold), never lifted into the priced row's band. */
 .toast-region {
   position: fixed;
   inset-inline: var(--space-4);
-  bottom: calc(var(--nav-top) + var(--space-3));
+  bottom: calc(var(--nav-top) + var(--keyboard-inset) + var(--space-3));
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -13,15 +16,7 @@
 }
 
 html:has(.sticky-action-bar) .toast-region {
-  bottom: calc(var(--nav-top) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--space-3));
-}
-
-/* A phone with a non-modal half sheet open (the Price keypad beside the Scanned list): the toast sits above the sheet, so
-   "Added … · Undo" never covers its keys. The height is the half sheet's (BottomSheet.css). */
-@media (width < 48em) {
-  html:has(.sheet[data-modal='false'][data-size='half']) .toast-region {
-    bottom: calc(max(50dvh, min(480px, 85dvh)) + var(--space-3));
-  }
+  bottom: calc(var(--nav-top) + var(--keyboard-inset) + var(--page-gutter) + var(--sticky-bar-clearance) + var(--space-3));
 }
 
 /* Both live regions stay mounted; an empty one takes no room. */
@@ -38,11 +33,12 @@ html:has(.sticky-action-bar) .toast-region {
 }
 
 /* DS-12 R-D: the toast. Inverse surface, radius --radius-button. A one-sentence toast is one line (title, actions, Dismiss);
-   a toast with detail stacks a headline, a muted subline, the body and its actions, with Dismiss top-aligned. */
+   a toast with detail, or with two actions, stacks a headline, a muted subline, the body and its actions. Dismiss is
+   top-aligned in both: level with the headline, never centred on a wrapped row of actions (R-D+). */
 .toast {
   pointer-events: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
   inline-size: 100%;
   max-width: 420px;
@@ -57,8 +53,9 @@ html:has(.sticky-action-bar) .toast-region {
   animation: toast-in var(--dur-2) var(--ease-out);
 }
 
-.toast[data-layout='stack'] {
-  align-items: flex-start;
+/* An action that only closes the toast ("Later") replaces Dismiss: no empty column, the content takes the width. */
+.toast[data-dismiss='none'] {
+  padding-inline-end: var(--space-4);
 }
 
 .toast__content {
@@ -96,6 +93,11 @@ html:has(.sticky-action-bar) .toast-region {
 
 .toast__title > svg {
   flex: none;
+}
+
+/* The headline row is as tall as Dismiss (32 px), so the two share a centre line when the actions wrap under it. */
+.toast[data-layout='line'] .toast__title {
+  min-block-size: var(--space-8);
 }
 
 .toast__title-text {
@@ -183,10 +185,6 @@ html:has(.sticky-action-bar) .toast-region {
   color: var(--color-bg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-bg) 55%, transparent);
   cursor: pointer;
-}
-
-.toast[data-layout='line'] .toast__dismiss {
-  align-self: center;
 }
 
 .toast__dismiss::after {
