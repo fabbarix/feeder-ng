@@ -2,22 +2,26 @@
 import { crumbsFor } from './breadcrumbs'
 import type { PrimaryNavItem } from './nav'
 
-/** Plan and Settings own their sub-pages (/plan/..., /settings/...); the other destinations match exactly. */
-const OWNS_SUBPAGES = new Set(['plan', 'settings'])
-
 const normalise = (pathname: string): string => {
   const path = pathname.replace(/[?#].*$/, '')
   return path.length > 1 ? path.replace(/\/+$/, '') || '/' : path
 }
 
 /**
- * True when `item` is the current destination at `pathname`: its own path (and, for Plan and Settings, anything under it), or a
- * page whose breadcrumb trail starts at it. So the Catalogue pages (/ingredients, /products, /supplies and their entities, under
- * Settings > Catalogue) make Settings current, and never leave the accent Scan button looking like the current one.
+ * True when `item` is the current destination at `pathname`: its own path, anything under it (TB-13: every destination but Today
+ * owns its sub-pages, so the Recipe page and the editor make Recipes current), or a page whose breadcrumb trail starts at it. So the
+ * Catalogue pages (/ingredients, /products, /supplies and their entities, under Settings > Catalogue) make Settings current, and
+ * never leave the accent Scan button looking like the current one. Today is current on "/" only.
  */
 export function isCurrentNav(item: Pick<PrimaryNavItem, 'id' | 'path'>, pathname: string): boolean {
   const path = normalise(pathname)
   if (path === item.path) return true
-  if (OWNS_SUBPAGES.has(item.id) && path.startsWith(`${item.path}/`)) return true
-  return OWNS_SUBPAGES.has(item.id) && crumbsFor(path)[0]?.to === item.path
+  if (item.path === '/') return false
+  if (path.startsWith(`${item.path}/`)) return true
+  return crumbsFor(path)[0]?.to === item.path
+}
+
+/** The current primary destination at `pathname`, or undefined (an unknown page). */
+export function currentNavOf<T extends Pick<PrimaryNavItem, 'id' | 'path'>>(items: readonly T[], pathname: string): T | undefined {
+  return items.find((item) => isCurrentNav(item, pathname))
 }

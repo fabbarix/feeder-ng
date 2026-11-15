@@ -31,7 +31,7 @@
 //      Scan's centre is the bar's centre (within 1 px); the active pill (the current page's .bottom-bar__icon squircle) sits at least the gap between
 //      items, and 4 px, from the bar's inner edge (Today current on /, Settings current on /settings); the squircles are 40 x 40 and 6 px inside the bar;
 //      no label is clipped, wrapped or wider than its button where labels show, and (also at 376 px, the narrowest labelled width) every label keeps
-//      8 px from the bar's straight inner edge, 3 px from its rounded ends (int1), and 4 px from its neighbour's label. At 375 px the bar is icons only (A1).
+//      8 px from the bar's straight inner edge and from its rounded ends (B9-49: the labelled band's smaller end radius), and 4 px from its neighbour's label. At 375 px the bar is icons only (A1).
 //      USER (w2c) rings, on / and /scan (Scan current) at 375, 376, 390 and 430: each link, focused in turn, rings its 40 px squircle only
 //      (no ring on the link); the focus ring and the current Scan's outline stay 2 px inside the bar's inner outline, 1.5 px off every
 //      label and 1.5 px off each other (a neighbour's ring), and the focused label turns accent text.
@@ -469,14 +469,13 @@ for (const scheme of ['light', 'dark']) {
         if (vp.width > 375 && l.iconsOnly) fail(`${tag}: label "${l.text}" is hidden above 375 px (A1)`)
       }
       // B9-19 review: a label keeps 8 px from the bar's straight inner edge and 4 px from its neighbour's label.
-      // int1 (main-session call to confirm): since the USER w2c bar geometry (labels 6 px under the 40 px squircle, the bar 70 px tall
-      // with 24 px ends) an end label's lower corner sits in the rounded end: "Settings" is 14.6 px from the straight edge but 3.8 px
-      // (376) to 4.8 px (390) from the curve at its line box's corner. The bar has no room to give 8 px there (wider end padding breaks
-      // the 4 px label gap at 376; raising the labels breaks the ring clearances), so the rounded end asks for 3 px clear, not 8.
+      // Since the USER w2c bar geometry (labels 6 px under the 40 px squircle) an end label's lower corner sits low in the bar; with 24 px
+      // ends it was 3.8 px (376) to 4.8 px (390) from the curve (int1). B9-49 gives the labelled band (376 px to 37.5em) the smaller end
+      // radius --radius-nav-compact, so the rounded end asks for the same 8 px as the straight edge.
       const labelled = n.links.filter((x) => !x.iconsOnly && x.label)
       for (const l of [labelled[0], labelled.at(-1)].filter(Boolean)) {
         if (l.labelStraightRoom < 8 - 0.5) fail(`${tag}: label "${l.text}" is ${l.labelStraightRoom.toFixed(1)} px from the bar's inner edge, less than 8`)
-        if (l.labelEdgeRoom < 3 - 0.5) fail(`${tag}: label "${l.text}" is ${l.labelEdgeRoom.toFixed(1)} px from the bar's rounded end, less than 3`)
+        if (l.labelEdgeRoom < 8 - 0.5) fail(`${tag}: label "${l.text}" is ${l.labelEdgeRoom.toFixed(1)} px from the bar's rounded end, less than 8`)
       }
       for (let i = 1; i < labelled.length; i++) {
         const space = labelled[i].label.left - labelled[i - 1].label.right
