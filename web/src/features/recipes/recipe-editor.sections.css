@@ -97,6 +97,7 @@
 .recipe-planning__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 7rem));
+  align-items: start; /* a field's error under it never stretches its neighbour's box */
   gap: var(--space-3);
   min-inline-size: 0;
 }
