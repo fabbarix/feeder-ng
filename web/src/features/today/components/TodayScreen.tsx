@@ -54,6 +54,7 @@ import { courseCells } from '../../plan/lib/couldntGroups'
 import { AdvanceStepsTile } from './AdvanceStepsTile'
 import { MetricStrip } from './MetricStrip'
 import { SetupChecklistTile } from './SetupChecklistTile'
+import { SetupSheets } from './SetupSheets.lazy'
 import { ShoppingSessionTile } from './ShoppingSessionTile'
 import { TodayView } from './TodayView'
 import { UseSoonTile } from './UseSoonTile'
@@ -211,7 +212,7 @@ export function TodayScreen(): ReactElement {
       />
     ),
     couldntPlan: <CouldntPlanNotice groups={notice.groups} onFix={fixCouldnt} onShowMeals={fixSheets.openMeals} span="full" />,
-    setup: <SetupChecklistTile checklist={setup.checklist} onAction={setup.goTo} isAdmin={isAdmin} />,
+    setup: <SetupChecklistTile checklist={setup.checklist} zoneRows={setup.zoneRows} actions={setup.actions} isAdmin={isAdmin} busy={setup.busy} sheetOpen={setup.sheet !== null} />,
     leftovers: <LeftoversTile leftovers={data.leftovers} today={data.planToday} flow={leftovers.flow} tone={leftovers.tile.tone} />,
     useSoon: <UseSoonTile items={data.useSoon} system={data.system} onOpenLot={setOpenLotId} />,
     shopping: shopping ? (
@@ -316,6 +317,15 @@ export function TodayScreen(): ReactElement {
       <LeftoverSheets flow={leftovers.flow} />
       <AllCookedSheets flow={sheets.allCooked} notice={false} />
       <SlotDateSheets controller={slotDate} />
+      {/* B9-53 (TB-06): the sheets the setup checklist opens over Today (loaded on demand). */}
+      <SetupSheets
+        sheet={setup.sheet}
+        closeSheet={setup.closeSheet}
+        memberCaption={setup.memberCaption}
+        sheets={setup.sheets}
+        pickZone={setup.pickZone}
+        setUpByHand={setup.setUpByHand}
+      />
     </>
   )
 }

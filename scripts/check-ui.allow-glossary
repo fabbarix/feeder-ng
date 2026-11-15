@@ -66,3 +66,6 @@ web/src/ui/fields/strings.ts unit  # durationUnit: the accessible name of Durati
 # (TB-12, decision TB 5); "Next meal" names the hero tile in "Next meal couldn't be shown." (RES-09), the tile, not a Planned Meal.
 web/src/features/today/strings.ts done  # Advance Step state and Done shopping (TB-02, TB-12), not a Planned Meal
 web/src/features/today/strings.ts meal  # "Next meal", the hero tile's name in its crash notice (RES-09)
+
+# "hidden" meaning the first-run checklist is out of view on Today (TB-06 "Hide for now", setupHidden), not an Archived Recipe, Product or Course.
+web/src/features/today/strings.ts hidden  # B9-53 (TB-06): the toast "Setup checklist hidden" after Hide for now

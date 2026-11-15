@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { todayApi } from '../api'
 import { composeToday } from '../lib/compose'
-import { needsSetup } from '../lib/setup'
+import { needsSetup, setupCompact } from '../lib/setup'
 import { useTodayPlan, useTodayStock } from '../seams'
 import { useShoppingSession } from '../shoppingSeam'
 import { useLinesToGet } from '../shopSeam'
@@ -42,6 +42,7 @@ export function useToday(): UseToday {
     toConfirm: plan.toConfirm,
     couldntPlan: plan.couldntPlan,
     needsSetup: needsSetup(setup.facts),
+    setupCompact: setupCompact(setup.facts),
     leftovers: plan.leftovers,
     useSoon: stock.useSoon.length,
     streakDays: streak.days,

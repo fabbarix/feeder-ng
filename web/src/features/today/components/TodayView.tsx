@@ -77,7 +77,7 @@ export function TodayView({
   const all = layout.tiles.map((t) => t.id).filter((id) => Boolean(tiles[id]))
   const shown = holding ? all.filter((id) => TOP.includes(id)) : all
   const aside = (layout.aside ?? []).filter((id) => shown.includes(id))
-  const halves = halfTiles(shown)
+  const halves = halfTiles(shown, { setupCompact: layout.setupCompact === true })
   const slot = (id: TileId) => (
     <div
       key={id}
@@ -85,6 +85,8 @@ export function TodayView({
       data-tile={id}
       data-half-last-2={id === halves.two.at(-1) ? 'true' : undefined}
       data-half-last-3={id === halves.three.at(-1) ? 'true' : undefined}
+      data-half-alone-2={halves.alone2.includes(id) ? 'true' : undefined}
+      data-compact={id === 'setup' && layout.setupCompact === true ? 'true' : undefined}
     >
       <TileErrorBoundary title={tileTitle(id)} queryKeys={tileQueryKeys(id)}>
         {tiles[id]}

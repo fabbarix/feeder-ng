@@ -153,8 +153,13 @@
   .today__slot[data-tile='spoiled'] > .tile-boundary > * {
     grid-column: auto;
   }
-  /* No half-width orphan: an odd last half tile takes the row. */
-  .today__grid[data-halves-odd='true'] .today__slot[data-half-last-2='true'] > .tile-boundary > * {
+  /* B9-53 (TB-06): the compact setup checklist is a half tile. */
+  .today__slot[data-tile='setup'][data-compact='true'] > .tile-boundary > * {
+    grid-column: auto;
+  }
+  /* No half-width orphan: an odd last half tile takes the row, and so does a half tile alone before a full row (B9-53). */
+  .today__grid[data-halves-odd='true'] .today__slot[data-half-last-2='true'] > .tile-boundary > *,
+  .today__slot[data-tile][data-half-alone-2='true'] > .tile-boundary > * {
     grid-column: 1 / -1;
   }
 }
@@ -195,7 +200,8 @@
   }
   /* The 2-track rule above does not apply here. Rows of three: a last row of one tile is as wide as To confirm (two tracks); a last
      row of two sits under the hero's two tracks, beside the aside's column. */
-  .today__grid[data-halves-odd='true'] .today__slot[data-half-last-2='true'] > .tile-boundary > * {
+  .today__grid[data-halves-odd='true'] .today__slot[data-half-last-2='true'] > .tile-boundary > *,
+  .today__slot[data-tile][data-half-alone-2='true'] > .tile-boundary > * {
     grid-column: auto;
   }
   .today__grid[data-halves-3-rest='1'] .today__slot[data-half-last-3='true'] > .tile-boundary > * {
@@ -389,43 +395,230 @@
   margin-block-start: var(--space-3);
 }
 
-/* R13: the first-run setup checklist. The title keeps a gap from the progress line, steps are spaced apart, the action
-   sits under its step on a phone and right next to it on a wide screen, never at the far edge. */
-.today__setup-title {
-  margin-bottom: 0;
+/* ---- B9-53 (TB-06, mocks tb-06-step1..5): the first-run checklist. A soft tile: the tile header (sparkle on a surface disc, the "N of 5"
+   count), a progress bar, then five numbered steps as rows (R-E). Done steps show a tick and their summary; the current step is expanded and
+   holds the only controls; later steps are muted. After the first plan it is compact: one sentence and two secondary buttons. ---- */
+.setup-tile .tile-header__badge[data-tone='neutral'] {
+  background: var(--color-surface);
+  color: var(--color-accent-text);
 }
-.today__setup {
-  margin-top: var(--space-4);
-  gap: var(--space-4);
+.setup-tile .tile-header .chip[data-kind='count'] {
+  background: var(--color-surface);
 }
-.today__setup-step {
+.setup-progress {
+  block-size: 0.375rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  overflow: hidden;
+}
+.setup-progress > span {
+  display: block;
+  block-size: 100%;
+  background: var(--status-success-fg);
+  border-radius: inherit;
+}
+.setup-steps {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
+}
+.setup-step {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-start: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.setup-step:first-child {
+  border-block-start: 0;
+}
+.setup-step__mark {
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: var(--radius-pill);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: var(--text-meta-size);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+}
+.setup-step[data-state='done'] .setup-step__mark {
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
+  box-shadow: inset 0 0 0 1px var(--status-success-fg);
+}
+.setup-step[data-state='current'] .setup-step__mark {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: none;
+}
+.setup-step__text {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  align-content: center;
+  min-block-size: 2rem;
+}
+.setup-step[data-state='current'] .setup-step__text {
+  gap: var(--space-2);
+}
+.setup-step__label {
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: 700;
+}
+.setup-step[data-state='todo'] .setup-step__label {
+  color: var(--color-muted);
+}
+.setup-step__sub,
+.setup-step__ask,
+.setup-note {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+.setup-step__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
+}
+.setup-step__actions .button {
+  white-space: nowrap;
+}
+/* R-E: the detected settings, set directly on the soft tint, separated by a 1 px line at 18 %. Key and state (body-strong) on one line,
+   the muted detail on one line under the key, Change at the end of the detail line; nothing wraps beside Change. */
+.setup-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.setup-fact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'key state' 'detail change';
   column-gap: var(--space-3);
-  row-gap: var(--space-2);
+  row-gap: var(--space-half);
+  align-items: center;
+  padding-block: var(--space-2);
+  border-block-start: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
 }
-.today__setup-step[data-done='true'] .today__row {
-  color: var(--color-on-surface-variant, inherit);
+.setup-fact:first-child {
+  border-block-start: 0;
 }
-.today__setup-step > .today__setup-action,
-.today__setup-step > .chip,
-.today__setup-step > .today__hint {
-  grid-column: 2;
-  justify-self: start;
+.setup-fact:not([data-change]) {
+  grid-template-areas: 'key state' 'detail detail';
 }
-@media (min-width: 48em) {
-  .today__setup-step {
-    grid-template-columns: auto minmax(0, 28rem) auto;
-    justify-content: start;
-    align-items: center;
-    column-gap: var(--space-4);
-  }
-  .today__setup-step > .today__setup-action,
-  .today__setup-step > .chip,
-  .today__setup-step > .today__hint {
-    grid-column: 3;
-  }
+.setup-fact__key {
+  grid-area: key;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: 700;
+}
+.setup-fact__state {
+  grid-area: state;
+  text-align: end;
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.setup-fact__detail {
+  grid-area: detail;
+  min-inline-size: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.setup-fact__change {
+  grid-area: change;
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+.setup-count {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: 700;
+}
+/* Step 4: three outlined 56 px row-buttons, side by side where each gets 14 rem. */
+.setup-ways {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+}
+.setup-way {
+  box-sizing: border-box;
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-block-size: 3.5rem;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-outline);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  text-align: start;
+  cursor: pointer;
+}
+.setup-way:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
+}
+.setup-way:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.setup-way__icon {
+  flex: none;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: var(--radius-chip);
+  display: grid;
+  place-items: center;
+  background: var(--color-surface-2);
+  color: var(--color-accent-text);
+}
+.setup-way__text {
+  display: grid;
+  min-inline-size: 0;
+}
+.setup-way__label {
+  font-size: var(--text-body-strong-size);
+  line-height: var(--text-body-strong-line);
+  font-weight: 700;
+}
+.setup-way__detail {
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  color: var(--color-muted);
+}
+/* Step 1's Change: the picker sheet's one line above its Select. */
+.setup-picker__lead {
+  margin: 0 0 var(--space-3);
+  color: var(--color-muted);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+}
+/* Compact (mock step 5): the sentence under the bar, then Add a Recipe and Hide for now. */
+.setup-tile--compact .setup-tile__lead {
+  margin-block-start: var(--space-3);
+}
+.setup-tile--compact .setup-step__actions {
+  margin-block-start: var(--space-3);
 }
 
 /* B9-44 (ruling 7: nothing is cut): in a narrow track a tile title takes a second line rather than an ellipsis ("Throw out or keep?"
