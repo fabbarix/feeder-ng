@@ -69,11 +69,21 @@ export function toRule(v: RuleFormValues): WeightRule | null {
   return rule
 }
 
-/** The message to show: strings.errNumber, else `validateRule`'s reason; null when the rule is fine. */
+/** A scan-library reason as a sentence: our own wording when we have one, else capitalised with a full stop. */
+function ruleMessage(reason: string, field: string | undefined): string {
+  if (field === 'prefix') return strings.errPrefix
+  const known = strings.ruleMessages[reason]
+  if (known) return known
+  const sentence = reason.charAt(0).toUpperCase() + reason.slice(1)
+  return sentence.endsWith('.') ? sentence : `${sentence}.`
+}
+
+/** The message to show (SAFE-04): strings.errNumber, else `validateRule`'s reason as a sentence; null when the rule is fine. */
 export function ruleFormError(v: RuleFormValues): string | null {
   const rule = toRule(v)
   if (rule === null) return strings.errNumber
-  return validateRule(rule)
+  const reason = validateRule(rule)
+  return reason === null ? null : ruleMessage(reason, ruleProblem(rule)?.field)
 }
 
 /** The field the validation reason is about (to mark it invalid and focus it); null when the rule is fine. */

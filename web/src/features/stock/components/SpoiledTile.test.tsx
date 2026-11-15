@@ -18,7 +18,7 @@ describe('SpoiledTile', () => {
     expect(container.querySelector('.tile')).toHaveAttribute('data-span', 'full')
   })
 
-  it('asks "Throw out or keep?" in a danger status Tile and lists each lot', () => {
+  it('asks "Throw out or keep?" in a spoil status Tile and lists each lot', () => {
     render(
       <SpoiledTile
         today={today}
@@ -30,10 +30,10 @@ describe('SpoiledTile', () => {
     expect(screen.getByText('Throw out or keep?')).toBeInTheDocument()
     expect(screen.getByText('Chicken thighs')).toBeInTheDocument()
     // L-07: each lot is a ListRow; the meta line carries the amount and the go-off wording.
-    expect(screen.getByText('200 g · Went off 3 days ago')).toBeInTheDocument()
-    expect(screen.getByText('1 l · Went off today')).toBeInTheDocument()
+    expect(screen.getByText('Went off 3 days ago · 200 g')).toBeInTheDocument()
+    expect(screen.getByText('Went off today · 1 l')).toBeInTheDocument()
     expect(screen.getByText('Milk')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Throw out or keep?' })).toHaveAttribute('data-status', 'danger')
+    expect(screen.getByRole('region', { name: 'Throw out or keep?' })).toHaveAttribute('data-status', 'spoil')
   })
 
   it('capitalises names for display only; the button names keep the stored name', () => {
@@ -52,7 +52,7 @@ describe('SpoiledTile', () => {
     expect(onKeep).toHaveBeenCalledWith(12)
   })
 
-  it('is a danger status Tile using the status tokens, with no legacy tone', () => {
+  it('is a status Tile (spoil: food going off, DS-06) using the status tokens, with no legacy tone', () => {
     render(<SpoiledTile today={today} lots={[makeLot()]} onThrowOut={() => {}} onKeep={() => {}} />)
     const tile = screen.getByRole('region', { name: 'Throw out or keep?' })
     expect(tile).toHaveAttribute('data-variant', 'status')

@@ -70,6 +70,10 @@ interface ImagePickerCommon {
   aspect?: CropAspect
   /** Offer the Crop button next to Rotate. Default true. */
   crop?: boolean
+  /** B9-30: the small picker of an entity page's last tile: a 72 px Thumb, "Choose a file" / "Take photo", or "Change" / "Remove". */
+  compact?: boolean
+  /** With `compact`: the name the empty Thumb takes its monogram letter from (default: the label). */
+  monogram?: string
   /** Preview size. Default `hero`. */
   size?: 'hero' | 72
   deps?: Partial<ImagePickerDeps>

@@ -4,5 +4,12 @@
 # food, with B9-44).
 web/src/ui/Gallery.tsx   # the primitives Gallery shows every tone as a specimen, spoil and danger included
 web/src/ui/GalleryOverlays.tsx   # the Gallery's overlay specimens show the danger confirm dialogs (a loss)
+web/src/features/stock/components/SpoiledTile.tsx   # B9-29: "Throw out or keep?" is food that has gone off (the spoil tile, DS-06)
+web/src/features/stock/components/LotList.tsx   # B9-29: a Lot's Went off / Use soon chip is food going off (spoil)
+web/src/features/stock/components/LotSheet.tsx   # B9-29: Delete a Stock Lot asks in a danger confirm, a destructive loss
+web/src/features/stock/screens/StoragePlacesScreen.tsx   # B9-29: Delete a Storage Place asks in a danger confirm, a destructive loss
+web/src/features/products/hooks/useProductActions.ts   # B9-30 (SAFE-02): Delete Product is a loss; its confirm keeps the danger tone
+web/src/features/products/screens/ProductScreen.tsx   # B9-30: the header menu's Delete Product item is a loss (danger tone; its confirm keeps danger too)
+web/src/features/shops/screens/ShopScreen.tsx   # B9-30 (SAFE-02): the Delete Shop confirm is a loss and keeps the danger tone
 web/src/features/import/components/StartOverButton.tsx   # the Start over confirm loses every answer given so far: a destructive confirm keeps its danger tone (main-session ruling, B9-28)
 web/src/features/recipes/lib/editorExit.ts   # B9-31: "Discard your changes?" is a destructive confirm (the changes are lost), danger as R1 and the safe-06 mock draw it

@@ -31,6 +31,7 @@ export function ProductList({ products, system = 'metric', showingArchived = fal
             leading={<Thumb name={p.name} imageUrl={p.imageUrl} size={40} />}
             chevron
             href={`/products/${p.id}`}
+            metaLines={2}
             trailing={p.archived ? <Chip kind="tag">{strings.archivedChip}</Chip> : undefined}
           />
         )

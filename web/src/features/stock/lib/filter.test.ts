@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeTotal } from '../testData'
-import { filterTotals, goOffPhrase, isDue, rowMeta } from './filter'
+import { filterTotals, goOffPhrase, isDue, rowMeta, rowMetaCompact } from './filter'
 
 const today = '2026-11-09' // a Monday
 
@@ -65,5 +65,16 @@ describe('isDue', () => {
     expect(isDue(makeTotal({ useSoon: true }))).toBe(true)
     expect(isDue(makeTotal({ spoiledCount: 1 }))).toBe(true)
     expect(isDue(makeTotal())).toBe(false)
+  })
+})
+
+// B9-29 (SSP-05): a narrow By Ingredient row shows the status alone, so it is never cut.
+describe('rowMetaCompact', () => {
+  const today = '2026-11-08'
+  it('is the status alone, capitalised, when the item is due', () => {
+    expect(rowMetaCompact(makeTotal({ lotCount: 2, spoiledCount: 1, nextGoesOff: '2026-11-04' }), today)).toBe('Went off 3 days ago')
+  })
+  it('is empty when nothing is due', () => {
+    expect(rowMetaCompact(makeTotal({ useSoon: false, spoiledCount: 0 }), today)).toBe('')
   })
 })

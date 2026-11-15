@@ -1,9 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../lib/http'
+import { useUndoToast } from '../../../ui'
+import { shopBarcodeBodyOf } from '../lib/shopBarcodeForm'
+import { strings } from '../strings'
 import { useScreenState } from '../../../app/useScreenState'
 import type { ScreenState } from '../../../lib/dataState'
 import { shopsApi, type RuleBody } from '../api'
-import type { Shop, ShopBarcode, ShopLocation, ShopRule } from '../types'
+import type { Shop, ShopBarcode, ShopImpact, ShopLocation, ShopRule } from '../types'
 
 export interface UseShop {
   /** B9-20 (RES-02): the state of the Shops list the Shop is read from (ready with no Shop: it does not exist). */
@@ -25,14 +28,20 @@ export interface UseShop {
   deleteRule: (id: number) => Promise<void>
   addBarcode: (body: Parameters<typeof shopsApi.addBarcode>[1]) => Promise<void>
   deleteBarcode: (id: number) => Promise<void>
+  /** SAFE-02: removes a Shop Barcode at once and offers Undo ("Shop Barcode PRIVATE-77 removed"), which adds it again. */
+  removeBarcode: (barcode: ShopBarcode, label: string) => Promise<void>
+  /** SAFE-02 (Admin): what Delete Shop takes with it; undefined while loading, null when it could not be read. */
+  impact: ShopImpact | null | undefined
 }
 
 /** One Shop with its rules and Shop Barcodes (keys ['shops', id, ...]); every mutation refreshes them and ['catalog']. */
-export function useShop(id: number): UseShop {
+export function useShop(id: number, isAdmin = false): UseShop {
   const client = useQueryClient()
+  const undo = useUndoToast()
   const list = useQuery({ queryKey: ['shops'], queryFn: () => shopsApi.list() })
   const rules = useQuery({ queryKey: ['shops', id, 'rules'], queryFn: () => shopsApi.rules(id) })
   const barcodes = useQuery({ queryKey: ['shops', id, 'barcodes'], queryFn: () => shopsApi.barcodes(id) })
+  const impact = useQuery({ queryKey: ['shops', id, 'impact'], queryFn: () => shopsApi.impact(id), enabled: isAdmin, retry: false })
 
   const changed = async (request: Promise<unknown>) => {
     await request
@@ -69,5 +78,10 @@ export function useShop(id: number): UseShop {
     deleteRule: (ruleId) => changed(shopsApi.deleteRule(ruleId)),
     addBarcode: (body) => changed(shopsApi.addBarcode(id, body)),
     deleteBarcode: (barcodeId) => changed(shopsApi.deleteBarcode(barcodeId)),
+    removeBarcode: async (barcode, label) => {
+      await changed(shopsApi.deleteBarcode(barcode.id))
+      undo.show({ headline: strings.shopBarcodeRemoved(label), undo: () => changed(shopsApi.addBarcode(id, shopBarcodeBodyOf(barcode))) })
+    },
+    impact: impact.isError ? null : impact.data,
   }
 }

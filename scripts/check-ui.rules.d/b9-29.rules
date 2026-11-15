@@ -1,0 +1,4 @@
+# B9-29 (plan section 9, rule 26, SAFE-11): no-first-choice-default warns across web/src/features and fails in features/stock, which
+# B9-29 made clean (Add a Stock Lot starts on "Choose an Ingredient"). Other packages clear their own folders.
+no-first-choice-default=warn
+no-first-choice-default.fail_paths=web/src/features/stock

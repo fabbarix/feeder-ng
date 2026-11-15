@@ -29,13 +29,14 @@ const maxPlaceName = Number(/const maxPlaceName = (\d+)/.exec(readFileSync(resol
 
 describe('SCENARIOS: the filtered /pantry, closed and with the panel open', () => {
   it('has both, after the Recipes ones', () => {
-    expect(rules.SCENARIOS.filter((s) => s.route === '/pantry').map((s) => [s.name, s.open])).toEqual([
+    expect(// B9-29 adds scenarios on /pantry too (pantry-put-away, meta-fit-pantry, text-spacing-pantry): these two are the filtered ones.
+    rules.SCENARIOS.filter((s) => s.route === '/pantry' && s.name.startsWith('pantry-filtered')).map((s) => [s.name, s.open])).toEqual([
       ['pantry-filtered', false],
       ['pantry-filtered-open', true],
     ])
   })
   it('resolveScenario puts Use soon and the long Storage Place from the ids file in the URL', () => {
-    for (const s of rules.SCENARIOS.filter((x) => x.route === '/pantry')) {
+    for (const s of rules.SCENARIOS.filter((x) => x.route === '/pantry' && x.name.startsWith('pantry-filtered'))) {
       const url = rules.resolveScenario(s, { longPlaceId: 12, sideCourseId: 2, longTag: 'x' })
       const q = new URLSearchParams(url.split('?')[1] ?? '')
       expect(url.startsWith('/pantry?')).toBe(true)

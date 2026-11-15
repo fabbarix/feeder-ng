@@ -2,7 +2,8 @@ import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Gallery } from './Gallery'
 
-describe('Gallery: Course primitives (CRS D1)', () => {
+// The whole Gallery renders here; under a full parallel run that alone can pass 5 s, so these tests get 20 s (load, not a slow path).
+describe('Gallery: Course primitives (CRS D1)', { timeout: 20_000 }, () => {
   it.each(['light', 'dark'] as const)('has CoursePicker and CourseSelect sections in the %s scheme', (scheme) => {
     const { container } = render(<Gallery />)
     const section = container.querySelector<HTMLElement>(`[data-scheme="${scheme}"]`)!

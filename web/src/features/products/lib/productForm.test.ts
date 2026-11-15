@@ -20,8 +20,8 @@ describe('validateProductForm', () => {
   it.each(['0.5', '12,5', ' 700 '])('accepts pack size %j', (packSize) => {
     expect(validateProductForm({ ...ok, packSize }).packSize).toBeUndefined()
   })
-  it('rejects an unreadable barcode (bad check digit)', () => {
-    expect(validateProductForm({ ...ok, barcode: '8001234567890' }).barcode).toBe(strings.errBarcode)
+  it('rejects an unreadable barcode (bad check digit), naming the digit (B9-30: SAFE-04, SET 1 = B)', () => {
+    expect(validateProductForm({ ...ok, barcode: '8001234567890' }).barcode).toBe(strings.errBarcodeDigit)
   })
 })
 

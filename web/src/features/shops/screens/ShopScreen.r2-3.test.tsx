@@ -11,7 +11,7 @@ import { ShopScreen } from './ShopScreen'
 afterEach(() => vi.unstubAllGlobals())
 
 function setup(me = ADMIN_ME) {
-  mockApi({ 'GET /api/me': me, 'GET /api/shops': [{ id: 4, name: 'Coop' }], 'GET /api/shops/4/weight-rules': [], 'GET /api/shops/4/barcodes': [], 'GET /api/household/settings': { currency: 'USD' } })
+  mockApi({ 'GET /api/me': me, 'GET /api/shops': [{ id: 4, name: 'Coop' }], 'GET /api/shops/4/prices': [], 'GET /api/shops/4/impact': { shopBarcodes: 0, weightBarcodeRules: 0, prices: 0 }, 'GET /api/shops/4/weight-rules': [], 'GET /api/shops/4/barcodes': [], 'GET /api/household/settings': { currency: 'USD' } })
   return renderWithProviders(
     <Routes>
       <Route path="/settings/shops/:id" element={<ShopScreen />} />
@@ -41,7 +41,8 @@ describe('ShopScreen entity actions (S-04)', () => {
   it('Delete Shop still asks to confirm before deleting', async () => {
     setup()
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Shop' }))
-    expect(await screen.findByText(/Its Shop Barcodes, Weight Barcode Rules and Prices go too/)).toBeInTheDocument()
+    // B9-30 (SAFE-02): the confirm is a dialog with the counts as rows (ShopScreen.b9-30.test.tsx pins its content).
+    expect(await screen.findByRole('dialog', { name: 'Delete Coop?' })).toBeInTheDocument()
   })
 
   it('a plain User sees the note and no entity actions', async () => {

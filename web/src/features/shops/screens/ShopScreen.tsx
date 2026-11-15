@@ -1,41 +1,45 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useBreadcrumbs } from '../../../app/useBreadcrumbs'
 import { useMe } from '../../../app/useMe'
 import { ApiError } from '../../../lib/http'
-import { BentoGrid, BottomSheet, Button, EmptyState, ErrorState, LoadState, IconButton, ListGroup, ListRow, Muted, PageHeader, SectionTitle, Stack, Tile } from '../../../ui'
+import { BentoGrid, BottomSheet, Button, ConfirmDialog, EmptyState, ErrorState, LoadState, IconButton, Muted, PageHeader, SectionTitle, Stack, Tile, useToast } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
 import { useCurrency } from '../../products/hooks/useCurrency'
 import { useProducts } from '../../products/hooks/useProducts'
-import { formatMinor } from '../../products/lib/money'
 import { useAttempt } from '../../products/hooks/useAttempt'
 import { useProductsLiveUpdates } from '../../products/hooks/useProductsLiveUpdates'
 import { AddShopBarcodeSheet } from '../components/AddShopBarcodeSheet'
 import { ShopBarcodeList } from '../components/ShopBarcodeList'
 import { ShopNameForm } from '../components/ShopList'
 import { ShopLocationTile } from '../components/ShopLocationTile'
+import { ShopPricesTile } from '../components/ShopPricesTile'
 import { WeightRuleEditor } from '../components/WeightRuleEditor'
 import { WeightRuleList } from '../components/WeightRuleList'
 import { useShop } from '../hooks/useShop'
 import { useShopPrices } from '../hooks/useShopPrices'
+import { soldAtIds } from '../lib/productChoices'
+import { shopImpactRows } from '../lib/shopImpact'
 import { strings } from '../strings'
 import type { ShopRule } from '../types'
 import '../../products/products.css'
 
 /**
- * /settings/shops/:id: BentoGrid with a Weight Barcode Rules tile (WeightRuleList + WeightRuleEditor in a
- * BottomSheet, Admin edits), a Shop Barcodes tile (ShopBarcodeList), rename/delete (Admin; delete asks to confirm
- * with strings.deleteShopWarning), and the Shop Location tile (any User saves it). Hooks: useShop, useCurrency (products
- * feature), useMe.
+ * /settings/shops/:id: the Shop Location (full width, short), Shop Barcodes (removed at once with Undo; "Add Shop Barcode" opens the
+ * sheet on the crafted Product Select), Weight Barcode Rules (Admin edits) and "Prices known here" (one read by Shop). Rename and
+ * Delete (Admin) sit in the header; Delete is a danger confirm with what goes as rows. A failed action is the page's FormError.
  */
 export function ShopScreen() {
   const id = Number(useParams().id)
   const navigate = useNavigate()
   const isAdmin = Boolean(useMe().data?.isAdmin)
   const currency = useCurrency()
-  const shop = useShop(id)
+  const shop = useShop(id, isAdmin)
   const breadcrumbs = useBreadcrumbs(shop.shop?.name)
   const { products } = useProducts('')
-  const prices = useShopPrices(id, [...new Set(shop.barcodes.map((b) => b.productId))])
+  const prices = useShopPrices(id, currency)
+  const toast = useToast()
+  const addButton = useRef<HTMLButtonElement>(null)
 
   const [editor, setEditor] = useState<{ rule?: ShopRule } | null>(null)
   const [renaming, setRenaming] = useState(false)
@@ -62,7 +66,8 @@ export function ShopScreen() {
     )
   }
 
-  const productName = (pid: number) => products.find((p) => p.id === pid)?.name ?? strings.unknownProduct
+  const name = shop.shop.name
+  const impactRows = shop.impact ? shopImpactRows(shop.impact) : []
 
   return (
     <Stack gap="4">
@@ -79,11 +84,7 @@ export function ShopScreen() {
         }
       />
       {isAdmin ? null : <Muted>{strings.adminOnly}</Muted>}
-      {error ? (
-        <p role="alert" className="pg__error">
-          {error}
-        </p>
-      ) : null}
+      <FormError>{error}</FormError>
 
       <BentoGrid min="card">
         <ShopLocationTile location={shop.shop.location} onSave={shop.saveLocation} />
@@ -94,9 +95,9 @@ export function ShopScreen() {
             barcodes={shop.barcodes}
             rules={shop.rules}
             products={products}
-            onDelete={(bid) => void attempt(() => shop.deleteBarcode(bid))}
+            onDelete={(barcode, label) => void attempt(() => shop.removeBarcode(barcode, label))}
           />
-          <Button variant="secondary" onClick={() => setAdding(true)}>
+          <Button ref={addButton} variant="secondary" onClick={() => setAdding(true)}>
             {strings.addShopBarcode}
           </Button>
         </Tile>
@@ -113,23 +114,7 @@ export function ShopScreen() {
           />
         </Tile>
 
-        <Tile as="section" span="full" aria-label={strings.pricesTitle}>
-          <SectionTitle>{strings.pricesTitle}</SectionTitle>
-          {prices.length === 0 ? (
-            <Muted>{strings.noPrices}</Muted>
-          ) : (
-            <ListGroup label={strings.pricesTitle}>
-              {prices.map((p) => (
-                <ListRow
-                  key={p.id}
-                  title={`${productName(p.productId)} · ${p.date}${p.priceCents != null ? ` · ${formatMinor(p.priceCents, currency)}` : ''}`}
-                  chevron
-                  href={`/products/${p.productId}`}
-                />
-              ))}
-            </ListGroup>
-          )}
-        </Tile>
+        <ShopPricesTile shopName={name} prices={prices} />
       </BentoGrid>
 
       {editor ? (
@@ -146,10 +131,18 @@ export function ShopScreen() {
       ) : null}
       <AddShopBarcodeSheet
         open={adding}
+        shop={{ id, name }}
         rules={shop.rules}
         currency={currency}
-        onClose={() => setAdding(false)}
-        onAdd={async (body) => shop.addBarcode(body)}
+        soldAtProductIds={soldAtIds(prices.rows, shop.barcodes)}
+        onClose={() => {
+          setAdding(false)
+          addButton.current?.focus()
+        }}
+        onAdd={async (body) => {
+          await shop.addBarcode(body)
+          toast.show({ status: 'success', title: strings.shopBarcodeAdded })
+        }}
       />
       <BottomSheet open={renaming} onClose={() => setRenaming(false)} title={strings.renameShop}>
         {renaming ? (
@@ -163,21 +156,23 @@ export function ShopScreen() {
           />
         ) : null}
       </BottomSheet>
-      <BottomSheet open={deleting} onClose={() => setDeleting(false)} title={strings.deleteShop}>
-        <p>{strings.deleteShopWarning}</p>
-        <Button
-          variant="danger"
-          onClick={() => {
-            setDeleting(false)
-            void attempt(async () => {
-              await shop.remove()
-              navigate('/settings/shops')
-            })
-          }}
-        >
-          {strings.confirmDeleteShop}
-        </Button>
-      </BottomSheet>
+      <ConfirmDialog
+        open={deleting}
+        tone="danger"
+        title={strings.deleteShopTitle(name)}
+        body={shop.impact === null ? strings.deleteShopWarning : shop.impact && impactRows.length === 0 ? strings.deleteShopNothing : undefined}
+        groups={impactRows.length > 0 ? [{ label: strings.deleteShopGoesWith(name), rows: impactRows }] : undefined}
+        note={shop.impact === null ? strings.cannotBeUndone : strings.deleteShopNote}
+        confirmLabel={strings.deleteShop}
+        onCancel={() => setDeleting(false)}
+        onConfirm={() => {
+          setDeleting(false)
+          void attempt(async () => {
+            await shop.remove()
+            navigate('/settings/shops')
+          })
+        }}
+      />
     </Stack>
   )
 }

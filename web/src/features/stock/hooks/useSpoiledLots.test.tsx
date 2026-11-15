@@ -51,7 +51,7 @@ describe('useSpoiledLots', () => {
     const { result } = renderHook(() => useSpoiledLots(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.data).toBeDefined())
     await act(() => result.current.keep(3))
-    expect(api.keep).toHaveBeenCalledWith(3)
+    expect(api.keep).toHaveBeenCalledWith(3, undefined)
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['stock'] }))
   })
 
@@ -59,7 +59,9 @@ describe('useSpoiledLots', () => {
     const { Wrapper, spy } = wrapper()
     const { result } = renderHook(() => useSpoiledLots(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.data).toBeDefined())
-    await act(() => result.current[action](3))
+    await act(async () => {
+      await result.current[action](3)
+    })
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['today', 'streak'] }))
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['board'] }))
   })

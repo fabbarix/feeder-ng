@@ -59,7 +59,7 @@ describe('AddLotSheet with Supplies', () => {
     await pick(/toilet paper/)
     await userEvent.type(screen.getByLabelText('Quantity'), '9')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(onSubmit).toHaveBeenCalledWith({ ingredientId: 40, quantity: 9 })
+    expect(onSubmit).toHaveBeenCalledWith({ ingredientId: 40, quantity: 9, purchased: '2026-11-10' })
     expect(onSubmit.mock.calls[0]![0]).not.toHaveProperty('goesOff')
   })
   it('a Supply measured in ml takes its Base Unit as the suffix', async () => {

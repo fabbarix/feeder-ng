@@ -459,6 +459,40 @@ func (s *Store) Shops(ctx context.Context) ([]Shop, error) {
 	return out, rows.Err()
 }
 
+// ListedShop is a Shop of the Shops list with the count its row shows (SET-14b).
+type ListedShop struct {
+	Shop
+	// PriceCount is the number of distinct non-archived Products with a Price at the Shop.
+	PriceCount int `json:"priceCount"`
+}
+
+// ShopsWithPriceCount is Shops, each with the number of distinct non-archived Products that have a Price there.
+func (s *Store) ShopsWithPriceCount(ctx context.Context) ([]ListedShop, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT s.id, s.name, s.lat, s.lon,
+		       (SELECT COUNT(DISTINCT p.product_id) FROM prices p
+		          JOIN products pr ON pr.id = p.product_id AND pr.archived_at IS NULL
+		         WHERE p.shop_id = s.id)
+		FROM shops s ORDER BY s.name_key, s.id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []ListedShop{}
+	for rows.Next() {
+		var ls ListedShop
+		var lat, lon sql.NullFloat64
+		if err := rows.Scan(&ls.ID, &ls.Name, &lat, &lon, &ls.PriceCount); err != nil {
+			return nil, err
+		}
+		if lat.Valid && lon.Valid {
+			ls.Location = &product.Location{Lat: lat.Float64, Lon: lon.Float64}
+		}
+		out = append(out, ls)
+	}
+	return out, rows.Err()
+}
+
 // DeleteShop removes its barcodes, rules and Prices; purchases keep a NULL Shop.
 func (s *Store) DeleteShop(ctx context.Context, id int64) error {
 	res, err := s.db.ExecContext(ctx, `DELETE FROM shops WHERE id = ?`, id)

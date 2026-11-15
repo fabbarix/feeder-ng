@@ -63,43 +63,37 @@ describe('ProductScreen barcodes (QA)', () => {
     await waitFor(() => expect(api.callsTo('DELETE', '/api/products/5/barcodes/08001505005707')).toHaveLength(1))
   })
 
-  it('names a weighed Shop Barcode by the rule prefix, not the rule id ("rule 4" vs "rule 21")', async () => {
+  it('names a weighed Shop Barcode by the rule prefix, not the rule id ("rule 4" vs "rule 21"); B9-30: as an R-E row', async () => {
     setup()
-    expect(await screen.findByText(/Big Mart · Weighed · prefix 21 · item 00123/)).toBeInTheDocument()
+    expect(await screen.findByText('Weight Barcode Rule 21 · item code 00123')).toBeInTheDocument()
     expect(screen.queryByText(/rule 4/i)).toBeNull()
   })
 })
 
-describe('ProductScreen archive (R8)', () => {
-  it('archives after a ConfirmDialog, then shows the Archived chip and Unarchive', async () => {
-    const api = setup()
-    await userEvent.click(await screen.findByRole('button', { name: 'Archive Product' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Archive Passata 700 g?' })
-    expect(within(dialog).getByText(/left out of lists and Scans/)).toBeInTheDocument()
-    expect(within(dialog).getByText(/history stays/i)).toBeInTheDocument()
-    expect(api.callsTo('POST', '/api/products/5/archive')).toHaveLength(0)
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Archive' }))
-    await waitFor(() => expect(api.callsTo('POST', '/api/products/5/archive')).toHaveLength(1))
-    expect(await screen.findByRole('button', { name: 'Unarchive Product' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Archive Product' })).toBeNull()
-    expect(screen.getByText('Archived', { selector: '.chip, .chip *' })).toBeInTheDocument()
-    expect(await findNotice('status', 'Passata 700 g archived')).toBeInTheDocument()
-  })
+/** B9-30 (SET-04): Archive and Delete live in the header's ⋮ "More for <Product>" menu. */
+async function fromMenu(item: string) {
+  await userEvent.click(await screen.findByRole('button', { name: 'More for Passata 700 g' }))
+  await userEvent.click(await screen.findByRole('menuitem', { name: item }))
+}
 
-  it('cancelling the ConfirmDialog archives nothing', async () => {
+describe('ProductScreen archive (R8)', () => {
+  it('archives at once (B9-30, SAFE-02: no confirm, Undo instead), then shows the Archived chip and Unarchive', async () => {
     const api = setup()
-    await userEvent.click(await screen.findByRole('button', { name: 'Archive Product' }))
-    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Archive Passata 700 g?' })).getByRole('button', { name: 'Cancel' }))
+    await fromMenu('Archive Product')
+    await waitFor(() => expect(api.callsTo('POST', '/api/products/5/archive')).toHaveLength(1))
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(api.callsTo('POST', '/api/products/5/archive')).toHaveLength(0)
+    expect(await screen.findByText('Archived', { selector: '.chip, .chip *' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'More for Passata 700 g' }))
+    expect(await screen.findByRole('menuitem', { name: 'Unarchive Product' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Archive Product' })).toBeNull()
+    expect(await findNotice('status', 'Passata 700 g archived')).toBeInTheDocument()
   })
 
   it('never uses the native confirm', async () => {
     const confirm = vi.spyOn(window, 'confirm')
     setup()
-    await userEvent.click(await screen.findByRole('button', { name: 'Archive Product' }))
-    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Product' }))
+    await fromMenu('Archive Product')
+    await fromMenu('Delete Product')
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }))
     expect(confirm).not.toHaveBeenCalled()
     confirm.mockRestore()
@@ -109,12 +103,10 @@ describe('ProductScreen archive (R8)', () => {
     const api = setup(archived)
     expect(await screen.findByRole('heading', { level: 1, name: 'Passata 700 g' })).toBeInTheDocument()
     expect(screen.getByText('Archived', { selector: '.chip, .chip *' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Archive Product' })).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'Unarchive Product' }))
+    await fromMenu('Unarchive Product')
     await waitFor(() => expect(api.callsTo('POST', '/api/products/5/unarchive')).toHaveLength(1))
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(await screen.findByRole('button', { name: 'Archive Product' })).toBeInTheDocument()
-    expect(screen.queryByText('Archived', { selector: '.chip, .chip *' })).toBeNull()
+    await waitFor(() => expect(screen.queryByText('Archived', { selector: '.chip, .chip *' })).toBeNull())
   })
 
   it('explains what Archived means on an archived Product (GLOSSARY: retired, history stays, can be unarchived)', async () => {
@@ -127,7 +119,7 @@ describe('ProductScreen archive (R8)', () => {
 describe('ProductScreen delete (R8)', () => {
   it('deletes a never-bought Product after a danger ConfirmDialog and returns to the list', async () => {
     const api = setup()
-    await userEvent.click(await screen.findByRole('button', { name: 'Delete Product' }))
+    await fromMenu('Delete Product')
     const dialog = await screen.findByRole('dialog', { name: 'Delete Passata 700 g?' })
     expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus() // danger focuses Cancel
@@ -140,7 +132,7 @@ describe('ProductScreen delete (R8)', () => {
     const api = setup(active, {
       'DELETE /api/products/5': { status: 409, json: { error: { code: 'product_bought', message: 'bought: archive it instead' } } },
     })
-    await userEvent.click(await screen.findByRole('button', { name: 'Delete Product' }))
+    await fromMenu('Delete Product')
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Delete Passata 700 g?' })).getByRole('button', { name: 'Delete' }))
     const hint = await screen.findByRole('dialog', { name: 'Passata 700 g has been bought' })
     expect(within(hint).getByText(/cannot be deleted/i)).toBeInTheDocument()
@@ -148,24 +140,26 @@ describe('ProductScreen delete (R8)', () => {
     expect(screen.queryByText('Products list page')).toBeNull()
     await userEvent.click(within(hint).getByRole('button', { name: 'Archive' }))
     await waitFor(() => expect(api.callsTo('POST', '/api/products/5/archive')).toHaveLength(1))
-    expect(await screen.findByRole('button', { name: 'Unarchive Product' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'More for Passata 700 g' }))
+    expect(await screen.findByRole('menuitem', { name: 'Unarchive Product' })).toBeInTheDocument()
   })
 
   it('declining the archive hint keeps the Product active and shows no raw server text', async () => {
     const api = setup(active, {
       'DELETE /api/products/5': { status: 409, json: { error: { code: 'product_bought', message: 'raw server message' } } },
     })
-    await userEvent.click(await screen.findByRole('button', { name: 'Delete Product' }))
+    await fromMenu('Delete Product')
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Passata 700 g has been bought' })).getByRole('button', { name: 'Keep' }))
     expect(api.callsTo('POST', '/api/products/5/archive')).toHaveLength(0)
     expect(screen.queryByText('raw server message')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Archive Product' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'More for Passata 700 g' }))
+    expect(screen.getByRole('menuitem', { name: 'Archive Product' })).toBeInTheDocument()
   })
 
   it('another failure while deleting is shown as an alert, not as the bought hint', async () => {
     setup(active, { 'DELETE /api/products/5': { status: 500, json: { error: { code: 'internal', message: 'boom' } } } })
-    await userEvent.click(await screen.findByRole('button', { name: 'Delete Product' }))
+    await fromMenu('Delete Product')
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
     expect(await findNotice('alert', 'boom')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).toBeNull()

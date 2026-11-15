@@ -152,4 +152,42 @@ export const stockStrings = {
     done: (name: string) => `${name} used up`,
   },
   deleteBodySupply: 'Use Delete for a mistake, such as a double Scan. If the Household used it, choose Used up instead.',
+  /** B9-29 (SSP-10): Put away the Not sorted Stock Lots into a Storage Place, many at once. */
+  putAway: {
+    action: 'Put away',
+    actionLabel: (n: number) => `Put away ${n === 1 ? '1 Stock Lot' : `${n} Stock Lots`}`,
+    into: 'Put into',
+    hint: 'Tick what goes there. Feeder remembers it for next time.',
+    moveTo: (place: string) => `Move to ${place}`,
+    tickOne: 'Tick at least one Stock Lot.',
+    allDone: 'Every Stock Lot is put away',
+  },
+  /** B9-29 (SSP-17, decision SSP 8): Keep makes a spoiled Lot good until today; Change offers other dates. */
+  keepDate: {
+    title: (name: string) => `${name}: good until?`,
+    why: 'Keep means it did not go off. It leaves Throw out or keep? until then.',
+    choices: 'Good until',
+    pick: 'Pick a date',
+    field: 'Good until',
+    choose: 'Choose a date.',
+    kept: (name: string) => `${name} kept`,
+    goodUntilToday: 'Good until today',
+    goodUntil: (day: string) => `Good until ${day}`,
+    change: 'Change',
+  },
+  /** B9-29 (SAFE-11): Add a Stock Lot never assumes the Ingredient. */
+  addLot: {
+    chooseIngredient: 'Choose an Ingredient',
+    needIngredient: 'Choose an Ingredient.',
+    needQuantity: 'Enter how much.',
+  },
+  /** B9-29 (SAFE-11): the Lot sheet's Move is a disclosure. */
+  moveDisclosure: 'Move…',
+  movePlaceNeeded: 'Choose where to move it.',
+  /** B9-29 (SAFE-09): Throw out acts at once, with Undo. "500 g Flour thrown out". */
+  thrownOut: (amount: string, name: string) => `${amount} ${name} thrown out`,
+  /** SAFE-09 "After Undo": a plain toast, no icon. "500 g Flour is back". */
+  thrownOutBack: (amount: string, name: string) => `${amount} ${name} is back`,
+  /** B9-29 (SSP-03): a Storage Place group that holds only frozen Leftovers counts them. */
+  leftoverCount: (n: number) => (n === 1 ? '1 Leftover' : `${n} Leftovers`),
 }

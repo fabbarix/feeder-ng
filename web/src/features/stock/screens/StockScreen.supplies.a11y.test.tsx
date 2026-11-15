@@ -90,7 +90,9 @@ describe('Supply rows', () => {
   it('say their Restock level in text, not by colour alone; the row is one button named by the Supply', async () => {
     await view()
     const row = await screen.findByRole('button', { name: /Toilet paper/ })
-    await vi.waitFor(() => expect(row.closest('li')).toHaveTextContent('4 pieces · Below 6 · 4 in Stock'))
+    // B9-29 (SSP-05): the quantity is in the value column, the Restock reason in the meta.
+    await vi.waitFor(() => expect(row.closest('li')?.querySelector('.list-row__meta-text')).toHaveTextContent('Below 6 · 4 in Stock'))
+    expect(row.closest('li')?.querySelector('.list-row__value')).toHaveTextContent('4 pieces')
   })
 })
 

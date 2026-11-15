@@ -7,7 +7,8 @@ import './PageHeader.css'
 export interface PageHeaderProps {
   /** The screen title, an h1 (title-1). */
   title: string
-  subtitle?: string
+  /** B9-30: a node, so it can hold a link ("<Ingredient> · 700 g pack"). */
+  subtitle?: ReactNode
   /** The Breadcrumbs trail, rendered on its own row above the title. */
   breadcrumbs?: Crumb[]
   /** Anything that leads the title row (not a way up a hierarchy: use `breadcrumbs`). */

@@ -48,6 +48,8 @@ export const SCENARIO_VIEWPORTS = {
   '1024x768': { width: 1024, height: 768, mobile: false },
   '1280x800': { width: 1280, height: 800, mobile: false },
   '1920x1080': { width: 1920, height: 1080, mobile: false },
+  // B9-29 (SSP-05): a 320 px card on a 1120 px screen, where P23 reads the Pantry's and Supplies' metas at desktop widths.
+  1120: { width: 1120, height: 800, mobile: false },
 }
 
 // B9-03: a scenario module that names a viewport this table lacks fails on load, not halfway through a run.

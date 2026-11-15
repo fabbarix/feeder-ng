@@ -5,6 +5,11 @@
 
 # "Item code" is the printed barcode term on a Shop receipt, not an Ingredient/Product synonym.
 web/src/features/shops/strings.ts item  # "Item code" is a Shop receipt term
+web/src/features/products/strings.ts item  # B9-30: "item code" of a weighed Shop Barcode row, the same Shop receipt term
+
+# "label" meaning the Shop's own printed barcode label (GLOSSARY Shop Barcode: "own-label or weighed goods"), not a Tag.
+web/src/features/shops/strings.ts label  # B9-30 (SET-01): "The code printed on the Shop's own label."
+web/src/features/products/strings.ts label  # B9-30 (SET-04): "The Shop's own label", the detail of a plain Shop Barcode row
 
 # "unit" meaning a measurement unit (g, ml, piece; currency minor unit), not a Stock Lot ("Units" is not a glossary term).
 web/src/features/import/strings.ts unit  # 'Units' title: measurement units
@@ -51,6 +56,7 @@ web/src/features/import/strings.ts bill  # "Anthropic reports a billing problem"
 # The rule cannot tell the two senses apart, so these files are allowed after review: every "food" in them is the kind.
 web/src/features/ingredients/strings.ts food  # kind label (Food | Supply, "This is food", "Change to food") and the kind_differs merge copy
 web/src/lib/baseRecipes/strings.ts food  # differentKinds: "not both food or both Supplies" (kind_differs merge toast)
+web/src/ui/Select/strings.ts food  # B9-30 (SET-01): the Product Select's "Food" filter chip, set against "Supplies" (the kind)
 web/src/features/stock/strings.ts food  # stockFilter kind label (Food | Supplies) of the Pantry's Food or Supplies filter
 # "unit" is on Portion's Avoid list (a Portion is never "a unit"). RX-08's DurationField names its time-unit Select "<label> unit"
 # ("Lead time unit", "Duration unit"), as the chapter requires: there "unit" is min, h or d, never a Portion.

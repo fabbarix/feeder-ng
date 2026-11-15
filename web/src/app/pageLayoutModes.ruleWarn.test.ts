@@ -69,9 +69,10 @@ describe("B9-13's drop-in", () => {
     .map((n) => readFileSync(resolve(dir, n), 'utf8'))
     .join('\n')
   const own = readFileSync(resolve(dir, '20-b9-13-p40-p41-warn'), 'utf8')
-  it('names P41 on /pantry and P40 on the two Settings pages, and no whole route', () => {
+  // B9-29 removed P41@/pantry: the Storage Place groups have visible titles (SSP-03).
+  it('names P40 on the two Settings pages, and no whole route', () => {
     expect(rules.parseModes(own).errors).toEqual([])
-    expect(rules.parseModes(own).ruleWarn.map((w) => `${w.rule}@${w.pattern}`)).toEqual(['P41@/pantry', 'P40@/settings/tags', 'P40@/settings/recipe-assistant'])
+    expect(rules.parseModes(own).ruleWarn.map((w) => `${w.rule}@${w.pattern}`)).toEqual(['P40@/settings/tags', 'P40@/settings/recipe-assistant'])
     expect(own).not.toMatch(/^\s*warn_routes\s*=/m)
   })
   it('leaves /pantry in fail mode for every other rule', () => {

@@ -8,16 +8,19 @@ import { stockStrings as strings } from '../strings'
 export interface PantrySortSelectProps {
   value: PantrySort
   onChange: (sort: PantrySort) => void
+  /** DS-03: the value does not fit beside the List control: only the icon and the chevron show, the value is in the name. */
+  iconOnly?: boolean
 }
 
 const shortOf: Partial<Record<PantrySort, string>> = strings.sortsShort
 
-export function PantrySortSelect({ value, onChange }: PantrySortSelectProps): ReactNode {
+export function PantrySortSelect({ value, onChange, iconOnly = false }: PantrySortSelectProps): ReactNode {
   return (
     <Select<PantrySort>
       label={strings.sortLabel}
       appearance="chip"
       icon="sort"
+      iconOnly={iconOnly}
       options={PANTRY_SORTS.map((s) => ({ value: s, label: strings.sorts[s], triggerLabel: shortOf[s] }))}
       value={value}
       onChange={onChange}

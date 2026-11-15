@@ -30,6 +30,10 @@ describe('IngredientLotsRow for a Supply', () => {
     expect(meta).toHaveTextContent('2 Stock Lots · Restocks below 6')
     expect(meta).not.toHaveAttribute('data-status', 'spoil')
   })
+  it('its narrow (compact) meta is the Restock status alone: "Restocks below 6", or "2 in Stock" below the level (SSP-05)', () => {
+    const { row } = setup({ restock: { level: 6, stock: 9 } })
+    expect(row.querySelector('.list-row__meta-compact')).toHaveTextContent(/^Restocks below 6$/)
+  })
   it('a Supply below its Restock level says so, with the info status', () => {
     const { row } = setup({ item: makeSupplyTotal({ total: 2, lotCount: 2 }), restock: { level: 6, stock: 2 } })
     const meta = row.querySelector('.list-row__meta') as HTMLElement

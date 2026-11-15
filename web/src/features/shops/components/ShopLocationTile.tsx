@@ -1,4 +1,5 @@
 import { Button, Muted, SectionTitle, Tile } from '../../../ui'
+import { FormError } from '../../../ui/fields/FormError'
 import { errorText } from '../../products/lib/productForm'
 import { useSaveHere } from '../hooks/useSaveHere'
 import { strings } from '../strings'
@@ -10,7 +11,7 @@ export interface ShopLocationTileProps {
   onSave: (location: ShopLocation) => Promise<void>
 }
 
-/** The Shop Location tile: saved or not, and "Save my current location" for any User standing in the Shop. */
+/** The Shop Location tile, full width and short (no half-width orphan beside the full-width tiles): saved or not, and "Save my current location" for any User standing in the Shop. */
 export function ShopLocationTile({ location, onSave }: ShopLocationTileProps) {
   const here = useSaveHere(onSave)
   return (
@@ -18,11 +19,7 @@ export function ShopLocationTile({ location, onSave }: ShopLocationTileProps) {
       <SectionTitle>{strings.locationTitle}</SectionTitle>
       <Muted>{location ? strings.locationSaved : strings.locationNone}</Muted>
       {here.status !== 'idle' ? <LocationStatus status={here.status} position={here.position} failure={here.failure} onRetry={here.saveHere} /> : null}
-      {here.error ? (
-        <p role="alert" className="pg__error">
-          {errorText(here.error)}
-        </p>
-      ) : null}
+      <FormError>{here.error ? errorText(here.error) : null}</FormError>
       <Button variant="secondary" onClick={here.saveHere} loading={here.saving || here.status === 'locating'}>
         {strings.saveLocationHere}
       </Button>

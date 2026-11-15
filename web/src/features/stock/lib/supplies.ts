@@ -111,3 +111,13 @@ export function usedUpRequest(lot: { id?: number; quantity: number }, used: numb
   if (used === undefined || used >= lot.quantity) return { type: 'delete' }
   return { type: 'patch', quantity: Number((lot.quantity - used).toFixed(6)) }
 }
+
+/**
+ * SSP-05: the meta of a Supply's Pantry row (and of its row in the Put away sheet): "Restocks below 6", or, below the level, "Below 6 ·
+ * 4 in Stock" in info with the compact form "4 in Stock". Null without a Restock level (the row has no meta then).
+ */
+export function supplyRestockMeta(restock: Restock | null, base: BaseUnit, system: UnitSystem): { long: string; compact: string; below: boolean } | null {
+  if (!restock) return null
+  const reason = restockReason(restock.stock, restock.level, base, system, { stockInReason: false })
+  return { long: reason.long, compact: reason.compact, below: isBelowRestock(restock) }
+}

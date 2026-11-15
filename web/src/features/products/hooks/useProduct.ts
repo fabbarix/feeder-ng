@@ -1,5 +1,9 @@
 import { useQuery, useQueryClient, useQueries } from '@tanstack/react-query'
 import { useScreenState } from '../../../app/useScreenState'
+import { useUndoToast } from '../../../ui'
+import { formatBarcode } from '../lib/barcodeFormat'
+import { priceBodyOf } from '../lib/priceForm'
+import { strings } from '../strings'
 import type { ScreenState } from '../../../lib/dataState'
 import { shopsApi } from '../../shops/api'
 import type { ShopRule } from '../../shops/types'
@@ -25,10 +29,12 @@ export interface UseProduct {
   /** PP: saves the Picture at once ("" removes it). */
   setImage: (image: string) => Promise<void>
   addBarcode: (raw: string) => Promise<void>
+  /** SAFE-02: removes at once and offers Undo ("Barcode 8 001505 005707 removed"), which adds the stored code again. */
   removeBarcode: (code: string) => Promise<void>
   setSoldAt: (shopId: number, sells: boolean) => Promise<void>
   recordPrice: (body: PriceBody) => Promise<void>
-  deletePrice: (priceId: number) => Promise<void>
+  /** SAFE-02: deletes at once and offers Undo ("Price at Big Mart removed"), which records it again. */
+  deletePrice: (price: Price) => Promise<void>
   /** The weight rules of the Shops that hold weighed Shop Barcodes (labels name the prefix). */
   rules: ShopRule[]
   archive: () => Promise<void>
@@ -40,6 +46,7 @@ export interface UseProduct {
 /** One Product (key ['products', id]); every mutation refreshes it and the list, and ['catalog']. */
 export function useProduct(id: number): UseProduct {
   const client = useQueryClient()
+  const undo = useUndoToast()
   const query = useQuery({ queryKey: ['products', id], queryFn: () => productsApi.get(id) })
   const shops = useQuery({ queryKey: ['shops'], queryFn: () => shopsApi.list() })
   const prices = useQuery({ queryKey: ['products', id, 'prices'], queryFn: () => productsApi.prices(id) })
@@ -81,10 +88,17 @@ export function useProduct(id: number): UseProduct {
     setPackSize: (size) => changed(productsApi.patch(id, { packSize: size })),
     setImage: (image) => changed(productsApi.patch(id, { image })),
     addBarcode: (raw) => changed(productsApi.addBarcode(id, raw)),
-    removeBarcode: (code) => changed(productsApi.removeBarcode(id, code)),
+    removeBarcode: async (code) => {
+      await changed(productsApi.removeBarcode(id, code))
+      undo.show({ headline: strings.barcodeRemoved(formatBarcode(code)), undo: () => changed(productsApi.addBarcode(id, code)) })
+    },
     setSoldAt: (shopId, sells) => changed(sells ? productsApi.setSoldAt(id, shopId) : productsApi.unsetSoldAt(id, shopId)),
     recordPrice: (body) => changed(productsApi.recordPrice(id, body)),
-    deletePrice: (priceId) => changed(productsApi.deletePrice(priceId)),
+    deletePrice: async (price) => {
+      await changed(productsApi.deletePrice(price.id))
+      const shop = shops.data?.find((s) => s.id === price.shopId)?.name ?? strings.unknownShop
+      undo.show({ headline: strings.priceRemoved(shop), undo: () => changed(productsApi.recordPrice(id, priceBodyOf(price))) })
+    },
     remove: async () => {
       await productsApi.remove(id)
       client.removeQueries({ queryKey: ['products', id] })

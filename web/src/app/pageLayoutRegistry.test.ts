@@ -99,8 +99,9 @@ const ADDED = {
   rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P31', 'P32', 'P33', 'P35', 'P36', 'P39', 'P40', 'P41', 'P43'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
-  // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning. Its shop-barcode-sheet (the Add Shop Barcode
-  // sheet) is held until B9-30 builds the sheet's Product Select (B9_15_DEFERRED); B9-30 adds its name here.
+  // B9-15: scenarios/b9-15.mjs (order 315): the crafted Select open on Settings > Planning, and shop-barcode-sheet (the Add Shop Barcode sheet,
+  // held until B9-30 built its Product Select; B9-30 deleted B9_15_DEFERRED and added the name here).
+  // B9-30: scenarios/b9-30.mjs (order 330): shop-page, shop-delete-confirm, product-page, products-new-product.
   // B9-10: scenarios/recipe-editor.mjs (order 40): the Recipe editor with the 36-character Tag (DS-04).
   // B9-14: scenarios/b9-14.mjs (order 310): the sheet scenarios of P25 and P33 and the sheet page of P39.
   // B9-16: scenarios/b9-16.mjs (order 310, after b9-14 by file name): P36's touch-targets-controls and the household-errors check.
@@ -112,11 +113,14 @@ const ADDED = {
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
+  // B9-29: scenarios/b9-29.mjs (order 330): pantry-put-away (SSP-10), meta-fit-pantry and meta-fit-supplies (SSP-05, P23 at 1120), text-spacing-pantry (DS-03, DS-10).
   scenarios: [
     'recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields',
     'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors',
-    'planning-recipe-select', 'toast-pricing', 'toast-over-bar',
+    'planning-recipe-select', 'shop-barcode-sheet', 'toast-pricing', 'toast-over-bar',
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
+    'pantry-put-away', 'meta-fit-pantry', 'meta-fit-supplies', 'text-spacing-pantry',
+    'shop-page', 'shop-delete-confirm', 'product-page', 'products-new-product',
     'recipe-editor-guard', 'recipe-new-empty-save',
     'recipe-editor-flow', 'recipe-new-flow', 'recipe-editor-ring-room', 'recipe-editor-restored-focus', 'recipe-editor-tag-chooser',
     'recipe-detail-cook', 'recipe-detail-phone',

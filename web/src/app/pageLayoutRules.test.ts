@@ -28,7 +28,7 @@ interface Metrics {
   fields: { label: string; type: string; short: boolean; segment: boolean; size: string; w: number; long?: boolean; inline?: boolean }[]
   bars: { cls: string; x: number; r: number; bgAlpha: number }[]
   railContrast: number | null
-  dialog: { x: number; w: number; vw: number } | null
+  dialog: { x: number; w: number; vw: number; vh?: number } | null
 }
 const ok = (over: Partial<Metrics> = {}): Metrics => ({
   vw: 1440, scrollW: 1440, clientW: 1440, over: [], content: { x: 480, r: 1200 }, railR: 240, container: { x: 440, r: 1240 },
@@ -103,6 +103,12 @@ describe('evaluateMetrics', () => {
     expect(run(ok({ dialog: { x: 100, w: 700, vw: 1440 } }))).toContain('P8')
     expect(run(ok({ dialog: { x: 420, w: 600, vw: 1440 } }))).toEqual([])
     expect(run(ok({ dialog: { x: 0, w: 390, vw: 390 }, vw: 390, scrollW: 390, clientW: 390 }), 390)).not.toContain('P8')
+  })
+  it('P8 on a short viewport (SHORT-02): the centred sheet may be min(640, vw - 48) wide; wider, or off-centre, still fails', () => {
+    expect(run(ok({ dialog: { x: 102, w: 640, vw: 844, vh: 390 } }), 844)).not.toContain('P8')
+    expect(run(ok({ dialog: { x: 92, w: 660, vw: 844, vh: 390 } }), 844)).toContain('P8')
+    expect(run(ok({ dialog: { x: 0, w: 640, vw: 844, vh: 390 } }), 844)).toContain('P8')
+    expect(run(ok({ dialog: { x: 102, w: 640, vw: 844, vh: 1180 } }), 844)).toContain('P8')
   })
   it('P9 the shell must mark the route with the width the table gives it (data-page-width), at every viewport', () => {
     expect(run(ok({ pageWidthAttr: null }))).toContain('P9')

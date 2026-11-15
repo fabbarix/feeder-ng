@@ -2,9 +2,9 @@ import type { ReactElement } from 'react'
 import { ListGroup, ListRow, Thumb } from '../../../ui'
 import { formatQuantity, type UnitSystem } from '../../../lib/units'
 import { deductionOrder, lotMeta } from '../lib/ingredientLots'
-import { rowMeta } from '../lib/filter'
+import { rowMeta, rowMetaCompact } from '../lib/filter'
 import { capitalise } from '../lib/display'
-import { isBelowRestock, isSupply, supplyLotLineMeta, supplyRowMeta, type Restock } from '../lib/supplies'
+import { isSupply, supplyLotLineMeta, supplyRestockMeta, supplyRowMeta, type Restock } from '../lib/supplies'
 import { describeGoOff } from '../lib/view'
 import { stockStrings as strings } from '../strings'
 import type { IngredientStock, StockLot, StoragePlace } from '../types'
@@ -32,12 +32,15 @@ export interface IngredientLotsRowProps {
 export function IngredientLotsRow({ item, lots, places, today, system = 'metric', expanded, onToggle, onOpenLot, restock = null }: IngredientLotsRowProps): ReactElement | null {
   const name = capitalise(item.name)
   const supply = isSupply(item)
+  // SSP-05: a narrow Supply row shows its Restock status alone ("4 in Stock" below the level, else "Restocks below 6"), never cut.
+  const restockMeta = supply ? supplyRestockMeta(restock, item.baseUnit, system) : null
   return (
     <ListRow
       title={name}
       aria-label={strings.ingredientLotsLabel(name, lots.length)}
       meta={supply ? supplyRowMeta(item, restock, system) : rowMeta(item, today)}
-      metaStatus={supply && isBelowRestock(restock) ? 'info' : undefined}
+      metaCompact={(supply ? (restockMeta ? restockMeta.compact || restockMeta.long : '') : rowMetaCompact(item, today)) || undefined}
+      metaStatus={restockMeta?.below ? 'info' : undefined}
       trailing={formatQuantity(item.total, item.baseUnit, system)}
       leading={<Thumb name={name} imageUrl={item.imageUrl} size={40} />}
       chevron

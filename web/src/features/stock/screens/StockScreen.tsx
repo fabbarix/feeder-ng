@@ -15,9 +15,9 @@
  * "Your Stock isn’t on this phone yet"; empty -> EmptyState "Nothing in Stock yet" + hint; ready or offlineSaved -> the list.
  * A failed change shows an error toast. No `<main>`: the shell provides it. No tile grid.
  */
-import { useId, useMemo, useRef, useState, type ReactElement } from 'react'
+import { useCallback, useId, useMemo, useRef, useState, type ReactElement } from 'react'
 import { combineScreenStates } from '../../../lib/dataState'
-import { ActiveFilterChips, BottomSheet, Button, EmptyState, ErrorState, FiltersButton, ListGroup, LoadState, PageHeader, SearchField, useToast } from '../../../ui'
+import { BottomSheet, Button, EmptyState, ErrorState, ListGroup, LoadState, PageHeader, useToast } from '../../../ui'
 import { SkeletonGroup, SkeletonList } from '../../../ui/Skeleton'
 import { AddLotSheet } from '../components/AddLotSheet'
 import { IngredientLotsRow } from '../components/IngredientLotsRow'
@@ -25,10 +25,14 @@ import { LotEditSheet } from '../components/LotEditSheet'
 import { LotList } from '../components/LotList'
 import { LotSheet } from '../components/LotSheet'
 import { PantryFiltersPanel } from '../components/PantryFiltersPanel'
-import { PantryModeControl } from '../components/PantryModeControl'
+import { PantryFilterHeader } from '../components/PantryFilterHeader'
 import { PantryOverflowMenu } from '../components/PantryOverflowMenu'
-import { PantrySortSelect } from '../components/PantrySortSelect'
-import { PantryLotRow } from '../components/PantryLotRow'
+import { PantryPlaceGroups } from '../components/PantryPlaceGroups'
+import { KeepDateSheet } from '../components/KeepDateSheet'
+import { PutAwaySheet } from '../components/PutAwaySheet'
+import { useLotParam } from '../hooks/useLotParam'
+import { usePutAway } from '../hooks/usePutAway'
+import { useSpoiledFlow } from '../hooks/useSpoiledFlow'
 import { useOpenIngredients } from '../hooks/useOpenIngredients'
 import { usePantry } from '../hooks/usePantry'
 import { usePantryFilters } from '../hooks/usePantryFilters'
@@ -37,7 +41,6 @@ import type { StockLot } from '../types'
 import { SetTotalSheet } from '../components/SetTotalSheet'
 import { SpoiledTile } from '../components/SpoiledTile'
 import { useIngredientChoices } from '../hooks/useIngredientChoices'
-import { LeftoverRow } from '../../../ui/LeftoverActions/LeftoverRow'
 import { LeftoverSheets } from '../../../ui/LeftoverActions/LeftoverSheets'
 import { useStockActions, useSpoiledLots, useStockLots, useStockTotals } from '../hooks/useStock'
 import { useStockTakeEntry } from '../hooks/useStockTakeEntry'
@@ -69,6 +72,9 @@ export function StockScreen(): ReactElement | null {
   const [openLot, setOpenLot] = useState<StockLot | null>(null)
   const [editingLot, setEditingLot] = useState<StockLot | null>(null)
   const openIngredients = useOpenIngredients()
+  const putAway = usePutAway()
+  // SSP-10: the Not sorted Lots the Put away sheet opened over (null = closed).
+  const [puttingAway, setPuttingAway] = useState<StockLot[] | null>(null)
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [settingTotal, setSettingTotal] = useState(false)
@@ -85,6 +91,12 @@ export function StockScreen(): ReactElement | null {
   const { restockFor, hasSupplies } = useSupplyRestock(choices.choices, pantry.lots.data)
   const selected = (totals.data ?? []).find((i) => i.ingredientId === selectedId) ?? null
   const spoiledLots = spoiled.data ?? []
+  // SAFE-09, SSP-17: Throw out and Keep act at once, with Undo (and Change for Keep).
+  const flow = useSpoiledFlow({ system, today, keep: spoiled.keep, undoKeep: spoiled.undoKeep })
+  const spoiledCalls = useMemo(() => ({ throwOut: spoiled.throwOut, undoThrowOut: spoiled.undoThrowOut }), [spoiled.throwOut, spoiled.undoThrowOut])
+  const lotCalls = useMemo(() => ({ throwOut: actions.throwOut, undoThrowOut: actions.undoThrowOut }), [actions.throwOut, actions.undoThrowOut])
+  // TB-11: /pantry?lot=<id> opens that Lot.
+  useLotParam(pantry.lots.data, useCallback((lot: StockLot) => setOpenLot(lot), []))
   // B9-20 (RES-02): the Storage Place view lists the Lots, so it waits for them as well as for the totals.
   const listState = mode === 'places' ? combineScreenStates(totals.state, pantry.lots.state) : totals.state
   // B9-20 (RES-02): the filter header shows while the list loads too (the skeleton then sits where the list will be, so
@@ -113,7 +125,7 @@ export function StockScreen(): ReactElement | null {
         title={strings.title}
         actions={
           <>
-            <Button variant="secondary" size="sm" icon="scan" onClick={openStockTake}>
+            <Button variant="secondary" size="sm" icon="scan" iconOnly="narrow" onClick={openStockTake}>
               {strings.stockTake}
             </Button>
             <Button size="sm" icon="add" onClick={() => setAdding(true)}>
@@ -131,31 +143,32 @@ export function StockScreen(): ReactElement | null {
               lots={spoiledLots}
               today={today}
               system={system}
-              onThrowOut={(id) => void attempt(() => spoiled.throwOut(id))}
-              onKeep={(id) => void attempt(() => spoiled.keep(id))}
+              onThrowOut={(id) => {
+                const lot = spoiledLots.find((l) => l.id === id)
+                if (lot) void flow.throwOut(lot, spoiledCalls)
+              }}
+              onKeep={(id) => {
+                const lot = spoiledLots.find((l) => l.id === id)
+                if (lot) void flow.keep(lot)
+              }}
             />
             {ready ? (
-              <div className="filter-bar">
-                <div className="filter-bar__row filter-bar__search-row">
-                  <SearchField label={strings.searchLabel} value={query} onChange={setQuery} />
-                  <FiltersButton
-                    ref={filtersAnchor}
-                    count={filters.count}
-                    expanded={panelOpen}
-                    controls={panelOpen ? panelId : undefined}
-                    onClick={() => setPanelOpen((open) => !open)}
-                  />
-                </div>
-                <div className="filter-bar__row filter-bar__view-row">
-                  <PantryModeControl value={mode} onChange={filters.setMode} />
-                  {mode === 'places' ? (
-                    <div className="filter-bar__sort">
-                      <PantrySortSelect value={sort} onChange={filters.setSort} />
-                    </div>
-                  ) : null}
-                </div>
-                <ActiveFilterChips chips={filters.chips} onRemove={filters.remove} onMore={() => setPanelOpen(true)} fallbackFocus={filtersAnchor} />
-              </div>
+              <PantryFilterHeader
+                query={query}
+                onQuery={setQuery}
+                filtersAnchor={filtersAnchor}
+                count={filters.count}
+                panelOpen={panelOpen}
+                panelId={panelId}
+                onTogglePanel={() => setPanelOpen((open) => !open)}
+                onOpenPanel={() => setPanelOpen(true)}
+                mode={mode}
+                onMode={filters.setMode}
+                sort={sort}
+                onSort={filters.setSort}
+                chips={filters.chips}
+                onRemoveChip={filters.remove}
+              />
             ) : null}
           </aside>
         ) : null}
@@ -175,37 +188,18 @@ export function StockScreen(): ReactElement | null {
             sections.length === 0 ? (
               <EmptyState title={strings.noMatch} description={strings.noMatchHint} />
             ) : (
-              <div className="pantry-groups">
-                {sections.map((section) => {
-                  const name = section.key === -1 ? strings.lotsLabel : section.name
-                  // A group of Leftovers only has no Stock Lots to count.
-                  const label = section.lots.length === 0 && section.leftovers.length > 0 ? name : strings.groupLabel(name, section.lots.length)
-                  return (
-                    <ListGroup key={section.key} label={label}>
-                      {section.lots.map((lot) => (
-                        <PantryLotRow
-                          key={lot.id}
-                          lot={lot}
-                          today={today}
-                          system={system}
-                          placeName={groupByPlace ? undefined : (pantry.placeOf(lot)?.name ?? strings.unsorted)}
-                          restock={restockFor(lot.ingredientId)}
-                          onOpen={setOpenLot}
-                        />
-                      ))}
-                      {section.leftovers.map((leftover) => (
-                        <LeftoverRow
-                          key={`leftover-${leftover.id}`}
-                          leftover={leftover}
-                          today={today}
-                          onAction={(kind, leftover) => leftovers.flow.openSheet(kind, leftover)}
-                          showPlace={!groupByPlace}
-                        />
-                      ))}
-                    </ListGroup>
-                  )
-                })}
-              </div>
+              <PantryPlaceGroups
+                sections={sections}
+                places={pantry.places}
+                groupByPlace={groupByPlace}
+                today={today}
+                system={system}
+                placeOf={pantry.placeOf}
+                restockFor={restockFor}
+                onOpenLot={setOpenLot}
+                onLeftover={(kind, leftover) => leftovers.flow.openSheet(kind, leftover)}
+                onPutAway={setPuttingAway}
+              />
             )
           ) : items.length === 0 ? (
             <EmptyState title={strings.noMatch} description={strings.noMatchHint} />
@@ -270,7 +264,10 @@ export function StockScreen(): ReactElement | null {
           lots={lots.data ?? []}
           today={today}
           system={system}
-          onThrowOut={(id) => void attempt(() => actions.throwOut(id))}
+          onThrowOut={(id) => {
+            const lot = (lots.data ?? []).find((l) => l.id === id)
+            if (lot) void flow.throwOut(lot, lotCalls)
+          }}
         />
       </BottomSheet>
 
@@ -338,6 +335,20 @@ export function StockScreen(): ReactElement | null {
       />
 
       <LeftoverSheets flow={leftovers.flow} />
+
+      <PutAwaySheet
+        open={puttingAway !== null}
+        onClose={() => setPuttingAway(null)}
+        lots={puttingAway ?? []}
+        places={pantry.places}
+        today={today}
+        system={system}
+        onMove={putAway.putAway}
+        onAllPutAway={() => toast.show(strings.putAway.allDone, { status: 'success' })}
+        restockFor={restockFor}
+      />
+
+      <KeepDateSheet open={flow.changing !== null} lot={flow.changing} today={today} onClose={flow.closeChange} onKeep={flow.keepUntil} />
 
       <AddLotSheet
         open={adding}

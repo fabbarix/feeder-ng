@@ -95,8 +95,9 @@ export function useTodayTileData(): TodayTileData {
     stockToday: spoiled.today ?? plan.today,
     system: totals.system,
     useSoon: useSoonItems(totals.data ?? [], plan.today),
-    throwOut: spoiled.throwOut,
-    keep: spoiled.keep,
+    // B9-29: useSpoiledLots now resolves with the waste record and the kept Lot (for the Pantry's Undo); Today keeps its void calls.
+    throwOut: (lotId) => spoiled.throwOut(lotId).then(() => undefined),
+    keep: (lotId) => spoiled.keep(lotId).then(() => undefined),
     planLoading: plan.isLoading || toConfirm.isLoading || couldntPlan.isLoading || leftovers.isLoading,
     stockLoading: spoiled.isLoading || totals.isLoading,
     loadFailed: failed,

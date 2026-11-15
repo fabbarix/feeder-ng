@@ -40,11 +40,11 @@ describe('B9-09: width queries are the DS-09 em table (min-width only, or width 
     }
     expect(bad).toEqual([])
   })
-  it('the converted queries land on the bands the chapter names (shop 37.5 and 48, scan 48, stock 80, ingredients 37.5)', () => {
+  it('the converted queries land on the bands the chapter names (shop 37.5 and 48, scan 48, stock 80 and B9-29\'s 37.5, ingredients 37.5)', () => {
     const heads = (file: string) => new Set(rules.filter((r) => r.file === file).flatMap((r) => r.context.filter((c) => c.startsWith('@media') && /width/.test(c))))
     expect([...heads('shop/shop.css')].sort()).toEqual(['@media (min-width: 37.5em)', '@media (min-width: 48em)'])
     expect([...heads('scan/scan.css')].sort()).toEqual(['@media (min-width: 48em)', '@media (width < 48em)'])
-    expect([...heads('stock/stock.css')]).toEqual(['@media (min-width: 80em)'])
+    expect([...heads('stock/stock.css')]).toEqual(['@media (min-width: 80em)', '@media (min-width: 37.5em)'])
     expect([...heads('ingredients/ingredients.css')]).toEqual(['@media (min-width: 37.5em)'])
   })
 })

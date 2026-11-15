@@ -8,6 +8,8 @@ export const fieldStrings = {
   hour: 'Hour',
   minute: 'Minute',
   chooseFile: 'Choose a file or drop it here',
+  /** B9-30: the button's text when the zone says "or drop it here" itself. */
+  chooseFileShort: 'Choose a file',
   custom: 'Custom',
   initialsGlyph: 'Aa',
   customColour: 'Custom colour',
