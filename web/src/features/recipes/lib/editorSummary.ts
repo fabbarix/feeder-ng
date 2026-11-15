@@ -62,3 +62,13 @@ export function planningSummary(draft: RecipeDraft, courses: readonly CourseChoi
   const parts = [courseNames, tags, overridePart].filter((p) => p !== '')
   return parts.length === 0 ? s.householdDefaults : parts.join(SEP)
 }
+
+/** The draft fields each closed section holds: a section opens itself when one of them has an error. */
+const ABOUT_FIELDS = ['description', 'sourceUrl', 'sourceAttribution']
+const PLANNING_FIELDS = ['courses', 'wholeMeal', 'tags', 'cooldownDays', 'leftoverUseByDays', 'reheatMinutes', 'frozenUseByDays']
+
+/** Whether "Description and source" or "Planning" holds a field with an error (a tag error is "tags" or "tags.N"). */
+export function sectionInvalid(errors: Readonly<Record<string, string>>, section: 'about' | 'planning'): boolean {
+  const fields = section === 'about' ? ABOUT_FIELDS : PLANNING_FIELDS
+  return Object.keys(errors).some((key) => fields.includes(key.split('.')[0]!))
+}

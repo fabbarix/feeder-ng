@@ -194,9 +194,10 @@ describe('the Kind is one Segmented control (RX-10, decision RX 4)', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Base recipe' }))
     expect(stub.callsTo('PUT', '/api/recipes/3')).toHaveLength(0)
     await save()
-    expect(await screen.findByRole('dialog', { name: 'Turn Roast tray into a Base recipe?' })).toBeInTheDocument()
+    const ask = await screen.findByRole('dialog', { name: 'Turn Roast tray into a Base recipe?' })
     expect(stub.callsTo('PUT', '/api/recipes/3')).toHaveLength(0)
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    // The dialog's own Cancel (the Save bar has a Cancel too).
+    await userEvent.click(within(ask).getByRole('button', { name: 'Cancel' }))
     expect(stub.callsTo('PUT', '/api/recipes/3')).toHaveLength(0)
   })
 
@@ -449,7 +450,8 @@ describe('Ingredient lines are quick to fill (RX-02, RX-08, RX-10)', () => {
 
 describe('a Step card (RX-02, RX-08)', () => {
   it('a Lead time of 720 minutes reads "12 h"; saving without touching it sends 720 again', async () => {
-    api({
+    // The calls go to the stub this test installs (the beforeEach one is replaced by it).
+    scratch = api({
       'GET /api/recipes/3': recipe({
         id: 3, updatedAt: '2026-11-14T10:00:00Z',
         steps: [{ text: 'Soak the beans', kind: 'advance', durationMinutes: 0, leadTimeMinutes: 720, after: [], uses: [], image: '' }, { text: 'Cook', kind: 'active', durationMinutes: 45, leadTimeMinutes: 0, after: [], uses: [], image: '' }],
