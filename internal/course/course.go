@@ -28,6 +28,7 @@ var (
 	ErrPlanned     = errors.New("course: a Planned Meal or Leftover uses it; archive it")      // 409 course_planned
 	ErrArchived    = errors.New("course: the Course is archived")                              // main on an archived Course: 422
 	ErrReplacement = errors.New("course: replacement missing, archived, or the Course itself") // 422, field replacement
+	ErrRecipeIDs   = errors.New("course: give one or more known Recipes")                    // 422 validation_failed, field recipeIds
 )
 
 // Course is one Course of the Household.
@@ -211,6 +212,38 @@ func Reassign(owners map[int64][]int64, removed, replacement int64) map[int64][]
 			kept = append(kept, replacement)
 		}
 		out[owner] = kept
+	}
+	return out
+}
+
+// RecipeIDs checks the Recipe list of Mark or Unmark Recipes (POST /api/courses/{id}/recipes and …/recipes/unmark):
+// at least one id, none zero or negative. Repeated ids are dropped; the first-seen order is kept. ErrRecipeIDs.
+func RecipeIDs(ids []int64) ([]int64, error) {
+	if len(ids) == 0 {
+		return nil, ErrRecipeIDs
+	}
+	seen := make(map[int64]bool, len(ids))
+	out := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			return nil, ErrRecipeIDs
+		}
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+// Pick returns the ids of want whose membership in has is the one asked: for Mark, the Recipes not yet marked
+// (member false); for Unmark, the Recipes that are (member true). The order of want is kept; never nil.
+func Pick(want []int64, has map[int64]bool, member bool) []int64 {
+	out := []int64{}
+	for _, id := range want {
+		if has[id] == member {
+			out = append(out, id)
+		}
 	}
 	return out
 }
