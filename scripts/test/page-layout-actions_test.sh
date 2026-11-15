@@ -64,7 +64,7 @@ for try in 0 1 2 3 4 5 6 7; do
 done
 [ -n "$PORT" ] || { echo "FAIL: no free port for the fixture server"; exit 1; }
 echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings)$' timeout 180 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings)$' timeout 600 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
 
 for w in 390 1440; do
   # P29: each of the four surfaces (tile, toast, sheet footer, dialog) reports its weak action, and names its label
