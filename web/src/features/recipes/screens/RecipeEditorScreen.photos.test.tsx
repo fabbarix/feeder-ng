@@ -41,10 +41,16 @@ const view = () =>
     </QueryClientProvider>,
   )
 
+// B9-37 (RX-02): the Recipe photo's picker is in the sheet its 96 px button opens; a Step's picker shows once it has a Photo or after
+// "Add Photo".
+const openRecipePhoto = () => userEvent.click(screen.getByRole('button', { name: 'Photo of the Recipe: change' }))
+
 describe('RecipeEditorScreen: photos', () => {
-  it('has one picker for the Recipe and one per Step, each showing its own image id', () => {
+  it('has one picker for the Recipe and one per Step, each showing its own image id', async () => {
     view()
+    await openRecipePhoto()
     expect(screen.getByRole('group', { name: recipeStrings.photo })).toHaveAttribute('data-value', 'cover1')
+    await userEvent.click(screen.getByRole('button', { name: 'Add Photo' }))
     const steps = screen.getAllByRole('group', { name: recipeStrings.steps.image })
     expect(steps.map((s) => s.getAttribute('data-value'))).toEqual(['one', ''])
   })
@@ -56,6 +62,7 @@ describe('RecipeEditorScreen: photos', () => {
 
   it('a picked Recipe photo updates draft.image only', async () => {
     view()
+    await openRecipePhoto()
     await userEvent.click(screen.getByRole('button', { name: `pick ${recipeStrings.photo}` }))
     const setDraft = h.editor.setDraft as ReturnType<typeof vi.fn>
     expect(setDraft).toHaveBeenCalledTimes(1)
@@ -65,6 +72,7 @@ describe('RecipeEditorScreen: photos', () => {
 
   it('removing the Recipe photo clears draft.image', async () => {
     view()
+    await openRecipePhoto()
     await userEvent.click(screen.getByRole('button', { name: `remove ${recipeStrings.photo}` }))
     const apply = (h.editor.setDraft as ReturnType<typeof vi.fn>).mock.calls[0]![0] as (d: Record<string, unknown>) => Record<string, unknown>
     expect(apply({ ...emptyDraft(), image: 'cover1' })).toMatchObject({ image: '' })
@@ -72,6 +80,7 @@ describe('RecipeEditorScreen: photos', () => {
 
   it('a picked Step photo goes to that Step through setSteps and leaves the Recipe photo alone', async () => {
     view()
+    await userEvent.click(screen.getByRole('button', { name: 'Add Photo' }))
     await userEvent.click(screen.getAllByRole('button', { name: `pick ${recipeStrings.steps.image}` })[1]!)
     const setSteps = h.editor.setSteps as ReturnType<typeof vi.fn>
     expect(setSteps).toHaveBeenCalledTimes(1)

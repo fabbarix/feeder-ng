@@ -66,7 +66,7 @@ describe('Quick create: the draft survives creating an Ingredient', () => {
   async function startDraft() {
     view()
     await userEvent.type(recipeName(), 'Paella')
-    await userEvent.click(screen.getByRole('button', { name: recipeStrings.lines.add }))
+    // B9-37 (RX-02): a new Recipe opens with one empty line; its picker is the one to type in.
     await typeInPicker('saffron')
     await userEvent.click(await screen.findByRole('option', { name: 'Create Ingredient "saffron"' }))
   }
@@ -120,7 +120,7 @@ describe('Quick create: near duplicates', () => {
   it('asks "Did you mean Garlic?" before creating a close name, and "Use garlic" selects the existing one', async () => {
     iApi.search.mockResolvedValue({ exact: null, suggestions: [{ ingredient: garlicFull, score: 0.9 }] })
     view()
-    await userEvent.click(screen.getByRole('button', { name: recipeStrings.lines.add }))
+    // B9-37 (RX-02): a new Recipe opens with one empty line; its picker is the one to type in.
     await typeInPicker('garlik')
     await userEvent.click(await screen.findByRole('option', { name: 'Create Ingredient "garlik"' }))
     await userEvent.click(within(sheet()).getByRole('button', { name: 'Create Ingredient' }))
@@ -138,7 +138,7 @@ describe('Quick create: offline', () => {
   it('shows Create Ingredient disabled with the reason and opens nothing', async () => {
     setOnline(false)
     view()
-    await userEvent.click(screen.getByRole('button', { name: recipeStrings.lines.add }))
+    // B9-37 (RX-02): a new Recipe opens with one empty line; its picker is the one to type in.
     await typeInPicker('saffron')
     const row = await screen.findByRole('option', { name: /Create Ingredient "saffron"/ })
     expect(row).toHaveAttribute('aria-disabled', 'true')
@@ -167,7 +167,8 @@ describe('Quick create: the Unit Conversion prompt is reused', () => {
 })
 
 describe('Ready Meal creates its Ingredient', () => {
-  const tickReadyMeal = () => userEvent.click(screen.getByRole('checkbox', { name: new RegExp(recipeStrings.fields.readyMeal) }))
+  // B9-37 (RX-10): Ready Meal is an option of the Kind control (it was a checkbox).
+  const tickReadyMeal = () => userEvent.click(screen.getByRole('radio', { name: recipeStrings.fields.readyMeal }))
 
   it('shows the Ingredient to be added, with the helper, as the only line', async () => {
     view()
@@ -210,7 +211,7 @@ describe('Ready Meal reuses an existing Ingredient', () => {
   it('selects the same-name Ingredient on the line and says nothing about adding one', async () => {
     view()
     await userEvent.type(recipeName(), 'lasagne PACK')
-    await userEvent.click(screen.getByRole('checkbox', { name: new RegExp(recipeStrings.fields.readyMeal) }))
+    await userEvent.click(screen.getByRole('radio', { name: recipeStrings.fields.readyMeal })) // B9-37: the Kind control
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveTextContent('Lasagne pack'))
     expect(screen.queryByText(recipeStrings.readyMealIngredient.newBadge)).toBeNull()
     expect(screen.queryByText(/Feeder adds an Ingredient called/)).toBeNull()
@@ -220,7 +221,7 @@ describe('Ready Meal reuses an existing Ingredient', () => {
     rApi.create.mockResolvedValue({ id: 41 } as Recipe)
     view()
     await userEvent.type(recipeName(), 'Lasagne pack')
-    await userEvent.click(screen.getByRole('checkbox', { name: new RegExp(recipeStrings.fields.readyMeal) }))
+    await userEvent.click(screen.getByRole('radio', { name: recipeStrings.fields.readyMeal })) // B9-37: the Kind control
     await userEvent.click(screen.getByRole('button', { name: recipeStrings.save }))
     await waitFor(() => expect(rApi.create).toHaveBeenCalledOnce())
     expect(rApi.create.mock.calls[0]![0]).toMatchObject({ readyMeal: true, lines: [{ ingredientId: 21, quantity: 1, unit: 'piece' }] })

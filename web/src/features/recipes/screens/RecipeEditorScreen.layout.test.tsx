@@ -60,30 +60,36 @@ describe('editor layout', () => {
     const { container } = view()
     expect(container.querySelector('.recipe-editor')).toContainElement(screen.getByRole('heading', { level: 1, name: 'New Recipe' }))
   })
-  it('has a section index named "Sections": Details, Photo, Ingredients, Steps', () => {
+  // B9-37 (RX-02): the sections are Recipe, Ingredients, Steps, then the Disclosures "Description and source" and "Planning".
+  it('has a section index named "Sections": Recipe, Ingredients, Steps, Description and source, Planning', () => {
     view()
     const nav = screen.getByRole('navigation', { name: 'Sections' })
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Details', 'Photo', 'Ingredients', 'Steps'])
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Recipe', 'Ingredients', 'Steps', 'Description and source', 'Planning'])
     for (const a of within(nav).getAllByRole('link')) {
       const target = document.getElementById(a.getAttribute('href')!.slice(1))
       expect(target, a.textContent ?? '').not.toBeNull()
     }
   })
-  it('section cards: Details, Ingredients and Steps are named regions with the ids the index links to', () => {
+  it('section cards: Recipe, Ingredients and Steps are named regions with the ids the index links to; the two optional ones are Disclosures', () => {
     view()
-    for (const [id, name] of [['recipe-section-details', 'Details'], ['recipe-section-ingredients', 'Ingredients'], ['recipe-section-steps', 'Steps']] as const) {
+    const recipe = screen.getByRole('region', { name: 'Recipe' })
+    expect(recipe.id).toBe('recipe-section-recipe')
+    expect(recipe).toHaveClass('recipe-editor__section')
+    for (const [id, name] of [['recipe-section-ingredients', 'Ingredients'], ['recipe-section-steps', 'Steps']] as const) {
       const region = screen.getByRole('region', { name })
       expect(region.id).toBe(id)
       expect(region).toHaveClass('recipe-editor__section')
       expect(within(region).getByRole('heading', { level: 2, name })).toBeInTheDocument()
     }
-    expect(document.getElementById('recipe-section-photo')).not.toBeNull()
+    for (const id of ['recipe-section-about', 'recipe-section-planning']) expect(document.getElementById(id)).toHaveAttribute('data-disclosure')
+    expect(document.getElementById('recipe-section-details')).toBeNull()
+    expect(document.getElementById('recipe-section-photo')).toBeNull()
   })
   it('captions the columns of the ingredient lines in a header row that assistive tech skips (the fields carry their own labels)', () => {
     const { container } = view()
     const head = container.querySelector('.recipe-editor__lines-head')!
     expect(head).toHaveAttribute('aria-hidden', 'true')
-    expect(head.textContent).toMatch(/Ingredient.*Quantity.*Unit.*Note/)
+    expect(head.textContent).toMatch(/Ingredient.*Quantity.*Unit.*Note.*Optional/)
   })
 })
 

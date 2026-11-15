@@ -289,6 +289,8 @@ describe('an upload in progress counts as unsaved', () => {
   it('while the Photo is uploading the editor is dirty; it is clean again when the upload ends unchanged', async () => {
     const { router } = mount()
     await ready()
+    // B9-37 (RX-02): the Recipe photo's picker is in the sheet its 96 px button opens.
+    await userEvent.click(screen.getByRole('button', { name: 'Photo of the Recipe: add' }))
     await userEvent.click(screen.getByRole('button', { name: 'start upload Photo' }))
     expect(unsaved()).toBe('true')
     await userEvent.click(screen.getByRole('link', { name: 'Plan' }))

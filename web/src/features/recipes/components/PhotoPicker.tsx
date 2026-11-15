@@ -17,7 +17,17 @@ export interface PhotoPickerProps {
 export function PhotoPicker({ value, onChange, onBusyChange }: PhotoPickerProps): ReactNode {
   const f = recipeStrings.fields
   const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
   const has = value !== ''
+  const busyChange = (next: boolean) => {
+    setBusy(next)
+    onBusyChange?.(next)
+  }
+  // Closing the sheet unmounts the picker and ends its upload: Save must not wait for it any more.
+  const close = () => {
+    setOpen(false)
+    if (busy) busyChange(false)
+  }
   return (
     <>
       <button type="button" className="recipe-photo" aria-label={f.photoButton(has)} aria-haspopup="dialog" onClick={() => setOpen(true)}>
@@ -27,9 +37,9 @@ export function PhotoPicker({ value, onChange, onBusyChange }: PhotoPickerProps)
           {has ? f.photoChange : f.photoAdd}
         </span>
       </button>
-      <BottomSheet open={open} onClose={() => setOpen(false)} title={recipeStrings.photo}>
+      <BottomSheet open={open} onClose={close} title={recipeStrings.photo}>
         <div className="photo-picker">
-          <ImagePicker hideLabel label={recipeStrings.photo} value={value} onChange={onChange} onBusyChange={onBusyChange} aspect={CROP_ASPECTS.landscape} size="hero" />
+          <ImagePicker hideLabel label={recipeStrings.photo} value={value} onChange={onChange} onBusyChange={busyChange} aspect={CROP_ASPECTS.landscape} size="hero" />
         </div>
       </BottomSheet>
     </>

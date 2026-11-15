@@ -56,35 +56,42 @@ const setEditor = (over: Record<string, unknown> = {}, draft = draftOf()) => {
 }
 
 beforeEach(() => {
+  window.localStorage.clear()
   h.courses = courseChoices
   setEditor()
 })
+// B9-37 (RX-02): Courses and Whole meal are in the Planning section, closed until it is opened.
+const openPlanning = () => userEvent.click(screen.getByRole('button', { name: /^Planning/ }))
 
 describe('RecipeEditorScreen: Courses', () => {
   it('hands the household Courses to the editor hook', () => {
     view()
     expect(h.args[2]).toEqual(courseChoices)
   })
-  it('shows the Courses picker in the details with the chosen Courses pressed', () => {
+  it('shows the Courses picker in Planning with the chosen Courses pressed', async () => {
     view()
+    await openPlanning()
     const group = screen.getByRole('group', { name: 'Courses' })
     expect(within(group).getByRole('button', { name: /^Main/ })).toHaveAttribute('aria-pressed', 'true')
     expect(within(group).getByRole('button', { name: /^Side/ })).toHaveAttribute('aria-pressed', 'false')
   })
   it('choosing a Course updates the draft with the ids in household order', async () => {
     view()
+    await openPlanning()
     await userEvent.click(screen.getByRole('button', { name: /^Side/ }))
     const setDraft = h.editor.setDraft as ReturnType<typeof vi.fn>
     const update = setDraft.mock.calls.at(-1)![0] as (d: RecipeDraft) => RecipeDraft
     expect(update(draftOf({ courseIds: [3] })).courseIds).toEqual([2, 3])
   })
-  it('shows the Whole meal switch only while the Courses include the main Course', () => {
+  it('shows the Whole meal switch only while the Courses include the main Course', async () => {
     view()
+    await openPlanning()
     expect(screen.getByRole('switch', { name: 'Whole meal' })).toBeInTheDocument()
   })
-  it('hides it when the Courses do not include the main Course', () => {
+  it('hides it when the Courses do not include the main Course', async () => {
     setEditor({}, draftOf({ courseIds: [2], wholeMeal: true }))
     view()
+    await openPlanning()
     expect(screen.queryByRole('switch', { name: 'Whole meal' })).toBeNull()
   })
   it('puts the editor\'s Courses error on the Courses field', () => {

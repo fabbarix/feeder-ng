@@ -50,26 +50,36 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
 
+// B9-37 (RX-02, RX-09): the Tags are in the Planning section (closed until opened), as removable chips plus "Add Tag" (the Tag chooser).
+const openPlanning = () => userEvent.click(screen.getByRole('button', { name: /^Planning/ }))
+
 describe('RecipeEditorScreen Tag field', () => {
-  it('colours the Recipe\'s saved Tags and marks an unsaved one New', () => {
+  beforeEach(() => window.localStorage.clear())
+
+  it('colours the Recipe\'s saved Tags and marks an unsaved one New', async () => {
     view(['roast', 'fresh'])
+    await openPlanning()
     expect(screen.getByRole('button', { name: 'Remove Tag roast' })).toHaveAttribute('data-tag-colour', 'tomato')
     expect(screen.getByRole('button', { name: 'Remove Tag fresh' })).not.toHaveAttribute('data-tag-colour')
     expect(screen.getByRole('button', { name: 'Remove Tag fresh' })).toHaveTextContent('New')
   })
-  it('shows no "New" while the Tags are still loading (nothing is known yet)', () => {
+  it('shows no "New" while the Tags are still loading (nothing is known yet)', async () => {
     h.loading = true
     view(['fresh'])
+    await openPlanning()
     expect(screen.getByRole('button', { name: 'Remove Tag fresh' })).not.toHaveTextContent('New')
   })
-  it('a new Tag is a neutral pill in the editor', () => {
+  it('a new Tag is a neutral pill in the editor', async () => {
     view(['fresh'])
+    await openPlanning()
     expect(screen.getByRole('button', { name: 'Remove Tag fresh' })).toHaveAttribute('data-kind', 'tag')
   })
-  it('offers the Household\'s Tags with their dots while typing', async () => {
+  it('offers the Household\'s Tags with their dots while typing in the Tag chooser', async () => {
     view([])
-    await userEvent.type(screen.getByRole('combobox', { name: 'Add a Tag' }), 'qu')
-    const option = within(screen.getByRole('listbox', { name: 'Existing Tags' })).getByRole('option')
+    await openPlanning()
+    await userEvent.click(screen.getByRole('button', { name: 'Add Tag' }))
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search or add a Tag' }), 'qu')
+    const option = within(screen.getByRole('listbox', { name: 'Tags' })).getAllByRole('option')[0]!
     expect(option.querySelector('.tag-dot')).toHaveAttribute('data-tag-colour', 'sky')
   })
 })
