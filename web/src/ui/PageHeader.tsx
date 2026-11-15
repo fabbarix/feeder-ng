@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { Breadcrumbs, type Crumb } from './Breadcrumbs'
+import { parentCrumb } from './lib/pageTitle'
+import { useDocumentTitle } from './lib/useDocumentTitle'
 import './PageHeader.css'
 
 export interface PageHeaderProps {
@@ -12,12 +14,16 @@ export interface PageHeaderProps {
   leading?: ReactNode
   /** Right-aligned actions (IconButtons, one Button). */
   actions?: ReactNode
-  /** STUB (B9-19): the document title when it must differ from the h1 text. */
+  /** The document title's page name when it must differ from the h1 (a heading that is a question changing with the step). */
   documentTitle?: string
 }
 
-/** The title row of a screen: `<header>` with the h1, an optional subtitle, leading node and actions. */
-export function PageHeader({ title, subtitle, breadcrumbs, leading, actions }: PageHeaderProps) {
+/**
+ * The title row of a screen: `<header>` with the h1, an optional subtitle, leading node and actions. It names the document
+ * "<title> · <parent crumb> · Feeder" (A11Y-01), and its h1 is the route-focus target (`#page-title`, focusable by script only).
+ */
+export function PageHeader({ title, subtitle, breadcrumbs, leading, actions, documentTitle }: PageHeaderProps) {
+  useDocumentTitle([documentTitle ?? title, parentCrumb(breadcrumbs)])
   return (
     <header className="page-header">
       {breadcrumbs && breadcrumbs.length > 0 ? (
@@ -28,7 +34,9 @@ export function PageHeader({ title, subtitle, breadcrumbs, leading, actions }: P
       <div className="page-header__row">
         {leading ? <div className="page-header__leading">{leading}</div> : null}
         <div className="page-header__text">
-          <h1 className="page-header__title">{title}</h1>
+          <h1 className="page-header__title" id="page-title" tabIndex={-1}>
+            {title}
+          </h1>
           {subtitle ? <p className="page-header__subtitle">{subtitle}</p> : null}
         </div>
         {actions ? <div className="page-header__actions">{actions}</div> : null}

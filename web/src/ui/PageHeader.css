@@ -24,14 +24,20 @@
   flex: none;
 }
 
-/* Wrapped actions stay at the inline end. */
+/* Wrapped actions stay at the inline end (DS-03): they never reach past the gutter, so when they do not fit beside the title they
+   take their own line and, if they still do not fit, wrap. */
 .page-header__actions {
   margin-inline-start: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
-/* A title that would get less than 12rem sends the actions to a second line. */
+/* RX-03: a title that would get less than 8rem sends the actions to a second line ("Recipes", New Recipe and the menu share one
+   row from 375 px). */
 .page-header__text {
-  flex: 1 1 12rem;
+  flex: 1 1 8rem;
   min-inline-size: 0;
 }
 
@@ -40,6 +46,11 @@
   font-size: var(--text-title-1-size);
   line-height: var(--text-title-1-line);
   font-weight: var(--text-title-1-weight);
+}
+
+.page-header__title:focus {
+  /* A11Y-01: the h1 takes focus on a route change; it is not an operable control, so it draws no ring. */
+  outline: none;
 }
 
 .page-header__subtitle {
