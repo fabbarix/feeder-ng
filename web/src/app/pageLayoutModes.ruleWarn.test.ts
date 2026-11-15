@@ -78,3 +78,25 @@ describe("B9-13's drop-in", () => {
     expect(rules.modeFor(`${base}\n${text}`, '/pantry')).toBe('fail')
   })
 })
+
+describe("w2a's drop-in (ruling e: P36 on Your preferences until B9-19)", () => {
+  const dir = resolve(cwd, '../scripts/check-page-layout.modes.d')
+  const own = readFileSync(resolve(dir, '30-b9-w2a-p36-preferences-warn'), 'utf8')
+  const base = readFileSync(resolve(cwd, '../scripts/check-page-layout.modes'), 'utf8')
+  const all = `${base}\n${readdirSync(dir)
+    .filter((n) => !n.startsWith('.'))
+    .sort()
+    .map((n) => readFileSync(resolve(dir, n), 'utf8'))
+    .join('\n')}`
+  it('is the one line P36@/settings/preferences, until B9-19, and no whole route', () => {
+    expect(rules.parseModes(own).errors).toEqual([])
+    expect(rules.parseModes(own).ruleWarn).toEqual([{ rule: 'P36', pattern: '/settings/preferences', until: 'B9-19' }])
+    expect(own).not.toMatch(/^\s*(warn_routes|fail_routes|default|width)\b/m)
+  })
+  it('covers P36 in the touch-targets-controls scenario and nothing else there or on other Settings pages', () => {
+    expect(rules.ruleWarnFor(all, 'P36', '/settings/preferences#touch-targets-controls')).not.toBeNull()
+    expect(rules.ruleWarnFor(all, 'P1', '/settings/preferences#touch-targets-controls')).toBeNull()
+    expect(rules.ruleWarnFor(all, 'P36', '/settings/household')).toBeNull()
+    expect(rules.modeFor(all, '/settings/preferences')).toBe('fail')
+  })
+})

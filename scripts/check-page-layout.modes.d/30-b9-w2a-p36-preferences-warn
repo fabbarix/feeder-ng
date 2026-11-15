@@ -1,0 +1,4 @@
+# w2a integration (main-session ruling e): P36 (by mode) on /settings/preferences, the touch-targets-controls scenario. B9-17's chip
+# passes now; the Your menu button (40x40) in the page header is fixed by B9-19. Only P36, only this route and its scenarios.
+# B9-19 deletes this file when the Your menu button is 44 px.
+P36@/settings/preferences = warn until B9-19
