@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Runs every check for this worktree and fails if any fails. The web steps run in order and stop at the first failure; after the
-# web build, the guards, the Go steps, the release preflight and the shell tests run side by side (each into its own log under
-# build/check-steps/), and the check fails after all of them have finished if any of them failed.
+# web build, two phases of steps run side by side (each into its own log under build/check-steps/): the page layout and shell layout
+# guards with go vet, go test and the release preflight, then the BDD suite with the shell tests. A phase fails once all its steps
+# have finished if any of them failed.
 # Output is teed to <worktree>/build/check.log. Exits non-zero on any failure. How to run which: docs/dev/checks.md.
 #
 # CHECK_PROFILE  full (the default): every step. This is the check to run locally before a tag.
@@ -354,8 +355,11 @@ if wants go && plans go; then
   step_bg "go vet" run_go_vet
   step_bg "go test" run_go_test
 fi
-if wants go && plans bdd; then step_bg "go test (BDD, bdd/)" run_bdd; fi
 if wants go && plans preflight; then step_bg "release preflight (go vet and go build in build/clean, no web build)" run_preflight; fi
+# Two phases: the browser guards beside the light Go steps, then the BDD suite beside the shell tests. All of it at once loaded a
+# 24-CPU machine past what the guard's setups wait for (two scenarios not inspected in a measured run).
+join_steps
+if wants go && plans bdd; then step_bg "go test (BDD, bdd/)" run_bdd; fi
 
 if wants shell && plans shell; then
   [ -z "$LIST" ] && finish_clean_copy

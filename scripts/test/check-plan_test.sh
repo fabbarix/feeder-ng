@@ -13,6 +13,7 @@ bad() {
   FAIL=$((FAIL + 1))
   printf 'FAIL: %s\n' "$1"
 }
+mkdir -p "$ROOT/build"
 TMP="$(mktemp -d "$ROOT/build/check-plan-test.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 
