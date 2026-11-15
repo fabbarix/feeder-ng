@@ -50,3 +50,33 @@ func TestEveryFeatureHasOneAreaTag(t *testing.T) {
 		}
 	}
 }
+
+// serialSteps are the steps that change process-wide state (authhttp.SetProvider, slog.SetDefault): a feature that uses one runs in
+// the serial pass of TestFeatures, so it carries @serial.
+var serialSteps = []string{
+	"a running Feeder with Google sign-in",
+	"a Feeder that asks new Google visitors for approval",
+	"Feeder runs with the Recipe Assistant on through a fake provider",
+}
+
+func TestFeaturesThatChangeProcessStateAreSerial(t *testing.T) {
+	files, _ := filepath.Glob("features/*/*.feature")
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(b)
+		head := strings.SplitN(text, "Feature:", 2)[0]
+		uses := false
+		for _, s := range serialSteps {
+			uses = uses || strings.Contains(text, s)
+		}
+		if uses && !strings.Contains(head, "@serial") {
+			t.Errorf("%s uses a step that changes process-wide state: tag the feature @serial", f)
+		}
+	}
+	if got := andTag("~@wip,@a && @b", "~@serial"); got != "~@wip && ~@serial,@a && @b && ~@serial" {
+		t.Errorf("andTag = %q", got)
+	}
+}

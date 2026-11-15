@@ -1,4 +1,4 @@
-@receipt-background @area-receipt
+@receipt-background @area-receipt @serial
 Feature: A receipt read goes on when the phone leaves the screen (receipt reading 3.3, beta.8)
   The phone starts a read and may leave the photos screen: the app keeps asking in the background and tells the User when the
   Receipt review is ready (the Scan screen's "Read the receipt" row, and a toast elsewhere in the app). That works because the

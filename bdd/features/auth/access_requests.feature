@@ -1,4 +1,4 @@
-@area-auth
+@area-auth @serial
 Feature: Access Requests
   Not everyone with a Google account can sign in. A person signs in straight
   away if their address was added to the Household (on the allowlist, or as a

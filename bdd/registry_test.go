@@ -10,7 +10,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -109,17 +112,50 @@ func TestFeatures(t *testing.T) {
 	if tags == "" {
 		tags = "~@wip"
 	}
-	suite := godog.TestSuite{
-		ScenarioInitializer: func(sc *godog.ScenarioContext) { initScenario(t, sc) },
-		Options: &godog.Options{
-			Format:   "pretty",
-			Paths:    []string{"features"},
-			Tags:     tags,
-			TestingT: t,
-			Strict:   true,
-		},
+	// fast-checks: scenarios run concurrently. Each one has its own World and so its own in-process Feeder, database and fake
+	// clock (testkit.Start), and the step files keep no shared mutable state, so they cannot see each other's writes. The
+	// features tagged @serial change process-wide state (the Google provider, the default logger: serialSteps below) and run
+	// afterwards, one scenario at a time. GODOG_CONCURRENCY sets how many run at once (default: the CPUs, at most 8); 1 runs
+	// every scenario one by one, in file order.
+	concurrency := min(runtime.NumCPU(), 8)
+	if v := os.Getenv("GODOG_CONCURRENCY"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			t.Fatalf("GODOG_CONCURRENCY=%q: want a positive number", v)
+		}
+		concurrency = n
 	}
-	if suite.Run() != 0 {
+	run := func(tags string, concurrency int) int {
+		suite := godog.TestSuite{
+			ScenarioInitializer: func(sc *godog.ScenarioContext) { initScenario(t, sc) },
+			Options: &godog.Options{
+				Format:      "pretty",
+				Paths:       []string{"features"},
+				Tags:        tags,
+				TestingT:    t,
+				Strict:      true,
+				Concurrency: concurrency,
+			},
+		}
+		return suite.Run()
+	}
+	if concurrency == 1 {
+		if run(tags, 1) != 0 {
+			t.Fatal("non-zero status returned, failed to run feature tests")
+		}
+		return
+	}
+	concurrent, serial := run(andTag(tags, "~@serial"), concurrency), run(andTag(tags, "@serial"), 1)
+	if concurrent != 0 || serial != 0 {
 		t.Fatal("non-zero status returned, failed to run feature tests")
 	}
+}
+
+// andTag adds one more condition to a godog tag expression: "," is OR and binds loosest, so it goes into every alternative.
+func andTag(expr, tag string) string {
+	alts := strings.Split(expr, ",")
+	for i, a := range alts {
+		alts[i] = strings.TrimSpace(a) + " && " + tag
+	}
+	return strings.Join(alts, ",")
 }

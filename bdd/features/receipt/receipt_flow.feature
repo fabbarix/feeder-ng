@@ -1,4 +1,4 @@
-@area-receipt
+@area-receipt @serial
 Feature: Reading and applying a receipt, end to end (receipt reading, RR5)
   The two halves already have their own features: receipt_read.feature (the read) and receipt_apply.feature (the apply
   with seeded reads). These scenarios run them together through the real routes with the fake provider: read the

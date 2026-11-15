@@ -1,4 +1,4 @@
-@area-auth
+@area-auth @serial
 Feature: Google sign-in
   People sign in with Google only. Someone whose verified Google email is not
   on the allowlist gets no session: they ask for access instead (see
