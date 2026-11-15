@@ -93,6 +93,14 @@
   font-weight: 700;
   text-align: center;
 }
+/* A long Meal Slot name ("Sunday lunch with the grandparents") ends in an ellipsis inside the badge, never across the title beside it. */
+.to-confirm__when > span {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .to-confirm__when > span:first-child {
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
