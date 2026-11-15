@@ -1,4 +1,4 @@
-// B9-31 (SAFE-01 "Connect the update prompt"): the app-level flag "a form has unsaved changes", in app/unsavedChanges.ts. A tiny
+// B9-31 (SAFE-01 "Connect the update prompt"): the app-level flag "a form has unsaved changes", in ui/lib/unsavedChanges.ts. A tiny
 // external store (useSyncExternalStore) so the editor and the shell, which are not in one subtree, share it without a provider.
 //
 //   useReportUnsavedChanges(dirty: boolean): void   an editor calls it every render with its dirty state. While it is mounted AND dirty

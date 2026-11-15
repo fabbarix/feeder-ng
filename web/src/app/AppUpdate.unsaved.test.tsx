@@ -1,11 +1,11 @@
 // B9-31 (SAFE-01): AppUpdate is where the "new version" prompt learns that a form has unsaved changes. It reads the app-level flag
-// (app/unsavedChanges.ts) and passes it to useAppUpdate as `hasUnsavedChanges`, which holds the prompt back (updateMove already does).
+// (ui/lib/unsavedChanges.ts) and passes it to useAppUpdate as `hasUnsavedChanges`, which holds the prompt back (updateMove already does).
 // useAppUpdate.ts and its move table are unchanged: only the source is new.
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppUpdate } from './AppUpdate'
-import { resetUnsavedChanges, useReportUnsavedChanges } from './unsavedChanges'
+import { resetUnsavedChanges, useReportUnsavedChanges } from '../ui/lib/unsavedChanges'
 import { useAppUpdate } from './useAppUpdate'
 
 vi.mock('./useAppUpdate', () => ({ useAppUpdate: vi.fn() }))

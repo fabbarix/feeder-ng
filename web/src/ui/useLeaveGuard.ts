@@ -3,7 +3,7 @@
 // or a closed tab is covered by the reload draft (lib/drafts). Needs a data router and a ConfirmProvider.
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useBlocker, type BlockerFunction } from 'react-router-dom'
-import { useReportUnsavedChanges } from '../app/unsavedChanges'
+import { useReportUnsavedChanges } from './lib/unsavedChanges'
 import { useConfirm, type ConfirmOptions } from './ConfirmDialog'
 
 export interface LeaveGuardOptions {

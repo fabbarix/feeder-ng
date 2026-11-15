@@ -1,4 +1,4 @@
-// B9-31 (SAFE-01 "Connect the update prompt"): the app-level flag "a form has unsaved changes". A tiny external store
+// B9-31 (SAFE-01 "Connect the update prompt"): the app-wide flag "a form has unsaved changes". A tiny external store
 // (useSyncExternalStore), so an editor and the shell, which are not in one subtree, share it without a provider. Each mounted,
 // dirty reporter is one holder; the flag is on while any holder exists. AppUpdate reads it to hold the "new version" prompt.
 import { useEffect, useSyncExternalStore } from 'react'

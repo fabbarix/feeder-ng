@@ -3,7 +3,7 @@
 // lib/drafts (draftStore, draftDecision, draftCopy, draftWriter) and reports the unsaved flag that holds the update prompt.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMe } from '../../../app/useMe'
-import { useReportUnsavedChanges } from '../../../app/unsavedChanges'
+import { useReportUnsavedChanges } from '../../../ui/lib/unsavedChanges'
 import { decideDraft, type DraftDecision, type DraftRecord } from '../../../lib/drafts/draftDecision'
 import { draftActionLabel, draftNotice } from '../../../lib/drafts/draftCopy'
 import { draftKey, openDraftStore, type DraftStore } from '../../../lib/drafts/draftStore'

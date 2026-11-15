@@ -23,13 +23,13 @@
 //     Not while clean (and when the editor turns clean again, e.g. the change was typed back, the record is removed). Not while an
 //     `ask` notice is unanswered (the older draft would be overwritten).
 //   - forget(): cancels a pending write and removes the record (after Save, after Discard changes in the leave dialog or Cancel).
-//   - It reports `dirty` through useReportUnsavedChanges (app/unsavedChanges.ts).
+//   - It reports `dirty` through useReportUnsavedChanges (ui/lib/unsavedChanges.ts).
 import { act, renderHook, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { resetUnsavedChanges, useHasUnsavedChanges } from '../../../app/unsavedChanges'
+import { resetUnsavedChanges, useHasUnsavedChanges } from '../../../ui/lib/unsavedChanges'
 import { ConfirmProvider } from '../../../ui'
 import { createMemoryDraftStore, draftKey } from '../../../lib/drafts/draftStore'
 import { draftFromRecipe, emptyDraft, type RecipeDraft } from '../lib/draft'
