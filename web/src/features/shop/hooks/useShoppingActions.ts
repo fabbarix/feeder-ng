@@ -15,6 +15,8 @@ export interface ShoppingActions {
   changeTick(input: ChangeTickInput): Promise<ChangeTickResult>
   /** B9-34: the same for an Ingredient extra. */
   changeExtraTick(id: number, quantity: number): Promise<ChangeTickResult>
+  /** B9-34: take one addition (by its client id) off its Line as if never made; refreshes the list and Stock. */
+  untickAddition(tickClientUuid: string): Promise<void>
   addExtra(input: ExtraInput): Promise<void>
   deleteExtra(id: number): Promise<void>
   tickExtra(id: number, quantity: number, shopId?: number | null, clientUuid?: string): Promise<TickResult>
@@ -57,6 +59,11 @@ export function useShoppingActions(): ShoppingActions {
         await refreshStock()
         await refreshList()
         return result
+      },
+      async untickAddition(tickClientUuid) {
+        await shopApi.untickAddition({ tickClientUuid, clientUuid: newClientUuid(), scannedAt: new Date().toISOString() })
+        await refreshStock()
+        await refreshList()
       },
       async untick(ingredientId, to) {
         await shopApi.untick(ingredientId, to)

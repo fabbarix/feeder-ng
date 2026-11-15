@@ -30,4 +30,15 @@ describe('createShopApi: Change and Take back', () => {
     await createShopApi(http).changeExtraTick(4, 300)
     expect(http.patch).toHaveBeenCalledExactlyOnceWith('/api/shopping/extras/4/tick', { quantity: 300 })
   })
+
+  it('untickAddition takes one addition off as if never made: a shop_untick op naming its client id (the More comes back)', async () => {
+    const http = client({ results: [{ clientUuid: 'op-1', status: 'applied' }] })
+    await createShopApi(http).untickAddition({ tickClientUuid: 'u-1', clientUuid: 'op-1', scannedAt: '2026-11-14T10:20:00Z' })
+    expect(http.post).toHaveBeenCalledExactlyOnceWith('/api/scan/sync', { ops: [{ clientUuid: 'op-1', scannedAt: '2026-11-14T10:20:00Z', kind: 'shop_untick', tickClientUuid: 'u-1' }] })
+  })
+
+  it('a rejected untick rejects with its code', async () => {
+    const http = client({ results: [{ clientUuid: 'op-1', status: 'rejected', error: { code: 'not_on_list' } }] })
+    await expect(createShopApi(http).untickAddition({ tickClientUuid: 'u-1', clientUuid: 'op-1', scannedAt: 'x' })).rejects.toMatchObject({ code: 'not_on_list' })
+  })
 })

@@ -4,7 +4,8 @@
 //                     useUndoToast: headline "<title> ticked", subline "<added> added to Stock" (the server's `added`; none when 0),
 //                     actions [Change] (only when Stock was added), Undo. Duration: the Undo default (8 s); `durationMs` overrides (Scan: 5 s).
 //                     A failure rejects (the screen's run() shows the failure toast), shows no toast and clears pending.
-//   Undo              of a first tick: untick (ADR 0019); of a "more since your tick" tick: change that addition (by client id) to 0.
+//   Undo              of a first tick: untick (ADR 0019); of a "more since your tick" tick: take that addition off (by client id) as if never
+//                     made (B9-34 developer: a PATCH to 0 keeps the addition's cover, so the More did not come back on the real server).
 //   Change (toast)    opens the Change sheet's subject: { entry, added, tickedAt, clientUuid } of the tick just made.
 //   change(q)         PATCH the subject's addition to q (0 = "Tick without adding"), closes the sheet, no toast.
 //   takeBack(entry, addition)   PATCH that addition to 0 and a toast "Your 500 g of Garlic was taken back from Stock" ("Sam's 50 g of …"
@@ -17,7 +18,7 @@ import { formatQuantity } from '../../../lib/units'
 import { extraEntry, lineEntry, listEntries } from '../lib/lines'
 import { makeAddition, makeExtra, makeGarlic, makeLine, makeList, makeTick } from '../testData'
 
-const actions = vi.hoisted(() => ({ tick: vi.fn(), untick: vi.fn(), tickExtra: vi.fn(), untickExtra: vi.fn(), changeTick: vi.fn(), changeExtraTick: vi.fn() }))
+const actions = vi.hoisted(() => ({ tick: vi.fn(), untick: vi.fn(), tickExtra: vi.fn(), untickExtra: vi.fn(), changeTick: vi.fn(), changeExtraTick: vi.fn(), untickAddition: vi.fn() }))
 vi.mock('./useShoppingActions', () => ({ useShoppingActions: () => actions }))
 const undoToast = vi.hoisted(() => ({ show: vi.fn() }))
 vi.mock('../../../ui/useUndoToast', () => ({ useUndoToast: () => undoToast }))
@@ -44,7 +45,7 @@ const shown = () => undoToast.show.mock.calls.at(-1)![0] as {
 beforeEach(() => {
   actions.tick.mockReset().mockResolvedValue({ ticked: true, lotId: 5, created: true, added: 500 })
   actions.tickExtra.mockReset().mockResolvedValue({ ticked: true, lotId: null, created: false, added: 0 })
-  for (const f of [actions.untick, actions.untickExtra]) f.mockReset().mockResolvedValue(undefined)
+  for (const f of [actions.untick, actions.untickExtra, actions.untickAddition]) f.mockReset().mockResolvedValue(undefined)
   actions.changeTick.mockReset().mockResolvedValue({ ticked: true, lotId: 5, quantity: 0 })
   actions.changeExtraTick.mockReset().mockResolvedValue({ ticked: true, lotId: 5, quantity: 0 })
   undoToast.show.mockReset().mockReturnValue({ id: 1, dismiss: vi.fn() })
@@ -139,14 +140,16 @@ describe('useTickFlow: Undo', () => {
     expect(actions.untickExtra).toHaveBeenCalledExactlyOnceWith(1)
   })
 
-  it('Undo of a "more since your tick" tick takes back only that addition (by its client id): the Line stays ticked', async () => {
+  it('Undo of a "more since your tick" tick takes off only that addition (by its client id): the Line stays ticked and the More comes back', async () => {
     const { result } = setup()
     await act(() => result.current.tick(more))
     const sent = actions.tick.mock.calls[0]![0]
     expect(sent).toMatchObject({ ingredientId: 9, quantity: 750 })
     await act(() => shown().undo({ focusWasInToast: false }))
     expect(actions.untick).not.toHaveBeenCalled()
-    expect(actions.changeTick).toHaveBeenCalledExactlyOnceWith({ ingredientId: 9, to: TO, quantity: 0, shopId: 1, clientUuid: sent.clientUuid })
+    // not a PATCH to 0: that keeps the addition's cover, so the More would stay covered (checked on the server, B9-23's CoversOfMore)
+    expect(actions.changeTick).not.toHaveBeenCalled()
+    expect(actions.untickAddition).toHaveBeenCalledExactlyOnceWith(sent.clientUuid)
   })
 
   it('a refused Undo rejects, so the Undo toast shows "Nothing was undone" with the reason', async () => {

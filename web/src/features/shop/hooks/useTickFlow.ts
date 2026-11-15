@@ -90,7 +90,8 @@ export function useTickFlow({ to, shopId, system, durationMs }: UseTickFlowOptio
       const tickedAt = new Date().toISOString()
       const added = result.added ?? 0
       const undo = async () => {
-        if (entry.moreSince) return setAddition(entry, 0, clientUuid, end)
+        // the More row's tick is taken off as if never made, so the More comes back (a PATCH to 0 would keep it covered)
+        if (entry.moreSince) return actions.untickAddition(clientUuid)
         if (plan.kind === 'line') return actions.untick(plan.request.ingredientId, end)
         return actions.untickExtra(plan.request.extraId)
       }

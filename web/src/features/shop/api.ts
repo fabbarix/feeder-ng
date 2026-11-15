@@ -1,4 +1,4 @@
-import { http as defaultHttp, type HttpClient } from '../../lib/http'
+import { ApiError, http as defaultHttp, type HttpClient } from '../../lib/http'
 import type { ChangeTickInput, ChangeTickResult, ExtraInput, ListQuery, NotNeededInput, ShoppingExtra, ShoppingList, TickInput, TickResult } from './types'
 
 export interface ShopApi {
@@ -13,6 +13,12 @@ export interface ShopApi {
   changeTick(input: ChangeTickInput): Promise<ChangeTickResult>
   /** B9-23: PATCH /api/shopping/extras/{id}/tick {quantity}. */
   changeExtraTick(id: number, quantity: number): Promise<ChangeTickResult>
+  /**
+   * B9-34: take ONE addition off a Line, as if it was never made: a `shop_untick` op (POST /api/scan/sync) naming the addition's client
+   * id. The Undo of a "more since your tick" tick: unlike a PATCH to 0 (which keeps the addition's cover, so the More stays covered),
+   * the More comes back. A rejected op rejects with an ApiError of its code.
+   */
+  untickAddition(input: { tickClientUuid: string; clientUuid: string; scannedAt: string }): Promise<void>
   /** B5-SH: POST /api/shopping/not-needed; answers the list. */
   notNeeded(input: NotNeededInput): Promise<ShoppingList>
   /** B5-SH: DELETE /api/shopping/not-needed/{ingredientId}?to=&shop=; answers the list. */
@@ -37,6 +43,12 @@ export function createShopApi(client: HttpClient): ShopApi {
     untick: (ingredientId, to) => client.delete<void>(`/api/shopping/ticks?ingredientId=${ingredientId}&to=${to}`),
     changeTick: (input) => client.patch<ChangeTickResult>('/api/shopping/ticks', input),
     changeExtraTick: (id, quantity) => client.patch<ChangeTickResult>(`/api/shopping/extras/${id}/tick`, { quantity }),
+    async untickAddition({ tickClientUuid, clientUuid, scannedAt }) {
+      const op = { clientUuid, scannedAt, kind: 'shop_untick', tickClientUuid }
+      const answer = await client.post<{ results?: { status: string; error?: { code: string } }[] }>('/api/scan/sync', { ops: [op] })
+      const result = answer?.results?.[0]
+      if (result?.status === 'rejected') throw new ApiError(409, result.error?.code ?? 'rejected', 'The tick could not be taken back.')
+    },
     notNeeded: (input) => client.post<ShoppingList>('/api/shopping/not-needed', input),
     neededAfterAll: (ingredientId, to, shopId) =>
       client.delete<ShoppingList>(`/api/shopping/not-needed/${ingredientId}?to=${to}${shopId != null ? `&shop=${shopId}` : ''}`),
