@@ -43,57 +43,45 @@ describe('E-01: section cards and the section index', () => {
   })
 })
 
-// Why 900 and not 720: the one-row line has 292 px of fixed tracks (88 + 120 + 84) plus four 12 px gaps, the drag handle sits inside the
-// Ingredient cell, and the page has side padding. At 820 px that left the Ingredient picker about 126 px ("T…"). Optional is no longer a cell:
-// it is a checkable item of the actions Menu plus a compact status chip inside the Ingredient cell (it wraps under the picker when the cell is
-// narrow), so the line has five tracks and one row. Ingredient 1.4fr then gets about 250 px (picker >= 180 px) and Note about 180 px (the
-// page-layout guard's P5 floor is 160). Below the switch the two-row phone layout is used. The header and the rows switch together.
-// B9-10 (DS-09): the 900 px media query became a container query in rem on the editor's lines box (container editor-lines), so the
-// one-row line follows the box, not the page. The box is at most 788 px wide from 1280 (the 840 px column less the Tile padding) and
-// 797-800 px from 900 to 1279, so 52rem (832 px) would never match and the line would stay two rows at every width. 49rem (784 px) keeps
-// the switch where it was: the box is 784 px at a viewport of about 887 px, and every width from 900 is one row. At 784 the Ingredient
-// track is about 259 px, so the picker keeps its 180 px. The tests read a container query as the box width (rules.test-helper).
-describe('E-01: an ingredient line is one row from 49rem (784 px)', () => {
-  const FROM = 784
-  it('between 720 and 783 px the line still uses the multi-row layout, so the picker is never cramped', () => {
-    for (const w of [720, 760, 783]) {
+// B9-37 (RX-02; rewritten from the B9-10 49rem contract): the lines box is the container "rx-lines" and a line is one row from 42rem of its
+// width (672 px; a 720 px viewport) under visible captions, with the chapter's tracks: handle 32 · Ingredient minmax(9rem, 1.6fr) ·
+// Quantity 88 · Unit 112 · Note minmax(6rem, 1fr) · Optional 64 · the ⋮ and trash 88. The drag handle sits inside the Ingredient cell,
+// which spans the handle and Ingredient tracks. Optional is a checkbox cell of its own (RX-10). Below 42rem a line is two rows on a phone,
+// the Note a third row only when the line has one. recipe-editor.flow.css.test.ts pins the tracks and the caption alignment too.
+describe('E-01: an ingredient line is one row from 42rem (672 px) of its lines box', () => {
+  const FROM = 672
+  it('below 42rem the line uses the multi-row layout and no captions', () => {
+    for (const w of [0, 375, 671]) {
       expect(valueFor('.line-row', 'grid-template-areas', w), `@${w}`).toMatch(/ingredient ingredient/)
       expect(valueFor('.recipe-editor__lines-head', 'display', w), `@${w}`).toBe('none')
     }
   })
-  it('has a header row of captions from 49rem, hidden below', () => {
-    expect(valueFor('.recipe-editor__lines-head', 'display', 783)).toBe('none')
-    expect(valueFor('.recipe-editor__lines-head', 'display', 784)).toBe('grid')
+  it('has a header row of captions from 42rem', () => {
+    expect(valueFor('.recipe-editor__lines-head', 'display', FROM)).toBe('grid')
   })
-  it('.line-row: Ingredient 1.4fr · Quantity 88 · Unit 120 · Note 1fr · actions + remove, all on row 1', () => {
-    const cols = valueFor('.line-row', 'grid-template-columns', FROM)
-    expect(cols).toMatch(/^minmax\(0, 1\.4fr\) 88px 120px minmax\(0, 1fr\) \d+px$/)
-    for (const c of ['ingredient', 'quantity', 'unit', 'note', 'remove']) expect(valueFor(`.line-row__${c}`, 'grid-row', FROM), c).toBe('1')
-    expect(rulesFor('.line-row__optional')).toEqual([])
+  it('.line-row: every cell on row 1, the hint on row 2, the Ingredient cell over the handle and Ingredient tracks', () => {
+    for (const c of ['quantity', 'unit', 'note', 'optional', 'remove']) expect(valueFor(`.line-row__${c}`, 'grid-row', FROM), c).toBe('1')
+    expect(valueFor('.line-row__ingredient', 'grid-row', FROM)).toBe('1')
+    expect(valueFor('.line-row__ingredient', 'grid-column', FROM)).toBe('1 / span 2')
     expect(valueFor('.line-row__hint', 'grid-row', FROM)).toBe('2')
-    expect(valueFor('.line-row', 'grid-template-columns', 783)).not.toMatch(/120px/)
   })
-  it('the actions + remove track holds two 40 px icon buttons and a gap', () => {
+  it('the actions track holds two 40 px icon buttons and a gap', () => {
     const last = Number(/ (\d+)px$/.exec(valueFor('.line-row', 'grid-template-columns', FROM)!)![1])
-    expect(last).toBeGreaterThanOrEqual(84)
+    expect(last).toBeGreaterThanOrEqual(88)
   })
-  it('the cells are top-aligned from 49rem, so the Optional chip under the picker leaves the picker level with the other fields', () => {
-    expect(valueFor('.line-row', 'align-items', FROM)).toBe('start')
-    expect(valueFor('.line-row__remove', 'align-self', FROM)).toBe('start')
+  it('the cells are centred on the row from 42rem (one row of 48 px fields)', () => {
+    expect(valueFor('.line-row', 'align-items', FROM)).toBe('center')
   })
-  it('the Ingredient picker keeps at least 180 px: it basis is 180 px and the chip wraps under it rather than squeezing it', () => {
+  it('the Ingredient picker keeps a 180 px basis inside its cell', () => {
     expect(valueFor('.line-row__ingredient-body', 'flex-wrap', 0)).toBe('wrap')
     expect(valueFor('.line-row__ingredient-body > :first-child', 'flex', 0)).toMatch(/^1 1 180px$/)
-  })
-  it('the Optional chip is compact and does not stretch', () => {
-    expect(valueFor('.line-row__ingredient-body > .chip', 'flex', 0)).toBe('none')
   })
   it('the header uses the same columns so the captions sit over the fields', () => {
     expect(valueFor('.recipe-editor__lines-head', 'grid-template-columns', FROM)).toBe(valueFor('.line-row', 'grid-template-columns', FROM))
   })
   it('the last track is a fixed width: an `auto` track is empty in the header and would collapse, drifting the captions', () => {
     for (const sel of ['.recipe-editor__lines-head', '.line-row']) {
-      for (const w of [784, 1280, 1920]) {
+      for (const w of [672, 1280, 1920]) {
         const cols = valueFor(sel, 'grid-template-columns', w)!
         expect(cols, `${sel} @${w}`).not.toMatch(/\bauto\b/)
         expect(cols, `${sel} @${w}`).toMatch(/ \d+px$/)
@@ -101,59 +89,56 @@ describe('E-01: an ingredient line is one row from 49rem (784 px)', () => {
     }
   })
   it('the header and the row pad and space alike (same gap, same inline padding)', () => {
-    expect(valueFor('.recipe-editor__lines-head', 'gap', FROM)).toBe(valueFor('.line-row', 'gap', FROM) ?? valueFor('.line-row', 'gap', 0))
-    expect(valueFor('.recipe-editor__lines-head', 'padding-inline', FROM)).toBe('var(--space-3)')
-    expect(valueFor('.line-row', 'padding', FROM) ?? valueFor('.line-row', 'padding-inline', FROM)).toMatch(/var\(--space-3\)/)
+    expect(valueFor('.recipe-editor__lines-head', 'column-gap', FROM)).toBe(valueFor('.line-row', 'column-gap', FROM))
+    expect(valueFor('.recipe-editor__lines-head', 'padding-inline', FROM)).toBe(valueFor('.line-row', 'padding-inline', FROM))
   })
-  it('the cells are direct grid items; from 49rem each goes to the next track (no named areas)', () => {
+  it('the cells are direct grid items; from 42rem they leave the named areas', () => {
     expect(valueFor('.line-row', 'grid-template-areas', FROM)).toBe('none')
-    for (const c of ['ingredient', 'quantity', 'unit', 'note', 'remove']) {
-      expect(valueFor(`.line-row__${c}`, 'grid-area', FROM), c).toBe('auto')
-    }
+    for (const c of ['quantity', 'unit', 'note', 'optional', 'remove']) expect(valueFor(`.line-row__${c}`, 'grid-area', FROM), c).toBe('auto')
     for (const sel of ['.line-row__amount', '.line-row__extras']) expect(rulesFor(sel), sel).toEqual([])
   })
-  it('from 49rem the field labels in a row are visually hidden (kept for assistive tech); the header names the columns', () => {
-    const body = rulesFor('.line-row .ui-field__label').filter((r) => r.minWidth === 784)
-    expect(body.length).toBeGreaterThan(0)
+  it('from 42rem the field labels in a row and the Optional label are visually hidden (kept for assistive tech); the header names the columns', () => {
+    const body = [...rulesFor('.line-row .ui-field__label'), ...rulesFor('.line-row__optional .checkbox__label')].filter((r) => r.minWidth === FROM)
+    expect(body.length).toBe(2)
     expect(body.map((r) => r.body).join(' ')).toMatch(/clip-path:\s*inset\(50%\)/)
     expect(body.map((r) => r.body).join(' ')).toMatch(/position:\s*absolute/)
   })
-  it('a row has no card background of its own from 49rem (it is a hairline-separated line)', () => {
-    expect(valueFor('.line-row', 'background', FROM)).toBe('none')
-    expect(valueFor('.line-row', 'border-block-end', FROM)).toMatch(/var\(--color-line\)/)
+  it('a row has no card background of its own (it is a hairline-separated line); the Note and the trash show from 42rem', () => {
+    expect(valueFor('.line-row', 'background', FROM)).toBeUndefined()
+    expect(valueFor('.line-row', 'border-block-end', 0)).toMatch(/var\(--color-line\)/)
+    expect(valueFor(".line-row[data-has-note='false'] .line-row__note", 'display', FROM)).toBe('block')
+    expect(valueFor('.line-row__trash', 'display', FROM)).toBe('inline-flex')
   })
 })
 
-describe('E-01: an ingredient line is two rows on a phone (below 49rem)', () => {
+describe('E-01: an ingredient line is two rows on a phone (below 42rem)', () => {
   const rows = (w: number) => [...(valueFor('.line-row', 'grid-template-areas', w) ?? '').matchAll(/["']([^"']+)["']/g)].map((m) => m[1]!.trim().split(/\s+/))
-  it('has named areas: Ingredient on its own first row', () => {
-    const r = rows(0)
-    expect(r.length).toBeGreaterThanOrEqual(2)
-    expect(new Set(r[0])).toEqual(new Set(['ingredient']))
+  it('row 1 is the Ingredient (with the handle inside) and the ⋮', () => {
+    expect(new Set(rows(0)[0])).toEqual(new Set(['ingredient', 'remove']))
   })
-  it('Quantity, Unit and remove share the second row, so the trash icon never gets a row of its own', () => {
-    const r = rows(0)
-    expect(r[1]).toEqual(expect.arrayContaining(['quantity', 'unit', 'remove']))
-    for (const row of r) if (row.includes('remove')) expect(new Set(row).size).toBeGreaterThan(1)
+  it('Quantity, Unit and the Optional checkbox share the second row', () => {
+    expect(new Set(rows(0)[1])).toEqual(new Set(['quantity', 'unit', 'optional']))
   })
-  it('Note follows on its own full row: three rows in all, and no Optional cell', () => {
+  it('the Note follows on its own full row, shown only when the line has one; the trash is hidden (Remove is in the ⋮)', () => {
     const r = rows(0)
     expect(r).toHaveLength(3)
     expect(new Set(r[2])).toEqual(new Set(['note']))
-    expect(r.flat()).not.toContain('optional')
+    expect(valueFor(".line-row[data-has-note='false'] .line-row__note", 'display', 0)).toBe('none')
+    expect(valueFor('.line-row__trash', 'display', 0)).toBe('none')
   })
   it('every cell is placed in its area; the hint takes its own row after them', () => {
-    for (const c of ['ingredient', 'quantity', 'unit', 'note', 'remove']) {
+    for (const c of ['ingredient', 'quantity', 'unit', 'note', 'optional', 'remove']) {
       expect(valueFor(`.line-row__${c}`, 'grid-area', 0), c).toBe(c)
     }
     expect(valueFor('.line-row__hint', 'grid-column', 0)).toBe('1 / -1')
     expect(valueFor('.line-row__hint', 'grid-row', 0)).toBe('4')
   })
-  it('the tracks are Quantity, Unit (flexible) and a column that holds the actions menu and the trash icon', () => {
-    expect(valueFor('.line-row', 'grid-template-columns', 0)).toMatch(/^\d+px minmax\(0, 1fr\) auto$/)
+  it('the tracks are the handle, a short track for Quantity, the flexible Unit and the actions', () => {
+    expect(valueFor('.line-row', 'grid-template-columns', 0)).toMatch(/^32px \d+px minmax\(0, 1fr\) auto$/)
   })
-  it('the remove cell is end-aligned', () => {
+  it('the actions cell is end-aligned and centred on its row', () => {
     expect(valueFor('.line-row__remove', 'justify-self', 0)).toBe('end')
+    expect(valueFor('.line-row__remove', 'align-self', 0)).toBe('center')
   })
 })
 
@@ -164,7 +149,7 @@ describe('E-02 / E-03: Step cards', () => {
     expect(valueFor('.steps-editor__list', 'margin', 0)).toBe('0')
     expect(valueFor('.steps-editor__list', 'list-style', 0)).toBe('none')
   })
-  it('the Kind and Duration row is a FieldRow inside the card (wrap, centre aligned to the controls)', () => {
+  it('the Kind and Duration row wraps and lines the controls up at their foot', () => {
     expect(valueFor('.step-card__timing', 'align-items', 0)).toBe('flex-end')
   })
   it('the Segmented frame in the timing row has an intrinsic width, so Kind and Duration share a row (it was 100 % wide, so Duration always wrapped)', () => {
@@ -182,56 +167,30 @@ describe('E-02 / E-03: Step cards', () => {
       expect(valueFor(sel, 'max-inline-size', w), `@${w}`).toBeUndefined()
     }
   })
-  it('the "Uses" strip is a wrapping row of chips, shown only when there are uses or the + Use chip', () => {
-    expect(valueFor('.step-card__uses', 'display', 0)).toBe('flex')
-    expect(valueFor('.step-card__uses', 'flex-wrap', 0)).toBe('wrap')
+  // B9-37 (RX-02): the uses, "Ingredient use" and "Photo" are one wrapping chip row; the card is a lead column, the body and the actions.
+  it('the chip row is a wrapping row of chips', () => {
+    expect(valueFor('.step-card__more', 'display', 0)).toBe('flex')
+    expect(valueFor('.step-card__more', 'flex-wrap', 0)).toBe('wrap')
   })
-  it('the Step head carries number, text area and the actions on one row from 720', () => {
-    expect(valueFor('.step-card__head', 'display', 0)).toBe('flex')
-    expect(valueFor('.step-card__head', 'align-items', 0)).toBe('center')
-  })
-})
-
-describe('E-01: the remove cell is centred in the line row', () => {
-  it('.line-row__remove has align-self: center below 49rem (from 49rem it is top-aligned)', () => {
-    expect(valueFor('.line-row__remove', 'align-self', 0)).toBe('center')
-    expect(valueFor('.line-row__remove', 'align-self', 720)).toBe('center')
+  it('a card is lead | body on a phone (the ⋮ under the lead), and lead | body | actions on one row from 42rem', () => {
+    expect(valueFor('.step-card', 'grid-template-columns', 0)).toBe('44px minmax(0, 1fr)')
+    expect(valueFor('.step-card', 'grid-template-areas', 0)).toMatch(/'lead body' 'actions body'/)
+    expect(valueFor('.step-card', 'grid-template-areas', 672)).toBe("'lead body actions'")
+    expect(valueFor('.step-card__remove', 'display', 0)).toBe('none')
+    expect(valueFor('.step-card__remove', 'display', 672)).toBe('inline-flex')
   })
 })
 
-describe('E-01: Tags as a chip input', () => {
-  it('chips and the text field share one flex-wrap control capped at 24rem and the column (DS-04: it was 320 px)', () => {
-    expect(valueFor('.tag-input__control', 'display', 0)).toBe('flex')
-    expect(valueFor('.tag-input__control', 'flex-wrap', 0)).toBe('wrap')
-    expect(valueFor('.tag-input', 'max-inline-size', 0)).toBe('min(24rem, 100%)')
+// B9-37 (RX-09, decision RX 6): the Tag field is removable chips plus "Add Tag" (the inline text field and its suggestions are gone).
+describe('E-01: Tags as removable chips plus "Add Tag"', () => {
+  it('the chips and the Add Tag button share one wrapping row that may shrink (DS-04: no fixed width)', () => {
+    expect(valueFor('.tag-chooser__chips', 'display', 0)).toBe('flex')
+    expect(valueFor('.tag-chooser__chips', 'flex-wrap', 0)).toBe('wrap')
+    expect(valueFor('.tag-chooser__chips', 'gap', 0)).toBe('var(--space-2)')
+    expect(valueFor('.tag-chooser', 'grid-template-columns', 0)).toBe('minmax(0, 1fr)')
   })
-  it('two realistic Tags and the field fit one line inside the cap: 2 chips (78 px each) + 2 gaps + the field minimum <= the cap', () => {
-    // DS-04: min(24rem, 100%) is 384 px at 16 px text in a column wider than that
-    const capValue = valueFor('.tag-input', 'max-inline-size', 1280) ?? ''
-    const cap = /^min\(([0-9.]+)rem, 100%\)$/.test(capValue) ? Number(/^min\(([0-9.]+)rem/.exec(capValue)![1]) * 16 : parseFloat(capValue || '9999')
-    const gap = valueFor('.tag-input__control', 'gap', 1280)
-    expect(gap).toBe('var(--space-2)') // 8 px
-    const fieldMin = parseFloat(valueFor('.tag-input__control > .ui-field', 'min-inline-size', 1280) ?? '0')
-    const basis = parseFloat((valueFor('.tag-input__control > .ui-field', 'flex', 1280) ?? '').split(/\s+/)[2] ?? '0')
-    expect(fieldMin).toBeGreaterThan(0)
-    expect(fieldMin).toBeLessThanOrEqual(96)
-    expect(basis).toBeLessThanOrEqual(96)
-    expect(2 * 78 + 2 * 8 + Math.max(fieldMin, basis)).toBeLessThanOrEqual(cap)
-  })
-  it('the .tag-input block is declared once', () => {
-    expect(rulesFor('.tag-input').length).toBe(1)
-  })
-  it('the chips and the text field sit on one line: the field is centred with the chips and its label is visually hidden', () => {
-    expect(valueFor('.tag-input__control', 'align-items', 0)).toBe('center')
-    const hide = rulesFor('.tag-input__control .ui-field__label').map((r) => r.body).join(' ')
-    expect(hide).toMatch(/position:\s*absolute/)
-    expect(hide).toMatch(/clip-path:\s*inset\(50%\)/)
-  })
-  it('the group label is a visible caption above the control', () => {
-    expect(rulesFor('.tag-input__label').length).toBeGreaterThan(0)
-  })
-  it('the old stacked chip list (a block under the chips) is gone', () => {
-    expect(rulesFor('.tag-input__tags')).toEqual([])
+  it('the old inline-field rules are gone', () => {
+    for (const sel of ['.tag-input', '.tag-input__control', '.tag-input__label', '.tag-input__tags', '.tag-input__suggestions']) expect(rulesFor(sel), sel).toEqual([])
   })
 })
 

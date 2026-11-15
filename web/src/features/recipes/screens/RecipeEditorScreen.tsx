@@ -54,6 +54,9 @@ import { parseNumber } from '../lib/draft'
 import type { IngredientRef } from '../types'
 import '../recipe-detail.css'
 import '../recipe-editor.css'
+import '../recipe-editor.lines.css'
+import '../recipe-editor.steps.css'
+import '../recipe-editor.sections.css'
 
 const SECTIONS = [
   { id: 'recipe-section-recipe', label: recipeStrings.fields.sectionRecipe },

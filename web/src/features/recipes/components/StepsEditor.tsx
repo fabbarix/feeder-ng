@@ -247,7 +247,7 @@ interface UseChipProps {
 /** One use as a chip: the chip is a button that opens the use's fields; the × beside it, inside the chip, removes it. Two buttons, each with its own ring. */
 function UseChip({ use, text, open, onToggle, onRemove }: UseChipProps): ReactNode {
   return (
-    <li className="use-chip" data-use="" data-use-key={use.key} data-open={open || undefined}>
+    <li className="use-chip" data-use="" data-focus-scope="" data-use-key={use.key} data-open={open || undefined}>
       <button type="button" className="use-chip__edit" aria-expanded={open} onClick={onToggle}>
         {text}
       </button>

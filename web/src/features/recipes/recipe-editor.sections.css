@@ -1,0 +1,98 @@
+/* B9-37 (RX-02, RX-09, RX-10): the closed sections of the editor (split from recipe-editor.css): "Description and source" and
+   "Planning" (Courses, Whole meal, the Tag chooser, the four overrides under one footnote). Layout on tokens only. */
+
+.recipe-about,
+.recipe-planning {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.recipe-about__source {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+@container rx-editor (min-width: 42rem) {
+  .recipe-about__source {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+}
+
+/* DS-04: the Tag field has a definite track, so a long Tag chip ellipsises inside it instead of running past the tile at 375. */
+.tag-chooser {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.tag-chooser__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* "New" on a Tag nobody has saved yet. */
+.tag-chooser__new {
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+}
+
+.tag-chooser__body {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.tag-chooser__chosen {
+  margin: 0;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+/* The popover from 768 px is as wide as the Filters panel. */
+.tag-chooser__panel {
+  inline-size: min(24rem, calc(100vw - 2 * var(--space-4)));
+}
+
+/* The four overrides: two by two (the unit is each field's suffix), then the one footnote with the Household's values. */
+.recipe-planning__overrides {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.recipe-planning__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 7rem));
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+@container rx-editor (min-width: 42rem) {
+  .recipe-planning__grid {
+    grid-template-columns: repeat(4, minmax(0, 7rem));
+  }
+}
+
+.recipe-planning__footnote {
+  margin: 0;
+  max-inline-size: 60ch;
+  font-size: var(--text-meta-size);
+  line-height: var(--text-meta-line);
+  font-weight: var(--text-meta-weight);
+  color: var(--color-muted);
+}
+
+.photo-picker {
+  min-inline-size: 0;
+}
