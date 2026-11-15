@@ -1,7 +1,8 @@
 // CRS F (spec 7.5, ADR 0009): the Planned Meal sheet is per Course; a relaxed pick explains itself and offers the fix.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { stubViewportWidth } from '../../../ui/lib/viewport.test-helper'
 import { courseMeal, courseSlot, meal, planCourse, slot } from '../test-utils'
 import type { PlanCourse, PlanSlot, Why } from '../types'
 import { PlannedMealSheet } from './PlannedMealSheet'
@@ -26,6 +27,8 @@ function setup(s: PlanSlot, courseId: number) {
 /** React's useId hands out `_r_0_`, `_r_1_`, … per render; only the counter differs between the two renders, so compare with it normalised. */
 const withoutGeneratedIds = (html: string) => html.replace(/_r_[0-9a-z]+_/g, '_r_#_')
 
+afterEach(() => vi.unstubAllGlobals())
+
 describe('one Course looks exactly as before (regression guard)', () => {
   it('a single Course in `courses` gives the same sheet as a slot without `courses`', () => {
     const m = meal({ recipeName: 'Chicken curry', why: [{ code: 'favourite', members: ['Anna'] }] })
@@ -43,8 +46,8 @@ describe('PlannedMealSheet for a Course', () => {
 
   it('is titled by the Course\'s Recipe and its header names the slot and the Course', () => {
     const h = setup(two(), 2)
-    expect(screen.getByRole('dialog', { name: 'Green beans' })).toBeInTheDocument()
-    expect(h.dialog.getByText(/Tue Dinner · Side/)).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Tue 10 · Dinner 19:00 · Side Green beans' })).toBeInTheDocument()
+    expect(h.dialog.getByText('Tue 10 · Dinner 19:00 · Side')).toBeInTheDocument()
   })
 
   it('shows the Course\'s portions, not the slot\'s or the main Course\'s', () => {
@@ -68,10 +71,15 @@ describe('PlannedMealSheet for a Course', () => {
   it('every action carries the key with the Course', async () => {
     const h = setup(two(), 2)
     const key = { date: '2026-11-10', mealSlotId: 2, courseId: 2 }
-    await userEvent.click(h.dialog.getByRole('button', { name: 'Swap' }))
-    await userEvent.click(h.dialog.getByRole('button', { name: 'Pin' }))
+    stubViewportWidth(1024)
+    const more = async (item: string) => {
+      await userEvent.click(h.dialog.getByRole('button', { name: 'More for Tue Dinner Side' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: item }))
+    }
+    await more('Swap')
+    await more('Pin')
     await userEvent.click(h.dialog.getByRole('button', { name: 'Mark as Cooked' }))
-    await userEvent.click(h.dialog.getByRole('button', { name: 'Choose a Recipe' }))
+    await more('Choose a Recipe')
     expect(h.onSwap).toHaveBeenCalledWith(key)
     expect(h.onPin).toHaveBeenCalledWith(key)
     expect(h.onMarkCooked).toHaveBeenCalledWith(key)

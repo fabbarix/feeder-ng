@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Avatar, BottomSheet, Button, Chip } from '../../../ui'
 import { fromLeftoverLabel } from '../../../lib/leftovers/copy'
+import type { Leftover, LeftoverActionKind } from '../../../lib/leftovers/types'
 import { guestsNote } from '../lib/slotDate'
 import { usePhraseContext } from '../hooks/usePhraseContext'
 import { useSheetTitleFocus } from '../hooks/useSheetTitleFocus'
@@ -53,6 +54,11 @@ export interface PlannedMealSheetProps {
   onUndoCooked?: (key: SlotKey) => void
   onUndoNotCooked?: (key: SlotKey) => void
   onCookedAfterAll?: (key: SlotKey) => void
+  /** B9-38 (PC-09): Not cooked from the footer's ⋮: acts at once, with Undo (SAFE-03). */
+  onNotCooked?: (key: SlotKey) => void
+  /** B9-38 (PC-09): the Leftover a Cooked meal made, for the block with Had it, Freeze it and ⋮ (undefined: no block). */
+  leftover?: Leftover | null
+  onLeftoverAction?: (kind: LeftoverActionKind, leftover: Leftover) => void
 }
 
 /**
