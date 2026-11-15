@@ -10,7 +10,15 @@ const filterSpacingProbe = `
   let rowGap = null
   if (row2 && row3 && row3.getBoundingClientRect().height > 0) rowGap = Math.round((row3.getBoundingClientRect().top - row2.getBoundingClientRect().bottom) * 10) / 10
   const sections = [...document.querySelectorAll('.filter-panel__section')]
-  const sectionGap = sections.length >= 2 ? Math.round((sections[1].getBoundingClientRect().top - sections[0].getBoundingClientRect().bottom) * 10) / 10 : null
+  // w2c: the gap between two sections stacked in one column (SHORT-07 sets the Filters body in two columns on a short landscape
+  // viewport; sections side by side have no vertical gap to measure). The smallest such gap; null when no two are stacked.
+  const boxes = sections.map((s) => s.getBoundingClientRect())
+  const gaps = []
+  for (let i = 0; i < boxes.length; i++) for (let j = 0; j < boxes.length; j++) {
+    const a = boxes[i], b = boxes[j]
+    if (i !== j && b.top >= a.bottom - 0.5 && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1) gaps.push(b.top - a.bottom)
+  }
+  const sectionGap = gaps.length ? Math.round(Math.min(...gaps) * 10) / 10 : null
   if (rowGap === null && sectionGap === null) return null
   return { rowGap, slotGap, sectionGap }
 })()`
