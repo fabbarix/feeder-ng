@@ -36,6 +36,9 @@ html:has(.sticky-action-bar) {
   /* One rule at every size: --nav-top is the bottom bar's top edge, or the bottom inset where no bar floats (the rail, the keyboard). */
   bottom: calc(var(--nav-top) + var(--bar-gap) + var(--keyboard-inset));
   z-index: 5;
+  /* As wide as its column: the whole track, capped by data-column below (auto margins alone would shrink it to its content). */
+  box-sizing: border-box;
+  inline-size: 100%;
   padding-inline: var(--tile-pad);
   padding-block: var(--space-3);
   /* The phone bottom bar's surface, border and elevation, with the tile radius. */
