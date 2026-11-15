@@ -158,11 +158,13 @@ describe('Cancel', () => {
     expect(p.applyEdit).not.toHaveBeenCalled()
     expect(edit(2)).toHaveFocus()
   })
-  it("the sheet's Close counts as Cancel", async () => {
+  // B9-14 (VC2): the sheet's footer has Cancel, so it has no Close; the scrim still counts as Cancel.
+  it('the sheet has no Close, and the scrim counts as Cancel', async () => {
     const p = photosRef.current
     show()
     await userEvent.click(edit(2))
-    await userEvent.click(within(sheet(2)).getByRole('button', { name: 'Close' }))
+    expect(within(sheet(2)).queryByRole('button', { name: 'Close' })).toBeNull()
+    fireEvent.click(sheet(2))
     noSheet()
     expect(p.applyEdit).not.toHaveBeenCalled()
     expect(edit(2)).toHaveFocus()

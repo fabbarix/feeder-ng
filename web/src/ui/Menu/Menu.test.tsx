@@ -232,6 +232,29 @@ describe('Menu: placement of the popover (inside the viewport at 768 and 1024)',
   })
 })
 
+describe('Menu: a ⋮ at the start of a centred dialog opens inside it (B9-14 review)', () => {
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} }) as DOMRect
+  it('is start-aligned with the trigger when end-aligned would leave the dialog', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 })
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('role') === 'menu') return rect(0, 0, 240, 112)
+      if (this.getAttribute('aria-haspopup') === 'menu') return rect(460, 473, 44, 44)
+      if (this.tagName === 'DIALOG') return rect(440, 364, 560, 173)
+      return rect(0, 0, 0, 0)
+    })
+    const dialog = document.createElement('dialog')
+    document.body.append(dialog)
+    dialog.show()
+    render(<Menu label="More for Dinner" items={[{ id: 'a', label: 'A' }]} />, { container: dialog.appendChild(document.createElement('div')) })
+    await userEvent.click(screen.getByRole('button', { name: 'More for Dinner' }))
+    const menu = await screen.findByRole('menu')
+    expect(Number.parseFloat(menu.style.left)).toBe(460)
+    dialog.remove()
+  })
+})
+
 describe('Menu: the popover follows its trigger', () => {
   const rect = (left: number, top: number, width: number, height: number) =>
     ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} }) as DOMRect

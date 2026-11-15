@@ -94,3 +94,15 @@ describe('FiltersPanel from 768 px', () => {
     expect(dialog).toHaveClass('popover', 'filter-panel', 'pantry-filters__panel')
   })
 })
+
+// SHORT-07: the footer is Clear filters (outlined secondary, R-A) and Show … (the commit, primary); no tertiary button.
+describe.each([390, 834])('FiltersPanel footer at %i px (SHORT-07)', (width) => {
+  it('Clear filters is the secondary and Show Stock the primary, and nothing is tertiary', () => {
+    stubViewportWidth(width)
+    render(<Harness />)
+    const dialog = screen.getByRole('dialog', { name: 'Filters' })
+    expect(within(dialog).getByRole('button', { name: 'Clear filters' })).toHaveAttribute('data-variant', 'secondary')
+    expect(within(dialog).getByRole('button', { name: 'Show Stock' })).toHaveAttribute('data-variant', 'primary')
+    expect(dialog.querySelector('[data-variant="tertiary"]')).toBeNull()
+  })
+})

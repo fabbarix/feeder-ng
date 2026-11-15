@@ -95,12 +95,13 @@ const ruleNum = (id: string) => Number(id.slice(1))
  * The golden files describe the pre-split module (P1..P23 and the beta.8 scenarios); a package that adds a rule or a scenario adds it here.
  */
 const ADDED = {
-  rules: ['P24', 'P26', 'P27', 'P28', 'P29', 'P30', 'P36', 'P39', 'P40', 'P41'], // B9-13 added P24, P28, P40, P41; B9-16 added P36
+  rules: ['P24', 'P25', 'P26', 'P27', 'P28', 'P29', 'P30', 'P33', 'P36', 'P39', 'P40', 'P41'],
   // font-24-settings-shops-id was deferred in w0b (scenarios/font-24.mjs FONT_24_DEFERRED); B9-09 runs it again.
   // B9-07: scenarios/b9-07.mjs (order 300, after font-24's 200): P26's Today resize walk and P39's ring-room pages.
   // B9-16: scenarios/b9-16.mjs (order 310): P36's touch-targets-controls and the household-errors check.
   // B9-10: scenarios/recipe-editor.mjs (order 40): the Recipe editor with the 36-character Tag (DS-04).
-  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'touch-targets-controls', 'household-errors'],
+  // B9-14: scenarios/b9-14.mjs (order 310): the sheet scenarios of P25 and P33 and the sheet page of P39.
+  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'touch-targets-controls', 'household-errors', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet'],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {

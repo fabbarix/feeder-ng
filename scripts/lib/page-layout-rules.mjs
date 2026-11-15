@@ -39,6 +39,9 @@ export const SCENARIO_VIEWPORTS = {
   '667x375': { width: 667, height: 375, mobile: true },
   '375x256': { width: 375, height: 256, mobile: false },
   '844x390-inset': { width: 844, height: 390, mobile: true, safeArea: { top: 0, right: 47, bottom: 21, left: 47 } },
+  // B9-14 (SHORT-02's sizes): phone landscape without insets, and a 390 px phone with the on-screen keyboard up (400 px left).
+  '844x390': { width: 844, height: 390, mobile: true },
+  '390x400': { width: 390, height: 400, mobile: true },
 }
 
 // B9-03: a scenario module that names a viewport this table lacks fails on load, not halfway through a run.

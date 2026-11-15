@@ -14,6 +14,9 @@
   color: var(--color-text);
   box-shadow: var(--elev-3);
   overflow: hidden;
+  /* DS-01: nothing of the trigger's row reaches the sheet (it is portalled, but a non-modal sheet still sits in the page). */
+  pointer-events: auto;
+  text-align: start;
   animation: sheet-in var(--dur-3) var(--ease-out);
 }
 
@@ -38,6 +41,12 @@
   background: var(--color-surface-3);
 }
 
+/* SHORT-02 rule 3: header and footer keep their size; the body takes what is left and never less than its floor. */
+.sheet__header,
+.sheet__footer {
+  flex: none;
+}
+
 /* R-B: top-aligned, so the 40 px CloseButton sits level with the title's first line and never stretches. */
 .sheet__header {
   display: flex;
@@ -51,6 +60,7 @@
 .sheet__title {
   min-inline-size: 0;
   margin: 0;
+  text-align: start;
   /* --space-10 is the 40 px Close */
   padding-block-start: calc((var(--space-10) - var(--text-title-2-line)) / 2);
   font-size: var(--text-title-2-size);
@@ -60,6 +70,34 @@
 
 .sheet__title:focus {
   outline: none;
+}
+
+/* A11Y-07: a step heading that takes the focus (focusStepStart) draws no ring; it is a reading position, not a control. */
+.sheet [data-step-heading]:focus,
+.sheet [tabindex='-1']:focus {
+  outline: none;
+}
+
+/* PC-10: the context line ("Mon 16 Nov · Dinner") above the title; the two stand together beside the Close. */
+.sheet__heading {
+  display: grid;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+.sheet__heading .sheet__title {
+  padding-block-start: 0;
+}
+
+.sheet__context {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: var(--text-meta-size);
+  font-weight: 600;
+  line-height: var(--text-meta-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sheet__body {
@@ -74,6 +112,28 @@
   /* R-C: 5 px of block room too (3 px ring + 2 px offset), and a focused control scrolled into view keeps it. */
   padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
   scroll-padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+}
+
+/* The body's own padding is its spacing: a paragraph's default margins add no blank line above the first line or under the last. */
+.sheet__body > :first-child {
+  margin-block-start: 0;
+}
+
+.sheet__body > :last-child {
+  margin-block-end: 0;
+}
+
+/* SHORT-02 rule 3: a squeezed body (the panel at its maximum height, the body scrolling: BottomSheet sets data-body="scroll") is
+   never squeezed to nothing by the header and footer. A body that fits keeps its content's height: no floor, no blank space. */
+.sheet__panel[data-body='scroll'] .sheet__body {
+  min-block-size: min(6rem, 30dvh);
+}
+
+/* A status chip in the body keeps its natural width (it is never stretched across a grid or flex column). */
+.sheet__body .chip {
+  justify-self: start;
+  inline-size: max-content;
+  max-inline-size: 100%;
 }
 
 /* A sticky bar inside the scrolling body: a control scrolled into view stops above it, never under it. */
@@ -111,6 +171,31 @@
   flex-direction: row;
 }
 
+/* SHORT-02 rule 1: the footer is one row; a FormActions row takes the whole of it. */
+.sheet__footer > .form-actions {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* SHORT-02 rule 5, the safety net: when the body would show less than 40 % of the panel (BottomSheet sets data-footer="flow"),
+   the footer follows the body and the whole panel scrolls, so the question is never hidden behind its own answer. */
+.sheet__panel[data-footer='flow'] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* The panel is now the scroller: ring room at its edges, and a focused control scrolled into view keeps it. */
+  scroll-padding-block: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+}
+
+.sheet__panel[data-footer='flow'] .sheet__body {
+  flex: none;
+  overflow: visible;
+  min-block-size: auto;
+}
+
+.sheet__panel[data-footer='flow'] .sheet__footer {
+  position: static;
+}
+
 @keyframes sheet-in {
   from {
     opacity: 0;
@@ -139,6 +224,46 @@
 
   .sheet__panel {
     padding-block-start: var(--space-5);
+  }
+}
+
+/* SHORT-02 rule 4: a short viewport (phone landscape, the keyboard up, 400 % zoom) gives the panel the height: no grip, title-3,
+   tighter padding that keeps clear of the side insets. */
+@media (max-height: 499px) {
+  .sheet__panel {
+    padding: var(--space-3) max(var(--space-5), var(--safe-right)) calc(var(--space-3) + var(--safe-bottom)) max(var(--space-5), var(--safe-left));
+  }
+
+  .sheet, .sheet__panel {
+    max-height: calc(100dvh - var(--space-2) - var(--safe-top));
+  }
+
+  .sheet__grip {
+    display: none;
+  }
+
+  .sheet__header {
+    margin-block-end: var(--space-2);
+  }
+
+  .sheet__title {
+    font-size: var(--text-title-3-size);
+    line-height: var(--text-title-3-line);
+    padding-block-start: calc((var(--space-10) - var(--text-title-3-line)) / 2);
+  }
+
+  .sheet__heading .sheet__title {
+    padding-block-start: 0;
+  }
+
+  .sheet__footer {
+    padding-block-start: var(--space-2);
+  }
+}
+
+@media (max-height: 499px) and (min-width: 48em) {
+  .sheet {
+    inline-size: min(640px, 100vw - 48px);
   }
 }
 
