@@ -22,6 +22,10 @@ export interface UseIngredientPage {
   attempt: (run: () => Promise<unknown>) => Promise<boolean>
   /** The Delete confirm's options, from the impact read made while it is open. */
   deleteOptions: ConfirmOptions
+  /** Delete was asked for and the impact read has answered: the confirm shows (never before, so its title never changes). */
+  deleteOpen: boolean
+  /** Delete was asked for and the impact read is out: More shows a busy state. */
+  deletePending: boolean
   /** The confirm's button: deletes (then `onDeleted`), or, when the read found it still used, opens Merge instead. */
   confirmDelete: () => Promise<void>
   /** SAFE-02: removes at once and offers Undo ("1 clove removed"). */
@@ -32,7 +36,7 @@ export function useIngredientPage(ing: UseIngredient, kind: IngredientKind, id: 
   const [sheet, setSheet] = useState<PageSheet>(null)
   const [failure, setFailure] = useState<string | null>(null)
   const undo = useUndoToast()
-  const { impact } = useIngredientImpact(id, sheet === 'delete')
+  const { impact, settled } = useIngredientImpact(id, sheet === 'delete')
   const name = ing.ingredient?.name ?? ''
 
   const attempt = async (run: () => Promise<unknown>) => {
@@ -56,6 +60,8 @@ export function useIngredientPage(ing: UseIngredient, kind: IngredientKind, id: 
     failure,
     attempt,
     deleteOptions: deleteConfirm(kind, name, impact),
+    deleteOpen: sheet === 'delete' && settled,
+    deletePending: sheet === 'delete' && !settled,
     confirmDelete: async () => {
       if (isInUse(impact)) {
         setSheet('merge')

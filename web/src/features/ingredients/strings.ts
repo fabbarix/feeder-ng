@@ -79,6 +79,8 @@ export const strings = {
   deleteIngredient: 'Delete Ingredient',
   deleteLocked: (n: number) => `Used in ${n} place${n === 1 ? '' : 's'}, so it can't be removed`,
   deleteConfirm: (name: string) => `Delete ${name}?`,
+  /** The Delete confirm when the impact read finds the Ingredient still used (batch w3e ruling). */
+  stillUsed: (name: string) => `${name} is still used`,
   mergeInto: 'Merge into another Ingredient',
   mergeTitle: 'Merge Ingredient',
   mergeFindLabel: 'Find the Ingredient to keep',

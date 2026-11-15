@@ -58,9 +58,10 @@ describe('deleteConfirm: Delete Ingredient and Delete Supply are a confirm only 
   })
   // User decision (B9-48): a still-used Ingredient cannot be deleted, so the dialog explains and offers only Close and the way
   // forward, Merge; no Delete button that would just be refused.
+  // Batch w3e ruling: the still-used dialog is titled "<Name> is still used", not "Delete <Name>?".
   it('when it is still used: Close and "Merge into another Ingredient" (Supply: "...Supply"), no Delete, not the danger tone', () => {
     const used = { references: { products: 2 }, total: 2 }
-    expect(deleteConfirm('food', 'passata', used)).toMatchObject({ title: 'Delete Passata?', cancelLabel: 'Close', confirmLabel: 'Merge into another Ingredient', tone: 'default' })
+    expect(deleteConfirm('food', 'passata', used)).toMatchObject({ title: 'Passata is still used', cancelLabel: 'Close', confirmLabel: 'Merge into another Ingredient', tone: 'default' })
     expect(deleteConfirm('supply', 'soap', used)).toMatchObject({ confirmLabel: 'Merge into another Supply' })
     expect(deleteConfirm('food', 'passata', used).note).not.toMatch(/can't be undone/)
   })

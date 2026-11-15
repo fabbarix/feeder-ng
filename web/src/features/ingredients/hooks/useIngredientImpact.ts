@@ -7,6 +7,8 @@ export interface UseIngredientImpact {
   /** undefined until the read comes back, and after a failed read (the confirm then makes no claim about its use). */
   impact: IngredientImpact | undefined
   isLoading: boolean
+  /** The read has answered (with data or a failure) since it was asked for. */
+  settled: boolean
 }
 
 export function useIngredientImpact(id: number, enabled: boolean): UseIngredientImpact {
@@ -19,5 +21,5 @@ export function useIngredientImpact(id: number, enabled: boolean): UseIngredient
     gcTime: 0,
     retry: false,
   })
-  return { impact: enabled ? query.data : undefined, isLoading: enabled && query.isLoading }
+  return { impact: enabled ? query.data : undefined, isLoading: enabled && query.isLoading, settled: enabled && !query.isLoading && !query.isFetching }
 }

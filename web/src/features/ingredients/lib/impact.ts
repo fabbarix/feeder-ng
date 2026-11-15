@@ -38,7 +38,8 @@ export function isInUse(impact: IngredientImpact | undefined): boolean {
 }
 
 /**
- * The Delete confirm. Nothing uses it: a danger confirm whose lead says so. Still in use (the page was stale): the same title, the
+ * The Delete confirm. Nothing uses it: a danger confirm whose lead says so. Still in use (the page was stale): the title
+ * "<Name> is still used" (batch w3e ruling; the page opens the dialog only once the read has answered, so it never jumps), the
  * places as "Used by" rows, and the way forward instead of a Delete that would only be refused: Close and "Merge into another
  * Ingredient" (user decision, B9-48). While the read is out: no claim about its use.
  */
@@ -48,7 +49,7 @@ export function deleteConfirm(kind: IngredientKind, name: string, impact: Ingred
   if (impact !== undefined && isInUse(impact)) {
     const rows = impactRows(impact.references)
     return {
-      title,
+      title: strings.stillUsed(displayName(name)),
       body: strings.impact.usedIn(impact.total),
       groups: [{ label: strings.impact.usedBy, rows }],
       note: strings.impact.mergeInstead(kind),

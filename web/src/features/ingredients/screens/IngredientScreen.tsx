@@ -98,7 +98,7 @@ function IngredientPage({ id, kind, ing, ingredient, breadcrumbs }: IngredientPa
             {ingredient.baseRecipe ? null : (
               <IconButton icon="edit" label={strings.header.rename(title)} aria-haspopup="dialog" onClick={() => page.open('rename')} />
             )}
-            <Menu label={strings.header.more(title)} items={more} />
+            <Menu label={strings.header.more(title)} items={more} busy={page.deletePending} />
           </>
         }
       />
@@ -175,7 +175,7 @@ function IngredientPage({ id, kind, ing, ingredient, breadcrumbs }: IngredientPa
           }}
         />
       ) : null}
-      <ConfirmDialog open={page.sheet === 'delete'} {...page.deleteOptions} onConfirm={() => void page.confirmDelete()} onCancel={page.close} />
+      <ConfirmDialog open={page.deleteOpen} {...page.deleteOptions} onConfirm={() => void page.confirmDelete()} onCancel={page.close} />
       <KindDialogs kind={kind} name={ingredient.name} change={change} />
     </section>
   )

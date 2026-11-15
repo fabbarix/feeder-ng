@@ -31,7 +31,7 @@ const hook = {
   },
 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
-vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false }) }))
+vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false, settled: true }) }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => 'metric' }))
 vi.mock('../../products', () => ({ IngredientProducts: () => <p>products tile</p> }))
 vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))

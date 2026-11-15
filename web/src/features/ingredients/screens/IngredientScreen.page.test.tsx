@@ -20,6 +20,8 @@ vi.mock('../../products', async () => {
 vi.mock('../../recipes/components/IngredientExclusionList', () => ({ IngredientExclusionList: () => <p>exclusion list</p> }))
 vi.mock('../components/MergeSheet', () => ({ MergeSheet: ({ open }: { open: boolean }) => (open ? <p>merge sheet</p> : null) }))
 
+import { ingredientsApi } from '../api'
+import type { IngredientImpact } from '../types'
 import { IngredientScreen } from './IngredientScreen'
 
 const garlic = detail(garlicJSON) // Shelf Life 30, frozen none, conversion 1 clove = 5 g
@@ -135,10 +137,10 @@ describe('Rename in a sheet and back to the Rename button (SET-05)', () => {
 })
 
 describe('Delete Ingredient: a confirm that shows what it touches (SAFE-02)', () => {
-  const openDelete = async () => {
+  const openDelete = async (name = 'Delete Garlic?') => {
     await userEvent.click(screen.getByRole('button', { name: 'More for Garlic' }))
     await userEvent.click(within(screen.getByRole('menu', { name: 'More for Garlic' })).getByRole('menuitem', { name: 'Delete Ingredient' }))
-    return screen.findByRole('dialog', { name: 'Delete Garlic?' })
+    return screen.findByRole('dialog', { name })
   }
   it('reads the impact when the confirm opens (not before), then DELETEs on confirm and goes to the list; no Undo toast (a confirm, not a light removal)', async () => {
     const { api } = setup({ 'DELETE /api/ingredients/7': { status: 204 } })
@@ -156,7 +158,7 @@ describe('Delete Ingredient: a confirm that shows what it touches (SAFE-02)', ()
   it('when the impact read finds it in use: rows, not a sentence', async () => {
     setup({ 'GET /api/ingredients/7/impact': { references: { products: 2, 'recipe lines': 1 }, total: 3 } })
     await ready()
-    const dialog = await openDelete()
+    const dialog = await openDelete('Garlic is still used')
     const group = await within(dialog).findByRole('list', { name: 'Used by' })
     expect(within(group).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Recipe lines1', 'Products2'])
     expect(dialog).toHaveTextContent('It is used in 3 places.')
@@ -164,14 +166,28 @@ describe('Delete Ingredient: a confirm that shows what it touches (SAFE-02)', ()
   it('when it is still used there is no Delete: Close, and Merge into another Ingredient opens the merge (user decision)', async () => {
     const { api } = setup({ 'GET /api/ingredients/7/impact': { references: { products: 2 }, total: 2 } })
     await ready()
-    const dialog = await openDelete()
+    const dialog = await openDelete('Garlic is still used')
     await within(dialog).findByRole('list', { name: 'Used by' })
     expect(within(dialog).queryByRole('button', { name: 'Delete Ingredient' })).toBeNull()
     expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveFocus()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Merge into another Ingredient' }))
     expect(await screen.findByText('merge sheet')).toBeInTheDocument()
-    expect(screen.queryByRole('dialog', { name: 'Delete Garlic?' })).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Garlic is still used' })).toBeNull()
     expect(api.callsTo('DELETE', '/api/ingredients/7')).toHaveLength(0)
+  })
+  // Batch w3e ruling: the dialog shows only once the impact read has answered (its title never jumps); meanwhile More is busy.
+  it('while the impact read is out there is no dialog yet and More is aria-busy', async () => {
+    let answer: (v: IngredientImpact) => void = () => {}
+    vi.spyOn(ingredientsApi, 'impact').mockImplementationOnce(() => new Promise<IngredientImpact>((r) => (answer = r)))
+    setup()
+    await ready()
+    await userEvent.click(screen.getByRole('button', { name: 'More for Garlic' }))
+    await userEvent.click(within(screen.getByRole('menu', { name: 'More for Garlic' })).getByRole('menuitem', { name: 'Delete Ingredient' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'More for Garlic' })).toHaveAttribute('aria-busy', 'true'))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    answer({ references: { products: 2 }, total: 2 })
+    expect(await screen.findByRole('dialog', { name: 'Garlic is still used' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'More for Garlic' })).not.toHaveAttribute('aria-busy')
   })
   it('Cancel deletes nothing and puts focus back on More', async () => {
     const { api } = setup()

@@ -26,7 +26,7 @@ const hook = {
   save: vi.fn().mockResolvedValue({}),
 }
 vi.mock('../hooks/useIngredient', () => ({ useIngredient: () => hook }))
-vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false }) }))
+vi.mock('../hooks/useIngredientImpact', () => ({ useIngredientImpact: () => ({ impact: { references: {}, total: 0 }, isLoading: false, settled: true }) }))
 vi.mock('../hooks/useDisplayUnitSystem', () => ({ useDisplayUnitSystem: () => system.value }))
 vi.mock('../../products', async () => {
   const { Tile } = await import('../../../ui')
