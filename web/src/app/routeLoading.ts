@@ -21,9 +21,6 @@ const BODIES: ReadonlyArray<[RegExp, LoadingBody]> = [
   [/^\/(shop|scan)$/, 'tiles'],
 ]
 
-/** Scan shows no header while its Shops load (the header names the Shop it picks), so it shows none while its code loads. */
-const HEADLESS = /^\/scan$/
-
 const clean = (pathname: string) => (pathname.split(/[?#]/)[0] ?? '/').replace(/(.)\/+$/, '$1')
 
 export function routeLoadingFor(pathname: string): RouteLoadingView {
@@ -34,6 +31,5 @@ export function routeLoadingFor(pathname: string): RouteLoadingView {
   const title = trail.at(-1)?.label ?? PRIMARY_NAV.find((item) => item.path === path)?.label
   // Plan keeps its subtitle row from the first frame (B9-20), so the week range does not push the grid down.
   const subtitle = body === 'plan' ? '\u00a0' : undefined
-  if (HEADLESS.test(path)) return { frame: 'shell', crumbs: [], body }
   return { frame: 'shell', title, crumbs: trail.length > 1 ? trail : [], subtitle, body }
 }

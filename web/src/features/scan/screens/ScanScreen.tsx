@@ -90,10 +90,12 @@ export function ScanScreen() {
   const near = useNearestShop(shops)
   const [adding, setAdding] = useState(false)
 
-  // While the Shops load neither the picker (it would flash) nor a session is shown.
+  // While the Shops load neither the picker (it would flash) nor a session is shown: the page's header and two tiles, the
+  // same as while the route's code loads (app/routeLoading.ts), so the page does not jump.
   if (isLoading) {
     return (
       <section className="scan-screen">
+        <PageHeader title={scanStrings.title} />
         <Skeleton variant="tile" count={2} />
       </section>
     )

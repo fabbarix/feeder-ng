@@ -33,9 +33,11 @@ describe('routeLoadingFor', () => {
     expect(view.frame === 'shell' && view.subtitle).toBe(' ')
   })
 
-  it('Scan shows tiles and no header, as it does while its Shops load', () => {
+  // int1 (main-session call): Scan gets its header and document title while its code loads, like every other route; the
+  // screen's own Shops-loading view shows the same header, so nothing jumps when the chunk arrives.
+  it('Scan shows its "Scan" header and tiles, as it does while its Shops load', () => {
     const view = routeLoadingFor('/scan')
-    expect(view).toEqual({ frame: 'shell', crumbs: [], body: 'tiles' })
+    expect(view).toEqual({ frame: 'shell', title: 'Scan', crumbs: [], subtitle: undefined, body: 'tiles' })
   })
 
   it.each(['/cook/recipe/3', '/board', '/scan/receipt', '/scan/receipt/review'])('%s is chromeless: its own minimal frame', (path) => {
