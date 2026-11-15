@@ -1,6 +1,6 @@
-import { useId, useRef, type MouseEvent } from 'react'
+import { useId, useRef } from 'react'
 import type { CourseChoice } from '../../../lib/courses'
-import { BottomSheet, Button, Chip, FieldRow, FormActions, TimeField, TextField, WeekdayPicker, type MenuEntry } from '../../../ui'
+import { BottomSheet, Chip, FieldRow, Menu, TimeField, TextField, WeekdayPicker, type MenuEntry } from '../../../ui'
 import { FormError } from '../../../ui/fields/FormError'
 import { useFocusFirstInvalid } from '../../../ui/fields/useFocusFirstInvalid'
 import { useSlotForm } from '../hooks/useSlotForm'
@@ -65,14 +65,6 @@ function EditorSheet(props: SheetProps) {
   return <SlotSheet key={`${props.slot?.id ?? 'new'}|${(props.courses?.length ?? 0) > 0 ? 'courses' : 'none'}`} {...props} />
 }
 
-/**
- * The Cancel of a footer the page draws itself goes out the way Escape does: the dialog's own `cancel` event, so the sheet asks
- * "Discard changes?" when the form holds edits (BottomSheet `confirmDismiss`) and closes at once when it does not.
- */
-function cancelSheet(event: MouseEvent<HTMLButtonElement>) {
-  event.currentTarget.closest('dialog')?.dispatchEvent(new Event('cancel', { cancelable: true }))
-}
-
 function SlotSheet({ slot, members, defaultWeekdays, defaultName, saving, error, onSave, slots, onApply, weekStart, initialWeekdays, courses, onPreview, locale = documentLocale(), onDelete, onChangeDate, onClose }: SheetProps) {
   const formId = useId()
   const formRef = useRef<HTMLFormElement>(null)
@@ -106,25 +98,12 @@ function SlotSheet({ slot, members, defaultWeekdays, defaultName, saving, error,
     <BottomSheet
       open
       onClose={onClose}
-      closeButton={false}
+      onCancel={onClose}
+      cancelLabel={text.cancel}
       confirmDismiss={dirty}
       title={slot ? text.editTitle : text.addTitle}
-      footer={
-        <FormActions
-          more={more.length > 0 ? more : undefined}
-          moreLabel={text.moreFor(name)}
-          tertiary={
-            <Button variant="secondary" className="sheet__cancel" onClick={cancelSheet}>
-              {text.cancel}
-            </Button>
-          }
-          primary={
-            <Button type="submit" form={formId} loading={saving}>
-              {slot ? text.save : text.addSave}
-            </Button>
-          }
-        />
-      }
+      more={more.length > 0 ? <Menu label={text.moreFor(name)} items={more} /> : undefined}
+      submit={{ label: slot ? text.save : text.addSave, form: formId, loading: saving }}
     >
       <form ref={formRef} id={formId} className="settings__stack" onSubmit={submit} noValidate>
         <WeekdayPicker
