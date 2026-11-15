@@ -18,6 +18,7 @@ const rules = createRequire(resolve(cwd, 'package.json'))(resolve(cwd, '../scrip
   countFindings: (text: string, output: string) => { fail: number; bridged: unknown[] }
   countRuleWarned: (text: string, output: string) => { rule: string; pattern: string; until: string | null; n: number }[]
   modeFor: (text: string, route: string) => 'warn' | 'fail'
+  ruleWarnFor: (text: string, rule: string, label: string) => { rule: string; pattern: string; until: string | null } | null
 }
 
 const modes = 'default=warn\nfail_routes=/pantry /settings/*\nP41@/pantry = warn until B9-29\nP40@/settings/tags = warn\n'
