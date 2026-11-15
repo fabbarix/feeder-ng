@@ -490,3 +490,11 @@
 .member-away__add {
   display: flex;
 }
+
+/* B9-53 (TB 6): the Household page's "Setup checklist" row (shown while the checklist is hidden from Today). */
+.settings__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}

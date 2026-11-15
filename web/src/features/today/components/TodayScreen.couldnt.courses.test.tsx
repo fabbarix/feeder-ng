@@ -8,6 +8,7 @@ import { EXCLUDED, NO_COURSE_RECIPES, NOBODY, dinner, empty, flat, planned, side
 import type { PlanSlot } from '../../plan/types'
 import { mockApi, renderWithProviders } from '../../settings/test-utils'
 import type { SetupFacts } from '../lib/setup'
+import { ESTABLISHED } from '../../../test/setupFacts'
 import { TodayScreen } from './TodayScreen'
 
 const h = vi.hoisted(() => ({ couldnt: [] as unknown[], all: [] as unknown[], facts: null as unknown }))
@@ -31,7 +32,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-const established: SetupFacts = { members: 2, mealSlots: 3, mealSlotsWithAttendance: 3, recipes: 5, plannedMeals: 4, unplannedMeals: 2 }
+const established: SetupFacts = { ...ESTABLISHED, plannedMeals: 4, unplannedMeals: 2 }
 const Where = () => {
   const l = useLocation()
   return <p>at {l.pathname + l.search}</p>

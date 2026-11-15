@@ -18,6 +18,12 @@ export const settingsHouseholdStrings = {
     locationHint: "Coordinates such as 45.07, 7.69 are needed for the kitchen board's sunset and sunrise. A city alone keeps the 19:00 to 07:00 dark mode.",
     currency: 'Currency',
     save: 'Save Household settings',
+    // B9-53 (TB-06, TB 6): the row that shows the hidden first-run checklist on Today again.
+    setupChecklist: 'Setup checklist',
+    setupHidden: 'Hidden from Today',
+    showSetup: 'Show on Today',
+    setupShown: 'The setup checklist is back on Today.',
+    rowsLabel: 'Today',
   },
   plannerStyle: 'Planner Style',
   plannerStyleAnchor: {

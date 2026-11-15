@@ -35,4 +35,26 @@ describe('composeToday: the first-run setup checklist (R13)', () => {
   it('a scan session adds the shopping tile before the setup checklist', () => {
     expect(ids({ ...quiet, needsSetup: true, scanSessionActive: true })).toEqual(['shopping', 'setup'])
   })
+
+  // B9-53 (TB-06, changed on purpose): after the first plan the checklist is compact and sits after the hero. The full checklist stays second after shopping.
+  it('the compact checklist sits after the hero (and after the shopping tile), before To confirm', () => {
+    expect(ids({ ...quiet, hasNextMeal: true, toConfirm: 2, setupCompact: true })).toEqual(['nextMeal', 'setup', 'toConfirm'])
+    expect(ids({ ...quiet, scanSessionActive: true, hasNextMeal: true, setupCompact: true })).toEqual(['shopping', 'nextMeal', 'setup'])
+  })
+
+  it('the full checklist is second after shopping, before the hero', () => {
+    expect(ids({ ...quiet, hasNextMeal: true, needsSetup: true })).toEqual(['setup', 'nextMeal'])
+  })
+
+  it('a compact checklist does not hide Couldn\'t plan: it is not the first-run state any more', () => {
+    expect(ids({ ...quiet, setupCompact: true, couldntPlan: 2 })).toEqual(['setup', 'couldntPlan'])
+  })
+
+  it('a compact checklist alone is not the "nothing on the menu" empty state', () => {
+    expect(composeToday({ ...quiet, setupCompact: true })).toMatchObject({ empty: false })
+  })
+
+  it('only one setup tile at a time: if both flags arrive, the full one wins and the tile is not doubled', () => {
+    expect(ids({ ...quiet, needsSetup: true, setupCompact: true, hasNextMeal: true })).toEqual(['setup', 'nextMeal'])
+  })
 })

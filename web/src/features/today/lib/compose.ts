@@ -4,7 +4,7 @@ import type { TileId, TodayData, TodayLayout } from '../types'
  * Decides what Today shows: the tiles with something to show, in DOM order (B9-44, TB-03): the Shopping tile while a Scan session is
  * active on this phone (TB-12), the setup checklist while the Household is being set up (it replaces Couldn't plan), the hero, To confirm,
  * then the aside's tiles (Advance Steps, the metric strip: the strip shows from a 1-day streak or a Line to get, TB 3), Couldn't plan,
- * Throw out or keep?, Leftovers and Use soon. `aside` names the aside's tiles that are present; CSS places them (and moves the strip
+ * Throw out or keep?, Leftovers and Use soon. B9-53: the compact checklist (after the first plan) follows the hero instead. `aside` names the aside's tiles that are present; CSS places them (and moves the strip
  * to the end below 60 rem). `empty` is true when no tile other than the metric strip would show.
  */
 export function composeToday(d: TodayData): TodayLayout {
@@ -12,6 +12,9 @@ export function composeToday(d: TodayData): TodayLayout {
   if (d.scanSessionActive) ids.push('shopping')
   if (d.needsSetup) ids.push('setup')
   if (d.hasNextMeal) ids.push('nextMeal')
+  // B9-53 (TB-06): after the first plan the checklist is compact and follows the hero (one setup tile at a time: the full one wins).
+  const compactSetup = d.setupCompact === true && !d.needsSetup
+  if (compactSetup) ids.push('setup')
   if (d.toConfirm > 0) ids.push('toConfirm')
   if (d.advanceSteps > 0) ids.push('advanceSteps')
   // DS-TODAY round 2: the Leftovers tile says its own count, so Leftovers alone does not open the strip.
@@ -26,5 +29,6 @@ export function composeToday(d: TodayData): TodayLayout {
     aside: ids.filter((id) => id === 'advanceSteps' || id === 'metrics'),
     empty: !d.loadFailed && ids.every((id) => id === 'metrics'),
     failed: d.loadFailed === true,
+    ...(compactSetup ? { setupCompact: true } : {}),
   }
 }

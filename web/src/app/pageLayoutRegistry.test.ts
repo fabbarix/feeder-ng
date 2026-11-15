@@ -131,6 +131,7 @@ const ADDED = {
   // B9-43: scenarios/b9-43.mjs (order 350, after b9-40 by file name): shop-notice, shop-line-sheet, shop-line-sheet-price, shop-complete and shop-complete-restore (SSP-04, 09, 13, 14).
   // B9-47: scenarios/b9-47.mjs (order 350, after b9-43 by file name): the Kitchen board on real screens (TB-04, TB-07, TB-08, TB-15c/d, SHORT-03, A11Y-12, RES-09): board-wall, board-portrait, board-short, board-phone, board-close, board-error.
   // B9-45: scenarios/b9-45.mjs (order 360): cooked-confirmation and cook-get-ready (Cook Mode, PC-02 and PC-05) and leftover-freeze-sheet (PC-13). No rule number: the setups measure and throw.
+  // B9-53: scenarios/b9-53.mjs (order 370): first-run-zone, first-run-member, first-run-slots and first-run-compact (TB-06; the empty Household is a fetch stub installed by `emulate`). No rule number: the setups measure and throw.
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
   // B9-48: scenarios/b9-48.mjs (order 480): the Keeping tile of an Ingredient and of a Supply, the Rename sheet and the Delete confirm.
@@ -163,6 +164,7 @@ const ADDED = {
     'shop-notice', 'shop-line-sheet', 'shop-line-sheet-price', 'shop-complete', 'shop-complete-restore',
     'board-wall', 'board-portrait', 'board-short', 'board-phone', 'board-close', 'board-error',
     'cooked-confirmation', 'cook-get-ready', 'leftover-freeze-sheet',
+    'first-run-zone', 'first-run-member', 'first-run-slots', 'first-run-compact',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',
     'ingredient-keeping', 'supply-keeping', 'ingredient-rename-sheet', 'ingredient-delete-confirm',

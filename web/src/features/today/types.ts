@@ -21,6 +21,8 @@ export interface TodayData {
   couldntPlan: number
   /** R13: the household is new and nothing can be planned yet: show the setup checklist (replaces Couldn't plan). */
   needsSetup?: boolean
+  /** B9-53 (TB-06): after the first plan, fewer than five Recipes: the compact checklist follows the hero (Couldn't plan still shows). */
+  setupCompact?: boolean
   leftovers: number
   useSoon: number
   streakDays: number
@@ -46,6 +48,8 @@ export interface TodayLayout {
   empty: boolean
   /** the data could not be loaded: show an error, never the empty state */
   failed?: boolean
+  /** B9-53 (TB-06): the setup tile is the compact one (a half tile from two tracks), not the full checklist. */
+  setupCompact?: boolean
 }
 
 export interface AdvanceStepDue {
