@@ -30,5 +30,9 @@ export const boardStrings = {
   loading: 'Loading the kitchen board',
   loadError: 'The kitchen board could not be loaded',
   due: (when: string) => `Start ${when}`,
+  /** B9-47 STUBS (test author), real values by the developer (TB-04, TB-08). */
+  close: '',
+  courses: '',
+  useBy: (_when: string) => '',
   portions: (n: number) => (n === 1 ? '1 portion' : `${n} portions`),
 } as const
