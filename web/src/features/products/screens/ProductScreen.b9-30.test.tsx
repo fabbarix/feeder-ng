@@ -118,7 +118,7 @@ describe('Prices as rows (SET-04)', () => {
     const li = row.closest('li')!
     expect(li.querySelector('.list-row__value')).toHaveTextContent('$1.59')
     expect(li.querySelector('.list-row__sub-value')).toHaveTextContent('$2.27 / kg')
-    expect(li.querySelector('.list-row__meta')).toHaveTextContent('14 Nov · per kg from the pack size')
+    expect(li.querySelector('.list-row__meta')).toHaveTextContent('14 Nov · per kg from pack size')
     expect(li.textContent).not.toContain(`${YEAR}-11-14`)
   })
 

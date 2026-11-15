@@ -36,7 +36,9 @@ describe('priceRows', () => {
 
   it('says in the detail when the price per kg was worked out from the pack size', () => {
     const [row] = priceRows([price({ id: 1, pricePerKgDerived: true })], shops, 'USD', TODAY)
-    expect(row!.detail).toBe('5 Nov · per kg from the pack size')
+    expect(row!.detail).toBe('5 Nov · per kg from pack size')
+    // the compact meta of a narrow row is the date alone (P23: the detail is never cut)
+    expect(row!.date).toBe('5 Nov')
   })
 
   it('names the row "<Shop>, <price>, <date>" for a screen reader', () => {

@@ -58,7 +58,7 @@ export const strings = {
   errAmount: 'Enter a price or a price per kg above zero.',
   perKg: 'per kg',
   derivedPerKg: 'worked out from the pack size',
-  perKgFromPack: 'per kg from the pack size',
+  perKgFromPack: 'per kg from pack size',
   noPrices: 'No Prices recorded',
   deleteProduct: 'Delete Product',
   loading: 'Loading…',

@@ -21,6 +21,7 @@ export function PriceList({ rows, label, onOpen }: PriceListProps) {
           title={r.key}
           aria-label={r.label}
           meta={r.detail}
+          metaCompact={r.detail === r.date ? undefined : r.date}
           value={r.value}
           subValue={r.subValue}
           chevron

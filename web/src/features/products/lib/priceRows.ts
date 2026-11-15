@@ -25,6 +25,8 @@ export interface PriceRow {
   subValue?: string
   /** the locale date, plus how the per-kg price was worked out */
   detail: string
+  /** the date alone: the row's compact meta, so a narrow row never cuts its detail (SSP-05 / P23) */
+  date: string
   /** "<Shop>, <price>, <date>" */
   label: string
   price: Price
@@ -47,7 +49,7 @@ export function priceRows(prices: Price[], shops: Shop[], currency: string, toda
     const date = formatPriceDate(p.date, today)
     const values = priceValues(p, currency)
     const detail = p.pricePerKgDerived && p.priceCents != null && p.pricePerKgCents != null ? `${date} · ${strings.perKgFromPack}` : date
-    return { id: p.id, shopId: p.shopId, key, ...values, detail, label: `${key}, ${values.value}, ${date}`, price: p }
+    return { id: p.id, shopId: p.shopId, key, ...values, detail, date, label: `${key}, ${values.value}, ${date}`, price: p }
   })
 }
 
