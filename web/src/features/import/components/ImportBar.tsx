@@ -10,6 +10,8 @@ export interface ImportBarProps {
   busy: boolean
   /** Moves focus to the first open question after the one that has focus (wraps around). */
   onNext: () => void
+  /** Moves focus to the first open question (the primary, pressed with questions open); defaults to onNext. */
+  onFirst?: () => void
   onImport: () => void
 }
 
@@ -20,7 +22,7 @@ const t = s.reviewRows
  * named) and the primary "Import N Recipes". The primary stays enabled with questions open: pressing it then goes to the next question
  * and says, as a status, how many are left (SAFE's field-error pattern). With nothing to import it reads "Nothing to import", disabled.
  */
-export function ImportBar({ recipes, questions, busy, onNext, onImport }: ImportBarProps): ReactNode {
+export function ImportBar({ recipes, questions, busy, onNext, onFirst, onImport }: ImportBarProps): ReactNode {
   const [asked, setAsked] = useState(false)
   useEffect(() => {
     if (questions === 0) setAsked(false)
@@ -29,7 +31,8 @@ export function ImportBar({ recipes, questions, busy, onNext, onImport }: Import
   const press = () => {
     if (questions > 0) {
       setAsked(true)
-      onNext()
+      const goTo = onFirst ?? onNext
+      goTo()
       return
     }
     onImport()

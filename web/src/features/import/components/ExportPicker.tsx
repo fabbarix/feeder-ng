@@ -59,6 +59,7 @@ export function ExportPicker({ recipes, selected, onToggle, onSelectAll, onClear
               key={r.id}
               title={r.name}
               leading={<RecipeThumb name={r.name} photoUrl={r.imageUrl || undefined} size={40} />}
+              wrapTitle
               onActivate={() => onToggle(r.id)}
               control={
                 <span className="export-picker__check">

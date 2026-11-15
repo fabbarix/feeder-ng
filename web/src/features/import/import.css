@@ -665,6 +665,13 @@
   color: var(--color-text);
 }
 
+/* A long state ("Kept as Lasagne (ready meal) (2)") wraps at the row's end instead of pushing the row onto a second line. */
+.recipe-preview .import-row__state {
+  max-inline-size: 9rem;
+  white-space: normal;
+  text-align: end;
+}
+
 .import-row__state[data-tone='info'] {
   color: var(--color-info-fg);
 }
@@ -709,6 +716,8 @@
 }
 
 .import-row__choices .choice-chip {
+  gap: var(--space-1);
+  padding-inline: var(--space-3);
   white-space: nowrap;
 }
 
@@ -768,7 +777,7 @@
   block-size: var(--space-6);
   border-radius: 50%;
   background: var(--color-soft);
-  color: var(--color-accent-text);
+  color: var(--color-text);
   font-size: var(--text-meta-size);
   font-variant-numeric: tabular-nums;
 }

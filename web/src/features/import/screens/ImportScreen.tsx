@@ -275,7 +275,7 @@ function Reviewing({ plan, stale, screen, courses, baseLines, startRef }: Review
           onRecipe={screen.choosePhotoRecipe}
         />
       ) : null}
-      <ImportBar recipes={counts.recipes} questions={questions.length} busy={screen.busy} onNext={jump.next} onImport={() => void screen.confirm()} />
+      <ImportBar recipes={counts.recipes} questions={questions.length} busy={screen.busy} onNext={jump.next} onFirst={jump.goToFirst} onImport={() => void screen.confirm()} />
     </div>
   )
 }
