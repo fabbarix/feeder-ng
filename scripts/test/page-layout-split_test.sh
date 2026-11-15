@@ -40,8 +40,9 @@ rm "$m/modes.d/b9-98.modes"
 out=$(printf '%s\n' "  - 1440px /shop: P3 content is 1036px wide" "  - 1440px /pantry: P3 content is 1036px wide" | node "$MODES_JS" count-fail "$m/modes" 2>/dev/null)
 [ "$out" = 1 ] && ok || bad "count-fail must read modes.d too: /shop fails, /pantry warns, so 1 (got '$out')"
 [ "$(PAGE_LAYOUT_MODES="$m/modes" "$W" --mode-of /shop 2>/dev/null)" = fail ] && ok || bad "check-page-layout.sh --mode-of reads modes.d"
-# the real tree: a modes.d directory next to the real modes file; the real modes file keeps its default=warn first line
-[ "$(grep -c '^default=warn$' "$ROOT/scripts/check-page-layout.modes")" = 1 ] && ok || bad "check-page-layout.modes keeps its one default=warn line"
+# the real tree: a modes.d directory next to the real modes file; the real modes file keeps its one default line, in its release
+# state since B9-55 (default=fail)
+[ "$(grep -c '^default=fail$' "$ROOT/scripts/check-page-layout.modes")" = 1 ] && ok || bad "check-page-layout.modes keeps its one default=fail line (the release state, B9-55)"
 
 # --- a full run (fakes as in check-page-layout_test.sh) that needs modes.d to fail, and --scenario passed through
 cat >"$TMP/fake-server.sh" <<'FS'

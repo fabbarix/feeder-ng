@@ -50,7 +50,9 @@ for try in 0 1 2 3 4 5 6 7; do
 done
 [ -n "$PORT" ] || { echo "FAIL: no free port for the fixture server"; exit 1; }
 echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings)$' timeout 600 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
+# fast-checks: --routes runs the two route-table entries and no scenario (the static fixture has nothing for a setup to find; each
+# one waited out its own timeout). The assertions read route findings only.
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" timeout 600 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" --routes /plan,/settings 2>&1)"
 
 # the lone chip cut by the 40 % cap, at a tablet and a desktop width and on a phone
 for w in 390 834 1024 1440; do

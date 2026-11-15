@@ -64,7 +64,9 @@ for try in 0 1 2 3 4 5 6 7; do
 done
 [ -n "$PORT" ] || { echo "FAIL: no free port for the fixture server"; exit 1; }
 echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|settings)$' timeout 600 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
+# fast-checks: --routes runs the two route-table entries and no scenario: this static fixture has nothing for a scenario's setup
+# to find, and every one used to wait out its own timeout (about 420 s for nothing). The assertions read route findings only.
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" timeout 600 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" --routes /plan,/settings 2>&1)"
 
 for w in 390 1440; do
   # P29: each of the four surfaces (tile, toast, sheet footer, dialog) reports its weak action, and names its label

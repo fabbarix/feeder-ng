@@ -182,11 +182,26 @@ stop_fake() {
 }
 
 # Stops only the server THIS run started (STARTED is set after its spawn) and the guard this run started. Never another run's server.
+WORKER_PIDS=()
+WDIRS=()
 stop_server() {
   if [ -n "${GUARD_PID:-}" ] && kill -0 "$GUARD_PID" 2>/dev/null; then
     kill -TERM "$GUARD_PID" 2>/dev/null
     pkill -TERM -P "$GUARD_PID" 2>/dev/null
   fi
+  # fast-checks: the parallel guard's drivers (and their Chrome, which each driver kills on TERM), then each worker's server.
+  local w p
+  for p in "${WORKER_PIDS[@]}"; do
+    kill -TERM "$p" 2>/dev/null
+    pkill -TERM -P "$p" 2>/dev/null
+  done
+  [ "${#WORKER_PIDS[@]}" -gt 0 ] && sleep 1
+  for w in "${WDIRS[@]}"; do bash "$ROOT/scripts/lib/page-layout/unit-server.sh" stop "$w"; done
+  stop_server_only
+  stop_fake
+}
+# Stops the seeded server this run started, if it is still up (the parallel guard stops it before it copies the database).
+stop_server_only() {
   if [ "$STARTED" = 1 ]; then
     local pid="${SERVER_PID:-}"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
@@ -204,7 +219,6 @@ stop_server() {
   fi
   SERVER_PID=""
   STARTED=""
-  stop_fake
 }
 
 # One run per worktree: flock -n on $BUILD/page-layout.lock, held on fd 9 for this script's whole life. The kernel drops the lock
@@ -275,8 +289,16 @@ mkdir -p "$DATA"
 : >"$LOG"
 rm -f "$PIDFILE"
 
+# fast-checks (deterministic time): the seed server and the seeder run at SEED_AT (Wednesday 15:00 UTC of this week), the probe
+# servers at PROBE_AT, ten minutes later (scripts/lib/page-layout/test-clock.mjs), so no run crosses the seeded Household's midnight
+# and every run sees the same hour. PAGE_LAYOUT_NOW=<ISO instant> picks another seed instant (debugging).
+CLOCK_JS="$ROOT/scripts/lib/page-layout/test-clock.mjs"
+SEED_AT="${PAGE_LAYOUT_NOW:-$(node --input-type=module -e "import { seedAt } from '$CLOCK_JS'; console.log(new Date(seedAt()).toISOString())")}"
+PROBE_AT="$(node --input-type=module -e "import { probeAt } from '$CLOCK_JS'; console.log(new Date(probeAt(Date.parse('$SEED_AT'))).toISOString())")"
+SERVER_STARTED_MS="$(date +%s%3N)"
+
 # Detached (own session and process group), loopback only, scratch data dir, dev login.
-FEEDER_SECRET_KEY="$SECRET_KEY" FEEDER_DEV_LOGIN=1 FEEDER_ADMIN_EMAIL=admin@example.test FEEDER_DATA_DIR="$DATA" FEEDER_ADDR="127.0.0.1:$PORT" PORT="$PORT" \
+FEEDER_TEST_NOW="$SEED_AT" FEEDER_SECRET_KEY="$SECRET_KEY" FEEDER_DEV_LOGIN=1 FEEDER_ADMIN_EMAIL=admin@example.test FEEDER_DATA_DIR="$DATA" FEEDER_ADDR="127.0.0.1:$PORT" PORT="$PORT" \
   setsid nohup bash -c 'echo $$ >"$1"; shift; exec '"$SERVER_CMD" _ "$PIDFILE" >>"$LOG" 2>&1 </dev/null 9>&- &
 SERVER_PID=$!
 STARTED=1
@@ -303,7 +325,7 @@ SEED_CMD="${PAGE_LAYOUT_SEED_CMD:-node $ROOT/scripts/test/fixtures/page-layout-s
 # Same kind of limit as the guard: a hung seeder must not hang check.sh. -k: kill whatever ignores TERM.
 SEED_LIMIT=""
 command -v timeout >/dev/null 2>&1 && SEED_LIMIT="timeout -k 5 ${PAGE_LAYOUT_SEED_TIMEOUT:-90}"
-(cd "$ROOT" && PAGE_LAYOUT_FAKE_ANTHROPIC_URL="$FAKE_URL" exec $SEED_LIMIT bash -c "$SEED_CMD \"\$@\"" _ "$URL" --out "$IDS") 9>&- >"$BUILD/page-layout-seed.log" 2>&1
+(cd "$ROOT" && PAGE_LAYOUT_NOW="$SEED_AT" NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--import=$ROOT/scripts/lib/page-layout-clock-preload.mjs" PAGE_LAYOUT_FAKE_ANTHROPIC_URL="$FAKE_URL" exec $SEED_LIMIT bash -c "$SEED_CMD \"\$@\"" _ "$URL" --out "$IDS") 9>&- >"$BUILD/page-layout-seed.log" 2>&1
 SEED_RC=$?
 if [ "$SEED_RC" -ne 0 ]; then
   if [ "$SEED_RC" -eq 124 ] || [ "$SEED_RC" -eq 137 ]; then
@@ -317,15 +339,98 @@ LIMIT=""
 # About 200 s is normal for the quick profile and 250 s for the full one (five or six viewports, the filtered scenarios, two walks;
 # pantry-filter review: 300 s left the full run under 20 % headroom). beta.7 added the Supplies, Scan and receipt scenarios, each a
 # setup replayed for its dark pass: about 345 s quick and 385 s full on the reference machine. 600 s means something hangs.
+# fast-checks: the limit is per worker; with the workers each one runs for a few minutes.
 # -k: kill what ignores TERM.
 command -v timeout >/dev/null 2>&1 && LIMIT="timeout -k 5 ${PAGE_LAYOUT_GUARD_TIMEOUT:-600}"
 START=$SECONDS
-# In the background and waited for, so a signal reaches the trap at once (bash defers traps while a foreground command runs).
-(cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS" "${GUARD_ARGS[@]}") 9>&- >"$OUT" 2>&1 &
-GUARD_PID=$!
-wait "$GUARD_PID"
-RC=$?
-GUARD_PID=""
+
+# fast-checks (the parallel guard): PAGE_LAYOUT_WORKERS drivers (default: half the CPUs, at most 12), each with its own Chrome and its own server, share the
+# run's units (a route at every viewport, a scenario at its widths, a resize walk; scripts/lib/page-layout/units.mjs). The seed runs
+# once; its database is copied to a snapshot, and every unit starts on a fresh copy of it (scripts/lib/page-layout/unit-server.sh), so
+# no scenario depends on another's writes or on the order they run in. PAGE_LAYOUT_WORKERS=0 (or a PAGE_LAYOUT_GUARD_CMD, which
+# speaks no worker protocol) runs one driver against the seeded server, as before.
+# The default: half the CPUs, at most 12 (measured on 24 CPUs, quick profile, 649 probes: 6 workers 330 s, 12 workers 188 s, 16
+# workers 153 s; the probes mostly wait on page loads and settle polls, so more workers than CPUs/2 buy little and load the machine).
+NCPU="$(nproc 2>/dev/null || echo 4)"
+DEFAULT_WORKERS=$((NCPU / 2))
+[ "$DEFAULT_WORKERS" -gt 12 ] && DEFAULT_WORKERS=12
+[ "$DEFAULT_WORKERS" -lt 1 ] && DEFAULT_WORKERS=1
+WORKERS="${PAGE_LAYOUT_WORKERS:-$DEFAULT_WORKERS}"
+[ -n "${PAGE_LAYOUT_GUARD_CMD:-}" ] && WORKERS=0
+case "$WORKERS" in '' | *[!0-9]*) not_run "PAGE_LAYOUT_WORKERS=$WORKERS is not a number" ;; esac
+
+if [ "$WORKERS" -eq 0 ]; then
+  # The page clock: the seed server's test clock has ticked since it started.
+  CLOCK_AT="$(node -e "console.log(new Date(Date.parse('$SEED_AT') + Date.now() - $SERVER_STARTED_MS).toISOString())")"
+  # In the background and waited for, so a signal reaches the trap at once (bash defers traps while a foreground command runs).
+  (cd "$ROOT" && exec $LIMIT bash -c "$GUARD_CMD \"\$@\"" _ --url "$URL" --profile "$PROFILE" --ids "$IDS" --clock-at "$CLOCK_AT" "${GUARD_ARGS[@]}") 9>&- >"$OUT" 2>&1 &
+  GUARD_PID=$!
+  wait "$GUARD_PID"
+  RC=$?
+  GUARD_PID=""
+else
+  DRIVER="$ROOT/scripts/check-page-layout.mjs"
+  if ! UNITS_LINE="$(cd "$ROOT" && node "$DRIVER" --url "$URL" --profile "$PROFILE" "${GUARD_ARGS[@]}" --list-units 2>&1)"; then
+    echo "$UNITS_LINE"
+    not_run "the guard could not list its units"
+  fi
+  NUNITS="$(sed -n 's/^units=\([0-9]*\).*/\1/p' <<<"$UNITS_LINE")"
+  [ "$WORKERS" -gt "$NUNITS" ] && WORKERS="$NUNITS"
+  [ "$WORKERS" -ge 1 ] || not_run "the selection has no unit to run"
+  # The session the workers share: made once on the seeded server, so it is in the snapshot.
+  COOKIE="$(curl -s --max-time 5 -o /dev/null -c - -H 'Content-Type: application/json' -d '{"email":"admin@example.test"}' "$URL/api/dev/login" 2>/dev/null \
+    | awk '$6 == "feeder_session" { print $6 "=" $7 }' | tail -n1)"
+  [ -n "$COOKIE" ] || not_run "the dev login on the seeded server gave no session cookie"
+  # The snapshot: the seeded data dir, copied after the seed server has stopped (its database closed and checkpointed).
+  stop_server_only
+  SNAP="$BUILD/page-layout-snapshot"
+  rm -rf "$SNAP"
+  cp -a "$DATA" "$SNAP" || not_run "cannot copy the seeded database to $SNAP"
+  export PL_SERVER_CMD="$SERVER_CMD" PL_SNAPSHOT="$SNAP" PL_SECRET_KEY="$SECRET_KEY" PL_TEST_NOW="$PROBE_AT" PL_ADMIN=admin@example.test
+  CLAIMS="$BUILD/page-layout-claims"
+  rm -rf "$CLAIMS" "$BUILD"/page-layout-w[0-9]*
+  mkdir -p "$CLAIMS"
+  echo "page layout guard: $UNITS_LINE, $WORKERS workers, seeded at $SEED_AT, probed at $PROBE_AT" >"$OUT.head"
+  # The workers' servers listen above the kernel's ephemeral port range (32768..60999 here), so no Chrome DevTools port or outgoing
+  # connection takes one between two units: 61000 + 16 ports per worktree (from the path, as --print-port). Each server is started
+  # once before any Chrome, and every unit restarts it on the same port.
+  wport=$((61000 + ($(printf '%s' "$ROOT" | cksum | cut -d' ' -f1) % 280) * 16))
+  for i in $(seq 1 "$WORKERS"); do
+    # A free port of its own for each worker's server (never one that answers).
+    while curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$wport/" 2>/dev/null; do wport=$((wport + 1)); done
+    wdir="$BUILD/page-layout-w$i"
+    mkdir -p "$wdir"
+    WDIRS+=("$wdir")
+    bash "$ROOT/scripts/lib/page-layout/unit-server.sh" restart "$wdir" "$wport" 9>&- || not_run "worker $i's server did not start on port $wport (see $wdir/server.log)"
+    (cd "$ROOT" && exec $LIMIT node "$DRIVER" --url "http://127.0.0.1:$wport" --profile "$PROFILE" --ids "$IDS" --profile-dir "$wdir" \
+      --claims "$CLAIMS" --reset "bash $ROOT/scripts/lib/page-layout/unit-server.sh restart $wdir $wport" --cookie "$COOKIE" \
+      --clock-at "$PROBE_AT" --result "$wdir/result.json" "${GUARD_ARGS[@]}") 9>&- >"$wdir/out" 2>&1 &
+    WORKER_PIDS+=($!)
+    wport=$((wport + 1))
+  done
+  RC=0
+  for i in "${!WORKER_PIDS[@]}"; do
+    wait "${WORKER_PIDS[$i]}"
+    wrc=$?
+    if [ "$wrc" -ne 0 ]; then
+      echo "page layout worker $((i + 1)) exited $wrc:" >>"$OUT.head"
+      cat "${WDIRS[$i]}/out" >>"$OUT.head"
+      [ "$RC" -eq 0 ] && RC=$wrc
+    fi
+  done
+  WORKER_PIDS=()
+  for w in "${WDIRS[@]}"; do bash "$ROOT/scripts/lib/page-layout/unit-server.sh" stop "$w"; done
+  if [ "$RC" -eq 0 ]; then
+    results=()
+    for w in "${WDIRS[@]}"; do results+=("$w/result.json"); done
+    node "$ROOT/scripts/lib/page-layout/merge.mjs" --exempt "$ROOT/scripts/check-page-layout.exempt" --units "$NUNITS" --seconds "$((SECONDS - START))" "${results[@]}" >"$OUT" 2>>"$OUT.head"
+    RC=$?
+  else
+    : >"$OUT"
+  fi
+  cat "$OUT.head"
+  rm -f "$OUT.head"
+fi
 ELAPSED=$((SECONDS - START))
 # The probe count from the driver's coverage summary ("check-page-layout: coverage: inspected N of M (...)").
 PROBES="$(sed -n 's/^.*check-page-layout: coverage: inspected \([0-9][0-9]*\) of .*/\1/p' "$OUT" | tail -n1)"

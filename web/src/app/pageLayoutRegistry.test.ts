@@ -450,7 +450,8 @@ describe('one module per in-page probe', () => {
     const own = fs.readFileSync(resolve(cwd, '../scripts/check-page-layout.mjs'), 'utf8')
     expect(own).not.toMatch(/const \w*[pP]robe = `/)
     expect(own).toMatch(/PROBES/)
-    expect(own.split('\n').length).toBeLessThan(560)
+    // fast-checks: the driver also splits its work in units for the parallel workers (claims, resets, results): 640 lines.
+    expect(own.split('\n').length).toBeLessThan(640)
     expect(driverSource().length).toBeGreaterThan(own.length)
   })
 })

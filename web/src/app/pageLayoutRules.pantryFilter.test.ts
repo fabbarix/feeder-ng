@@ -53,8 +53,10 @@ describe('RESIZE_WALKS: both filtered headers are walked through phone widths', 
     for (const w of rules.RESIZE_WALKS ?? []) expect(rules.SCENARIOS.map((s) => s.name)).toContain(w.scenario)
   })
   it('the driver runs every walk, fresh loads and the live sweep', () => {
-    expect(driver).toMatch(/for \(const walk of RESIZE_WALKS\)/)
-    expect(driver).toMatch(/SCENARIOS\.find\(\(x\) => x\.name === walk\.scenario\)/)
+    // fast-checks: every walk is a unit of the run (page-layout/units.mjs), run by runWalk on the walk's scenario.
+    expect(driver).toMatch(/walks: RESIZE_WALKS\.filter\(\(w\) => RUN_SCENARIOS\.some\(\(x\) => x\.name === w\.scenario\)\)/)
+    expect(driver).toMatch(/for \(const walk of walks\)/)
+    expect(driver).toMatch(/SCENARIOS\.find\(\(x\) => x\.name === unit\.walk\)/)
   })
 })
 

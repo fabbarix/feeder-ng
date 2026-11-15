@@ -226,5 +226,22 @@ if [ -n "$REAL" ]; then
   [ "$(profiles "$b")" = "$before" ] && ok || bad "real Chrome: no profile dir may remain (/tmp/page-layout-* or build/page-layout-chrome-*)"
 fi
 
+# --- fast-checks: the parallel guard's merge (scripts/lib/page-layout/merge.mjs) reads like one driver, and a lost unit is lost coverage
+MG="$ROOT/scripts/lib/page-layout/merge.mjs"
+printf '' >"$TMP/no-exempt"
+printf '{"profile":"quick","seconds":5,"units":[{"n":1,"id":"route /b","ms":10,"probes":2,"failures":["375px /b: P1 x"],"notInspected":[]}]}' >"$TMP/r1.json"
+printf '{"profile":"quick","seconds":5,"units":[{"n":0,"id":"route /a","ms":10,"probes":3,"failures":[],"notInspected":[]}]}' >"$TMP/r2.json"
+out="$(node "$MG" --exempt "$TMP/no-exempt" --units 2 --seconds 7 "$TMP/r1.json" "$TMP/r2.json" 2>/dev/null)"; rc=$?
+[ "$rc" -eq 1 ] && grep -q '^  - 375px /b: P1 x$' <<<"$out" && grep -q 'coverage: inspected 5 of 5' <<<"$out" && ok || bad "merge: two workers' findings and probes add up, exit 1 on a finding (rc $rc): $out"
+out="$(node "$MG" --exempt "$TMP/no-exempt" --units 2 "$TMP/r2.json" 2>/dev/null)"; rc=$?
+[ "$rc" -eq 2 ] && grep -q 'reported 1 of 2 units' <<<"$out" && ok || bad "merge: a unit no worker reported is lost coverage (exit 2) (rc $rc): $out"
+out="$(node "$MG" --exempt "$TMP/no-exempt" --units 1 "$TMP/r2.json" 2>/dev/null)"; rc=$?
+[ "$rc" -eq 0 ] && grep -q 'check-page-layout: OK (3 probes, ' <<<"$out" && ok || bad "merge: a clean run is OK with its probe count (rc $rc): $out"
+# the wrapper: workers by default, one driver with PAGE_LAYOUT_WORKERS=0 or a PAGE_LAYOUT_GUARD_CMD; every worker's server is stopped
+grep -q 'PAGE_LAYOUT_WORKERS:-$DEFAULT_WORKERS' "$W" && ok || bad "the wrapper runs workers by default (PAGE_LAYOUT_WORKERS)"
+grep -q 'unit-server.sh" stop' "$W" && ok || bad "the wrapper stops every worker's server on exit"
+bash "$ROOT/scripts/lib/page-layout/unit-server.sh" >/dev/null 2>&1; [ $? -eq 2 ] && ok || bad "unit-server.sh without arguments is a usage error"
+bash "$ROOT/scripts/lib/page-layout/unit-server.sh" stop "$TMP/no-such-worker" && ok || bad "unit-server.sh stop of a worker with no server is fine"
+
 printf 'check-page-layout_test: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -89,7 +89,8 @@ JS
   pkill -f "$TMP/nomain.js" 2>/dev/null
 fi
 # the driver's OK line reports the probes it ran, not viewports x all routes (PAGE_LAYOUT_ONLY narrows the run)
-okline=$(grep -n 'check-page-layout: OK' "$DRV")
+# fast-checks: the summary (one driver's, or the parallel workers' merged) is built by scripts/lib/page-layout/units.mjs reportLines.
+okline=$(grep -hn 'check-page-layout: OK' "$DRV" "$ROOT/scripts/lib/page-layout/units.mjs")
 grep -q 'ROUTES.length' <<<"$okline" && bad "the driver's OK line must report the real probe count (the 'probes' counter), not VIEWPORTS x ROUTES.length: $okline" || ok
 grep -q 'probes' <<<"$okline" && ok || bad "the driver's OK line must report the real probe count (got: $okline)"
 

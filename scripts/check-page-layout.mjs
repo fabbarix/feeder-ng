@@ -4,6 +4,15 @@
 //   node scripts/check-page-layout.mjs --url http://127.0.0.1:<port> [--profile quick|full] [--ids build/page-layout-ids.json]
 //                                      [--chrome /usr/bin/google-chrome] [--email admin@example.test] [--scenario NAME[,NAME]]
 //                                      [--routes PATTERN[,PATTERN]]
+// fast-checks (the parallel guard; scripts/check-page-layout.sh runs one driver per worker):
+//   --profile-dir DIR    where this driver's Chrome profile lives (default: the ids file's folder); each worker has its own
+//   --claims DIR         the work is split in units (a route at every viewport, a scenario at its widths, a resize walk:
+//                        page-layout/units.mjs); a driver takes the next unit no other driver has claimed (mkdir DIR/<n>)
+//   --reset CMD          run before every unit: restarts this worker's server on a fresh copy of the seeded database, so no
+//                        unit sees another's writes
+//   --cookie NAME=VALUE  the session (made once, before the database was copied) instead of a dev login in the page
+//   --clock-at ISO       the server's test clock (FEEDER_TEST_NOW) at each reset: pages read the same time (test-clock.mjs)
+//   --result FILE        write the results as JSON (probes, findings, not inspected, by unit) for the merge, print no summary
 // --url is required (no default port), so two worktrees can never probe each other's server by accident.
 // --scenario (B9-03) runs only the named scenarios (and the resize walk of a named one), no route table: a package's targeted run. An
 // unknown name is a usage error (exit 2) before Chrome starts.
@@ -13,14 +22,16 @@
 // Every route x viewport must be inspected: a probe that cannot run fails the guard unless its route is exempt
 // (scripts/check-page-layout.exempt, or --exempt FILE). Exit 1 on any finding or failing not-inspected entry, never OK then;
 // exit 2 = usage or environment trouble (the wrapper treats that as not run). Design: docs/dev/design/b5-pl.md.
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DARK_PROBES, PROBES, PROFILES, ROUTES, RESIZE_SWEEP, RESIZE_WALKS, SCENARIOS, SETUPS, evaluateDarkMetrics, evaluateMetrics, resizeSweepWidths, resizeWalkFindings, resizeWalkWidths, resolveRoute, resolveScenario, scenarioViewports, selectScenarios } from './lib/page-layout-rules.mjs'
-import { coverageSummary, notInspectedLine, parseExemptions } from './lib/page-layout-coverage.mjs'
+import { parseExemptions } from './lib/page-layout-coverage.mjs'
 import { installHelpers } from './lib/page-layout/helpers.mjs'
 import { emulationCalls } from './lib/page-layout/viewport.mjs'
+import { dateShim } from './lib/page-layout/test-clock.mjs'
+import { planUnits, reportLines } from './lib/page-layout/units.mjs'
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`)
@@ -63,6 +74,17 @@ if (routesArg !== null) {
   if (scenarioArg === null) RUN_SCENARIOS = []
 }
 const RUN_ROUTES = routesArg !== null ? ROUTES.filter(([p]) => routesArg.split(',').includes(p)) : scenarioArg !== null ? [] : ROUTES
+// --list-units: how many units this selection has (the parallel wrapper checks every one was reported), then exit before Chrome starts.
+const planThisRun = () =>
+  planUnits({
+    routes: RUN_ROUTES, scenarios: RUN_SCENARIOS, viewports: VIEWPORTS, walks: RESIZE_WALKS.filter((w) => RUN_SCENARIOS.some((x) => x.name === w.scenario)),
+    walkWidths: resizeWalkWidths(), sweepWidths: resizeSweepWidths(), scenarioViewports, only: process.env.PAGE_LAYOUT_ONLY || null,
+  })
+if (process.argv.includes('--list-units')) {
+  const units = planThisRun()
+  console.log(`units=${units.length} probes=${units.reduce((t, u) => t + u.probes, 0)}`)
+  process.exit(0)
+}
 const chromeBin = arg('chrome', process.env.CHROME ?? 'google-chrome')
 const email = arg('email', 'admin@example.test')
 const idsPath = arg('ids', 'build/page-layout-ids.json')
@@ -84,7 +106,19 @@ try {
 // The Chrome profile lives next to the ids file (the worktree's build dir), never in the system tmp dir; stale ones of crashed runs are swept first.
 // The sweep is safe only under the lock: scripts/check-page-layout.sh holds $BUILD/page-layout.lock (flock) for its whole run, so no other
 // run in this build dir can be removing or using a profile dir at the same time. Run this driver by hand only when no wrapper run is active.
-const profileRoot = dirname(idsPath)
+const profileRoot = arg('profile-dir', dirname(idsPath))
+const claimsDir = arg('claims', null)
+const resetCmd = arg('reset', null)
+const cookieArg = arg('cookie', null)
+const clockAt = arg('clock-at', null) ? Date.parse(arg('clock-at', null)) : null
+const resultPath = arg('result', null)
+if (clockAt !== null && Number.isNaN(clockAt)) {
+  console.error(`check-page-layout: --clock-at ${arg('clock-at', '')} is not an instant`)
+  process.exit(2)
+}
+// The page clock: the offset that makes the page's Date read the server's test clock. Set again at every reset (the server restarts at
+// --clock-at then).
+let clockOffset = clockAt === null ? null : clockAt - Date.now()
 mkdirSync(profileRoot, { recursive: true })
 for (const name of readdirSync(profileRoot)) {
   if (name.startsWith('page-layout-chrome-')) rmSync(join(profileRoot, name), { recursive: true, force: true })
@@ -257,6 +291,8 @@ const openTab = async () => {
   await cdp('Log.enable')
   await cdp('Network.enable')
   await cdp('Network.setBypassServiceWorker', { bypass: true })
+  // fast-checks: the page reads the server's test clock (before any of its own scripts).
+  if (clockOffset !== null) await cdp('Page.addScriptToEvaluateOnNewDocument', { source: dateShim(clockOffset) })
   // pantry-filter review: /api/board answers are paused at the response, so pinBoardPhase can pin the board's day/night phase.
   await cdp('Fetch.enable', { patterns: [{ urlPattern: '*/api/board', requestStage: 'Response' }] })
 }
@@ -269,18 +305,34 @@ const evaluate = async (expression) => {
   return r.result.value
 }
 
-// Sign in once (dev login; the cookie stays in the browser profile).
-try {
+// Sign in (dev login; the cookie stays in the browser profile), or (--cookie) put the session made before the database was copied in the
+// browser. With --reset and no --cookie, every unit signs in again after its server restarted.
+const signIn = async () => {
   await openTab()
   await cdp('Page.navigate', { url: base + '/sign-in' })
   await sleep(1200)
   await evaluate(
     `fetch('/api/dev/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: ${JSON.stringify(email)} }) }).then((r) => r.status)`,
   )
+}
+try {
+  if (cookieArg) {
+    const eq = cookieArg.indexOf('=')
+    await openTab()
+    const { success } = await cdp('Network.setCookie', { name: cookieArg.slice(0, eq), value: cookieArg.slice(eq + 1), url: base, httpOnly: true, sameSite: 'Lax' })
+    if (!success) throw new Error('Chrome refused the session cookie')
+  } else if (!resetCmd) await signIn()
 } catch (e) {
   // Environment trouble (no server, hung CDP), not a layout finding: exit 2, which the wrapper FAILS on in every mode (lost coverage).
   console.error(`check-page-layout: could not start the session (${e.message})`)
   await die(2)
+}
+/** --reset: this worker's server restarted on a fresh copy of the seeded database, before a unit. */
+const resetServer = async () => {
+  if (!resetCmd) return
+  execFileSync('bash', ['-c', resetCmd], { stdio: ['ignore', 'ignore', 'inherit'], timeout: 60_000 })
+  if (clockAt !== null) clockOffset = clockAt - Date.now()
+  if (!cookieArg) await signIn()
 }
 
 // Settle poll: load complete and nothing busy or skeleton-shaped for 300 ms, 5 s cap.
@@ -415,40 +467,43 @@ async function probePage(vp, route, pattern, kind, open, setup = null, label = r
   }
 }
 
-for (const vp of VIEWPORTS) {
-  // --scenario: the named scenarios only, no route table.
-  for (const [pattern, kind] of RUN_ROUTES) {
-    if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(pattern)) continue
-    await probePage(vp, resolveRoute(pattern, ids), pattern, kind, false)
-  }
-  // hf-recipes-filter round 2: the filtered /recipes, closed and with the Filters panel open (SCENARIOS).
-  for (const scenario of RUN_SCENARIOS.filter((x) => !x.widths)) {
-    if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
-    const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
-    await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open, null, undefined, scenario)
+// fast-checks: the work in units (page-layout/units.mjs), each on a fresh server with --reset. With --claims, a unit is run by the first
+// driver that claims it (mkdir is atomic), so several drivers share the list without a coordinator.
+const UNITS = planThisRun()
+const claim = (unit) => {
+  if (!claimsDir) return true
+  try {
+    mkdirSync(join(claimsDir, String(unit.n)))
+    return true
+  } catch {
+    return false
   }
 }
-// beta.7 (H8, SR6, RR5): the scenarios with their own widths and a setup, at those widths in every profile. A finding or a missed probe
-// is reported on "<route>#<scenario name>", so it says which state broke; the modes file reads the scenario's route.
-for (const scenario of RUN_SCENARIOS.filter((x) => x.widths)) {
-  if (process.env.PAGE_LAYOUT_ONLY && !new RegExp(process.env.PAGE_LAYOUT_ONLY).test(scenario.route)) continue
-  const kind = ROUTES.find(([pattern]) => pattern === scenario.route)?.[1] ?? 'default'
+const kindOf = (route) => ROUTES.find(([pattern]) => pattern === route)?.[1] ?? 'default'
+async function runRoute(unit) {
+  const kind = kindOf(unit.pattern)
+  for (const vp of VIEWPORTS) await probePage(vp, resolveRoute(unit.pattern, ids), unit.pattern, kind, false)
+}
+async function runScenario(unit) {
+  const scenario = SCENARIOS.find((x) => x.name === unit.scenario)
+  const kind = kindOf(scenario.route)
+  if (!scenario.widths) {
+    // hf-recipes-filter round 2: the filtered /recipes and /pantry, closed and with the Filters panel open, at every profile viewport.
+    for (const vp of VIEWPORTS) await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, scenario.open, null, undefined, scenario)
+    return
+  }
+  // beta.7 (H8, SR6, RR5): a scenario with its own widths and a setup, at those widths in every profile. A finding or a missed probe
+  // is reported on "<route>#<scenario name>", so it says which state broke; the modes file reads the scenario's route.
   // B9-03: a scenario's setup is optional (the registry has checked that a named one exists); without one the page is probed as it
   // loads, under the scenario's viewport and its own emulation.
   const setup = scenario.setup ? SETUPS[scenario.setup] : null
   for (const vp of scenarioViewports(scenario, VIEWPORTS)) {
-    // "<route>#<scenario>": one token, so the modes file reads the route (the part before #) and the line names the state.
     await probePage(vp, resolveScenario(scenario, ids), scenario.route, kind, false, setup, `${scenario.route}#${scenario.name}`, scenario)
   }
 }
-
-// hf-recipes-filter round 3 (P21, RESIZE_WALK): the closed filtered page is loaded fresh at each phone width from 375 to 480 px, and the
-// page must not break at any of them: an uncaught exception, a console error, or the error page ("Something went wrong").
-// pantry-filter: one walk per filtered header (RESIZE_WALKS: /recipes and /pantry). With --scenario, only the walk of a named scenario.
-for (const walk of RESIZE_WALKS) {
-  const named = SCENARIOS.find((x) => x.name === walk.scenario)
-  const walkScenario = RUN_SCENARIOS.includes(named) ? named : undefined
-  if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
+async function runWalk(unit) {
+  const walkScenario = SCENARIOS.find((x) => x.name === unit.walk)
+  {
     for (const w of resizeWalkWidths()) {
       probes++
       const route = resolveScenario(walkScenario, ids)
@@ -481,7 +536,7 @@ for (const walk of RESIZE_WALKS) {
   // fresh load never exercises the resize path (ResizeObserver). So the same page is also loaded once at the widest width and resized
   // live, 1 px at a time, down to the narrowest and back up. The first width at which it logs an error or shows the error page is a
   // P21 finding, labelled "(live resize)".
-  if (walkScenario && (!process.env.PAGE_LAYOUT_ONLY || new RegExp(process.env.PAGE_LAYOUT_ONLY).test(walkScenario.route))) {
+  {
     probes++
     const route = resolveScenario(walkScenario, ids)
     const widths = resizeSweepWidths()
@@ -508,27 +563,35 @@ for (const walk of RESIZE_WALKS) {
   }
 }
 
+const unitResults = []
+for (const unit of UNITS) {
+  if (!claim(unit)) continue
+  const at = { probes, failures: failures.length, notInspected: notInspected.length }
+  try {
+    await resetServer()
+  } catch (e) {
+    console.error(`check-page-layout: the server reset before ${unit.id} failed (${e.message})`)
+    await die(2)
+  }
+  const t0 = Date.now()
+  if (unit.kind === 'route') await runRoute(unit)
+  else if (unit.kind === 'scenario') await runScenario(unit)
+  else await runWalk(unit)
+  if (process.env.PAGE_LAYOUT_DEBUG) console.error(`unit ${unit.id}: ${Date.now() - t0}ms`)
+  unitResults.push({ n: unit.n, id: unit.id, ms: Date.now() - t0, probes: probes - at.probes, failures: failures.slice(at.failures), notInspected: notInspected.slice(at.notInspected) })
+}
 ws.close()
+const seconds = Math.round((Date.now() - started) / 1000)
+// --result: a worker of the parallel guard writes its units' results for the merge (page-layout/merge.mjs) and prints no summary.
+if (resultPath) {
+  writeFileSync(resultPath, JSON.stringify({ profile: profileName, seconds, units: unitResults }))
+  await die(0)
+}
 // A PAGE_LAYOUT_ONLY filter that matches no route inspected nothing: a usage error (exit 2), never "inspected 0 of 0" and never OK.
 if (probes === 0) {
   console.log(`check-page-layout: PAGE_LAYOUT_ONLY=${process.env.PAGE_LAYOUT_ONLY} matches no route in ROUTES${scenarioArg ? ` or of --scenario ${scenarioArg}` : ''}; nothing was inspected`)
   await die(2)
 }
-const seconds = Math.round((Date.now() - started) / 1000)
-const coverage = coverageSummary({ inspected: probes - notInspected.length, notInspected, exemptions })
-const exemptReason = (entry) => exemptions.find((x) => x.pattern === entry.pattern).reason
-const detail = [
-  ...failures.map((f) => '  - ' + f),
-  ...notInspected.map((entry) =>
-    coverage.exempt.includes(entry) ? `  ~ ${entry.width}px ${entry.route}: exempt (${exemptReason(entry)})` : notInspectedLine(entry),
-  ),
-]
-const bad = failures.length + coverage.failing.length
-if (bad) {
-  console.log(`check-page-layout: ${failures.length} failure(s), ${coverage.failing.length} not inspected (${profileName} profile, ${seconds}s)`)
-}
-if (detail.length) console.log(detail.join('\n'))
-console.log(coverage.line)
-if (bad) await die(1)
-console.log(`check-page-layout: OK (${probes} probes, ${seconds}s)`)
-await die(0)
+const { lines, bad } = reportLines({ results: unitResults, exemptions, profileName, seconds })
+console.log(lines.join('\n'))
+await die(bad ? 1 : 0)

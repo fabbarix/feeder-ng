@@ -57,7 +57,9 @@ for try in 0 1 2 3 4 5 6 7; do
 done
 [ -n "$PORT" ] || { echo "FAIL: no free port for the fixture server"; exit 1; }
 echo '{"recipeId":1,"ingredientId":1,"productId":1,"shopId":1,"sideCourseId":2,"longTag":"HEARTY HOMEMADE MUSHROOM WELLINGTONS","longPlaceId":10}' >"$TMP/ids.json"
-OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" PAGE_LAYOUT_ONLY='^/(plan|recipes|settings|pantry)$' timeout 600 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" 2>&1)"
+# fast-checks: the four route-table entries and the four filtered scenarios with their resize walks, which is what the assertions
+# read; the other scenarios on these routes have nothing to find on the static fixture and each waited out its own timeout.
+OUT="$(cd "$ROOT" && CHROME="$CHROME_BIN" timeout 600 node scripts/check-page-layout.mjs --url "http://127.0.0.1:$PORT" --ids "$TMP/ids.json" --routes /plan,/recipes,/settings,/pantry --scenario recipes-filtered,recipes-filtered-open,pantry-filtered,pantry-filtered-open 2>&1)"
 
 # the beta.6 Tag row (/plan): its chips are crushed at a phone and both iPad portrait widths
 for w in 390 834 1024; do
