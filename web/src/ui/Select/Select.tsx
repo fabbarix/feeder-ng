@@ -419,11 +419,11 @@ function SelectCore<V extends string | number>({
           onKeyDown={onKey}
         >
           {!multi && icon ? (
-            <span className="select__leading">
+            <span className="select__leading" aria-hidden="true">
               <Icon name={icon} size={20} />
             </span>
           ) : !multi && selectedOption?.leading ? (
-            <span className="select__leading">{selectedOption.leading}</span>
+            <span className="select__leading" aria-hidden="true">{selectedOption.leading}</span>
           ) : null}
           <span className={iconOnlyOn ? 'select__value visually-hidden' : 'select__value'}>{triggerText === '' ? (placeholder ?? '') : triggerText}</span>
           <Icon name="expand" size={20} />
