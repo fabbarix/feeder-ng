@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Button, Chip, ChoiceChip, Icon, IconButton, IngredientSelect, Menu, Segmented, Sortable, TextArea, TextField, UnitSelect } from '../../../ui'
 import { DurationField } from '../../../ui/fields/DurationField'
 import type { DraftErrors, StepDraft, UseDraft } from '../lib/draft'
@@ -38,10 +38,6 @@ const STEP_FIELDS = ['kind', 'after']
 
 /** Focus wanted after the next render: an open use's Ingredient picker or Quantity, a use's chip, or a new Step's text. */
 type FocusRequest = { useKey: string; field: 'picker' | 'quantity' | 'chip' } | { stepKey: string; field: 'text' }
-
-/** Focus moving to `next` stays with the open use while it goes inside the row or into a list the row opened (a popover or a sheet). */
-const staysWithRow = (row: HTMLElement, next: EventTarget | null) =>
-  next instanceof Element && (row.contains(next) || next.closest('dialog, [role="dialog"], [popover]') !== null)
 
 function focusTarget(root: HTMLElement, want: FocusRequest): HTMLElement | null | undefined {
   if (want.field === 'text') return root.querySelector<HTMLElement>(`li[data-focus-key="${want.stepKey}"] textarea`)
@@ -285,7 +281,7 @@ interface UseRowProps {
   stepNumber: number
   onPick: (ingredient: IngredientRef) => void
   onChange: (change: Partial<UseDraft>) => void
-  /** Enter (refocus: the chip takes the cursor back) or the cursor leaving the row (refocus false). */
+  /** Enter or Escape: the row closes and the chip takes the cursor back. */
   onClose: (refocus: boolean) => void
 }
 
@@ -295,9 +291,8 @@ function UseRow({ use, ingredients, errors, index, stepNumber, onPick, onChange,
   const base = `steps.${index.step}.uses.${index.use}`
   const asks = needsConversion(use.unit, ingredient)
   const err = (f: string) => (errors[`${base}.${f}`] ? codeMessage(errors[`${base}.${f}`]!) : undefined)
-  const onBlur = (e: FocusEvent<HTMLDivElement>) => {
-    if (!staysWithRow(e.currentTarget, e.relatedTarget)) onClose(false)
-  }
+  // w4b: the row stays open when the cursor leaves it (Tab on to the next control): closing it there moved everything under it while
+  // the person was moving on. It closes from its chip, Enter, Escape, or when another use opens.
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // Enter in a field, or Escape that no open list inside the row took for itself, closes the row and gives the chip the cursor back.
     const listOpen = e.target instanceof Element && e.target.getAttribute('aria-expanded') === 'true'
@@ -307,7 +302,7 @@ function UseRow({ use, ingredients, errors, index, stepNumber, onPick, onChange,
     }
   }
   return (
-    <div className="use-row" data-use-row={use.key} onBlur={onBlur} onKeyDown={onKeyDown}>
+    <div className="use-row" data-use-row={use.key} onKeyDown={onKeyDown}>
       <div className="use-row__ingredient">
         <IngredientSelect
           size="full"

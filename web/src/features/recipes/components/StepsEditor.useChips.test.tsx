@@ -1,7 +1,7 @@
 // B9-37 (RX-02; main-session ruling 3, written by the developer before the code because the test author left it unpinned): a Step's
 // Ingredient uses are chips. Each use is a chip "2 clove Garlic" that is a real button, with its own remove × beside it inside the chip
 // (two buttons, never fused). Pressing the chip opens that use's fields (Ingredient used, Quantity used, Unit used) in one row under the
-// chips; one use is open at a time; Enter or leaving the row closes it. "Add ingredient use" adds a use and opens its picker; after a
+// chips; one use is open at a time; Enter, Escape or its chip closes it (w4b: leaving the row no longer does, it moved the layout). "Add ingredient use" adds a use and opens its picker; after a
 // pick the cursor is in "Quantity used". A use with an error stays open, so its fields can be found. Removing keeps B9-31's callback.
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -107,11 +107,14 @@ describe('pressing a use chip opens its fields under the chips', () => {
     expect(row.previousElementSibling?.matches('.step-card__photo, .step-card__more')).toBe(true)
   })
 
-  it('leaving the row closes it', async () => {
+  it('leaving the row keeps it open, so nothing under it moves while the cursor goes on; pressing its chip closes it (w4b review)', async () => {
     render(<Harness initial={[step({ uses: [use()] })]} />)
-    await userEvent.click(within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ }))
+    const chip = within(card(1)).getByRole('button', { name: /^2 clove Garlic( in Step \d+)?$/ })
+    await userEvent.click(chip)
     await userEvent.click(within(card(1)).getByRole('textbox', { name: 'Quantity used' }))
     await userEvent.click(screen.getByRole('button', { name: 'elsewhere' }))
+    expect(within(card(1)).getByRole('textbox', { name: 'Quantity used' })).toBeInTheDocument()
+    await userEvent.click(chip)
     expect(within(card(1)).queryByRole('textbox', { name: 'Quantity used' })).toBeNull()
   })
 })
