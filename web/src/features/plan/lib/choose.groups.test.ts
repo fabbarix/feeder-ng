@@ -1,7 +1,7 @@
 // B9-38 (PC-10): Choose a Recipe's groups for a Course.
 import { describe, expect, it } from 'vitest'
 import type { RecipeChoice } from '../types'
-import { chooseGroups } from './choose'
+import { chooseGroups, chooserRecipes } from './choose'
 
 const r = (id: number, name: string, courseIds?: number[]): RecipeChoice => ({ id, name, tags: [], courseIds })
 const recipes = [r(1, 'Lemon ricotta cake', [3]), r(2, 'Baked apples', [1]), r(3, 'Pancakes', [1, 3]), r(4, 'Plain rice')]
@@ -21,5 +21,17 @@ describe('chooseGroups', () => {
 
   it('a Recipe that carries no Course list counts as not marked', () => {
     expect(chooseGroups([r(4, 'Plain rice')], { id: 3, main: false })).toEqual({ marked: [], other: [r(4, 'Plain rice')] })
+  })
+})
+
+describe('chooserRecipes (B9-38: "Other Recipes")', () => {
+  it("the server's marked list first, then every other Recipe once, so chooseGroups splits them", () => {
+    const marked = [r(1, 'Lemon ricotta cake', [3]), r(3, 'Pancakes')]
+    const all = [r(1, 'Lemon ricotta cake', [3]), r(2, 'Baked apples', [1]), r(3, 'Pancakes', [1, 3]), r(4, 'Plain rice')]
+    const list = chooserRecipes(marked, all, 3)
+    expect(list.map((x) => x.name)).toEqual(['Lemon ricotta cake', 'Pancakes', 'Baked apples', 'Plain rice'])
+    const g = chooseGroups(list, { id: 3, main: false })
+    expect(g.marked.map((x) => x.name)).toEqual(['Lemon ricotta cake', 'Pancakes'])
+    expect(g.other.map((x) => x.name)).toEqual(['Baked apples', 'Plain rice'])
   })
 })
