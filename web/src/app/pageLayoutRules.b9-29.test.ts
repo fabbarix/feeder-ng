@@ -71,9 +71,10 @@ describe('the mode lines', () => {
   it('P41 on /pantry is gone: the Storage Place groups have visible titles, so the route fails on P41 again', () => {
     expect(modes()).not.toMatch(/^P41@\/pantry/m)
   })
-  it('the P40 lines of B9-51 stay', () => {
-    expect(modes()).toMatch(/^P40@\/settings\/tags = warn until B9-51/m)
-    expect(modes()).toMatch(/^P40@\/settings\/recipe-assistant = warn until B9-51/m)
+  // int1: B9-51 landed and cleared P40 on both Settings pages, so its two lines are gone too.
+  it('the P40 lines of B9-51 are gone (B9-51 landed)', () => {
+    expect(modes()).not.toMatch(/^P40@\/settings\/tags/m)
+    expect(modes()).not.toMatch(/^P40@\/settings\/recipe-assistant/m)
   })
   it('/pantry is a fail route', () => {
     expect(read('scripts/check-page-layout.modes')).toMatch(/fail_routes=.*\s\/pantry(\s|$)/)
