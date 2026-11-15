@@ -105,8 +105,9 @@ const ADDED = {
   // B9-14: scenarios/b9-14.mjs (order 310): the sheet scenarios of P25 and P33 and the sheet page of P39.
   // B9-16: scenarios/b9-16.mjs (order 310, after b9-14 by file name): P36's touch-targets-controls and the household-errors check.
   // B9-18: scenarios/b9-18.mjs (order 320): P43's toast-pricing and toast-over-bar on /scan.
+  // B9-26: scenarios/b9-26.mjs (order 326): plan-after-swap (PC-01), regenerate (SAFE-07) and to-confirm-not-cooked (SAFE-03).
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
-  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'toast-pricing', 'toast-over-bar', 'offline-unknown', 'error-state-fast'],
+  scenarios: ['recipe-editor-long-tag', 'font-24-today', 'font-24-shop', 'font-24-settings-shops-id', 'font-24-recipes-id', 'today-columns', 'focus-ring-room-today', 'focus-ring-room-fields', 'leftover-menu-sheet', 'sheet-planned-meal', 'sheet-add-member', 'sheet-short-landscape', 'sheet-zoom-400', 'focus-ring-room-sheet', 'touch-targets-controls', 'household-errors', 'planning-recipe-select', 'toast-pricing', 'toast-over-bar', 'plan-after-swap', 'regenerate', 'to-confirm-not-cooked', 'offline-unknown', 'error-state-fast'],
 }
 
 describe('P1..P23 report exactly what they reported before the split (golden, made with the pre-split code)', () => {

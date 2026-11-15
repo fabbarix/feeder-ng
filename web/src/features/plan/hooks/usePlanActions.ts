@@ -64,7 +64,7 @@ export function usePlanActions(): UsePlanActions {
 
   /** Shares the changes (marks, Review) and shows What changed for the signed-in User's own write. */
   const announce = useCallback(
-    (kind: ReplanKind, target: SlotKey, res: ReplanFields & { changed?: number }) => {
+    (kind: ReplanKind, target: SlotKey | undefined, res: ReplanFields & { changed?: number }) => {
       const changes = res.changes ?? []
       const slots = cachedSlots(client)
       const words = replanToast({ kind, target, changes, slots, changed: res.changed })
@@ -99,7 +99,7 @@ export function usePlanActions(): UsePlanActions {
     try {
       return await run(
         () => planApi.regenerate(),
-        (res) => announce('regenerate', { date: '', mealSlotId: 0, courseId: 0 }, res ?? { changed: 0 }),
+        (res) => announce('regenerate', undefined, res ?? { changed: 0 }),
       )
     } finally {
       setRegenerating(false)

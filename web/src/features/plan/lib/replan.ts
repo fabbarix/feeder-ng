@@ -109,8 +109,11 @@ function changesBody(changes: PlanChange[], slots: PlanSlot[]): string {
   return listed.join(' ')
 }
 
-/** The toast after a write of the signed-in User; null when it has nothing to say (Pin or Unpin that changed nothing else). */
-export function replanToast(src: { kind: ReplanKind; target: SlotKey; changes: PlanChange[]; slots: PlanSlot[]; changed?: number }): ReplanToast | null {
+/**
+ * The toast after a write of the signed-in User; null when it has nothing to say (Pin or Unpin that changed nothing else).
+ * `target` is the edited Planned Meal (Regenerate has none).
+ */
+export function replanToast(src: { kind: ReplanKind; target?: SlotKey; changes: PlanChange[]; slots: PlanSlot[]; changed?: number }): ReplanToast | null {
   const { kind, target, changes, slots } = src
   const edit = u.editNoun[kind]
   if (kind === 'regenerate') {
@@ -122,8 +125,9 @@ export function replanToast(src: { kind: ReplanKind; target: SlotKey; changes: P
     if (kind === 'pin' || kind === 'unpin') return null
     return { headline: kind === 'swap' ? u.swapped : u.chosen, review: false, undoAriaLabel: u.undoEdit(edit) }
   }
-  const label = mealLabel(slots, target)
-  const headline = { swap: u.swappedMeal, choose: u.chosenFor, pin: u.pinnedMeal, unpin: u.unpinnedMeal }[kind](label)
+  const headline = target
+    ? { swap: u.swappedMeal, choose: u.chosenFor, pin: u.pinnedMeal, unpin: u.unpinnedMeal }[kind](mealLabel(slots, target))
+    : { swap: u.swapped, choose: u.chosen, pin: u.pinned, unpin: u.unpinned }[kind]
   return {
     headline,
     subline: u.otherMealsChanged(n),
