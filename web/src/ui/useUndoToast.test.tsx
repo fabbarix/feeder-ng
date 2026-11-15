@@ -15,7 +15,8 @@
 //     durationMs?: number               default 8000 (UNDO); Scan passes 5000
 //   }
 //   The toast has no status icon (R-D+), carries the Undo as the action with role 'undo', and has the round Dismiss.
-//   A refused Undo shows a sticky error toast: headline "Nothing was undone" with the error icon in its line, subline = the reason,
+//   A refused Undo shows a sticky warning toast: headline "Nothing was undone" with the warning triangle in its line, subline = the
+//   reason, announced politely, never held,
 //   nothing else to press but Dismiss (main-session ruling 1: the approved PC-01 mock, shots/pc-01-after-toasts-*).
 //   undoRefusal(error): { headline: string; subline: string; body (deprecated, = subline) }   pure; exported for tests and for screens
 //   that word their own failures
@@ -26,7 +27,9 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../lib/http'
-import { ToastProvider } from './Toast'
+import { ToastProvider, useToast } from './Toast'
+import { Icon } from './Icon'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { undoRefusal, useUndoToast, type UndoToastInput } from './useUndoToast'
 
 function Show({ input }: { input: UndoToastInput }) {
@@ -48,6 +51,12 @@ async function open(input: UndoToastInput) {
   return { user, toast: () => document.querySelector('.toast') as HTMLElement | null }
 }
 const tick = (ms: number) => act(() => void vi.advanceTimersByTime(ms))
+/** The warning triangle as the Toast draws it (16 px, decorative), to compare with the toast's headline icon. */
+const warningIconSvg = () => {
+  const box = document.createElement('div')
+  box.innerHTML = renderToStaticMarkup(<Icon name="warning" size={16} />)
+  return box.querySelector('svg')!.outerHTML
+}
 
 describe('the toast', () => {
   it('a one-line toast: the headline, an outline Undo and Dismiss, no status icon, no subline or body', async () => {
@@ -161,7 +170,7 @@ describe('after Undo', () => {
     expect(toast()).toBeNull()
   })
 
-  it('a refused Undo (409 plan_changed) shows an error toast: icon in the headline line, "Nothing was undone", the reason as the subline, and it stays', async () => {
+  it('a refused Undo (409 plan_changed) shows a warning toast: the warning triangle in the headline line, "Nothing was undone", the reason as the subline, and it stays', async () => {
     const { user } = await open({
       headline: 'Plan regenerated: 18 Planned Meals changed',
       undo: async () => {
@@ -172,12 +181,15 @@ describe('after Undo', () => {
     await user.click(screen.getByRole('button', { name: /^Undo/ }))
     await waitFor(() => expect(screen.getByText('Nothing was undone')).toBeInTheDocument())
     const t = screen.getByText('Nothing was undone').closest('.toast') as HTMLElement
-    expect(t).toHaveAttribute('data-status', 'error')
+    expect(t).toHaveAttribute('data-status', 'warning')
     expect(t.querySelector('.toast__title svg')).not.toBeNull()
+    expect(t.querySelector('.toast__title svg')!.outerHTML).toBe(warningIconSvg())
     expect(t.querySelector('.toast__subline')).toHaveTextContent('The plan has changed since.')
     expect(t.querySelector('.toast__body')).toBeNull()
     expect(within(t).queryByRole('button', { name: /Undo/ })).toBeNull()
-    expect(screen.getByRole('alert')).toHaveTextContent('Nothing was undone The plan has changed since.')
+    // a warning is announced politely: it is in the status region, not the alert one
+    expect(screen.getByRole('status')).toHaveTextContent('Nothing was undone The plan has changed since.')
+    expect(screen.getByRole('alert')).toBeEmptyDOMElement()
     tick(120_000)
     expect(screen.getByText('Nothing was undone')).toBeInTheDocument()
     expect(screen.queryByText('Plan is back')).toBeNull()
@@ -191,7 +203,32 @@ describe('after Undo', () => {
       },
     })
     await user.click(screen.getByRole('button', { name: /^Undo/ }))
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('It was already undone.'))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('It was already undone.'))
+  })
+})
+
+describe('a refused Undo while toasts are held', () => {
+  it('is never held: it shows at once although a hold is open, and stays after the hold is released', async () => {
+    let release: (() => void) | undefined
+    function Holder() {
+      const toast = useToast()
+      return <button onClick={() => (release = toast.hold())}>hold</button>
+    }
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(
+      <ToastProvider>
+        <Show input={{ headline: 'Sam removed', undo: async () => Promise.reject(new ApiError(409, 'plan_changed', 'x')) }} />
+        <Holder />
+      </ToastProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'show' }))
+    await user.click(screen.getByRole('button', { name: 'hold' }))
+    await user.click(screen.getByRole('button', { name: /^Undo/ }))
+    await waitFor(() => expect(screen.getByText('Nothing was undone')).toBeInTheDocument())
+    expect(screen.getByText('Nothing was undone').closest('.toast')).toHaveAttribute('data-status', 'warning')
+    act(() => release?.())
+    tick(60_000)
+    expect(screen.getByText('Nothing was undone')).toBeInTheDocument()
   })
 })
 

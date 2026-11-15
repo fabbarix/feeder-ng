@@ -65,7 +65,7 @@ const RICH_UNDO = [
 const TWO_ACTIONS_UNDO = [
   { headline: 'Plan regenerated', actions: [{ label: 'Review', ariaLabel: 'Review 26 changed meals', onClick: noop }], undoAriaLabel: 'Undo Regenerate', undo: noop },
 ]
-const REFUSED_TOAST: ToastContent[] = [{ status: 'error', title: REFUSED.headline, subline: REFUSED.subline, sticky: true }]
+const REFUSED_TOAST: ToastContent[] = [{ status: 'warning', title: REFUSED.headline, subline: REFUSED.subline, sticky: true }]
 const UPDATE: ToastContent[] = [
   {
     status: 'info',
@@ -164,7 +164,7 @@ export function ToastUndoGalleryGroup(): ReactNode {
             <Shows undo={TWO_ACTIONS_UNDO} />
           </Stage>
         </Cell>
-        <Cell caption="refused Undo: sticky error, the reason as the subline">
+        <Cell caption="refused Undo: sticky warning, the reason as the subline">
           <Stage size="two">
             <Shows toasts={REFUSED_TOAST} />
           </Stage>

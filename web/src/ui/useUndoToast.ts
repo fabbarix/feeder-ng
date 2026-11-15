@@ -1,7 +1,9 @@
 // SAFE R1 (B9-18): the one way a screen shows "<thing> done" with an Undo. The toast has no status icon (R-D+), carries the Undo
 // as its last action (role 'undo': 8 s, paused on hover, focus and a hidden page, the Ctrl+Z / Cmd+Z target) and keeps the round
 // Dismiss. Undo runs once; success can say "<thing> is back" for 4 s; a refusal says what did not happen and stays (PC-01 mock:
-// "Nothing was undone", the reason as the subline, the error icon in the headline line).
+// "Nothing was undone", the reason as the subline, the warning triangle in the headline line). The refusal is a warning, not an
+// error: nothing was lost, the person only learns the Undo did not apply. It is sticky (never held, never timed out) and is
+// announced politely, as every non-error toast is.
 import { useCallback, useMemo } from 'react'
 import { ApiError } from '../lib/http'
 import { useToast, type ToastAction, type ToastActionContext, type ToastHandle } from './Toast'
@@ -77,7 +79,7 @@ export function useUndoToast(): UndoToastApi {
           await input.undo(ctx)
         } catch (error) {
           const refusal = undoRefusal(error)
-          toast.show({ status: 'error', title: refusal.headline, subline: refusal.subline, sticky: true })
+          toast.show({ status: 'warning', title: refusal.headline, subline: refusal.subline, sticky: true })
           return
         }
         if (input.restored) toast.show({ status: 'success', title: input.restored })

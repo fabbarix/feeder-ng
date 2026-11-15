@@ -12,6 +12,8 @@ describe('Gallery: Toasts, Undo and confirms', () => {
     expect(titles).toEqual(
       expect.arrayContaining(['Saved to the plan', 'Sam removed', 'Could not save', 'Sat Dinner marked Not cooked', 'Cooked, nice one!', 'Plan regenerated', 'Nothing was undone', 'A new version of Feeder is ready']),
     )
+    const refused = [...group.querySelectorAll<HTMLElement>('.toast')].find((t) => t.querySelector('.toast__title')?.textContent === 'Nothing was undone')!
+    expect(refused).toHaveAttribute('data-status', 'warning')
     const update = [...group.querySelectorAll<HTMLElement>('.toast')].find((t) => t.textContent?.includes('A new version'))!
     expect(update).toHaveAttribute('data-dismiss', 'none')
     expect(within(update).queryByRole('button', { name: 'Dismiss' })).toBeNull()
