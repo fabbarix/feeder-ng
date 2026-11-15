@@ -16,6 +16,7 @@ ALLOW=(
   "FEEDER_DEV_LOGIN|passwordless dev login: must never be set in a cluster (the chart README says so)"
   "FEEDER_ADDR|fixed at :8080: container port, Service and probes are hardcoded; the image sets the same default"
   "FEEDER_DATA_DIR|fixed at /data: the volume mount is hardcoded; the image sets the same default"
+  "FEEDER_TEST_NOW|test clock for the page-layout guard: refused without FEEDER_DEV_LOGIN, must never be set in a cluster"
 )
 allowed() { local e; for e in "${ALLOW[@]}"; do [ "${e%%|*}" = "$1" ] && return 0; done; return 1; }
 

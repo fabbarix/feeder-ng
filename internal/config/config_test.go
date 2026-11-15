@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/config"
 )
@@ -113,5 +114,25 @@ func TestSecureCookiesOnlyForHTTPSBaseURL(t *testing.T) {
 		if got := (config.Config{BaseURL: url}).SecureCookies(); got != want {
 			t.Errorf("SecureCookies(%q) = %v, want %v", url, got, want)
 		}
+	}
+}
+
+// fast-checks: FEEDER_TEST_NOW starts a test server's clock at an instant; it is refused without dev login and when malformed.
+func TestTestNowNeedsDevLoginAndAnInstant(t *testing.T) {
+	c, err := config.Load(env(map[string]string{"FEEDER_ADMIN_EMAIL": "a@example.test", "FEEDER_DEV_LOGIN": "1", "FEEDER_TEST_NOW": "2026-11-18T16:00:00+01:00"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := time.Date(2026, 11, 18, 15, 0, 0, 0, time.UTC); !c.TestNow.Equal(want) || c.TestNow.Location() != time.UTC {
+		t.Fatalf("TestNow = %v, want %v in UTC", c.TestNow, want)
+	}
+	if _, err := config.Load(env(map[string]string{"FEEDER_ADMIN_EMAIL": "a@example.test", "FEEDER_TEST_NOW": "2026-11-18T15:00:00Z"})); !errors.Is(err, config.ErrTestNowNeedsDevLogin) {
+		t.Fatalf("without dev login: err = %v, want ErrTestNowNeedsDevLogin", err)
+	}
+	if _, err := config.Load(env(map[string]string{"FEEDER_ADMIN_EMAIL": "a@example.test", "FEEDER_DEV_LOGIN": "1", "FEEDER_TEST_NOW": "tomorrow"})); !errors.Is(err, config.ErrTestNowMalformed) {
+		t.Fatalf("malformed: err = %v, want ErrTestNowMalformed", err)
+	}
+	if c, _ := config.Load(env(map[string]string{"FEEDER_ADMIN_EMAIL": "a@example.test"})); !c.TestNow.IsZero() {
+		t.Fatalf("unset: TestNow = %v, want zero", c.TestNow)
 	}
 }

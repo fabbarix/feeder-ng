@@ -56,3 +56,19 @@ func TestFakeIsSafeForConcurrentUse(t *testing.T) {
 
 var _ clock.Clock = clock.System{}
 var _ clock.Clock = (*clock.Fake)(nil)
+
+func TestShiftedStartsAtItsInstantAndTicks(t *testing.T) {
+	at := time.Date(2026, 11, 18, 15, 0, 0, 0, time.FixedZone("x", 3600))
+	s := clock.NewShifted(at)
+	got := s.Now()
+	if got.Location() != time.UTC {
+		t.Fatalf("Shifted.Now location = %v, want UTC", got.Location())
+	}
+	if d := got.Sub(at); d < 0 || d > time.Second {
+		t.Fatalf("Shifted.Now = %v, want %v plus a moment", got, at)
+	}
+	time.Sleep(20 * time.Millisecond)
+	if d := s.Now().Sub(got); d < 15*time.Millisecond || d > time.Second {
+		t.Fatalf("Shifted clock must tick with the real one (moved %v in 20 ms)", d)
+	}
+}

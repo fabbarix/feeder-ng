@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fabbarix/feeder-ng/internal/secretbox"
 )
@@ -18,6 +19,12 @@ var ErrAdminEmailRequired = errors.New("FEEDER_ADMIN_EMAIL is required: it names
 // ErrSecretKeyMalformed is returned when FEEDER_SECRET_KEY is set but is not base64 of exactly 32 bytes.
 // The message names the variable and never the value.
 var ErrSecretKeyMalformed = errors.New("FEEDER_SECRET_KEY is malformed: it must be base64 of exactly 32 bytes (openssl rand -base64 32)")
+
+// ErrTestNowNeedsDevLogin is returned when FEEDER_TEST_NOW is set without FEEDER_DEV_LOGIN: the test clock is for test servers only.
+var ErrTestNowNeedsDevLogin = errors.New("FEEDER_TEST_NOW is a test clock: it is refused unless FEEDER_DEV_LOGIN=1 (a test server)")
+
+// ErrTestNowMalformed is returned when FEEDER_TEST_NOW is not an RFC 3339 instant.
+var ErrTestNowMalformed = errors.New("FEEDER_TEST_NOW is malformed: it must be an RFC 3339 instant such as 2026-11-18T15:00:00Z")
 
 // Config is the Feeder's start-up configuration.
 type Config struct {
@@ -33,6 +40,9 @@ type Config struct {
 	// TrustProxy: the client address for rate limits is the last X-Forwarded-For entry. Off by default (the socket peer
 	// is used); FEEDER_TRUST_PROXY=1/true/yes/on says a reverse proxy sits in front.
 	TrustProxy bool
+	// TestNow is FEEDER_TEST_NOW (zero value: unset): the server's clock starts at this instant and ticks from there
+	// (clock.Shifted). Tests only: Load refuses it without DevLogin.
+	TestNow time.Time
 }
 
 // HasSecretKey reports whether FEEDER_SECRET_KEY was set (and valid).
@@ -59,6 +69,7 @@ func (c Config) LogValue() slog.Value {
 		slog.Bool("DevLogin", c.DevLogin),
 		slog.String("SecretKey", redacted),
 		slog.Bool("TrustProxy", c.TrustProxy),
+		slog.Time("TestNow", c.TestNow),
 	)
 }
 
@@ -107,6 +118,16 @@ func Load(getenv func(string) string) (Config, error) {
 	switch strings.ToLower(getenv("FEEDER_DEV_LOGIN")) {
 	case "1", "true":
 		c.DevLogin = true
+	}
+	if v := strings.TrimSpace(getenv("FEEDER_TEST_NOW")); v != "" {
+		if !c.DevLogin {
+			return Config{}, fmt.Errorf("config: %w", ErrTestNowNeedsDevLogin)
+		}
+		at, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			return Config{}, fmt.Errorf("config: %w", ErrTestNowMalformed)
+		}
+		c.TestNow = at.UTC()
 	}
 	return c, nil
 }

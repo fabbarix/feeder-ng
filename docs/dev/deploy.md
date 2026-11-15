@@ -109,6 +109,7 @@ The Dockerfile works with both the legacy builder and BuildKit: its stages use `
 | `FEEDER_ADDR` | no | Default `:8080`. |
 | `FEEDER_TRUST_PROXY` | no | Default `false`. `true` takes the client address (for the sign-in request rate limits) from the last `X-Forwarded-For` entry. Set it only when the Feeder sits behind a reverse proxy that appends the real client address. With it off, the socket peer address is used: behind a proxy every visitor then shares the proxy's address and one rate limit bucket. With it on and no proxy, anyone could forge the header. |
 | `FEEDER_DEV_LOGIN` | never in production | `1` enables a passwordless dev login. Leave unset. |
+| `FEEDER_TEST_NOW` | never in production | Tests only: an RFC 3339 instant the server's clock starts at (then ticks), so the page-layout guard sees the same Household time on every run. Refused unless `FEEDER_DEV_LOGIN=1`. |
 
 The Google variables are `FEEDER_GOOGLE_CLIENT_ID` and `FEEDER_GOOGLE_CLIENT_SECRET`; the chart reads them from a Secret (`google.existingSecret`).
 

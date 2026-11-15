@@ -50,7 +50,13 @@ func run(cfg config.Config, logger *slog.Logger) error {
 	if err := prepareDatabase(ctx, d, cfg.DataDir, logger); err != nil {
 		return err
 	}
-	a, err := app.New(cfg, d, clock.System{}, web.FS(), app.WithLogger(logger))
+	var clk clock.Clock = clock.System{}
+	if !cfg.TestNow.IsZero() {
+		// A test server (FEEDER_TEST_NOW needs FEEDER_DEV_LOGIN): its clock starts at the given instant and ticks from there.
+		clk = clock.NewShifted(cfg.TestNow)
+		logger.Warn("test clock: FEEDER_TEST_NOW is set, the server's time starts at it", "at", cfg.TestNow)
+	}
+	a, err := app.New(cfg, d, clk, web.FS(), app.WithLogger(logger))
 	if err != nil {
 		return err
 	}
