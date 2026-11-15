@@ -39,18 +39,18 @@ describe('SlotHeader', () => {
     const { head } = setup()
     const actions = head.querySelector('.plan-slot-head__actions') as HTMLElement
     expect(head.lastElementChild).toBe(actions)
-    expect(within(actions).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Cook', 'Dinner actions'])
+    expect(within(actions).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Cook Tue 10 Dinner', 'More for Tue 10 Dinner'])
   })
 
   it('Cook starts Cook Mode for the slot', async () => {
     const { h } = setup()
-    await userEvent.click(screen.getByRole('button', { name: 'Cook' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Cook / }))
     expect(h.onCook).toHaveBeenCalledWith({ date: today, mealSlotId: 2 })
   })
 
   it('a slot that is not for today has no Cook', () => {
     const { head } = setup(several({ date: '2026-11-12' }))
-    expect(within(head).queryByRole('button', { name: 'Cook' })).toBeNull()
+    expect(within(head).queryByRole('button', { name: /^Cook / })).toBeNull()
   })
 
   it('a slot with no actions has no actions group at all (no empty box at the end)', () => {
@@ -60,8 +60,8 @@ describe('SlotHeader', () => {
 
   it('has no Swap and no Pin: those belong to the Course rows', () => {
     const { head } = setup()
-    expect(within(head).queryByRole('button', { name: 'Swap' })).toBeNull()
-    expect(within(head).queryByRole('button', { name: 'Pin' })).toBeNull()
+    expect(within(head).queryByRole('button', { name: /^Swap / })).toBeNull()
+    expect(within(head).queryByRole('button', { name: /^Pin / })).toBeNull()
   })
 
   it('round 2: the ⋮ is the same size and treatment as Cook, Swap and Pin: every button of the group is a compact icon button', () => {

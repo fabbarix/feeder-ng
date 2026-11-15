@@ -9,6 +9,11 @@ const h = vi.hoisted(() => ({
 }))
 vi.mock('../plan', () => ({
   heroSelection: () => null,
+  // B9-39: the clock and the just-served rows (the seam merges them into To confirm)
+  useHeroClock: () => new Date('2026-11-09T12:00:00Z'),
+  heroNextChange: () => null,
+  justServed: () => [],
+  withJustServed: (served: unknown[], server: unknown[]) => [...served, ...server],
   usePlan: () => h.plan,
   useToConfirm: () => ({ slots: [], isLoading: false, failed: false }),
   useCouldntPlan: () => ({ slots: [], isLoading: false, failed: false }),

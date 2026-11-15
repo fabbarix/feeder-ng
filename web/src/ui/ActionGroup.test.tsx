@@ -26,6 +26,20 @@ describe('ActionGroup: render', () => {
     expect(onAdjust).toHaveBeenCalledOnce()
   })
 
+  // B9-39 (A11Y-08): a button whose text repeats down a list is named by what it acts on; without `aria-label` the text is the name.
+  it('a button may carry its own accessible name, which starts with its visible text', () => {
+    render(
+      <ActionGroup
+        label="Mon Lunch"
+        primary={{ label: 'Cooked', onClick: vi.fn(), 'aria-label': 'Cooked Lentil soup, Mon 9 Lunch' }}
+        secondary={{ label: 'Adjust', onClick: vi.fn() }}
+      />,
+    )
+    const cooked = screen.getByRole('button', { name: 'Cooked Lentil soup, Mon 9 Lunch' })
+    expect(cooked).toHaveTextContent(/^Cooked$/)
+    expect(screen.getByRole('button', { name: 'Adjust' })).not.toHaveAttribute('aria-label')
+  })
+
   it('takes no list of buttons: a third action is a type error, it belongs in `more`', () => {
     // @ts-expect-error ActionGroup has no `actions` / children: one primary, one secondary, the rest in `more`
     const el = <ActionGroup label="x" actions={[]} />

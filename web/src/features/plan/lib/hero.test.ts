@@ -2,13 +2,35 @@ import { describe, expect, it } from 'vitest'
 import { meal, slot } from '../test-utils'
 import { heroCookLabel, heroDayOverline, heroOverline, heroPhase, heroSelection, heroStartBy } from './hero'
 
+// B9-39 (TB-01): the phases are 'upcoming', 'start-now' (from the start time until the slot time) and 'past' (from the slot time);
+// the old 'awaiting' is gone, because the hero no longer asks "cooked?". The start time is the slot time less the distance from
+// the slot's start-by to its time (HH:MM, wrapping past midnight), so it needs no time zone. Without a start-by there is no start-now.
 describe('heroPhase', () => {
   const s = slot({ at: '2026-11-10T19:30:00Z', time: '19:30' })
-  it('is upcoming before the slot time and awaiting from it', () => {
+  it('without a start-by: upcoming before the slot time and past from it', () => {
     expect(heroPhase(s, new Date('2026-11-10T18:00:00Z'))).toBe('upcoming')
     expect(heroPhase(s, new Date('2026-11-10T19:29:59Z'))).toBe('upcoming')
-    expect(heroPhase(s, new Date('2026-11-10T19:30:00Z'))).toBe('awaiting')
-    expect(heroPhase(s, new Date('2026-11-10T21:00:00Z'))).toBe('awaiting')
+    expect(heroPhase(s, new Date('2026-11-10T19:30:00Z'))).toBe('past')
+    expect(heroPhase(s, new Date('2026-11-10T21:00:00Z'))).toBe('past')
+  })
+
+  it('with a start-by: start-now from the start time until the slot time', () => {
+    const stew = slot({ at: '2026-11-10T19:30:00Z', time: '19:30', startBy: '13:30' })
+    expect(heroPhase(stew, new Date('2026-11-10T13:29:59Z'))).toBe('upcoming')
+    expect(heroPhase(stew, new Date('2026-11-10T13:30:00Z'))).toBe('start-now')
+    expect(heroPhase(stew, new Date('2026-11-10T19:29:59Z'))).toBe('start-now')
+    expect(heroPhase(stew, new Date('2026-11-10T19:30:00Z'))).toBe('past')
+  })
+
+  it('the meal\'s own start-by counts when the slot has none, and the start may be on the day before (A2)', () => {
+    const own = slot({ at: '2026-11-10T19:30:00Z', time: '19:30', meal: meal({ startBy: '18:45' }) })
+    expect(heroPhase(own, new Date('2026-11-10T18:44:59Z'))).toBe('upcoming')
+    expect(heroPhase(own, new Date('2026-11-10T18:45:00Z'))).toBe('start-now')
+    // Breakfast 07:00 to start at 21:30 the evening before: the start is 9 h 30 min before the slot, not 14 h 30 min after it.
+    const overnight = slot({ date: '2026-11-11', at: '2026-11-11T07:00:00Z', time: '07:00', startBy: '21:30' })
+    expect(heroPhase(overnight, new Date('2026-11-10T21:29:00Z'))).toBe('upcoming')
+    expect(heroPhase(overnight, new Date('2026-11-10T21:30:00Z'))).toBe('start-now')
+    expect(heroPhase(overnight, new Date('2026-11-11T07:00:00Z'))).toBe('past')
   })
 })
 
@@ -71,10 +93,12 @@ describe('heroSelection (N3)', () => {
     expect(todays).toMatchObject({ day: 'today', action: 'reheat' })
   })
 
-  it('keeps an unconfirmed meal of today as the hero for two hours after its slot, then moves on', () => {
+  // B9-39 (TB-01, TB 2): the hero moves on AT the slot time (the old two hours of grace are gone: lib/hero.moveOn.test.ts has the table).
+  it('moves on at the slot time: an unconfirmed meal of today is no longer the hero', () => {
     const slots = [fresh(today, 2, '19:00'), fresh('2026-11-11', 1, '13:00')]
-    expect(heroSelection(slots, new Date('2026-11-10T20:30:00Z'), today)?.slot.date).toBe(today)
-    expect(heroSelection(slots, new Date('2026-11-10T21:00:00Z'), today)?.slot.date).toBe('2026-11-11')
+    expect(heroSelection(slots, new Date('2026-11-10T18:59:59Z'), today)?.slot.date).toBe(today)
+    expect(heroSelection(slots, new Date('2026-11-10T19:00:00Z'), today)?.slot.date).toBe('2026-11-11')
+    expect(heroSelection(slots, new Date('2026-11-10T20:30:00Z'), today)?.slot.date).toBe('2026-11-11')
   })
 
   it('a meal further out is labelled with its weekday and offers no Cook', () => {

@@ -5,6 +5,9 @@ export const todayStrings = {
   emptyTitle: 'Nothing on the menu. The kitchen is yours.',
   emptyHint: 'No Planned Meals to cook, no Leftovers waiting, nothing about to spoil. Put your feet up or plan something tasty.',
   loadError: 'Today could not be loaded.',
+  // B9-39 (RES-02): offline, and the plan was never loaded on this phone
+  offlineUnknownTitle: 'Today’s plan isn’t on this phone yet',
+  offlineUnknownText: 'It will appear as soon as the connection is back.',
   emptyAction: 'Open the Plan',
   actionFailed: 'That did not save. Try again.',
   advanceStepsHeading: 'Advance Steps',

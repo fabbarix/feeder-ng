@@ -3,9 +3,6 @@ import type { PlanSlot } from '../types'
 import { dayNumber, weekdayName } from './phrase'
 import { plannedMeals } from './courses'
 
-/** Two hours: the Today hero stays on a Planned Meal this long after its slot time, then To confirm takes over. */
-const HERO_GRACE_MS = 2 * 60 * 60 * 1000
-
 export interface DayGroup {
   date: string
   /** "Today", "Tomorrow", "Yesterday", otherwise "Wed 11 Nov". */
@@ -105,13 +102,36 @@ export function dateRange(first: string, last: string): string {
 }
 
 /**
- * The Planned Meal the Today hero shows: the first planned meal (state planned) whose slot time is less than two hours
- * past, so it also covers "started, not yet confirmed" (after two hours it belongs to To confirm). Null when none.
+ * The slot the Today hero shows: the first one with a Planned Meal still to cook (state planned) whose slot time has not
+ * come yet. B9-39 (TB-01, decision TB 2): at the slot time it moves on, and the past meal heads To confirm. Null when none.
  */
 export function heroMeal(slots: PlanSlot[], now: Date): PlanSlot | null {
   const t = now.getTime()
   const open = slots
-    .filter((s) => plannedMeals(s).length > 0 && Date.parse(s.at) + HERO_GRACE_MS > t)
+    .filter((s) => plannedMeals(s).length > 0 && Date.parse(s.at) > t)
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
   return open[0] ?? null
+}
+
+// B9-32 (PC-11 option B, decision PC 2): the week grid's columns and spans.
+/** The most columns the week grid has, and its tracks. */
+export const GRID_MAX_COLUMNS = 4
+export const GRID_TRACKS = 12
+/** The narrowest a day tile may be, in rem (`min="day"`). */
+const DAY_MIN_REM = 21
+
+/** Columns of the week grid for a container `px` wide: min(4, floor((px + gap) / (21 rem + gap))), at least 1. */
+export function gridColumns(containerPx: number, opts: { remPx?: number; gapPx?: number } = {}): number {
+  const rem = opts.remPx ?? 16
+  const gap = opts.gapPx ?? 12
+  const fit = Math.floor((containerPx + gap) / (DAY_MIN_REM * rem + gap))
+  return Math.max(1, Math.min(GRID_MAX_COLUMNS, Number.isFinite(fit) ? fit : 1))
+}
+
+/** The span (of 12 tracks) of each of `count` days in `columns` columns; the days of an incomplete last row share it. */
+export function daySpans(count: number, columns: number): number[] {
+  const cols = Math.max(1, Math.min(GRID_MAX_COLUMNS, Math.floor(columns)))
+  const full = count - (count % cols)
+  const rest = count - full
+  return Array.from({ length: Math.max(0, count) }, (_, i) => (i < full ? GRID_TRACKS / cols : GRID_TRACKS / rest))
 }

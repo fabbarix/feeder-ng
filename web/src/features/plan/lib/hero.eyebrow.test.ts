@@ -17,7 +17,8 @@ describe('heroEyebrow', () => {
     expect(heroEyebrow(sel(dinner({ meal: meal() }), 'today'), noon)).toEqual(['Today', 'Dinner', '19:30'])
   })
 
-  it('today after the slot time (awaiting): the slot time, no start-by', () => {
+  // B9-39: the hero is never past its slot (it moves on at the slot time); a stale render still shows the slot time, not a start-by.
+  it('today at or after the slot time (past): the slot time, no start-by', () => {
     expect(heroEyebrow(sel(dinner(), 'today'), new Date('2026-11-10T20:30:00Z'))).toEqual(['Today', 'Dinner', '19:30'])
   })
 

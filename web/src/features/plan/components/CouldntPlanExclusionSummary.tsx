@@ -13,7 +13,7 @@ export interface CouldntPlanExclusionSummaryProps {
 export function CouldntPlanExclusionSummary({ headline }: CouldntPlanExclusionSummaryProps): ReactNode {
   const headingId = useId()
   return (
-    <Tile as="section" aria-labelledby={headingId} variant="status" status="spoil" overline={s.couldntPlanTitle} overlineIcon="exclusion" className="plan-couldnt">
+    <Tile as="section" aria-labelledby={headingId} variant="status" status="warn" overline={s.couldntPlanTitle} overlineIcon="exclusion" className="plan-couldnt">
       <h2 id={headingId} className="plan__tile-title">
         {headline}
       </h2>

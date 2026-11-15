@@ -36,18 +36,18 @@ function setup(s: PlanSlot = dinner(), over: Partial<TonightHeroProps> = {}) {
 }
 
 describe('TonightHero: the eyebrow', () => {
-  it('is one line "Tomorrow · Dinner · start 19:09" in the tile overline, each part its own span', () => {
+  it('is "Tomorrow · Dinner · start 19:09" in the tile overline, each part its own element led by its "·" (B9-39, TB-15b)', () => {
     const { container } = setup()
     const eyebrow = container.querySelector('.plan-hero .tile__overline')!
-    expect(eyebrow.textContent).toBe('Tomorrow · Dinner · start 19:09')
+    expect([...eyebrow.querySelectorAll('.plan-hero__eyebrow-part')].map((p) => p.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['Tomorrow', '· Dinner', '· start 19:09'])
     expect(within(eyebrow as HTMLElement).getByText('start 19:09')).toBeInTheDocument()
-    expect(container.querySelector('.plan-hero__start')).toBeNull() // no second line for the start-by
+    expect(container.querySelector('.plan-hero__start')!.closest('.tile__overline')).not.toBeNull() // no second line for the start-by
   })
 
   it('a one-Course hero has the same eyebrow (today, before the slot time)', () => {
     const one = courseSlot([planCourse({ courseId: 1, meal: meal({ startBy: '18:45', cookMinutes: 45 }) })], { name: 'Dinner', time: '19:30', at: '2026-11-10T19:30:00Z' })
     const { container } = setup(one, { day: 'today', action: 'cook' })
-    expect(container.querySelector('.plan-hero .tile__overline')!.textContent).toBe('Today · Dinner · start 18:45')
+    expect([...container.querySelectorAll('.plan-hero .tile__overline .plan-hero__eyebrow-part')].map((p) => p.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['Dinner', '· start 18:45'])
   })
 
   it('the title is the Main Recipe, a level-2 heading', () => {
@@ -73,13 +73,13 @@ describe('TonightHero: the Course row', () => {
     const row = screen.getByRole('listitem', { name: 'Side' })
     const body = row.querySelector('.plan-course__body')!
     expect(row.querySelector('.plan-course__caption')).toHaveTextContent('Side')
-    expect(within(row).getByRole('button', { name: /Two-colour cauliflower/ })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /^Two-colour cauliflower$/ })).toBeInTheDocument()
     expect(within(row).getByText('Leftover from Mon')).toBeInTheDocument()
     const actions = body.lastElementChild as HTMLElement
     expect(actions).toHaveClass('plan-course__actions')
     expect(actions).toHaveAttribute('role', 'group')
     expect(actions).toHaveAccessibleName('Side actions')
-    expect(within(actions).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Swap', 'Pin', 'More for Side'])
+    expect(within(actions).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Swap Two-colour cauliflower with peppers, Tue 10 Dinner', 'Pin Two-colour cauliflower with peppers, Tue 10 Dinner', 'More for Side'])
     // the name and the chip come before the actions
     expect(body.querySelector('.plan-meal__recipe')!.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -96,8 +96,8 @@ describe('TonightHero: the Course row', () => {
   it('Swap and Pin report the Course key', async () => {
     const h = setup()
     const row = screen.getByRole('listitem', { name: 'Side' })
-    await userEvent.click(within(row).getByRole('button', { name: 'Swap' }))
-    await userEvent.click(within(row).getByRole('button', { name: 'Pin' }))
+    await userEvent.click(within(row).getByRole('button', { name: /^Swap / }))
+    await userEvent.click(within(row).getByRole('button', { name: /^Pin / }))
     const key = { date: '2026-11-10', mealSlotId: 2, courseId: 2 }
     expect(h.rowHandlers.onSwap).toHaveBeenCalledWith(key)
     expect(h.rowHandlers.onPin).toHaveBeenCalledWith(key)
@@ -131,7 +131,7 @@ describe('TonightHero: the Course row structure (round 2)', () => {
 
   it('the Recipe name is not given an ellipsis class or a max-width in markup (full name, wrapping)', () => {
     setup()
-    const name = screen.getByRole('button', { name: /Two-colour cauliflower/ })
+    const name = screen.getByRole('button', { name: /^Two-colour cauliflower$/ })
     expect(name.getAttribute('style') ?? '').not.toMatch(/max-|overflow|ellipsis/)
   })
 

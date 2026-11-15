@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react'
 import { useToast, useUndoToast, type ToastAction } from '../../../ui'
 import { planApi, type ReplanFields } from '../api'
 import { replanToast, type ReplanKind } from '../lib/replan'
+import { focusIsInToastOrLost, focusPlanRow } from '../lib/rowFocus'
 import { notCookedToast } from '../lib/resolved'
 import { undoStrings as u } from '../strings/undo'
 import type { SlotDayKey, SlotKey } from '../types'
@@ -85,7 +86,12 @@ export function usePlanActions(): UsePlanActions {
           undoAriaLabel: words.undoAriaLabel,
           restored: kind === 'regenerate' ? u.regenerateUndone : undefined,
           durationMs,
-          undo: () => restorePlan(client, token),
+          // B9-32 (B9-26 hand-back): an Undo pressed in the toast puts focus on the restored row; one clicked from elsewhere leaves focus be.
+          undo: async (ctx) => {
+            const handBack = focusIsInToastOrLost(ctx.focusWasInToast)
+            await restorePlan(client, token)
+            if (handBack && target) setTimeout(() => focusPlanRow(target), 0)
+          },
         })
       } else {
         toast.show({ status: 'success', title: words.headline, subline: words.subline, body: words.body, actions, durationMs })

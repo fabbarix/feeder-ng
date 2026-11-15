@@ -74,7 +74,7 @@ describe('Today: To confirm and Undo (SAFE-03)', () => {
     h.toConfirm = [entry()]
     const api = mockApi({ ...base, 'GET /api/plan/2026-11-10/2/1/cook': preview, 'POST /api/plan/2026-11-10/2/1/cooked': cooked, 'POST /api/plan/2026-11-10/2/1/reopen': reopen })
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Cooked' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Cooked / }))
     const toast = await findToast('Cooked, nice one!')
     expect(toast.querySelector('.toast__subline')).toHaveTextContent('Tue Dinner · Chicken curry')
     expect(toast.querySelector('.toast__body')).toHaveTextContent('2 portions kept as a Leftover, good until Fri.')
