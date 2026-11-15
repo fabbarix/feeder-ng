@@ -40,3 +40,10 @@ describe('the toast region and an open modal sheet', () => {
     await waitFor(() => expect(document.querySelector('.toast-region')!.closest('dialog')).toBeNull())
   })
 })
+
+describe('Toast.css: inside a bottom sheet', () => {
+  it('the region sits at the top of the screen, over the scrim, not over the sheet', async () => {
+    const { stylesheet, rule } = await import('../test/cssRules')
+    expect(rule(stylesheet('src/ui/Toast.css').base, 'dialog.sheet > .toast-region')).toMatchObject({ 'inset-block-end': 'auto' })
+  })
+})

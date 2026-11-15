@@ -220,3 +220,11 @@ html:has(.sticky-action-bar) .toast-region {
     animation: none;
   }
 }
+
+/* Batch w3e: a toast with an action raised while a bottom sheet stays open is shown inside the sheet's <dialog> (ToastProvider), at
+   the top of the screen over the scrim, so it never covers the sheet's rows or its footer (Take back's Undo over the ticked Line's
+   sheet). In a centred dialog it keeps its place at the bottom. */
+dialog.sheet > .toast-region {
+  inset-block-start: calc(var(--space-3) + env(safe-area-inset-top, 0px));
+  inset-block-end: auto;
+}
