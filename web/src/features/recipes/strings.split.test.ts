@@ -16,7 +16,7 @@ const KEYS = [
   'edit', 'save', 'saving', 'cancel', 'ingredients', 'stepsTitle', 'photo', 'optional', 'sections', 'editorActions', 'favourite', 'dislike', 'exclusion',
   'preferences', 'preferencesFor', 'preferencesLoadError', 'memberColumn', 'you', 'noMembers', 'addMembers', 'askAdmin', 'viaNote', 'excludedVia', 'via',
   'alsoVia', 'stateToggle', 'saveFailed', 'exclusionSaveFailed', 'members', 'excludesToggle', 'unitConversion', 'fields', 'lines', 'quickCreate',
-  'readyMealIngredient', 'steps', 'generic', 'checkFields', 'codes',
+  'readyMealIngredient', 'steps', 'generic', 'codes',
   // B9-31: the leave and discard dialogs' word for a new Recipe, and the removal Undo toasts (SAFE-10).
   'recipeNoun', 'removed',
   // B9-20 (RES-02): the seven-state copy. 'noMatch' ("No Recipe matches.") became noMatchFor / noMatchFilters.

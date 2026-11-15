@@ -167,7 +167,6 @@ export const recipeEditorStrings = {
     },
   },
   generic: 'The Recipe could not be saved.',
-  checkFields: 'Check the fields marked above.',
   codes: {
     courses_empty: 'Choose at least one Course',
     course_unknown: 'That Course is no longer there. Choose again.',
