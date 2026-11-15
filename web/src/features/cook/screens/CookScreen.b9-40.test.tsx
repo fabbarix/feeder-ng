@@ -30,16 +30,16 @@ const tm = (id: number, label: string, seconds: number, over: Partial<CookTimer>
   endsAt: new Date(Date.now() + seconds * 1000).toISOString(), startedAt: '', ...over,
 })
 
-type Env = 'phone' | 'desktop' | 'landscape844' | 'landscape568'
+type Env = 'phone' | 'desktop' | 'landscape844' | 'landscape667'
 /** matchMedia as the CSS sees the device: every min-width band true up to the device's width, the short-landscape query for a phone on its side. */
 function device(env: Env) {
-  const widths = { phone: 390, desktop: 1440, landscape844: 844, landscape568: 568 }
+  const widths = { phone: 390, desktop: 1440, landscape844: 844, landscape667: 667 }
   const w = widths[env]
   vi.stubGlobal('innerWidth', w)
   vi.stubGlobal('matchMedia', (q: string) => {
     const min = /min-width:\s*([\d.]+)em/.exec(q)
     let matches = false
-    if (q === '(max-height: 499px) and (min-width: 560px)') matches = env === 'landscape844' || env === 'landscape568'
+    if (q === '(max-height: 499px) and (min-width: 37.5em)') matches = env === 'landscape844' || env === 'landscape667'
     else if (min) matches = w >= Number(min[1]) * 16
     return { matches, media: q, addEventListener: () => {}, removeEventListener: () => {} }
   })
@@ -221,8 +221,8 @@ describe('Scenario: A cook in phone landscape sees the whole current Step withou
     expect(await screen.findByRole('dialog', { name: 'Rest the meat' })).toBeInTheDocument()
   })
 
-  it('at 568 wide only one whole pill shows', async () => {
-    setup('landscape568', { timers: [tm(1, 'Step 1: Pre-heat the oven', 163), tm(2, 'Step 4: Simmer the rice', 680, { step: 3 })] })
+  it('at 667 wide (the smallest landscape) only one whole pill shows', async () => {
+    setup('landscape667', { timers: [tm(1, 'Step 1: Pre-heat the oven', 163), tm(2, 'Step 4: Simmer the rice', 680, { step: 3 })] })
     await screen.findByRole('article', { name: 'Step 1 of 3' })
     const region = await screen.findByRole('region', { name: 'Timers' })
     expect(within(region).getAllByRole('timer')).toHaveLength(1)

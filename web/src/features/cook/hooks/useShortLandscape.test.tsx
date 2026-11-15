@@ -12,7 +12,8 @@ function stub(matches: boolean, width: number) {
   let on = matches
   vi.stubGlobal('innerWidth', width)
   vi.stubGlobal('matchMedia', (q: string) => ({
-    matches: q === SHORT_LANDSCAPE_QUERY ? on : false,
+    // the short-landscape query as a whole, and the table's min-width bands by the window's width
+    matches: q === SHORT_LANDSCAPE_QUERY ? on : /^\(min-width: ([\d.]+)em\)$/.test(q) ? width >= Number(/([\d.]+)em/.exec(q)![1]) * 16 : false,
     media: q,
     addEventListener: (_: string, l: () => void) => listeners.add(l),
     removeEventListener: (_: string, l: () => void) => listeners.delete(l),
@@ -24,8 +25,8 @@ function stub(matches: boolean, width: number) {
 }
 
 describe('useShortLandscape', () => {
-  it('the query is the one cook.css uses: under 500 px tall and at least 560 px wide', () => {
-    expect(SHORT_LANDSCAPE_QUERY).toBe('(max-height: 499px) and (min-width: 560px)')
+  it('the query is the one cook.css uses: under 500 px tall and at least 37.5 em wide (the breakpoint table, not the chapter\'s 560 px)', () => {
+    expect(SHORT_LANDSCAPE_QUERY).toBe('(max-height: 499px) and (min-width: 37.5em)')
   })
   it('without matchMedia (jsdom, old browsers) it is not short: the portrait presentation', () => {
     vi.stubGlobal('matchMedia', undefined)
@@ -37,8 +38,8 @@ describe('useShortLandscape', () => {
     const { result } = renderHook(() => useShortLandscape())
     expect(result.current).toEqual({ short: true, maxPills: 2 })
   })
-  it('at 568 px wide: short, one whole pill', () => {
-    stub(true, 568)
+  it('at 667 px wide (the smallest landscape): short, one whole pill', () => {
+    stub(true, 667)
     const { result } = renderHook(() => useShortLandscape())
     expect(result.current).toEqual({ short: true, maxPills: 1 })
   })

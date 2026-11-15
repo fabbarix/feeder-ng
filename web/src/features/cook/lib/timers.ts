@@ -96,7 +96,7 @@ export function timerPlace(timerScope: string | null, currentScope: string, reci
 
 // ---- B9-40 stubs (PC-03, SHORT-01; the developer replaces them; tests in lib/timers.strip.test.ts) ----
 
-/** Short landscape shows whole pills only: two from 700 px wide, one below. */
+/** Short landscape shows whole pills only: two from 768 px (48 em, the breakpoint table's md) wide, one below. */
 export function visiblePillCount(_width: number): number {
   return 0
 }

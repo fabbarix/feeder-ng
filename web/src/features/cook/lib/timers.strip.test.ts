@@ -8,15 +8,16 @@ const t = (id: number): { timer: CookTimer; seconds: number } => ({
   seconds: 60,
 })
 
-describe('visiblePillCount (SHORT-01: only whole pills; two from 700 px, one below)', () => {
-  it('844 wide shows two, 568 wide shows one', () => {
+// The chapter's edge is 700 px; the breakpoint table (DS-09) has 37.5 em and 48 em, so the edge is 768 px (choice, listed in the hand-back).
+describe('visiblePillCount (SHORT-01: only whole pills; two from 768 px, one below)', () => {
+  it('844 wide shows two, 667 wide (the smallest landscape, A1) shows one', () => {
     expect(visiblePillCount(844)).toBe(2)
-    expect(visiblePillCount(568)).toBe(1)
+    expect(visiblePillCount(667)).toBe(1)
   })
-  it('the edge is 700 px', () => {
-    expect(visiblePillCount(700)).toBe(2)
-    expect(visiblePillCount(699)).toBe(1)
-    expect(visiblePillCount(560)).toBe(1)
+  it('the edge is 768 px', () => {
+    expect(visiblePillCount(768)).toBe(2)
+    expect(visiblePillCount(767)).toBe(1)
+    expect(visiblePillCount(600)).toBe(1)
   })
 })
 
