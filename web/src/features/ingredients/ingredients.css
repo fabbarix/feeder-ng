@@ -153,19 +153,87 @@
   color: var(--color-muted);
 }
 
-/* H5: the Restock level Tile of a Supply and the Kind Tile (ADR 0017). Tokens only. */
-.restock__summary,
-.kind-tile__text {
+/* SET-05 (B9-48): the one "Keeping" tile (mock set-05-ingredient.html). Rows: the label and hint at the start, the control at the
+   end; it wraps under the text when the row is too narrow. Tokens only. */
+.kp form {
+  display: grid;
+}
+
+.kp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-line);
+}
+
+.kp-row__text {
+  display: grid;
+  gap: var(--space-half);
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+}
+
+.kp-row__label {
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+}
+
+.kp-row__hint {
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-meta-size);
   line-height: var(--text-meta-line);
 }
 
-.kind-tile__reasons {
+.kp-row__ctrl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.kp-row__error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.kp-value {
+  min-inline-size: var(--row-value-min);
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
+  text-align: end;
+}
+
+.kp-actions {
+  margin-block-start: var(--space-4);
+}
+
+/* SET-14e: a search that matched nothing names the query and offers to create it (mock set-14-small.html, item e). */
+.ingredients__no-match {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+
+.ingredients__no-match-text {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+/* SET-05: the Rename sheet's form: the Name field, then the form's one FormError. */
+.rename-sheet__form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* SAFE-02 (R-E): the merge step's "Moves to <target>" rows. */
+.merge-sheet__moves {
   display: grid;
   gap: var(--space-1);
-  margin: 0;
-  padding-inline-start: var(--space-4);
-  color: var(--color-text);
 }
