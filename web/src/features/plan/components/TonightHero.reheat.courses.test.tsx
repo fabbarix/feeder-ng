@@ -8,7 +8,6 @@ import type { PlanCourse } from '../types'
 import { TonightHero, type TonightHeroProps } from './TonightHero'
 
 const upcoming = new Date('2026-11-10T17:00:00Z')
-const late = new Date('2026-11-10T20:00:00Z')
 const slotKey = { date: '2026-11-10', mealSlotId: 2 }
 const source = { leftoverId: 4, date: '2026-11-09', mealSlotId: 2, recipeName: 'Chicken curry' }
 const main = (leftover: boolean): PlanCourse => planCourse({ courseId: 1, name: 'Main', main: true, meal: courseMeal(1, 'Main', { recipeName: 'Roast chicken', servedFromLeftover: leftover ? source : null }) })
@@ -30,13 +29,6 @@ describe('Reheat on the Today hero with several Courses', () => {
     const h = setup([main(true), side(true)], { action: 'reheat' })
     await userEvent.click(screen.getByRole('button', { name: 'Reheat' }))
     expect(h.onReheat).toHaveBeenCalledTimes(1)
-    expect(h.onReheat).toHaveBeenCalledWith({ ...slotKey, courseId: 1 })
-  })
-
-  it('(a) after the slot time, with one Course left to cook, it reports that Course too', async () => {
-    const cookedSide = planCourse({ courseId: 2, name: 'Side', main: false, meal: courseMeal(2, 'Side', { state: 'cooked' }) })
-    const h = setup([main(true), cookedSide], { action: 'reheat', now: late })
-    await userEvent.click(screen.getByRole('button', { name: 'Reheat' }))
     expect(h.onReheat).toHaveBeenCalledWith({ ...slotKey, courseId: 1 })
   })
 

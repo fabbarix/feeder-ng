@@ -136,7 +136,7 @@ describe('Today: To confirm is one decision per Meal Slot', () => {
       'POST /api/plan/2026-11-09/4/all/cooked': { meals: [], leftovers: [], warnings: [], plannedFor: [] },
     })
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'All Cooked' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^All Cooked / }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/4/all/cooked')).toHaveLength(1))
     expect(api.callsTo('POST', '/api/plan/2026-11-09/4/all/cooked')[0]!.body).toEqual({
       courses: [{ courseId: 1, leftoverPortions: 2 }, { courseId: 2, leftoverPortions: 2 }],
@@ -153,7 +153,7 @@ describe('Today: To confirm is one decision per Meal Slot', () => {
       'POST /api/plan/2026-11-09/4/all/cooked': { meals: [], leftovers: [], warnings: [], plannedFor: [] },
     })
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Adjust' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Adjust / }))
     const sheet = await screen.findByRole('dialog', { name: 'Mark all Cooked' })
     await within(sheet).findByRole('spinbutton', { name: 'Main Leftover portions' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Mark all Cooked' }))
@@ -180,7 +180,7 @@ describe('Today: To confirm is one decision per Meal Slot', () => {
       'POST /api/plan/2026-11-09/4/1/cooked': { meal: courseMeal(1, 'Main', { state: 'cooked' }), leftover: null, warnings: [], plannedFor: [] },
     })
     renderWithProviders(routed, '/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Cooked' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Cooked / }))
     await waitFor(() => expect(api.callsTo('POST', '/api/plan/2026-11-09/4/1/cooked')).toHaveLength(1))
     expect(api.callsTo('POST', '/api/plan/2026-11-09/4/1/cooked')[0]!.body).toEqual({ leftoverPortions: 2 })
   })

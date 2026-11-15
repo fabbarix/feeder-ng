@@ -109,6 +109,7 @@ const ADDED = {
   // B9-31: scenarios/b9-31.mjs (order 330): recipe-editor-guard (SAFE-01) and recipe-new-empty-save (SAFE-04).
   // B9-19: scenarios/b9-19.mjs (order 330): P31's bottom bar, P32's chrome budget in landscape and at 400 % zoom, P35's safe gutters.
   // B9-32: scenarios/b9-32.mjs (order 332): plan-grid (PC-11, PC-06, A11Y-08, A11Y-09) and plan-couldnt (PC-07); rules/P38-unique-names.mjs (A11Y-08).
+  // B9-39: scenarios/b9-39.mjs (order 336): today-after-lunch (TB-01, TB-10, TB-15b: the hero at 14:44, the eyebrow, the ⋮ never over the name) and today-after-swap.
   // B9-34: scenarios/b9-34.mjs (order 340): shop-ticked (P23 on ticked rows) and shop-focus-after-tick (A11Y-07).
   // B9-20: scenarios/res-state.mjs (order 400): offline-unknown (RES-02) and error-state-fast (RES-06).
   // B9-28: scenarios/import.mjs (order 410): import-review and import-result (RX-01, RX-11).
@@ -121,6 +122,7 @@ const ADDED = {
     'bottom-bar', 'chrome-landscape', 'chrome-landscape-editor', 'chrome-landscape-detail', 'chrome-zoom-editor', 'chrome-zoom-detail', 'safe-gutters-today', 'safe-gutters-shop',
     'recipe-editor-guard', 'recipe-new-empty-save',
     'plan-grid', 'plan-couldnt',
+    'today-after-lunch', 'today-after-swap',
     'shop-ticked', 'shop-focus-after-tick',
     'offline-unknown', 'error-state-fast',
     'import-review', 'import-result',

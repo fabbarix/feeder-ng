@@ -3,9 +3,6 @@ import type { PlanSlot } from '../types'
 import { dayNumber, weekdayName } from './phrase'
 import { plannedMeals } from './courses'
 
-/** Two hours: the Today hero stays on a Planned Meal this long after its slot time, then To confirm takes over. */
-const HERO_GRACE_MS = 2 * 60 * 60 * 1000
-
 export interface DayGroup {
   date: string
   /** "Today", "Tomorrow", "Yesterday", otherwise "Wed 11 Nov". */
@@ -105,13 +102,13 @@ export function dateRange(first: string, last: string): string {
 }
 
 /**
- * The Planned Meal the Today hero shows: the first planned meal (state planned) whose slot time is less than two hours
- * past, so it also covers "started, not yet confirmed" (after two hours it belongs to To confirm). Null when none.
+ * The slot the Today hero shows: the first one with a Planned Meal still to cook (state planned) whose slot time has not
+ * come yet. B9-39 (TB-01, decision TB 2): at the slot time it moves on, and the past meal heads To confirm. Null when none.
  */
 export function heroMeal(slots: PlanSlot[], now: Date): PlanSlot | null {
   const t = now.getTime()
   const open = slots
-    .filter((s) => plannedMeals(s).length > 0 && Date.parse(s.at) + HERO_GRACE_MS > t)
+    .filter((s) => plannedMeals(s).length > 0 && Date.parse(s.at) > t)
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.mealSlotId - b.mealSlotId)
   return open[0] ?? null
 }

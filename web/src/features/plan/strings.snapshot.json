@@ -222,6 +222,15 @@
  "leftoversOverline": "Leftovers",
  "leftoverRowMeta": "__fn__(portions, useBy) => `${useBy} · ${portions}`",
  "cookedCheer": "Cooked, nice one!",
+ "startNow": "start now",
+ "heroHint": {
+  "one": "__fn__(time, recipe, duration) => `Ready at ${time}. ${recipe} needs ${duration}, so start it now.`",
+  "several": "__fn__(time, recipe) => `Ready at ${time}. Start with ${recipe} now.`"
+ },
+ "heroWhyChip": "__fn__(label) => `Why: ${label}. Open the Planned Meal`",
+ "heroOpenRecipe": "Open Recipe",
+ "movedToConfirm": "__fn__(names) => `${names} moved to To confirm.`",
+ "toConfirmAction": "__fn__(action, recipe, when) => `${action} ${recipe}, ${when}`",
  "swapTitle": "Swap for…",
  "swapAlternatives": "Alternatives",
  "swapLoading": "Finding alternatives…",

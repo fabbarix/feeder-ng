@@ -8,7 +8,6 @@ import type { PlanCourse, PlanSlot } from '../types'
 import { TonightHero, type TonightHeroProps } from './TonightHero'
 
 const upcoming = new Date('2026-11-10T17:00:00Z')
-const late = new Date('2026-11-10T20:00:00Z')
 const slotKey = { date: '2026-11-10', mealSlotId: 2 }
 const main = (over: Partial<PlanCourse> = {}) => planCourse({ courseId: 1, name: 'Main', main: true, meal: courseMeal(1, 'Main', { recipeName: 'Roast chicken', photoUrl: '/api/images/5' }), ...over })
 const side = (over: Partial<PlanCourse> = {}) => planCourse({ courseId: 2, name: 'Side', main: false, meal: courseMeal(2, 'Side', { recipeName: 'Green beans' }), ...over })
@@ -99,53 +98,5 @@ describe('TonightHero with several Courses', () => {
   })
 })
 
-// DS-TODAY round 2 (changed on purpose): after the slot time the hero keeps its Main Recipe (eyebrow, name, Course rows). The decision is
-// the hero's own ActionGroup: Cooked (or All Cooked), Adjust, Not cooked in the ⋮. "Dinner cooked?" is a line, not the title.
-describe('after the slot time', () => {
-  it('several Courses to cook: the Main Recipe stays the title, "Dinner cooked?" is the ask line, the group is All Cooked | Adjust | ⋮', async () => {
-    const h = setup(dinner([main(), side()]), { now: late })
-    expect(screen.getByRole('heading', { level: 2, name: 'Roast chicken' })).toBeInTheDocument()
-    expect(document.querySelector('.plan-hero__ask')).toHaveTextContent('Dinner cooked?')
-    expect(screen.getByRole('listitem', { name: 'Side' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Yes, Cooked' })).not.toBeInTheDocument()
-    const group = screen.getByRole('group', { name: 'Dinner' })
-    const all = within(group).getByRole('button', { name: 'All Cooked' })
-    expect(all).toHaveAttribute('data-variant', 'primary')
-    await userEvent.click(all)
-    expect(h.onMarkAllCooked).toHaveBeenCalledWith(slotKey)
-    await userEvent.click(within(group).getByRole('button', { name: 'Adjust' }))
-    expect(h.onMarkAllCooked).toHaveBeenCalledTimes(2) // Adjust opens the Mark all Cooked sheet for the slot
-    // round 3: no ⋮ of its own; Not cooked lives in the slot's ⋮ ("Dinner actions")
-    expect(within(group).queryByRole('button', { name: 'More for Dinner' })).not.toBeInTheDocument()
-    expect(within(group).getAllByRole('button')).toHaveLength(2)
-    await userEvent.click(screen.getByRole('button', { name: 'Dinner actions' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /^Not cooked/ }))
-    expect(h.menu.onNotCookedSlot).toHaveBeenCalledWith(slotKey)
-  })
-
-  it('round 3: after the slot time only ONE ⋮ shows in the hero\'s decision area, and it has Not cooked', async () => {
-    setup(dinner([main(), side()]), { now: late })
-    const hero = document.querySelector('.plan-hero')!
-    const menus = [...hero.querySelectorAll('button')].filter((b) => /^(More for Dinner|Dinner actions)$/.test(b.getAttribute('aria-label') ?? ''))
-    expect(menus.map((b) => b.getAttribute('aria-label'))).toEqual(['Dinner actions'])
-    await userEvent.click(menus[0]!)
-    expect(await screen.findByRole('menuitem', { name: /^Not cooked/ })).toBeInTheDocument()
-  })
-
-  it('only one Course left to cook: it is the hero, and Cooked and Adjust report that Course', async () => {
-    const h = setup(dinner([main({ meal: courseMeal(1, 'Main', { state: 'cooked' }) }), side()]), { now: late })
-    expect(screen.getByRole('heading', { level: 2, name: 'Green beans' })).toBeInTheDocument()
-    expect(document.querySelector('.plan-hero__ask')).toHaveTextContent('Green beans cooked?')
-    await userEvent.click(screen.getByRole('button', { name: 'Cooked' }))
-    expect(h.onYesCooked).toHaveBeenCalledWith({ ...slotKey, courseId: 2 })
-    await userEvent.click(screen.getByRole('button', { name: 'Adjust' }))
-    expect(h.onAdjust).toHaveBeenCalledWith({ ...slotKey, courseId: 2 })
-  })
-
-  it('nothing floats: the ask line, the group and the Course rows are all inside the hero tile', () => {
-    setup(dinner([main(), side()]), { now: late })
-    const hero = document.querySelector('.plan-hero')!
-    expect(hero.contains(document.querySelector('.plan-hero__ask'))).toBe(true)
-    expect(hero.contains(screen.getByRole('group', { name: 'Dinner' }))).toBe(true)
-  })
-})
+// B9-39 (TB-01): the hero no longer has an "after the slot time" form (All Cooked, Adjust, "Dinner cooked?"): it moves on at the slot time and
+// the past slot is a To confirm row (ToConfirmTile.slot.test.tsx covers All Cooked | Adjust | ⋮ there).
