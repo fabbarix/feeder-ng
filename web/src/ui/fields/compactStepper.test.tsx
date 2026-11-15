@@ -1,4 +1,4 @@
-// R2-F (F-01): a NumberField with a stepper is a compact group [−] 7 [+] (40 px buttons, tabular value, unit inside), never
+// R2-F (F-01): a NumberField with a stepper is a compact group [−] 7 [+] (36 px buttons since A11Y-09, tabular value, unit inside), never
 // stretched; Stepper gets the same compact variant (size="sm").
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
@@ -33,12 +33,12 @@ describe('NumberField with a stepper', () => {
 })
 
 describe('NumberField stepper CSS', () => {
-  it('the stepper control has 40 px buttons and a centred tabular value', () => {
-    expect(declarations(field, '.ui-field--stepper .icon-button')).toMatchObject({ 'inline-size': '40px', 'block-size': '40px' })
+  it('the stepper control has 36 px buttons (4 px of fill inside the 48 px frame, A11Y-09) and a centred tabular value', () => {
+    expect(declarations(field, '.ui-field--stepper .icon-button')).toMatchObject({ 'inline-size': '36px', 'block-size': '36px' })
     expect(declarations(field, '.ui-field--stepper .ui-field__number')).toMatchObject({ 'text-align': 'center', 'font-variant-numeric': 'tabular-nums' })
   })
 
-  it('the 40 px visual button is the IconButton default (no override of its hit area)', () => {
+  it('the IconButton default stays 40 px (the stepper field overrides the size, not the hit area rule)', () => {
     expect(declarations(iconButton, '.icon-button')).toMatchObject({ 'inline-size': '40px', 'block-size': '40px' })
   })
 })
