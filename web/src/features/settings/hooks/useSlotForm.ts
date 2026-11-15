@@ -1,9 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import type { CourseChoice } from '../../../lib/courses'
 import { sortIsoDays } from '../../../ui'
 import { documentLocale } from '../lib/locale'
 import { batchRequest, hasChanges, matchingSlots, quickPicks, summaryLines } from '../lib/multiDay'
-import { slotDraft, slotFromDraft, slotInputsForWeekdays, slotProblem, weekdaysProblem } from '../lib/slotForm'
+import { slotDraft, slotFormDirty, slotFromDraft, slotInputsForWeekdays, slotProblem, slotProblemField, weekdaysProblem } from '../lib/slotForm'
 import { courseRemovals, coursesProblem, removalPreview, type RemovalPreview } from '../lib/slotCourses'
 import { settingsStrings } from '../strings'
 import type { MealSlot, MealSlotInput, Member, SlotBatchRequest, SlotBatchResult } from '../types'
@@ -17,7 +17,7 @@ export interface UseSlotFormOptions {
   /** Add mode: the Name the draft starts with (the grid row whose add button was pressed). */
   defaultName?: string
   slots?: MealSlot[]
-  /** SET-14h, edit mode: the weekdays the selection starts with. Stub: not read yet (B9-42). */
+  /** SET-14h, edit mode: the weekdays the selection starts with (a card: every day of the name); absent, the slot's own day. */
   initialWeekdays?: number[]
   /** CRS D2: the household's active Courses. Without them the form has no Courses field and sends none. */
   courses?: CourseChoice[]
@@ -28,17 +28,23 @@ export interface UseSlotFormOptions {
   onApply?: (request: SlotBatchRequest) => void | Promise<void>
 }
 
-type Problem = { message: string; field: 'weekdays' | 'form' }
+/** The first problem and the field it belongs to (the sheet marks that field and focuses it); 'form' belongs to no field. */
+export type SlotFormProblem = { message: string; field: 'weekdays' | 'name' | 'time' | 'form' }
+type Problem = SlotFormProblem
 
 const noPreview = (): Promise<SlotBatchResult> => Promise.reject(new Error('no preview'))
 
 /** The Meal Slot sheet's state: the draft, the weekday selection, the matching "What will change" summary and the submit rules. */
-export function useSlotForm({ slot, members, defaultWeekdays, defaultName, slots, courses, onPreview, locale = documentLocale(), onSave, onApply }: UseSlotFormOptions) {
-  const [draft, setDraft] = useState<MealSlotInput>(() => {
+export function useSlotForm({ slot, members, defaultWeekdays, defaultName, slots, initialWeekdays, courses, onPreview, locale = documentLocale(), onSave, onApply }: UseSlotFormOptions) {
+  // What the sheet opened with: the dirty flag compares against it (a partial save's new weekdays are not a change by the Admin).
+  const [start] = useState(() => {
     const d = slotDraft(slot, members, courses)
-    return !slot && defaultName ? { ...d, name: defaultName } : d
+    const draft = !slot && defaultName ? { ...d, name: defaultName } : d
+    const days = slot ? sortIsoDays(initialWeekdays && initialWeekdays.length > 0 ? [...initialWeekdays] : [slot.weekday]) : (defaultWeekdays ?? [])
+    return { draft, weekdays: days }
   })
-  const [weekdays, setWeekdays] = useState<number[]>(() => (slot ? [slot.weekday] : (defaultWeekdays ?? [])))
+  const [draft, setDraft] = useState<MealSlotInput>(start.draft)
+  const [weekdays, setWeekdays] = useState<number[]>(start.weekdays)
   // A partial save hands back the weekdays still to save: the selection follows them, the draft stays as typed.
   const weekdaysKey = (defaultWeekdays ?? []).join(',')
   useEffect(() => {
@@ -51,13 +57,17 @@ export function useSlotForm({ slot, members, defaultWeekdays, defaultName, slots
   const picks = quickPicks(slots ?? (slot ? [slot] : []), slot)
   const courseProblem = draft.courses ? coursesProblem(draft.courses) : null
 
+  const [submitCount, setSubmitCount] = useState(0)
+  const dirty = useMemo(() => slotFormDirty(start, { draft, weekdays }), [start, draft, weekdays])
+
   const submit = (e?: FormEvent) => {
     e?.preventDefault()
     setAttempted(true)
+    setSubmitCount((n) => n + 1)
     const none = weekdaysProblem(weekdays)
     if (none) return setProblem({ message: none, field: 'weekdays' })
     const bad = slotProblem(draft)
-    if (bad) return setProblem({ message: bad, field: 'form' })
+    if (bad) return setProblem({ message: bad, field: slotProblemField(draft) ?? 'form' })
     if (courseProblem) return setProblem(null)
     if (!slot) {
       setProblem(null)
@@ -92,8 +102,10 @@ export function useSlotForm({ slot, members, defaultWeekdays, defaultName, slots
     summary,
     problem,
     submit,
-    /** True while the sheet holds unsaved changes (drives BottomSheet `confirmDismiss`). Stub: always false until B9-42 builds it. */
-    dirty: false as boolean,
+    /** True while the sheet holds unsaved changes (drives BottomSheet `confirmDismiss`). */
+    dirty,
+    /** How many times Save was pressed (useFocusFirstInvalid moves focus after each refused one). */
+    submitCount,
     /** The Courses problem, once Save was pressed (the picker shows it). */
     coursesError: attempted ? (courseProblem ?? undefined) : undefined,
     removal: { lines: removalLines, status: removals.length > 0 ? preview.status : 'idle' as const },

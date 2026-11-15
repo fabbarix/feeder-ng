@@ -1,5 +1,5 @@
 // SET-09, SET-10, SHORT-02, SAFE-04, SET-14h: the Meal Slot sheet's footer and form behaviour.
-//   Footer, add:  [Cancel (outlined)] [Save Meal Slot (primary, submits the sheet's form)]; no circular Close (R-B).
+//   Footer, add:  [Cancel (outlined)] [Add Meal Slot (primary, submits the sheet's form)]; no circular Close (R-B).
 //   Footer, edit: [⋮ "More for Dinner": Change a date, Remove Meal Slot (danger)] [Cancel] [Save Meal Slot]; no Close, no Remove button of its own.
 // Built on B9-14's BottomSheet (`onCancel`, `submit={{ label, form }}`, `confirmDismiss`) and FormActions `more`; on this branch those are
 // type-only stubs, so the footer tests below are red until B9-14's developer lands (see the hand-back).
@@ -27,14 +27,16 @@ const pressed = (group: string) =>
   within(screen.getByRole('group', { name: group })).getAllByRole('button').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.getAttribute('aria-label'))
 
 beforeEach(() => {
+  // jsdom has no scrollIntoView; focusFirstInvalid scrolls the field it focuses into view.
+  Element.prototype.scrollIntoView = vi.fn()
   vi.stubGlobal('matchMedia', (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }))
 })
 
 describe('the footer: Cancel and Save, no Close (R-B)', () => {
-  it('adding: an outlined Cancel and the primary Save Meal Slot, and no Close button', () => {
+  it('adding: an outlined Cancel and the primary Add Meal Slot (SET-10 mock), and no Close button', () => {
     add()
     expect(within(dialog()).getByRole('button', { name: 'Cancel' })).toHaveAttribute('data-variant', 'secondary')
-    expect(within(dialog()).getByRole('button', { name: 'Save Meal Slot' })).toHaveAttribute('data-variant', 'primary')
+    expect(within(dialog()).getByRole('button', { name: 'Add Meal Slot' })).toHaveAttribute('data-variant', 'primary')
     expect(within(dialog()).queryByRole('button', { name: 'Close' })).toBeNull()
   })
   it('editing: the same, and Remove is not a button of the footer', () => {
@@ -46,7 +48,7 @@ describe('the footer: Cancel and Save, no Close (R-B)', () => {
   })
   it('Save is a submit button of the sheet\'s own form (the form attribute names it), so Enter in a field saves', async () => {
     const { onSave } = add()
-    const save = within(dialog()).getByRole('button', { name: 'Save Meal Slot' })
+    const save = within(dialog()).getByRole('button', { name: 'Add Meal Slot' })
     expect(save).toHaveAttribute('type', 'submit')
     const formId = save.getAttribute('form')!
     expect(formId).toBeTruthy()
@@ -55,7 +57,11 @@ describe('the footer: Cancel and Save, no Close (R-B)', () => {
     await userEvent.type(screen.getByLabelText('Name'), 'Tea')
     screen.getByRole('spinbutton', { name: 'Hour' }).focus()
     await userEvent.keyboard('1600')
-    await userEvent.type(screen.getByLabelText('Name'), '{Enter}')
+    // A browser's Enter submits through the form's default button, which is any submit button in `form.elements` (the form
+    // attribute counts). user-event only looks for one inside the form, so the test checks the association and submits as Enter would.
+    const form = document.getElementById(formId) as HTMLFormElement
+    expect([...form.elements]).toContain(save)
+    form.requestSubmit()
     expect(onSave).toHaveBeenCalledTimes(1)
   })
   it('Cancel closes an untouched sheet at once', async () => {
@@ -66,6 +72,10 @@ describe('the footer: Cancel and Save, no Close (R-B)', () => {
 })
 
 describe('the ⋮ menu of an edit sheet (SHORT-02: Change a date and Remove Meal Slot)', () => {
+  // The ⋮ opens a popover menu (menuitem rows) from 768 px; below it is a sheet of rows. These tests read the popover.
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: /min-width/.test(q), media: q, addEventListener() {}, removeEventListener() {} }))
+  })
   it('is the first control of the footer, named "More for Dinner", and opens a menu', async () => {
     edit()
     const more = within(dialog()).getByRole('button', { name: 'More for Dinner' })
@@ -162,7 +172,7 @@ describe('Apply to starts with the weekdays the page gives (SET-14h)', () => {
 describe('a refused Save focuses the field that is wrong', () => {
   it('no name: the Name field is aria-invalid, described by its message, and has focus', async () => {
     add({ defaultWeekdays: [1] })
-    await userEvent.click(within(dialog()).getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'Add Meal Slot' }))
     const name = screen.getByLabelText('Name')
     expect(name).toHaveAttribute('aria-invalid', 'true')
     expect(name).toHaveAccessibleDescription('Enter a name for the Meal Slot.')
@@ -171,14 +181,14 @@ describe('a refused Save focuses the field that is wrong', () => {
   it('no time: the time field is the one invalid, and the Name is not', async () => {
     add({ defaultWeekdays: [1] })
     await userEvent.type(screen.getByLabelText('Name'), 'Tea')
-    await userEvent.click(within(dialog()).getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'Add Meal Slot' }))
     expect(screen.getByLabelText('Name')).not.toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByRole('group', { name: 'Usual time' })).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByRole('spinbutton', { name: 'Hour' })).toHaveFocus()
   })
   it('the message is under the field, not a loose alert at the foot of the sheet', async () => {
     add({ defaultWeekdays: [1] })
-    await userEvent.click(within(dialog()).getByRole('button', { name: 'Save Meal Slot' }))
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'Add Meal Slot' }))
     expect(dialog().querySelector('.settings__error')).toBeNull()
     expect(within(dialog()).getByText('Enter a name for the Meal Slot.').closest('.ui-field')).not.toBeNull()
   })
