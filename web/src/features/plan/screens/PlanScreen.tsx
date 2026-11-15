@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useMe } from '../../../app/useMe'
 import { BentoGrid, Button, EmptyState, ErrorState, LoadState, PageHeader } from '../../../ui'
 import { PlanSkeleton } from '../components/PlanSkeleton'
@@ -21,7 +21,7 @@ import { usePlanDays } from '../hooks/usePlanDays'
 import { usePlanScreen } from '../hooks/usePlanScreen'
 import { ReplanMarksContext } from '../hooks/useReplanReview'
 import { courseCells, unplannedOf } from '../lib/couldntGroups'
-import { cookPath } from '../lib/cook'
+import { cookLinkFor } from '../lib/cook'
 import { planStrings } from '../strings'
 import type { SlotDayKey } from '../types'
 import '../plan.css'
@@ -36,7 +36,12 @@ export function PlanScreen(): ReactNode {
   const navigate = useNavigate()
   const { plan, actions, flow } = s
   const { days, range } = usePlanDays(plan.slots, plan.today)
-  const cookMeal = (key: SlotDayKey) => navigate(cookPath(key))
+  const location = useLocation()
+  // B9-45 (PC-02): Cook Mode returns to the Plan, at the week the User was on
+  const cookMeal = (key: SlotDayKey) => {
+    const link = cookLinkFor(key, `/plan${location.search}`)
+    navigate(link.to, { state: link.state })
+  }
   const unplanned = useMemo(() => unplannedOf(courseCells(plan.slots)), [plan.slots])
   const isAdmin = useMe().data?.isAdmin !== false
   const notice = useCouldntPlanNotice(unplanned, courseCells(plan.slots), isAdmin)

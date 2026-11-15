@@ -16,7 +16,7 @@ import {
   SwapSheet,
   TonightHero,
   ToConfirmTile,
-  cookPath,
+  cookLinkFor,
   useCookFlow,
   useCouldntFix,
   useCouldntPlanNotice,
@@ -68,7 +68,8 @@ export function TodayScreen(): ReactElement {
   const notice = useCouldntPlanNotice(data.couldntPlan, courseCells(data.planSlots ?? []), isAdmin)
   const fixCouldnt = useCouldntFix()
   const setup = useSetupChecklist()
-  const cookMeal = (key: SlotDayKey) => navigate(cookPath(key))
+  // B9-45 (PC-02): Cook Mode returns to Today
+  const cookMeal = (key: SlotDayKey) => navigate(cookLinkFor(key, '/').to, { state: cookLinkFor(key, '/').state })
   const reheatMeal = (key: SlotKey) => navigate(cookReheatPath(key))
   const yesCooked = (key: SlotKey) => void flow.quickCook(key)
   const hero = data.nextSlot
