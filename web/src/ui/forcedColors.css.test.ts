@@ -22,7 +22,6 @@ const val = (selector: string, prop: string): string | undefined =>
     .filter(([p]) => p === prop)
     .map(([, v]) => v)
     .pop()
-const no = (v: string | undefined) => (v ?? '').replace(/\s*!important$/, '')
 
 describe('ui/forcedColors.css exists and holds only the forced-colours layer (A11Y-04)', () => {
   it('the file exists and has rules', () => {

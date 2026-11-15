@@ -1,0 +1,145 @@
+/* A11Y-04 (docs/design/ui-review-3/a11y.md, system.md §2 "Forced colours"): the ONE forced-colours layer of the primitives. ui/index.ts
+   imports it last, so it follows every component stylesheet. Features add no forced-colors rule of their own.
+   - Controls get a 1 px ButtonText border; the ruled Search field and Segmented track (A11Y-05) keep their 2 px rule on top of it.
+   - Tiles, list groups, the bottom bar and toasts get a 1 px CanvasText border.
+   - A selected, pressed, checked or current state is Highlight on HighlightText. !important is allowed in this file only, and only
+     there: the selected state must beat every variant rule (the filter chip's accent fill, a pressed icon button's soft fill).
+   - Colour swatches keep their own colour with a CanvasText border; the chosen one has a Highlight ring.
+   - Disabled is GrayText. Every focus ring, outer or nested (A11Y-02), is an outline in Highlight: the ring token itself becomes
+     Highlight, so every rule drawn with var(--focus-ring-color) keeps a system colour forced colours do not replace. */
+@media (forced-colors: active) {
+  /* The ring token: a system colour is kept as it is. Set on every element, so a container's own ring colour (the hero tile's
+     on-accent, the toast's bg) does not reach its controls; the controls that set it on themselves are named after. */
+  *,
+  ::before,
+  ::after {
+    --focus-ring-color: Highlight;
+  }
+
+  .toast,
+  .date-field__grid button[data-range-start],
+  .date-field__grid button[data-selected],
+  :root .skip-link:focus-visible,
+  :root .bottom-bar__link[data-accent='true']:focus-visible .bottom-bar__icon,
+  :root .side-rail__link[data-accent='true']:focus-visible {
+    --focus-ring-color: Highlight;
+  }
+
+  /* Boundaries (1.4.11). */
+  .button,
+  .icon-button,
+  .chip,
+  .choice-chip,
+  .your-menu-button,
+  .line-row__tick,
+  .search-field__control,
+  .segmented,
+  .stepper__value,
+  .price-keypad__key,
+  .switch {
+    border: 1px solid ButtonText;
+  }
+
+  /* the ruled shape keeps its 2 px bottom rule on top of the 1 px frame */
+  .search-field__control,
+  .segmented {
+    border-block-end: var(--field-rule-width) solid ButtonText;
+  }
+
+  .tile,
+  .list-group,
+  .bottom-bar,
+  .toast {
+    border: 1px solid CanvasText;
+  }
+
+  /* Selected, pressed, checked: Highlight on HighlightText, beating every variant rule. */
+  .segmented__option[aria-checked='true'],
+  .icon-button[aria-pressed='true'],
+  .choice-chip[aria-pressed='true'],
+  .chip[aria-pressed='true'],
+  .checkbox__box[data-state='checked'],
+  .checkbox__box[data-state='mixed'],
+  .switch[aria-checked='true'] {
+    forced-color-adjust: none !important;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  /* The other chosen options of the primitives: the same pair, by their own selector (it follows theirs). */
+  .emoji-choice[aria-checked='true'],
+  .radio-card[aria-checked='true'],
+  .select__option[aria-selected='true'],
+  .sortable-handle[aria-pressed='true'],
+  .weekday-picker__chip[aria-pressed='true'] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+
+  /* Current page. */
+  .bottom-bar__link[aria-current='page'],
+  .side-rail__link[aria-current='page'] .side-rail__pill {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .side-rail__link[aria-current='page'] {
+    color: HighlightText;
+  }
+
+  /* Switch thumb. */
+  .switch__thumb {
+    forced-color-adjust: none;
+    background: ButtonText;
+  }
+
+  .switch[aria-checked='true'] .switch__thumb {
+    background: HighlightText;
+  }
+
+  /* Swatches keep their colour; the chosen one is ringed. */
+  .colour-swatch,
+  .tag-swatch {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+
+  .colour-swatch[aria-checked='true'],
+  .tag-swatch[aria-checked='true'] {
+    box-shadow: none;
+    outline: 3px solid Highlight;
+    outline-offset: 3px;
+  }
+
+  /* Disabled. */
+  :disabled,
+  [aria-disabled='true'] {
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+  }
+
+  /* Focus: every ring is an outline in Highlight, including the three frames that ring instead of their control. */
+  :focus-visible,
+  .ui-field__control:has(:is(input, textarea, [role='spinbutton']):focus),
+  .search-field__control:has(input:focus),
+  .segmented:has(.segmented__option:focus-visible) {
+    outline-color: Highlight;
+  }
+
+  /* A nested control (stepper - and +, Clear search, a button in a data-focus-scope) keeps its 2 px inner ring; its soft focus fill
+     becomes Canvas, so the ring alone marks it. */
+  :is(.ui-field__control, .search-field__control, [data-focus-scope]) :is(button, [role='button'], a):focus-visible {
+    outline-color: Highlight;
+    background: Canvas;
+  }
+
+  .picker-row:focus-visible {
+    outline: var(--focus-ring-width) solid Highlight;
+    outline-offset: var(--focus-ring-offset-inset);
+  }
+}
