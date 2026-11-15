@@ -56,11 +56,26 @@ else
   echo "bundle budget: ok: $what: $(kb "$size") KB brotli, within 350 KB (the budget is 400 KB)"
 fi
 
-# Every JS chunk with its brotli size (raw when it has no .br sibling), largest first.
+# The chunks of THIS build: the entry and every chunk it can reach by an import (static or dynamic), followed through the
+# chunks' code. The build does not empty dist/ (emptyOutDir is off), so an older build's chunks may still lie beside them;
+# they are not this build's and do not count.
+declare -A reach=(["$entry"]=1)
+queue=("$entry")
+while [ "${#queue[@]}" -gt 0 ]; do
+  cur="${queue[0]}"; queue=("${queue[@]:1}")
+  while read -r ref; do
+    [ -n "$ref" ] || continue
+    f="assets/${ref##*/}"
+    [ -f "$DIST/$f" ] || continue
+    [ -n "${reach[$f]:-}" ] && continue
+    reach["$f"]=1; queue+=("$f")
+  done < <(grep -oE '[A-Za-z0-9_./-]*[A-Za-z0-9_-]+\.js' "$DIST/$cur" | sort -u)
+done
+
+# Every chunk of this build with its brotli size (raw when it has no .br sibling), largest first.
 sizes="$(
-  for js in "$DIST"/assets/*.js; do
-    [ -f "$js" ] || continue
-    printf '%s %s\n' "$(brsize "${js#"$DIST"/}")" "${js#"$DIST"/}"
+  for f in "${!reach[@]}"; do
+    printf '%s %s\n' "$(brsize "$f")" "$f"
   done | sort -rn
 )"
 

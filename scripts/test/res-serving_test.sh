@@ -39,7 +39,7 @@ fixture() { # name brotli-bytes
   local d="$SCRATCH/dist-$1"
   mkdir -p "$d/assets"
   printf '<!doctype html><html><head><script type="module" crossorigin src="/assets/index-Ab12Cd.js"></script><link rel="stylesheet" href="/assets/index-Ab12Cd.css"></head><body><div id="root"></div></body></html>' >"$d/index.html"
-  printf 'console.log(1)' >"$d/assets/index-Ab12Cd.js"
+  printf 'import("./other-9f9f9f.js");console.log(1)' >"$d/assets/index-Ab12Cd.js"
   printf 'body{}' >"$d/assets/index-Ab12Cd.css"
   # another chunk that is NOT the entry and is bigger than a small entry: it never counts toward the entry's budget
   # (B9-59: it has its own, 250 KB, and this one is within it)
@@ -53,6 +53,7 @@ route_fixture() { # name brotli-bytes
   local d; d="$(fixture "$1" 300000)"
   printf 'export{}' >"$d/assets/PlanScreen-77aa77.js"
   head -c "$2" /dev/zero >"$d/assets/PlanScreen-77aa77.js.br"
+  printf 'import("./PlanScreen-77aa77.js");' >>"$d/assets/index-Ab12Cd.js"
   echo "$d"
 }
 run_budget() { BUNDLE_DIST="$1" bash "$B" 2>&1; }
@@ -87,7 +88,7 @@ head -1 <<<"$listed" | grep -q 'index-Ab12Cd.js (entry)' && ok || bad "budget: t
 out="$(run_budget "$(route_fixture rover2 260000)")"
 grep -qi 'five largest' <<<"$out" && ok || bad "budget: the five largest are printed when a chunk fails too (got: $out)"
 d6="$(fixture six 300000)"
-for i in 1 2 3 4 5 6; do printf 'export{}' >"$d6/assets/r$i-aa.js"; head -c $((i * 1000)) /dev/zero >"$d6/assets/r$i-aa.js.br"; done
+for i in 1 2 3 4 5 6; do printf 'export{}' >"$d6/assets/r$i-aa.js"; head -c $((i * 1000)) /dev/zero >"$d6/assets/r$i-aa.js.br"; printf 'import("./r%s-aa.js");' "$i" >>"$d6/assets/index-Ab12Cd.js"; done
 listed="$(run_budget "$d6" | sed -n '/five largest/,$p' | tail -n +2)"
 [ "$(grep -c 'KB' <<<"$listed")" -eq 5 ] && ok || bad "budget: lists five chunks, no more (got: $listed)"
 
@@ -95,6 +96,7 @@ listed="$(run_budget "$d6" | sed -n '/five largest/,$p' | tail -n +2)"
 # the entry's budget, not the route-chunk one
 dp="$(fixture preload 300000)"
 printf 'export{}' >"$dp/assets/ui-Ee55Ff.js"
+printf 'import"./ui-Ee55Ff.js";' >>"$dp/assets/index-Ab12Cd.js"
 head -c 60000 /dev/zero >"$dp/assets/ui-Ee55Ff.js.br"
 sed -i 's|<link rel="stylesheet"|<link rel="modulepreload" crossorigin href="/assets/ui-Ee55Ff.js"><link rel="stylesheet"|' "$dp/index.html"
 out="$(run_budget "$dp")"; rc=$?
@@ -102,6 +104,14 @@ out="$(run_budget "$dp")"; rc=$?
 head -c 120000 /dev/zero >"$dp/assets/ui-Ee55Ff.js.br"
 out="$(run_budget "$dp")"; rc=$?
 [ "$rc" -ne 0 ] && ok || bad "budget: the entry and its preloaded chunk over 400 KB together must fail (got: $out)"
+
+# B9-59: an older build's chunk left in dist/ (the build does not empty it), referenced by nothing of this build, is not
+# counted, however big
+ds="$(fixture stale 300000)"
+printf 'export{}' >"$ds/assets/index-OldOld.js"
+head -c 300000 /dev/zero >"$ds/assets/index-OldOld.js.br"
+out="$(run_budget "$ds")"; rc=$?
+[ "$rc" -eq 0 ] && ! grep -q 'index-OldOld' <<<"$out" && ok || bad "budget: a stale chunk of an older build must not count (exit $rc: $out)"
 
 out="$(run_budget "$(fixture nobr)")"; rc=$?
 [ "$rc" -ne 0 ] && ok || bad "budget: a build with no .br sibling for the entry chunk must fail (the compression step did not run)"
